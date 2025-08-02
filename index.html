@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Internet is Dead</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    body {
+      background-color: #000;
+      background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAHUlEQVQYV2NkYGD4z0AEYBxVSFJgAAxBAIYwgGcBAMAGbgEUBjRuXYAAAAASUVORK5CYII=");
+      background-repeat: repeat;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      color: #222;
+      font-family: Georgia, "Times New Roman", serif;
+      text-align: center;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAHUlEQVQYV2NkYGD4z0AEYBxVSFJgAAxBAIYwgGcBAMAGbgEUBjRuXYAAAAASUVORK5CYII=");
+      background-repeat: repeat;
+      pointer-events: none;
+      animation: flicker 0.1s steps(2) infinite;
+    }
+
+    @keyframes flicker {
+      0%   { opacity: 0; }
+      50%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .tombstone {
+      background: radial-gradient(circle at top center, #ddd 10%, #ccc 50%, #aaa 100%);
+      padding: 2rem;
+      border-radius: 50% / 10%;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+      max-width: 90%;
+    }
+
+    .tombstone h1 {
+      margin: 0;
+      font-size: 3rem;
+      line-height: 1.2;
+      color: #222;
+      text-shadow: -2px -2px 0 #eee, 2px 2px 0 #888;
+    }
+
+    .tombstone h1 span {
+      display: inline-block;
+      margin-top: 0.5rem;
+      font-size: 2rem;
+    }
+
+    @media (max-width: 600px) {
+      .tombstone h1 {
+        font-size: 2rem;
+      }
+      .tombstone h1 span {
+        font-size: 1.5rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .tombstone {
+        padding: 1.5rem;
+      }
+      .tombstone h1 {
+        font-size: 1.5rem;
+      }
+      .tombstone h1 span {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="tombstone">
+    <h1>R.I.P.<br>The Internet<br><span>1996&ndash;2025</span></h1>
+  </div>
+</body>
+</html>
