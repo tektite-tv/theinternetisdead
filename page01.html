@@ -11,12 +11,26 @@
       50% { transform: scale(4); opacity: 0.5; }
       100% { transform: scale(0); opacity: 0; }
     }
+
+    @keyframes respect-pop {
+      0% { transform: scale(0); opacity: 0; }
+      20% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 0; }
+    }
   </style>
 </head>
-<body class="bg-black flex items-center justify-center h-screen overflow-hidden">
-  <div id="explosion-container" class="relative w-full h-full flex items-center justify-center"></div>
+<body class="bg-black flex items-center justify-center h-screen overflow-hidden relative">
+  <div id="explosion-container" class="absolute inset-0 flex items-center justify-center"></div>
+  <div id="respect-text" class="absolute text-white text-6xl font-extrabold" style="font-family: Impact, Charcoal, sans-serif; display: none;">
+    RESPECT
+  </div>
+  <div id="counter" class="absolute top-4 left-4 text-white text-xl font-mono">
+    Respect Paid: 0
+  </div>
 
   <script>
+    let pressCount = 0;
+
     function createPixel(color) {
       const pixel = document.createElement('div');
       pixel.className = `absolute w-4 h-4 ${color} rounded-full animate-[explode_1s_ease-out]`;
@@ -37,9 +51,27 @@
       }
     }
 
+    function showRespect() {
+      const respectText = document.getElementById('respect-text');
+      respectText.style.display = 'block';
+      respectText.classList.add('animate-[respect-pop_1s_ease-out]');
+
+      setTimeout(() => {
+        respectText.style.display = 'none';
+        respectText.classList.remove('animate-[respect-pop_1s_ease-out]');
+      }, 1000);
+    }
+
+    function updateCounter() {
+      pressCount++;
+      document.getElementById('counter').textContent = `Press F Count: ${pressCount}`;
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.key.toLowerCase() === 'f') {
         explodePixels();
+        showRespect();
+        updateCounter();
       }
     });
 
