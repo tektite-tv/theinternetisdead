@@ -163,8 +163,8 @@
     <span>Press F To Pay Respect</span>
   </div>
 
-  <a href="https://theinternetisdead.org/who" style="position:fixed; top:50%; left:50%; z-index:9999; display:block;">
-    <img id="ghost-face" src="face.png" alt="Ghost Face" style="width:150px; pointer-events:auto; opacity:0;">
+  <a id="ghost-link" href="https://theinternetisdead.org/who" style="position:fixed; z-index:9999; display:block; pointer-events:auto;">
+    <img id="ghost-face" src="face.png" alt="Ghost Face" style="width:150px; opacity:0;">
   </a>
 
   <script>
@@ -180,7 +180,8 @@
       }
     });
 
-    const ghost = document.getElementById("ghost-face");
+    const ghostLink = document.getElementById("ghost-link");
+    const ghostFace = document.getElementById("ghost-face");
     let ghostWidth = 150;
     let ghostHeight = 150;
     let x = Math.random() * (window.innerWidth - ghostWidth);
@@ -197,8 +198,8 @@
       if (x <= 0 || x + ghostWidth >= window.innerWidth) dx *= -1;
       if (y <= 0 || y + ghostHeight >= window.innerHeight) dy *= -1;
 
-      ghost.style.left = `${x}px`;
-      ghost.style.top = `${y}px`;
+      ghostLink.style.left = `${x}px`;
+      ghostLink.style.top = `${y}px`;
 
       if (fadingIn) {
         opacity += 0.01;
@@ -207,7 +208,7 @@
         opacity -= 0.01;
         if (opacity <= 0) fadingIn = true;
       }
-      ghost.style.opacity = opacity;
+      ghostFace.style.opacity = opacity;
 
       requestAnimationFrame(haunt);
     }
