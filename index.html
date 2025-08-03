@@ -153,7 +153,7 @@
     <div class="start-button" onclick="toggleMenu()">Start</div>
     <div class="start-menu" id="startMenu">
       <a href="index.html">Home</a>
-      <a href="who.html">Who?</a>
+      <a href="who/">Who?</a>
       <a href="page01.html">Press F</a>
       <a href="#" onclick="shutdown()">Shutdown</a>
     </div>
@@ -165,6 +165,16 @@
   </a>
 
   <script>
+    // Midnight ritual redirect
+    (function(){
+      const now = new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      if (hour === 0 && minute < 10) {
+        window.location.href = "/ritual/index.html";
+      }
+    })();
+
     function toggleMenu() {
       const menu = document.getElementById('startMenu');
       menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
