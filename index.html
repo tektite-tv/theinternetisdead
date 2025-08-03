@@ -10,115 +10,100 @@
       padding: 0;
       height: 100%;
       box-sizing: border-box;
+      background-color: #000;
+      overflow: hidden;
+      font-family: "Courier New", monospace;
+      color: #00ff99;
+      text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
     }
 
     *, *::before, *::after {
       box-sizing: inherit;
     }
 
-    body {
-      background-color: #000;
-      background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAHUlEQVQYV2NkYGD4z0AEYBxVSFJgAAxBAIYwgGcBAMAGbgEUBjRuXYAAAAASUVORK5CYII=");
-      background-repeat: repeat;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      min-height: 100vh;
-      color: #222;
-      font-family: Georgia, "Times New Roman", serif;
-      text-align: center;
-    }
-
-    body::after {
+    body::before {
       content: "";
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAHUlEQVQYV2NkYGD4z0AEYBxVSFJgAAxBAIYwgGcBAMAGbgEUBjRuXYAAAAASUVORK5CYII=");
-      background-repeat: repeat;
+      background: repeating-linear-gradient(0deg, rgba(255,0,255,0.03) 0px, rgba(0,255,255,0.03) 1px, transparent 2px);
       pointer-events: none;
-      animation: flicker 0.1s steps(2) infinite;
-      z-index: 0;
+      z-index: 100;
+      animation: scanlines 1s linear infinite;
     }
 
-    @keyframes flicker {
-      0%   { opacity: 0; }
-      50%  { opacity: 1; }
-      100% { opacity: 0; }
+    @keyframes scanlines {
+      0% {background-position: 0 0;}
+      100% {background-position: 0 2px;}
     }
 
     .content {
-      z-index: 1;
+      position: relative;
+      z-index: 10;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex: 1;
-      padding: 2rem;
+      height: 100vh;
       gap: 2rem;
+      animation: glitch-flicker 1s infinite;
     }
 
     .tombstone {
-      background: radial-gradient(circle at top center, #ddd 10%, #ccc 50%, #aaa 100%);
       padding: 2rem;
-      border-radius: 50% / 10%;
-      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-      max-width: 90%;
+      border: 2px dashed #ff00ff;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      box-shadow: 0 0 20px #00ffff, inset 0 0 10px #ff00ff;
     }
 
     .tombstone h1 {
-      margin: 0;
       font-size: 3rem;
       line-height: 1.2;
-      color: #222;
-      text-shadow: -2px -2px 0 #eee, 2px 2px 0 #888;
+      color: #ffffff;
+      text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff;
+      animation: text-glitch 1s infinite;
     }
 
     .tombstone h1 span {
-      display: inline-block;
-      margin-top: 0.5rem;
+      display: block;
       font-size: 2rem;
+      margin-top: 1rem;
     }
 
     .taskbar {
-      background-color: #444;
-      color: #eee;
-      padding: 0.5rem 1rem;
-      font-family: "MS Sans Serif", sans-serif;
-      font-size: 0.9rem;
-      box-shadow: inset 0 1px #666, inset 0 -1px #222;
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
+      position: fixed;
+      bottom: 0;
       width: 100%;
-      position: relative;
+      background: linear-gradient(90deg, #ff00ff, #00ffff);
+      color: #000;
+      font-family: "Courier New", monospace;
+      padding: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      animation: bar-glitch 2s infinite;
     }
 
     .start-button {
-      background-color: #ccc;
-      color: #000;
-      padding: 0.3rem 0.8rem;
-      margin-right: 1rem;
-      border: 2px outset #fff;
+      background: #000;
+      color: #00ff99;
+      border: 1px solid #00ff99;
+      padding: 0.3rem 1rem;
       cursor: pointer;
-      font-weight: bold;
-    }
-
-    .start-button:hover {
-      background-color: #eee;
+      animation: flicker 1.5s infinite;
     }
 
     .start-menu {
       display: none;
       position: absolute;
-      bottom: 100%;
-      left: 0;
-      background-color: #ddd;
-      border: 2px outset #fff;
+      bottom: 2.5rem;
+      background: #111;
+      border: 1px solid #ff00ff;
       padding: 0.5rem;
-      box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
     }
 
     .start-button:hover + .start-menu {
@@ -126,77 +111,46 @@
     }
 
     .start-menu a {
-      display: block;
-      color: #000;
+      color: #00ffff;
       text-decoration: none;
-      padding: 0.3rem 0;
+      display: block;
+      margin: 0.2rem 0;
+      font-weight: bold;
     }
 
     .start-menu a:hover {
-      background-color: #bbb;
+      color: #ff00ff;
     }
 
-    @media (max-width: 600px) {
-      .tombstone h1 {
-        font-size: 2rem;
-      }
-      .tombstone h1 span {
-        font-size: 1.5rem;
-      }
-      .taskbar {
-        flex-direction: column;
-        align-items: flex-start;
-      }
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
 
-    @media (max-width: 400px) {
-      .tombstone {
-        padding: 1.5rem;
-      }
-      .tombstone h1 {
-        font-size: 1.5rem;
-      }
-      .tombstone h1 span {
-        font-size: 1.2rem;
-      }
+    @keyframes glitch-flicker {
+      0% { transform: translate(0, 0); }
+      20% { transform: translate(-2px, 2px); }
+      40% { transform: translate(2px, -2px); }
+      60% { transform: translate(-1px, 1px); }
+      80% { transform: translate(1px, -1px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    @keyframes text-glitch {
+      0%, 100% { text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff; }
+      50% { text-shadow: 0 0 10px #00ff99, 0 0 20px #ff00ff; }
+    }
+
+    @keyframes bar-glitch {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
     }
   </style>
 </head>
 <body>
-  <div id="wind-audio">
-    <iframe
-      id="windIframe"
-      width="0"
-      height="0"
-      src="https://www.youtube.com/embed/wjC4N5A3zgU?autoplay=1&loop=1&playlist=wjC4N5A3zgU&controls=0&showinfo=0&modestbranding=1&mute=1"
-      frameborder="0"
-      allow="autoplay"
-      allowfullscreen
-    ></iframe>
-  </div>
-  <script>
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
-
-    function onYouTubeIframeAPIReady() {
-      new YT.Player('windIframe', {
-        events: {
-          onReady: (event) => {
-            event.target.unMute();
-            event.target.setVolume(50);
-          }
-        }
-      });
-    }
-  </script>
-
   <div class="content">
     <div class="tombstone">
       <h1>R.I.P.<br>The Internet<br><span>1996&ndash;2025</span></h1>
-    </div>
-    <div class="chatango">
-      <script id="cid0020000415101070445" data-cfasync="false" async src="//st.chatango.com/js/gz/emb.js" style="width: 250px;height: 350px;">{"handle":"theinternetisdead","arch":"js","styles":{"a":"000033","b":100,"c":"FFFFFF","d":"FFFFFF","k":"000033","l":"000033","m":"000033","n":"FFFFFF","p":"10","q":"000033","r":100,"fwtickm":1}}</script>
     </div>
   </div>
   <div class="taskbar">
@@ -208,5 +162,12 @@
     </div>
     <span>R.I.P. The Internet</span>
   </div>
+  <script>
+    document.body.addEventListener("mousemove", (e) => {
+      const x = (e.clientX / window.innerWidth) * 255;
+      const y = (e.clientY / window.innerHeight) * 255;
+      document.body.style.backgroundColor = `rgb(${x}, ${255 - x}, ${y})`;
+    });
+  </script>
 </body>
 </html>
