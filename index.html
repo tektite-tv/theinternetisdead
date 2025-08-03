@@ -168,6 +168,12 @@
       const y = (e.clientY / window.innerHeight) * 255;
       document.body.style.backgroundColor = `rgb(${x}, ${255 - x}, ${y})`;
     });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "f") {
+        window.location.href = "page01.html";
+      }
+    });
   </script>
 </body>
 </html>
