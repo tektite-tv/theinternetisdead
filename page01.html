@@ -1,1 +1,50 @@
-Bazinga
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RGB Pixel Explosion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes explode {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(4); opacity: 0.5; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="bg-black flex items-center justify-center h-screen overflow-hidden">
+  <div id="explosion-container" class="relative w-full h-full flex items-center justify-center"></div>
+
+  <script>
+    function createPixel(color) {
+      const pixel = document.createElement('div');
+      pixel.className = `absolute w-4 h-4 ${color} rounded-full animate-[explode_1s_ease-out]`;
+      pixel.style.left = `${Math.random() * 100}%`;
+      pixel.style.top = `${Math.random() * 100}%`;
+      return pixel;
+    }
+
+    function explodePixels() {
+      const container = document.getElementById('explosion-container');
+      container.innerHTML = '';
+      const colors = ['bg-red-500', 'bg-green-500', 'bg-blue-500'];
+
+      for (let i = 0; i < 100; i++) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const pixel = createPixel(color);
+        container.appendChild(pixel);
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'f') {
+        explodePixels();
+      }
+    });
+
+    // Optional: trigger an initial explosion
+    explodePixels();
+  </script>
+</body>
+</html>
