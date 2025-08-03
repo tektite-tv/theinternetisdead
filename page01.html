@@ -25,7 +25,17 @@
     RESPECT
   </div>
   <div id="counter" class="absolute top-4 left-4 text-white text-xl font-mono">
-    Respect Paid: 0
+    Press F Count: 0
+  </div>
+
+  <div class="taskbar absolute bottom-0 left-0 w-full bg-gray-700 text-white text-sm font-sans p-2 flex items-center shadow-inner">
+    <div class="start-button bg-gray-300 text-black px-2 py-1 mr-4 border border-white cursor-pointer font-bold">Start</div>
+    <div class="start-menu hidden absolute bottom-10 left-0 bg-gray-200 border border-white p-2 shadow-lg">
+      <a href="#" class="block text-black no-underline py-1 hover:bg-gray-400">Reboot Internet</a>
+      <a href="#" class="block text-black no-underline py-1 hover:bg-gray-400">Contact Nobody</a>
+      <a href="#" class="block text-black no-underline py-1 hover:bg-gray-400">Exit</a>
+    </div>
+    <span>R.I.P. The Internet</span>
   </div>
 
   <script>
@@ -75,7 +85,27 @@
       }
     });
 
-    // Optional: trigger an initial explosion
+    const startButton = document.querySelector('.start-button');
+    const startMenu = document.querySelector('.start-menu');
+
+    startButton.addEventListener('mouseover', () => {
+      startMenu.classList.remove('hidden');
+    });
+
+    startButton.addEventListener('mouseout', () => {
+      setTimeout(() => {
+        startMenu.classList.add('hidden');
+      }, 500);
+    });
+
+    startMenu.addEventListener('mouseover', () => {
+      startMenu.classList.remove('hidden');
+    });
+
+    startMenu.addEventListener('mouseout', () => {
+      startMenu.classList.add('hidden');
+    });
+
     explodePixels();
   </script>
 </body>
