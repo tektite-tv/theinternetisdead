@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RGB Pixel Explosion</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -20,14 +20,23 @@
   </style>
 </head>
 <body class="bg-black flex items-center justify-center h-screen overflow-hidden relative">
+  <!-- Explosion Container -->
   <div id="explosion-container" class="absolute inset-0 flex items-center justify-center"></div>
+
+  <!-- RESPECT Text -->
   <div id="respect-text" class="absolute text-white text-6xl font-extrabold" style="font-family: Impact, Charcoal, sans-serif; display: none;">
     RESPECT
   </div>
+
+  <!-- Counter -->
   <div id="counter" class="absolute top-4 left-4 text-white text-xl font-mono">
     Press F Count: 0
   </div>
 
+  <!-- Audio for Start Button -->
+  <audio id="start-sfx" src="https://assets.mixkit.co/sfx/preview/mixkit-click-notification-2608.mp3"></audio>
+
+  <!-- Taskbar -->
   <div class="taskbar absolute bottom-0 left-0 w-full bg-gray-700 text-white text-sm font-sans p-2 flex justify-between items-center shadow-inner">
     <div class="flex items-center space-x-4">
       <div class="start-button bg-gray-300 text-black px-2 py-1 border border-white cursor-pointer font-bold">Start</div>
@@ -90,6 +99,12 @@
 
     const startButton = document.querySelector('.start-button');
     const startMenu = document.querySelector('.start-menu');
+    const sfx = document.getElementById('start-sfx');
+
+    startButton.addEventListener('click', () => {
+      sfx.currentTime = 0;
+      sfx.play();
+    });
 
     startButton.addEventListener('mouseover', () => {
       startMenu.classList.remove('hidden');
