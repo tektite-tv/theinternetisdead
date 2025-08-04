@@ -39,6 +39,9 @@
       100% {background-position: 0 2px;}
     }
 
+    .sprinkle {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}   
     .content {
       position: relative;
       z-index: 10;
@@ -259,7 +262,7 @@
         }
       });
     });
-    // Rainbow sprinkle trail of chaos
+    // Sprinkle trail v2 - now with link-hover madness
 document.addEventListener("mousemove", (e) => {
   const sprinkle = document.createElement("div");
   sprinkle.style.position = "fixed";
@@ -273,10 +276,19 @@ document.addEventListener("mousemove", (e) => {
   sprinkle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 70%)`;
   sprinkle.style.opacity = 1;
   sprinkle.style.boxShadow = `0 0 5px white`;
+  sprinkle.classList.add("sprinkle");
+
+  // Check if cursor is over a link
+  const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+  if (elementUnderCursor && elementUnderCursor.tagName.toLowerCase() === 'a') {
+    sprinkle.style.width = "16px";
+    sprinkle.style.height = "16px";
+    sprinkle.style.boxShadow = `0 0 10px white, 0 0 20px ${sprinkle.style.backgroundColor}`;
+  }
 
   document.body.appendChild(sprinkle);
 
-  // Dissolve the sprinkle like it never existed
+  // Dissolve effect
   let fade = 1;
   const fadeOut = setInterval(() => {
     fade -= 0.05;
