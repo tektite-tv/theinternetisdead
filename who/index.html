@@ -27,7 +27,7 @@
       flex-direction: column;
       text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
       animation: stripe-shift 5s linear infinite;
-      cursor: none; /* Hide cursor for fire effect */
+      cursor: none; /* Fire is the cursor now */
     }
 
     @keyframes stripe-shift {
@@ -200,18 +200,7 @@
       document.body.appendChild(blackout);
     }
 
-    // Play Achievement sound on link click
-    document.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        const audio = document.getElementById('achievementSound');
-        if (audio) {
-          audio.currentTime = 0;
-          audio.play();
-        }
-      });
-    });
-
-    // FIRE CURSOR SCRIPT
+    // FIRE CURSOR TRAIL
     const fireParticles = [];
     document.addEventListener('mousemove', (e) => {
       const flame = document.createElement('div');
@@ -227,13 +216,44 @@
       }, 300);
     });
 
-    // Cap flame particles
+    // Cap flame count to avoid browser hell
     setInterval(() => {
       while (fireParticles.length > 100) {
         fireParticles[0].remove();
         fireParticles.shift();
       }
     }, 100);
+
+    // LINK CLICK = EXPLOSION
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const audio = document.getElementById('achievementSound');
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play();
+        }
+
+        // EXPLODE
+        for (let i = 0; i < 30; i++) {
+          const flame = document.createElement('div');
+          flame.classList.add('flame');
+          flame.style.left = e.clientX + 'px';
+          flame.style.top = e.clientY + 'px';
+          document.body.appendChild(flame);
+
+          const dx = (Math.random() - 0.5) * 100;
+          const dy = (Math.random() - 0.5) * 100;
+
+          flame.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
+          requestAnimationFrame(() => {
+            flame.style.transform = `translate(${dx}px, ${dy}px) scale(2)`;
+            flame.style.opacity = '0';
+          });
+
+          setTimeout(() => flame.remove(), 500);
+        }
+      });
+    });
   </script>
 </body>
 </html>
