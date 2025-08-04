@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RGB Pixel Explosion</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Press F to Pay Respect</title>
   <style>
     html, body {
       margin: 0;
@@ -15,10 +15,31 @@
       color: #00ff99;
       text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
       transition: filter 0.3s ease;
+      cursor: none; /* Zalgo cursor replaces real cursor */
     }
 
     .inverted {
       filter: invert(100%);
+    }
+
+    .zalgo {
+      position: fixed;
+      color: cyan;
+      font-family: "Courier New", monospace;
+      font-size: 1rem;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 1;
+      animation: fade-out 1s forwards;
+      white-space: nowrap;
+      text-shadow: 0 0 5px cyan, 0 0 10px cyan;
+    }
+
+    @keyframes fade-out {
+      to {
+        opacity: 0;
+        transform: translateY(-10px) scale(1.2);
+      }
     }
 
     #explosion-container div {
@@ -35,12 +56,6 @@
       100% { transform: scale(0); opacity: 0; }
     }
 
-    @keyframes respect-pop {
-      0% { transform: scale(0); opacity: 0; }
-      20% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); opacity: 0; }
-    }
-
     #respect-text {
       font-family: Impact, Charcoal, sans-serif;
       font-size: 4rem;
@@ -53,11 +68,30 @@
       animation: respect-pop 1s ease-out;
     }
 
+    @keyframes respect-pop {
+      0% { transform: scale(0); opacity: 0; }
+      20% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 0; }
+    }
+
     #counter {
       position: absolute;
       top: 10px;
       left: 10px;
       font-size: 1.2rem;
+    }
+
+    .invert-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 0.3rem 1rem;
+      background: #ff00ff;
+      color: #000;
+      border: 1px solid #fff;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 9999;
     }
 
     .taskbar {
@@ -120,19 +154,6 @@
       cursor: pointer;
     }
 
-    .invert-toggle {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      padding: 0.3rem 1rem;
-      background: #ff00ff;
-      color: #000;
-      border: 1px solid #fff;
-      font-weight: bold;
-      cursor: pointer;
-      z-index: 9999;
-    }
-
     @keyframes flicker {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -175,50 +196,6 @@
     let pressCount = 0;
     let timeOnPage = 0;
 
-    function createPixel(color) {
-      const pixel = document.createElement('div');
-      pixel.style.backgroundColor = color;
-      pixel.style.left = `${Math.random() * 100}%`;
-      pixel.style.top = `${Math.random() * 100}%`;
-      document.getElementById('explosion-container').appendChild(pixel);
-    }
-
-    function explodePixels() {
-      const container = document.getElementById('explosion-container');
-      container.innerHTML = '';
-      const colors = ['red', 'green', 'blue'];
-      for (let i = 0; i < 100; i++) {
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        createPixel(color);
-      }
-    }
-
-    function showRespect() {
-      const respectText = document.getElementById('respect-text');
-      respectText.style.display = 'block';
-      setTimeout(() => {
-        respectText.style.display = 'none';
-      }, 1000);
-    }
-
-    function updateCounter() {
-      pressCount++;
-      document.getElementById('counter').textContent = `Press F Count: ${pressCount}`;
-    }
-
-    function updateTimer() {
-      timeOnPage++;
-      document.getElementById('timer').textContent = `Time on Page: ${timeOnPage}s`;
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 'f') {
-        explodePixels();
-        showRespect();
-        updateCounter();
-      }
-    });
-
     function toggleMenu() {
       const menu = document.getElementById('startMenu');
       menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
@@ -245,6 +222,72 @@
       }
     }
 
+    function updateCounter() {
+      pressCount++;
+      document.getElementById('counter').textContent = `Press F Count: ${pressCount}`;
+    }
+
+    function updateTimer() {
+      timeOnPage++;
+      document.getElementById('timer').textContent = `Time on Page: ${timeOnPage}s`;
+    }
+
+    function createPixel(color) {
+      const pixel = document.createElement('div');
+      pixel.style.backgroundColor = color;
+      pixel.style.left = `${Math.random() * 100}%`;
+      pixel.style.top = `${Math.random() * 100}%`;
+      document.getElementById('explosion-container').appendChild(pixel);
+    }
+
+    function explodePixels() {
+      const container = document.getElementById('explosion-container');
+      container.innerHTML = '';
+      const colors = ['red', 'green', 'blue'];
+      for (let i = 0; i < 100; i++) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        createPixel(color);
+      }
+    }
+
+    function showRespect() {
+      const respectText = document.getElementById('respect-text');
+      respectText.style.display = 'block';
+      setTimeout(() => {
+        respectText.style.display = 'none';
+      }, 1000);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'f') {
+        explodePixels();
+        showRespect();
+        updateCounter();
+      }
+    });
+
+    // ZALGO TRAIL
+    const zalgoChars = [..."\u0300\u0301\u0302\u0303\u0304\u0305\u0306\u0307\u0308\u0309\u030A\u030B\u030C\u030D\u030E\u030F\u0310\u0311\u0312\u0313\u0314\u0315\u0316\u0317\u0318\u0319\u031A\u031B\u031C\u031D\u031E\u031F\u0320\u0321\u0322\u0323\u0324\u0325\u0326\u0327\u0328\u0329\u032A\u032B\u032C\u032D\u032E\u032F\u0330\u0331\u0332\u0333\u0334\u0335\u0336\u0337\u0338\u0339\u033A\u033B\u033C\u033D\u033E\u033F\u0340\u0341\u0342\u0343\u0344\u0345\u0346\u0347\u0348\u0349\u034A\u034B\u034C\u034D\u034E\u034F\u0350\u0351\u0352\u0353\u0354\u0355\u0356\u0357\u0358\u0359\u035A\u035B\u035C\u035D\u035E\u035F\u0360\u0361\u0362"];
+
+    function generateZalgo(base = "~", intensity = 10) {
+      let result = base;
+      for (let i = 0; i < intensity; i++) {
+        result += zalgoChars[Math.floor(Math.random() * zalgoChars.length)];
+      }
+      return result;
+    }
+
+    document.addEventListener('mousemove', (e) => {
+      const zalgo = document.createElement('div');
+      zalgo.className = 'zalgo';
+      zalgo.textContent = generateZalgo();
+      zalgo.style.left = `${e.clientX}px`;
+      zalgo.style.top = `${e.clientY}px`;
+      document.body.appendChild(zalgo);
+      setTimeout(() => zalgo.remove(), 1000);
+    });
+
+    // Audio for any link click
     document.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
         const audio = document.getElementById('achievementSound');
@@ -255,8 +298,8 @@
       });
     });
 
-    explodePixels();
     setInterval(updateTimer, 1000);
+    explodePixels(); // Initial explosion for flair
   </script>
 </body>
 </html>
