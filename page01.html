@@ -22,21 +22,14 @@
       filter: invert(100%);
     }
 
-    .marker-dot {
+    canvas {
       position: fixed;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9998;
       pointer-events: none;
-      z-index: 9999;
-      animation: fade-out 0.5s forwards;
-    }
-
-    @keyframes fade-out {
-      to {
-        opacity: 0;
-        transform: scale(2);
-      }
     }
 
     #explosion-container div {
@@ -163,6 +156,7 @@
   </style>
 </head>
 <body>
+  <canvas id="trailCanvas"></canvas>
   <audio src="/jeopardy.mp3" autoplay loop hidden></audio>
   <audio id="achievementSound" src="/AchievementUnlocked.mp3" preload="auto"></audio>
 
@@ -286,33 +280,42 @@
       }
     });
 
-    // Rainbow Marker Trail
-    let isDrawing = false;
+    // Rainbow Line Trail Drawing
+    const canvas = document.getElementById('trailCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let hue = 0;
 
-    const rainbowColors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
-    let colorIndex = 0;
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
 
-    document.addEventListener('mousedown', () => {
-      isDrawing = true;
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    document.addEventListener('mousedown', (e) => {
+      drawing = true;
+      [lastX, lastY] = [e.clientX, e.clientY];
     });
 
     document.addEventListener('mouseup', () => {
-      isDrawing = false;
+      drawing = false;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!isDrawing) return;
-
-      const dot = document.createElement('div');
-      dot.className = 'marker-dot';
-      dot.style.left = `${e.clientX}px`;
-      dot.style.top = `${e.clientY}px`;
-      dot.style.backgroundColor = rainbowColors[colorIndex];
-      document.body.appendChild(dot);
-
-      colorIndex = (colorIndex + 1) % rainbowColors.length;
-
-      setTimeout(() => dot.remove(), 500);
+      if (!drawing) return;
+      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.clientX, e.clientY);
+      ctx.stroke();
+      [lastX, lastY] = [e.clientX, e.clientY];
+      hue = (hue + 5) % 360;
     });
   </script>
 </body>
