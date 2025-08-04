@@ -145,6 +145,7 @@
 </head>
 <body>
   <audio src="/smw.mp3" autoplay loop hidden></audio>
+  <audio id="achievementSound" src="/AchievementUnlocked.mp3" preload="auto"></audio>
 
   <div class="content">
     <div class="mytitle">
@@ -247,6 +248,17 @@
     }
 
     haunt();
+
+    // Play Achievement sound on link click
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        const audio = document.getElementById('achievementSound');
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play();
+        }
+      });
+    });
   </script>
 </body>
 </html>
