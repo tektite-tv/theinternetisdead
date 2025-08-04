@@ -9,7 +9,15 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      background: #000;
+      background: repeating-linear-gradient(
+        180deg,
+        #1a001a,
+        #1a001a 20px,
+        #330000 20px,
+        #330000 40px,
+        #000000 40px,
+        #000000 60px
+      );
       font-family: "Courier New", monospace;
       color: #00ff99;
       display: flex;
@@ -18,6 +26,12 @@
       text-align: center;
       flex-direction: column;
       text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
+      animation: stripe-shift 5s linear infinite;
+    }
+
+    @keyframes stripe-shift {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 60px; }
     }
 
     .profile-pic {
