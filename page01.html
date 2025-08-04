@@ -53,18 +53,11 @@
       animation: respect-pop 1s ease-out;
     }
 
-    #counter, #timer {
+    #counter {
       position: absolute;
       top: 10px;
-      font-size: 1.2rem;
-    }
-
-    #counter {
       left: 10px;
-    }
-
-    #timer {
-      right: 10px;
+      font-size: 1.2rem;
     }
 
     .taskbar {
@@ -80,6 +73,12 @@
       align-items: center;
       z-index: 20;
       animation: bar-glitch 2s infinite;
+    }
+
+    .taskbar-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
     }
 
     .start-button {
@@ -153,17 +152,19 @@
   <div id="explosion-container"></div>
   <div id="respect-text">RESPECT</div>
   <div id="counter">Press F Count: 0</div>
-  <div id="timer">Time on Page: 0s</div>
 
   <div class="taskbar">
-    <div style="position: relative;">
-      <div class="start-button" onclick="toggleMenu()">Start</div>
-      <div class="start-menu" id="startMenu">
-        <a href="index.html">Home</a>
-        <a href="who/">Who?</a>
-        <a href="page01.html">Press F</a>
-        <a href="#" onclick="shutdown()">Shutdown</a>
+    <div class="taskbar-left">
+      <div style="position: relative;">
+        <div class="start-button" onclick="toggleMenu()">Start</div>
+        <div class="start-menu" id="startMenu">
+          <a href="index.html">Home</a>
+          <a href="who/">Who?</a>
+          <a href="page01.html">Press F</a>
+          <a href="#" onclick="shutdown()">Shutdown</a>
+        </div>
       </div>
+      <span id="timer">Time on Page: 0s</span>
     </div>
     <span>Press F To Pay Respect</span>
     <a class="gtfo-button" href="https://theinternetisdead.org">GTFO</a>
