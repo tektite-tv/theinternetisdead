@@ -15,30 +15,27 @@
       color: #00ff99;
       text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
       transition: filter 0.3s ease;
-      cursor: none; /* Zalgo cursor replaces real cursor */
+      cursor: none;
     }
 
     .inverted {
       filter: invert(100%);
     }
 
-    .zalgo {
+    .marker-dot {
       position: fixed;
-      color: cyan;
-      font-family: "Courier New", monospace;
-      font-size: 1rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
       pointer-events: none;
       z-index: 9999;
-      opacity: 1;
-      animation: fade-out 1s forwards;
-      white-space: nowrap;
-      text-shadow: 0 0 5px cyan, 0 0 10px cyan;
+      animation: fade-out 0.5s forwards;
     }
 
     @keyframes fade-out {
       to {
         opacity: 0;
-        transform: translateY(-10px) scale(1.2);
+        transform: scale(2);
       }
     }
 
@@ -266,28 +263,6 @@
       }
     });
 
-    // ZALGO TRAIL
-    const zalgoChars = [..."\u0300\u0301\u0302\u0303\u0304\u0305\u0306\u0307\u0308\u0309\u030A\u030B\u030C\u030D\u030E\u030F\u0310\u0311\u0312\u0313\u0314\u0315\u0316\u0317\u0318\u0319\u031A\u031B\u031C\u031D\u031E\u031F\u0320\u0321\u0322\u0323\u0324\u0325\u0326\u0327\u0328\u0329\u032A\u032B\u032C\u032D\u032E\u032F\u0330\u0331\u0332\u0333\u0334\u0335\u0336\u0337\u0338\u0339\u033A\u033B\u033C\u033D\u033E\u033F\u0340\u0341\u0342\u0343\u0344\u0345\u0346\u0347\u0348\u0349\u034A\u034B\u034C\u034D\u034E\u034F\u0350\u0351\u0352\u0353\u0354\u0355\u0356\u0357\u0358\u0359\u035A\u035B\u035C\u035D\u035E\u035F\u0360\u0361\u0362"];
-
-    function generateZalgo(base = "~", intensity = 10) {
-      let result = base;
-      for (let i = 0; i < intensity; i++) {
-        result += zalgoChars[Math.floor(Math.random() * zalgoChars.length)];
-      }
-      return result;
-    }
-
-    document.addEventListener('mousemove', (e) => {
-      const zalgo = document.createElement('div');
-      zalgo.className = 'zalgo';
-      zalgo.textContent = generateZalgo();
-      zalgo.style.left = `${e.clientX}px`;
-      zalgo.style.top = `${e.clientY}px`;
-      document.body.appendChild(zalgo);
-      setTimeout(() => zalgo.remove(), 1000);
-    });
-
-    // Audio for any link click
     document.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
         const audio = document.getElementById('achievementSound');
@@ -299,19 +274,46 @@
     });
 
     setInterval(updateTimer, 1000);
-    explodePixels(); // Initial explosion for flair
+    explodePixels();
 
-    // DO A BARREL ROLL on Q press
-document.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() === 'q') {
-    document.body.style.transition = 'transform 1s ease-in-out';
-    document.body.style.transform = 'rotate(360deg)';
-    setTimeout(() => {
-      document.body.style.transform = 'none';
-    }, 1000);
-  }
-});
-    
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'q') {
+        document.body.style.transition = 'transform 1s ease-in-out';
+        document.body.style.transform = 'rotate(360deg)';
+        setTimeout(() => {
+          document.body.style.transform = 'none';
+        }, 1000);
+      }
+    });
+
+    // Rainbow Marker Trail
+    let isDrawing = false;
+
+    const rainbowColors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+    let colorIndex = 0;
+
+    document.addEventListener('mousedown', () => {
+      isDrawing = true;
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDrawing = false;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDrawing) return;
+
+      const dot = document.createElement('div');
+      dot.className = 'marker-dot';
+      dot.style.left = `${e.clientX}px`;
+      dot.style.top = `${e.clientY}px`;
+      dot.style.backgroundColor = rainbowColors[colorIndex];
+      document.body.appendChild(dot);
+
+      colorIndex = (colorIndex + 1) % rainbowColors.length;
+
+      setTimeout(() => dot.remove(), 500);
+    });
   </script>
 </body>
 </html>
