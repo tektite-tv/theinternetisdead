@@ -254,6 +254,19 @@
         }
       });
     });
+
+    // DO A BARREL ROLL on Q press
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'q') {
+    document.body.style.transition = 'transform 1s ease-in-out';
+    document.body.style.transform = 'rotate(360deg)';
+    setTimeout(() => {
+      document.body.style.transform = 'none';
+    }, 1000);
+  }
+});
+
+    
   </script>
 </body>
 </html>
