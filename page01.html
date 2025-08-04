@@ -146,6 +146,7 @@
 </head>
 <body>
   <audio src="/jeopardy.mp3" autoplay loop hidden></audio>
+  <audio id="achievementSound" src="/AchievementUnlocked.mp3" preload="auto"></audio>
 
   <button class="invert-toggle" onclick="toggleInvert()">INVERT</button>
 
@@ -238,6 +239,16 @@
     function toggleInvert() {
       document.body.classList.toggle('inverted');
     }
+
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        const audio = document.getElementById('achievementSound');
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play();
+        }
+      });
+    });
 
     explodePixels();
     setInterval(updateTimer, 1000);
