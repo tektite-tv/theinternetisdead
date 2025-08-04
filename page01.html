@@ -238,6 +238,11 @@
 
     function toggleInvert() {
       document.body.classList.toggle('inverted');
+      const audio = document.getElementById('achievementSound');
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play();
+      }
     }
 
     document.querySelectorAll('a').forEach(link => {
