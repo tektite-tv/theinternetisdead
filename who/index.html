@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Who?</title>
   <style>
     html, body {
@@ -27,6 +27,7 @@
       flex-direction: column;
       text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
       animation: stripe-shift 5s linear infinite;
+      cursor: none; /* Hide cursor for fire effect */
     }
 
     @keyframes stripe-shift {
@@ -131,6 +132,29 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
+
+    /* FIRE CURSOR STYLES */
+    .flame {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ff6600 0%, #ff0000 60%, transparent 100%);
+      pointer-events: none;
+      z-index: 9999;
+      animation: flicker-flame 0.3s ease-out forwards;
+    }
+
+    @keyframes flicker-flame {
+      0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(2) translateY(-20px);
+      }
+    }
   </style>
 </head>
 <body>
@@ -186,6 +210,30 @@
         }
       });
     });
+
+    // FIRE CURSOR SCRIPT
+    const fireParticles = [];
+    document.addEventListener('mousemove', (e) => {
+      const flame = document.createElement('div');
+      flame.classList.add('flame');
+      flame.style.left = e.clientX + 'px';
+      flame.style.top = e.clientY + 'px';
+      document.body.appendChild(flame);
+      fireParticles.push(flame);
+
+      setTimeout(() => {
+        flame.remove();
+        fireParticles.shift();
+      }, 300);
+    });
+
+    // Cap flame particles
+    setInterval(() => {
+      while (fireParticles.length > 100) {
+        fireParticles[0].remove();
+        fireParticles.shift();
+      }
+    }, 100);
   </script>
 </body>
 </html>
