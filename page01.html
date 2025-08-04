@@ -32,6 +32,24 @@
       pointer-events: none;
     }
 
+    .glitch-cursor {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      background: radial-gradient(circle, #ff00ff, #00ffff);
+      mix-blend-mode: difference;
+      opacity: 0.6;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.5); opacity: 0.3; }
+    }
+
     #explosion-container div {
       position: absolute;
       width: 10px;
@@ -157,6 +175,7 @@
 </head>
 <body>
   <canvas id="trailCanvas"></canvas>
+  <div id="glitchCursor" class="glitch-cursor"></div>
   <audio src="/jeopardy.mp3" autoplay loop hidden></audio>
   <audio id="achievementSound" src="/AchievementUnlocked.mp3" preload="auto"></audio>
 
@@ -307,6 +326,10 @@
     });
 
     document.addEventListener('mousemove', (e) => {
+      const glitchCursor = document.getElementById('glitchCursor');
+      glitchCursor.style.left = `${e.clientX - 10}px`;
+      glitchCursor.style.top = `${e.clientY - 10}px`;
+
       if (!drawing) return;
       ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
       ctx.lineWidth = 5;
