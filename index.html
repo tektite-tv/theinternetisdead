@@ -259,6 +259,37 @@
         }
       });
     });
+    // Rainbow sprinkle trail of chaos
+document.addEventListener("mousemove", (e) => {
+  const sprinkle = document.createElement("div");
+  sprinkle.style.position = "fixed";
+  sprinkle.style.left = e.clientX + "px";
+  sprinkle.style.top = e.clientY + "px";
+  sprinkle.style.width = "8px";
+  sprinkle.style.height = "8px";
+  sprinkle.style.borderRadius = "50%";
+  sprinkle.style.zIndex = "9999";
+  sprinkle.style.pointerEvents = "none";
+  sprinkle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 70%)`;
+  sprinkle.style.opacity = 1;
+  sprinkle.style.boxShadow = `0 0 5px white`;
+
+  document.body.appendChild(sprinkle);
+
+  // Dissolve the sprinkle like it never existed
+  let fade = 1;
+  const fadeOut = setInterval(() => {
+    fade -= 0.05;
+    if (fade <= 0) {
+      clearInterval(fadeOut);
+      sprinkle.remove();
+    } else {
+      sprinkle.style.opacity = fade;
+      sprinkle.style.transform = `scale(${1 + (1 - fade)})`;
+    }
+  }, 16);
+});
+
   </script>
 </body>
 </html>
