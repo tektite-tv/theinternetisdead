@@ -135,6 +135,7 @@
 </head>
 <body>
   <audio src="/harmony.mp3" autoplay loop hidden></audio>
+  <audio id="achievementSound" src="/AchievementUnlocked.mp3" preload="auto"></audio>
 
   <img src="/face.png" class="profile-pic" alt="Thomas Harrison">
   <div class="info">
@@ -174,6 +175,17 @@
       blackout.style.zIndex = '99999';
       document.body.appendChild(blackout);
     }
+
+    // Play Achievement sound on link click
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        const audio = document.getElementById('achievementSound');
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play();
+        }
+      });
+    });
   </script>
 </body>
 </html>
