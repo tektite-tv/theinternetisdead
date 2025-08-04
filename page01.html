@@ -14,6 +14,11 @@
       font-family: "Courier New", monospace;
       color: #00ff99;
       text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
+      transition: filter 0.3s ease;
+    }
+
+    .inverted {
+      filter: invert(100%);
     }
 
     #explosion-container div {
@@ -109,6 +114,19 @@
       cursor: pointer;
     }
 
+    .invert-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 0.3rem 1rem;
+      background: #ff00ff;
+      color: #000;
+      border: 1px solid #fff;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 9999;
+    }
+
     @keyframes flicker {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
@@ -122,6 +140,8 @@
 </head>
 <body>
   <audio src="/jeopardy.mp3" autoplay loop hidden></audio>
+
+  <button class="invert-toggle" onclick="toggleInvert()">INVERT</button>
 
   <div id="explosion-container"></div>
   <div id="respect-text">RESPECT</div>
@@ -198,6 +218,10 @@
       blackout.style.backgroundColor = '#000';
       blackout.style.zIndex = '99999';
       document.body.appendChild(blackout);
+    }
+
+    function toggleInvert() {
+      document.body.classList.toggle('inverted');
     }
 
     explodePixels();
