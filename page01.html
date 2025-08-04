@@ -53,11 +53,18 @@
       animation: respect-pop 1s ease-out;
     }
 
-    #counter {
+    #counter, #timer {
       position: absolute;
       top: 10px;
-      left: 10px;
       font-size: 1.2rem;
+    }
+
+    #counter {
+      left: 10px;
+    }
+
+    #timer {
+      right: 10px;
     }
 
     .taskbar {
@@ -146,6 +153,7 @@
   <div id="explosion-container"></div>
   <div id="respect-text">RESPECT</div>
   <div id="counter">Press F Count: 0</div>
+  <div id="timer">Time on Page: 0s</div>
 
   <div class="taskbar">
     <div style="position: relative;">
@@ -163,6 +171,7 @@
 
   <script>
     let pressCount = 0;
+    let timeOnPage = 0;
 
     function createPixel(color) {
       const pixel = document.createElement('div');
@@ -195,6 +204,11 @@
       document.getElementById('counter').textContent = `Press F Count: ${pressCount}`;
     }
 
+    function updateTimer() {
+      timeOnPage++;
+      document.getElementById('timer').textContent = `Time on Page: ${timeOnPage}s`;
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.key.toLowerCase() === 'f') {
         explodePixels();
@@ -225,6 +239,7 @@
     }
 
     explodePixels();
+    setInterval(updateTimer, 1000);
   </script>
 </body>
 </html>
