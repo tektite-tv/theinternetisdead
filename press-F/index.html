@@ -340,6 +340,26 @@
       [lastX, lastY] = [e.clientX, e.clientY];
       hue = (hue + 5) % 360;
     });
+
+    let clickStartTime = null;
+let clickTimer = null;
+
+document.addEventListener('mousedown', (e) => {
+  if (e.button === 0) { // Left click only
+    clickStartTime = Date.now();
+    clickTimer = setTimeout(() => {
+      window.location.href = '/ritual';
+    }, 30000); // 30 seconds in milliseconds
+  }
+});
+
+document.addEventListener('mouseup', (e) => {
+  if (e.button === 0) {
+    clearTimeout(clickTimer);
+    clickStartTime = null;
+  }
+});
+
   </script>
 </body>
 </html>
