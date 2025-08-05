@@ -170,12 +170,15 @@
     <a href="#" onclick="shutdown()">Shutdown</a>
   </div>
   <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
-  <div class="system-tray" style="display: flex; gap: 1rem; align-items: center;">
-    <span id="muteBtn" style="cursor:pointer;" title="Mute/Unmute">🎵</span>
-    <span title="Disconnected">🌀</span>
-    <span id="attentionBtn" style="cursor:pointer;" title="Barrel Roll!">⚠️</span>
+  <div class="system-tray" style="display: flex; gap: 1rem; align-items: center; position: relative;">
+  <span id="muteBtn" style="cursor:pointer;" title="Mute/Unmute">🎵</span>
+  <span id="spiralIcon" style="cursor:pointer;">🌀</span>
+  <span id="attentionBtn" style="cursor:pointer;" title="Barrel Roll!">⚠️</span>
+  <div id="disconnectPopup" style="position: absolute; bottom: 2rem; right: 0; background: rgba(0,0,0,0.8); color: #ff00ff; padding: 0.3rem 0.6rem; border: 1px solid #00ffff; border-radius: 5px; display: none; font-weight: bold; text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff;">
+    Disconnected
   </div>
 </div>
+
   
   <a id="ghost-link" href="https://theinternetisdead.org/who" style="position:fixed; z-index:9999; display:block; pointer-events:auto;">
     <img id="ghost-face" src="face.png" alt="Ghost Face" style="width:150px; opacity:0;">
@@ -317,7 +320,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Mute/Unmute button
+// Mute/Unmute logic
 const audioEl = document.querySelector('audio');
 const muteBtn = document.getElementById('muteBtn');
 muteBtn.addEventListener('click', () => {
@@ -331,6 +334,24 @@ attentionBtn.addEventListener('click', () => {
   const event = new KeyboardEvent('keydown', { key: 'q' });
   document.dispatchEvent(event);
 });
+
+// Spiral hover popup
+const spiralIcon = document.getElementById('spiralIcon');
+const disconnectPopup = document.getElementById('disconnectPopup');
+
+spiralIcon.addEventListener('mouseenter', () => {
+  disconnectPopup.style.display = 'block';
+});
+
+spiralIcon.addEventListener('mouseleave', () => {
+  disconnectPopup.style.display = 'none';
+});
+
+spiralIcon.addEventListener('mousemove', (e) => {
+  disconnectPopup.style.left = e.offsetX + 20 + 'px';
+  disconnectPopup.style.bottom = '2rem';
+});
+
     
   </script>
 </body>
