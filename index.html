@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Internet is Dead</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      box-sizing: border-box;
+      background-color: #000;
+      overflow: hidden;
+      font-family: "Courier New", monospace;
+      color: #00ff99;
+      text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
+    }
+
+    *, *::before, *::after {
+      box-sizing: inherit;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(0deg, rgba(255,0,255,0.03) 0px, rgba(0,255,255,0.03) 1px, transparent 2px);
+      pointer-events: none;
+      z-index: 100;
+      animation: scanlines 1s linear infinite;
+    }
+
+    @keyframes scanlines {
+      0% {background-position: 0 0;}
+      100% {background-position: 0 2px;}
+    }
+
+    .sprinkle {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}   
+    .content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 2rem;
+      animation: glitch-flicker 1s infinite;
+    }
+
+    .tombstone {
+      padding: 2rem;
+      border: 2px dashed #ff00ff;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      box-shadow: 0 0 20px #00ffff, inset 0 0 10px #ff00ff;
+    }
+
+    .tombstone h1 {
+      font-size: 3rem;
+      line-height: 1.2;
+      color: #ffffff;
+      text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff;
+      animation: text-glitch 1s infinite;
+    }
+
+    .tombstone h1 span {
+      display: block;
+      font-size: 2rem;
+      margin-top: 1rem;
+    }
+
+    .taskbar {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: linear-gradient(90deg, #ff00ff, #00ffff);
+      color: #000;
+      font-family: "Courier New", monospace;
+      padding: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      animation: bar-glitch 2s infinite;
+    }
+
+    .start-button {
+      background: #000;
+      color: #00ff99;
+      border: 1px solid #00ff99;
+      padding: 0.3rem 1rem;
+      cursor: pointer;
+      animation: flicker 1.5s infinite;
+    }
+
+    .start-menu {
+      display: none;
+      position: absolute;
+      bottom: 2.5rem;
+      background: #111;
+      border: 1px solid #ff00ff;
+      padding: 0.5rem;
+    }
+
+    .start-menu a {
+      color: #00ffff;
+      text-decoration: none;
+      display: block;
+      margin: 0.2rem 0;
+      font-weight: bold;
+    }
+
+    .start-menu a:hover {
+      color: #ff00ff;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes glitch-flicker {
+      0% { transform: translate(0, 0); }
+      20% { transform: translate(-2px, 2px); }
+      40% { transform: translate(2px, -2px); }
+      60% { transform: translate(-1px, 1px); }
+      80% { transform: translate(1px, -1px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    @keyframes text-glitch {
+      0%, 100% { text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff; }
+      50% { text-shadow: 0 0 10px #00ff99, 0 0 20px #ff00ff; }
+    }
+
+    @keyframes bar-glitch {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+  </style>
+</head>
+<body>
+  <audio src="/smw.mp3" autoplay loop hidden></audio>
+  <audio id="achievementSound" src="/AchievementUnlocked.mp3" preload="auto"></audio>
+
+  <div class="content">
+    <div class="mytitle">
+      <center>
+      <h1><a href="https://theinternetisdead.org/">theinternetisdead.org</a></h1><br>
+      <iframe src="https://free.timeanddate.com/clock/ia0cxdnr/n250/fn7/fs20/fc0f0/tct/pct/ftbu/tt0/th2/ta1" frameborder="0" width="546" height="30" allowtransparency="true"></iframe></center>
+    </div>
+    <div class="tombstone">
+      <h1>R.I.P.<br>The Internet<br><span>1996&ndash;2025</span>
+</h1>
+    </div>
+  </div>
+  <div class="taskbar">
+    <div class="start-button" onclick="toggleMenu()">Start</div>
+    <div class="start-menu" id="startMenu">
+      <a href="index.html">Home</a>
+      <a href="who/">Who?</a>
+      <a href="/press-F/index.html">Press F</a>
+      <a href="#" onclick="shutdown()">Shutdown</a>
+    </div>
+    <span>Press F To Pay Respect</span>
+  </div>
+
+  <a id="ghost-link" href="https://theinternetisdead.org/who" style="position:fixed; z-index:9999; display:block; pointer-events:auto;">
+    <img id="ghost-face" src="face.png" alt="Ghost Face" style="width:150px; opacity:0;">
+  </a>
+
+  <script>
+    // Midnight ritual redirect
+    (function(){
+      const now = new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      if (hour === 0 && minute < 10) {
+        window.location.href = "/ritual/index.html";
+      }
+    })();
+
+    function toggleMenu() {
+      const menu = document.getElementById('startMenu');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function shutdown() {
+      const blackout = document.createElement('div');
+      blackout.style.position = 'fixed';
+      blackout.style.top = '0';
+      blackout.style.left = '0';
+      blackout.style.width = '100vw';
+      blackout.style.height = '100vh';
+      blackout.style.backgroundColor = '#000';
+      blackout.style.zIndex = '99999';
+      document.body.appendChild(blackout);
+    }
+
+    document.body.addEventListener("mousemove", (e) => {
+      const x = (e.clientX / window.innerWidth) * 255;
+      const y = (e.clientY / window.innerHeight) * 255;
+      document.body.style.backgroundColor = `rgb(${x}, ${255 - x}, ${y})`;
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "f") {
+        window.location.href = "page01.html";
+      }
+    });
+
+    const ghostLink = document.getElementById("ghost-link");
+    const ghostFace = document.getElementById("ghost-face");
+    let ghostWidth = 150;
+    let ghostHeight = 150;
+    let x = Math.random() * (window.innerWidth - ghostWidth);
+    let y = Math.random() * (window.innerHeight - ghostHeight);
+    let dx = (Math.random() * 2 - 1) * 2;
+    let dy = (Math.random() * 2 - 1) * 2;
+    let opacity = 0;
+    let fadingIn = true;
+
+    function haunt() {
+      x += dx;
+      y += dy;
+
+      if (x <= 0 || x + ghostWidth >= window.innerWidth) dx *= -1;
+      if (y <= 0 || y + ghostHeight >= window.innerHeight) dy *= -1;
+
+      ghostLink.style.left = `${x}px`;
+      ghostLink.style.top = `${y}px`;
+
+      if (fadingIn) {
+        opacity += 0.01;
+        if (opacity >= 1) fadingIn = false;
+      } else {
+        opacity -= 0.01;
+        if (opacity <= 0) fadingIn = true;
+      }
+      ghostFace.style.opacity = opacity;
+
+      requestAnimationFrame(haunt);
+    }
+
+    haunt();
+
+    // Play Achievement sound on link click
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        const audio = document.getElementById('achievementSound');
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play();
+        }
+      });
+    });
+    // Sprinkle trail v2 - now with link-hover madness
+document.addEventListener("mousemove", (e) => {
+  const sprinkle = document.createElement("div");
+  sprinkle.style.position = "fixed";
+  sprinkle.style.left = e.clientX + "px";
+  sprinkle.style.top = e.clientY + "px";
+  sprinkle.style.width = "8px";
+  sprinkle.style.height = "8px";
+  sprinkle.style.borderRadius = "50%";
+  sprinkle.style.zIndex = "9999";
+  sprinkle.style.pointerEvents = "none";
+  sprinkle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 70%)`;
+  sprinkle.style.opacity = 1;
+  sprinkle.style.boxShadow = `0 0 5px white`;
+  sprinkle.classList.add("sprinkle");
+
+  // Check if cursor is over a link
+  const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+  if (elementUnderCursor && elementUnderCursor.tagName.toLowerCase() === 'a') {
+    sprinkle.style.width = "16px";
+    sprinkle.style.height = "16px";
+    sprinkle.style.boxShadow = `0 0 10px white, 0 0 20px ${sprinkle.style.backgroundColor}`;
+  }
+
+  document.body.appendChild(sprinkle);
+
+  // Dissolve effect
+  let fade = 1;
+  const fadeOut = setInterval(() => {
+    fade -= 0.05;
+    if (fade <= 0) {
+      clearInterval(fadeOut);
+      sprinkle.remove();
+    } else {
+      sprinkle.style.opacity = fade;
+      sprinkle.style.transform = `scale(${1 + (1 - fade)})`;
+    }
+  }, 16);
+});
+
+  // DO A BARREL ROLL on Q press
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'q') {
+    document.body.style.transition = 'transform 1s ease-in-out';
+    document.body.style.transform = 'rotate(360deg)';
+    setTimeout(() => {
+      document.body.style.transform = 'none';
+    }, 1000);
+  }
+});
+
+    
+  </script>
+</body>
+</html>
