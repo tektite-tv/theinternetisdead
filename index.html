@@ -162,16 +162,21 @@
     </div>
   </div>
   <div class="taskbar">
-    <div class="start-button" onclick="toggleMenu()">Start</div>
-    <div class="start-menu" id="startMenu">
-      <a href="index.html">Home</a>
-      <a href="who/">Who?</a>
-      <a href="/press-F/index.html">Press F</a>
-      <a href="#" onclick="shutdown()">Shutdown</a>
-    </div>
-    <span>Press F To Pay Respect</span>
+  <div class="start-button" onclick="toggleMenu()">Start</div>
+  <div class="start-menu" id="startMenu">
+    <a href="index.html">Home</a>
+    <a href="who/">Who?</a>
+    <a href="/press-F/index.html">Press F</a>
+    <a href="#" onclick="shutdown()">Shutdown</a>
   </div>
-
+  <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
+  <div class="system-tray" style="display: flex; gap: 1rem; align-items: center;">
+    <span id="muteBtn" style="cursor:pointer;" title="Mute/Unmute">🎵</span>
+    <span title="Disconnected">🌀</span>
+    <span id="attentionBtn" style="cursor:pointer;" title="Barrel Roll!">⚠️</span>
+  </div>
+</div>
+  
   <a id="ghost-link" href="https://theinternetisdead.org/who" style="position:fixed; z-index:9999; display:block; pointer-events:auto;">
     <img id="ghost-face" src="face.png" alt="Ghost Face" style="width:150px; opacity:0;">
   </a>
@@ -312,6 +317,20 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Mute/Unmute button
+const audioEl = document.querySelector('audio');
+const muteBtn = document.getElementById('muteBtn');
+muteBtn.addEventListener('click', () => {
+  audioEl.muted = !audioEl.muted;
+  muteBtn.textContent = audioEl.muted ? '🔇' : '🎵';
+});
+
+// Attention triangle triggers Q barrel roll
+const attentionBtn = document.getElementById('attentionBtn');
+attentionBtn.addEventListener('click', () => {
+  const event = new KeyboardEvent('keydown', { key: 'q' });
+  document.dispatchEvent(event);
+});
     
   </script>
 </body>
