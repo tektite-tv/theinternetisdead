@@ -1,1 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Press F to Pay Respect</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #000;
+      overflow: hidden;
+      font-family: "Courier New", monospace;
+      color: #00ff99;
+      text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
+      transition: filter 0.3s ease;
+      cursor: default;
+    }
 
+    .inverted {
+      filter: invert(100%);
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9998;
+      pointer-events: none;
+    }
+
+    .glitch-cursor {
+      position: fixed;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      background: radial-gradient(circle, #ff00ff, #00ffff);
+      mix-blend-mode: difference;
+      opacity: 0.6;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.5); opacity: 0.3; }
+    }
+
+    #explosion-container div {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      animation: explode 1s ease-out;
+    }
+
+    @keyframes explode {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(4); opacity: 0.5; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+
+    #respect-text {
+      font-family: Impact, Charcoal, sans-serif;
+      font-size: 4rem;
+      color: white;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+      animation: respect-pop 1s ease-out;
+    }
+
+    @keyframes respect-pop {
+      0% { transform: scale(0); opacity: 0; }
+      20% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 0; }
+    }
+
+    #counter {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 1.2rem;
+    }
+
+    .invert-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 0.3rem 1rem;
+      background: #ff00ff;
+      color: #000;
+      border: 1px solid #fff;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 9999;
+    }
+
+    .taskbar {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: linear-gradient(90deg, #ff00ff, #00ffff);
+      color: #000;
+      font-family: "Courier New", monospace;
+      padding: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      animation: bar-glitch 2s infinite;
+    }
+
+    .taskbar-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .start-button {
+      background: #000;
+      color: #00ff99;
+      border: 1px solid #00ff99;
+      padding: 0.3rem 1rem;
+      cursor: pointer;
+      animation: flicker 1.5s infinite;
+    }
+
+    .start-menu {
+      display: none;
+      position: absolute;
+      bottom: 2.5rem;
+      background: #111;
+      border: 1px solid #ff00ff;
+      padding: 0.5rem;
+    }
+
+    .start-menu a {
+      color: #00ffff;
+      text-decoration: none;
+      display: block;
+      margin: 0.2rem 0;
+      font-weight: bold;
+    }
+
+    .start-menu a:hover {
+      color: #ff00ff;
+    }
+
+    .gtfo-button {
+      background: #ff0000;
+      color: white;
+      padding: 0.3rem 1rem;
+      border: 1px solid #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes bar-glitch {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="trailCanvas"></canvas>
+  <div id="glitchCursor" class="glitch-cursor"></div>
+  <audio src="/jeopardy.mp3" autoplay loop hidden></audio>
+  <audio id="achievementSound" src="/AchievementUnlocked.mp3" preload="auto"></audio>
+
+  <button class="invert-toggle" onclick="toggleInvert()">INVERT</button>
+
+  <div id="explosion-container"></div>
+  <div id="respect-text">RESPECT</div>
+  <div id="counter">Press F Count: 0</div>
+
+  <div class="taskbar">
+    <div class="taskbar-left">
+      <div style="position: relative;">
+        <div class="start-button" onclick="toggleMenu()">Start</div>
+        <div class="start-menu" id="startMenu">
+          <a href="index.html">Home</a>
+          <a href="who/">Who?</a>
+          <a href="page01.html">Press F</a>
+          <a href="#" onclick="shutdown()">Shutdown</a>
+        </div>
+      </div>
+      <span id="timer">Time on Page: 0s</span>
+    </div>
+    <span>Press F To Pay Respect</span>
+    <a class="gtfo-button" href="https://theinternetisdead.org">GTFO</a>
+  </div>
+
+  <script>
+    let pressCount = 0;
+    let timeOnPage = 0;
+
+    function toggleMenu() {
+      const menu = document.getElementById('startMenu');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function shutdown() {
+      const blackout = document.createElement('div');
+      blackout.style.position = 'fixed';
+      blackout.style.top = '0';
+      blackout.style.left = '0';
+      blackout.style.width = '100vw';
+      blackout.style.height = '100vh';
+      blackout.style.backgroundColor = '#000';
+      blackout.style.zIndex = '99999';
+      document.body.appendChild(blackout);
+    }
+
+    function toggleInvert() {
+      document.body.classList.toggle('inverted');
+      const audio = document.getElementById('achievementSound');
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play();
+      }
+    }
+
+    function updateCounter() {
+      pressCount++;
+      document.getElementById('counter').textContent = `Press F Count: ${pressCount}`;
+    }
+
+    function updateTimer() {
+      timeOnPage++;
+      document.getElementById('timer').textContent = `Time on Page: ${timeOnPage}s`;
+    }
+
+    function createPixel(color) {
+      const pixel = document.createElement('div');
+      pixel.style.backgroundColor = color;
+      pixel.style.left = `${Math.random() * 100}%`;
+      pixel.style.top = `${Math.random() * 100}%`;
+      document.getElementById('explosion-container').appendChild(pixel);
+    }
+
+    function explodePixels() {
+      const container = document.getElementById('explosion-container');
+      container.innerHTML = '';
+      const colors = ['red', 'green', 'blue'];
+      for (let i = 0; i < 100; i++) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        createPixel(color);
+      }
+    }
+
+    function showRespect() {
+      const respectText = document.getElementById('respect-text');
+      respectText.style.display = 'block';
+      setTimeout(() => {
+        respectText.style.display = 'none';
+      }, 1000);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'f') {
+        explodePixels();
+        showRespect();
+        updateCounter();
+      }
+    });
+
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        const audio = document.getElementById('achievementSound');
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play();
+        }
+      });
+    });
+
+    setInterval(updateTimer, 1000);
+    explodePixels();
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'q') {
+        document.body.style.transition = 'transform 1s ease-in-out';
+        document.body.style.transform = 'rotate(360deg)';
+        setTimeout(() => {
+          document.body.style.transform = 'none';
+        }, 1000);
+      }
+    });
+
+    // Rainbow Line Trail Drawing
+    const canvas = document.getElementById('trailCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let hue = 0;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    document.addEventListener('mousedown', (e) => {
+      drawing = true;
+      [lastX, lastY] = [e.clientX, e.clientY];
+    });
+
+    document.addEventListener('mouseup', () => {
+      drawing = false;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      const glitchCursor = document.getElementById('glitchCursor');
+      glitchCursor.style.left = `${e.clientX - 10}px`;
+      glitchCursor.style.top = `${e.clientY - 10}px`;
+
+      if (!drawing) return;
+      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.clientX, e.clientY);
+      ctx.stroke();
+      [lastX, lastY] = [e.clientX, e.clientY];
+      hue = (hue + 5) % 360;
+    });
+  </script>
+</body>
+</html>
