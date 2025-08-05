@@ -180,23 +180,36 @@
   </style>
 </head>
 <body>
+  <div class="content">
+    <div class="mytitle">
+      <center>
+        <h1><a href="https://theinternetisdead.org/">theinternetisdead.org</a></h1><br>
+        <iframe src="https://free.timeanddate.com/clock/ia0cxdnr/n250/fn7/fs20/fc0f0/tct/pct/ftbu/tt0/th2/ta1" frameborder="0" width="546" height="30" allowtransparency="true"></iframe>
+      </center>
+    </div>
+    <div class="tombstone">
+      <h1>R.I.P.<br>The Internet<br><span>1996&ndash;2025</span></h1>
+    </div>
+  </div>
   <div class="taskbar">
     <div class="start-button" onclick="toggleMenu()">Start</div>
     <div class="taskbar-center">Press F To Pay Respect</div>
     <div class="system-tray">
       <div class="tray-icon" onclick="toggleMute()" data-tooltip="Toggle Mute">🎵</div>
       <div class="tray-icon" data-tooltip="Disconnected">📐</div>
-      <div class="tray-icon" data-tooltip="It's a surprise">🚀</div>
+      <div class="tray-icon" onclick="alert('You found the surprise!')" data-tooltip="It's a surprise">🚀</div>
     </div>
   </div>
   <script>
     function toggleMenu() {
-      // menu logic here
+      alert('Menu toggled!');
     }
 
     function toggleMute() {
-      const audioElements = document.querySelectorAll('audio');
-      audioElements.forEach(audio => audio.muted = !audio.muted);
+      const audios = document.querySelectorAll('audio');
+      audios.forEach(audio => {
+        audio.muted = !audio.muted;
+      });
     }
   </script>
 </body>
