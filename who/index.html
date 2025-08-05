@@ -72,24 +72,25 @@
       position: fixed;
       bottom: 0;
       width: 100%;
-      background: linear-gradient(90deg, #ff00ff, #00ffff);
-      color: #000;
+      background: url('https://media.giphy.com/media/IcifSxYbb7b2g/giphy.gif') repeat-x;
+      background-size: cover;
+      color: #fff;
       font-family: "Courier New", monospace;
       padding: 0.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       z-index: 20;
-      animation: bar-glitch 2s infinite;
+      box-shadow: 0 0 20px #ff4500;
     }
 
-    .start-button {
+    .start-button, .gtfo-button {
       background: #000;
-      color: #00ff99;
-      border: 1px solid #00ff99;
+      color: #fff;
+      border: 1px solid #fff;
       padding: 0.3rem 1rem;
       cursor: pointer;
-      animation: flicker 1.5s infinite;
+      font-weight: bold;
     }
 
     .start-menu {
@@ -113,27 +114,11 @@
       color: #ff00ff;
     }
 
-    .gtfo-button {
-      background: #ff0000;
-      color: white;
-      padding: 0.3rem 1rem;
-      border: 1px solid #fff;
-      font-weight: bold;
-      cursor: pointer;
-      text-decoration: none;
+    @keyframes flicker-flame {
+      0% { opacity: 1; transform: scale(1) translateY(0); }
+      100% { opacity: 0; transform: scale(2) translateY(-20px); }
     }
 
-    @keyframes bar-glitch {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-
-    @keyframes flicker {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    /* FIRE CURSOR STYLES */
     .flame {
       position: fixed;
       width: 8px;
@@ -143,17 +128,6 @@
       pointer-events: none;
       z-index: 9999;
       animation: flicker-flame 0.3s ease-out forwards;
-    }
-
-    @keyframes flicker-flame {
-      0% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-      }
-      100% {
-        opacity: 0;
-        transform: scale(2) translateY(-20px);
-      }
     }
   </style>
 </head>
@@ -201,7 +175,6 @@
       document.body.appendChild(blackout);
     }
 
-    // FIRE CURSOR TRAIL
     const fireParticles = [];
     document.addEventListener('mousemove', (e) => {
       const flame = document.createElement('div');
@@ -217,7 +190,6 @@
       }, 300);
     });
 
-    // Cap flame count to avoid browser hell
     setInterval(() => {
       while (fireParticles.length > 100) {
         fireParticles[0].remove();
@@ -225,7 +197,6 @@
       }
     }, 100);
 
-    // LINK CLICK = EXPLOSION
     document.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', (e) => {
         const audio = document.getElementById('achievementSound');
@@ -234,7 +205,6 @@
           audio.play();
         }
 
-        // EXPLODE
         for (let i = 0; i < 30; i++) {
           const flame = document.createElement('div');
           flame.classList.add('flame');
@@ -256,18 +226,15 @@
       });
     });
 
-    // DO A BARREL ROLL on Q press
-document.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() === 'q') {
-    document.body.style.transition = 'transform 1s ease-in-out';
-    document.body.style.transform = 'rotate(360deg)';
-    setTimeout(() => {
-      document.body.style.transform = 'none';
-    }, 1000);
-  }
-});
-
-    
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'q') {
+        document.body.style.transition = 'transform 1s ease-in-out';
+        document.body.style.transform = 'rotate(360deg)';
+        setTimeout(() => {
+          document.body.style.transform = 'none';
+        }, 1000);
+      }
+    });
   </script>
 </body>
 </html>
