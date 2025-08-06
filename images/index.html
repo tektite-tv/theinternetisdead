@@ -48,6 +48,10 @@
       z-index: 200;
     }
 
+    .start-container {
+      position: relative;
+    }
+
     .start-button {
       background: #000;
       color: #00ff99;
@@ -60,54 +64,62 @@
       display: none;
       position: absolute;
       bottom: 2.5rem;
+      left: 0;
       background: #111;
       border: 1px solid #ff00ff;
       padding: 0.5rem;
+      z-index: 201;
     }
 
     .start-menu a {
       color: #00ffff;
       text-decoration: none;
       display: block;
-      margin: 0.2rem 0;
+      margin: 0.3rem 0;
       font-weight: bold;
     }
 
     .start-menu a:hover {
       color: #ff00ff;
     }
+
+    .taskbar-center {
+      font-weight: bold;
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    .system-tray {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
   <h1>🔥 Welcome to the Image Gallery 🔥</h1>
   <div class="gallery">
-    <a href="face.png" target="_blank">
-      <img src="face.png" alt="face.png" />
-    </a>
-    <a href="favicon.png" target="_blank">
-      <img src="favicon.png" alt="favicon.png" />
-    </a>
-    <a href="fire.gif" target="_blank">
-      <img src="fire.gif" alt="fire.gif" />
-    </a>
-    <a href="gameicon.png" target="_blank">
-      <img src="gameicon.png" alt="gameicon.png" />
-    </a>
+    <a href="face.png" target="_blank"><img src="face.png" alt="face.png" /></a>
+    <a href="favicon.png" target="_blank"><img src="favicon.png" alt="favicon.png" /></a>
+    <a href="fire.gif" target="_blank"><img src="fire.gif" alt="fire.gif" /></a>
+    <a href="gameicon.png" target="_blank"><img src="gameicon.png" alt="gameicon.png" /></a>
   </div>
 
   <audio id="bgMusic" src="/sounds/smw.mp3" autoplay loop></audio>
 
   <div class="taskbar">
-    <div class="start-button" onclick="toggleMenu()">Start</div>
-    <div class="start-menu" id="startMenu">
-      <a href="index.html">Home</a>
-      <a href="/images/index.html">Images</a>
-      <a href="who/">Who?</a>
-      <a href="/press-F/index.html">Press F</a>
-      <a href="#" onclick="shutdown()">Shutdown</a>
+    <div class="start-container">
+      <div class="start-button" onclick="toggleMenu()">Start</div>
+      <div class="start-menu" id="startMenu">
+        <a href="index.html">Home</a>
+        <a href="/images/index.html">Images</a>
+        <a href="who/">Who?</a>
+        <a href="/press-F/index.html">Press F</a>
+        <a href="#" onclick="shutdown()">Shutdown</a>
+      </div>
     </div>
-    <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
-    <div class="system-tray" style="display: flex; gap: 1rem; align-items: center;">
+    <div class="taskbar-center">Press F To Pay Respect</div>
+    <div class="system-tray">
       <span id="muteBtn" style="cursor:pointer;">🎵</span>
       <span id="spiralIcon" style="cursor:pointer;">🔀</span>
       <span id="attentionBtn" style="cursor:pointer;">⚠️</span>
