@@ -10,21 +10,25 @@
       color: white;
       font-family: monospace;
       margin: 0;
-      padding: 0; /* FIXED: no more global padding destruction */
+      padding: 0;
     }
+
     h1 {
       text-align: center;
       margin: 30px 0;
     }
+
     .gallery-wrapper {
-      padding: 20px; /* Padding just for the content */
+      padding: 20px;
     }
+
     .gallery {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 20px;
     }
+
     .gallery img {
       max-width: 150px;
       height: auto;
@@ -32,6 +36,7 @@
       transition: transform 0.2s ease-in-out, border-color 0.2s;
       cursor: pointer;
     }
+
     .gallery img:hover {
       transform: scale(1.1);
       border-color: magenta;
@@ -47,7 +52,6 @@
       font-family: "Courier New", monospace;
       padding: 0.5rem;
       display: flex;
-      justify-content: space-between;
       align-items: center;
       z-index: 200;
     }
@@ -88,15 +92,16 @@
     }
 
     .taskbar-center {
-      font-weight: bold;
+      flex: 1;
       text-align: center;
-      flex-grow: 1;
+      font-weight: bold;
     }
 
     .system-tray {
       display: flex;
       gap: 1rem;
       align-items: center;
+      min-width: fit-content;
     }
   </style>
 </head>
@@ -124,7 +129,9 @@
         <a href="#" onclick="shutdown()">Shutdown</a>
       </div>
     </div>
+
     <div class="taskbar-center">Press F To Pay Respect</div>
+
     <div class="system-tray">
       <span id="muteBtn" style="cursor:pointer;">🎵</span>
       <span id="spiralIcon" style="cursor:pointer;">🔀</span>
