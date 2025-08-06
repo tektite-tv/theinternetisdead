@@ -209,6 +209,7 @@
 
   <div id="explosion-container"></div>
   <div id="respect-text">RESPECT</div>
+  <div id="screenshot-indicator">📸 Screenshot Taken</div>
   <div id="counter">Press F Count: 0</div>
 
   <div class="taskbar">
@@ -387,6 +388,31 @@ document.addEventListener('mouseup', (e) => {
   }
 });
 
+document.addEventListener('keydown', async (e) => {
+  if (e.ctrlKey && e.key === 'c') {
+    e.preventDefault(); // Prevent copy
+    const indicator = document.getElementById('screenshot-indicator');
+    indicator.style.display = 'block';
+
+    // Screenshot logic
+    html2canvas(document.body).then(canvas => {
+      canvas.toBlob(blob => {
+        const link = document.createElement('a');
+        link.download = `screenshot_${Date.now()}.png`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+
+      // Hide indicator after a moment
+      setTimeout(() => {
+        indicator.style.display = 'none';
+      }, 1500);
+    });
+  }
+});
+
+    
   </script>
 </body>
 </html>
