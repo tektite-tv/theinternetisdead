@@ -1,1 +1,55 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Gallery</title>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: monospace;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
+    .gallery img {
+      max-width: 150px;
+      height: auto;
+      border: 2px solid white;
+      transition: transform 0.2s ease-in-out, border-color 0.2s;
+      cursor: pointer;
+    }
+    .gallery img:hover {
+      transform: scale(1.1);
+      border-color: magenta;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔥 Welcome to the Image Gallery 🔥</h1>
+  <div class="gallery">
+    <a href="face.png" target="_blank">
+      <img src="face.png" alt="face.png" />
+    </a>
+    <a href="favicon.png" target="_blank">
+      <img src="favicon.png" alt="favicon.png" />
+    </a>
+    <a href="fire.gif" target="_blank">
+      <img src="fire.gif" alt="fire.gif" />
+    </a>
+    <a href="gameicon.png" target="_blank">
+      <img src="gameicon.png" alt="gameicon.png" />
+    </a>
+  </div>
+</body>
+</html>
