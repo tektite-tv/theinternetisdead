@@ -237,6 +237,15 @@
       const bgMusic = document.getElementById('bgMusic');
       bgMusic.muted = !bgMusic.muted;
     });
+
+    // Attention button triggers Q barrel roll
+    document.getElementById('attentionBtn').addEventListener('click', () => {
+      document.body.style.transition = "transform 1s ease-in-out";
+      document.body.style.transform = "rotate(360deg)";
+      setTimeout(() => {
+        document.body.style.transform = "none";
+      }, 1000);
+    });
   </script>
 </body>
 </html>
