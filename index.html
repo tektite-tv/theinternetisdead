@@ -34,14 +34,33 @@
       animation: scanlines 1s linear infinite;
     }
 
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        repeating-linear-gradient(45deg, rgba(0,255,255,0.1) 0px, rgba(0,255,255,0.1) 2px, transparent 2px, transparent 4px),
+        repeating-linear-gradient(-45deg, rgba(255,0,255,0.1) 0px, rgba(255,0,255,0.1) 2px, transparent 2px, transparent 4px);
+      z-index: 99;
+      pointer-events: none;
+      animation: glitchTex 2s infinite alternate;
+      opacity: 0.4;
+    }
+
     @keyframes scanlines {
       0% {background-position: 0 0;}
       100% {background-position: 0 2px;}
     }
 
-    .sprinkle {
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}   
+    @keyframes glitchTex {
+      0% { transform: translate(0,0); }
+      50% { transform: translate(2px, -2px); }
+      100% { transform: translate(-2px, 2px); }
+    }
+
     .content {
       position: relative;
       z-index: 10;
@@ -77,20 +96,19 @@
     }
 
     .taskbar {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: linear-gradient(180deg, black, white, black);
-  color: #000;
-  font-family: "Courier New", monospace;
-  padding: 0.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 20;
-  animation: bar-glitch 2s infinite;
-}
-
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: linear-gradient(180deg, black, white, black);
+      color: #000;
+      font-family: "Courier New", monospace;
+      padding: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      animation: bar-glitch 2s infinite;
+    }
 
     .start-button {
       background: #000;
@@ -148,54 +166,38 @@
   </style>
 </head>
 <body>
-  <audio src="/smw.mp3" autoplay loop hidden></audio>
-  <audio id="achievementSound" src="/AchievementUnlocked.mp3" preload="auto"></audio>
-
   <div class="content">
     <div class="mytitle">
       <center>
-      <h1><a href="https://theinternetisdead.org/">theinternetisdead.org</a></h1><br>
-      <iframe src="https://free.timeanddate.com/clock/ia0cxdnr/n250/fn7/fs20/fc0f0/tct/pct/ftbu/tt0/th2/ta1" frameborder="0" width="546" height="30" allowtransparency="true"></iframe></center>
+        <h1><a href="https://theinternetisdead.org/">theinternetisdead.org</a></h1><br>
+        <iframe src="https://free.timeanddate.com/clock/ia0cxdnr/n250/fn7/fs20/fc0f0/tct/pct/ftbu/tt0/th2/ta1" frameborder="0" width="546" height="30" allowtransparency="true"></iframe>
+      </center>
     </div>
     <div class="tombstone">
-      <h1>R.I.P.<br>The Internet<br><span>1996&ndash;2025</span>
-</h1>
+      <h1>R.I.P.<br>The Internet<br><span>1996&ndash;2025</span></h1>
     </div>
   </div>
-  <div class="taskbar">
-  <div class="start-button" onclick="toggleMenu()">Start</div>
-  <div class="start-menu" id="startMenu">
-    <a href="index.html">Home</a>
-    <a href="who/">Who?</a>
-    <a href="/press-F/index.html">Press F</a>
-    <a href="#" onclick="shutdown()">Shutdown</a>
-  </div>
-  <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
-  <div class="system-tray" style="display: flex; gap: 1rem; align-items: center; position: relative;">
-  <span id="muteBtn" style="cursor:pointer;" title="Mute/Unmute">🎵</span>
-  <span id="spiralIcon" style="cursor:pointer;">🌀</span>
-  <span id="attentionBtn" style="cursor:pointer;" title="Barrel Roll!">⚠️</span>
-  <div id="disconnectPopup" style="position: absolute; bottom: 2rem; right: 0; background: rgba(0,0,0,0.8); color: #ff00ff; padding: 0.3rem 0.6rem; border: 1px solid #00ffff; border-radius: 5px; display: none; font-weight: bold; text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff;">
-    Disconnected
-  </div>
-</div>
 
-  
-  <a id="ghost-link" href="https://theinternetisdead.org/who" style="position:fixed; z-index:9999; display:block; pointer-events:auto;">
-    <img id="ghost-face" src="face.png" alt="Ghost Face" style="width:150px; opacity:0;">
-  </a>
+  <div class="taskbar">
+    <div class="start-button" onclick="toggleMenu()">Start</div>
+    <div class="start-menu" id="startMenu">
+      <a href="index.html">Home</a>
+      <a href="who/">Who?</a>
+      <a href="/press-F/index.html">Press F</a>
+      <a href="#" onclick="shutdown()">Shutdown</a>
+    </div>
+    <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
+    <div class="system-tray" style="display: flex; gap: 1rem; align-items: center; position: relative;">
+      <span id="muteBtn" style="cursor:pointer;" title="Mute/Unmute">🎵</span>
+      <span id="spiralIcon" style="cursor:pointer;">🌀</span>
+      <span id="attentionBtn" style="cursor:pointer;" title="Barrel Roll!">⚠️</span>
+      <div id="disconnectPopup" style="position: absolute; bottom: 2rem; right: 0; background: rgba(0,0,0,0.8); color: #ff00ff; padding: 0.3rem 0.6rem; border: 1px solid #00ffff; border-radius: 5px; display: none; font-weight: bold; text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff;">
+        Disconnected
+      </div>
+    </div>
+  </div>
 
   <script>
-    // Midnight ritual redirect
-    (function(){
-      const now = new Date();
-      const hour = now.getHours();
-      const minute = now.getMinutes();
-      if (hour === 0 && minute < 10) {
-        window.location.href = "/ritual/index.html";
-      }
-    })();
-
     function toggleMenu() {
       const menu = document.getElementById('startMenu');
       menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
@@ -213,147 +215,35 @@
       document.body.appendChild(blackout);
     }
 
-    document.body.addEventListener("mousemove", (e) => {
-      const x = (e.clientX / window.innerWidth) * 255;
-      const y = (e.clientY / window.innerHeight) * 255;
-      document.body.style.backgroundColor = `rgb(${x}, ${255 - x}, ${y})`;
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "f") {
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'f') {
         window.location.href = "page01.html";
       }
-    });
-
-    const ghostLink = document.getElementById("ghost-link");
-    const ghostFace = document.getElementById("ghost-face");
-    let ghostWidth = 150;
-    let ghostHeight = 150;
-    let x = Math.random() * (window.innerWidth - ghostWidth);
-    let y = Math.random() * (window.innerHeight - ghostHeight);
-    let dx = (Math.random() * 2 - 1) * 2;
-    let dy = (Math.random() * 2 - 1) * 2;
-    let opacity = 0;
-    let fadingIn = true;
-
-    function haunt() {
-      x += dx;
-      y += dy;
-
-      if (x <= 0 || x + ghostWidth >= window.innerWidth) dx *= -1;
-      if (y <= 0 || y + ghostHeight >= window.innerHeight) dy *= -1;
-
-      ghostLink.style.left = `${x}px`;
-      ghostLink.style.top = `${y}px`;
-
-      if (fadingIn) {
-        opacity += 0.01;
-        if (opacity >= 1) fadingIn = false;
-      } else {
-        opacity -= 0.01;
-        if (opacity <= 0) fadingIn = true;
+      if (e.key.toLowerCase() === 'q') {
+        document.body.style.transition = 'transform 1s ease-in-out';
+        document.body.style.transform = 'rotate(360deg)';
+        setTimeout(() => {
+          document.body.style.transform = 'none';
+        }, 1000);
       }
-      ghostFace.style.opacity = opacity;
-
-      requestAnimationFrame(haunt);
-    }
-
-    haunt();
-
-    // Play Achievement sound on link click
-    document.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        const audio = document.getElementById('achievementSound');
-        if (audio) {
-          audio.currentTime = 0;
-          audio.play();
-        }
-      });
     });
-    // Sprinkle trail v2 - now with link-hover madness
-document.addEventListener("mousemove", (e) => {
-  const sprinkle = document.createElement("div");
-  sprinkle.style.position = "fixed";
-  sprinkle.style.left = e.clientX + "px";
-  sprinkle.style.top = e.clientY + "px";
-  sprinkle.style.width = "8px";
-  sprinkle.style.height = "8px";
-  sprinkle.style.borderRadius = "50%";
-  sprinkle.style.zIndex = "9999";
-  sprinkle.style.pointerEvents = "none";
-  sprinkle.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 70%)`;
-  sprinkle.style.opacity = 1;
-  sprinkle.style.boxShadow = `0 0 5px white`;
-  sprinkle.classList.add("sprinkle");
 
-  // Check if cursor is over a link
-  const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
-  if (elementUnderCursor && elementUnderCursor.tagName.toLowerCase() === 'a') {
-    sprinkle.style.width = "16px";
-    sprinkle.style.height = "16px";
-    sprinkle.style.boxShadow = `0 0 10px white, 0 0 20px ${sprinkle.style.backgroundColor}`;
-  }
+    const muteBtn = document.getElementById('muteBtn');
+    muteBtn.addEventListener('click', () => {
+      // Placeholder for audio toggle logic
+      muteBtn.textContent = muteBtn.textContent === '🎵' ? '🔇' : '🎵';
+    });
 
-  document.body.appendChild(sprinkle);
+    const spiralIcon = document.getElementById('spiralIcon');
+    const disconnectPopup = document.getElementById('disconnectPopup');
 
-  // Dissolve effect
-  let fade = 1;
-  const fadeOut = setInterval(() => {
-    fade -= 0.05;
-    if (fade <= 0) {
-      clearInterval(fadeOut);
-      sprinkle.remove();
-    } else {
-      sprinkle.style.opacity = fade;
-      sprinkle.style.transform = `scale(${1 + (1 - fade)})`;
-    }
-  }, 16);
-});
+    spiralIcon.addEventListener('mouseenter', () => {
+      disconnectPopup.style.display = 'block';
+    });
 
-  // DO A BARREL ROLL on Q press
-document.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() === 'q') {
-    document.body.style.transition = 'transform 1s ease-in-out';
-    document.body.style.transform = 'rotate(360deg)';
-    setTimeout(() => {
-      document.body.style.transform = 'none';
-    }, 1000);
-  }
-});
-
-// Mute/Unmute logic
-const audioEl = document.querySelector('audio');
-const muteBtn = document.getElementById('muteBtn');
-muteBtn.addEventListener('click', () => {
-  audioEl.muted = !audioEl.muted;
-  muteBtn.textContent = audioEl.muted ? '🔇' : '🎵';
-});
-
-// Attention triangle triggers Q barrel roll
-const attentionBtn = document.getElementById('attentionBtn');
-attentionBtn.addEventListener('click', () => {
-  const event = new KeyboardEvent('keydown', { key: 'q' });
-  document.dispatchEvent(event);
-});
-
-// Spiral hover popup
-const spiralIcon = document.getElementById('spiralIcon');
-const disconnectPopup = document.getElementById('disconnectPopup');
-
-spiralIcon.addEventListener('mouseenter', () => {
-  disconnectPopup.style.display = 'block';
-});
-
-spiralIcon.addEventListener('mouseleave', () => {
-  disconnectPopup.style.display = 'none';
-});
-
-spiralIcon.addEventListener('mousemove', (e) => {
-  disconnectPopup.style.left = e.offsetX + 20 + 'px';
-  disconnectPopup.style.bottom = '2rem';
-});
-
-    
+    spiralIcon.addEventListener('mouseleave', () => {
+      disconnectPopup.style.display = 'none';
+    });
   </script>
 </body>
 </html>
