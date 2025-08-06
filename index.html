@@ -170,6 +170,9 @@
     </div>
   </div>
 
+  <img id="dvdLogo" src="/images/face.png" 
+       style="position: absolute; top: 50%; left: 50%; width: 100px; height: 100px; z-index: 150;" />
+
   <div class="taskbar">
     <div class="start-button" onclick="toggleMenu()">Start</div>
     <div class="start-menu" id="startMenu">
@@ -223,7 +226,6 @@
       }
     });
 
-    // Play sound on all link clicks
     const clickSound = new Audio('/sounds/AchievementUnlocked.mp3');
     document.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
@@ -232,13 +234,11 @@
       });
     });
 
-    // Mute toggle button
     document.getElementById('muteBtn').addEventListener('click', () => {
       const bgMusic = document.getElementById('bgMusic');
       bgMusic.muted = !bgMusic.muted;
     });
 
-    // Attention button triggers Q barrel roll
     document.getElementById('attentionBtn').addEventListener('click', () => {
       document.body.style.transition = "transform 1s ease-in-out";
       document.body.style.transform = "rotate(360deg)";
@@ -246,6 +246,31 @@
         document.body.style.transform = "none";
       }, 1000);
     });
+
+    const dvdLogo = document.getElementById('dvdLogo');
+    let posX = 100;
+    let posY = 100;
+    let velocityX = 2;
+    let velocityY = 2;
+    const dvdWidth = 100;
+    const dvdHeight = 100;
+
+    function animateDVD() {
+      const maxX = window.innerWidth - dvdWidth;
+      const maxY = window.innerHeight - dvdHeight;
+
+      posX += velocityX;
+      posY += velocityY;
+
+      if (posX <= 0 || posX >= maxX) velocityX *= -1;
+      if (posY <= 0 || posY >= maxY) velocityY *= -1;
+
+      dvdLogo.style.left = posX + 'px';
+      dvdLogo.style.top = posY + 'px';
+
+      requestAnimationFrame(animateDVD);
+    }
+    animateDVD();
   </script>
 </body>
 </html>
