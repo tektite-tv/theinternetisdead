@@ -162,6 +162,7 @@
   </style>
 </head>
 <body>
+  <audio id="bgMusic" src="/sounds/smw.mp3" autoplay loop></audio>
   <div class="content">
     <h1><a href="https://theinternetisdead.org/">theinternetisdead.org</a></h1>
     <div class="tombstone">
@@ -180,7 +181,7 @@
     <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
     <div class="system-tray" style="display: flex; gap: 1rem; align-items: center;">
       <span id="muteBtn" style="cursor:pointer;">🎵</span>
-      <span id="spiralIcon" style="cursor:pointer;">🌀</span>
+      <span id="spiralIcon" style="cursor:pointer;">🔀</span>
       <span id="attentionBtn" style="cursor:pointer;">⚠️</span>
     </div>
   </div>
@@ -220,6 +221,21 @@
           document.body.style.transform = "none";
         }, 1000);
       }
+    });
+
+    // Play sound on all link clicks
+    const clickSound = new Audio('/sounds/AchievementUnlocked.mp3');
+    document.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        clickSound.currentTime = 0;
+        clickSound.play();
+      });
+    });
+
+    // Mute toggle button
+    document.getElementById('muteBtn').addEventListener('click', () => {
+      const bgMusic = document.getElementById('bgMusic');
+      bgMusic.muted = !bgMusic.muted;
     });
   </script>
 </body>
