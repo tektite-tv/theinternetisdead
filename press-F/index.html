@@ -390,12 +390,25 @@ document.addEventListener('mouseup', (e) => {
 
 document.addEventListener('keydown', async (e) => {
   if (e.ctrlKey && e.key === 'c') {
-    e.preventDefault(); // Prevent copy
+    e.preventDefault(); // Block copy
     const indicator = document.getElementById('screenshot-indicator');
+    const shutterSound = document.getElementById('shutterSound');
     indicator.style.display = 'block';
 
-    // Screenshot logic
+    // Play shutter sound
+    if (shutterSound) {
+      shutterSound.currentTime = 0;
+      shutterSound.play();
+    }
+
+    // Temporarily remove invert class
+    const wasInverted = document.body.classList.contains('inverted');
+    if (wasInverted) document.body.classList.remove('inverted');
+
     html2canvas(document.body).then(canvas => {
+      // Restore invert class
+      if (wasInverted) document.body.classList.add('inverted');
+
       canvas.toBlob(blob => {
         const link = document.createElement('a');
         link.download = `screenshot_${Date.now()}.png`;
@@ -404,7 +417,6 @@ document.addEventListener('keydown', async (e) => {
         URL.revokeObjectURL(link.href);
       });
 
-      // Hide indicator after a moment
       setTimeout(() => {
         indicator.style.display = 'none';
       }, 1500);
