@@ -10,7 +10,6 @@
       padding: 0;
       height: 100%;
       box-sizing: border-box;
-      background-color: #000;
       overflow: hidden;
       font-family: "Courier New", monospace;
       color: #00ff99;
@@ -19,6 +18,10 @@
 
     *, *::before, *::after {
       box-sizing: inherit;
+    }
+
+    body {
+      background-color: #000;
     }
 
     body::before {
@@ -167,14 +170,9 @@
 </head>
 <body>
   <div class="content">
-    <div class="mytitle">
-      <center>
-        <h1><a href="https://theinternetisdead.org/">theinternetisdead.org</a></h1><br>
-        <iframe src="https://free.timeanddate.com/clock/ia0cxdnr/n250/fn7/fs20/fc0f0/tct/pct/ftbu/tt0/th2/ta1" frameborder="0" width="546" height="30" allowtransparency="true"></iframe>
-      </center>
-    </div>
+    <h1><a href="https://theinternetisdead.org/">theinternetisdead.org</a></h1>
     <div class="tombstone">
-      <h1>R.I.P.<br>The Internet<br><span>1996&ndash;2025</span></h1>
+      <h1>R.I.P.<br>The Internet<br><span>1996–2025</span></h1>
     </div>
   </div>
 
@@ -187,20 +185,17 @@
       <a href="#" onclick="shutdown()">Shutdown</a>
     </div>
     <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
-    <div class="system-tray" style="display: flex; gap: 1rem; align-items: center; position: relative;">
-      <span id="muteBtn" style="cursor:pointer;" title="Mute/Unmute">🎵</span>
+    <div class="system-tray" style="display: flex; gap: 1rem; align-items: center;">
+      <span id="muteBtn" style="cursor:pointer;">🎵</span>
       <span id="spiralIcon" style="cursor:pointer;">🌀</span>
-      <span id="attentionBtn" style="cursor:pointer;" title="Barrel Roll!">⚠️</span>
-      <div id="disconnectPopup" style="position: absolute; bottom: 2rem; right: 0; background: rgba(0,0,0,0.8); color: #ff00ff; padding: 0.3rem 0.6rem; border: 1px solid #00ffff; border-radius: 5px; display: none; font-weight: bold; text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff;">
-        Disconnected
-      </div>
+      <span id="attentionBtn" style="cursor:pointer;">⚠️</span>
     </div>
   </div>
 
   <script>
     function toggleMenu() {
       const menu = document.getElementById('startMenu');
-      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
     }
 
     function shutdown() {
@@ -215,34 +210,23 @@
       document.body.appendChild(blackout);
     }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 'f') {
+    document.addEventListener("mousemove", (e) => {
+      const x = Math.round((e.clientX / window.innerWidth) * 255);
+      const y = Math.round((e.clientY / window.innerHeight) * 255);
+      document.body.style.backgroundColor = `rgb(${x}, ${255 - x}, ${y})`;
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "f") {
         window.location.href = "page01.html";
       }
-      if (e.key.toLowerCase() === 'q') {
-        document.body.style.transition = 'transform 1s ease-in-out';
-        document.body.style.transform = 'rotate(360deg)';
+      if (e.key.toLowerCase() === "q") {
+        document.body.style.transition = "transform 1s ease-in-out";
+        document.body.style.transform = "rotate(360deg)";
         setTimeout(() => {
-          document.body.style.transform = 'none';
+          document.body.style.transform = "none";
         }, 1000);
       }
-    });
-
-    const muteBtn = document.getElementById('muteBtn');
-    muteBtn.addEventListener('click', () => {
-      // Placeholder for audio toggle logic
-      muteBtn.textContent = muteBtn.textContent === '🎵' ? '🔇' : '🎵';
-    });
-
-    const spiralIcon = document.getElementById('spiralIcon');
-    const disconnectPopup = document.getElementById('disconnectPopup');
-
-    spiralIcon.addEventListener('mouseenter', () => {
-      disconnectPopup.style.display = 'block';
-    });
-
-    spiralIcon.addEventListener('mouseleave', () => {
-      disconnectPopup.style.display = 'none';
     });
   </script>
 </body>
