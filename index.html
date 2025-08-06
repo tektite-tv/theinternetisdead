@@ -102,6 +102,49 @@
       margin-top: 1rem;
     }
 
+    .taskbar {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: linear-gradient(180deg, black, white, black);
+      color: #000;
+      font-family: "Courier New", monospace;
+      padding: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 200;
+    }
+
+    .start-button {
+      background: #000;
+      color: #00ff99;
+      border: 1px solid #00ff99;
+      padding: 0.3rem 1rem;
+      cursor: pointer;
+    }
+
+    .start-menu {
+      display: none;
+      position: absolute;
+      bottom: 2.5rem;
+      background: #111;
+      border: 1px solid #ff00ff;
+      padding: 0.5rem;
+    }
+
+    .start-menu a {
+      color: #00ffff;
+      text-decoration: none;
+      display: block;
+      margin: 0.2rem 0;
+      font-weight: bold;
+    }
+
+    .start-menu a:hover {
+      color: #ff00ff;
+    }
+
     @keyframes glitch-flicker {
       0% { transform: translate(0, 0); }
       20% { transform: translate(-2px, 2px); }
@@ -125,11 +168,57 @@
     </div>
   </div>
 
+  <div class="taskbar">
+    <div class="start-button" onclick="toggleMenu()">Start</div>
+    <div class="start-menu" id="startMenu">
+      <a href="index.html">Home</a>
+      <a href="who/">Who?</a>
+      <a href="/press-F/index.html">Press F</a>
+      <a href="#" onclick="shutdown()">Shutdown</a>
+    </div>
+    <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
+    <div class="system-tray" style="display: flex; gap: 1rem; align-items: center;">
+      <span id="muteBtn" style="cursor:pointer;">🎵</span>
+      <span id="spiralIcon" style="cursor:pointer;">🌀</span>
+      <span id="attentionBtn" style="cursor:pointer;">⚠️</span>
+    </div>
+  </div>
+
   <script>
+    function toggleMenu() {
+      const menu = document.getElementById('startMenu');
+      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function shutdown() {
+      const blackout = document.createElement('div');
+      blackout.style.position = 'fixed';
+      blackout.style.top = '0';
+      blackout.style.left = '0';
+      blackout.style.width = '100vw';
+      blackout.style.height = '100vh';
+      blackout.style.backgroundColor = '#000';
+      blackout.style.zIndex = '99999';
+      document.body.appendChild(blackout);
+    }
+
     document.addEventListener("mousemove", (e) => {
       const x = Math.round((e.clientX / window.innerWidth) * 255);
       const y = Math.round((e.clientY / window.innerHeight) * 255);
       document.body.style.backgroundColor = `rgb(${x}, ${255 - x}, ${y})`;
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "f") {
+        window.location.href = "page01.html";
+      }
+      if (e.key.toLowerCase() === "q") {
+        document.body.style.transition = "transform 1s ease-in-out";
+        document.body.style.transform = "rotate(360deg)";
+        setTimeout(() => {
+          document.body.style.transform = "none";
+        }, 1000);
+      }
     });
   </script>
 </body>
