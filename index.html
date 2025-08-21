@@ -72,6 +72,9 @@
 
     a { color: inherit; }
 
+    /* Editable link list: hidden from UI, only for you to edit. */
+    #linksData { display: none; }
+
     @media (max-width: 600px) {
       .icon-grid { grid-template-columns: repeat(auto-fill, 72px); grid-auto-rows: 86px; }
       .taskbar { height: 48px; }
@@ -80,6 +83,18 @@
   </style>
 </head>
 <body>
+  <!--
+    Edit your links here. One <li><a href="URL">Title</a></li> per link.
+    Both the Start menu and desktop icons are generated from this list.
+    Example shows only "Home". Add as many as you want.
+  -->
+  <ul id="linksData">
+    <li><a href="/">Home</a></li>
+    <!-- <li><a href="/images/">Images</a></li> -->
+    <!-- <li><a href="https://web.archive.org/web/20170322054157/http://tektite.tv/">Wayback: tektite.tv (2017)</a></li> -->
+    <!-- <li><a href="https://oldschool.runescape.wiki/">OSRS Wiki</a></li> -->
+  </ul>
+
   <div class="desktop" id="desktop">
     <div class="icon-grid" id="iconGrid" aria-label="Desktop icons"></div>
   </div>
@@ -101,11 +116,6 @@
   </nav>
 
   <script>
-    // --- Configure your links here. These populate BOTH the Start menu and the desktop icons. ---
-    const LINKS = [
-      { title: "Home", url: "/" }
-    ];
-
     const menuList = document.getElementById("menuList");
     const iconGrid = document.getElementById("iconGrid");
 
@@ -124,7 +134,13 @@
       return 'data:image/svg+xml;base64,' + btoa(svg);
     }
 
-    // Build Start menu + desktop icons from the same data
+    // Parse the editable link list
+    const LINKS = Array.from(document.querySelectorAll('#linksData a')).map(a => ({
+      title: a.textContent.trim() || a.getAttribute('href'),
+      url: a.getAttribute('href')
+    }));
+
+    // Build Start menu + desktop icons from the editable list
     LINKS.forEach(link => {
       // Start menu item
       const li = document.createElement('li');
