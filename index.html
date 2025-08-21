@@ -1,281 +1,190 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Internet is Dead</title>
-  <link rel="icon" type="image/png" href="/images/favicon.png" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vapor95 Desktop</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      box-sizing: border-box;
-      overflow: hidden;
-      font-family: "Courier New", monospace;
-      color: #00ff99;
-      text-shadow: 0 0 5px #00ff99, 0 0 10px #ff00ff;
+    :root {
+      --bg: #ffccff;       /* desktop background */
+      --ui: #66ff99;       /* taskbar + start menu */
+      --ui-dark: #52cc7a;  /* bevel/shadow */
+      --text: #0a0a0a;
     }
-
-    *, *::before, *::after {
-      box-sizing: inherit;
-    }
-
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
-      background-color: #000;
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
+      margin: 0;
       height: 100%;
-      background: repeating-linear-gradient(0deg, rgba(255,0,255,0.03) 0px, rgba(0,255,255,0.03) 1px, transparent 2px);
-      pointer-events: none;
-      z-index: 100;
-      animation: scanlines 1s linear infinite;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "MS Sans Serif", Tahoma, Geneva, Verdana, system-ui, sans-serif;
+      overflow: hidden;
     }
 
-    body::after {
-      content: "";
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background:
-        repeating-linear-gradient(90deg, rgba(0,255,255,0.2) 0px, rgba(0,255,255,0.2) 4px, transparent 4px, transparent 8px),
-        repeating-linear-gradient(0deg, rgba(255,0,255,0.2) 0px, rgba(255,0,255,0.2) 4px, transparent 4px, transparent 8px),
-        repeating-linear-gradient(135deg, rgba(255,255,0,0.1) 0px, rgba(255,255,0,0.1) 2px, transparent 2px, transparent 6px);
-      z-index: 99;
-      pointer-events: none;
-      animation: glitchTex 0.5s infinite steps(1, end);
-      opacity: 0.6;
-      mix-blend-mode: lighten;
+    /* Desktop */
+    .desktop { position: relative; height: calc(100% - 40px); padding: 16px; }
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 84px);
+      grid-auto-rows: 90px;
+      gap: 12px;
+      align-content: start;
+      user-select: none;
     }
-
-    @keyframes scanlines {
-      0% {background-position: 0 0;}
-      100% {background-position: 0 2px;}
+    .icon {
+      width: 84px; height: 90px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; cursor: pointer; border: 1px solid transparent; border-radius: 6px;
+      background: transparent;
     }
+    .icon:focus, .icon:hover { background: #ffffffcc; outline: none; border-color: #00000055; }
+    .icon img { width: 40px; height: 40px; image-rendering: pixelated; }
+    .icon span { margin-top: 6px; font-size: 12px; background: #00000022; color: #000; padding: 2px 4px; border-radius: 4px; }
 
-    @keyframes glitchTex {
-      0% { transform: translate(0px, 0px); }
-      25% { transform: translate(3px, -3px); }
-      50% { transform: translate(-3px, 3px); }
-      75% { transform: translate(2px, 2px); }
-      100% { transform: translate(0px, 0px); }
-    }
-
-    .content {
-      position: relative;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      gap: 2rem;
-      animation: glitch-flicker 1s infinite;
-    }
-
-    .tombstone {
-      padding: 2rem;
-      border: 2px dashed #ff00ff;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(5px);
-      box-shadow: 0 0 20px #00ffff, inset 0 0 10px #ff00ff;
-    }
-
-    .tombstone h1 {
-      font-size: 3rem;
-      line-height: 1.2;
-      color: #ffffff;
-      text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff;
-      animation: text-glitch 1s infinite;
-    }
-
-    .tombstone h1 span {
-      display: block;
-      font-size: 2rem;
-      margin-top: 1rem;
-    }
-
+    /* Taskbar */
     .taskbar {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: linear-gradient(180deg, black, white, black);
-      color: #000;
-      font-family: "Courier New", monospace;
-      padding: 0.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 200;
+      position: fixed; left: 0; right: 0; bottom: 0; height: 40px;
+      background: var(--ui);
+      box-shadow: 0 -2px 0 var(--ui-dark) inset, 0 -8px 24px rgba(0,0,0,.15);
+      display: flex; align-items: center; gap: 8px; padding: 0 8px;
     }
-
-    .start-button {
-      background: #000;
-      color: #00ff99;
-      border: 1px solid #00ff99;
-      padding: 0.3rem 1rem;
-      cursor: pointer;
+    .start-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: linear-gradient(#aaffcc, var(--ui));
+      border: 2px outset #c8ffd9; border-radius: 4px;
+      font-weight: 700; letter-spacing: .5px; padding: 6px 12px; cursor: pointer;
     }
+    .start-btn:active { border-style: inset; }
+    .logo { width: 14px; height: 14px; background: conic-gradient(from 45deg, #ff66ff, #66ccff, #ffff66, #ff66ff); border: 1px solid #0006; box-shadow: 0 0 0 1px #fff inset; }
+    .task-items { flex: 1; display: flex; gap: 6px; }
+    .task { background: #d9ffe9; border: 2px inset #b0f7cf; border-radius: 4px; padding: 4px 10px; min-width: 120px; }
+    .clock { margin-left: auto; padding: 4px 8px; background: #b8ffd6; border: 2px inset #92f0b6; border-radius: 4px; font-variant-numeric: tabular-nums; }
 
-    .start-menu {
-      display: none;
-      position: absolute;
-      bottom: 2.5rem;
-      background: #111;
-      border: 1px solid #ff00ff;
-      padding: 0.5rem;
-    }
+    /* Start menu */
+    .start-menu { position: fixed; bottom: 40px; left: 8px; width: 280px; background: var(--ui); border: 2px outset #c8ffd9; border-radius: 6px; box-shadow: 0 16px 48px rgba(0,0,0,.25); display: none; }
+    .start-menu.open { display: block; }
+    .menu-title { padding: 10px 12px; font-weight: 800; background: linear-gradient(90deg, #66ff99, #99ffd1); border-bottom: 1px solid #0002; }
+    .menu-list { list-style: none; margin: 0; padding: 8px; max-height: 50vh; overflow: auto; }
+    .menu-list li a { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 6px; text-decoration: none; color: #000; }
+    .menu-list li a:hover { background: #ffffffaa; }
+    .menu-list img { width: 18px; height: 18px; }
 
-    .start-menu a {
-      color: #00ffff;
-      text-decoration: none;
-      display: block;
-      margin: 0.2rem 0;
-      font-weight: bold;
-    }
+    a { color: inherit; }
 
-    .start-menu a:hover {
-      color: #ff00ff;
-    }
-
-    @keyframes glitch-flicker {
-      0% { transform: translate(0, 0); }
-      20% { transform: translate(-2px, 2px); }
-      40% { transform: translate(2px, -2px); }
-      60% { transform: translate(-1px, 1px); }
-      80% { transform: translate(1px, -1px); }
-      100% { transform: translate(0, 0); }
-    }
-
-    @keyframes text-glitch {
-      0%, 100% { text-shadow: 0 0 5px #ff00ff, 0 0 10px #00ffff; }
-      50% { text-shadow: 0 0 10px #00ff99, 0 0 20px #ff00ff; }
+    @media (max-width: 600px) {
+      .icon-grid { grid-template-columns: repeat(auto-fill, 72px); grid-auto-rows: 86px; }
+      .taskbar { height: 48px; }
+      .desktop { height: calc(100% - 48px); }
     }
   </style>
 </head>
 <body>
-  <audio id="bgMusic" src="/sounds/smw.mp3" autoplay loop></audio>
-  <div class="content">
-    <div>
-      <h1><a href="https://theinternetisdead.org/">theinternetisdead.org</a></h1>
-    </div>
-    <div class="tombstone">
-      <h1>R.I.P.<br>The Internet<br><span>1996–2025</span></h1>
-    </div>
+  <div class="desktop" id="desktop">
+    <div class="icon-grid" id="iconGrid" aria-label="Desktop icons"></div>
   </div>
 
-  <a href="https://theinternetisdead.org/who" style="position:absolute; z-index:150;" id="dvdLink">
-  <img id="dvdLogo" src="/images/face.png" 
-       style="width: 100px; height: 100px;" />
-</a>
-
-  <div class="taskbar">
-    <div class="start-button" onclick="toggleMenu()">Start</div>
-    <div class="start-menu" id="startMenu">
-      <a href="index.html">Home</a>
-      <a href="/images/index.html">Images</a>
-      <a href="who/">Who?</a>
-      <a href="/press-F/index.html">Press F</a>
-      <a href="#" onclick="shutdown()">Shutdown</a>
+  <div class="taskbar" role="navigation" aria-label="Taskbar">
+    <button class="start-btn" id="startBtn" aria-haspopup="true" aria-expanded="false">
+      <div class="logo" aria-hidden="true"></div>
+      <span>Start</span>
+    </button>
+    <div class="task-items">
+      <div class="task" aria-hidden="true">Welcome.txt</div>
     </div>
-    <span style="margin: 0 auto; font-weight: bold;">Press F To Pay Respect</span>
-    <div class="system-tray" style="display: flex; gap: 1rem; align-items: center;">
-      <span id="muteBtn" style="cursor:pointer;">🎵</span>
-      <span id="spiralIcon" style="cursor:pointer;">🔀</span>
-      <span id="attentionBtn" style="cursor:pointer;">⚠️</span>
-    </div>
+    <div class="clock" id="clock" aria-live="polite">00:00</div>
   </div>
+
+  <nav class="start-menu" id="startMenu" aria-label="Start menu">
+    <div class="menu-title">Vapor95</div>
+    <ul class="menu-list" id="menuList"></ul>
+  </nav>
 
   <script>
-    function toggleMenu() {
-      const menu = document.getElementById('startMenu');
-      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    // --- Configure your links here. These populate BOTH the Start menu and the desktop icons. ---
+    const LINKS = [
+      { title: "Home",   url: "/" },
+      { title: "Images", url: "/images/" },
+      { title: "Wayback: tektite.tv (2017)", url: "https://web.archive.org/web/20170322054157/http://tektite.tv/" },
+      { title: "YouTube", url: "https://www.youtube.com" },
+      { title: "OSRS Wiki", url: "https://oldschool.runescape.wiki/" },
+      { title: "GitHub", url: "https://github.com/" }
+    ];
+
+    const menuList = document.getElementById("menuList");
+    const iconGrid = document.getElementById("iconGrid");
+
+    function iconSVG() {
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
+        <defs>
+          <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+            <stop offset='0' stop-color='#ff66ff'/>
+            <stop offset='1' stop-color='#66ccff'/>
+          </linearGradient>
+        </defs>
+        <rect x='6' y='6' width='52' height='52' rx='8' fill='url(#g)' stroke='black' opacity='0.9'/>
+        <rect x='12' y='38' width='40' height='14' rx='2' fill='#ffffff' opacity='0.9'/>
+        <rect x='12' y='12' width='40' height='20' rx='2' fill='#66ff99' opacity='0.9' stroke='#00000055'/>
+      </svg>`;
+      return 'data:image/svg+xml;base64,' + btoa(svg);
     }
 
-    function shutdown() {
-      const blackout = document.createElement('div');
-      blackout.style.position = 'fixed';
-      blackout.style.top = '0';
-      blackout.style.left = '0';
-      blackout.style.width = '100vw';
-      blackout.style.height = '100vh';
-      blackout.style.backgroundColor = '#000';
-      blackout.style.zIndex = '99999';
-      document.body.appendChild(blackout);
-    }
+    // Build Start menu + desktop icons from the same data
+    LINKS.forEach(link => {
+      // Start menu item
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = link.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      const img = document.createElement('img');
+      img.alt = '';
+      img.src = iconSVG();
+      a.appendChild(img);
+      a.append(document.createTextNode(link.title));
+      li.appendChild(a);
+      menuList.appendChild(li);
 
-    document.addEventListener("mousemove", (e) => {
-      const x = Math.round((e.clientX / window.innerWidth) * 255);
-      const y = Math.round((e.clientY / window.innerHeight) * 255);
-      document.body.style.backgroundColor = `rgb(${x}, ${255 - x}, ${y})`;
+      // Desktop icon (double-click to open)
+      const ic = document.createElement('button');
+      ic.className = 'icon';
+      ic.title = link.title;
+      ic.addEventListener('dblclick', () => window.open(link.url, '_blank', 'noopener'));
+      ic.addEventListener('keydown', e => { if (e.key === 'Enter') window.open(link.url, '_blank', 'noopener'); });
+      const im = document.createElement('img');
+      im.src = iconSVG();
+      im.alt = '';
+      const label = document.createElement('span');
+      label.textContent = link.title;
+      ic.appendChild(im);
+      ic.appendChild(label);
+      iconGrid.appendChild(ic);
     });
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "f") {
-        window.location.href = "/press-F/index.html";
+    // Start menu toggling / click-away
+    const startBtn = document.getElementById('startBtn');
+    const startMenu = document.getElementById('startMenu');
+    startBtn.addEventListener('click', () => {
+      const open = startMenu.classList.toggle('open');
+      startBtn.setAttribute('aria-expanded', open);
+    });
+    document.addEventListener('click', e => {
+      const isInside = startMenu.contains(e.target) || startBtn.contains(e.target);
+      if (!isInside) {
+        startMenu.classList.remove('open');
+        startBtn.setAttribute('aria-expanded', 'false');
       }
-      if (e.key.toLowerCase() === "q") {
-        document.body.style.transition = "transform 1s ease-in-out";
-        document.body.style.transform = "rotate(360deg)";
-        setTimeout(() => {
-          document.body.style.transform = "none";
-        }, 1000);
-      }
     });
 
-    const clickSound = new Audio('/sounds/AchievementUnlocked.mp3');
-    document.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        clickSound.currentTime = 0;
-        clickSound.play();
-      });
-    });
-
-    document.getElementById('muteBtn').addEventListener('click', () => {
-      const bgMusic = document.getElementById('bgMusic');
-      bgMusic.muted = !bgMusic.muted;
-    });
-
-    document.getElementById('attentionBtn').addEventListener('click', () => {
-      document.body.style.transition = "transform 1s ease-in-out";
-      document.body.style.transform = "rotate(360deg)";
-      setTimeout(() => {
-        document.body.style.transform = "none";
-      }, 1000);
-    });
-
-    const dvdLink = document.getElementById('dvdLink');
-    let posX = 100;
-    let posY = 100;
-    let velocityX = 2;
-    let velocityY = 2;
-    const dvdWidth = 100;
-    const dvdHeight = 100;
-
-    function animateDVD() {
-      const maxX = window.innerWidth - dvdWidth;
-      const maxY = window.innerHeight - dvdHeight;
-
-      posX += velocityX;
-      posY += velocityY;
-
-      if (posX <= 0 || posX >= maxX) velocityX *= -1;
-      if (posY <= 0 || posY >= maxY) velocityY *= -1;
-
-      dvdLink.style.left = posX + 'px';
-dvdLink.style.top = posY + 'px';
-
-      requestAnimationFrame(animateDVD);
+    // Simple taskbar clock
+    function updateClock(){
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      document.getElementById('clock').textContent = `${hh}:${mm}`;
     }
-    animateDVD();
+    updateClock();
+    setInterval(updateClock, 10000);
   </script>
 </body>
 </html>
