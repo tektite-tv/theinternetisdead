@@ -3,262 +3,220 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TheInternetIsDead.org</title>
+  <title>theinternetisdead.org — Win95 x Graveyard</title>
   <style>
     :root {
-      --bg: #ffccff;       /* desktop background */
-      --ui: #66ff99;       /* taskbar + start menu */
-      --ui-dark: #52cc7a;  /* bevel/shadow */
-      --text: #0a0a0a;
-      --window: #fff;
-      --titlebar: linear-gradient(#e9fff3, #bdf7d8);
+      --ui: #c0c0c0;
+      --ui-light: #ffffff;
+      --ui-mid: #b5b5b5;
+      --ui-dark: #7b7b7b;
+      --ui-black: #000000;
+      --text: #000000;
+      --sky-top: #0b1b2a;
+      --sky-mid: #12263a;
+      --grass-top: #0e1b12;
+      --grass-bot: #103318;
+      --stone: #d9d9d9;
+      --stone-edge: #9a9a9a;
+      --horror: #ff0000;
     }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
       margin: 0;
       height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: "MS Sans Serif", Tahoma, Geneva, Verdana, system-ui, sans-serif;
       overflow: hidden;
+      color: var(--text);
+      background: #000;
+      font-family: "MS Sans Serif", Tahoma, Geneva, Verdana, system-ui, sans-serif;
+      image-rendering: pixelated;
     }
 
-    /* Desktop */
-    .desktop { position: relative; height: calc(100% - 40px); padding: 16px; }
-    .icon-grid {
+    .wallpaper {
+      position: fixed;
+      inset: 0 0 40px 0;
+      background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-mid) 55%, var(--grass-top) 55%, var(--grass-bot) 100%);
+    }
+    .wallpaper::before {
+      content: "";
+      position: absolute; inset: 0 0 40% 0;
+      background-image:
+        radial-gradient(circle at 10% 20%, rgba(255,255,255,.8) 1px, transparent 1px),
+        radial-gradient(circle at 30% 40%, rgba(255,255,255,.6) 1px, transparent 1px),
+        radial-gradient(circle at 70% 30%, rgba(255,255,255,.7) 1px, transparent 1px),
+        radial-gradient(circle at 85% 15%, rgba(255,255,255,.5) 1px, transparent 1px),
+        radial-gradient(circle at 55% 25%, rgba(255,255,255,.7) 1px, transparent 1px),
+        radial-gradient(circle at 20% 10%, rgba(255,255,255,.6) 1px, transparent 1px),
+        radial-gradient(circle at 15% 35%, rgba(255,255,255,.8) 1px, transparent 1px),
+        radial-gradient(circle at 45% 15%, rgba(255,255,255,.6) 1px, transparent 1px),
+        radial-gradient(circle at 65% 20%, rgba(255,255,255,.5) 1px, transparent 1px),
+        radial-gradient(circle at 80% 35%, rgba(255,255,255,.7) 1px, transparent 1px),
+        radial-gradient(circle at 25% 5%, rgba(255,255,255,.8) 1px, transparent 1px),
+        radial-gradient(circle at 90% 25%, rgba(255,255,255,.6) 1px, transparent 1px);
+      background-size: 300px 200px, 400px 300px, 500px 400px, 600px 500px, 700px 600px, 800px 700px, 900px 800px, 1000px 900px, 1100px 1000px, 1200px 1100px, 1300px 1200px, 1400px 1300px;
+      background-repeat: repeat;
+      opacity: .7;
+      pointer-events: none;
+    }
+
+    .stone {
+      position: absolute;
+      width: clamp(80px, 10vw, 140px);
+      height: clamp(110px, 14vw, 180px);
+      left: 10%; bottom: 10%;
+      background: var(--stone);
+      border-radius: 16px 16px 6px 6px;
+      border: 2px solid var(--stone-edge);
+      box-shadow: 0 0 0 2px rgba(0,0,0,.15) inset, 2px 4px 0 rgba(0,0,0,.25);
       display: grid;
-      grid-template-columns: repeat(auto-fill, 84px);
-      grid-auto-rows: 90px;
-      gap: 12px;
-      align-content: start;
+      place-items: center;
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: .5px;
       user-select: none;
+      pointer-events: none;
     }
-    .icon {
-      width: 84px; height: 90px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; cursor: pointer; border: 1px solid transparent; border-radius: 6px;
-      background: transparent;
+    .stone .face { font-size: clamp(12px, 1.3vw, 15px); }
+    .stone .face small { display:block; font-weight: 600; opacity: .7; margin-top: 4px; }
+    .stone::after {
+      content: "";
+      position: absolute; left: -8%; right: -8%; bottom: -8px; height: 10px;
+      background: #5a5a5a;
+      box-shadow: 0 3px 0 rgba(0,0,0,.35);
+      border-radius: 2px;
+      opacity: .9;
     }
-    .icon:focus, .icon:hover { background: #ffffffcc; outline: none; border-color: #00000055; }
-    .icon img { width: 40px; height: 40px; image-rendering: pixelated; }
-    .icon span { margin-top: 6px; font-size: 12px; background: #00000022; color: #000; padding: 2px 4px; border-radius: 4px; }
+    .s1 { left: 8%;  bottom: 11%; }
+    .s2 { left: 42%; bottom: 12%; transform: scale(1.05); }
+    .s3 { left: 76%; bottom: 10%; transform: scale(.92); }
 
-    /* Taskbar */
+    .desktop {
+      position: fixed; inset: 0 0 40px 0;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+      padding-top: 60px;
+    }
+
+    .horror-text {
+      color: var(--horror);
+      font-family: "Impact", "Chiller", "Copperplate Gothic Bold", fantasy;
+      font-size: 36px;
+      text-shadow: 2px 2px 4px #000000;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #cccccc;
+      font-size: 14px;
+      font-style: italic;
+    }
+
     .taskbar {
       position: fixed; left: 0; right: 0; bottom: 0; height: 40px;
       background: var(--ui);
-      box-shadow: 0 -2px 0 var(--ui-dark) inset, 0 -8px 24px rgba(0,0,0,.15);
-      display: flex; align-items: center; gap: 8px; padding: 0 8px;
+      border-top: 2px solid var(--ui-light);
+      box-shadow: inset 0 2px 0 var(--ui-mid), inset 0 -2px 0 var(--ui-dark);
+      display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center;
+      padding: 4px 6px;
     }
-    .start-btn {
-      display: flex; align-items: center; gap: 8px;
-      background: linear-gradient(#aaffcc, var(--ui));
-      border: 2px outset #c8ffd9; border-radius: 4px;
-      font-weight: 700; letter-spacing: .5px; padding: 6px 12px; cursor: pointer;
+    .start {
+      display: inline-grid; place-items: center; gap: 6px;
+      grid-auto-flow: column;
+      height: 32px; min-width: 84px; padding: 0 10px;
+      font-weight: 700; letter-spacing: .5px;
+      background: var(--ui);
+      border: 2px solid var(--ui-dark);
+      border-left-color: var(--ui-light);
+      border-top-color: var(--ui-light);
+      border-right-color: var(--ui-black);
+      border-bottom-color: var(--ui-black);
+      cursor: pointer;
+      user-select: none;
     }
-    .start-btn:active { border-style: inset; }
-    .logo { width: 14px; height: 14px; background: conic-gradient(from 45deg, #ff66ff, #66ccff, #ffff66, #ff66ff); border: 1px solid #0006; box-shadow: 0 0 0 1px #fff inset; }
-    .task-items { flex: 1; display: flex; gap: 6px; align-items: stretch; }
-    .task { background: #d9ffe9; border: 2px inset #b0f7cf; border-radius: 4px; padding: 4px 10px; min-width: 120px; display: flex; align-items: center; cursor: pointer; }
-    .task[hidden] { display: none; }
-    .clock { margin-left: auto; padding: 4px 8px; background: #b8ffd6; border: 2px inset #92f0b6; border-radius: 4px; font-variant-numeric: tabular-nums; }
-
-    /* Start menu */
-    .start-menu { position: fixed; bottom: 40px; left: 8px; width: 280px; background: var(--ui); border: 2px outset #c8ffd9; border-radius: 6px; box-shadow: 0 16px 48px rgba(0,0,0,.25); display: none; }
-    .start-menu.open { display: block; }
-    .menu-title { padding: 10px 12px; font-weight: 800; background: linear-gradient(90deg, #66ff99, #99ffd1); border-bottom: 1px solid #0002; }
-    .menu-list { list-style: none; margin: 0; padding: 8px; max-height: 50vh; overflow: auto; }
-    .menu-list li a { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 6px; text-decoration: none; color: #000; }
-    .menu-list li a:hover { background: #ffffffaa; }
-    .menu-list img { width: 18px; height: 18px; }
-
-    a { color: inherit; }
-
-    /* Editable link list: hidden from UI, only for you to edit. */
-    #linksData { display: none; }
-
-    /* Window (Welcome.txt) */
-    .window {
-      position: absolute; top: 72px; left: 72px; width: 460px; max-width: calc(100% - 32px);
-      background: var(--window); border: 2px outset #c8ffd9; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    .start:active {
+      border-left-color: var(--ui-black);
+      border-top-color: var(--ui-black);
+      border-right-color: var(--ui-light);
+      border-bottom-color: var(--ui-light);
     }
-    .titlebar {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 6px 8px; background: var(--titlebar); border-bottom: 1px solid #0002; cursor: move; user-select: none;
-      border-top-left-radius: 6px; border-top-right-radius: 6px;
-    }
-    .titlebar .name { font-weight: 700; }
-    .win-buttons { display: flex; gap: 6px; }
-    .win-btn {
-      width: 20px; height: 20px; display: grid; place-items: center; cursor: pointer;
-      background: #d9ffe9; border: 2px outset #b0f7cf; border-radius: 4px;
-    }
-    .win-btn:active { border-style: inset; }
-    .content { padding: 12px; max-height: 50vh; overflow: auto; background: #fff; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
-    .window.minimized .content { display: none; }
+    .start span { font-size: 14px; }
 
-    @media (max-width: 600px) {
-      .icon-grid { grid-template-columns: repeat(auto-fill, 72px); grid-auto-rows: 86px; }
-      .taskbar { height: 48px; }
-      .desktop { height: calc(100% - 48px); }
+    .tray {
+      height: 32px; display: grid; align-content: center; padding: 0 10px;
+      border: 2px solid var(--ui-dark);
+      border-left-color: var(--ui-light);
+      border-top-color: var(--ui-light);
+      border-right-color: var(--ui-black);
+      border-bottom-color: var(--ui-black);
+      min-width: 120px; justify-items: end;
+      background: var(--ui);
+      font-variant-numeric: tabular-nums;
+    }
+    .clock { font-size: 13px; }
+
+    .start::before {
+      content: "☠";
+      font-size: 16px; line-height: 1;
+    }
+
+    .blackout {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9999;
+    }
+
+    @media (max-width: 480px) {
+      .taskbar { height: 44px; }
+      .tray { min-width: 96px; }
+      .start { min-width: 72px; }
     }
   </style>
 </head>
 <body>
-  <!-- Edit your links here; Start menu and desktop icons are generated from this list -->
-  <ul id="linksData">
-    <li><a href="/">Home</a></li>
-    <!-- Add more like: <li><a href="/images/">Images</a></li> -->
-  </ul>
-
-  <div class="desktop" id="desktop">
-    <div class="icon-grid" id="iconGrid" aria-label="Desktop icons"></div>
-
-    <!-- Welcome.txt window -->
-    <section class="window" id="welcomeWin" role="dialog" aria-label="Welcome.txt" aria-modal="false">
-      <header class="titlebar" id="welcomeTitlebar">
-        <span class="name">Welcome.txt</span>
-        <div class="win-buttons">
-          <button class="win-btn" id="btnMin" title="Minimize" aria-label="Minimize">_</button>
-          <button class="win-btn" id="btnClose" title="Close" aria-label="Close">×</button>
-        </div>
-      </header>
-      <div class="content">
-        <p>Welcome to <strong>The Internet Is Dead OS</strong>. Drag this window around, minimize it to the taskbar, or close it like a champ.</p>
-        <p>Edit the hidden link list to add icons to the desktop and Start menu.</p>
-      </div>
-    </section>
+  <div class="wallpaper" aria-hidden="true">
+    <div class="stone s1"><div class="face">RIP<small>Guestbooks</small></div></div>
+    <div class="stone s2"><div class="face">RIP<small>Webrings</small></div></div>
+    <div class="stone s3"><div class="face">RIP<small>Flash</small></div></div>
   </div>
 
-  <div class="taskbar" role="navigation" aria-label="Taskbar">
-    <button class="start-btn" id="startBtn" aria-haspopup="true" aria-expanded="false">
-      <div class="logo" aria-hidden="true"></div>
-      <span>Start</span>
-    </button>
-    <div class="task-items">
-      <button class="task" id="taskWelcome" title="Welcome.txt (click to restore)">Welcome.txt</button>
-    </div>
-    <div class="clock" id="clock" aria-live="polite">00:00 AM</div>
-  </div>
+  <main class="desktop" role="application" aria-label="Desktop">
+    <div class="horror-text">YOU HAVE DIED</div>
+    <div class="subtitle">Welcome to theinternetisdead.org — you may never leave</div>
+  </main>
 
-  <nav class="start-menu" id="startMenu" aria-label="Start menu">
-    <div class="menu-title">TheInternetIsDead.org</div>
-    <ul class="menu-list" id="menuList"></ul>
-  </nav>
+  <footer class="taskbar" role="toolbar" aria-label="Taskbar">
+    <button class="start" aria-label="End menu" id="endBtn"><span>END</span></button>
+    <div class="spacer" aria-hidden="true"></div>
+    <div class="tray" aria-label="System tray"><span id="clock" class="clock" aria-live="polite">--:-- --</span></div>
+  </footer>
 
   <script>
-    // Utility: simple icon SVG as data URL
-    function iconSVG() {
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
-        <defs>
-          <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
-            <stop offset='0' stop-color='#ff66ff'/>
-            <stop offset='1' stop-color='#66ccff'/>
-          </linearGradient>
-        </defs>
-        <rect x='6' y='6' width='52' height='52' rx='8' fill='url(#g)' stroke='black' opacity='0.9'/>
-        <rect x='12' y='38' width='40' height='14' rx='2' fill='#ffffff' opacity='0.9'/>
-        <rect x='12' y='12' width='40' height='20' rx='2' fill='#66ff99' opacity='0.9' stroke='#00000055'/>
-      </svg>`;
-      return 'data:image/svg+xml;base64,' + btoa(svg);
-    }
+    (function clock(){
+      function tick(){
+        try {
+          const now = new Date();
+          const t = now.toLocaleTimeString('en-CA', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+            timeZone: 'America/Toronto'
+          });
+          document.getElementById('clock').textContent = t.replace(/^0/, '');
+        } catch(e) {
+          document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+        }
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
 
-    // Build Start menu + desktop icons from the editable list
-    const menuList = document.getElementById('menuList');
-    const iconGrid = document.getElementById('iconGrid');
-    const LINKS = Array.from(document.querySelectorAll('#linksData a')).map(a => ({
-      title: a.textContent.trim() || a.getAttribute('href'),
-      url: a.getAttribute('href')
-    }));
-
-    LINKS.forEach(link => {
-      // Start menu entry
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = link.url; a.target = '_blank'; a.rel = 'noopener';
-      const img = document.createElement('img'); img.alt = ''; img.src = iconSVG();
-      a.appendChild(img); a.append(document.createTextNode(link.title));
-      li.appendChild(a); menuList.appendChild(li);
-
-      // Desktop icon
-      const ic = document.createElement('button');
-      ic.className = 'icon'; ic.title = link.title;
-      ic.addEventListener('dblclick', () => window.open(link.url, '_blank', 'noopener'));
-      ic.addEventListener('keydown', e => { if (e.key === 'Enter') window.open(link.url, '_blank', 'noopener'); });
-      const im = document.createElement('img'); im.src = iconSVG(); im.alt = '';
-      const label = document.createElement('span'); label.textContent = link.title;
-      ic.appendChild(im); ic.appendChild(label); iconGrid.appendChild(ic);
-    });
-
-    // Start menu toggle
-    const startBtn = document.getElementById('startBtn');
-    const startMenu = document.getElementById('startMenu');
-    startBtn.addEventListener('click', () => {
-      const open = startMenu.classList.toggle('open');
-      startBtn.setAttribute('aria-expanded', open);
-    });
-    document.addEventListener('click', e => {
-      const inside = startMenu.contains(e.target) || startBtn.contains(e.target);
-      if (!inside) { startMenu.classList.remove('open'); startBtn.setAttribute('aria-expanded', 'false'); }
-    });
-
-    // 12-hour Eastern clock
-    const clockEl = document.getElementById('clock');
-    const tz = 'America/Toronto';
-    function updateClock(){
-      const now = new Date();
-      const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz });
-      clockEl.textContent = time.replace('a.m.', 'AM').replace('p.m.', 'PM');
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
-
-    // Welcome window controls with safe dragging
-    const win = document.getElementById('welcomeWin');
-    const titlebar = document.getElementById('welcomeTitlebar');
-    const btnMin = document.getElementById('btnMin');
-    const btnClose = document.getElementById('btnClose');
-    const taskWelcome = document.getElementById('taskWelcome');
-    const desktop = document.getElementById('desktop');
-
-    let zTop = 10;
-    function bringToFront(el){ el.style.zIndex = ++zTop; }
-    win.addEventListener('mousedown', () => bringToFront(win));
-
-    let dragging = false; let offsetX = 0, offsetY = 0;
-
-    titlebar.addEventListener('mousedown', e => {
-      dragging = true;
-      offsetX = e.clientX - win.offsetLeft;
-      offsetY = e.clientY - win.offsetTop;
-      document.body.style.userSelect = 'none';
-      bringToFront(win);
-    });
-
-    document.addEventListener('mousemove', e => {
-      if (!dragging) return;
-      // Constrain to desktop bounds
-      const maxX = desktop.clientWidth - win.offsetWidth - 4;
-      const maxY = desktop.clientHeight - titlebar.offsetHeight - 4; // allow titlebar to stay visible
-      let x = e.clientX - offsetX; let y = e.clientY - offsetY;
-      x = Math.max(4, Math.min(x, maxX));
-      y = Math.max(4, Math.min(y, maxY));
-      win.style.left = x + 'px';
-      win.style.top  = y + 'px';
-    });
-
-    document.addEventListener('mouseup', () => {
-      dragging = false;
-      document.body.style.userSelect = '';
-    });
-
-    btnMin.addEventListener('click', () => win.classList.add('minimized'));
-    btnClose.addEventListener('click', () => win.style.display = 'none');
-    taskWelcome.addEventListener('click', () => {
-      win.style.display = 'block';
-      win.classList.remove('minimized');
-      bringToFront(win);
+    document.getElementById('endBtn').addEventListener('click', function(){
+      const blackout = document.createElement('div');
+      blackout.className = 'blackout';
+      document.body.appendChild(blackout);
     });
   </script>
 </body>
