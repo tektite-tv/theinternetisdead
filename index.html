@@ -292,17 +292,42 @@
     })();
 
     // Mute/unmute button logic
-    document.getElementById('muteBtn').addEventListener('click', function() {
-      const audio = document.getElementById('bgm');
-      audio.muted = !audio.muted;
-      this.textContent = audio.muted ? '🔇' : '🔊';
+    const audio = document.getElementById('bgm');
+    const muteBtn = document.getElementById('muteBtn');
+
+    function syncMuteUI() {
+      muteBtn.textContent = (audio.muted || audio.volume === 0) ? '🔇' : '🔊';
+    }
+    function setMuted(on) {
+      audio.muted = !!on;
+      audio.volume = on ? 0 : 1;
+      try { localStorage.setItem('bgmMuted', on ? '1' : '0'); } catch(e) {}
+      syncMuteUI();
+    }
+
+    // Initialize from saved state once audio is ready
+    (function initMuteState(){
+      const wantMuted = (typeof localStorage !== 'undefined' && localStorage.getItem('bgmMuted') === '1');
+      if (audio.readyState >= 1) {
+        setMuted(wantMuted);
+      } else {
+        audio.addEventListener('loadedmetadata', () => setMuted(wantMuted), { once: true });
+      }
+    })();
+
+    muteBtn.type = 'button';
+    muteBtn.addEventListener('click', function() {
+      setMuted(!(audio.muted || audio.volume === 0));
     });
 
     // Autoplay fallback: if blocked, start on first user interaction
     (function autoPlayFallback(){
       const audio = document.getElementById('bgm');
       const resume = () => {
-        audio.play().catch(()=>{});
+        audio.play().catch(()=>{}).finally(() => {
+          try { if (localStorage.getItem('bgmMuted') === '1') { audio.muted = true; audio.volume = 0; } } catch(e) {}
+          if (typeof syncMuteUI === 'function') syncMuteUI();
+        });
         window.removeEventListener('pointerdown', resume, { once: true });
       };
       if (audio.paused) {
