@@ -272,108 +272,52 @@
   <!-- Background soundtrack (hidden, loops) -->
   <audio id="bgm" class="visually-hidden" src="/sounds/Aesop Waits - Tom Shall Pass - 03 Undercomb Kids.mp3" autoplay loop></audio>
 
-  <script>
-    // Clock
-    (function clock(){
-      function tick(){
-        try {
-          const now = new Date();
-          const t = now.toLocaleTimeString('en-CA', {
-            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
-            timeZone: 'America/Toronto'
-          });
-          document.getElementById('clock').textContent = '🕒 ' + t.replace(/^0/, '');
-        } catch(e) {
-          document.getElementById('clock').textContent = '🕒 ' + new Date().toLocaleTimeString();
-        }
-      }
-      tick();
-      setInterval(tick, 1000);
-    })();
-
-    // Mute/unmute button logic
+<script>
+  // Unified audio controller: one source of truth, no volume shenanigans
+  (function audioController(){
     const audio = document.getElementById('bgm');
-    const muteBtn = document.getElementById('muteBtn');
+    const btn   = document.getElementById('muteBtn');
+    const KEY   = 'bgmMuted';
 
-    function syncMuteUI() {
-      muteBtn.textContent = (audio.muted || audio.volume === 0) ? '🔇' : '🔊';
+    function updateUI(muted){
+      btn.setAttribute('aria-pressed', String(muted));
+      btn.title = muted ? 'Unmute' : 'Mute';
+      btn.textContent = muted ? '🔇' : '🔊';
     }
-    function setMuted(on) {
-      audio.muted = !!on;
-      audio.volume = on ? 0 : 1;
-      try { localStorage.setItem('bgmMuted', on ? '1' : '0'); } catch(e) {}
-      syncMuteUI();
+    function setMuted(muted){
+      audio.muted = muted;
+      try { localStorage.setItem(KEY, muted ? '1' : '0'); } catch(e) {}
+      updateUI(muted);
     }
 
-    // Initialize from saved state once audio is ready
-    (function initMuteState(){
-      const wantMuted = (typeof localStorage !== 'undefined' && localStorage.getItem('bgmMuted') === '1');
-      if (audio.readyState >= 1) {
-        setMuted(wantMuted);
-      } else {
-        audio.addEventListener('loadedmetadata', () => setMuted(wantMuted), { once: true });
-      }
-    })();
+    // Load saved state
+    let savedMuted = false;
+    try { savedMuted = localStorage.getItem(KEY) === '1'; } catch(e) {}
 
-    muteBtn.type = 'button';
-    muteBtn.addEventListener('click', function() {
-      setMuted(!(audio.muted || audio.volume === 0));
+    // Show correct icon immediately
+    updateUI(savedMuted);
+
+    // Respect browser autoplay rules: start audio on first user interaction
+    const start = () => {
+      audio.play().catch(()=>{});     // try to play; if blocked, no drama
+      setMuted(savedMuted);           // apply saved mute once it can play
+      window.removeEventListener('pointerdown', start);
+    };
+    if (audio.paused) {
+      window.addEventListener('pointerdown', start, { once: true });
+    } else {
+      // If autoplay already working, apply saved state on first play
+      audio.addEventListener('play', () => setMuted(savedMuted), { once: true });
+    }
+
+    // Toggle handlers
+    btn.type = 'button';
+    btn.addEventListener('click', () => setMuted(!audio.muted));
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); btn.click(); }
     });
-
-    // Autoplay fallback: if blocked, start on first user interaction
-    (function autoPlayFallback(){
-      const audio = document.getElementById('bgm');
-      const resume = () => {
-        audio.play().catch(()=>{}).finally(() => {
-          try { if (localStorage.getItem('bgmMuted') === '1') { audio.muted = true; audio.volume = 0; } } catch(e) {}
-          if (typeof syncMuteUI === 'function') syncMuteUI();
-        });
-        window.removeEventListener('pointerdown', resume, { once: true });
-      };
-      if (audio.paused) {
-        window.addEventListener('pointerdown', resume, { once: true });
-      }
-    })();
-
-    // Mute toggle with persistence
-    (function muteControl(){
-      const audio = document.getElementById('bgm');
-      const btn = document.getElementById('muteBtn');
-
-      function applyState(muted){
-        audio.muted = muted;
-        btn.setAttribute('aria-pressed', String(muted));
-        btn.textContent = muted ? '🔇' : '🔊';
-        btn.title = muted ? 'Unmute' : 'Mute';
-      }
-
-      // Load saved state
-      try {
-        const saved = localStorage.getItem('bgmMuted');
-        if (saved !== null) applyState(saved === 'true');
-      } catch(e) {}
-
-      btn.addEventListener('click', () => {
-        const newState = !audio.muted;
-        applyState(newState);
-        try { localStorage.setItem('bgmMuted', String(newState)); } catch(e) {}
-      });
-
-      // Keyboard support
-      btn.addEventListener('keydown', (e) => {
-        if (e.key === ' ' || e.key === 'Enter') {
-          e.preventDefault();
-          btn.click();
-        }
-      });
-    })();
-
-    // END button blackout
-    document.getElementById('endBtn').addEventListener('click', function(){
-      const blackout = document.createElement('div');
-      blackout.className = 'blackout';
-      document.body.appendChild(blackout);
-    });
-  </script>
+  })();
+</script>
+  
 </body>
 </html>
