@@ -33,7 +33,7 @@
       padding-top: 48px; /* space for banner */
     }
 
-    /* --- Wallpaper + stars + fake tombstones --- */
+    /* --- Wallpaper + stars --- */
     .wallpaper {
       position: fixed;
       inset: 0 0 40px 0;
@@ -61,6 +61,7 @@
       pointer-events: none;
     }
 
+    /* --- Tombstones with hover + ghostly glows --- */
     .stone {
       position: absolute;
       width: clamp(80px, 10vw, 140px);
@@ -76,10 +77,68 @@
       font-weight: 700;
       letter-spacing: .5px;
       user-select: none;
-      pointer-events: none;
+      /* allow hover */
+      pointer-events: auto;
+      /* floating animation */
+      transform: translateY(0);
+      animation: float 4.8s ease-in-out infinite;
+      /* smooth hover lift */
+      transition: transform .25s cubic-bezier(.2,.8,.2,1);
+      isolation: isolate; /* ensure glow sits behind text */
     }
-    .stone .face { font-size: clamp(12px, 1.3vw, 15px); }
-    .stone .face small { display:block; font-weight: 600; opacity: .7; margin-top: 4px; }
+    .stone .face { font-size: clamp(12px, 1.3vw, 15px); line-height: 1.15; }
+    .stone .face small { display:block; font-weight: 600; opacity: .8; margin-top: 6px; font-size: .9em; }
+
+    /* ghostly aura using ::before so the glow bleeds nicely */
+    .stone::before {
+      content: "";
+      position: absolute;
+      inset: -14px -14px -8px -14px;
+      border-radius: 20px 20px 10px 10px;
+      background: radial-gradient(60% 70% at 50% 30%, var(--aura, transparent), transparent 60%);
+      filter: blur(6px);
+      opacity: .75;
+      z-index: -1;
+      transition: opacity .25s ease;
+    }
+
+    /* subtle colored inner glow on the face text */
+    .stone .face {
+      text-shadow:
+        0 0 6px var(--glow-soft, transparent),
+        0 0 18px var(--glow-strong, transparent);
+    }
+
+    /* Hover lift intensifies aura */
+    .stone:hover {
+      transform: translateY(-12px) scale(1.03);
+    }
+    .stone:hover::before { opacity: 1; }
+
+    /* Keyframes for gentle bob */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    /* Stagger the bob so they don't sync */
+    .s1 { left: 8%;  bottom: 12%; animation-duration: 4.6s; animation-delay: .0s;
+          --aura: rgba(255, 32, 32, .45);
+          --glow-soft: rgba(255, 46, 46, .55);
+          --glow-strong: rgba(255, 0, 0, .35);
+    }
+    .s2 { left: 42%; bottom: 13%; transform: scale(1.05); animation-duration: 5.1s; animation-delay: .3s;
+          --aura: rgba(46, 255, 120, .45);
+          --glow-soft: rgba(46, 255, 120, .55);
+          --glow-strong: rgba(0, 255, 120, .35);
+    }
+    .s3 { left: 76%; bottom: 11%; transform: scale(.95); animation-duration: 4.9s; animation-delay: .6s;
+          --aura: rgba(60, 120, 255, .5);
+          --glow-soft: rgba(60, 120, 255, .6);
+          --glow-strong: rgba(60, 120, 255, .4);
+    }
+
+    /* Base + shadow plinth under each stone */
     .stone::after {
       content: "";
       position: absolute; left: -8%; right: -8%; bottom: -8px; height: 10px;
@@ -87,10 +146,9 @@
       box-shadow: 0 3px 0 rgba(0,0,0,.35);
       border-radius: 2px;
       opacity: .9;
+      z-index: -2;
+      filter: blur(.2px);
     }
-    .s1 { left: 8%;  bottom: 11%; }
-    .s2 { left: 42%; bottom: 12%; transform: scale(1.05); }
-    .s3 { left: 76%; bottom: 10%; transform: scale(.92); }
 
     .desktop {
       position: fixed; inset: 0 0 40px 0;
@@ -165,7 +223,7 @@
       border-top-color: var(--ui-light);
       border-right-color: var(--ui-black);
       border-bottom-color: var(--ui-black);
-      min-width: 160px;
+      min-width: 180px;
       background: var(--ui);
       font-variant-numeric: tabular-nums;
     }
@@ -195,7 +253,7 @@
 
     @media (max-width: 480px) {
       .taskbar { height: 44px; }
-      .tray { min-width: 120px; gap: 6px; }
+      .tray { min-width: 130px; gap: 6px; }
       .start { min-width: 72px; }
       .mute-btn { width: 26px; height: 22px; }
       .clock { font-size: 12px; }
@@ -235,9 +293,16 @@
   </div>
 
   <div class="wallpaper" aria-hidden="true">
-    <div class="stone s1"><div class="face">RIP<small>Guestbooks</small></div></div>
-    <div class="stone s2"><div class="face">RIP<small>Webrings</small></div></div>
-    <div class="stone s3"><div class="face">RIP<small>Flash</small></div></div>
+    <!-- Updated epitaphs -->
+    <div class="stone s1">
+      <div class="face">RIP Free Time<small>We traded it for feeds</small></div>
+    </div>
+    <div class="stone s2">
+      <div class="face">RIP Weird Forums<small>Replaced by algo sludge</small></div>
+    </div>
+    <div class="stone s3">
+      <div class="face">RIP Privacy<small>Cookies ate our souls</small></div>
+    </div>
   </div>
 
   <main class="desktop" role="application" aria-label="Desktop">
