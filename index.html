@@ -106,16 +106,8 @@
   </style>
 </head>
 <body>
-  <!--
-    Edit your links here. One <li><a href="URL">Title</a></li> per link.
-    Both the Start menu and desktop icons are generated from this list.
-    Example shows only "Home". Add as many as you want.
-  -->
   <ul id="linksData">
     <li><a href="/">Home</a></li>
-    <!-- <li><a href="/images/">Images</a></li> -->
-    <!-- <li><a href="https://web.archive.org/web/20170322054157/http://tektite.tv/">Wayback: tektite.tv (2017)</a></li> -->
-    <!-- <li><a href="https://oldschool.runescape.wiki/">OSRS Wiki</a></li> -->
   </ul>
 
   <div class="desktop" id="desktop">
@@ -132,11 +124,6 @@
       </header>
       <div class="content">
         <p>Welcome to <strong>The Internet Is Dead OS</strong>. Drag this window around, minimize it to the taskbar, or close it like a champ.</p>
-        <ul>
-          <li>Edit links in the hidden <code>#linksData</code> list and both the Start menu and desktop update automatically.</li>
-          <li>Double click the desktop icons to open them in a new tab.</li>
-          <li>Clock is synced to Eastern US/Canada and uses a 12‑hour format with AM/PM. DST handled for you.</li>
-        </ul>
       </div>
     </section>
   </div>
@@ -158,63 +145,6 @@
   </nav>
 
   <script>
-    const menuList = document.getElementById("menuList");
-    const iconGrid = document.getElementById("iconGrid");
-
-    function iconSVG() {
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
-        <defs>
-          <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
-            <stop offset='0' stop-color='#ff66ff'/>
-            <stop offset='1' stop-color='#66ccff'/>
-          </linearGradient>
-        </defs>
-        <rect x='6' y='6' width='52' height='52' rx='8' fill='url(#g)' stroke='black' opacity='0.9'/>
-        <rect x='12' y='38' width='40' height='14' rx='2' fill='#ffffff' opacity='0.9'/>
-        <rect x='12' y='12' width='40' height='20' rx='2' fill='#66ff99' opacity='0.9' stroke='#00000055'/>
-      </svg>`;
-      return 'data:image/svg+xml;base64,' + btoa(svg);
-    }
-
-    // Parse the editable link list
-    const LINKS = Array.from(document.querySelectorAll('#linksData a')).map(a => ({
-      title: a.textContent.trim() || a.getAttribute('href'),
-      url: a.getAttribute('href')
-    }));
-
-    // Build Start menu + desktop icons from the editable list
-    LINKS.forEach(link => {
-      // Start menu item
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = link.url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      const img = document.createElement('img');
-      img.alt = '';
-      img.src = iconSVG();
-      a.appendChild(img);
-      a.append(document.createTextNode(link.title));
-      li.appendChild(a);
-      menuList.appendChild(li);
-
-      // Desktop icon (double-click to open)
-      const ic = document.createElement('button');
-      ic.className = 'icon';
-      ic.title = link.title;
-      ic.addEventListener('dblclick', () => window.open(link.url, '_blank', 'noopener'));
-      ic.addEventListener('keydown', e => { if (e.key === 'Enter') window.open(link.url, '_blank', 'noopener'); });
-      const im = document.createElement('img');
-      im.src = iconSVG();
-      im.alt = '';
-      const label = document.createElement('span');
-      label.textContent = link.title;
-      ic.appendChild(im);
-      ic.appendChild(label);
-      iconGrid.appendChild(ic);
-    });
-
-    // Start menu toggling / click-away
     const startBtn = document.getElementById('startBtn');
     const startMenu = document.getElementById('startMenu');
     startBtn.addEventListener('click', () => {
@@ -222,68 +152,60 @@
       startBtn.setAttribute('aria-expanded', open);
     });
     document.addEventListener('click', e => {
-      const isInside = startMenu.contains(e.target) || startBtn.contains(e.target);
-      if (!isInside) {
+      if (!startMenu.contains(e.target) && !startBtn.contains(e.target)) {
         startMenu.classList.remove('open');
         startBtn.setAttribute('aria-expanded', 'false');
       }
     });
 
-    // 12-hour Eastern clock (US/Canada), DST-aware
+    // Clock
     const clockEl = document.getElementById('clock');
-    const tz = 'America/Toronto'; // covers Eastern Canada/US with DST
+    const tz = 'America/Toronto';
     function updateClock(){
       const now = new Date();
       const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz });
-      // Force AM/PM uppercase on some browsers
-      clockEl.textContent = time.replace('a.m.', 'AM').replace('p.m.', 'PM').replace('AM', 'AM').replace('PM', 'PM');
+      clockEl.textContent = time.replace('a.m.', 'AM').replace('p.m.', 'PM');
     }
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Welcome.txt window behavior: drag, minimize, close, and restore from taskbar
+    // Welcome window controls
     const win = document.getElementById('welcomeWin');
     const titlebar = document.getElementById('welcomeTitlebar');
     const btnMin = document.getElementById('btnMin');
     const btnClose = document.getElementById('btnClose');
     const taskWelcome = document.getElementById('taskWelcome');
 
-    // Bring window to front when interacted with
     let zTop = 10;
     function bringToFront(el){ el.style.zIndex = ++zTop; }
-    win.addEventListener('pointerdown', () => bringToFront(win));
+    win.addEventListener('mousedown', () => bringToFront(win));
 
-    // Dragging
-    let drag = { active:false, dx:0, dy:0 };
-    titlebar.addEventListener('pointerdown', e => {
-      drag.active = true; drag.dx = e.clientX - win.offsetLeft; drag.dy = e.clientY - win.offsetTop;
-      win.setPointerCapture(e.pointerId);
+    // Dragging only when clicked
+    let dragging = false;
+    let offsetX = 0, offsetY = 0;
+
+    titlebar.addEventListener('mousedown', e => {
+      dragging = true;
+      offsetX = e.clientX - win.offsetLeft;
+      offsetY = e.clientY - win.offsetTop;
+      bringToFront(win);
     });
-    titlebar.addEventListener('pointermove', e => {
-      if(!drag.active) return;
-      const desk = document.getElementById('desktop');
-      let x = e.clientX - drag.dx; let y = e.clientY - drag.dy;
-      // constrain to desktop bounds
-      const maxX = desk.clientWidth - win.offsetWidth - 4; // padding
-      const maxY = desk.clientHeight - (win.classList.contains('minimized') ? titlebar.offsetHeight : win.offsetHeight) - 4;
-      x = Math.max(4, Math.min(x, maxX));
-      y = Math.max(4, Math.min(y, maxY));
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      let x = e.clientX - offsetX;
+      let y = e.clientY - offsetY;
       win.style.left = x + 'px';
-      win.style.top  = y + 'px';
+      win.style.top = y + 'px';
     });
-    titlebar.addEventListener('pointerup', e => { drag.active = false; win.releasePointerCapture(e.pointerId); });
+    document.addEventListener('mouseup', () => dragging = false);
 
-    // Minimize / Close / Restore
-    function minimize(){ win.classList.add('minimized'); bringToFront(win); }
-    function closeWin(){ win.style.display = 'none'; }
-    function restore(){ win.style.display = 'block'; win.classList.remove('minimized'); bringToFront(win); }
-
-    btnMin.addEventListener('click', minimize);
-    btnClose.addEventListener('click', closeWin);
-    taskWelcome.addEventListener('click', restore);
-
-    // Keyboard accessibility on buttons
-    [btnMin, btnClose, taskWelcome].forEach(b => b.setAttribute('tabindex','0'));
+    btnMin.addEventListener('click', () => win.classList.add('minimized'));
+    btnClose.addEventListener('click', () => win.style.display = 'none');
+    taskWelcome.addEventListener('click', () => {
+      win.style.display = 'block';
+      win.classList.remove('minimized');
+      bringToFront(win);
+    });
   </script>
 </body>
 </html>
