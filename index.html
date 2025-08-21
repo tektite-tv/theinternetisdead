@@ -38,6 +38,7 @@
       position: fixed;
       inset: 0 0 40px 0;
       background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-mid) 55%, var(--grass-top) 55%, var(--grass-bot) 100%);
+      z-index: 1; /* ensure stones are hoverable above desktop */
     }
     .wallpaper::before {
       content: "";
@@ -86,7 +87,6 @@
     .stone .face { font-size: clamp(12px, 1.3vw, 15px); line-height: 1.15; padding: 6px 8px; }
     .stone .face small { display:block; font-weight: 600; opacity: .8; margin-top: 6px; font-size: .9em; }
 
-    /* aura base */
     .stone::before {
       content: "";
       position: absolute;
@@ -99,7 +99,6 @@
       transition: opacity .18s ease, filter .18s ease, inset .18s ease, transform .18s ease;
     }
 
-    /* text glow */
     .stone .face {
       text-shadow:
         0 0 6px var(--glow-soft, transparent),
@@ -107,7 +106,6 @@
       transition: text-shadow .18s ease;
     }
 
-    /* Hover reaction: lift, scale, stronger aura and a soft pulse */
     .stone:hover {
       transform: translateY(-16px) scale(1.08);
       filter: brightness(1.03);
@@ -125,7 +123,6 @@
         0 0 40px var(--glow-strong, transparent);
     }
 
-    /* Keyframes */
     @keyframes float {
       0%, 100% { transform: translateY(0) scale(1); }
       50% { transform: translateY(-8px) scale(1.01); }
@@ -135,7 +132,6 @@
       50% { transform: scale(1.06); opacity: .9; }
     }
 
-    /* Per-stone colors and stagger */
     .s1 { left: 8%;  bottom: 12%; animation-duration: 4.6s; animation-delay: .0s;
           --aura: rgba(255, 32, 32, .45);
           --glow-soft: rgba(255, 46, 46, .6);
@@ -152,7 +148,6 @@
           --glow-strong: rgba(60, 120, 255, .5);
     }
 
-    /* Base plinth */
     .stone::after {
       content: "";
       position: absolute; left: -8%; right: -8%; bottom: -8px; height: 10px;
@@ -173,6 +168,8 @@
       justify-content: flex-start;
       text-align: center;
       padding-top: 60px;
+      z-index: 0;
+      pointer-events: none; /* don't block hovering stones */
     }
 
     .horror-text {
@@ -189,7 +186,6 @@
       font-style: italic;
     }
 
-    /* --- Taskbar --- */
     .taskbar {
       position: fixed; left: 0; right: 0; bottom: 0; height: 40px;
       background: var(--ui);
@@ -200,6 +196,7 @@
       align-items: center;
       padding: 4px 6px;
       gap: 8px;
+      z-index: 2; /* above stones */
     }
     .start {
       display: inline-grid; place-items: center; gap: 6px;
@@ -275,7 +272,6 @@
   </style>
 
   <style>
-    /* ===== Simple fixed marquee banner (retro) ===== */
     .warning-banner {
       position: fixed; top: 0; left: 0; right: 0;
       z-index: 99999;
@@ -333,7 +329,6 @@
   <audio id="bgm" class="visually-hidden" src="/sounds/Aesop Waits - Tom Shall Pass - 03 Undercomb Kids.mp3" autoplay loop></audio>
 
   <script>
-    // Clock (12-hour, America/Toronto)
     (function clock(){
       const el = document.getElementById('clock');
       function tick(){
@@ -352,7 +347,6 @@
       setInterval(tick, 1000);
     })();
 
-    // Audio controller
     (function audioController(){
       const audio = document.getElementById('bgm');
       const btn   = document.getElementById('muteBtn');
@@ -391,7 +385,6 @@
       });
     })();
 
-    // END button blackout
     document.getElementById('endBtn').addEventListener('click', function(){
       const blackout = document.createElement('div');
       blackout.className = 'blackout';
