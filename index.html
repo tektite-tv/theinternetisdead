@@ -30,6 +30,7 @@
       background: #000;
       font-family: "MS Sans Serif", Tahoma, Geneva, Verdana, system-ui, sans-serif;
       image-rendering: pixelated;
+      padding-top: 64px; /* space for banner */
     }
 
     .wallpaper {
@@ -146,17 +147,43 @@
     .start span { font-size: 14px; }
 
     .tray {
-      height: 32px; display: grid; align-content: center; padding: 0 10px;
+      height: 32px;
+      display: grid;
+      grid-auto-flow: column;
+      align-items: center;
+      justify-content: end;
+      gap: 8px;
+      padding: 0 10px;
       border: 2px solid var(--ui-dark);
       border-left-color: var(--ui-light);
       border-top-color: var(--ui-light);
       border-right-color: var(--ui-black);
       border-bottom-color: var(--ui-black);
-      min-width: 120px; justify-items: end;
+      min-width: 160px;
       background: var(--ui);
       font-variant-numeric: tabular-nums;
     }
     .clock { font-size: 13px; }
+
+    .mute-btn {
+      width: 28px; height: 24px;
+      display: grid; place-items: center;
+      font-size: 14px; line-height: 1;
+      background: var(--ui);
+      border: 2px solid var(--ui-dark);
+      border-left-color: var(--ui-light);
+      border-top-color: var(--ui-light);
+      border-right-color: var(--ui-black);
+      border-bottom-color: var(--ui-black);
+      cursor: pointer;
+      user-select: none;
+    }
+    .mute-btn:active, .mute-btn[aria-pressed="true"] {
+      border-left-color: var(--ui-black);
+      border-top-color: var(--ui-black);
+      border-right-color: var(--ui-light);
+      border-bottom-color: var(--ui-light);
+    }
 
     .start::before {
       content: "☠";
@@ -172,46 +199,47 @@
 
     @media (max-width: 480px) {
       .taskbar { height: 44px; }
-      .tray { min-width: 96px; }
+      .tray { min-width: 120px; gap: 6px; }
       .start { min-width: 72px; }
+      .mute-btn { width: 26px; height: 22px; }
+      .clock { font-size: 12px; }
     }
   </style>
 
-<style>
-/* ===== Simple fixed marquee banner (retro) ===== */
-.warning-banner {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 99999;
-  height: 48px;
-  border-bottom: 2px solid #000;
-  background: #ff0000;
-  animation: wb-flash .8s steps(1, end) infinite;
-  display: grid;
-  align-items: center;
-}
-.warning-banner marquee {
-  font-weight: 900;
-  font-size: 18px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  text-shadow: 2px 2px 0 rgba(0,0,0,.35);
-  color: #000;
-}
-@keyframes wb-flash {
-  0%, 49%   { background: #ff0000; }
-  50%, 100% { background: #ffd400; }
-}
-/* Push content down so it's not under the banner */
-body { padding-top: 64px; }
-@media (prefers-reduced-motion: reduce) {
-  .warning-banner { animation: none; background: #ff1c1c; }
-}
-/* Hide the audio element */
-#audio-visually-hidden { 
-  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(1px,1px,1px,1px);
-}
-</style>
+  <style>
+  /* ===== Simple fixed marquee banner (retro) ===== */
+  .warning-banner {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 99999;
+    height: 48px;
+    border-bottom: 2px solid #000;
+    background: #ff0000;
+    animation: wb-flash .8s steps(1, end) infinite;
+    display: grid;
+    align-items: center;
+  }
+  .warning-banner marquee {
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+    color: #000;
+  }
+  @keyframes wb-flash {
+    0%, 49%   { background: #ff0000; }
+    50%, 100% { background: #ffd400; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .warning-banner { animation: none; background: #ff1c1c; }
+  }
+
+  /* Hide audio element but keep it accessible */
+  .visually-hidden { 
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(1px,1px,1px,1px);
+  }
+  </style>
 </head>
 <body>
 
@@ -235,13 +263,17 @@ body { padding-top: 64px; }
   <footer class="taskbar" role="toolbar" aria-label="Taskbar">
     <button class="start" aria-label="End menu" id="endBtn"><span>END</span></button>
     <div class="spacer" aria-hidden="true"></div>
-    <div class="tray" aria-label="System tray"><span id="clock" class="clock" aria-live="polite">🕒 --:-- --</span></div>
+    <div class="tray" aria-label="System tray">
+      <button id="muteBtn" class="mute-btn" aria-label="Toggle mute" aria-pressed="false" title="Mute/unmute">🔊</button>
+      <span id="clock" class="clock" aria-live="polite">🕒 --:-- --</span>
+    </div>
   </footer>
 
   <!-- Background soundtrack (hidden, loops) -->
-  <audio id="bgm" class="audio-visually-hidden" src="/sounds/Aesop Waits - Tom Shall Pass - 03 Undercomb Kids.mp3" autoplay loop></audio>
+  <audio id="bgm" class="visually-hidden" src="/sounds/Aesop Waits - Tom Shall Pass - 03 Undercomb Kids.mp3" autoplay loop></audio>
 
   <script>
+    // Clock
     (function clock(){
       function tick(){
         try {
@@ -259,6 +291,13 @@ body { padding-top: 64px; }
       setInterval(tick, 1000);
     })();
 
+    // Mute/unmute button logic
+    document.getElementById('muteBtn').addEventListener('click', function() {
+      const audio = document.getElementById('bgm');
+      audio.muted = !audio.muted;
+      this.textContent = audio.muted ? '🔇' : '🔊';
+    });
+
     // Autoplay fallback: if blocked, start on first user interaction
     (function autoPlayFallback(){
       const audio = document.getElementById('bgm');
@@ -266,12 +305,45 @@ body { padding-top: 64px; }
         audio.play().catch(()=>{});
         window.removeEventListener('pointerdown', resume, { once: true });
       };
-      // If not already playing, listen for first interaction
       if (audio.paused) {
         window.addEventListener('pointerdown', resume, { once: true });
       }
     })();
 
+    // Mute toggle with persistence
+    (function muteControl(){
+      const audio = document.getElementById('bgm');
+      const btn = document.getElementById('muteBtn');
+
+      function applyState(muted){
+        audio.muted = muted;
+        btn.setAttribute('aria-pressed', String(muted));
+        btn.textContent = muted ? '🔇' : '🔊';
+        btn.title = muted ? 'Unmute' : 'Mute';
+      }
+
+      // Load saved state
+      try {
+        const saved = localStorage.getItem('bgmMuted');
+        if (saved !== null) applyState(saved === 'true');
+      } catch(e) {}
+
+      btn.addEventListener('click', () => {
+        const newState = !audio.muted;
+        applyState(newState);
+        try { localStorage.setItem('bgmMuted', String(newState)); } catch(e) {}
+      });
+
+      // Keyboard support
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          btn.click();
+        }
+      });
+    })();
+
+    // END button blackout
     document.getElementById('endBtn').addEventListener('click', function(){
       const blackout = document.createElement('div');
       blackout.className = 'blackout';
