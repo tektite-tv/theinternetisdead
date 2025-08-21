@@ -175,80 +175,47 @@
       .tray { min-width: 96px; }
       .start { min-width: 72px; }
     }
-  
-          .warning-banner__track { animation: none; }
-    }
-
-  
-    /* ===== Warning marquee banner (seamless loop) ===== */
-    .warning-banner {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: 48px;
-      z-index: 10000;
-      overflow: hidden;
-      border-bottom: 2px solid #000;
-      display: grid;
-      align-items: center;
-      animation: wb-flash .8s steps(1, end) infinite;
-    }
-    .warning-banner__viewport {
-      width: 100%;
-      overflow: hidden;
-    }
-    .warning-banner__scroller {
-      display: flex;
-      width: max-content;
-      will-change: transform;
-      animation: wb-loop 18s linear infinite;
-    }
-    .warning-banner__track {
-      flex: 0 0 auto;
-      white-space: nowrap;
-      font-weight: 900;
-      font-size: 18px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      text-shadow: 2px 2px 0 rgba(0,0,0,.35);
-      color: #000;
-      padding-right: 3rem; /* gap between repeats */
-    }
-    @keyframes wb-flash {
-      0%, 49%   { background: #ff0000; }
-      50%, 100% { background: #ffd400; }
-    }
-    /* Move exactly one track width (50% of scroller that has two identical tracks) */
-    @keyframes wb-loop {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
-    /* Make space for the banner so it doesn't overlap desktop */
-    .has-warning .desktop { padding-top: 116px; }
-
-    /* Respect reduced motion */
-    @media (prefers-reduced-motion: reduce) {
-      .warning-banner { animation: none; background: #ff1c1c; }
-      .warning-banner__scroller { animation: none; }
-    }
-
   </style>
+
+<style>
+/* ===== Simple fixed marquee banner (retro) ===== */
+.warning-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 99999;
+  height: 48px;
+  border-bottom: 2px solid #000;
+  background: #ff0000;
+  animation: wb-flash .8s steps(1, end) infinite;
+  display: grid;
+  align-items: center;
+}
+.warning-banner marquee {
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+  color: #000;
+}
+@keyframes wb-flash {
+  0%, 49%   { background: #ff0000; }
+  50%, 100% { background: #ffd400; }
+}
+/* Push content down so it's not under the banner */
+body { padding-top: 64px; }
+@media (prefers-reduced-motion: reduce) {
+  .warning-banner { animation: none; background: #ff1c1c; }
+}
+</style>
 </head>
-<body class="has-warning">
+<body>
 
-  <div class="warning-banner" role="region" aria-label="Internet warning banner">
-    <div class="warning-banner__viewport">
-      <div class="warning-banner__scroller">
-        <div class="warning-banner__track">
-          WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET •
-        </div>
-        <div class="warning-banner__track" aria-hidden="true">
-          WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET •
-        </div>
-      </div>
-    </div>
-  </div>
-
-  </div>
+<div class="warning-banner" role="region" aria-label="Internet warning banner">
+  <marquee behavior="scroll" direction="left" scrollamount="6">
+    WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET •
+  </marquee>
+</div>
 
   <div class="wallpaper" aria-hidden="true">
     <div class="stone s1"><div class="face">RIP<small>Guestbooks</small></div></div>
