@@ -106,8 +106,10 @@
   </style>
 </head>
 <body>
+  <!-- Edit your links here; Start menu and desktop icons are generated from this list -->
   <ul id="linksData">
     <li><a href="/">Home</a></li>
+    <!-- Add more like: <li><a href="/images/">Images</a></li> -->
   </ul>
 
   <div class="desktop" id="desktop">
@@ -124,6 +126,7 @@
       </header>
       <div class="content">
         <p>Welcome to <strong>The Internet Is Dead OS</strong>. Drag this window around, minimize it to the taskbar, or close it like a champ.</p>
+        <p>Edit the hidden link list to add icons to the desktop and Start menu.</p>
       </div>
     </section>
   </div>
@@ -145,6 +148,50 @@
   </nav>
 
   <script>
+    // Utility: simple icon SVG as data URL
+    function iconSVG() {
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
+        <defs>
+          <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+            <stop offset='0' stop-color='#ff66ff'/>
+            <stop offset='1' stop-color='#66ccff'/>
+          </linearGradient>
+        </defs>
+        <rect x='6' y='6' width='52' height='52' rx='8' fill='url(#g)' stroke='black' opacity='0.9'/>
+        <rect x='12' y='38' width='40' height='14' rx='2' fill='#ffffff' opacity='0.9'/>
+        <rect x='12' y='12' width='40' height='20' rx='2' fill='#66ff99' opacity='0.9' stroke='#00000055'/>
+      </svg>`;
+      return 'data:image/svg+xml;base64,' + btoa(svg);
+    }
+
+    // Build Start menu + desktop icons from the editable list
+    const menuList = document.getElementById('menuList');
+    const iconGrid = document.getElementById('iconGrid');
+    const LINKS = Array.from(document.querySelectorAll('#linksData a')).map(a => ({
+      title: a.textContent.trim() || a.getAttribute('href'),
+      url: a.getAttribute('href')
+    }));
+
+    LINKS.forEach(link => {
+      // Start menu entry
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = link.url; a.target = '_blank'; a.rel = 'noopener';
+      const img = document.createElement('img'); img.alt = ''; img.src = iconSVG();
+      a.appendChild(img); a.append(document.createTextNode(link.title));
+      li.appendChild(a); menuList.appendChild(li);
+
+      // Desktop icon
+      const ic = document.createElement('button');
+      ic.className = 'icon'; ic.title = link.title;
+      ic.addEventListener('dblclick', () => window.open(link.url, '_blank', 'noopener'));
+      ic.addEventListener('keydown', e => { if (e.key === 'Enter') window.open(link.url, '_blank', 'noopener'); });
+      const im = document.createElement('img'); im.src = iconSVG(); im.alt = '';
+      const label = document.createElement('span'); label.textContent = link.title;
+      ic.appendChild(im); ic.appendChild(label); iconGrid.appendChild(ic);
+    });
+
+    // Start menu toggle
     const startBtn = document.getElementById('startBtn');
     const startMenu = document.getElementById('startMenu');
     startBtn.addEventListener('click', () => {
@@ -152,13 +199,11 @@
       startBtn.setAttribute('aria-expanded', open);
     });
     document.addEventListener('click', e => {
-      if (!startMenu.contains(e.target) && !startBtn.contains(e.target)) {
-        startMenu.classList.remove('open');
-        startBtn.setAttribute('aria-expanded', 'false');
-      }
+      const inside = startMenu.contains(e.target) || startBtn.contains(e.target);
+      if (!inside) { startMenu.classList.remove('open'); startBtn.setAttribute('aria-expanded', 'false'); }
     });
 
-    // Clock
+    // 12-hour Eastern clock
     const clockEl = document.getElementById('clock');
     const tz = 'America/Toronto';
     function updateClock(){
@@ -169,35 +214,44 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Welcome window controls
+    // Welcome window controls with safe dragging
     const win = document.getElementById('welcomeWin');
     const titlebar = document.getElementById('welcomeTitlebar');
     const btnMin = document.getElementById('btnMin');
     const btnClose = document.getElementById('btnClose');
     const taskWelcome = document.getElementById('taskWelcome');
+    const desktop = document.getElementById('desktop');
 
     let zTop = 10;
     function bringToFront(el){ el.style.zIndex = ++zTop; }
     win.addEventListener('mousedown', () => bringToFront(win));
 
-    // Dragging only when clicked
-    let dragging = false;
-    let offsetX = 0, offsetY = 0;
+    let dragging = false; let offsetX = 0, offsetY = 0;
 
     titlebar.addEventListener('mousedown', e => {
       dragging = true;
       offsetX = e.clientX - win.offsetLeft;
       offsetY = e.clientY - win.offsetTop;
+      document.body.style.userSelect = 'none';
       bringToFront(win);
     });
+
     document.addEventListener('mousemove', e => {
       if (!dragging) return;
-      let x = e.clientX - offsetX;
-      let y = e.clientY - offsetY;
+      // Constrain to desktop bounds
+      const maxX = desktop.clientWidth - win.offsetWidth - 4;
+      const maxY = desktop.clientHeight - titlebar.offsetHeight - 4; // allow titlebar to stay visible
+      let x = e.clientX - offsetX; let y = e.clientY - offsetY;
+      x = Math.max(4, Math.min(x, maxX));
+      y = Math.max(4, Math.min(y, maxY));
       win.style.left = x + 'px';
-      win.style.top = y + 'px';
+      win.style.top  = y + 'px';
     });
-    document.addEventListener('mouseup', () => dragging = false);
+
+    document.addEventListener('mouseup', () => {
+      dragging = false;
+      document.body.style.userSelect = '';
+    });
 
     btnMin.addEventListener('click', () => win.classList.add('minimized'));
     btnClose.addEventListener('click', () => win.style.display = 'none');
