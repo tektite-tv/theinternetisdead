@@ -175,9 +175,58 @@
       .tray { min-width: 96px; }
       .start { min-width: 72px; }
     }
+  
+    /* ===== Warning marquee banner ===== */
+    .warning-banner {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      z-index: 10000;
+      display: grid;
+      align-items: center;
+      overflow: hidden;
+      border-bottom: 2px solid #000;
+      animation: wb-flash .8s steps(1, end) infinite;
+    }
+    .warning-banner__track {
+      white-space: nowrap;
+      display: inline-block;
+      will-change: transform;
+      animation: wb-scroll 18s linear infinite;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+      color: #000;
+      padding-left: 100vw; /* start off-screen for smooth entry */
+    }
+    @keyframes wb-flash {
+      0%, 49%   { background: #ff0000; }
+      50%, 100% { background: #ffd400; }
+    }
+    @keyframes wb-scroll {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-200%); }
+    }
+    /* Make space for the banner */
+    .has-warning .desktop { padding-top: 116px; }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .warning-banner { animation: none; background: #ff1c1c; }
+      .warning-banner__track { animation: none; }
+    }
+
   </style>
 </head>
-<body>
+<body class="has-warning">
+  <div class="warning-banner" role="region" aria-label="Internet warning banner">
+    <div class="warning-banner__track">
+      WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET •
+    </div>
+  </div>
+
   <div class="wallpaper" aria-hidden="true">
     <div class="stone s1"><div class="face">RIP<small>Guestbooks</small></div></div>
     <div class="stone s2"><div class="face">RIP<small>Webrings</small></div></div>
