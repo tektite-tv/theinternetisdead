@@ -1,197 +1,263 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Gallery</title>
-  <link rel="icon" type="image/png" href="/images/myeye.png" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>theinternetisdead · images</title>
+  <meta name="color-scheme" content="dark" />
   <style>
-    body {
-      background-color: black;
-      color: white;
-      font-family: monospace;
-      margin: 0;
-      padding: 0;
+    :root{
+      --bg: #040607;
+      --panel: #0a0f0f;
+      --grid: #0b1e15;
+      --txt: #c8facc;
+      --muted:#6df7a8;
+      --neon:#00ff80;
+      --neon2:#39ff14;
+      --accent:#9afc7d;
+      --warn:#00ffa6;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;background:radial-gradient(1200px 800px at 20% -10%,rgba(0,255,128,.08),transparent 60%),
+      radial-gradient(900px 600px at 120% 110%,rgba(0,255,128,.08),transparent 60%),
+      linear-gradient(#021,#000);
+      color:var(--txt);
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      letter-spacing:.2px;
+      overflow-y:overlay;
     }
 
-    h1 {
-      text-align: center;
-      margin: 30px 0;
+    /* subtle CRT scanlines */
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;background:
+      repeating-linear-gradient(180deg,rgba(0,255,128,.06) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 3px, rgba(0,255,128,.06) 4px);
+      mix-blend-mode:soft-light;opacity:.25}
+
+    header{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,rgba(0,0,0,.75),rgba(0,0,0,.35));backdrop-filter:blur(6px);border-bottom:1px solid #103926}
+    .wrap{max-width:1200px;margin:0 auto;padding:18px 20px}
+    h1{font-size:clamp(18px,2vw,22px);margin:0;display:flex;align-items:center;gap:12px;color:var(--accent)}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--neon);box-shadow:0 0 10px var(--neon),0 0 20px var(--neon)}
+
+    .controls{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+    input[type="search"],select{background:#021b12;border:1px solid #0a3; color:var(--txt); padding:8px 10px;border-radius:8px;outline:none}
+    .btn{cursor:pointer;border:1px solid #0a3;background:#052215;color:var(--accent);padding:8px 12px;border-radius:8px}
+
+    main{max-width:1400px;margin:10px auto 80px; padding: 10px 16px}
+
+    /* grid */
+    .grid{
+      display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+    }
+    .card{
+      position:relative;overflow:hidden;border-radius:16px;background:linear-gradient(180deg,#06140f,#010705);
+      border:1px solid #0c3;box-shadow:0 0 0 1px rgba(0,255,128,.05), 0 10px 25px rgba(0,0,0,.35);
+      transform:translateZ(0)
+    }
+    .card::after{content:"";position:absolute;inset:-1px;border-radius:16px;pointer-events:none;border:1px dashed rgba(0,255,128,.25); mix-blend-mode:overlay}
+
+    img{display:block;width:100%;height:220px;object-fit:cover;filter:contrast(1.05) saturate(1.1)}
+
+    /* glitch aura on hover */
+    .card:hover img{animation:glitch .9s infinite}
+    @keyframes glitch{
+      0%{clip-path:inset(0 0 0 0);transform:translate(0)}
+      10%{clip-path:inset(5% 0 60% 0);transform:translate(-1px,-1px)}
+      20%{clip-path:inset(60% 0 5% 0);transform:translate(1px,1px)}
+      35%{clip-path:inset(10% 0 45% 0);filter:hue-rotate(20deg)}
+      50%{clip-path:inset(0 0 0 0);}
+      65%{clip-path:inset(40% 0 20% 0);}
+      80%{clip-path:inset(0 0 0 0);}
+      100%{clip-path:inset(0 0 0 0);transform:translate(0)}
     }
 
-    .gallery-wrapper {
-      padding: 20px;
-    }
+    .meta{position:absolute;left:8px;bottom:8px;right:8px;background:linear-gradient(180deg,transparent,rgba(0,0,0,.85));padding:34px 10px 8px;border-radius:12px;color:#bfffcf;font-size:12px}
+    .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-    .gallery {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
-    }
+    .badge{position:absolute;top:8px;right:8px;font-size:10px;color:#00150a;background:var(--muted);border-radius:999px;padding:4px 8px;border:1px solid #00c76a;box-shadow:0 0 10px rgba(0,255,128,.45)}
 
-    .gallery img {
-      max-width: 150px;
-      height: auto;
-      border: 2px solid white;
-      transition: transform 0.2s ease-in-out, border-color 0.2s;
-      cursor: pointer;
-    }
+    /* lightbox */
+    dialog#viewer{width:100vw;height:100vh;max-width:none;max-height:none;border:0;padding:0;background:rgba(0,0,0,.92)}
+    .viewer-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+    .viewer-wrap img{max-width:92vw;max-height:90vh;object-fit:contain;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+    .nav{position:fixed;inset:0;display:flex;justify-content:space-between;align-items:center;pointer-events:none}
+    .nav button{pointer-events:auto;background:transparent;border:0;color:var(--accent);font-size:40px;padding:20px;cursor:pointer;text-shadow:0 0 12px var(--neon)}
+    .close{position:fixed;top:8px;right:12px;font-size:26px}
 
-    .gallery img:hover {
-      transform: scale(1.1);
-      border-color: magenta;
-    }
-
-    .taskbar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: linear-gradient(180deg, black, white, black);
-      color: #000;
-      font-family: "Courier New", monospace;
-      padding: 0.5rem;
-      display: flex;
-      align-items: center;
-      z-index: 200;
-    }
-
-    .start-container {
-      position: relative;
-    }
-
-    .start-button {
-      background: #000;
-      color: #00ff99;
-      border: 1px solid #00ff99;
-      padding: 0.3rem 1rem;
-      cursor: pointer;
-    }
-
-    .start-menu {
-      display: none;
-      position: absolute;
-      bottom: 2.5rem;
-      left: 0;
-      background: #111;
-      border: 1px solid #ff00ff;
-      padding: 0.5rem;
-      z-index: 201;
-    }
-
-    .start-menu a {
-      color: #00ffff;
-      text-decoration: none;
-      display: block;
-      margin: 0.3rem 0;
-      font-weight: bold;
-    }
-
-    .start-menu a:hover {
-      color: #ff00ff;
-    }
-
-    .taskbar-center {
-      flex: 1;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .system-tray {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      min-width: fit-content;
-    }
+    footer{max-width:1200px;margin:40px auto;padding:0 16px;color:#a9f5bf;opacity:.75}
+    code{background:#072313;border:1px solid #0a3;border-radius:8px;padding:2px 6px}
   </style>
 </head>
 <body>
-  <div class="gallery-wrapper">
-    <h1>🔥 Welcome to the Image Gallery 🔥</h1>
-    <div class="gallery">
-      <a href="face.png" target="_blank"><img src="face.png" alt="face.png" /></a>
-      <a href="favicon.png" target="_blank"><img src="favicon.png" alt="favicon.png" /></a>
-      <a href="fire.gif" target="_blank"><img src="fire.gif" alt="fire.gif" /></a>
-      <a href="gameicon.png" target="_blank"><img src="gameicon.png" alt="gameicon.png" /></a>
-      <a href="myeye.png" target="_blank"><img src="myeye.png" alt="myeye.png" /></a>
-    </div>
-  </div>
-
-  <audio id="bgMusic" src="/sounds/smw.mp3" autoplay loop></audio>
-
-  <div class="taskbar">
-    <div class="start-container">
-      <div class="start-button" onclick="toggleMenu()">Start</div>
-      <div class="start-menu" id="startMenu">
-        <a href="https://theinternetisdead.org">Home</a>
-        <a href="/images/index.html">Images</a>
-        <a href="/who/">Who?</a>
-        <a href="/press-F/index.html">Press F</a>
-        <a href="#" onclick="shutdown()">Shutdown</a>
+  <header>
+    <div class="wrap">
+      <h1><span class="dot" aria-hidden="true"></span> theinternetisdead / <span style="color:var(--txt);opacity:.9">images</span></h1>
+      <div class="controls">
+        <input id="q" type="search" placeholder="filter by name…" aria-label="Filter images" />
+        <select id="sort">
+          <option value="name-asc">name ↑</option>
+          <option value="name-desc">name ↓</option>
+        </select>
+        <button class="btn" id="shuffle">shuffle</button>
       </div>
     </div>
+  </header>
 
-    <div class="taskbar-center">Press F To Pay Respect</div>
+  <main>
+    <div id="grid" class="grid" aria-live="polite"></div>
+    <template id="tpl">
+      <a class="card" target="_blank" rel="noopener noreferrer">
+        <span class="badge">IMG</span>
+        <img loading="lazy" alt="" />
+        <div class="meta"><div class="name"></div></div>
+      </a>
+    </template>
+  </main>
 
-    <div class="system-tray">
-      <span id="muteBtn" style="cursor:pointer;">🎵</span>
-      <span id="spiralIcon" style="cursor:pointer;">🔀</span>
-      <span id="attentionBtn" style="cursor:pointer;">⚠️</span>
+  <dialog id="viewer">
+    <div class="viewer-wrap">
+      <img id="full" alt="" />
+      <div class="nav">
+        <button id="prev" aria-label="Previous">◀</button>
+        <button id="next" aria-label="Next">▶</button>
+      </div>
+      <button class="nav close" id="close" aria-label="Close">✕</button>
     </div>
-  </div>
+  </dialog>
+
+  <footer>
+    <p>Drop this file into <code>/images/index.html</code>. If directory listing is enabled, it will auto-index. Otherwise, edit <code>FALLBACK_LIST</code> below.</p>
+  </footer>
 
   <script>
-    function toggleMenu() {
-      const menu = document.getElementById('startMenu');
-      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    // Base path relative to this file. Leave as '.' when this lives in /images/
+    const BASE_PATH = '.';
+
+    // Fallback list if your server doesn't expose a directory index. Put filenames here.
+    const FALLBACK_LIST = [
+      // "my-image-01.jpg", "art-02.png"
+    ];
+
+    const exts = [".png",".jpg",".jpeg",".gif",".webp",".avif",".svg"];
+    const grid = document.getElementById('grid');
+    const tpl = document.getElementById('tpl');
+    const q = document.getElementById('q');
+    const sortSel = document.getElementById('sort');
+    const shuffleBtn = document.getElementById('shuffle');
+
+    let items = [];
+    let viewIndex = 0;
+
+    async function listFromIndex() {
+      try {
+        const res = await fetch(BASE_PATH + '/');
+        if (!res.ok) throw new Error('no index');
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const anchors = [...doc.querySelectorAll('a[href]')];
+        const hrefs = anchors.map(a => a.getAttribute('href'));
+        const files = hrefs
+          .map(h => decodeURIComponent(h))
+          .filter(h => exts.some(e => h.toLowerCase().endsWith(e)))
+          .map(h => h.replace(/^\.\//,''))
+          .map(h => h.startsWith('http') ? h : (h.startsWith('/') ? h : `${BASE_PATH}/${h}`));
+        return [...new Set(files)];
+      } catch (e) {
+        return null;
+      }
     }
 
-    function shutdown() {
-      const blackout = document.createElement('div');
-      blackout.style.position = 'fixed';
-      blackout.style.top = '0';
-      blackout.style.left = '0';
-      blackout.style.width = '100vw';
-      blackout.style.height = '100vh';
-      blackout.style.backgroundColor = '#000';
-      blackout.style.zIndex = '99999';
-      document.body.appendChild(blackout);
+    async function getImages() {
+      const auto = await listFromIndex();
+      if (auto && auto.length) return auto;
+      return FALLBACK_LIST.map(f => `${BASE_PATH}/${f}`);
     }
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "f") {
-        window.location.href = "/press-F/index.html";
-      }
-      if (e.key.toLowerCase() === "q") {
-        document.body.style.transition = "transform 1s ease-in-out";
-        document.body.style.transform = "rotate(360deg)";
-        setTimeout(() => {
-          document.body.style.transform = "none";
-        }, 1000);
-      }
-    });
-
-    const clickSound = new Audio('/sounds/AchievementUnlocked.mp3');
-    document.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', () => {
-        clickSound.currentTime = 0;
-        clickSound.play();
+    function render(list){
+      grid.innerHTML = '';
+      list.forEach((src,i)=>{
+        const node = tpl.content.firstElementChild.cloneNode(true);
+        const img = node.querySelector('img');
+        const meta = node.querySelector('.name');
+        const name = src.split('/').pop();
+        img.src = src;
+        img.alt = name;
+        meta.textContent = name;
+        node.href = src;
+        node.addEventListener('click', (ev)=>{
+          ev.preventDefault();
+          openViewer(i);
+        });
+        grid.appendChild(node);
       });
+    }
+
+    function sortList(kind){
+      const sorted = [...items].sort((a,b)=>{
+        const A = a.toLowerCase();
+        const B = b.toLowerCase();
+        if (kind === 'name-asc') return A.localeCompare(B, undefined, {numeric:true});
+        if (kind === 'name-desc') return B.localeCompare(A, undefined, {numeric:true});
+        return 0;
+      });
+      return sorted;
+    }
+
+    function shuffle(list){
+      for (let i=list.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [list[i],list[j]] = [list[j],list[i]];
+      }
+      return list;
+    }
+
+    function applyFilter(){
+      const term = q.value.trim().toLowerCase();
+      let list = sortList(sortSel.value);
+      if (term) list = list.filter(src => src.toLowerCase().includes(term));
+      render(list);
+    }
+
+    function openViewer(i){
+      viewIndex = i;
+      const dlg = document.getElementById('viewer');
+      const img = document.getElementById('full');
+      img.src = items[i];
+      img.alt = items[i].split('/').pop();
+      dlg.showModal();
+    }
+
+    function nav(delta){
+      viewIndex = (viewIndex + delta + items.length) % items.length;
+      const img = document.getElementById('full');
+      img.src = items[viewIndex];
+      img.alt = items[viewIndex].split('/').pop();
+    }
+
+    document.getElementById('prev').onclick = () => nav(-1);
+    document.getElementById('next').onclick = () => nav(1);
+    document.getElementById('close').onclick = () => document.getElementById('viewer').close();
+
+    document.addEventListener('keydown', (e)=>{
+      const dlg = document.getElementById('viewer');
+      if (!dlg.open) return;
+      if (e.key === 'ArrowLeft') nav(-1);
+      if (e.key === 'ArrowRight') nav(1);
+      if (e.key === 'Escape') dlg.close();
     });
 
-    document.getElementById('muteBtn').addEventListener('click', () => {
-      const bgMusic = document.getElementById('bgMusic');
-      bgMusic.muted = !bgMusic.muted;
-    });
+    q.addEventListener('input', applyFilter);
+    sortSel.addEventListener('change', applyFilter);
+    shuffleBtn.addEventListener('click', ()=>{ render(shuffle([...items])); });
 
-    document.getElementById('attentionBtn').addEventListener('click', () => {
-      document.body.style.transition = "transform 1s ease-in-out";
-      document.body.style.transform = "rotate(360deg)";
-      setTimeout(() => {
-        document.body.style.transform = "none";
-      }, 1000);
-    });
+    (async function init(){
+      items = await getImages();
+      if (!items.length){
+        grid.innerHTML = '<p style="opacity:.8">No images found. If your host disables directory listing, add filenames to <code>FALLBACK_LIST</code> in the source.</p>';
+        return;
+      }
+      applyFilter();
+    })();
   </script>
 </body>
 </html>
