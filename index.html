@@ -30,9 +30,10 @@
       background: #000;
       font-family: "MS Sans Serif", Tahoma, Geneva, Verdana, system-ui, sans-serif;
       image-rendering: pixelated;
-      padding-top: 64px; /* space for banner */
+      padding-top: 48px; /* space for banner */
     }
 
+    /* --- Wallpaper + stars + fake tombstones --- */
     .wallpaper {
       position: fixed;
       inset: 0 0 40px 0;
@@ -116,13 +117,17 @@
       font-style: italic;
     }
 
+    /* --- Taskbar (flex, no spacer shenanigans) --- */
     .taskbar {
       position: fixed; left: 0; right: 0; bottom: 0; height: 40px;
       background: var(--ui);
       border-top: 2px solid var(--ui-light);
       box-shadow: inset 0 2px 0 var(--ui-mid), inset 0 -2px 0 var(--ui-dark);
-      display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 4px 6px;
+      gap: 8px;
     }
     .start {
       display: inline-grid; place-items: center; gap: 6px;
@@ -145,6 +150,7 @@
       border-bottom-color: var(--ui-light);
     }
     .start span { font-size: 14px; }
+    .start::before { content: "☠"; font-size: 16px; line-height: 1; }
 
     .tray {
       height: 32px;
@@ -163,7 +169,7 @@
       background: var(--ui);
       font-variant-numeric: tabular-nums;
     }
-    .clock { font-size: 13px; }
+    .clock { font-size: 13px; white-space: nowrap; }
 
     .mute-btn {
       width: 28px; height: 24px;
@@ -185,17 +191,7 @@
       border-bottom-color: var(--ui-light);
     }
 
-    .start::before {
-      content: "☠";
-      font-size: 16px; line-height: 1;
-    }
-
-    .blackout {
-      position: fixed;
-      inset: 0;
-      background: #000;
-      z-index: 9999;
-    }
+    .blackout { position: fixed; inset: 0; background: #000; z-index: 9999; }
 
     @media (max-width: 480px) {
       .taskbar { height: 44px; }
@@ -207,47 +203,36 @@
   </style>
 
   <style>
-  /* ===== Simple fixed marquee banner (retro) ===== */
-  .warning-banner {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 99999;
-    height: 48px;
-    border-bottom: 2px solid #000;
-    background: #ff0000;
-    animation: wb-flash .8s steps(1, end) infinite;
-    display: grid;
-    align-items: center;
-  }
-  .warning-banner marquee {
-    font-weight: 900;
-    font-size: 18px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    text-shadow: 2px 2px 0 rgba(0,0,0,.35);
-    color: #000;
-  }
-  @keyframes wb-flash {
-    0%, 49%   { background: #ff0000; }
-    50%, 100% { background: #ffd400; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .warning-banner { animation: none; background: #ff1c1c; }
-  }
+    /* ===== Simple fixed marquee banner (retro) ===== */
+    .warning-banner {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 99999;
+      height: 48px;
+      border-bottom: 2px solid #000;
+      background: #ff0000;
+      animation: wb-flash .8s steps(1, end) infinite;
+      display: grid; align-items: center;
+    }
+    .warning-banner marquee {
+      font-weight: 900; font-size: 18px; letter-spacing: 1px;
+      text-transform: uppercase;
+      text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+      color: #000;
+    }
+    @keyframes wb-flash { 0%, 49% { background:#ff0000; } 50%,100% { background:#ffd400; } }
+    @media (prefers-reduced-motion: reduce) { .warning-banner { animation: none; background:#ff1c1c; } }
 
-  /* Hide audio element but keep it accessible */
-  .visually-hidden { 
-    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(1px,1px,1px,1px);
-  }
+    /* Visually hide audio without removing it from a11y tree */
+    .visually-hidden { position: absolute; width:1px; height:1px; overflow:hidden; clip: rect(1px,1px,1px,1px); }
   </style>
 </head>
 <body>
 
-<div class="warning-banner" role="region" aria-label="Internet warning banner">
-  <marquee behavior="scroll" direction="left" scrollamount="6">
-    WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET •
-  </marquee>
-</div>
+  <div class="warning-banner" role="region" aria-label="Internet warning banner">
+    <marquee behavior="scroll" direction="left" scrollamount="6">
+      WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET • WARNING: YOU HAVE REACHED THE END OF THE INTERNET •
+    </marquee>
+  </div>
 
   <div class="wallpaper" aria-hidden="true">
     <div class="stone s1"><div class="face">RIP<small>Guestbooks</small></div></div>
@@ -262,7 +247,6 @@
 
   <footer class="taskbar" role="toolbar" aria-label="Taskbar">
     <button class="start" aria-label="End menu" id="endBtn"><span>END</span></button>
-    <div class="spacer" aria-hidden="true"></div>
     <div class="tray" aria-label="System tray">
       <button id="muteBtn" class="mute-btn" aria-label="Toggle mute" aria-pressed="false" title="Mute/unmute">🔊</button>
       <span id="clock" class="clock" aria-live="polite">🕒 --:-- --</span>
@@ -272,52 +256,74 @@
   <!-- Background soundtrack (hidden, loops) -->
   <audio id="bgm" class="visually-hidden" src="/sounds/Aesop Waits - Tom Shall Pass - 03 Undercomb Kids.mp3" autoplay loop></audio>
 
-<script>
-  // Unified audio controller: one source of truth, no volume shenanigans
-  (function audioController(){
-    const audio = document.getElementById('bgm');
-    const btn   = document.getElementById('muteBtn');
-    const KEY   = 'bgmMuted';
+  <script>
+    // ===== Clock (12-hour, America/Toronto) =====
+    (function clock(){
+      const el = document.getElementById('clock');
+      function tick(){
+        try {
+          const now = new Date();
+          const t = now.toLocaleTimeString('en-CA', {
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+            timeZone: 'America/Toronto'
+          }).replace(/^0/, '');
+          el.textContent = '🕒 ' + t;
+        } catch(e) {
+          el.textContent = '🕒 ' + new Date().toLocaleTimeString();
+        }
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
 
-    function updateUI(muted){
-      btn.setAttribute('aria-pressed', String(muted));
-      btn.title = muted ? 'Unmute' : 'Mute';
-      btn.textContent = muted ? '🔇' : '🔊';
-    }
-    function setMuted(muted){
-      audio.muted = muted;
-      try { localStorage.setItem(KEY, muted ? '1' : '0'); } catch(e) {}
-      updateUI(muted);
-    }
+    // ===== Unified audio controller (no volume hacks) =====
+    (function audioController(){
+      const audio = document.getElementById('bgm');
+      const btn   = document.getElementById('muteBtn');
+      const KEY   = 'bgmMuted';
 
-    // Load saved state
-    let savedMuted = false;
-    try { savedMuted = localStorage.getItem(KEY) === '1'; } catch(e) {}
+      function updateUI(muted){
+        btn.setAttribute('aria-pressed', String(muted));
+        btn.title = muted ? 'Unmute' : 'Mute';
+        btn.textContent = muted ? '🔇' : '🔊';
+      }
+      function setMuted(muted){
+        audio.muted = muted;
+        try { localStorage.setItem(KEY, muted ? '1' : '0'); } catch(e) {}
+        updateUI(muted);
+      }
 
-    // Show correct icon immediately
-    updateUI(savedMuted);
+      // Load saved state immediately for correct icon
+      let savedMuted = false;
+      try { savedMuted = localStorage.getItem(KEY) === '1'; } catch(e) {}
+      updateUI(savedMuted);
 
-    // Respect browser autoplay rules: start audio on first user interaction
-    const start = () => {
-      audio.play().catch(()=>{});     // try to play; if blocked, no drama
-      setMuted(savedMuted);           // apply saved mute once it can play
-      window.removeEventListener('pointerdown', start);
-    };
-    if (audio.paused) {
-      window.addEventListener('pointerdown', start, { once: true });
-    } else {
-      // If autoplay already working, apply saved state on first play
-      audio.addEventListener('play', () => setMuted(savedMuted), { once: true });
-    }
+      // Respect autoplay policies; start on first user interaction if needed
+      const start = () => {
+        audio.play().catch(()=>{});
+        setMuted(savedMuted);
+        window.removeEventListener('pointerdown', start);
+      };
+      if (audio.paused) {
+        window.addEventListener('pointerdown', start, { once: true });
+      } else {
+        audio.addEventListener('play', () => setMuted(savedMuted), { once: true });
+      }
 
-    // Toggle handlers
-    btn.type = 'button';
-    btn.addEventListener('click', () => setMuted(!audio.muted));
-    btn.addEventListener('keydown', (e) => {
-      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); btn.click(); }
+      // Toggle
+      btn.type = 'button';
+      btn.addEventListener('click', () => setMuted(!audio.muted));
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); btn.click(); }
+      });
+    })();
+
+    // ===== END button blackout =====
+    document.getElementById('endBtn').addEventListener('click', function(){
+      const blackout = document.createElement('div');
+      blackout.className = 'blackout';
+      document.body.appendChild(blackout);
     });
-  })();
-</script>
-  
+  </script>
 </body>
 </html>
