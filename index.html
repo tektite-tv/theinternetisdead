@@ -77,68 +77,82 @@
       font-weight: 700;
       letter-spacing: .5px;
       user-select: none;
-      /* allow hover */
       pointer-events: auto;
-      /* floating animation */
-      transform: translateY(0);
+      transform: translateY(0) scale(1);
       animation: float 4.8s ease-in-out infinite;
-      /* smooth hover lift */
-      transition: transform .25s cubic-bezier(.2,.8,.2,1);
-      isolation: isolate; /* ensure glow sits behind text */
+      transition: transform .2s cubic-bezier(.2,.8,.2,1), filter .2s ease;
+      isolation: isolate;
     }
-    .stone .face { font-size: clamp(12px, 1.3vw, 15px); line-height: 1.15; }
+    .stone .face { font-size: clamp(12px, 1.3vw, 15px); line-height: 1.15; padding: 6px 8px; }
     .stone .face small { display:block; font-weight: 600; opacity: .8; margin-top: 6px; font-size: .9em; }
 
-    /* ghostly aura using ::before so the glow bleeds nicely */
+    /* aura base */
     .stone::before {
       content: "";
       position: absolute;
-      inset: -14px -14px -8px -14px;
+      inset: -14px -14px -10px -14px;
       border-radius: 20px 20px 10px 10px;
-      background: radial-gradient(60% 70% at 50% 30%, var(--aura, transparent), transparent 60%);
-      filter: blur(6px);
+      background: radial-gradient(60% 70% at 50% 30%, var(--aura, transparent), transparent 65%);
+      filter: blur(8px);
       opacity: .75;
       z-index: -1;
-      transition: opacity .25s ease;
+      transition: opacity .18s ease, filter .18s ease, inset .18s ease, transform .18s ease;
     }
 
-    /* subtle colored inner glow on the face text */
+    /* text glow */
     .stone .face {
       text-shadow:
         0 0 6px var(--glow-soft, transparent),
         0 0 18px var(--glow-strong, transparent);
+      transition: text-shadow .18s ease;
     }
 
-    /* Hover lift intensifies aura */
+    /* Hover reaction: lift, scale, stronger aura and a soft pulse */
     .stone:hover {
-      transform: translateY(-12px) scale(1.03);
+      transform: translateY(-16px) scale(1.08);
+      filter: brightness(1.03);
     }
-    .stone:hover::before { opacity: 1; }
+    .stone:hover::before {
+      inset: -24px -24px -16px -24px;
+      filter: blur(14px);
+      opacity: 1;
+      animation: auraPulse 1.2s ease-in-out infinite;
+    }
+    .stone:hover .face {
+      text-shadow:
+        0 0 10px var(--glow-soft, transparent),
+        0 0 26px var(--glow-strong, transparent),
+        0 0 40px var(--glow-strong, transparent);
+    }
 
-    /* Keyframes for gentle bob */
+    /* Keyframes */
     @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-8px) scale(1.01); }
+    }
+    @keyframes auraPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.06); opacity: .9; }
     }
 
-    /* Stagger the bob so they don't sync */
+    /* Per-stone colors and stagger */
     .s1 { left: 8%;  bottom: 12%; animation-duration: 4.6s; animation-delay: .0s;
           --aura: rgba(255, 32, 32, .45);
-          --glow-soft: rgba(255, 46, 46, .55);
-          --glow-strong: rgba(255, 0, 0, .35);
+          --glow-soft: rgba(255, 46, 46, .6);
+          --glow-strong: rgba(255, 0, 0, .45);
     }
-    .s2 { left: 42%; bottom: 13%; transform: scale(1.05); animation-duration: 5.1s; animation-delay: .3s;
+    .s2 { left: 42%; bottom: 13%; transform: scale(1.01); animation-duration: 5.1s; animation-delay: .28s;
           --aura: rgba(46, 255, 120, .45);
-          --glow-soft: rgba(46, 255, 120, .55);
-          --glow-strong: rgba(0, 255, 120, .35);
+          --glow-soft: rgba(46, 255, 120, .6);
+          --glow-strong: rgba(0, 255, 120, .45);
     }
-    .s3 { left: 76%; bottom: 11%; transform: scale(.95); animation-duration: 4.9s; animation-delay: .6s;
+    .s3 { left: 76%; bottom: 11%; transform: scale(.98); animation-duration: 4.9s; animation-delay: .56s;
           --aura: rgba(60, 120, 255, .5);
-          --glow-soft: rgba(60, 120, 255, .6);
-          --glow-strong: rgba(60, 120, 255, .4);
+          --glow-soft: rgba(60, 120, 255, .65);
+          --glow-strong: rgba(60, 120, 255, .5);
     }
 
-    /* Base + shadow plinth under each stone */
+    /* Base plinth */
     .stone::after {
       content: "";
       position: absolute; left: -8%; right: -8%; bottom: -8px; height: 10px;
@@ -175,7 +189,7 @@
       font-style: italic;
     }
 
-    /* --- Taskbar (flex, no spacer shenanigans) --- */
+    /* --- Taskbar --- */
     .taskbar {
       position: fixed; left: 0; right: 0; bottom: 0; height: 40px;
       background: var(--ui);
@@ -280,7 +294,6 @@
     @keyframes wb-flash { 0%, 49% { background:#ff0000; } 50%,100% { background:#ffd400; } }
     @media (prefers-reduced-motion: reduce) { .warning-banner { animation: none; background:#ff1c1c; } }
 
-    /* Visually hide audio without removing it from a11y tree */
     .visually-hidden { position: absolute; width:1px; height:1px; overflow:hidden; clip: rect(1px,1px,1px,1px); }
   </style>
 </head>
@@ -293,7 +306,6 @@
   </div>
 
   <div class="wallpaper" aria-hidden="true">
-    <!-- Updated epitaphs -->
     <div class="stone s1">
       <div class="face">RIP Free Time<small>We traded it for feeds</small></div>
     </div>
@@ -318,11 +330,10 @@
     </div>
   </footer>
 
-  <!-- Background soundtrack (hidden, loops) -->
   <audio id="bgm" class="visually-hidden" src="/sounds/Aesop Waits - Tom Shall Pass - 03 Undercomb Kids.mp3" autoplay loop></audio>
 
   <script>
-    // ===== Clock (12-hour, America/Toronto) =====
+    // Clock (12-hour, America/Toronto)
     (function clock(){
       const el = document.getElementById('clock');
       function tick(){
@@ -341,7 +352,7 @@
       setInterval(tick, 1000);
     })();
 
-    // ===== Unified audio controller (no volume hacks) =====
+    // Audio controller
     (function audioController(){
       const audio = document.getElementById('bgm');
       const btn   = document.getElementById('muteBtn');
@@ -358,12 +369,10 @@
         updateUI(muted);
       }
 
-      // Load saved state immediately for correct icon
       let savedMuted = false;
       try { savedMuted = localStorage.getItem(KEY) === '1'; } catch(e) {}
       updateUI(savedMuted);
 
-      // Respect autoplay policies; start on first user interaction if needed
       const start = () => {
         audio.play().catch(()=>{});
         setMuted(savedMuted);
@@ -375,7 +384,6 @@
         audio.addEventListener('play', () => setMuted(savedMuted), { once: true });
       }
 
-      // Toggle
       btn.type = 'button';
       btn.addEventListener('click', () => setMuted(!audio.muted));
       btn.addEventListener('keydown', (e) => {
@@ -383,7 +391,7 @@
       });
     })();
 
-    // ===== END button blackout =====
+    // END button blackout
     document.getElementById('endBtn').addEventListener('click', function(){
       const blackout = document.createElement('div');
       blackout.className = 'blackout';
