@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cam Portal</title>
+  <title>Camera Switcher</title>
   <style>
     html, body {
       margin: 0;
@@ -19,23 +19,73 @@
       width: 100vw;
       height: 100vh;
       object-fit: cover;
+      z-index: 0;
+    }
+    select {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      font-size: 16px;
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
+  <select id="videoSource"></select>
   <video id="cam" autoplay playsinline muted></video>
 
   <script>
-    async function startCamera() {
+    const videoElement = document.getElementById('cam');
+    const videoSelect = document.getElementById('videoSource');
+    let currentStream;
+
+    async function getVideoDevices() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter(device => device.kind === 'videoinput');
+    }
+
+    async function startStream(deviceId) {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        video: deviceId ? { deviceId: { exact: deviceId } } : true
+      };
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        document.getElementById('cam').srcObject = stream;
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoElement.srcObject = stream;
+        currentStream = stream;
       } catch (err) {
-        alert('Access to camera denied or not available: ' + err.message);
+        alert('Could not access the camera: ' + err.message);
       }
     }
 
-    startCamera();
+    async function init() {
+      const devices = await getVideoDevices();
+      videoSelect.innerHTML = '';
+      devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Camera ${videoSelect.length + 1}`;
+        videoSelect.appendChild(option);
+      });
+
+      if (devices.length > 0) {
+        await startStream(devices[0].deviceId);
+      }
+
+      videoSelect.onchange = () => startStream(videoSelect.value);
+    }
+
+    // Permission needed before device labels are available
+    navigator.mediaDevices.getUserMedia({ video: true }).then(init);
   </script>
 </body>
 </html>
