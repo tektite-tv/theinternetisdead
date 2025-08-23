@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Void Cam Portal</title>
+  <title>Glitchy Cam Portal</title>
   <style>
     html, body {
       margin: 0;
@@ -11,7 +11,9 @@
       overflow: hidden;
       background: black;
       height: 100%;
+      font-family: monospace;
     }
+
     video {
       position: fixed;
       top: 0;
@@ -20,26 +22,56 @@
       height: 100vh;
       object-fit: cover;
       z-index: 0;
+      filter: contrast(1.2) brightness(0.95) saturate(1.1) hue-rotate(2deg);
     }
+
     select, button {
       position: absolute;
       z-index: 10;
       background: rgba(0, 0, 0, 0.7);
-      color: white;
+      color: #00ff99;
       font-size: 16px;
       padding: 6px 12px;
-      border: none;
+      border: 1px solid #00ff99;
       border-radius: 4px;
       margin: 8px;
       cursor: pointer;
     }
+
     #videoSource {
       top: 10px;
       left: 10px;
     }
+
     #screenshotBtn {
       top: 10px;
       right: 10px;
+    }
+
+    #flash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+      transition: opacity 0.3s ease-out;
+    }
+
+    #overlayText {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 5;
+      color: #00ff99;
+      font-size: 18px;
+      background: rgba(0,0,0,0.4);
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-shadow: 1px 1px 2px black;
     }
   </style>
 </head>
@@ -48,12 +80,15 @@
   <button id="screenshotBtn">📸 Screenshot</button>
   <video id="cam" autoplay playsinline muted></video>
   <canvas id="canvas" style="display: none;"></canvas>
+  <div id="flash"></div>
+  <div id="overlayText">REC ● 00:00:00</div>
 
   <script>
     const videoElement = document.getElementById('cam');
     const videoSelect = document.getElementById('videoSource');
     const screenshotBtn = document.getElementById('screenshotBtn');
     const canvas = document.getElementById('canvas');
+    const flash = document.getElementById('flash');
     let currentStream;
 
     async function getVideoDevices() {
@@ -104,6 +139,12 @@
       const ctx = canvas.getContext('2d');
       ctx.drawImage(videoElement, 0, 0, width, height);
 
+      // Flash effect
+      flash.style.opacity = 1;
+      setTimeout(() => {
+        flash.style.opacity = 0;
+      }, 150);
+
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const link = document.createElement('a');
       link.download = `screenshot-${timestamp}.png`;
@@ -111,7 +152,18 @@
       link.click();
     };
 
-    // Ensure labels show up by getting permission early
+    // REKORD TEXT TIMER
+    let seconds = 0;
+    const overlayText = document.getElementById('overlayText');
+    setInterval(() => {
+      seconds++;
+      const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+      const secs = String(seconds % 60).padStart(2, '0');
+      overlayText.textContent = `REC ● ${hrs}:${mins}:${secs}`;
+    }, 1000);
+
+    // Request permission and load
     navigator.mediaDevices.getUserMedia({ video: true }).then(init);
   </script>
 </body>
