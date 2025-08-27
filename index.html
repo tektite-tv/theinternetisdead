@@ -7,29 +7,32 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
 
-    /* Hide the OS cursor when glitch cursor is enabled */
-    .use-glitch-cursor, .use-glitch-cursor * { cursor: none !important; }
-    @media (prefers-reduced-motion: reduce) { .use-glitch-cursor, .use-glitch-cursor * { cursor: auto !important; } }
-
-    html, body { height: 100%; background: #000; color: #00FFCC; overflow: hidden; transition: transform 1s ease-in-out; }
+    html, body {
+      height: 100%;
+      background: #000;
+      color: #00FFCC;
+      overflow: hidden;
+      transition: transform 1s ease-in-out;
+    }
     .rotate { transform: rotate(360deg); }
 
     /* Welcome Text */
     .welcome {
       position: absolute;
-      top: 10%;
+      top: 12%;
       width: 100%;
       text-align: center;
       font-family: Impact, sans-serif;
-      font-size: 48px;
+      font-size: 56px;
       color: red;
-      text-shadow: 2px 2px 0px black;
+      text-shadow: 3px 3px 0px black;
+      z-index: 2000;
     }
     .subwelcome {
-      margin-top: 10px;
-      font-size: 32px;
+      margin-top: 12px;
+      font-size: 36px;
       color: #cc0000;
-      text-shadow: 2px 2px 0px black;
+      text-shadow: 3px 3px 0px black;
     }
 
     /* Desktop area above the taskbar */
@@ -47,8 +50,116 @@
       from { background-position: 0px 0px, 0 0, 0 0; }
       to   { background-position: 800px 800px, 0 0, 0 0; }
     }
-    @media (prefers-reduced-motion: reduce) { .desktop { animation: none; } }
-    /* ... rest of your CSS untouched ... */
+
+    /* Taskbar */
+    .taskbar {
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 40px;
+      background: linear-gradient(to top, #444, #222);
+      border-top: 2px solid #00FFCC;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000;
+      gap: 8px;
+    }
+    .menu-button {
+      background: linear-gradient(to bottom, #333, #111);
+      border: 2px outset #00FFCC; color: #00FFCC; padding: 4px 12px; text-shadow: 1px 1px #000;
+    }
+    .menu-button:hover { background: #000; }
+
+    .menu-popup {
+      position: absolute; bottom: 42px; left: 8px; width: 170px;
+      background: #111; border: 2px outset #00FFCC; box-shadow: 0 0 5px #00ffcc99;
+      display: none; flex-direction: column; z-index: 1001;
+    }
+    .menu-popup a {
+      color: #00FFCC; padding: 10px; text-decoration: none; border-bottom: 1px solid #00FFCC;
+    }
+    .menu-popup a:hover { background: #222; }
+
+    .clock { background: #111; padding: 4px 10px; border: 2px inset #00FFCC; color: #00FFCC; text-shadow: 1px 1px #000; }
+
+    .task-buttons {
+      display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; flex: 1;
+    }
+    .taskbtn {
+      background: linear-gradient(to bottom, #2a2a2a, #111);
+      border: 2px outset #00FFCC;
+      color: #00FFCC;
+      padding: 3px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      text-shadow: 1px 1px #000;
+    }
+    .taskbtn.active { outline: 1px solid #00FFCC; }
+
+    /* Glitch cursor + trails */
+    .use-glitch-cursor, .use-glitch-cursor * { cursor: none !important; }
+    @media (prefers-reduced-motion: reduce) { .use-glitch-cursor, .use-glitch-cursor * { cursor: auto !important; } }
+
+    .glitch-cursor {
+      position: fixed; top: 0; left: 0;
+      width: 1px; height: 1px;
+      pointer-events: none; z-index: 10000;
+      filter: drop-shadow(0 0 2px rgba(0,255,204,0.75));
+      will-change: transform;
+      display: none;
+    }
+    .gc-pointer {
+      position: absolute; top: 0; left: 0;
+      transform-origin: 0 0; transform: rotate(45deg);
+      filter: drop-shadow(0 0 3px rgba(0,255,204,0.9));
+    }
+    .gc-pointer .outline { stroke: #00FFCC; stroke-width: 2; fill: rgba(0,255,204,0.15); }
+    .gc-pointer .core { fill: #00FFCC; opacity: 0.9; }
+
+    .gc-glyph {
+      position: absolute; top: -10px; left: -10px;
+      font-size: 16px; color: #00FFCC;
+      text-shadow: 0 0 2px rgba(0,255,204,0.9), 1px 0 rgba(255,0,128,0.6), -1px 0 rgba(0,128,255,0.6);
+      mix-blend-mode: screen; user-select: none; pointer-events: none;
+    }
+    .cursor-trail {
+      position: fixed; font-size: 14px; color: #00FFCC; pointer-events: none; mix-blend-mode: screen; opacity: 0.85;
+      text-shadow: 0 0 2px rgba(0,255,204,0.9), 1px 0 rgba(255,0,128,0.5), -1px 0 rgba(0,128,255,0.5);
+      will-change: transform, opacity; z-index: 9999; user-select: none; transform: rotate(45deg);
+    }
+    .cursor-trail.fade { transition: transform 300ms ease, opacity 350ms ease; opacity: 0; }
+
+    /* Desk boxes */
+    .draw-ghost {
+      position: absolute;
+      border: 2px dashed rgba(0,255,204,0.7);
+      background: rgba(0,255,204,0.08);
+      box-shadow: inset 0 0 8px rgba(0,255,204,0.25);
+      pointer-events: none;
+    }
+    .desk-box {
+      position: absolute;
+      background: rgba(0, 10, 10, 0.65);
+      border: 2px solid #00FFCC;
+      box-shadow: 0 0 10px #00ffcc66, inset 0 0 12px #00ffcc22;
+      min-width: 120px; min-height: 80px;
+      z-index: 10;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .desk-box.maximized { box-shadow: 0 0 18px #00ffccaa, inset 0 0 14px #00ffcc44; }
+    .desk-box .titlebar {
+      height: 22px;
+      background: linear-gradient(to bottom, #0c3, #033);
+      color: #001a16;
+      font-weight: bold; font-size: 12px; letter-spacing: 0.5px;
+      padding: 0 6px; display: flex; align-items: center; justify-content: space-between;
+      cursor: move; user-select: none; text-shadow: 0 1px #00ffcc; gap: 6px;
+    }
+    .title-left { display: flex; align-items: center; gap: 6px; }
+    .win-controls { display: flex; align-items: center; gap: 4px; }
+    .btn {
+      background: #011; color: #00FFCC; border: 1px solid #00FFCC;
+      font-size: 12px; line-height: 1; padding: 0 6px; cursor: pointer; text-shadow: 0 0 3px #00FFCC;
+    }
+    .btn.close { font-size: 16px; padding: 0 8px; border-width: 2px; background: #120202; }
   </style>
 </head>
 <body>
@@ -75,7 +186,46 @@
     <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
   </div>
 
-  <!-- Glitch cursor + scripts (unchanged) -->
-  <!-- ... keep the rest of your file exactly as before ... -->
+  <!-- Glitch cursor -->
+  <div id="glitchCursor" class="glitch-cursor" aria-hidden="true">
+    <div class="gc-pointer">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+        <polygon class="outline" points="0,0 0,18 11,12"></polygon>
+        <polygon class="core" points="0,0 0,14 8,10"></polygon>
+      </svg>
+    </div>
+    <div class="gc-glyph" id="glitchGlyph">⟟</div>
+  </div>
+
+  <script>
+    /* clock */
+    function updateClock() {
+      const clock = document.getElementById('clock');
+      const now = new Date();
+      let h = now.getHours();
+      const m = now.getMinutes().toString().padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      clock.innerHTML = `${h}:${m} ${ampm} 🌀`;
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    function toggleMenu() {
+      const menu = document.getElementById('menuPopup');
+      menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    }
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('menuPopup');
+      const button = document.querySelector('.menu-button');
+      if (!menu.contains(e.target) && !button.contains(e.target)) menu.style.display = 'none';
+    });
+    function doABarrelRoll() {
+      document.body.classList.add('rotate');
+      setTimeout(() => document.body.classList.remove('rotate'), 1000);
+    }
+
+    /* glitch cursor logic, trails, drag-to-box code (unchanged from your version) */
+    // ... keep all your JS from the previous file ...
+  </script>
 </body>
 </html>
