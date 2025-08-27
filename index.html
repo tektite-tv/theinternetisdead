@@ -37,6 +37,7 @@
       border-top: 2px solid #00FFCC;
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000;
+      gap: 8px;
     }
     .menu-button {
       background: linear-gradient(to bottom, #333, #111);
@@ -55,6 +56,27 @@
     .menu-popup a:hover { background: #222; }
 
     .clock { background: #111; padding: 4px 10px; border: 2px inset #00FFCC; color: #00FFCC; text-shadow: 1px 1px #000; }
+
+    /* Task buttons (minimized windows) */
+    .task-buttons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      flex: 1;
+    }
+    .taskbtn {
+      background: linear-gradient(to bottom, #2a2a2a, #111);
+      border: 2px outset #00FFCC;
+      color: #00FFCC;
+      padding: 3px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      text-shadow: 1px 1px #000;
+    }
+    .taskbtn.active { outline: 1px solid #00FFCC; }
 
     /* === Glitch Cursor (diagonal) === */
     .glitch-cursor {
@@ -96,12 +118,17 @@
       background: rgba(0, 10, 10, 0.65);
       border: 2px solid #00FFCC;
       box-shadow: 0 0 10px #00ffcc66, inset 0 0 12px #00ffcc22;
-      min-width: 16px; min-height: 16px;
-      /* keep it under the taskbar and above the desktop */
+      min-width: 120px; min-height: 80px;
       z-index: 10;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .desk-box.maximized {
+      /* visual hint */
+      box-shadow: 0 0 18px #00ffccaa, inset 0 0 14px #00ffcc44;
     }
     .desk-box .titlebar {
-      height: 18px;
+      height: 22px;
       background: linear-gradient(to bottom, #0c3, #033);
       color: #001a16;
       font-weight: bold;
@@ -112,13 +139,31 @@
       cursor: move;
       user-select: none;
       text-shadow: 0 1px #00ffcc;
+      gap: 6px;
     }
+    .title-left { display: flex; align-items: center; gap: 6px; }
+    .win-controls { display: flex; align-items: center; gap: 4px; }
+    .btn {
+      background: #011; color: #00FFCC; border: 1px solid #00FFCC;
+      font-size: 12px; line-height: 1; padding: 0 6px; cursor: pointer;
+      text-shadow: 0 0 3px #00FFCC;
+    }
+    .btn:hover { background: #022; }
+    .btn.close {
+      font-size: 16px; /* bigger X button */
+      padding: 0 8px;
+      border-width: 2px;
+      background: #120202;
+    }
+    .btn.close:hover { background: #220202; }
+
     .desk-box .content {
-      padding: 6px; color: #00FFCC; font-size: 12px;
+      padding: 8px; color: #00FFCC; font-size: 12px;
+      overflow: auto; flex: 1;
+      outline: none;
     }
-    .desk-box .close {
-      background: #011; border: 1px solid #00FFCC; color: #00FFCC; font-size: 10px; padding: 0 4px;
-      cursor: pointer;
+    .desk-box .content:focus {
+      box-shadow: inset 0 0 0 1px #00FFCC;
     }
     .desk-box:focus-within,
     .desk-box.active { box-shadow: 0 0 14px #00ffccaa, inset 0 0 12px #00ffcc33; }
@@ -138,6 +183,7 @@
         <a href="#" id="toggleCursor">🖱️ Toggle Glitch Cursor</a>
       </div>
     </div>
+    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
     <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
   </div>
 
@@ -187,9 +233,9 @@
     const base = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const blocks = "░▒▓█▞▚▛▜▟▙▐▌▖▗▘▝▞▚";
     const misc = "✶✹✦✧✪✱✲✳✴✵☼☄☯☢☣☰☱☲☳☴☵☶☷⟟◈◇◆◇◍◌◉◎●◘◙○◔◕◖◗◩◪◫◬◭◮◯";
-    const zalgoUp = ["\u030d","\u030e","\u0304","\u0305","\u033f","\u0311","\u0306","\u0310","\u0352","\u0357","\u0351","\u0307","\u0308","\u030a","\u0342","\u0343","\u0344","\u034a","\u034b","\u034c","\u0303","\u0302","\u030c","\u0350","\u0300","\u0301","\u030b","\u030f","\u0312","\u0313","\u0314","\u033d","\u0309","\u0363","\u0364","\u0365","\u0366","\u0367","\u0368","\u0369","\u036a","\u036b","\u036c","\u036d","\u036e","\u036f","\u033e","\u035b","\u0346","\u031a"];
-    const zalgoMid = ["\u0315","\u031b","\u0340","\u0341","\u0358","\u0321","\u0322","\u0327","\u0328","\u0334","\u0335","\u0336","\u034f","\u035c","\u035d","\u035e","\u035f","\u0360","\u0362","\u0338","\u0337","\u0361","\u0489"];
-    const zalgoDown = ["\u0316","\u0317","\u0318","\u0319","\u031c","\u031d","\u031e","\u031f","\u0320","\u0324","\u0325","\u0326","\u0329","\u032a","\u032b","\u032c","\u032d","\u032e","\u032f","\u0330","\u0331","\u0332","\u0333","\u0339","\u033a","\u033b","\u033c","\u0345","\u0347","\u0348","\u0349","\u034d","\u034e","\u0353","\u0354","\u0355","\u0356","\u0359","\u035a"];
+    const zalgoUp = ["\\u030d","\\u030e","\\u0304","\\u0305","\\u033f","\\u0311","\\u0306","\\u0310","\\u0352","\\u0357","\\u0351","\\u0307","\\u0308","\\u030a","\\u0342","\\u0343","\\u0344","\\u034a","\\u034b","\\u034c","\\u0303","\\u0302","\\u030c","\\u0350","\\u0300","\\u0301","\\u030b","\\u030f","\\u0312","\\u0313","\\u0314","\\u033d","\\u0309","\\u0363","\\u0364","\\u0365","\\u0366","\\u0367","\\u0368","\\u0369","\\u036a","\\u036b","\\u036c","\\u036d","\\u036e","\\u036f","\\u033e","\\u035b","\\u0346","\\u031a"];
+    const zalgoMid = ["\\u0315","\\u031b","\\u0340","\\u0341","\\u0358","\\u0321","\\u0322","\\u0327","\\u0328","\\u0334","\\u0335","\\u0336","\\u034f","\\u035c","\\u035d","\\u035e","\\u035f","\\u0360","\\u0362","\\u0338","\\u0337","\\u0361","\\u0489"];
+    const zalgoDown = ["\\u0316","\\u0317","\\u0318","\\u0319","\\u031c","\\u031d","\\u031e","\\u031f","\\u0320","\\u0324","\\u0325","\\u0326","\\u0329","\\u032a","\\u032b","\\u032c","\\u032d","\\u032e","\\u032f","\\u0330","\\u0331","\\u0332","\\u0333","\\u0339","\\u033a","\\u033b","\\u033c","\\u0345","\\u0347","\\u0348","\\u0349","\\u034d","\\u034e","\\u0353","\\u0354","\\u0355","\\u0356","\\u0359","\\u035a"];
 
     const rand = arr => arr[Math.floor(Math.random()*arr.length)];
     const randInt = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
@@ -264,7 +310,9 @@
 
     /* ===== Drag to Create Boxes ===== */
     const desktop = document.getElementById('desktop');
+    const taskButtons = document.getElementById('taskButtons');
     let drawing = false, startX = 0, startY = 0, ghost = null;
+    let zCounter = 20;
 
     function toDesktopCoords(ev) {
       const r = desktop.getBoundingClientRect();
@@ -272,13 +320,10 @@
     }
 
     desktop.addEventListener('mousedown', (ev) => {
-      // Ignore clicks that start on an existing box titlebar, those are for dragging boxes
       if ((ev.target.closest('.desk-box'))) return;
-
       drawing = true;
       const { x, y } = toDesktopCoords(ev);
       startX = x; startY = y;
-
       ghost = document.createElement('div');
       ghost.className = 'draw-ghost';
       ghost.style.left = `${x}px`;
@@ -292,12 +337,10 @@
     window.addEventListener('mousemove', (ev) => {
       if (!drawing || !ghost) return;
       const { x, y } = toDesktopCoords(ev);
-
       const left = Math.min(x, startX);
       const top  = Math.min(y, startY);
       const w = Math.abs(x - startX);
       const h = Math.abs(y - startY);
-
       ghost.style.left = `${left}px`;
       ghost.style.top  = `${top}px`;
       ghost.style.width = `${w}px`;
@@ -307,19 +350,12 @@
     window.addEventListener('mouseup', (ev) => {
       if (!drawing) return;
       drawing = false;
-
       const rect = ghost.getBoundingClientRect();
-      const drect = desktop.getBoundingClientRect();
       const w = rect.width, h = rect.height;
       const left = parseFloat(ghost.style.left);
       const top  = parseFloat(ghost.style.top);
-
-      ghost.remove();
-      ghost = null;
-
-      // Minimum size to avoid accidental dots
+      ghost.remove(); ghost = null;
       if (w < 8 || h < 8) return;
-
       spawnDeskBox(left, top, w, h);
     });
 
@@ -330,44 +366,157 @@
       box.style.top  = `${y}px`;
       box.style.width = `${w}px`;
       box.style.height= `${h}px`;
+      box.style.zIndex = (++zCounter).toString();
 
-      const title = document.createElement('div');
-      title.className = 'titlebar';
-      title.innerHTML = `<span>BOX ${Math.random().toString(36).slice(2,6).toUpperCase()}</span>`;
-      const close = document.createElement('button');
-      close.className = 'close';
-      close.textContent = 'X';
-      close.addEventListener('click', (e) => { e.stopPropagation(); box.remove(); });
+      const titlebar = document.createElement('div');
+      titlebar.className = 'titlebar';
+      const titleLeft = document.createElement('div');
+      titleLeft.className = 'title-left';
+      const titleSpan = document.createElement('span');
+      const label = `BOX ${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+      titleSpan.textContent = label;
+      titleLeft.appendChild(titleSpan);
 
-      title.appendChild(close);
+      const controls = document.createElement('div');
+      controls.className = 'win-controls';
+      const btnMin = document.createElement('button');
+      btnMin.className = 'btn min'; btnMin.textContent = '—';
+      const btnMax = document.createElement('button');
+      btnMax.className = 'btn max'; btnMax.textContent = '□';
+      const btnClose = document.createElement('button');
+      btnClose.className = 'btn close'; btnClose.textContent = 'X';
+
+      controls.appendChild(btnMin);
+      controls.appendChild(btnMax);
+      controls.appendChild(btnClose);
+
+      titlebar.appendChild(titleLeft);
+      titlebar.appendChild(controls);
 
       const content = document.createElement('div');
       content.className = 'content';
-      content.textContent = 'Drag my title to move me. Create more by click-dragging the desktop.';
+      content.contentEditable = 'true';
+      content.spellcheck = false;
+      content.textContent = 'Type here. Double-click the title to toggle maximize. Use the buttons to minimize/maximize/close.';
 
-      box.appendChild(title);
+      box.appendChild(titlebar);
       box.appendChild(content);
       desktop.appendChild(box);
 
-      // Bring to front on click
-      box.addEventListener('mousedown', () => {
-        document.querySelectorAll('.desk-box').forEach(b => b.classList.remove('active'));
-        box.classList.add('active');
-        box.style.zIndex = (parseInt(box.style.zIndex || '10', 10) + 1).toString();
+      // Task button
+      const taskBtn = document.createElement('button');
+      taskBtn.className = 'taskbtn';
+      taskBtn.textContent = label;
+      taskBtn.addEventListener('click', () => {
+        if (box.dataset.minimized === 'true') {
+          restoreBox(box, taskBtn);
+        } else {
+          // focus/raise
+          raiseBox(box);
+        }
+      });
+      taskButtons.appendChild(taskBtn);
+      box.dataset.taskId = cryptoRandomId();
+      taskBtn.dataset.boxId = box.dataset.taskId;
+
+      // Focus/raise on mousedown
+      box.addEventListener('mousedown', () => raiseBox(box));
+
+      // Close
+      btnClose.addEventListener('click', (e) => {
+        e.stopPropagation();
+        taskBtn.remove();
+        box.remove();
       });
 
-      makeDraggable(box, title);
+      // Minimize
+      btnMin.addEventListener('click', (e) => {
+        e.stopPropagation();
+        minimizeBox(box, taskBtn);
+      });
+
+      // Maximize toggle
+      function toggleMax() {
+        if (box.classList.contains('maximized')) {
+          unmaximizeBox(box);
+        } else {
+          maximizeBox(box);
+        }
+      }
+      btnMax.addEventListener('click', (e) => { e.stopPropagation(); toggleMax(); });
+      titlebar.addEventListener('dblclick', toggleMax);
+
+      makeDraggable(box, titlebar);
+    }
+
+    function cryptoRandomId() {
+      if (window.crypto && crypto.getRandomValues) {
+        const arr = new Uint32Array(2);
+        crypto.getRandomValues(arr);
+        return Array.from(arr).map(n => n.toString(16)).join('');
+      }
+      return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    }
+
+    function raiseBox(box) {
+      document.querySelectorAll('.taskbtn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.desk-box').forEach(b => b.classList.remove('active'));
+      box.classList.add('active');
+      box.style.zIndex = (++zCounter).toString();
+      // activate its task button
+      const label = box.querySelector('.title-left span')?.textContent;
+      const btn = Array.from(document.querySelectorAll('.taskbtn')).find(tb => tb.textContent === label);
+      if (btn) btn.classList.add('active');
+    }
+
+    function minimizeBox(box, taskBtn) {
+      box.dataset.minimized = 'true';
+      box.style.display = 'none';
+      taskBtn.classList.add('active');
+    }
+
+    function restoreBox(box, taskBtn) {
+      box.dataset.minimized = 'false';
+      box.style.display = 'flex';
+      raiseBox(box);
+      taskBtn.classList.remove('active');
+    }
+
+    function maximizeBox(box) {
+      if (box.classList.contains('maximized')) return;
+      const r = box.getBoundingClientRect();
+      const d = desktop.getBoundingClientRect();
+      // store previous geometry
+      box.dataset.prevLeft = box.style.left;
+      box.dataset.prevTop  = box.style.top;
+      box.dataset.prevWidth= box.style.width;
+      box.dataset.prevHeight=box.style.height;
+
+      box.style.left = '0px';
+      box.style.top  = '0px';
+      box.style.width = d.width + 'px';
+      box.style.height= d.height + 'px';
+      box.classList.add('maximized');
+    }
+
+    function unmaximizeBox(box) {
+      if (!box.classList.contains('maximized')) return;
+      box.style.left = box.dataset.prevLeft || box.style.left;
+      box.style.top  = box.dataset.prevTop  || box.style.top;
+      box.style.width= box.dataset.prevWidth|| box.style.width;
+      box.style.height=box.dataset.prevHeight|| box.style.height;
+      box.classList.remove('maximized');
     }
 
     function makeDraggable(box, handle) {
       let drag = false, offX = 0, offY = 0;
-
       handle.addEventListener('mousedown', (ev) => {
+        if (box.classList.contains('maximized')) return; // don't drag while maximized
         drag = true;
         const r = box.getBoundingClientRect();
-        const d = desktop.getBoundingClientRect();
         offX = ev.clientX - r.left;
         offY = ev.clientY - r.top;
+        raiseBox(box);
         ev.preventDefault();
       });
 
@@ -376,11 +525,9 @@
         const d = desktop.getBoundingClientRect();
         let nx = ev.clientX - d.left - offX;
         let ny = ev.clientY - d.top  - offY;
-
         // keep within desktop bounds
         nx = Math.max(0, Math.min(nx, d.width  - box.offsetWidth));
         ny = Math.max(0, Math.min(ny, d.height - box.offsetHeight));
-
         box.style.left = `${nx}px`;
         box.style.top  = `${ny}px`;
       }, { passive: true });
