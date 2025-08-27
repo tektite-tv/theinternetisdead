@@ -1,104 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cursed Material Sidebar</title>
-  <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
+  <meta charset="UTF-8">
+  <title>Glitchcore 95</title>
   <style>
-    body {
+    * {
       margin: 0;
-      font-family: Roboto, sans-serif;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Courier New', monospace;
     }
 
-    .mdc-top-app-bar {
+    html, body {
+      height: 100%;
+      background: linear-gradient(135deg, #000000, #222222);
+      color: #00FFCC;
+      overflow: hidden;
+    }
+
+    /* Taskbar */
+    .taskbar {
       position: fixed;
-      top: 0;
+      bottom: 0;
       left: 0;
-      right: 0;
-      z-index: 10;
-    }
-
-    .main-content {
-      padding: 64px 16px 16px 16px;
-    }
-
-    .sidebar-item {
+      width: 100%;
+      height: 40px;
+      background: linear-gradient(to top, #444, #222);
+      border-top: 2px solid #00FFCC;
       display: flex;
       align-items: center;
-      padding: 16px;
-      font-size: 1rem;
-      border-bottom: 1px solid #ddd;
+      justify-content: space-between;
+      padding: 0 8px;
+      z-index: 1000;
+    }
+
+    .menu-button {
+      background: linear-gradient(to bottom, #333, #111);
+      border: 2px outset #00FFCC;
+      color: #00FFCC;
+      padding: 4px 12px;
       cursor: pointer;
     }
 
-    .sidebar-item:hover {
-      background-color: #f0f0f0;
+    .menu-button:hover {
+      background: #000;
+    }
+
+    .menu-popup {
+      position: absolute;
+      bottom: 42px;
+      left: 8px;
+      width: 150px;
+      background: #111;
+      border: 2px outset #00FFCC;
+      box-shadow: 0 0 5px #00ffcc99;
+      display: none;
+      flex-direction: column;
+      z-index: 1001;
+    }
+
+    .menu-popup a {
+      color: #00FFCC;
+      padding: 10px;
+      text-decoration: none;
+      border-bottom: 1px solid #00FFCC;
+    }
+
+    .menu-popup a:hover {
+      background: #222;
+    }
+
+    .clock {
+      background: #111;
+      padding: 4px 10px;
+      border: 2px inset #00FFCC;
+      color: #00FFCC;
+    }
+
+    /* Retro border + glitch vibes */
+    .taskbar, .menu-button, .clock {
+      text-shadow: 1px 1px #000;
+    }
+
+    /* For fun: */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .clock::after {
+      content: " 🌀";
+      animation: blink 1s infinite;
     }
   </style>
 </head>
-<body class="mdc-typography mdc-drawer-app-content">
+<body>
 
-  <!-- Sidebar Drawer -->
-  <aside class="mdc-drawer mdc-drawer--modal">
-    <div class="mdc-drawer__header">
-      <h3 class="mdc-drawer__title">Cursed Menu</h3>
-      <h6 class="mdc-drawer__subtitle">Choose your doom</h6>
+  <div class="taskbar">
+    <div class="menu-area">
+      <div class="menu-button" onclick="toggleMenu()">Menu</div>
+      <div class="menu-popup" id="menuPopup">
+        <a href="/images" target="_blank">🖼️ Images</a>
+        <a href="/sounds" target="_blank">🔊 Sounds</a>
+      </div>
     </div>
-    <div class="mdc-drawer__content">
-      <nav class="mdc-list">
-        <a class="mdc-list-item" href="#" tabindex="0">
-          <span class="mdc-list-item__text">Summon Glitch Entity</span>
-        </a>
-        <a class="mdc-list-item" href="#">
-          <span class="mdc-list-item__text">Browse The Void</span>
-        </a>
-        <a class="mdc-list-item" href="#">
-          <span class="mdc-list-item__text">Activate Chaos Mode</span>
-        </a>
-        <a class="mdc-list-item" href="#">
-          <span class="mdc-list-item__text">💀 Delete Reality</span>
-        </a>
-        <a class="mdc-list-item" href="#">
-          <span class="mdc-list-item__text">🧀 Cheese Generator</span>
-        </a>
-        <a class="mdc-list-item" href="#">
-          <span class="mdc-list-item__text">🚪 Exit Through the Gift Shop</span>
-        </a>
-        <a class="mdc-list-item" href="#">
-          <span class="mdc-list-item__text">☕ Brew Existential Dread</span>
-        </a>
-      </nav>
-    </div>
-  </aside>
+    <div class="clock" id="clock">--:-- --</div>
+  </div>
 
-  <!-- Overlay -->
-  <div class="mdc-drawer-scrim"></div>
-
-  <!-- Top App Bar -->
-  <header class="mdc-top-app-bar">
-    <div class="mdc-top-app-bar__row">
-      <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
-        <button class="material-icons mdc-top-app-bar__navigation-icon mdc-icon-button">menu</button>
-        <span class="mdc-top-app-bar__title">The Cursed Hub</span>
-      </section>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <main class="main-content" id="main-content">
-    <h1>Welcome, Traveler of the Rift</h1>
-    <p>This is your portal. Choose wisely. Or don’t. It’s all chaos anyway.</p>
-  </main>
-
-  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
   <script>
-    const drawer = mdc.drawer.MDCDrawer.attachTo(document.querySelector('.mdc-drawer'));
-    const topAppBar = mdc.topAppBar.MDCTopAppBar.attachTo(document.querySelector('.mdc-top-app-bar'));
+    // Clock Logic
+    function updateClock() {
+      const clock = document.getElementById('clock');
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      clock.textContent = `${hours}:${minutes} ${ampm}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
 
-    topAppBar.setScrollTarget(document.getElementById('main-content'));
-    topAppBar.listen('MDCTopAppBar:nav', () => {
-      drawer.open = !drawer.open;
+    // Menu Toggle
+    function toggleMenu() {
+      const menu = document.getElementById('menuPopup');
+      menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('menuPopup');
+      const button = document.querySelector('.menu-button');
+      if (!menu.contains(e.target) && !button.contains(e.target)) {
+        menu.style.display = 'none';
+      }
     });
   </script>
 </body>
