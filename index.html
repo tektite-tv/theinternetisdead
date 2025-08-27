@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Glitchcore 95</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     * {
       margin: 0;
@@ -11,16 +12,53 @@
       font-family: 'Courier New', monospace;
     }
 
+    .use-glitch-cursor, .use-glitch-cursor * {
+      cursor: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .use-glitch-cursor, .use-glitch-cursor * { cursor: auto !important; }
+    }
+
     html, body {
       height: 100%;
-      background: linear-gradient(135deg, #000000, #222222);
+      background: #000;
       color: #00FFCC;
       overflow: hidden;
       transition: transform 1s ease-in-out;
     }
 
-    .rotate {
-      transform: rotate(360deg);
+    .rotate { transform: rotate(360deg); }
+
+    .desktop {
+      position: fixed;
+      inset: 0 0 40px 0;
+      z-index: 0;
+      background:
+        repeating-linear-gradient(
+          135deg,
+          rgba(0, 255, 204, 0.10) 0px,
+          rgba(0, 255, 204, 0.10) 2px,
+          rgba(0, 0, 0, 0.0) 2px,
+          rgba(0, 0, 0, 0.0) 6px
+        ),
+        radial-gradient(1200px 1200px at 0% 0%,
+          rgba(0,255,204,0.12) 0%,
+          rgba(0,255,204,0.05) 30%,
+          rgba(0,0,0,0.0) 60%),
+        linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
+      background-size: auto, 100% 100%, 100% 100%;
+      --scan-speed: 22s;
+      animation: scanScroll var(--scan-speed) linear infinite;
+    }
+
+    @keyframes scanScroll {
+      from { background-position: 0px 0px, 0 0, 0 0; }
+      to   { background-position: 800px 800px, 0 0, 0 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .desktop { animation: none; }
     }
 
     .taskbar {
@@ -36,6 +74,7 @@
       justify-content: space-between;
       padding: 0 8px;
       z-index: 1000;
+      text-shadow: 1px 1px #000;
     }
 
     .menu-button {
@@ -43,18 +82,16 @@
       border: 2px outset #00FFCC;
       color: #00FFCC;
       padding: 4px 12px;
-      cursor: pointer;
+      text-shadow: 1px 1px #000;
     }
 
-    .menu-button:hover {
-      background: #000;
-    }
+    .menu-button:hover { background: #000; }
 
     .menu-popup {
       position: absolute;
       bottom: 42px;
       left: 8px;
-      width: 150px;
+      width: 170px;
       background: #111;
       border: 2px outset #00FFCC;
       box-shadow: 0 0 5px #00ffcc99;
@@ -70,29 +107,86 @@
       border-bottom: 1px solid #00FFCC;
     }
 
-    .menu-popup a:hover {
-      background: #222;
-    }
+    .menu-popup a:hover { background: #222; }
 
     .clock {
       background: #111;
       padding: 4px 10px;
       border: 2px inset #00FFCC;
       color: #00FFCC;
-      cursor: pointer;
-    }
-
-    .taskbar, .menu-button, .clock {
       text-shadow: 1px 1px #000;
     }
 
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    /* === Custom Glitch Cursor === */
+    .glitch-cursor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: auto;
+      height: auto;
+      font-size: 18px;
+      line-height: 1;
+      color: #00FFCC;
+      pointer-events: none;
+      z-index: 10000;
+      text-shadow:
+        0 0 2px rgba(0,255,204,0.9),
+        1px 0 rgba(255,0,128,0.6),
+        -1px 0 rgba(0,128,255,0.6);
+      mix-blend-mode: screen;
+      will-change: transform, opacity, filter;
+      transform: translate3d(-50%, -50%, 0) rotate(45deg);
+      filter: drop-shadow(0 0 2px rgba(0,255,204,0.75));
+      user-select: none;
+      display: none;
+    }
+
+    .glitch-cursor .ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      width: 18px; height: 18px;
+      border: 2px solid rgba(0,255,204,0.6);
+      border-radius: 4px;
+      box-shadow: 0 0 6px rgba(0,255,204,0.5);
+      animation: ringPulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes ringPulse {
+      0%, 100% { transform: translate(-50%, -50%) rotate(45deg) scale(1); opacity: 0.9; }
+      50%      { transform: translate(-50%, -50%) rotate(45deg) scale(1.2); opacity: 0.6; }
+    }
+
+    .cursor-trail {
+      position: fixed;
+      font-size: 14px;
+      color: #00FFCC;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      opacity: 0.85;
+      text-shadow:
+        0 0 2px rgba(0,255,204,0.9),
+        1px 0 rgba(255,0,128,0.5),
+        -1px 0 rgba(0,128,255,0.5);
+      will-change: transform, opacity;
+      z-index: 9999;
+      user-select: none;
+      transform: rotate(45deg);
+    }
+
+    .cursor-trail.fade {
+      transition: transform 300ms ease, opacity 350ms ease;
+      opacity: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .glitch-cursor, .cursor-trail { display: none !important; }
     }
   </style>
 </head>
 <body>
+
+  <div class="desktop" aria-hidden="true"></div>
 
   <div class="taskbar">
     <div class="menu-area">
@@ -100,9 +194,15 @@
       <div class="menu-popup" id="menuPopup">
         <a href="/images" target="_blank">🖼️ Images</a>
         <a href="/sounds" target="_blank">🔊 Sounds</a>
+        <a href="#" id="toggleCursor">🖱️ Toggle Glitch Cursor</a>
       </div>
     </div>
     <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
+  </div>
+
+  <div id="glitchCursor" class="glitch-cursor" aria-hidden="true">
+    <div class="ring"></div>
+    <span id="glitchGlyph">⟟</span>
   </div>
 
   <script>
@@ -137,6 +237,106 @@
         document.body.classList.remove('rotate');
       }, 1000);
     }
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const htmlTag = document.documentElement;
+    const cursorEl = document.getElementById('glitchCursor');
+    const glyphEl = document.getElementById('glitchGlyph');
+    const toggleCursorLink = document.getElementById('toggleCursor');
+    let cursorEnabled = !prefersReduced;
+    let lastX = window.innerWidth / 2;
+    let lastY = window.innerHeight / 2;
+    let targetX = lastX;
+    let targetY = lastY;
+    let rafId = null;
+
+    const base = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const blocks = "░▒▓█▞▚▛▜▟▙▐▌▖▗▘▝▞▚";
+    const misc = "✶✹✦✧✪✱✲✳✴✵☼☄☯☢☣☰☱☲☳☴☵☶☷⟟◈◇◆◇◍◌◉◎●◘◙○◔◕◖◗◩◪◫◬◭◮◯";
+    const zalgoUp = ["\u030d","\u030e","\u0304","\u0305","\u033f","\u0311","\u0306","\u0310","\u0352","\u0357","\u0351","\u0307","\u0308","\u030a","\u0342","\u0343","\u0344","\u034a","\u034b","\u034c","\u0303","\u0302","\u030c","\u0350","\u0300","\u0301","\u030b","\u030f","\u0312","\u0313","\u0314","\u033d","\u0309","\u0363","\u0364","\u0365","\u0366","\u0367","\u0368","\u0369","\u036a","\u036b","\u036c","\u036d","\u036e","\u036f","\u033e","\u035b","\u0346","\u031a"];
+    const zalgoMid = ["\u0315","\u031b","\u0340","\u0341","\u0358","\u0321","\u0322","\u0327","\u0328","\u0334","\u0335","\u0336","\u034f","\u035c","\u035d","\u035e","\u035f","\u0360","\u0362","\u0338","\u0337","\u0361","\u0489"];
+    const zalgoDown = ["\u0316","\u0317","\u0318","\u0319","\u031c","\u031d","\u031e","\u031f","\u0320","\u0324","\u0325","\u0326","\u0329","\u032a","\u032b","\u032c","\u032d","\u032e","\u032f","\u0330","\u0331","\u0332","\u0333","\u0339","\u033a","\u033b","\u033c","\u0345","\u0347","\u0348","\u0349","\u034d","\u034e","\u0353","\u0354","\u0355","\u0356","\u0359","\u035a"];
+
+    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+    function makeZalgoGlyph() {
+      const baseChar = Math.random() < 0.6 ? rand(base) : (Math.random() < 0.5 ? rand(blocks) : rand(misc));
+      const up = Array.from({length: randInt(1, 3)}, () => rand(zalgoUp)).join("");
+      const mid = Array.from({length: randInt(0, 2)}, () => rand(zalgoMid)).join("");
+      const down = Array.from({length: randInt(1, 3)}, () => rand(zalgoDown)).join("");
+      return baseChar + up + mid + down;
+    }
+
+    function setGlyph() {
+      glyphEl.textContent = makeZalgoGlyph();
+    }
+
+    function spawnTrail(x, y) {
+      if (!cursorEnabled) return;
+      const t = document.createElement('div');
+      t.className = 'cursor-trail';
+      t.textContent = makeZalgoGlyph();
+      t.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(45deg)`;
+      document.body.appendChild(t);
+      requestAnimationFrame(() => {
+        t.classList.add('fade');
+        const dx = randInt(-12, 12);
+        const dy = randInt(-12, 12);
+        t.style.transform = `translate3d(${x+dx}px, ${y+dy}px, 0) rotate(45deg)`;
+      });
+      setTimeout(() => t.remove(), 420);
+    }
+
+    function onMove(e) {
+      if (!cursorEnabled) return;
+      targetX = e.clientX;
+      targetY = e.clientY;
+      if (Math.random() < 0.6) spawnTrail(targetX, targetY);
+    }
+
+    function animate() {
+      if (!cursorEnabled) { rafId = requestAnimationFrame(animate); return; }
+      const lerp = 0.18;
+      lastX += (targetX - lastX) * lerp;
+      lastY += (targetY - lastY) * lerp;
+      cursorEl.style.transform = `translate3d(${lastX}px, ${lastY}px, 0) rotate(45deg)`;
+      rafId = requestAnimationFrame(animate);
+    }
+
+    function enableCursor() {
+      cursorEnabled = true;
+      htmlTag.classList.add('use-glitch-cursor');
+      cursorEl.style.display = 'block';
+      toggleCursorLink.textContent = '🖱️ Toggle Glitch Cursor (ON)';
+    }
+
+    function disableCursor() {
+      cursorEnabled = false;
+      htmlTag.classList.remove('use-glitch-cursor');
+      cursorEl.style.display = 'none';
+      toggleCursorLink.textContent = '🖱️ Toggle Glitch Cursor (OFF)';
+    }
+
+    if (prefersReduced) {
+      disableCursor();
+    } else {
+      enableCursor();
+      setGlyph();
+      window.addEventListener('mousemove', onMove, { passive: true });
+      animate();
+      setInterval(() => { if (cursorEnabled) setGlyph(); }, 90);
+    }
+
+    toggleCursorLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (cursorEnabled) { disableCursor(); } else { enableCursor(); }
+    });
+
+    window.addEventListener('resize', () => {
+      targetX = Math.min(window.innerWidth, Math.max(0, targetX));
+      targetY = Math.min(window.innerHeight, Math.max(0, targetY));
+    }, { passive: true });
   </script>
 </body>
 </html>
