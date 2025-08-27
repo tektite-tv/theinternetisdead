@@ -1,193 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Glitchcore 95</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Courier New', monospace;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
 
-    .use-glitch-cursor, .use-glitch-cursor * {
-      cursor: none !important;
-    }
+    /* Hide the OS cursor when glitch cursor is enabled */
+    .use-glitch-cursor, .use-glitch-cursor * { cursor: none !important; }
+    @media (prefers-reduced-motion: reduce) { .use-glitch-cursor, .use-glitch-cursor * { cursor: auto !important; } }
 
-    @media (prefers-reduced-motion: reduce) {
-      .use-glitch-cursor, .use-glitch-cursor * { cursor: auto !important; }
-    }
-
-    html, body {
-      height: 100%;
-      background: #000;
-      color: #00FFCC;
-      overflow: hidden;
-      transition: transform 1s ease-in-out;
-    }
-
+    html, body { height: 100%; background: #000; color: #00FFCC; overflow: hidden; transition: transform 1s ease-in-out; }
     .rotate { transform: rotate(360deg); }
 
+    /* Desktop area above the taskbar */
     .desktop {
-      position: fixed;
-      inset: 0 0 40px 0;
-      z-index: 0;
+      position: fixed; inset: 0 0 40px 0; z-index: 0;
       background:
-        repeating-linear-gradient(
-          135deg,
-          rgba(0, 255, 204, 0.10) 0px,
-          rgba(0, 255, 204, 0.10) 2px,
-          rgba(0, 0, 0, 0.0) 2px,
-          rgba(0, 0, 0, 0.0) 6px
-        ),
-        radial-gradient(1200px 1200px at 0% 0%,
-          rgba(0,255,204,0.12) 0%,
-          rgba(0,255,204,0.05) 30%,
-          rgba(0,0,0,0.0) 60%),
+        repeating-linear-gradient(135deg, rgba(0,255,204,0.10) 0px, rgba(0,255,204,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+        radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,204,0.12) 0%, rgba(0,255,204,0.05) 30%, rgba(0,0,0,0.0) 60%),
         linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
       background-size: auto, 100% 100%, 100% 100%;
       --scan-speed: 22s;
       animation: scanScroll var(--scan-speed) linear infinite;
     }
-
     @keyframes scanScroll {
       from { background-position: 0px 0px, 0 0, 0 0; }
       to   { background-position: 800px 800px, 0 0, 0 0; }
     }
-
-    @media (prefers-reduced-motion: reduce) {
-      .desktop { animation: none; }
-    }
+    @media (prefers-reduced-motion: reduce) { .desktop { animation: none; } }
 
     .taskbar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 40px;
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 40px;
       background: linear-gradient(to top, #444, #222);
       border-top: 2px solid #00FFCC;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 8px;
-      z-index: 1000;
-      text-shadow: 1px 1px #000;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000;
     }
-
     .menu-button {
       background: linear-gradient(to bottom, #333, #111);
-      border: 2px outset #00FFCC;
-      color: #00FFCC;
-      padding: 4px 12px;
-      text-shadow: 1px 1px #000;
+      border: 2px outset #00FFCC; color: #00FFCC; padding: 4px 12px; text-shadow: 1px 1px #000;
     }
-
     .menu-button:hover { background: #000; }
 
     .menu-popup {
-      position: absolute;
-      bottom: 42px;
-      left: 8px;
-      width: 170px;
-      background: #111;
-      border: 2px outset #00FFCC;
-      box-shadow: 0 0 5px #00ffcc99;
-      display: none;
-      flex-direction: column;
-      z-index: 1001;
+      position: absolute; bottom: 42px; left: 8px; width: 170px;
+      background: #111; border: 2px outset #00FFCC; box-shadow: 0 0 5px #00ffcc99;
+      display: none; flex-direction: column; z-index: 1001;
     }
-
     .menu-popup a {
-      color: #00FFCC;
-      padding: 10px;
-      text-decoration: none;
-      border-bottom: 1px solid #00FFCC;
+      color: #00FFCC; padding: 10px; text-decoration: none; border-bottom: 1px solid #00FFCC;
     }
-
     .menu-popup a:hover { background: #222; }
 
-    .clock {
-      background: #111;
-      padding: 4px 10px;
-      border: 2px inset #00FFCC;
-      color: #00FFCC;
-      text-shadow: 1px 1px #000;
-    }
+    .clock { background: #111; padding: 4px 10px; border: 2px inset #00FFCC; color: #00FFCC; text-shadow: 1px 1px #000; }
 
-    /* === Custom Glitch Cursor === */
+    /* === Glitch Cursor (diagonal) === */
     .glitch-cursor {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: auto;
-      height: auto;
-      font-size: 18px;
-      line-height: 1;
-      color: #00FFCC;
-      pointer-events: none;
-      z-index: 10000;
-      text-shadow:
-        0 0 2px rgba(0,255,204,0.9),
-        1px 0 rgba(255,0,128,0.6),
-        -1px 0 rgba(0,128,255,0.6);
-      mix-blend-mode: screen;
-      will-change: transform, opacity, filter;
+      position: fixed; top: 0; left: 0; width: auto; height: auto; font-size: 18px; line-height: 1; color: #00FFCC;
+      pointer-events: none; z-index: 10000;
+      text-shadow: 0 0 2px rgba(0,255,204,0.9), 1px 0 rgba(255,0,128,0.6), -1px 0 rgba(0,128,255,0.6);
+      mix-blend-mode: screen; will-change: transform, opacity, filter;
       transform: translate3d(-50%, -50%, 0) rotate(45deg);
-      filter: drop-shadow(0 0 2px rgba(0,255,204,0.75));
-      user-select: none;
-      display: none;
+      filter: drop-shadow(0 0 2px rgba(0,255,204,0.75)); user-select: none; display: none;
     }
-
     .glitch-cursor .ring {
-      position: absolute;
-      top: 50%; left: 50%;
+      position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%) rotate(45deg);
-      width: 18px; height: 18px;
-      border: 2px solid rgba(0,255,204,0.6);
-      border-radius: 4px;
-      box-shadow: 0 0 6px rgba(0,255,204,0.5);
-      animation: ringPulse 1.2s ease-in-out infinite;
+      width: 18px; height: 18px; border: 2px solid rgba(0,255,204,0.6); border-radius: 4px;
+      box-shadow: 0 0 6px rgba(0,255,204,0.5); animation: ringPulse 1.2s ease-in-out infinite;
     }
-
     @keyframes ringPulse {
-      0%, 100% { transform: translate(-50%, -50%) rotate(45deg) scale(1); opacity: 0.9; }
-      50%      { transform: translate(-50%, -50%) rotate(45deg) scale(1.2); opacity: 0.6; }
+      0%,100% { transform: translate(-50%, -50%) rotate(45deg) scale(1); opacity: 0.9; }
+      50%     { transform: translate(-50%, -50%) rotate(45deg) scale(1.2); opacity: 0.6; }
     }
-
     .cursor-trail {
-      position: fixed;
-      font-size: 14px;
-      color: #00FFCC;
+      position: fixed; font-size: 14px; color: #00FFCC; pointer-events: none; mix-blend-mode: screen; opacity: 0.85;
+      text-shadow: 0 0 2px rgba(0,255,204,0.9), 1px 0 rgba(255,0,128,0.5), -1px 0 rgba(0,128,255,0.5);
+      will-change: transform, opacity; z-index: 9999; user-select: none; transform: rotate(45deg);
+    }
+    .cursor-trail.fade { transition: transform 300ms ease, opacity 350ms ease; opacity: 0; }
+    @media (prefers-reduced-motion: reduce) { .glitch-cursor, .cursor-trail { display: none !important; } }
+
+    /* === Drag-to-Create Boxes === */
+    .draw-ghost {
+      position: absolute;
+      border: 2px dashed rgba(0,255,204,0.7);
+      background: rgba(0,255,204,0.08);
+      box-shadow: inset 0 0 8px rgba(0,255,204,0.25);
       pointer-events: none;
-      mix-blend-mode: screen;
-      opacity: 0.85;
-      text-shadow:
-        0 0 2px rgba(0,255,204,0.9),
-        1px 0 rgba(255,0,128,0.5),
-        -1px 0 rgba(0,128,255,0.5);
-      will-change: transform, opacity;
-      z-index: 9999;
+    }
+    .desk-box {
+      position: absolute;
+      background: rgba(0, 10, 10, 0.65);
+      border: 2px solid #00FFCC;
+      box-shadow: 0 0 10px #00ffcc66, inset 0 0 12px #00ffcc22;
+      min-width: 16px; min-height: 16px;
+      /* keep it under the taskbar and above the desktop */
+      z-index: 10;
+    }
+    .desk-box .titlebar {
+      height: 18px;
+      background: linear-gradient(to bottom, #0c3, #033);
+      color: #001a16;
+      font-weight: bold;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      padding: 0 6px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: move;
       user-select: none;
-      transform: rotate(45deg);
+      text-shadow: 0 1px #00ffcc;
     }
-
-    .cursor-trail.fade {
-      transition: transform 300ms ease, opacity 350ms ease;
-      opacity: 0;
+    .desk-box .content {
+      padding: 6px; color: #00FFCC; font-size: 12px;
     }
-
-    @media (prefers-reduced-motion: reduce) {
-      .glitch-cursor, .cursor-trail { display: none !important; }
+    .desk-box .close {
+      background: #011; border: 1px solid #00FFCC; color: #00FFCC; font-size: 10px; padding: 0 4px;
+      cursor: pointer;
     }
+    .desk-box:focus-within,
+    .desk-box.active { box-shadow: 0 0 14px #00ffccaa, inset 0 0 12px #00ffcc33; }
   </style>
 </head>
 <body>
+  <!-- Desktop drawing surface -->
+  <div class="desktop" id="desktop" aria-hidden="false"></div>
 
-  <div class="desktop" aria-hidden="true"></div>
-
+  <!-- Taskbar -->
   <div class="taskbar">
     <div class="menu-area">
       <div class="menu-button" onclick="toggleMenu()">Menu</div>
@@ -200,55 +141,48 @@
     <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
   </div>
 
+  <!-- Glitch cursor -->
   <div id="glitchCursor" class="glitch-cursor" aria-hidden="true">
     <div class="ring"></div>
     <span id="glitchGlyph">⟟</span>
   </div>
 
   <script>
+    /* ===== Clock ===== */
     function updateClock() {
       const clock = document.getElementById('clock');
       const now = new Date();
-      let hours = now.getHours();
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12 || 12;
-      clock.innerHTML = `${hours}:${minutes} ${ampm} 🌀`;
+      let h = now.getHours();
+      const m = now.getMinutes().toString().padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      clock.innerHTML = `${h}:${m} ${ampm} 🌀`;
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateClock, 1000); updateClock();
 
     function toggleMenu() {
       const menu = document.getElementById('menuPopup');
       menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
     }
-
     document.addEventListener('click', (e) => {
       const menu = document.getElementById('menuPopup');
       const button = document.querySelector('.menu-button');
-      if (!menu.contains(e.target) && !button.contains(e.target)) {
-        menu.style.display = 'none';
-      }
+      if (!menu.contains(e.target) && !button.contains(e.target)) menu.style.display = 'none';
     });
-
     function doABarrelRoll() {
       document.body.classList.add('rotate');
-      setTimeout(() => {
-        document.body.classList.remove('rotate');
-      }, 1000);
+      setTimeout(() => document.body.classList.remove('rotate'), 1000);
     }
 
+    /* ===== Glitch Cursor (diagonal) ===== */
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const htmlTag = document.documentElement;
     const cursorEl = document.getElementById('glitchCursor');
     const glyphEl = document.getElementById('glitchGlyph');
     const toggleCursorLink = document.getElementById('toggleCursor');
     let cursorEnabled = !prefersReduced;
-    let lastX = window.innerWidth / 2;
-    let lastY = window.innerHeight / 2;
-    let targetX = lastX;
-    let targetY = lastY;
-    let rafId = null;
+    let lastX = innerWidth / 2, lastY = innerHeight / 2;
+    let targetX = lastX, targetY = lastY;
 
     const base = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const blocks = "░▒▓█▞▚▛▜▟▙▐▌▖▗▘▝▞▚";
@@ -257,20 +191,17 @@
     const zalgoMid = ["\u0315","\u031b","\u0340","\u0341","\u0358","\u0321","\u0322","\u0327","\u0328","\u0334","\u0335","\u0336","\u034f","\u035c","\u035d","\u035e","\u035f","\u0360","\u0362","\u0338","\u0337","\u0361","\u0489"];
     const zalgoDown = ["\u0316","\u0317","\u0318","\u0319","\u031c","\u031d","\u031e","\u031f","\u0320","\u0324","\u0325","\u0326","\u0329","\u032a","\u032b","\u032c","\u032d","\u032e","\u032f","\u0330","\u0331","\u0332","\u0333","\u0339","\u033a","\u033b","\u033c","\u0345","\u0347","\u0348","\u0349","\u034d","\u034e","\u0353","\u0354","\u0355","\u0356","\u0359","\u035a"];
 
-    function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+    const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+    const randInt = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
 
     function makeZalgoGlyph() {
       const baseChar = Math.random() < 0.6 ? rand(base) : (Math.random() < 0.5 ? rand(blocks) : rand(misc));
-      const up = Array.from({length: randInt(1, 3)}, () => rand(zalgoUp)).join("");
-      const mid = Array.from({length: randInt(0, 2)}, () => rand(zalgoMid)).join("");
-      const down = Array.from({length: randInt(1, 3)}, () => rand(zalgoDown)).join("");
+      const up = Array.from({length: randInt(1,3)}, () => rand(zalgoUp)).join("");
+      const mid = Array.from({length: randInt(0,2)}, () => rand(zalgoMid)).join("");
+      const down = Array.from({length: randInt(1,3)}, () => rand(zalgoDown)).join("");
       return baseChar + up + mid + down;
     }
-
-    function setGlyph() {
-      glyphEl.textContent = makeZalgoGlyph();
-    }
+    function setGlyph(){ glyphEl.textContent = makeZalgoGlyph(); }
 
     function spawnTrail(x, y) {
       if (!cursorEnabled) return;
@@ -281,8 +212,7 @@
       document.body.appendChild(t);
       requestAnimationFrame(() => {
         t.classList.add('fade');
-        const dx = randInt(-12, 12);
-        const dy = randInt(-12, 12);
+        const dx = randInt(-12, 12), dy = randInt(-12, 12);
         t.style.transform = `translate3d(${x+dx}px, ${y+dy}px, 0) rotate(45deg)`;
       });
       setTimeout(() => t.remove(), 420);
@@ -290,18 +220,17 @@
 
     function onMove(e) {
       if (!cursorEnabled) return;
-      targetX = e.clientX;
-      targetY = e.clientY;
+      targetX = e.clientX; targetY = e.clientY;
       if (Math.random() < 0.6) spawnTrail(targetX, targetY);
     }
 
     function animate() {
-      if (!cursorEnabled) { rafId = requestAnimationFrame(animate); return; }
+      if (!cursorEnabled) { requestAnimationFrame(animate); return; }
       const lerp = 0.18;
       lastX += (targetX - lastX) * lerp;
       lastY += (targetY - lastY) * lerp;
       cursorEl.style.transform = `translate3d(${lastX}px, ${lastY}px, 0) rotate(45deg)`;
-      rafId = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
     }
 
     function enableCursor() {
@@ -310,7 +239,6 @@
       cursorEl.style.display = 'block';
       toggleCursorLink.textContent = '🖱️ Toggle Glitch Cursor (ON)';
     }
-
     function disableCursor() {
       cursorEnabled = false;
       htmlTag.classList.remove('use-glitch-cursor');
@@ -318,25 +246,147 @@
       toggleCursorLink.textContent = '🖱️ Toggle Glitch Cursor (OFF)';
     }
 
-    if (prefersReduced) {
-      disableCursor();
-    } else {
-      enableCursor();
-      setGlyph();
+    if (prefersReduced) { disableCursor(); }
+    else {
+      enableCursor(); setGlyph();
       window.addEventListener('mousemove', onMove, { passive: true });
       animate();
       setInterval(() => { if (cursorEnabled) setGlyph(); }, 90);
     }
-
     toggleCursorLink.addEventListener('click', (e) => {
       e.preventDefault();
-      if (cursorEnabled) { disableCursor(); } else { enableCursor(); }
+      if (cursorEnabled) disableCursor(); else enableCursor();
+    });
+    window.addEventListener('resize', () => {
+      targetX = Math.min(innerWidth, Math.max(0, targetX));
+      targetY = Math.min(innerHeight, Math.max(0, targetY));
+    }, { passive: true });
+
+    /* ===== Drag to Create Boxes ===== */
+    const desktop = document.getElementById('desktop');
+    let drawing = false, startX = 0, startY = 0, ghost = null;
+
+    function toDesktopCoords(ev) {
+      const r = desktop.getBoundingClientRect();
+      return { x: ev.clientX - r.left, y: ev.clientY - r.top, rect: r };
+    }
+
+    desktop.addEventListener('mousedown', (ev) => {
+      // Ignore clicks that start on an existing box titlebar, those are for dragging boxes
+      if ((ev.target.closest('.desk-box'))) return;
+
+      drawing = true;
+      const { x, y } = toDesktopCoords(ev);
+      startX = x; startY = y;
+
+      ghost = document.createElement('div');
+      ghost.className = 'draw-ghost';
+      ghost.style.left = `${x}px`;
+      ghost.style.top = `${y}px`;
+      ghost.style.width = '0px';
+      ghost.style.height = '0px';
+      desktop.appendChild(ghost);
+      ev.preventDefault();
     });
 
-    window.addEventListener('resize', () => {
-      targetX = Math.min(window.innerWidth, Math.max(0, targetX));
-      targetY = Math.min(window.innerHeight, Math.max(0, targetY));
+    window.addEventListener('mousemove', (ev) => {
+      if (!drawing || !ghost) return;
+      const { x, y } = toDesktopCoords(ev);
+
+      const left = Math.min(x, startX);
+      const top  = Math.min(y, startY);
+      const w = Math.abs(x - startX);
+      const h = Math.abs(y - startY);
+
+      ghost.style.left = `${left}px`;
+      ghost.style.top  = `${top}px`;
+      ghost.style.width = `${w}px`;
+      ghost.style.height = `${h}px`;
     }, { passive: true });
+
+    window.addEventListener('mouseup', (ev) => {
+      if (!drawing) return;
+      drawing = false;
+
+      const rect = ghost.getBoundingClientRect();
+      const drect = desktop.getBoundingClientRect();
+      const w = rect.width, h = rect.height;
+      const left = parseFloat(ghost.style.left);
+      const top  = parseFloat(ghost.style.top);
+
+      ghost.remove();
+      ghost = null;
+
+      // Minimum size to avoid accidental dots
+      if (w < 8 || h < 8) return;
+
+      spawnDeskBox(left, top, w, h);
+    });
+
+    function spawnDeskBox(x, y, w, h) {
+      const box = document.createElement('div');
+      box.className = 'desk-box';
+      box.style.left = `${x}px`;
+      box.style.top  = `${y}px`;
+      box.style.width = `${w}px`;
+      box.style.height= `${h}px`;
+
+      const title = document.createElement('div');
+      title.className = 'titlebar';
+      title.innerHTML = `<span>BOX ${Math.random().toString(36).slice(2,6).toUpperCase()}</span>`;
+      const close = document.createElement('button');
+      close.className = 'close';
+      close.textContent = 'X';
+      close.addEventListener('click', (e) => { e.stopPropagation(); box.remove(); });
+
+      title.appendChild(close);
+
+      const content = document.createElement('div');
+      content.className = 'content';
+      content.textContent = 'Drag my title to move me. Create more by click-dragging the desktop.';
+
+      box.appendChild(title);
+      box.appendChild(content);
+      desktop.appendChild(box);
+
+      // Bring to front on click
+      box.addEventListener('mousedown', () => {
+        document.querySelectorAll('.desk-box').forEach(b => b.classList.remove('active'));
+        box.classList.add('active');
+        box.style.zIndex = (parseInt(box.style.zIndex || '10', 10) + 1).toString();
+      });
+
+      makeDraggable(box, title);
+    }
+
+    function makeDraggable(box, handle) {
+      let drag = false, offX = 0, offY = 0;
+
+      handle.addEventListener('mousedown', (ev) => {
+        drag = true;
+        const r = box.getBoundingClientRect();
+        const d = desktop.getBoundingClientRect();
+        offX = ev.clientX - r.left;
+        offY = ev.clientY - r.top;
+        ev.preventDefault();
+      });
+
+      window.addEventListener('mousemove', (ev) => {
+        if (!drag) return;
+        const d = desktop.getBoundingClientRect();
+        let nx = ev.clientX - d.left - offX;
+        let ny = ev.clientY - d.top  - offY;
+
+        // keep within desktop bounds
+        nx = Math.max(0, Math.min(nx, d.width  - box.offsetWidth));
+        ny = Math.max(0, Math.min(ny, d.height - box.offsetHeight));
+
+        box.style.left = `${nx}px`;
+        box.style.top  = `${ny}px`;
+      }, { passive: true });
+
+      window.addEventListener('mouseup', () => { drag = false; });
+    }
   </script>
 </body>
 </html>
