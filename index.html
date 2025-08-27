@@ -16,9 +16,13 @@
       background: linear-gradient(135deg, #000000, #222222);
       color: #00FFCC;
       overflow: hidden;
+      transition: transform 1s ease-in-out;
     }
 
-    /* Taskbar */
+    .rotate {
+      transform: rotate(360deg);
+    }
+
     .taskbar {
       position: fixed;
       bottom: 0;
@@ -75,22 +79,16 @@
       padding: 4px 10px;
       border: 2px inset #00FFCC;
       color: #00FFCC;
+      cursor: pointer;
     }
 
-    /* Retro border + glitch vibes */
     .taskbar, .menu-button, .clock {
       text-shadow: 1px 1px #000;
     }
 
-    /* For fun: */
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
-    }
-
-    .clock::after {
-      content: " 🌀";
-      animation: blink 1s infinite;
     }
   </style>
 </head>
@@ -104,11 +102,10 @@
         <a href="/sounds" target="_blank">🔊 Sounds</a>
       </div>
     </div>
-    <div class="clock" id="clock">--:-- --</div>
+    <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
   </div>
 
   <script>
-    // Clock Logic
     function updateClock() {
       const clock = document.getElementById('clock');
       const now = new Date();
@@ -116,18 +113,16 @@
       const minutes = now.getMinutes().toString().padStart(2, '0');
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12 || 12;
-      clock.textContent = `${hours}:${minutes} ${ampm}`;
+      clock.innerHTML = `${hours}:${minutes} ${ampm} 🌀`;
     }
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Menu Toggle
     function toggleMenu() {
       const menu = document.getElementById('menuPopup');
       menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
     }
 
-    // Close menu when clicking outside
     document.addEventListener('click', (e) => {
       const menu = document.getElementById('menuPopup');
       const button = document.querySelector('.menu-button');
@@ -135,6 +130,13 @@
         menu.style.display = 'none';
       }
     });
+
+    function doABarrelRoll() {
+      document.body.classList.add('rotate');
+      setTimeout(() => {
+        document.body.classList.remove('rotate');
+      }, 1000);
+    }
   </script>
 </body>
 </html>
