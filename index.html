@@ -12,14 +12,28 @@ html, body { height: 100%; background: #000; color: #00FFCC; transition: transfo
 /* Avoid trapping mobile users in a scroll jail */
 body { overflow: auto; }
 
-/* ===== Animated desktop backdrop (kept) ===== */
+/* ===== Animated desktop backdrop (updated to #00ff99) ===== */
 .desktop {
   position: fixed;
   top: 40px; bottom: 0; left: 0; right: 0;
   z-index: 0;
   background:
-    repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
-    radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
+    /* stripes */
+    repeating-linear-gradient(
+      135deg,
+      rgba(0,255,153,0.10) 0px,
+      rgba(0,255,153,0.10) 2px,
+      rgba(0,0,0,0.0) 2px,
+      rgba(0,0,0,0.0) 6px
+    ),
+    /* glow */
+    radial-gradient(
+      1200px 1200px at 0% 0%,
+      rgba(0,255,153,0.12) 0%,
+      rgba(0,255,153,0.05) 30%,
+      rgba(0,0,0,0.0) 60%
+    ),
+    /* base */
     linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
   background-size: auto, 100% 100%, 100% 100%;
   --scan-speed: 22s;
@@ -154,7 +168,7 @@ body { overflow: auto; }
   }
 }
     
-/* === Mobile backdrop revival: lighter, longer, still alive === */
+/* === Mobile backdrop revival: same #00ff99 vibe, lighter + slower === */
 @media (max-width: 640px) {
   /* Undo the kill switch */
   .desktop {
@@ -166,8 +180,8 @@ body { overflow: auto; }
     --scan-speed: 36s;              /* desktop was 22s */
     /* Slightly smaller radial to avoid harsh banding on tiny screens */
     background:
-      repeating-linear-gradient(135deg, rgba(0,255,204,0.10) 0px, rgba(0,255,204,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
-      radial-gradient(900px 900px at 0% 0%, rgba(0,255,204,0.12) 0%, rgba(0,255,204,0.05) 30%, rgba(0,0,0,0.0) 60%),
+      repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+      radial-gradient(900px 900px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
       linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
     background-size: auto, 100% 100%, 100% 100%;
     /* Kick some mobile browsers into using the compositor */
