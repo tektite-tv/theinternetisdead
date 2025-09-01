@@ -230,87 +230,79 @@ body { overflow: auto; }
   <div id="posts" class="posts-container">
     <h1 class="posts-title">WEBMASTER POSTS:</h1>
   </div>
+<script>
+  function updateClock() {
+    const clock = document.getElementById('clock');
+    const now = new Date();
+    let h = now.getHours();
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    clock.innerHTML = `${h}:${m} ${ampm} 🌀`;
+  }
+  setInterval(updateClock, 1000); updateClock();
 
-  <script>
-    function updateClock() {
-      const clock = document.getElementById('clock');
-      const now = new Date();
-      let h = now.getHours();
-      const m = now.getMinutes().toString().padStart(2, '0');
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      h = h % 12 || 12;
-      clock.innerHTML = `${h}:${m} ${ampm} 🌀`;
-    }
-    setInterval(updateClock, 1000); updateClock();
+  function toggleMenu() {
+    const menu = document.getElementById('menuPopup');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+  }
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('menuPopup');
+    const button = document.querySelector('.menu-button');
+    if (!menu.contains(e.target) && !button.contains(e.target)) menu.style.display = 'none';
+  });
+  function doABarrelRoll() {
+    document.body.classList.add('rotate');
+    setTimeout(() => document.body.classList.remove('rotate'), 1000);
+  }
 
-    function toggleMenu() {
-      const menu = document.getElementById('menuPopup');
-      menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-    }
-    document.addEventListener('click', (e) => {
-      const menu = document.getElementById('menuPopup');
-      const button = document.querySelector('.menu-button');
-      if (!menu.contains(e.target) && !button.contains(e.target)) menu.style.display = 'none';
-    });
-    function doABarrelRoll() {
-      document.body.classList.add('rotate');
-      setTimeout(() => document.body.classList.remove('rotate'), 1000);
-    }
+  // Helper: format to user's timezone (America/Toronto)
+  const tz = 'America/Toronto';
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: 'short', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz
+  });
 
-    // Helper: format to user's timezone (America/Toronto)
-    const tz = 'America/Toronto';
-    const fmt = new Intl.DateTimeFormat('en-CA', {
-      year: 'numeric', month: 'short', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz
-    });
+  // Load posts from index.json with {file, updated}
+  async function loadPosts() {
+    const container = document.getElementById('posts');
 
-    // Load posts from index.json only, show Last-Modified timestamp per file
-    async function loadPosts() {
-      const container = document.getElementById('posts');
-
-      try {
-        const resp = await fetch('/posts/index.json');
-        if (!resp.ok) {
-          console.warn("No index.json found");
-          return;
-        }
-        const files = await resp.json();
-
-        for (const file of files.reverse()) {
-          try {
-            // Fetch the markdown file (GET usually includes Last-Modified header on static hosts)
-            const r = await fetch('/posts/' + file, { cache: 'no-cache' });
-            if (!r.ok) continue; // skip missing files
-            const text = (await r.text()).trim();
-            if (!text) continue; // skip empty files
-
-            // Try to read Last-Modified header
-            const lm = r.headers.get('Last-Modified');
-            let stampHTML = '';
-            if (lm) {
-              const d = new Date(lm);
-              if (!isNaN(d.getTime())) {
-                stampHTML = `<div class="post-meta">Updated: ${fmt.format(d)}</div>`;
-              }
-            }
-
-            const el = document.createElement('div');
-            el.className = 'post';
-            el.innerHTML = `${stampHTML}${marked.parse(text)}`;
-            container.appendChild(el);
-          } catch (err) {
-            console.warn("Skipping invalid file:", file, err);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading posts:", err);
+    try {
+      const resp = await fetch('/posts/index.json');
+      if (!resp.ok) {
+        console.warn("No index.json found");
+        return;
       }
-    }
+      const posts = await resp.json(); // [{file, updated}, ...]
 
-    const script = document.createElement('script');
-    script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
-    script.onload = loadPosts;
-    document.head.appendChild(script);
-  </script>
+      for (const { file, updated } of posts) {
+        try {
+          const r = await fetch('/posts/' + file, { cache: 'no-cache' });
+          if (!r.ok) continue;
+          const text = (await r.text()).trim();
+          if (!text) continue;
+
+          const stamp = updated
+            ? `<div class="post-meta">Updated: ${fmt.format(new Date(updated))}</div>`
+            : "";
+
+          const el = document.createElement('div');
+          el.className = 'post';
+          el.innerHTML = `${stamp}${marked.parse(text)}`;
+          container.appendChild(el);
+        } catch (err) {
+          console.warn("Skipping invalid file:", file, err);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading posts:", err);
+    }
+  }
+
+  const script = document.createElement('script');
+  script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+  script.onload = loadPosts;
+  document.head.appendChild(script);
+</script>
 </body>
 </html>
