@@ -5,15 +5,15 @@
   <title>theinternetisdead.org</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-/* ===== Base reset & typography ===== */
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
-html, body { height: 100%; background: #000; color: #00FFCC; transition: transform 1s ease-in-out; }
-body { overflow: auto; }
+/* ===== Theme & reset ===== */
+:root { --accent:#00ff99; --accent-soft: #00ff9977; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
+html, body { height:100%; background:#000; color:var(--accent); transition:transform 1s ease-in-out; }
+body { overflow:auto; }
 
-/* ===== Animated desktop backdrop (kept) ===== */
+/* ===== Animated desktop backdrop ===== */
 .desktop {
-  position: fixed;
-  top: 40px; bottom: 0; left: 0; right: 0;
+  position: fixed; top: 40px; bottom: 0; left: 0; right: 0;
   z-index: 0;
   background:
     repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
@@ -28,23 +28,21 @@ body { overflow: auto; }
 
 /* ===== Taskbar ===== */
 .taskbar {
-  position: sticky;
-  top: 0; left: 0;
-  width: 100%; height: 40px;
+  position: sticky; top: 0; left: 0; width: 100%; height: 40px;
   background: linear-gradient(to bottom, #444, #222);
-  border-bottom: 2px solid #00FFCC;
+  border-bottom: 2px solid var(--accent);
   display: flex; align-items: center; gap: 8px;
-  padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: #00FFCC;
+  padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent);
 }
-.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset #00FFCC; color: #00FFCC; padding: 6px 12px; text-shadow: 1px 1px #000; }
+.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer; }
 .menu-button:active { transform: translateY(1px); }
-.menu-popup { position: absolute; top: 42px; left: 8px; width: 200px; background: #111; border: 2px outset #00FFCC; box-shadow: 0 0 5px #00ffcc99; display: none; flex-direction: column; z-index: 1001; }
-.menu-popup a { color: #00FFCC; padding: 12px; text-decoration: none; border-bottom: 1px solid #00FFCC; }
+.menu-popup { position: absolute; top: 42px; left: 8px; width: 200px; background: #111; border: 2px outset var(--accent); box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; }
+.menu-popup a { color: var(--accent); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--accent); }
 .menu-popup a:hover { background: #222; }
-.clock { background: #111; padding: 4px 10px; border: 2px inset #00FFCC; color: #00FFCC; text-shadow: 1px 1px #000; }
+.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
 .task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
-.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset #00FFCC; color: #00FFCC; padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
-.taskbtn.active { outline: 1px solid #00FFCC; }
+.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
+.taskbtn.active { outline: 1px solid var(--accent); }
 .taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
 
 /* ===== Posts container ===== */
@@ -53,24 +51,24 @@ body { overflow: auto; }
 
 .post {
   background: #111;
-  border: 2px solid #00FFCC;
+  border: 2px solid var(--accent);
   margin-bottom: 20px;
   padding: 16px;
-  box-shadow: 0 0 8px #00ffcc55;
+  box-shadow: 0 0 8px var(--accent-soft);
   border-radius: 8px;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
 .post h1, .post h2, .post h3 { color: #FF0040; line-height: 1.2; }
-.post p, .post li { line-height: 1.6; color: #00FFCC; }
+.post p, .post li { line-height: 1.6; color: var(--accent); }
 
 /* Timestamp */
 .post-meta {
   font-size: 0.85rem;
-  color: #7fffe6;
-  opacity: 0.9;
+  color: #b7ffe6;
+  opacity: 0.95;
   margin-bottom: 10px;
-  border-bottom: 1px dashed #00FFCC55;
+  border-bottom: 1px dashed #00ff9955;
   padding-bottom: 8px;
 }
 
@@ -80,52 +78,90 @@ body { overflow: auto; }
   height: auto;
   display: block;
   margin: 12px auto;
-  border: 1px solid #00FFCC;
+  border: 1px solid var(--accent);
 }
 
 /* Code blocks */
-.post pre { overflow-x: auto; padding: 12px; background: #0b0b0b; border: 1px dashed #00FFCC; border-radius: 6px; }
+.post pre { overflow-x: auto; padding: 12px; background: #0b0b0b; border: 1px dashed var(--accent); border-radius: 6px; }
 .post code { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Courier New',monospace; }
 
 /* ===== Controls under images ===== */
 .media-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.media-actions {
-  display: flex; gap: 8px; align-items: center; justify-content: center;
-}
+.media-actions { display: flex; gap: 8px; align-items: center; justify-content: center; }
 .media-actions .btn {
   cursor: pointer;
   background: linear-gradient(to bottom, #2a2a2a, #111);
-  border: 2px outset #00FFCC; color: #00FFCC;
+  border: 2px outset var(--accent); color: var(--accent);
   padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000;
   text-decoration: none;
 }
 .media-actions .btn:active { transform: translateY(1px); }
 
-/* ===== Lightbox ===== */
+/* ===== Lightbox (responsive) ===== */
 .lightbox {
   position: fixed; inset: 0; display: none; place-items: center;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.88);
   z-index: 2000;
-  padding: 24px;
+
+  /* Safe-area padding + scalable gutter */
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+
+  /* Handle mobile browser chrome */
+  height: 100dvh;              /* modern */
+  height: calc(var(--vh, 1vh) * 100); /* fallback via JS shim */
 }
 .lightbox.open { display: grid; }
-.lightbox-inner { max-width: 95vw; max-height: 90vh; display: grid; gap: 10px; }
-.lightbox-img {
-  max-width: 95vw; max-height: 80vh; object-fit: contain; border: 2px solid #00FFCC; box-shadow: 0 0 12px #00ffcc88;
-  background: #000;
-}
-.lightbox-bar { display: flex; justify-content: space-between; align-items: center; }
-.lightbox-title { color: #7fffe6; font-size: 0.9rem; opacity: 0.9; }
-.lightbox-actions { display: flex; gap: 8px; }
-.lightbox .btn { cursor: pointer; background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset #00FFCC; color: #00FFCC; padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000; }
 
-/* ===== Mobile ===== */
+.lightbox-inner {
+  display: grid;
+  grid-template-rows: 1fr auto; /* image grows, control bar sits under */
+  gap: 10px;
+  width: min(98vw, 1440px);
+  max-height: 100%;
+}
+.lightbox-img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  background: #000;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 12px var(--accent-soft);
+}
+.lightbox-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+}
+.lightbox-title {
+  flex: 1 1 auto; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #b7ffe6; font-size: 0.95rem; opacity: 0.95;
+}
+.lightbox-actions { display: flex; gap: 8px; }
+.lightbox .btn {
+  cursor: pointer;
+  background: linear-gradient(to bottom, #2a2a2a, #111);
+  border: 2px outset var(--accent); color: var(--accent);
+  padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000;
+}
+
+/* Tiny phones */
+@media (max-width: 480px) {
+  .lightbox-inner { gap: 8px; }
+  .lightbox-title { font-size: 0.85rem; }
+  .lightbox .btn { padding: 6px 8px; font-size: 12px; }
+}
+
+/* ===== Mobile site layout ===== */
 @media (max-width: 640px) {
   html, body { height: auto; }
   .desktop { display: block; top: 44px; opacity: 0.55; --scan-speed: 36s;
     background:
-      repeating-linear-gradient(135deg, rgba(0,255,204,0.10) 0px, rgba(0,255,204,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
-      radial-gradient(900px 900px at 0% 0%, rgba(0,255,204,0.12) 0%, rgba(0,255,204,0.05) 30%, rgba(0,0,0,0.0) 60%),
+      repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+      radial-gradient(900px 900px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
       linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
     background-size: auto, 100% 100%, 100% 100%;
     transform: translateZ(0);
@@ -141,8 +177,9 @@ body { overflow: auto; }
   .post h2 { font-size: 1.125rem; }
   .post h3 { font-size: 1rem; }
   .post p, .post li { font-size: 0.95rem; }
-  .post table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; }
-  .post th, .post td { padding: 8px; border: 1px solid #00FFCC55; }
+
+  /* On phones, let post images breathe wider */
+  .post img, .post video, .post iframe { max-width: 100%; }
 }
 
 /* Reduced motion */
@@ -153,6 +190,7 @@ body { overflow: auto; }
 </head>
 <body>
   <div class="desktop" id="desktop" aria-hidden="false"></div>
+
   <div class="taskbar">
     <div class="menu-area">
       <div class="menu-button" onclick="toggleMenu()">Menu</div>
@@ -179,13 +217,22 @@ body { overflow: auto; }
         <div id="lightboxTitle" class="lightbox-title"></div>
         <div class="lightbox-actions">
           <a id="lightboxDownload" class="btn" download>⬇ Download</a>
-          <button id="lightboxClose" class="btn">✕ Close</button>
+          <button id="lightboxClose" class="btn" type="button">✕ Close</button>
         </div>
       </div>
     </div>
   </div>
 
+<!-- ===== JS ===== -->
 <script>
+  /* viewport shim for mobile 100vh weirdness */
+  function setVhUnit() {
+    document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+  }
+  setVhUnit();
+  window.addEventListener('resize', setVhUnit, { passive: true });
+  window.addEventListener('orientationchange', setVhUnit, { passive: true });
+
   /* clock */
   function updateClock() {
     const clock = document.getElementById('clock');
@@ -204,7 +251,7 @@ body { overflow: auto; }
 
   function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
 
-  /* timezone + formatter */
+  /* timezone + formatter for Updated timestamps */
   const tz = 'America/Toronto';
   const fmt = new Intl.DateTimeFormat('en-CA', {
     year: 'numeric', month: 'short', day: '2-digit',
@@ -239,7 +286,6 @@ body { overflow: auto; }
     lb.title = document.getElementById('lightboxTitle');
     lb.dl = document.getElementById('lightboxDownload');
     lb.closeBtn = document.getElementById('lightboxClose');
-
     lb.root.addEventListener('click', (e)=>{ if(e.target === lb.root) lb.close(); });
     lb.closeBtn.addEventListener('click', ()=> lb.close());
   }
@@ -248,8 +294,7 @@ body { overflow: auto; }
   function enhancePostMedia(scope){
     const imgs = scope.querySelectorAll('img');
     imgs.forEach(img => {
-      // Skip if we already enhanced this one
-      if (img.closest('.media-wrap')) return;
+      if (img.closest('.media-wrap')) return; // already enhanced
 
       const wrapper = document.createElement('div');
       wrapper.className = 'media-wrap';
@@ -287,7 +332,7 @@ body { overflow: auto; }
     });
   }
 
-  /* Load posts and then enhance images */
+  /* Load posts from /posts/index.json and render */
   async function loadPosts() {
     const container = document.getElementById('posts');
 
@@ -328,6 +373,8 @@ body { overflow: auto; }
 
   /* boot */
   initLightbox();
+
+  // bring in marked for markdown parsing, then load posts
   const script = document.createElement('script');
   script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
   script.onload = loadPosts;
