@@ -295,7 +295,14 @@ body { overflow:auto; }
     const grid=document.getElementById('grid');
     const emptyMsg=document.getElementById('emptyMsg');
 
-    const candidates=['/images/index.json', '/images/_manifest.json', '/images/manifest.json'];
+    const candidates=[
+  './index.json',             // relative path (works with /images/index.html + index.json)
+  '/images/index.json',       // absolute path (works if deployed at root)
+  './_manifest.json',
+  './manifest.json',
+  '/images/_manifest.json',
+  '/images/manifest.json'
+];
 
     let data=null;
     for(const url of candidates){
