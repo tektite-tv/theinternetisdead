@@ -5,11 +5,9 @@
   <title>theinternetisdead.org</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-   /* ===== Base reset & typography ===== */
+/* ===== Base reset & typography ===== */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
 html, body { height: 100%; background: #000; color: #00FFCC; transition: transform 1s ease-in-out; }
-
-/* Avoid trapping mobile users in a scroll jail */
 body { overflow: auto; }
 
 /* ===== Animated desktop backdrop (kept) ===== */
@@ -25,15 +23,12 @@ body { overflow: auto; }
   --scan-speed: 22s;
   animation: scanScroll var(--scan-speed) linear infinite;
 }
-@keyframes scanScroll {
-  from { background-position: 0 0, 0 0, 0 0; }
-  to   { background-position: 800px 800px, 0 0, 0 0; }
-}
+@keyframes scanScroll { from { background-position: 0 0,0 0,0 0; } to { background-position: 800px 800px,0 0,0 0; } }
 .rotate { transform: rotate(360deg); }
 
 /* ===== Taskbar ===== */
 .taskbar {
-  position: sticky; /* sticky > fixed on mobile to respect safe areas */
+  position: sticky;
   top: 0; left: 0;
   width: 100%; height: 40px;
   background: linear-gradient(to bottom, #444, #222);
@@ -41,48 +36,21 @@ body { overflow: auto; }
   display: flex; align-items: center; gap: 8px;
   padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: #00FFCC;
 }
-.menu-button {
-  background: linear-gradient(to bottom, #333, #111);
-  border: 2px outset #00FFCC; color: #00FFCC; padding: 6px 12px; text-shadow: 1px 1px #000;
-}
+.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset #00FFCC; color: #00FFCC; padding: 6px 12px; text-shadow: 1px 1px #000; }
 .menu-button:active { transform: translateY(1px); }
-.menu-popup {
-  position: absolute; top: 42px; left: 8px; width: 200px;
-  background: #111; border: 2px outset #00FFCC; box-shadow: 0 0 5px #00ffcc99;
-  display: none; flex-direction: column; z-index: 1001;
-}
+.menu-popup { position: absolute; top: 42px; left: 8px; width: 200px; background: #111; border: 2px outset #00FFCC; box-shadow: 0 0 5px #00ffcc99; display: none; flex-direction: column; z-index: 1001; }
 .menu-popup a { color: #00FFCC; padding: 12px; text-decoration: none; border-bottom: 1px solid #00FFCC; }
 .menu-popup a:hover { background: #222; }
 .clock { background: #111; padding: 4px 10px; border: 2px inset #00FFCC; color: #00FFCC; text-shadow: 1px 1px #000; }
 .task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
-.taskbtn {
-  background: linear-gradient(to bottom, #2a2a2a, #111);
-  border: 2px outset #00FFCC; color: #00FFCC;
-  padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000;
-}
+.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset #00FFCC; color: #00FFCC; padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
 .taskbtn.active { outline: 1px solid #00FFCC; }
 .taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
 
 /* ===== Posts container ===== */
-.posts-container {
-  position: relative;
-  z-index: 1;
-  margin-top: 50px;           /* below taskbar */
-  padding: 16px;
-  max-width: 960px;
-  width: 100%;
-  margin-left: auto;
-  margin-right: auto;
-  /* Let the page scroll naturally instead of confining to a viewport calc() */
-  overflow: visible;
-}
+.posts-container { position: relative; z-index: 1; margin-top: 50px; padding: 16px; max-width: 960px; width: 100%; margin-left: auto; margin-right: auto; overflow: visible; }
+.posts-title { display:block; text-align:center; padding:10px; }
 
-.posts-title {
-  display:block;
-  text-align:center;
-  padding:10px;
-}
-    
 .post {
   background: #111;
   border: 2px solid #00FFCC;
@@ -96,7 +64,7 @@ body { overflow: auto; }
 .post h1, .post h2, .post h3 { color: #FF0040; line-height: 1.2; }
 .post p, .post li { line-height: 1.6; color: #00FFCC; }
 
-/* New: timestamp styling */
+/* Timestamp */
 .post-meta {
   font-size: 0.85rem;
   color: #7fffe6;
@@ -106,7 +74,7 @@ body { overflow: auto; }
   padding-bottom: 8px;
 }
 
-/* Media embeds & images scale down */
+/* Media */
 .post img, .post video, .post iframe {
   max-width: 50%;
   height: auto;
@@ -115,99 +83,71 @@ body { overflow: auto; }
   border: 1px solid #00FFCC;
 }
 
-/* Code blocks scroll horizontally instead of blowing up the layout */
-.post pre, .post code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-.post pre {
-  overflow-x: auto;
-  padding: 12px;
-  background: #0b0b0b;
-  border: 1px dashed #00FFCC;
-  border-radius: 6px;
-}
+/* Code blocks */
+.post pre { overflow-x: auto; padding: 12px; background: #0b0b0b; border: 1px dashed #00FFCC; border-radius: 6px; }
+.post code { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Courier New',monospace; }
 
-/* ===== Mobile-first adjustments ===== */
+/* ===== Controls under images ===== */
+.media-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.media-actions {
+  display: flex; gap: 8px; align-items: center; justify-content: center;
+}
+.media-actions .btn {
+  cursor: pointer;
+  background: linear-gradient(to bottom, #2a2a2a, #111);
+  border: 2px outset #00FFCC; color: #00FFCC;
+  padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000;
+  text-decoration: none;
+}
+.media-actions .btn:active { transform: translateY(1px); }
+
+/* ===== Lightbox ===== */
+.lightbox {
+  position: fixed; inset: 0; display: none; place-items: center;
+  background: rgba(0,0,0,0.85);
+  z-index: 2000;
+  padding: 24px;
+}
+.lightbox.open { display: grid; }
+.lightbox-inner { max-width: 95vw; max-height: 90vh; display: grid; gap: 10px; }
+.lightbox-img {
+  max-width: 95vw; max-height: 80vh; object-fit: contain; border: 2px solid #00FFCC; box-shadow: 0 0 12px #00ffcc88;
+  background: #000;
+}
+.lightbox-bar { display: flex; justify-content: space-between; align-items: center; }
+.lightbox-title { color: #7fffe6; font-size: 0.9rem; opacity: 0.9; }
+.lightbox-actions { display: flex; gap: 8px; }
+.lightbox .btn { cursor: pointer; background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset #00FFCC; color: #00FFCC; padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000; }
+
+/* ===== Mobile ===== */
 @media (max-width: 640px) {
   html, body { height: auto; }
-  .desktop { display: none; } /* save battery and avoid fixed layers on small screens */
-  .taskbar { height: 44px; padding: 0 10px; }
-  .taskbar-title { font-size: 12px; padding: 0 4px; }
-  .menu-button { padding: 6px 10px; }
-  .clock { padding: 4px 8px; }
-
-  .posts-container {
-    margin-top: 56px;   /* a smidge more room for the taller sticky bar */
-    padding: 12px;
-    max-width: 720px;
-  }
-
-  .posts-title {
-    display:block;
-    text-align:center;
-  }
-
-  .post { padding: 14px; }
-  .post h1 { font-size: 1.375rem; }
-  .post h2 { font-size: 1.125rem; }
-  .post h3 { font-size: 1rem; }
-  .post p, .post li { font-size: 0.95rem; }
-
-  /* Make tables scrollable if Markdown renders them */
-  .post table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; }
-  .post th, .post td { padding: 8px; border: 1px solid #00FFCC55; }
-}
-
-/* ===== Larger screens polish ===== */
-@media (min-width: 1024px) {
-  .posts-container { padding: 24px; }
-  .post { padding: 20px; }
-}
-    
-/* Clock fix for mobile */
-@media (max-width: 640px) {
-  .clock {
-    font-size: 0.75rem;       /* smaller text */
-    padding: 2px 6px;         /* tighter padding */
-    min-width: 52px;          /* keeps it from collapsing weirdly */
-    text-align: center;
-    border-width: 1px;        /* thinner frame */
-    flex-shrink: 0;           /* don't let flex crush it */
-  }
-}
-    
-/* === Mobile backdrop revival: lighter, longer, still alive === */
-@media (max-width: 640px) {
-  /* Undo the kill switch */
-  .desktop {
-    display: block;                 /* was none */
-    top: 44px;                      /* match the taller mobile taskbar */
-    opacity: 0.55;                  /* soften for readability */
-    will-change: background-position;
-    /* Slow the scan to save battery */
-    --scan-speed: 36s;              /* desktop was 22s */
-    /* Slightly smaller radial to avoid harsh banding on tiny screens */
+  .desktop { display: block; top: 44px; opacity: 0.55; --scan-speed: 36s;
     background:
       repeating-linear-gradient(135deg, rgba(0,255,204,0.10) 0px, rgba(0,255,204,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
       radial-gradient(900px 900px at 0% 0%, rgba(0,255,204,0.12) 0%, rgba(0,255,204,0.05) 30%, rgba(0,0,0,0.0) 60%),
       linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
     background-size: auto, 100% 100%, 100% 100%;
-    /* Kick some mobile browsers into using the compositor */
     transform: translateZ(0);
   }
+  .taskbar { height: 44px; padding: 0 10px; }
+  .taskbar-title { font-size: 12px; padding: 0 4px; }
+  .menu-button { padding: 6px 10px; }
+  .clock { padding: 2px 6px; min-width: 52px; font-size: 0.75rem; border-width: 1px; flex-shrink: 0; }
 
-  /* Tighten taskbar so it doesn't overlap weirdly */
-  .taskbar {
-    height: 44px;
-  }
+  .posts-container { margin-top: 56px; padding: 12px; max-width: 720px; }
+  .post { padding: 14px; }
+  .post h1 { font-size: 1.375rem; }
+  .post h2 { font-size: 1.125rem; }
+  .post h3 { font-size: 1rem; }
+  .post p, .post li { font-size: 0.95rem; }
+  .post table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; }
+  .post th, .post td { padding: 8px; border: 1px solid #00FFCC55; }
 }
 
-/* Respect users who hate motion (or whose phones are wheezing) */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .desktop {
-    animation: none;
-    background-position: 0 0, 0 0, 0 0; /* static but still pretty */
-  }
+  .desktop { animation: none; background-position: 0 0,0 0,0 0; }
 }
   </style>
 </head>
@@ -230,7 +170,23 @@ body { overflow: auto; }
   <div id="posts" class="posts-container">
     <h1 class="posts-title">WEBMASTER POSTS:</h1>
   </div>
+
+  <!-- Lightbox modal -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
+      <img id="lightboxImg" class="lightbox-img" alt="">
+      <div class="lightbox-bar">
+        <div id="lightboxTitle" class="lightbox-title"></div>
+        <div class="lightbox-actions">
+          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
+          <button id="lightboxClose" class="btn">✕ Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script>
+  /* clock */
   function updateClock() {
     const clock = document.getElementById('clock');
     const now = new Date();
@@ -242,28 +198,96 @@ body { overflow: auto; }
   }
   setInterval(updateClock, 1000); updateClock();
 
-  function toggleMenu() {
-    const menu = document.getElementById('menuPopup');
-    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-  }
-  document.addEventListener('click', (e) => {
-    const menu = document.getElementById('menuPopup');
-    const button = document.querySelector('.menu-button');
-    if (!menu.contains(e.target) && !button.contains(e.target)) menu.style.display = 'none';
-  });
-  function doABarrelRoll() {
-    document.body.classList.add('rotate');
-    setTimeout(() => document.body.classList.remove('rotate'), 1000);
-  }
+  /* menu */
+  function toggleMenu(){ const menu = document.getElementById('menuPopup'); menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex'; }
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menuPopup'); const b=document.querySelector('.menu-button'); if(m && b && !m.contains(e.target) && !b.contains(e.target)) m.style.display='none'; });
 
-  // Helper: format to user's timezone (America/Toronto)
+  function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
+
+  /* timezone + formatter */
   const tz = 'America/Toronto';
   const fmt = new Intl.DateTimeFormat('en-CA', {
     year: 'numeric', month: 'short', day: '2-digit',
     hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz
   });
 
-  // Load posts from index.json with {file, updated}
+  /* Lightbox helpers */
+  const lb = {
+    root: null, img: null, title: null, dl: null, closeBtn: null,
+    open(src, alt, filename){
+      this.img.src = src;
+      this.img.alt = alt || '';
+      this.title.textContent = alt || filename || src.split('/').pop();
+      this.dl.href = src;
+      this.dl.download = filename || src.split('/').pop();
+      this.root.classList.add('open');
+      this.root.setAttribute('aria-hidden','false');
+      document.addEventListener('keydown', escClose);
+    },
+    close(){
+      this.root.classList.remove('open');
+      this.root.setAttribute('aria-hidden','true');
+      this.img.src = '';
+      document.removeEventListener('keydown', escClose);
+    }
+  };
+  function escClose(e){ if(e.key === 'Escape') lb.close(); }
+
+  function initLightbox(){
+    lb.root = document.getElementById('lightbox');
+    lb.img = document.getElementById('lightboxImg');
+    lb.title = document.getElementById('lightboxTitle');
+    lb.dl = document.getElementById('lightboxDownload');
+    lb.closeBtn = document.getElementById('lightboxClose');
+
+    lb.root.addEventListener('click', (e)=>{ if(e.target === lb.root) lb.close(); });
+    lb.closeBtn.addEventListener('click', ()=> lb.close());
+  }
+
+  /* Enhance images: add Expand + Download controls */
+  function enhancePostMedia(scope){
+    const imgs = scope.querySelectorAll('img');
+    imgs.forEach(img => {
+      // Skip if we already enhanced this one
+      if (img.closest('.media-wrap')) return;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'media-wrap';
+
+      const actions = document.createElement('div');
+      actions.className = 'media-actions';
+
+      const expandBtn = document.createElement('button');
+      expandBtn.className = 'btn';
+      expandBtn.type = 'button';
+      expandBtn.textContent = '🔍 Expand';
+
+      const downloadLink = document.createElement('a');
+      downloadLink.className = 'btn';
+      downloadLink.textContent = '⬇ Download';
+      downloadLink.href = img.src;
+      downloadLink.setAttribute('download', (img.alt || img.src.split('/').pop() || 'image').replace(/\s+/g,'_'));
+
+      expandBtn.addEventListener('click', ()=>{
+        const nameGuess = img.getAttribute('alt') || img.src.split('/').pop();
+        lb.open(img.src, img.getAttribute('alt'), nameGuess);
+      });
+
+      // Click on the image also expands
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', ()=> expandBtn.click());
+
+      actions.appendChild(expandBtn);
+      actions.appendChild(downloadLink);
+
+      // Wrap: insert wrapper before img, move img inside, then append actions
+      img.parentNode.insertBefore(wrapper, img);
+      wrapper.appendChild(img);
+      wrapper.appendChild(actions);
+    });
+  }
+
+  /* Load posts and then enhance images */
   async function loadPosts() {
     const container = document.getElementById('posts');
 
@@ -290,6 +314,9 @@ body { overflow: auto; }
           el.className = 'post';
           el.innerHTML = `${stamp}${marked.parse(text)}`;
           container.appendChild(el);
+
+          // After the markdown is injected, enhance media in this post
+          enhancePostMedia(el);
         } catch (err) {
           console.warn("Skipping invalid file:", file, err);
         }
@@ -299,6 +326,8 @@ body { overflow: auto; }
     }
   }
 
+  /* boot */
+  initLightbox();
   const script = document.createElement('script');
   script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
   script.onload = loadPosts;
