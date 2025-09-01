@@ -153,6 +153,40 @@ body { overflow: auto; }
     flex-shrink: 0;           /* don't let flex crush it */
   }
 }
+    
+/* === Mobile backdrop revival: lighter, longer, still alive === */
+@media (max-width: 640px) {
+  /* Undo the kill switch */
+  .desktop {
+    display: block;                 /* was none */
+    top: 44px;                      /* match the taller mobile taskbar */
+    opacity: 0.55;                  /* soften for readability */
+    will-change: background-position;
+    /* Slow the scan to save battery */
+    --scan-speed: 36s;              /* desktop was 22s */
+    /* Slightly smaller radial to avoid harsh banding on tiny screens */
+    background:
+      repeating-linear-gradient(135deg, rgba(0,255,204,0.10) 0px, rgba(0,255,204,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+      radial-gradient(900px 900px at 0% 0%, rgba(0,255,204,0.12) 0%, rgba(0,255,204,0.05) 30%, rgba(0,0,0,0.0) 60%),
+      linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
+    background-size: auto, 100% 100%, 100% 100%;
+    /* Kick some mobile browsers into using the compositor */
+    transform: translateZ(0);
+  }
+
+  /* Tighten taskbar so it doesn't overlap weirdly */
+  .taskbar {
+    height: 44px;
+  }
+}
+
+/* Respect users who hate motion (or whose phones are wheezing) */
+@media (prefers-reduced-motion: reduce) {
+  .desktop {
+    animation: none;
+    background-position: 0 0, 0 0, 0 0; /* static but still pretty */
+  }
+}
   </style>
 </head>
 <body>
