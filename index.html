@@ -45,6 +45,7 @@
       display: flex; align-items: center;
       padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000;
       gap: 8px;
+      color: #00FFCC; /* keep taskbar text mint */
     }
     .menu-button {
       background: linear-gradient(to bottom, #333, #111);
@@ -100,7 +101,7 @@
     .post h1, .post h2, .post h3 {
       color: #FF0040;
     }
-    .post p {
+    .post p, .post li {
       line-height: 1.5;
       color: #00FFCC;
     }
@@ -153,7 +154,7 @@
     // Load posts
     async function loadPosts() {
       const container = document.getElementById('posts');
-      const files = ['post001.md','post002.md','post003.md']; // Add more as needed
+      const files = ['post001.md','post002.md','post003.md']; // add more in order
 
       // Oldest bottom: reverse the list so newest is appended first
       for (const file of files.reverse()) {
