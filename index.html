@@ -1,1 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>theinternetisdead.org</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
 
+    html, body {
+      height: 100%;
+      background: #000;
+      color: #00FFCC;
+      overflow: hidden;
+      transition: transform 1s ease-in-out;
+    }
+    .rotate { transform: rotate(360deg); }
+
+    .desktop {
+      position: fixed;
+      top: 40px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 0;
+      background:
+        repeating-linear-gradient(135deg, rgba(0,255,204,0.10) 0px, rgba(0,255,204,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+        radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,204,0.12) 0%, rgba(0,255,204,0.05) 30%, rgba(0,0,0,0.0) 60%),
+        linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
+      background-size: auto, 100% 100%, 100% 100%;
+      --scan-speed: 22s;
+      animation: scanScroll var(--scan-speed) linear infinite;
+    }
+    @keyframes scanScroll {
+      from { background-position: 0px 0px, 0 0, 0 0; }
+      to   { background-position: 800px 800px, 0 0, 0 0; }
+    }
+
+    .taskbar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 40px;
+      background: linear-gradient(to bottom, #444, #222);
+      border-bottom: 2px solid #00FFCC;
+      display: flex; align-items: center;
+      padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000;
+      gap: 8px;
+      color: #00FFCC;
+    }
+    .menu-button {
+      background: linear-gradient(to bottom, #333, #111);
+      border: 2px outset #00FFCC; color: #00FFCC; padding: 4px 12px; text-shadow: 1px 1px #000;
+    }
+    .menu-button:hover { background: #000; }
+    .menu-popup {
+      position: absolute; top: 42px; left: 8px; width: 170px;
+      background: #111; border: 2px outset #00FFCC; box-shadow: 0 0 5px #00ffcc99;
+      display: none; flex-direction: column; z-index: 1001;
+    }
+    .menu-popup a {
+      color: #00FFCC; padding: 10px; text-decoration: none; border-bottom: 1px solid #00FFCC;
+    }
+    .menu-popup a:hover { background: #222; }
+    .clock {
+      background: #111; padding: 4px 10px;
+      border: 2px inset #00FFCC; color: #00FFCC;
+      text-shadow: 1px 1px #000;
+    }
+    .task-buttons {
+      display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; flex: 1;
+    }
+    .taskbtn {
+      background: linear-gradient(to bottom, #2a2a2a, #111);
+      border: 2px outset #00FFCC;
+      color: #00FFCC;
+      padding: 3px 8px;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      text-shadow: 1px 1px #000;
+    }
+    .taskbtn.active { outline: 1px solid #00FFCC; }
+    .taskbar-title { flex: 1; text-align: center; font-weight: 700; letter-spacing: 0.5px; }
+
+    /* Posts styling */
+    .posts-container {
+      position: relative;
+      z-index: 1;
+      margin-top: 50px; /* below taskbar */
+      padding: 20px;
+      max-height: calc(100% - 60px);
+      overflow-y: auto;
+    }
+    .post {
+      background: #111;
+      border: 2px solid #00FFCC;
+      margin-bottom: 20px;
+      padding: 16px;
+      box-shadow: 0 0 8px #00ffcc55;
+    }
+    .post h1, .post h2, .post h3 {
+      color: #FF0040;
+    }
+    .post p, .post li {
+      line-height: 1.5;
+      color: #00FFCC;
+    }
+  </style>
+</head>
+<body>
+  <div class="desktop" id="desktop" aria-hidden="false"></div>
+  <div class="taskbar">
+    <div class="menu-area">
+      <div class="menu-button" onclick="toggleMenu()">Menu</div>
+      <div class="menu-popup" id="menuPopup">
+        <a href="/" target="_blank">Home</a>
+        <a href="/images" target="_blank">🖼️ Images</a>
+        <a href="/sounds" target="_blank">🔊 Sounds</a>
+      </div>
+    </div>
+    <div class="taskbar-title" title="You may never leave.">Welcome to theinternetisdead.org</div>
+    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
+    <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
+  </div>
+
+  <div id="posts" class="posts-container"></div>
+
+  <script>
+    function updateClock() {
+      const clock = document.getElementById('clock');
+      const now = new Date();
+      let h = now.getHours();
+      const m = now.getMinutes().toString().padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      clock.innerHTML = `${h}:${m} ${ampm} 🌀`;
+    }
+    setInterval(updateClock, 1000); updateClock();
+
+    function toggleMenu() {
+      const menu = document.getElementById('menuPopup');
+      menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    }
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('menuPopup');
+      const button = document.querySelector('.menu-button');
+      if (!menu.contains(e.target) && !button.contains(e.target)) menu.style.display = 'none';
+    });
+    function doABarrelRoll() {
+      document.body.classList.add('rotate');
+      setTimeout(() => document.body.classList.remove('rotate'), 1000);
+    }
+
+    // Load posts from index.json only
+    async function loadPosts() {
+      const container = document.getElementById('posts');
+
+      try {
+        const resp = await fetch('/posts/index.json');
+        if (!resp.ok) {
+          console.warn("No index.json found");
+          return;
+        }
+        const files = await resp.json();
+
+        for (const file of files.reverse()) {
+          try {
+            const r = await fetch('/posts/' + file);
+            if (!r.ok) continue; // skip missing files
+            const text = (await r.text()).trim();
+            if (!text) continue; // skip empty files
+
+            const el = document.createElement('div');
+            el.className = 'post';
+            el.innerHTML = marked.parse(text);
+            container.appendChild(el);
+          } catch (err) {
+            console.warn("Skipping invalid file:", file);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading posts:", err);
+      }
+    }
+
+    const script = document.createElement('script');
+    script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+    script.onload = loadPosts;
+    document.head.appendChild(script);
+  </script>
+</body>
+</html>
