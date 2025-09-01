@@ -141,6 +141,18 @@ body { overflow: auto; }
   .posts-container { padding: 24px; }
   .post { padding: 20px; }
 }
+    
+/* Clock fix for mobile */
+@media (max-width: 640px) {
+  .clock {
+    font-size: 0.75rem;       /* smaller text */
+    padding: 2px 6px;         /* tighter padding */
+    min-width: 52px;          /* keeps it from collapsing weirdly */
+    text-align: center;
+    border-width: 1px;        /* thinner frame */
+    flex-shrink: 0;           /* don't let flex crush it */
+  }
+}
   </style>
 </head>
 <body>
