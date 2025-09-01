@@ -1,1 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>theinternetisdead.org — Images</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+/* ===== Theme & reset ===== */
+:root { --accent:#00ff99; --accent-soft:#00ff9977; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
+html, body { height:100%; background:#000; color:var(--accent); transition:transform 1s ease-in-out; }
+body { overflow:auto; }
 
+/* ===== Animated desktop backdrop ===== */
+.desktop {
+  position: fixed; top: 40px; bottom: 0; left: 0; right: 0;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+    radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
+    linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
+  background-size: auto, 100% 100%, 100% 100%;
+  --scan-speed: 22s;
+  animation: scanScroll var(--scan-speed) linear infinite;
+}
+@keyframes scanScroll { from { background-position: 0 0,0 0,0 0; } to { background-position: 800px 800px,0 0,0 0; } }
+.rotate { transform: rotate(360deg); }
+
+/* ===== Taskbar ===== */
+.taskbar {
+  position: sticky; top: 0; left: 0; width: 100%; height: 40px;
+  background: linear-gradient(to bottom, #444, #222);
+  border-bottom: 2px solid var(--accent);
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent);
+}
+.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer; }
+.menu-button:active { transform: translateY(1px); }
+.menu-popup { position: absolute; top: 42px; left: 8px; width: 200px; background: #111; border: 2px outset var(--accent); box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; }
+.menu-popup a { color: var(--accent); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--accent); }
+.menu-popup a:hover { background: #222; }
+.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
+.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
+.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
+.taskbtn.active { outline: 1px solid var(--accent); }
+.taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
+
+/* ===== Gallery container ===== */
+.gallery-container { position: relative; z-index: 1; margin-top: 20px; padding: 16px; max-width: 1200px; width: 100%; margin-left: auto; margin-right: auto; }
+.gallery-title { text-align:center; padding:10px 0 14px; text-decoration:underline; color:#FF0040; }
+
+/* ===== Responsive grid ===== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 980px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+.card {
+  background:#111;
+  border:2px solid var(--accent);
+  border-radius:8px;
+  box-shadow:0 0 8px var(--accent-soft);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+.card figure { margin:0; }
+.card img {
+  display:block;
+  width:100%;
+  height:auto;
+  object-fit:cover;
+  cursor:zoom-in;
+  border-bottom:1px solid var(--accent);
+}
+.card .meta {
+  display:flex; gap:8px; align-items:center; justify-content:space-between; padding:10px; flex-wrap:wrap;
+}
+.meta .name { color:#b7ffe6; font-size:0.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ===== Controls under images ===== */
+.media-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.media-actions .btn {
+  cursor:pointer;
+  background: linear-gradient(to bottom, #2a2a2a, #111);
+  border:2px outset var(--accent); color:var(--accent);
+  padding:6px 10px; font-size:12px; text-shadow:1px 1px #000;
+  text-decoration:none;
+}
+.media-actions .btn:active { transform: translateY(1px); }
+
+/* ===== Lightbox (reused) ===== */
+.lightbox {
+  position: fixed; inset: 0; display: none; place-items: center;
+  background: rgba(0,0,0,0.88);
+  z-index: 2000;
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-right))
+    max(10px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
+  height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
+}
+.lightbox.open { display: grid; }
+
+.lightbox-inner {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 100%;
+  overflow: hidden;
+}
+.lightbox-img {
+  width: 100%; height: 100%; max-width: 100%; max-height: 100%;
+  object-fit: contain; background:#000; border:2px solid var(--accent);
+  box-shadow:0 0 12px var(--accent-soft); box-sizing:border-box;
+}
+.lightbox-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.lightbox-title { flex:1 1 auto; min-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#b7ffe6; font-size:0.95rem; opacity:0.95; }
+.lightbox-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.lightbox .btn {
+  cursor:pointer;
+  background: linear-gradient(to bottom, #2a2a2a, #111);
+  border:2px outset var(--accent); color:var(--accent);
+  padding:6px 10px; font-size:12px; text-shadow:1px 1px #000;
+}
+
+/* Tiny phones */
+@media (max-width: 480px) {
+  .lightbox { 
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+  .lightbox-inner { gap: 6px; }
+  .lightbox-img { border-width: 1px; }
+  .lightbox-title { font-size: 0.85rem; }
+  .lightbox .btn { padding: 6px 8px; font-size: 12px; }
+  .lightbox-bar { flex-direction: column; align-items: stretch; }
+  .lightbox-actions { justify-content: stretch; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .desktop { animation: none; background-position: 0 0,0 0,0 0; }
+}
+  </style>
+</head>
+<body>
+  <div class="desktop" id="desktop" aria-hidden="false"></div>
+
+  <div class="taskbar">
+    <div class="menu-area">
+      <div class="menu-button" onclick="toggleMenu()">Menu</div>
+      <div class="menu-popup" id="menuPopup">
+        <a href="/" target="_blank">🏠 Home</a>
+        <a href="/images" target="_blank">🖼️ Images</a>
+        <a href="/sounds" target="_blank">🔊 Sounds</a>
+      </div>
+    </div>
+    <div class="taskbar-title" title="You may never leave.">Welcome to theinternetisdead.org — Images</div>
+    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
+    <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
+  </div>
+
+  <!-- ===== Gallery ===== -->
+  <div id="gallery" class="gallery-container">
+    <h1 class="gallery-title">IMAGE ARCHIVE</h1>
+    <div id="grid" class="grid" aria-live="polite"></div>
+    <p id="emptyMsg" style="text-align:center; padding:18px; display:none; color:#b7ffe6;">
+      No images found. Add a manifest at <code>/images/index.json</code>.
+    </p>
+  </div>
+
+  <!-- Lightbox modal -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
+      <img id="lightboxImg" class="lightbox-img" alt="">
+      <div class="lightbox-bar">
+        <div id="lightboxTitle" class="lightbox-title"></div>
+        <div class="lightbox-actions">
+          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
+          <button id="lightboxClose" class="btn" type="button">✕ Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- ===== JS ===== -->
+<script>
+  /* viewport shim for mobile 100vh weirdness */
+  function setVhUnit(){ document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
+  setVhUnit(); window.addEventListener('resize', setVhUnit, { passive:true }); window.addEventListener('orientationchange', setVhUnit, { passive:true });
+
+  /* clock */
+  function updateClock(){
+    const clock=document.getElementById('clock'); const now=new Date();
+    let h=now.getHours(); const m=now.getMinutes().toString().padStart(2,'0'); const ampm=h>=12?'PM':'AM'; h=h%12||12;
+    clock.innerHTML=`${h}:${m} ${ampm} 🌀`;
+  }
+  setInterval(updateClock, 1000); updateClock();
+
+  /* menu */
+  function toggleMenu(){
+    const menu=document.getElementById('menuPopup');
+    menu.style.display=menu.style.display==='flex'?'none':'flex';
+  }
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menuPopup'); const b=document.querySelector('.menu-button'); if(m&&b&&!m.contains(e.target)&&!b.contains(e.target)) m.style.display='none'; });
+
+  function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
+
+  /* Lightbox helpers */
+  const lb={ root:null, img:null, title:null, dl:null, closeBtn:null,
+    open(src, alt, filename){
+      this.img.src=src; this.img.alt=alt||''; this.title.textContent=alt||filename||src.split('/').pop();
+      this.dl.href=src; this.dl.download=filename||src.split('/').pop();
+      this.root.classList.add('open'); this.root.setAttribute('aria-hidden','false');
+      document.addEventListener('keydown', escClose);
+    },
+    close(){
+      this.root.classList.remove('open'); this.root.setAttribute('aria-hidden','true'); this.img.src=''; document.removeEventListener('keydown', escClose);
+    }
+  };
+  function escClose(e){ if(e.key==='Escape') lb.close(); }
+  function initLightbox(){
+    lb.root=document.getElementById('lightbox'); lb.img=document.getElementById('lightboxImg'); lb.title=document.getElementById('lightboxTitle'); lb.dl=document.getElementById('lightboxDownload'); lb.closeBtn=document.getElementById('lightboxClose');
+    lb.root.addEventListener('click',(e)=>{ if(e.target===lb.root) lb.close(); }); lb.closeBtn.addEventListener('click',()=>lb.close());
+  }
+
+  /* Build one card */
+  function makeCard(item){
+    const src=item.src||item.url||item.path;
+    const alt=item.alt||item.title||item.name||src.split('/').pop();
+    const filename=item.filename||src.split('/').pop();
+
+    const card=document.createElement('div');
+    card.className='card';
+
+    const fig=document.createElement('figure');
+    const img=document.createElement('img');
+    img.loading='lazy';
+    img.decoding='async';
+    img.src=src;
+    img.alt=alt;
+
+    img.addEventListener('click',()=>lb.open(src, alt, filename));
+
+    const meta=document.createElement('div');
+    meta.className='meta';
+
+    const name=document.createElement('div');
+    name.className='name';
+    name.textContent=alt;
+
+    const actions=document.createElement('div');
+    actions.className='media-actions';
+
+    const expandBtn=document.createElement('button');
+    expandBtn.className='btn';
+    expandBtn.type='button';
+    expandBtn.textContent='🔍 Expand';
+    expandBtn.addEventListener('click',()=>lb.open(src, alt, filename));
+
+    const dl=document.createElement('a');
+    dl.className='btn';
+    dl.textContent='⬇ Download';
+    dl.href=src;
+    dl.setAttribute('download', filename.replace(/\s+/g,'_'));
+
+    actions.appendChild(expandBtn);
+    actions.appendChild(dl);
+
+    meta.appendChild(name);
+    meta.appendChild(actions);
+
+    fig.appendChild(img);
+    card.appendChild(fig);
+    card.appendChild(meta);
+    return card;
+  }
+
+  /* Load images from manifest(s) */
+  async function loadImages(){
+    const grid=document.getElementById('grid');
+    const emptyMsg=document.getElementById('emptyMsg');
+
+    const candidates=['/images/index.json', '/images/_manifest.json', '/images/manifest.json'];
+
+    let data=null;
+    for(const url of candidates){
+      try{
+        const r=await fetch(url, { cache:'no-cache' });
+        if(r.ok){ data=await r.json(); break; }
+      }catch(e){ /* move along */ }
+    }
+
+    if(!data){
+      emptyMsg.style.display='block';
+      return;
+    }
+
+    // normalize shapes: array<string> OR array<object> OR {images:[...]}
+    let items=[];
+    if(Array.isArray(data)){
+      items=data.map(x=> typeof x==='string' ? { src:`/images/${x}` } : x);
+    }else if(Array.isArray(data.images)){
+      items=data.images.map(x=> typeof x==='string' ? { src:`/images/${x}` } : x);
+    }else{
+      // last-ditch: keys of object { filename: meta }
+      items=Object.keys(data).map(k=> ({ src:`/images/${k}`, ...(typeof data[k]==='object'?data[k]:{}) }));
+    }
+
+    // filter for common image extensions just in case
+    const ok=/\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
+    items = items
+      .map(it => ({ ...it, src: it.src?.startsWith('/images/') ? it.src : `/images/${it.src}` }))
+      .filter(it => ok.test(it.src));
+
+    if(items.length===0){ emptyMsg.style.display='block'; return; }
+
+    const frag=document.createDocumentFragment();
+    for(const it of items){ frag.appendChild(makeCard(it)); }
+    grid.appendChild(frag);
+  }
+
+  /* boot */
+  initLightbox();
+  loadImages();
+</script>
+</body>
+</html>
