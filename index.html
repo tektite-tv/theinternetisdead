@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
 /* ===== Theme & reset ===== */
-:root { --accent:#00ff99; --accent-soft: #00ff9977; }
+:root { --accent:#00ff99; --accent-soft:#00ff9977; }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
 html, body { height:100%; background:#000; color:var(--accent); transition:transform 1s ease-in-out; }
 body { overflow:auto; }
@@ -18,7 +18,7 @@ body { overflow:auto; }
   background:
     repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
     radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
-    linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
+    linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
   background-size: auto, 100% 100%, 100% 100%;
   --scan-speed: 22s;
   animation: scanScroll var(--scan-speed) linear infinite;
@@ -46,7 +46,7 @@ body { overflow:auto; }
 .taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
 
 /* ===== Posts container ===== */
-.posts-container { position: relative; z-index: 1; margin-top: 50px; padding: 16px; max-width: 960px; width: 100%; margin-left: auto; margin-right: auto; overflow: visible; }
+.posts-container { position: relative; z-index: 1; margin-top: 50px; padding: 16px; max-width: 960px; width: 100%; margin-left: auto; margin-right: auto; }
 .posts-title { display:block; text-align:center; padding:10px; }
 
 .post {
@@ -56,7 +56,6 @@ body { overflow:auto; }
   padding: 16px;
   box-shadow: 0 0 8px var(--accent-soft);
   border-radius: 8px;
-  word-wrap: break-word;
   overflow-wrap: anywhere;
 }
 .post h1, .post h2, .post h3 { color: #FF0040; line-height: 1.2; }
@@ -87,7 +86,7 @@ body { overflow:auto; }
 
 /* ===== Controls under images ===== */
 .media-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.media-actions { display: flex; gap: 8px; align-items: center; justify-content: center; }
+.media-actions { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .media-actions .btn {
   cursor: pointer;
   background: linear-gradient(to bottom, #2a2a2a, #111);
@@ -97,7 +96,7 @@ body { overflow:auto; }
 }
 .media-actions .btn:active { transform: translateY(1px); }
 
-/* ===== Lightbox (responsive) ===== */
+/* ===== Lightbox (fully responsive) ===== */
 .lightbox {
   position: fixed; inset: 0; display: none; place-items: center;
   background: rgba(0,0,0,0.88);
@@ -105,23 +104,24 @@ body { overflow:auto; }
 
   /* Safe-area padding + scalable gutter */
   padding:
-    max(12px, env(safe-area-inset-top))
-    max(12px, env(safe-area-inset-right))
-    max(12px, env(safe-area-inset-bottom))
-    max(12px, env(safe-area-inset-left));
+    max(10px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-right))
+    max(10px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
 
-  /* Handle mobile browser chrome */
-  height: 100dvh;              /* modern */
-  height: calc(var(--vh, 1vh) * 100); /* fallback via JS shim */
+  height: 100dvh; /* modern */
+  height: calc(var(--vh, 1vh) * 100); /* shim fallback */
 }
 .lightbox.open { display: grid; }
 
 .lightbox-inner {
   display: grid;
-  grid-template-rows: 1fr auto; /* image grows, control bar sits under */
+  grid-template-rows: 1fr auto; /* image takes available height */
   gap: 10px;
-  width: min(98vw, 1440px);
+  width: 100%;
+  max-width: 100vw;     /* never overflow horizontally */
   max-height: 100%;
+  overflow: hidden;     /* keep borders and bar inside */
 }
 .lightbox-img {
   width: 100%;
@@ -132,6 +132,7 @@ body { overflow:auto; }
   background: #000;
   border: 2px solid var(--accent);
   box-shadow: 0 0 12px var(--accent-soft);
+  box-sizing: border-box; /* include border in sizing */
 }
 .lightbox-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
@@ -140,7 +141,7 @@ body { overflow:auto; }
   flex: 1 1 auto; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: #b7ffe6; font-size: 0.95rem; opacity: 0.95;
 }
-.lightbox-actions { display: flex; gap: 8px; }
+.lightbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .lightbox .btn {
   cursor: pointer;
   background: linear-gradient(to bottom, #2a2a2a, #111);
@@ -148,11 +149,24 @@ body { overflow:auto; }
   padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000;
 }
 
-/* Tiny phones */
+/* Tiny phones and narrow viewports */
 @media (max-width: 480px) {
-  .lightbox-inner { gap: 8px; }
+  .lightbox { 
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+  .lightbox-inner { gap: 6px; }
+  .lightbox-img { border-width: 1px; }      /* slimmer border so it fits */
   .lightbox-title { font-size: 0.85rem; }
   .lightbox .btn { padding: 6px 8px; font-size: 12px; }
+  .lightbox-bar { 
+    flex-direction: column; 
+    align-items: stretch;   /* title on top, buttons below, full width */
+  }
+  .lightbox-actions { justify-content: stretch; }
 }
 
 /* ===== Mobile site layout ===== */
@@ -162,7 +176,7 @@ body { overflow:auto; }
     background:
       repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
       radial-gradient(900px 900px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
-      linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
+      linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
     background-size: auto, 100% 100%, 100% 100%;
     transform: translateZ(0);
   }
@@ -178,7 +192,7 @@ body { overflow:auto; }
   .post h3 { font-size: 1rem; }
   .post p, .post li { font-size: 0.95rem; }
 
-  /* On phones, let post images breathe wider */
+  /* On phones, let post media use full width */
   .post img, .post video, .post iframe { max-width: 100%; }
 }
 
