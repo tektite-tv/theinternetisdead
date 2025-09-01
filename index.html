@@ -5,39 +5,21 @@
   <title>theinternetisdead.org</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-/* ===== Base reset & typography ===== */
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', ui-monospace, monospace; }
-:root { --neon: #00ff99; }
-html, body { height: 100%; background: #000; color: var(--neon); }
+   /* ===== Base reset & typography ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
+html, body { height: 100%; background: #000; color: #00FFCC; transition: transform 1s ease-in-out; }
 
-/* Prevent scroll jank on mobile */
-body { overflow: auto; position: relative; }
+/* Avoid trapping mobile users in a scroll jail */
+body { overflow: auto; }
 
-/* ===== Animated desktop backdrop (pure #00ff99 vibe) ===== */
+/* ===== Animated desktop backdrop (kept) ===== */
 .desktop {
   position: fixed;
   top: 40px; bottom: 0; left: 0; right: 0;
-  z-index: -1; /* behind content */
-  filter: none;
-  mix-blend-mode: normal;
-  opacity: 1;
+  z-index: 0;
   background:
-    /* scanline stripes */
-    repeating-linear-gradient(
-      135deg,
-      rgba(0,255,153,0.10) 0px,
-      rgba(0,255,153,0.10) 2px,
-      rgba(0,0,0,0.0) 2px,
-      rgba(0,0,0,0.0) 6px
-    ),
-    /* corner glow */
-    radial-gradient(
-      1200px 1200px at 0% 0%,
-      rgba(0,255,153,0.12) 0%,
-      rgba(0,255,153,0.05) 30%,
-      rgba(0,0,0,0.0) 60%
-    ),
-    /* base */
+    repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+    radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
     linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
   background-size: auto, 100% 100%, 100% 100%;
   --scan-speed: 22s;
@@ -47,76 +29,56 @@ body { overflow: auto; position: relative; }
   from { background-position: 0 0, 0 0, 0 0; }
   to   { background-position: 800px 800px, 0 0, 0 0; }
 }
-
-/* ===== Anti-vignette nuke squad ===== */
-.vignette, .overlay, .backdrop, .scrim,
-[class*="vignette" i], [class*="overlay" i], [class*="backdrop" i], [data-overlay],
-.vignette::before, .overlay::before, .backdrop::before, .scrim::before,
-.vignette::after,  .overlay::after,  .backdrop::after,  .scrim::after,
-body::before, body::after, main::before, main::after {
-  background: none !important;
-  background-image: none !important;
-  box-shadow: none !important;
-  opacity: 0 !important;
-  filter: none !important;
-  mix-blend-mode: normal !important;
-  content: none !important;
-  pointer-events: none !important;
-}
+.rotate { transform: rotate(360deg); }
 
 /* ===== Taskbar ===== */
 .taskbar {
-  position: sticky;
+  position: sticky; /* sticky > fixed on mobile to respect safe areas */
   top: 0; left: 0;
   width: 100%; height: 40px;
   background: linear-gradient(to bottom, #444, #222);
-  border-bottom: 2px solid var(--neon);
+  border-bottom: 2px solid #00FFCC;
   display: flex; align-items: center; gap: 8px;
-  padding: 0 8px; z-index: 1000;
-  color: var(--neon); text-shadow: 1px 1px #000;
+  padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: #00FFCC;
 }
 .menu-button {
   background: linear-gradient(to bottom, #333, #111);
-  border: 2px outset var(--neon); color: var(--neon);
-  padding: 6px 12px; cursor: pointer; text-shadow: 1px 1px #000;
+  border: 2px outset #00FFCC; color: #00FFCC; padding: 6px 12px; text-shadow: 1px 1px #000;
 }
 .menu-button:active { transform: translateY(1px); }
 .menu-popup {
   position: absolute; top: 42px; left: 8px; width: 200px;
-  background: #111; border: 2px outset var(--neon); box-shadow: 0 0 5px #00ffcc99;
+  background: #111; border: 2px outset #00FFCC; box-shadow: 0 0 5px #00ffcc99;
   display: none; flex-direction: column; z-index: 1001;
 }
-.menu-popup a { color: var(--neon); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--neon); }
+.menu-popup a { color: #00FFCC; padding: 12px; text-decoration: none; border-bottom: 1px solid #00FFCC; }
 .menu-popup a:hover { background: #222; }
-
-.taskbar-title { flex: 1; text-align: center; font-weight: 700; letter-spacing: 0.5px; }
-.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+.clock { background: #111; padding: 4px 10px; border: 2px inset #00FFCC; color: #00FFCC; text-shadow: 1px 1px #000; }
+.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
 .taskbtn {
   background: linear-gradient(to bottom, #2a2a2a, #111);
-  border: 2px outset var(--neon); color: var(--neon);
+  border: 2px outset #00FFCC; color: #00FFCC;
   padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000;
 }
-.taskbtn.active { outline: 1px solid var(--neon); }
-
-.clock {
-  background: #111; padding: 4px 10px; border: 2px inset var(--neon);
-  color: var(--neon); text-shadow: 1px 1px #000; white-space: nowrap;
-}
+.taskbtn.active { outline: 1px solid #00FFCC; }
+.taskbar-title { flex: 1; text-align: center; font-weight: 700; letter-spacing: 0.5px; }
 
 /* ===== Posts container ===== */
 .posts-container {
   position: relative;
   z-index: 1;
-  margin-top: 50px;
+  margin-top: 50px;           /* below taskbar */
   padding: 16px;
   max-width: 960px;
   width: 100%;
   margin-left: auto;
   margin-right: auto;
+  /* Let the page scroll naturally instead of confining to a viewport calc() */
+  overflow: visible;
 }
 .post {
   background: #111;
-  border: 2px solid var(--neon);
+  border: 2px solid #00FFCC;
   margin-bottom: 20px;
   padding: 16px;
   box-shadow: 0 0 8px #00ffcc55;
@@ -125,59 +87,110 @@ body::before, body::after, main::before, main::after {
   overflow-wrap: anywhere;
 }
 .post h1, .post h2, .post h3 { color: #FF0040; line-height: 1.2; }
-.post p, .post li { line-height: 1.6; color: var(--neon); }
+.post p, .post li { line-height: 1.6; color: #00FFCC; }
+
+/* Media embeds & images scale down */
 .post img, .post video, .post iframe {
-  max-width: 100%; height: auto; display: block; margin: 12px auto; border: 1px solid var(--neon);
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px auto;
+  border: 1px solid #00FFCC;
 }
+
+/* Code blocks scroll horizontally instead of blowing up the layout */
 .post pre, .post code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 .post pre {
-  overflow-x: auto; padding: 12px; background: #0b0b0b;
-  border: 1px dashed var(--neon); border-radius: 6px;
+  overflow-x: auto;
+  padding: 12px;
+  background: #0b0b0b;
+  border: 1px dashed #00FFCC;
+  border-radius: 6px;
 }
 
-/* ===== Mobile adjustments ===== */
+/* ===== Mobile-first adjustments ===== */
 @media (max-width: 640px) {
   html, body { height: auto; }
+  .desktop { display: none; } /* save battery and avoid fixed layers on small screens */
   .taskbar { height: 44px; padding: 0 10px; }
   .taskbar-title { font-size: 12px; padding: 0 4px; }
   .menu-button { padding: 6px 10px; }
-  .clock {
-    font-size: 0.75rem; padding: 2px 6px; min-width: 52px; text-align: center; border-width: 1px; flex-shrink: 0;
+  .clock { padding: 4px 8px; }
+
+  .posts-container {
+    margin-top: 56px;   /* a smidge more room for the taller sticky bar */
+    padding: 12px;
+    max-width: 720px;
   }
-  .posts-container { margin-top: 56px; padding: 12px; max-width: 720px; }
+
   .post { padding: 14px; }
   .post h1 { font-size: 1.375rem; }
   .post h2 { font-size: 1.125rem; }
   .post h3 { font-size: 1rem; }
   .post p, .post li { font-size: 0.95rem; }
 
-  /* Mobile backdrop revived, same color, gentler motion */
+  /* Make tables scrollable if Markdown renders them */
+  .post table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; }
+  .post th, .post td { padding: 8px; border: 1px solid #00FFCC55; }
+}
+
+/* ===== Larger screens polish ===== */
+@media (min-width: 1024px) {
+  .posts-container { padding: 24px; }
+  .post { padding: 20px; }
+}
+    
+/* Clock fix for mobile */
+@media (max-width: 640px) {
+  .clock {
+    font-size: 0.75rem;       /* smaller text */
+    padding: 2px 6px;         /* tighter padding */
+    min-width: 52px;          /* keeps it from collapsing weirdly */
+    text-align: center;
+    border-width: 1px;        /* thinner frame */
+    flex-shrink: 0;           /* don't let flex crush it */
+  }
+}
+    
+/* === Mobile backdrop revival: lighter, longer, still alive === */
+@media (max-width: 640px) {
+  /* Undo the kill switch */
   .desktop {
-    display: block;
-    top: 44px;
-    opacity: 0.55;
+    display: block;                 /* was none */
+    top: 44px;                      /* match the taller mobile taskbar */
+    opacity: 0.55;                  /* soften for readability */
     will-change: background-position;
-    --scan-speed: 36s;
+    /* Slow the scan to save battery */
+    --scan-speed: 36s;              /* desktop was 22s */
+    /* Slightly smaller radial to avoid harsh banding on tiny screens */
     background:
-      repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
-      radial-gradient(900px 900px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
+      repeating-linear-gradient(135deg, rgba(0,255,204,0.10) 0px, rgba(0,255,204,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+      radial-gradient(900px 900px at 0% 0%, rgba(0,255,204,0.12) 0%, rgba(0,255,204,0.05) 30%, rgba(0,0,0,0.0) 60%),
       linear-gradient(135deg, #000000 0%, #141414 50%, #000000 100%);
     background-size: auto, 100% 100%, 100% 100%;
+    /* Kick some mobile browsers into using the compositor */
     transform: translateZ(0);
+  }
+
+  /* Tighten taskbar so it doesn't overlap weirdly */
+  .taskbar {
+    height: 44px;
   }
 }
 
-/* Respect prefers-reduced-motion */
+/* Respect users who hate motion (or whose phones are wheezing) */
 @media (prefers-reduced-motion: reduce) {
-  .desktop { animation: none; background-position: 0 0, 0 0, 0 0; }
+  .desktop {
+    animation: none;
+    background-position: 0 0, 0 0, 0 0; /* static but still pretty */
+  }
 }
   </style>
 </head>
 <body>
   <div class="desktop" id="desktop" aria-hidden="false"></div>
-
   <div class="taskbar">
     <div class="menu-area">
       <div class="menu-button" onclick="toggleMenu()">Menu</div>
@@ -189,13 +202,12 @@ body::before, body::after, main::before, main::after {
     </div>
     <div class="taskbar-title" title="You may never leave.">Welcome to theinternetisdead.org</div>
     <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
-    <div class="clock" id="clock" title="Click to roll">--:-- 🌀</div>
+    <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
   </div>
 
   <div id="posts" class="posts-container"></div>
 
   <script>
-    // Clock
     function updateClock() {
       const clock = document.getElementById('clock');
       const now = new Date();
@@ -203,18 +215,10 @@ body::before, body::after, main::before, main::after {
       const m = now.getMinutes().toString().padStart(2, '0');
       const ampm = h >= 12 ? 'PM' : 'AM';
       h = h % 12 || 12;
-      clock.textContent = `${h}:${m} ${ampm} 🌀`;
+      clock.innerHTML = `${h}:${m} ${ampm} 🌀`;
     }
     setInterval(updateClock, 1000); updateClock();
 
-    // Barrel roll
-    document.getElementById('clock').addEventListener('click', () => {
-      document.body.style.transition = 'transform 1s ease-in-out';
-      document.body.style.transform = 'rotate(360deg)';
-      setTimeout(() => document.body.style.transform = 'none', 1000);
-    });
-
-    // Menu
     function toggleMenu() {
       const menu = document.getElementById('menuPopup');
       menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
@@ -224,30 +228,36 @@ body::before, body::after, main::before, main::after {
       const button = document.querySelector('.menu-button');
       if (!menu.contains(e.target) && !button.contains(e.target)) menu.style.display = 'none';
     });
+    function doABarrelRoll() {
+      document.body.classList.add('rotate');
+      setTimeout(() => document.body.classList.remove('rotate'), 1000);
+    }
 
-    // Load posts from /posts/index.json only
+    // Load posts from index.json only
     async function loadPosts() {
       const container = document.getElementById('posts');
 
       try {
-        const resp = await fetch('/posts/index.json', { cache: 'no-store' });
-        if (!resp.ok) { console.warn("No /posts/index.json found"); return; }
+        const resp = await fetch('/posts/index.json');
+        if (!resp.ok) {
+          console.warn("No index.json found");
+          return;
+        }
         const files = await resp.json();
-        if (!Array.isArray(files) || !files.length) return;
 
-        for (const file of files.slice().reverse()) {
+        for (const file of files.reverse()) {
           try {
-            const r = await fetch('/posts/' + file, { cache: 'no-store' });
-            if (!r.ok) continue;
+            const r = await fetch('/posts/' + file);
+            if (!r.ok) continue; // skip missing files
             const text = (await r.text()).trim();
-            if (!text) continue;
+            if (!text) continue; // skip empty files
 
             const el = document.createElement('div');
             el.className = 'post';
             el.innerHTML = marked.parse(text);
             container.appendChild(el);
-          } catch {
-            /* skip bad file */
+          } catch (err) {
+            console.warn("Skipping invalid file:", file);
           }
         }
       } catch (err) {
@@ -255,7 +265,6 @@ body::before, body::after, main::before, main::after {
       }
     }
 
-    // Bring in marked and then load posts
     const script = document.createElement('script');
     script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
     script.onload = loadPosts;
