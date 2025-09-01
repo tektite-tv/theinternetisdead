@@ -96,6 +96,16 @@ body { overflow: auto; }
 .post h1, .post h2, .post h3 { color: #FF0040; line-height: 1.2; }
 .post p, .post li { line-height: 1.6; color: #00FFCC; }
 
+/* New: timestamp styling */
+.post-meta {
+  font-size: 0.85rem;
+  color: #7fffe6;
+  opacity: 0.9;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed #00FFCC55;
+  padding-bottom: 8px;
+}
+
 /* Media embeds & images scale down */
 .post img, .post video, .post iframe {
   max-width: 50%;
@@ -218,7 +228,7 @@ body { overflow: auto; }
   </div>
 
   <div id="posts" class="posts-container">
-  <h1 class="posts-title">WEBMASTER POSTS:</h1>
+    <h1 class="posts-title">WEBMASTER POSTS:</h1>
   </div>
 
   <script>
@@ -247,7 +257,14 @@ body { overflow: auto; }
       setTimeout(() => document.body.classList.remove('rotate'), 1000);
     }
 
-    // Load posts from index.json only
+    // Helper: format to user's timezone (America/Toronto)
+    const tz = 'America/Toronto';
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric', month: 'short', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz
+    });
+
+    // Load posts from index.json only, show Last-Modified timestamp per file
     async function loadPosts() {
       const container = document.getElementById('posts');
 
@@ -261,17 +278,28 @@ body { overflow: auto; }
 
         for (const file of files.reverse()) {
           try {
-            const r = await fetch('/posts/' + file);
+            // Fetch the markdown file (GET usually includes Last-Modified header on static hosts)
+            const r = await fetch('/posts/' + file, { cache: 'no-cache' });
             if (!r.ok) continue; // skip missing files
             const text = (await r.text()).trim();
             if (!text) continue; // skip empty files
 
+            // Try to read Last-Modified header
+            const lm = r.headers.get('Last-Modified');
+            let stampHTML = '';
+            if (lm) {
+              const d = new Date(lm);
+              if (!isNaN(d.getTime())) {
+                stampHTML = `<div class="post-meta">Updated: ${fmt.format(d)}</div>`;
+              }
+            }
+
             const el = document.createElement('div');
             el.className = 'post';
-            el.innerHTML = marked.parse(text);
+            el.innerHTML = `${stampHTML}${marked.parse(text)}`;
             container.appendChild(el);
           } catch (err) {
-            console.warn("Skipping invalid file:", file);
+            console.warn("Skipping invalid file:", file, err);
           }
         }
       } catch (err) {
