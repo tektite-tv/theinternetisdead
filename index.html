@@ -45,7 +45,7 @@
       display: flex; align-items: center;
       padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000;
       gap: 8px;
-      color: #00FFCC; /* keep taskbar text mint */
+      color: #00FFCC;
     }
     .menu-button {
       background: linear-gradient(to bottom, #333, #111);
@@ -151,27 +151,38 @@
       setTimeout(() => document.body.classList.remove('rotate'), 1000);
     }
 
-    // Load posts
+    // Load posts from index.json only
     async function loadPosts() {
       const container = document.getElementById('posts');
-      const files = ['post001.md','post002.md','post003.md']; // add more in order
 
-      // Oldest bottom: reverse the list so newest is appended first
-      for (const file of files.reverse()) {
-        try {
-          const resp = await fetch('/posts/' + file);
-          const text = await resp.text();
-          const el = document.createElement('div');
-          el.className = 'post';
-          el.innerHTML = marked.parse(text);
-          container.appendChild(el);
-        } catch (err) {
-          console.error('Error loading', file, err);
+      try {
+        const resp = await fetch('/posts/index.json');
+        if (!resp.ok) {
+          console.warn("No index.json found");
+          return;
         }
+        const files = await resp.json();
+
+        for (const file of files.reverse()) {
+          try {
+            const r = await fetch('/posts/' + file);
+            if (!r.ok) continue; // skip missing files
+            const text = (await r.text()).trim();
+            if (!text) continue; // skip empty files
+
+            const el = document.createElement('div');
+            el.className = 'post';
+            el.innerHTML = marked.parse(text);
+            container.appendChild(el);
+          } catch (err) {
+            console.warn("Skipping invalid file:", file);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading posts:", err);
       }
     }
 
-    // Load markdown parser, then posts
     const script = document.createElement('script');
     script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
     script.onload = loadPosts;
