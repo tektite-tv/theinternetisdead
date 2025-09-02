@@ -1,223 +1,171 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
+  <title>theinternetisdead.org — Images</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Images (Scoped)</title>
   <style>
-    /* SCOPED: everything lives under #images-app so your global CSS stays chill. */
-    #images-app {
-      --bg: #000;
-      --fg: #e6e6e6;
-      --muted: #9aa0a6;
-      --card: #111;
-      --accent: #00ff99;
-      font-family: inherit;
-      color: var(--fg);
-    }
-    #images-app a,
-    #images-app button,
-    #images-app input { all: unset; }
-    #images-app button { cursor: pointer; }
-    #images-app .ia-wrap {
-      background: transparent;
-    }
-    #images-app .ia-header {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      gap: .75rem;
-      padding: .5rem .75rem;
-      background: color-mix(in oklab, black 70%, transparent);
-      backdrop-filter: blur(4px);
-      border-bottom: 1px solid #222;
-    }
-    #images-app .ia-title {
-      font-size: .95rem;
-      font-weight: 600;
-      margin: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #images-app .ia-actions { margin-left: auto; display: flex; gap: .5rem; align-items: center; }
-    #images-app .ia-chip {
-      border: 1px solid #222;
-      background: #0a0a0a;
-      padding: .35rem .6rem;
-      border-radius: 10px;
-      font-size: .85rem;
-    }
-    #images-app .ia-btn {
-      border: 1px solid #222;
-      background: #0a0a0a;
-      padding: .45rem .7rem;
-      border-radius: 10px;
-      font-weight: 600;
-    }
-    #images-app .ia-main { padding: .75rem; }
-    #images-app .ia-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-    @media (min-width: 560px) {
-      #images-app .ia-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    }
-    @media (min-width: 900px) {
-      #images-app .ia-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    }
-    #images-app .ia-card {
-      background: var(--card);
-      border: 1px solid #1a1a1a;
-      border-radius: 12px;
-      overflow: clip;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-    #images-app .ia-thumb {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      object-fit: cover;
-      background: #050505;
-      display: block;
-    }
-    #images-app .ia-meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: .5rem;
-      padding: .5rem .6rem;
-    }
-    #images-app .ia-name {
-      font-size: .85rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    #images-app .ia-size { font-size: .75rem; color: var(--muted); }
-    #images-app .ia-empty {
-      color: var(--muted);
-      text-align: center;
-      padding: 10vh 1rem;
-    }
+/* ===== Theme & reset ===== */
+:root { --accent:#00ff99; --accent-soft:#00ff9977; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
+html, body { height:100%; background:#000; color:var(--accent); transition:transform 1s ease-in-out; }
+body { overflow:auto; }
+
+/* ===== Animated desktop backdrop ===== */
+.desktop {
+  position: fixed; top: 40px; bottom: 0; left: 0; right: 0;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+    radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
+    linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
+  background-size: auto, 100% 100%, 100% 100%;
+  --scan-speed: 22s;
+  animation: scanScroll var(--scan-speed) linear infinite;
+}
+@keyframes scanScroll { from { background-position: 0 0,0 0,0 0; } to { background-position: 800px 800px,0 0,0 0; } }
+.rotate { transform: rotate(360deg); }
+
+/* ===== Taskbar ===== */
+.taskbar {
+  position: sticky; top: 0; left: 0; width: 100%; height: 40px;
+  background: linear-gradient(to bottom, #444, #222);
+  border-bottom: 2px solid var(--accent);
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent);
+}
+.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer; }
+.menu-button:active { transform: translateY(1px); }
+.menu-popup { position: absolute; top: 42px; left: 8px; width: 200px; background: #111; border: 2px outset var(--accent); box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; }
+.menu-popup a { color: var(--accent); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--accent); }
+.menu-popup a:hover { background: #222; }
+.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
+.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
+.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
+.taskbtn.active { outline: 1px solid var(--accent); }
+.taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
+
+/* ===== Gallery container ===== */
+.gallery-container { position: relative; z-index: 1; margin-top: 20px; padding: 16px; max-width: 1200px; width: 100%; margin-left: auto; margin-right: auto; }
+.gallery-title { text-align:center; padding:10px 0 14px; text-decoration:underline; color:#FF0040; }
+
+/* ===== Responsive grid ===== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 980px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+
+.card {
+  background:#111;
+  border:2px solid var(--accent);
+  border-radius:8px;
+  box-shadow:0 0 8px var(--accent-soft);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+.card figure { margin:0; }
+.card img {
+  display:block;
+  width:100%;
+  height:auto;
+  object-fit:cover;
+  cursor:zoom-in;
+  border-bottom:1px solid var(--accent);
+}
+.card .meta {
+  display:flex; gap:8px; align-items:center; justify-content:space-between; padding:10px; flex-wrap:wrap;
+}
+.meta .name { color:#b7ffe6; font-size:0.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ===== Controls under images ===== */
+.media-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.media-actions .btn {
+  cursor:pointer;
+  background: linear-gradient(to bottom, #2a2a2a, #111);
+  border:2px outset var(--accent); color:var(--accent);
+  padding:6px 10px; font-size:12px; text-shadow:1px 1px #000;
+  text-decoration:none;
+}
+.media-actions .btn:active { transform: translateY(1px); }
+
+/* ===== Lightbox (reused) ===== */
+.lightbox {
+  position: fixed; inset: 0; display: none; place-items: center;
+  background: rgba(0,0,0,0.88);
+  z-index: 2000;
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-right))
+    max(10px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
+  height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
+}
+.lightbox.open { display: grid; }
+
+.lightbox-inner {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 100%;
+  overflow: hidden;
+}
+.lightbox-img {
+  width: 100%; height: 100%; max-width: 100%; max-height: 100%;
+  object-fit: contain; background:#000; border:2px solid var(--accent);
+  box-shadow:0 0 12px var(--accent-soft); box-sizing:border-box;
+}
+.lightbox-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.lightbox-title { flex:1 1 auto; min-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#b7ffe6; font-size:0.95rem; opacity:0.95; }
+.lightbox-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.lightbox .btn {
+  cursor:pointer;
+  background: linear-gradient(to bottom, #2a2a2a, #111);
+  border:2px outset var(--accent); color:var(--accent);
+  padding:6px 10px; font-size:12px; text-shadow:1px 1px #000;
+}
+
+/* Tiny phones */
+@media (max-width: 480px) {
+  .lightbox { 
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+  .lightbox-inner { gap: 6px; }
+  .lightbox-img { border-width: 1px; }
+  .lightbox-title { font-size: 0.85rem; }
+  .lightbox .btn { padding: 6px 8px; font-size: 12px; }
+  .lightbox-bar { flex-direction: column; align-items: stretch; }
+  .lightbox-actions { justify-content: stretch; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .desktop { animation: none; background-position: 0 0,0 0,0 0; }
+}
   </style>
 </head>
 <body>
-  <!-- SCOPED WIDGET START -->
-  <div id="images-app">
-    <div class="ia-wrap">
-      <div class="ia-header">
-        <h1 class="ia-title">Images</h1>
-        <div class="ia-actions">
-          <span id="ia-count" class="ia-chip">0</span>
-          <button id="ia-refresh" class="ia-btn" title="Reload images">Refresh</button>
-        </div>
+  <div class="desktop" id="desktop" aria-hidden="false"></div>
+
+  <div class="taskbar">
+    <div class="menu-area">
+      <div class="menu-button" onclick="toggleMenu()">Menu</div>
+      <div class="menu-popup" id="menuPopup">
+        <a href="/" target="_blank">🏠 Home</a>
+        <a href="/images" target="_blank">🖼️ Images</a>
+        <a href="/sounds" target="_blank">🔊 Sounds</a>
       </div>
-
-      <main class="ia-main">
-        <div id="ia-grid" class="ia-grid" aria-live="polite"></div>
-        <p id="ia-empty" class="ia-empty" hidden>No images found. Add filenames to <code>/images/index.json</code>.</p>
-      </main>
     </div>
-  </div>
-  <!-- SCOPED WIDGET END -->
-
-  <script>
-    (function ImagesApp(){
-      const root   = document.getElementById('images-app');
-      const grid   = document.getElementById('ia-grid');
-      const count  = document.getElementById('ia-count');
-      const empty  = document.getElementById('ia-empty');
-      const btn    = document.getElementById('ia-refresh');
-
-      function normalizeSrc(s) {
-        if (!s) return '';
-        if (/^https?:\/\//i.test(s) || s.startsWith('/')) return s;
-        s = s.replace(/^\.?\/*/, '');
-        s = s.replace(/^images\//i, '');
-        return `/images/${s}`;
-      }
-      function nameFromPath(p) {
-        try {
-          const u = new URL(p, location.origin);
-          const parts = u.pathname.split('/').filter(Boolean);
-          return parts.at(-1) || p;
-        } catch {
-          const parts = p.split('/').filter(Boolean);
-          return parts.at(-1) || p;
-        }
-      }
-      async function fetchIndex(bust=false){
-        const url = `/images/index.json${bust ? `?v=${Date.now()}` : ''}`;
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error('index.json fetch failed ' + res.status);
-        return res.json();
-      }
-      function normalizeItems(data){
-        let items = [];
-        if (Array.isArray(data)) {
-          items = data.map(x => typeof x === 'string' ? { src: x } : x);
-        } else if (Array.isArray(data?.images)) {
-          items = data.images.map(x => typeof x === 'string' ? { src: x } : x);
-        } else if (data && typeof data === 'object') {
-          items = Object.keys(data).map(k => (typeof data[k] === 'object' ? { src: k, ...data[k] } : { src: k }));
-        }
-        items = items.map(it => {
-          const raw = it.src || it.url || it.path || '';
-          const src = normalizeSrc(raw);
-          return { ...it, src };
-        });
-        const ok = /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
-        return items.filter(it => ok.test(it.src));
-      }
-      function render(items){
-        grid.replaceChildren();
-        if (!items.length){
-          empty.hidden = false;
-          count.textContent = '0';
-          return;
-        }
-        empty.hidden = true;
-        for (const it of items){
-          const fig = document.createElement('figure');
-          fig.className = 'ia-card';
-          const img = document.createElement('img');
-          img.className = 'ia-thumb';
-          img.loading = 'lazy';
-          img.decoding = 'async';
-          img.src = it.src;
-          img.alt = it.alt || '';
-          fig.appendChild(img);
-          const meta = document.createElement('figcaption');
-          meta.className = 'ia-meta';
-          const name = document.createElement('span');
-          name.className = 'ia-name';
-          name.textContent = it.name || it.title || nameFromPath(it.src);
-          const size = document.createElement('span');
-          size.className = 'ia-size';
-          size.textContent = it.dim || '';
-          meta.appendChild(name);
-          meta.appendChild(size);
-          fig.appendChild(meta);
-          grid.appendChild(fig);
-        }
-        count.textContent = String(items.length);
-      }
-      async function load({bust=false}={}){
-        try {
-          const data = await fetchIndex(bust);
-          render(normalizeItems(data));
-        } catch (e) {
-          console.error(e);
-          grid.replaceChildren();
-          empty.hidden = false;
-          empty.textContent = 'Error loading images. Ensure /images/index.json exists.';
-          count.textContent = '0';
-        }
-      }
-      btn?.addEventListener('click', () => load({bust:true}));
-      load();
+    <div class="taskbar-title" title="You may never leave.">Welcome to theinternetisdead.org — Images</div>
+    <div class="task-buttons" id="taskButtons" aria-label="Windows">
+      <button class="menu-button" id="refreshBtn" type="button" title="Reload images">🔄 Refresh</button></div>
