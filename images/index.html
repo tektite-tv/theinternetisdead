@@ -167,5 +167,173 @@ body { overflow:auto; }
       </div>
     </div>
     <div class="taskbar-title" title="You may never leave.">Welcome to theinternetisdead.org — Images</div>
-    <div class="task-buttons" id="taskButtons" aria-label="Windows">
-      <button class="menu-button" id="refreshBtn" type="button" title="Reload images">🔄 Refresh</button></div>
+    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
+    <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
+  </div>
+
+  <!-- ===== Gallery ===== -->
+  <div id="gallery" class="gallery-container">
+    <h1 class="gallery-title">IMAGE ARCHIVE</h1>
+    <div id="grid" class="grid" aria-live="polite"></div>
+    <p id="emptyMsg" style="text-align:center; padding:18px; display:none; color:#b7ffe6;">
+      No images found. Add a manifest at <code>/images/index.json</code>.
+    </p>
+  </div>
+
+  <!-- Lightbox modal -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
+      <img id="lightboxImg" class="lightbox-img" alt="">
+      <div class="lightbox-bar">
+        <div id="lightboxTitle" class="lightbox-title"></div>
+        <div class="lightbox-actions">
+          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
+          <button id="lightboxClose" class="btn" type="button">✕ Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- ===== JS ===== -->
+<script>
+  /* viewport shim for mobile 100vh weirdness */
+  function setVhUnit(){ document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
+  setVhUnit(); window.addEventListener('resize', setVhUnit, { passive:true }); window.addEventListener('orientationchange', setVhUnit, { passive:true });
+
+  /* clock */
+  function updateClock(){
+    const clock=document.getElementById('clock'); const now=new Date();
+    let h=now.getHours(); const m=now.getMinutes().toString().padStart(2,'0'); const ampm=h>=12?'PM':'AM'; h=h%12||12;
+    clock.innerHTML=`${h}:${m} ${ampm} 🌀`;
+  }
+  setInterval(updateClock, 1000); updateClock();
+
+  /* menu */
+  function toggleMenu(){
+    const menu=document.getElementById('menuPopup');
+    menu.style.display=menu.style.display==='flex'?'none':'flex';
+  }
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menuPopup'); const b=document.querySelector('.menu-button'); if(m&&b&&!m.contains(e.target)&&!b.contains(e.target)) m.style.display='none'; });
+
+  function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
+
+  /* Lightbox helpers */
+  const lb={ root:null, img:null, title:null, dl:null, closeBtn:null,
+    open(src, alt, filename){
+      this.img.src=src; this.img.alt=alt||''; this.title.textContent=alt||filename||src.split('/').pop();
+      this.dl.href=src; this.dl.download=filename||src.split('/').pop();
+      this.root.classList.add('open'); this.root.setAttribute('aria-hidden','false');
+      document.addEventListener('keydown', escClose);
+    },
+    close(){
+      this.root.classList.remove('open'); this.root.setAttribute('aria-hidden','true'); this.img.src=''; document.removeEventListener('keydown', escClose);
+    }
+  };
+  function escClose(e){ if(e.key==='Escape') lb.close(); }
+  function initLightbox(){
+    lb.root=document.getElementById('lightbox'); lb.img=document.getElementById('lightboxImg'); lb.title=document.getElementById('lightboxTitle'); lb.dl=document.getElementById('lightboxDownload'); lb.closeBtn=document.getElementById('lightboxClose');
+    lb.root.addEventListener('click',(e)=>{ if(e.target===lb.root) lb.close(); }); lb.closeBtn.addEventListener('click',()=>lb.close());
+  }
+
+  /* Build one card */
+  function makeCard(item){
+    const src=item.src||item.url||item.path;
+    const alt=item.alt||item.title||item.name||src.split('/').pop();
+    const filename=item.filename||src.split('/').pop();
+
+    const card=document.createElement('div');
+    card.className='card';
+
+    const fig=document.createElement('figure');
+    const img=document.createElement('img');
+    img.loading='lazy';
+    img.decoding='async';
+    img.src=src;
+    img.alt=alt;
+
+    img.addEventListener('click',()=>lb.open(src, alt, filename));
+
+    const meta=document.createElement('div');
+    meta.className='meta';
+
+    const name=document.createElement('div');
+    name.className='name';
+    name.textContent=alt;
+
+    const actions=document.createElement('div');
+    actions.className='media-actions';
+
+    const expandBtn=document.createElement('button');
+    expandBtn.className='btn';
+    expandBtn.type='button';
+    expandBtn.textContent='🔍 Expand';
+    expandBtn.addEventListener('click',()=>lb.open(src, alt, filename));
+
+    const dl=document.createElement('a');
+    dl.className='btn';
+    dl.textContent='⬇ Download';
+    dl.href=src;
+    dl.setAttribute('download', filename.replace(/\s+/g,'_'));
+
+    actions.appendChild(expandBtn);
+    actions.appendChild(dl);
+
+    meta.appendChild(name);
+    meta.appendChild(actions);
+
+    fig.appendChild(img);
+    card.appendChild(fig);
+    card.appendChild(meta);
+    return card;
+  }
+
+  /* Load images from manifest(s) */
+  async function loadImages(){
+    const grid=document.getElementById('grid');
+    const emptyMsg=document.getElementById('emptyMsg');
+
+    const candidates=['/images/index.json', '/images/_manifest.json', '/images/manifest.json'];
+
+    let data=null;
+    for(const url of candidates){
+      try{
+        const r=await fetch(url, { cache:'no-cache' });
+        if(r.ok){ data=await r.json(); break; }
+      }catch(e){ /* move along */ }
+    }
+
+    if(!data){
+      emptyMsg.style.display='block';
+      return;
+    }
+
+    // normalize shapes: array<string> OR array<object> OR {images:[...]}
+    let items=[];
+    if(Array.isArray(data)){
+      items=data.map(x=> typeof x==='string' ? { src:`/images/${x}` } : x);
+    }else if(Array.isArray(data.images)){
+      items=data.images.map(x=> typeof x==='string' ? { src:`/images/${x}` } : x);
+    }else{
+      // last-ditch: keys of object { filename: meta }
+      items=Object.keys(data).map(k=> ({ src:`/images/${k}`, ...(typeof data[k]==='object'?data[k]:{}) }));
+    }
+
+    // filter for common image extensions just in case
+    const ok=/\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
+    items = items
+      .map(it => ({ ...it, src: it.src?.startsWith('/images/') ? it.src : `/images/${it.src}` }))
+      .filter(it => ok.test(it.src));
+
+    if(items.length===0){ emptyMsg.style.display='block'; return; }
+
+    const frag=document.createDocumentFragment();
+    for(const it of items){ frag.appendChild(makeCard(it)); }
+    grid.appendChild(frag);
+  }
+
+  /* boot */
+  initLightbox();
+  loadImages();
+</script>
+</body>
+</html>
