@@ -70,46 +70,19 @@ input[type="range"].vol::-moz-range-thumb {
   box-shadow: 0 0 6px var(--accent-soft);
 }
 
-/* ===== Posts container ===== */
-.posts-container { display:block; position: relative; z-index: 1; margin-top: 20px; padding: 16px; max-width: 960px; width: 100%; margin-left: auto; margin-right: auto; background-color:rgba(85, 0, 151, 0.3); }
-.posts-title h1 { display:block; text-align:center; padding:10px; text-decoration:underline; color: #FF0040;}
-
-/* Face image above posts */
-.face-img { display:block; margin: 0 auto 0 auto; width: 20%; border-radius: 50%; border: 2px solid var(--accent); }
-    
-.post { background: #111; border: 2px solid var(--accent); margin-bottom: 20px; padding: 16px; box-shadow: 0 0 8px var(--accent-soft); border-radius: 8px; overflow-wrap: anywhere; }
-.post h1, .post h2, .post h3 { color: #FF0040; line-height: 1.2; }
-.post p, .post li { line-height: 1.6; color: var(--accent); }
-
-/* Timestamp */
-.post-meta { font-size: 0.85rem; color: #b7ffe6; opacity: 0.95; margin-bottom: 10px; border-bottom: 1px dashed #00ff9955; padding-bottom: 8px; }
-
-/* Media */
-.post img, .post video, .post iframe { max-width: 50%; height: auto; display: block; margin: 12px auto; border: 1px solid var(--accent); }
-
-/* Code blocks */
-.post pre { overflow-x: auto; padding: 12px; background: #0b0b0b; border: 1px dashed var(--accent); border-radius: 6px; }
-.post code { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Courier New',monospace; }
-
-/* ===== Lightbox (fully responsive) ===== */
-.lightbox { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,0.88); z-index: 2000;
-  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
-  height: 100dvh; height: calc(var(--vh, 1vh) * 100);
-}
-.lightbox.open { display: grid; }
-.lightbox-inner { display: grid; grid-template-rows: 1fr auto; gap: 10px; width: 100%; max-width: 100vw; max-height: 100%; overflow: hidden; }
-.lightbox-img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; background: #000; border: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent-soft); box-sizing: border-box; }
-.lightbox-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.lightbox-title { flex: 1 1 auto; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b7ffe6; font-size: 0.95rem; opacity: 0.95; }
-.lightbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.lightbox .btn { cursor: pointer; background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000; }
-
 /* ===== Game Links Grid ===== */
-.game-links .caption {
-  margin-top: 8px;
-  font-size: 14px;
-  color: var(--accent);
-  text-shadow: 1px 1px #000;
+.game-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+  padding: 16px;
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: rgba(0, 255, 153, 0.05);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
 }
 
 .game-links a {
@@ -136,39 +109,14 @@ input[type="range"].vol::-moz-range-thumb {
   box-shadow: 0 0 6px var(--accent-soft);
 }
 
-    
-/* ===== Mobile layout & tray popup ===== */
-@media (max-width: 640px) {
-  html, body { height: auto; }
-  .desktop { display: block; top: 44px; opacity: 0.55; --scan-speed: 36s;
-    background:
-      repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
-      radial-gradient(900px 900px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
-      linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
-    background-size: auto, 100% 100%, 100% 100%;
-    transform: translateZ(0);
-  }
-  .taskbar { height: 44px; padding: 0 10px; }
-  .taskbar-title { font-size: 12px; padding: 0 4px; }
-  .menu-button { padding: 6px 10px; }
-  .clock { padding: 2px 6px; min-width: 52px; font-size: 0.75rem; border-width: 1px; flex-shrink: 0; }
-  .posts-container { margin-top: 56px; padding: 12px; max-width: 720px; }
-  .post { padding: 14px; }
-  .post img, .post video, .post iframe { max-width: 100%; }
-
-  /* Tray popup sits at top-right */
-  .tray-popup { right: 8px; left: auto; }
-  .tray-popup .popup-row { padding: 12px; display: flex; align-items: center; gap: 10px; }
-  .tray-popup .popup-row .label { flex: 0 0 auto; }
-  .tray-popup .popup-row .range-wrap { flex: 1 1 auto; }
-  .tray-popup input[type="range"].vol { width: 100%; }
+.game-links .caption {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--accent);
+  text-shadow: 1px 1px #000;
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .desktop { animation: none; background-position: 0 0,0 0,0 0; }
-}
-
+/* ===== Footer glitch ===== */
 .footer-glitch {
   position: relative; z-index: 2; margin-top: 40px; padding: 16px; text-align: center; font-size: 14px; color: #00ff99;
   background: linear-gradient(to right, #000, #111, #000); border-top: 2px solid var(--accent);
@@ -224,266 +172,20 @@ input[type="range"].vol::-moz-range-thumb {
     </div>
   </div>
 
+  <!-- ===== Fixed Game Links Section ===== -->
   <div class="game-links">
-  <div class="posts-title"><h1>Game Links</h1></div>
+    <div class="posts-title"><h1>Game Links</h1></div>
 
-  <a href="/jad">
-    <img src="/images/jad-simulator.png" alt="Jad Simulator">
-    <div class="caption">Jad Simulator</div>
-  </a>
+    <a href="/jad">
+      <img src="/images/jad-simulator.png" alt="Jad Simulator">
+      <div class="caption">Jad Simulator</div>
+    </a>
 
-  <!-- Add more links here -->
-</div>
-
-
-  <!-- Lightbox modal -->
-  <div id="lightbox" class="lightbox" aria-hidden="true">
-    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
-      <img id="lightboxImg" class="lightbox-img" alt="">
-      <div class="lightbox-bar">
-        <div id="lightboxTitle" class="lightbox-title"></div>
-        <div class="lightbox-actions">
-          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
-          <button id="lightboxClose" class="btn" type="button">✕ Close</button>
-        </div>
-      </div>
-    </div>
+    <!-- Add more links here -->
   </div>
 
-<!-- ===== JS ===== -->
-<script>
-  /* viewport shim for mobile 100vh weirdness */
-  function setVhUnit() {
-    document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-  }
-  setVhUnit();
-  window.addEventListener('resize', setVhUnit, { passive: true });
-  window.addEventListener('orientationchange', setVhUnit, { passive: true });
-
-  /* clock display */
-  function updateClockText() {
-    const clock = document.getElementById('clock');
-    const now = new Date();
-    let h = now.getHours();
-    const m = now.getMinutes().toString().padStart(2, '0');
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    clock.innerHTML = `${h}:${m} 🌀`;
-    clock.title = `${h}:${m} ${ampm}`;
-  }
-  setInterval(updateClockText, 1000); updateClockText();
-
-  /* menus */
-  function toggleMenu(){ const menu = document.getElementById('menuPopup'); menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex'; }
-  document.addEventListener('click',(e)=>{
-    const m=document.getElementById('menuPopup');
-    const b=document.querySelector('.menu-button');
-    const tp=document.getElementById('trayPopup');
-    const clock=document.getElementById('clock');
-    if(m && b && !m.contains(e.target) && !b.contains(e.target)) m.style.display='none';
-    if(tp && !tp.contains(e.target) && e.target !== clock) closeTrayPopup();
-  });
-
-  function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
-
-  /* timezone for post timestamps if needed */
-  const tz = 'America/Toronto';
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric', month: 'short', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz
-  });
-
-  /* Lightbox helpers */
-  const lb = {
-    root: null, img: null, title: null, dl: null, closeBtn: null,
-    open(src, alt, filename){
-      this.img.src = src;
-      this.img.alt = alt || '';
-      this.title.textContent = alt || filename || src.split('/').pop();
-      this.dl.href = src;
-      this.dl.download = filename || src.split('/').pop();
-      this.root.classList.add('open');
-      this.root.setAttribute('aria-hidden','false');
-      document.addEventListener('keydown', escClose);
-    },
-    close(){
-      this.root.classList.remove('open');
-      this.root.setAttribute('aria-hidden','true');
-      this.img.src = '';
-      document.removeEventListener('keydown', escClose);
-    }
-  };
-  function escClose(e){ if(e.key === 'Escape') lb.close(); }
-  function initLightbox(){
-    lb.root = document.getElementById('lightbox');
-    lb.img = document.getElementById('lightboxImg');
-    lb.title = document.getElementById('lightboxTitle');
-    lb.dl = document.getElementById('lightboxDownload');
-    lb.closeBtn = document.getElementById('lightboxClose');
-    lb.root.addEventListener('click', (e)=>{ if(e.target === lb.root) lb.close(); });
-    lb.closeBtn.addEventListener('click', ()=> lb.close());
-  }
-
-  /* Enhance images: add Expand + Download controls */
-  function enhancePostMedia(scope){
-    const imgs = scope.querySelectorAll('img');
-    imgs.forEach(img => {
-      if (img.closest('.media-wrap')) return;
-      const wrapper = document.createElement('div'); wrapper.className = 'media-wrap';
-      const actions = document.createElement('div'); actions.className = 'media-actions';
-      const expandBtn = document.createElement('button'); expandBtn.className = 'btn'; expandBtn.type='button'; expandBtn.textContent='🔍 Expand';
-      const downloadLink = document.createElement('a'); downloadLink.className='btn'; downloadLink.textContent='⬇ Download'; downloadLink.href=img.src; downloadLink.setAttribute('download', (img.alt || img.src.split('/').pop() || 'image').replace(/\s+/g,'_'));
-      expandBtn.addEventListener('click', ()=>{ const nameGuess = img.getAttribute('alt') || img.src.split('/').pop(); lb.open(img.src, img.getAttribute('alt'), nameGuess); });
-      img.style.cursor = 'zoom-in'; img.addEventListener('click', ()=> expandBtn.click());
-      actions.appendChild(expandBtn); actions.appendChild(downloadLink);
-      img.parentNode.insertBefore(wrapper, img); wrapper.appendChild(img); wrapper.appendChild(actions);
-    });
-  }
-
-  /* ----- Audio: toggle + volume ----- */
-  const audio = document.getElementById('bgAudio');
-  const menuSoundsBtn = document.getElementById('menuSounds');
-  const volSlider = document.getElementById('volumeSlider');
-  const volIcon = document.getElementById('volIcon');
-  const tray = document.getElementById('tray');
-  const trayPopup = document.getElementById('trayPopup');
-  const rangeWrap = document.getElementById('rangeWrap');
-  const spinBtn = document.getElementById('spinBtn');
-  const clock = document.getElementById('clock');
-
-  // Initial state
-  audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? volSlider.value);
-  volSlider.value = audio.volume.toString();
-
-  function updateVolIcon(v){
-    if (v == 0 || audio.muted) volIcon.textContent = '🔇';
-    else if (v < 0.34) volIcon.textContent = '🔈';
-    else if (v < 0.67) volIcon.textContent = '🔉';
-    else volIcon.textContent = '🔊';
-  }
-  updateVolIcon(audio.volume);
-
-  volSlider.addEventListener('input', () => {
-    audio.muted = false;
-    audio.volume = parseFloat(volSlider.value);
-    localStorage.setItem('tiid_vol', audio.volume.toString());
-    updateVolIcon(audio.volume);
-  });
-
-  async function toggleAudio() {
-    try {
-      if (audio.paused) {
-        await audio.play();
-        menuSoundsBtn.textContent = '🔊 Sounds: On';
-      } else {
-        audio.pause();
-        menuSoundsBtn.textContent = '🔇 Sounds: Off';
-      }
-    } catch (err) {
-      console.warn('Audio toggle blocked until user gesture:', err);
-    }
-  }
-
-  menuSoundsBtn.addEventListener('click', (e) => { e.preventDefault(); toggleAudio(); });
-
-  // Quick mute via icon
-  volIcon.addEventListener('click', () => {
-    if (audio.muted || audio.volume === 0) {
-      audio.muted = false;
-      audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? '0.6') || 0.6;
-      volSlider.value = audio.volume.toString();
-    } else {
-      audio.muted = true;
-      volSlider.value = '0';
-    }
-    updateVolIcon(parseFloat(volSlider.value));
-  });
-
-  /* ===== Mobile tray popup behavior ===== */
-  const mqMobile = window.matchMedia('(max-width: 640px)');
-
-  function openTrayPopup(){
-    trayPopup.style.display = 'flex';
-    trayPopup.setAttribute('aria-hidden','false');
-  }
-  function closeTrayPopup(){
-    trayPopup.style.display = 'none';
-    trayPopup.setAttribute('aria-hidden','true');
-  }
-  function toggleTrayPopup(){
-    if (trayPopup.style.display === 'flex') closeTrayPopup(); else openTrayPopup();
-  }
-
-  // Move slider between tray and popup based on screen width
-  function relocateSlider(){
-    if (mqMobile.matches) {
-      // move slider into popup
-      if (!rangeWrap.contains(volSlider)) {
-        rangeWrap.appendChild(volSlider);
-      }
-      // hide desktop tray slider but keep icon to indicate mute state
-      tray.style.gap = '6px';
-    } else {
-      // move slider back to tray
-      if (!tray.contains(volSlider)) {
-        tray.appendChild(volSlider);
-      }
-      closeTrayPopup();
-    }
-  }
-  relocateSlider();
-  mqMobile.addEventListener('change', relocateSlider);
-
-  // Clock/spiral click behavior: mobile opens popup; desktop spins
-  clock.addEventListener('click', () => {
-    if (mqMobile.matches) {
-      toggleTrayPopup();
-    } else {
-      doABarrelRoll();
-    }
-  });
-
-  // Spin button inside popup
-  spinBtn.addEventListener('click', () => {
-    doABarrelRoll();
-    closeTrayPopup();
-  });
-
-  /* Lightbox init */
-  initLightbox();
-
-  // bring in marked for markdown parsing, then load posts
-  const script = document.createElement('script');
-  script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
-  script.onload = loadPosts;
-  document.head.appendChild(script);
-
-  async function loadPosts() {
-    const container = document.getElementById('posts');
-    try {
-      const resp = await fetch('/posts/index.json');
-      if (!resp.ok) { console.warn("No index.json found"); return; }
-      const posts = await resp.json(); // [{file, updated}, ...]
-      for (const { file, updated } of posts) {
-        try {
-          const r = await fetch('/posts/' + file, { cache: 'no-cache' });
-          if (!r.ok) continue;
-          const text = (await r.text()).trim();
-          if (!text) continue;
-          const stamp = updated ? `<div class="post-meta">Updated: ${fmt.format(new Date(updated))}</div>` : "";
-          const el = document.createElement('div');
-          el.className = 'post';
-          el.innerHTML = `${stamp}${marked.parse(text)}`;
-          container.appendChild(el);
-          enhancePostMedia(el);
-        } catch (err) { console.warn("Skipping invalid file:", file, err); }
-      }
-    } catch (err) { console.error("Error loading posts:", err); }
-  }
-</script>
-
-<footer class="footer-glitch">
-  Thomas Harrison - theinternetisdead.org - Copyright 2025
-</footer>
+  <footer class="footer-glitch">
+    Thomas Harrison - theinternetisdead.org - Copyright 2025
+  </footer>
 </body>
 </html>
