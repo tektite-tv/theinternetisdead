@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>theinternetisdead.org 📺 Videos</title>
+  <title>theinternetisdead.org 🏠 Home</title>
   <link rel="icon" href="/images/internet-rip.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
@@ -32,28 +32,68 @@ body { overflow:auto; }
   position: sticky; top: 0; left: 0; width: 100%; height: 40px;
   background: linear-gradient(to bottom, #444, #222);
   border-bottom: 2px solid var(--accent);
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center;
   padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent);
+  gap: 8px;
 }
-.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer; }
+.taskbar > .left, .taskbar > .center, .taskbar > .right { display:flex; align-items:center; gap:8px; }
+.taskbar > .left { flex: 0 0 auto; }
+.taskbar > .center { flex: 1 1 auto; min-width: 0; }
+.taskbar > .right { flex: 0 0 auto; }
+
+.menu-area { position: relative; display: inline-flex; }
+.menu-button {
+  background: linear-gradient(to bottom, #333, #111);
+  border: 2px outset var(--accent);
+  color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer;
+  line-height: 1; user-select: none;
+}
 .menu-button:active { transform: translateY(1px); }
-.menu-popup, .tray-popup {
-  position: absolute; top: 42px; background: #111; border: 2px outset var(--accent);
+.menu-popup {
+  position: absolute; top: 42px; left: 0;
+  background: #111; border: 2px outset var(--accent);
   box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; width: 220px;
 }
-.menu-popup { left: 8px; }
-.menu-popup a, .menu-popup button, .tray-popup button, .tray-popup label {
+.menu-popup a, .menu-popup button {
   color: var(--accent); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--accent);
   background: transparent; text-align: left; cursor: pointer; font: inherit;
 }
-.menu-popup a:hover, .menu-popup button:hover, .tray-popup button:hover { background: #222; }
-.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
-.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
+.menu-popup a:hover, .menu-popup button:hover { background: #222; }
+
+.taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; min-width: 0; overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; max-width: 50vw; }
 .taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
 .taskbtn.active { outline: 1px solid var(--accent); }
-.taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
+
+.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; flex: 0 0 auto; white-space: nowrap; }
 
 /* ===== System tray (volume) ===== */
+.tray { display:flex; align-items:center; gap:6px; position: relative; }
+.tray .vol-icon { font-size:14px; line-height:1; }
+input[type="range"].vol {
+  -webkit-appearance: none; appearance: none;
+  height: 6px; width: 120px; background: #0b0b0b; border: 2px inset var(--accent); border-radius: 6px;
+}
+input[type="range"].vol::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; background: var(--accent); border: 1px solid #00331a; border-radius: 50%;
+  cursor: pointer; box-shadow: 0 0 6px var(--accent-soft);
+}
+input[type="range"].vol::-moz-range-thumb {
+  width: 14px; height: 14px; background: var(--accent); border: 1px solid #00331a; border-radius: 50%; cursor: pointer;
+  box-shadow: 0 0 6px var(--accent-soft);
+}
+
+/* Tray popup anchored to the right of the taskbar */
+.tray-popup {
+  position: absolute; top: 42px; right: 8px;
+  background: #111; border: 2px outset var(--accent);
+  box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; width: 240px; padding: 6px;
+}
+.tray-popup .popup-row { display:flex; align-items:center; gap:8px; padding: 8px 6px; }
+.tray-popup .label { flex:0 0 auto; }
+.tray-popup .range-wrap { flex: 1 1 auto; }
+
 .tray { display:flex; align-items:center; gap:6px; }
 .tray .vol-icon { font-size:14px; line-height:1; }
 input[type="range"].vol {
@@ -96,13 +136,14 @@ input[type="range"].vol::-moz-range-thumb {
     transform: translateZ(0);
   }
   .taskbar { height: 44px; padding: 0 10px; }
+  .taskbar .menu-button { padding: 6px 10px; }
   .taskbar-title { font-size: 12px; padding: 0 4px; }
-  .menu-button { padding: 6px 10px; }
-  .clock { padding: 2px 6px; min-width: 52px; font-size: 0.75rem; border-width: 1px; flex-shrink: 0; }
+  .clock { padding: 2px 6px; min-width: 56px; font-size: 0.75rem; border-width: 1px; flex-shrink: 0; }
   .videos-container { margin-top: 56px; padding: 12px; max-width: 720px; }
 }
 
 /* Reduced motion */
+
 @media (prefers-reduced-motion: reduce) {
   .desktop { animation: none; background-position: 0 0,0 0,0 0; }
 }
@@ -128,6 +169,7 @@ input[type="range"].vol::-moz-range-thumb {
   <div class="desktop" id="desktop" aria-hidden="false"></div>
 
   <div class="taskbar">
+    <div class="left">
     <div class="menu-area">
       <div class="menu-button" onclick="toggleMenu()">Menu</div>
       <div class="menu-popup" id="menuPopup">
@@ -139,16 +181,20 @@ input[type="range"].vol::-moz-range-thumb {
       </div>
     </div>
 
-    <div class="taskbar-title" title="You may never leave.">theinternetisdead.org 📺 Videos</div>
-    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
+    <div class="center">
+      <div class="taskbar-title" title="You may never leave.">theinternetisdead.org 🏠 Home</div>
+      <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
+    </div>
 
-    <!-- System tray (desktop shows slider here; mobile moves it into popup) -->
-    <div class="tray" id="tray" title="Volume">
+    <div class="right">
+      <!-- System tray (desktop shows slider here; mobile moves it into popup) -->
+      <div class="tray" id="tray" title="Volume">
       <span class="vol-icon" id="volIcon" aria-hidden="true">🔈</span>
       <input id="volumeSlider" class="vol" type="range" min="0" max="1" step="0.01" value="0.6" aria-label="Volume">
     </div>
 
-    <div class="clock" id="clock">--:-- 🌀</div>
+      <div class="clock" id="clock">--:-- 🌀</div>
+    </div>
 
     <!-- Mobile tray popup (top-right) -->
     <div class="tray-popup" id="trayPopup" role="menu" aria-hidden="true">
@@ -190,7 +236,7 @@ input[type="range"].vol::-moz-range-thumb {
   setInterval(updateClockText, 1000); updateClockText();
 
   /* menus */
-  function toggleMenu(){ const menu = document.getElementById('menuPopup'); menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex'; }
+  function toggleMenu(){ const menu = document.getElementById('menuPopup'); const cur = getComputedStyle(menu).display; menu.style.display = cur === 'none' ? 'flex' : 'none'; }
   document.addEventListener('click',(e)=>{
     const m=document.getElementById('menuPopup');
     const b=document.querySelector('.menu-button');
