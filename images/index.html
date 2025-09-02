@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
 /* ===== Theme & reset ===== */
-:root { --accent:#00ff99; --accent-soft:#00ff9977; --warn:#FF0040; }
+:root { --accent:#00ff99; --accent-soft:#00ff9977; }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
-html, body { height:100%; background:#000; color:var(--accent); }
+html, body { height:100%; background:#000; color:var(--accent); transition:transform 1s ease-in-out; }
 body { overflow:auto; }
 
 /* ===== Animated desktop backdrop ===== */
@@ -24,6 +24,7 @@ body { overflow:auto; }
   animation: scanScroll var(--scan-speed) linear infinite;
 }
 @keyframes scanScroll { from { background-position: 0 0,0 0,0 0; } to { background-position: 800px 800px,0 0,0 0; } }
+.rotate { transform: rotate(360deg); }
 
 /* ===== Taskbar ===== */
 .taskbar {
@@ -33,17 +34,14 @@ body { overflow:auto; }
   display: flex; align-items: center; gap: 8px;
   padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent);
 }
-.menu-button { background: linear-gradient(to bottom, #333, #111); border:2px outset var(--accent); color: var(--accent);
-  padding: 6px 10px; text-shadow: 1px 1px #000; cursor: pointer; }
+.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer; }
 .menu-button:active { transform: translateY(1px); }
-.menu-popup { position: absolute; top: 42px; left: 8px; width: 220px; background: #111; border: 2px solid var(--accent); border-radius: 8px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.6); backdrop-filter: blur(2px); overflow: hidden; background-image: radial-gradient(400px 200px at 0% 0%, var(--accent-soft), transparent); display: none; flex-direction: column; z-index: 1001; }
+.menu-popup { position: absolute; top: 42px; left: 8px; width: 200px; background: #111; border: 2px outset var(--accent); box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; }
 .menu-popup a { color: var(--accent); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--accent); }
 .menu-popup a:hover { background: #222; }
-.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); border-radius: 8px; color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
+.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
 .task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
-.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent);
-  padding: 6px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
+.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
 .taskbtn.active { outline: 1px solid var(--accent); }
 .taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
 
@@ -64,54 +62,68 @@ body { overflow:auto; }
   background:#111;
   border:2px solid var(--accent);
   border-radius:8px;
+  box-shadow:0 0 8px var(--accent-soft);
   overflow:hidden;
-  box-shadow:0 10px 20px rgba(0,0,0,0.4);
-  display:flex; flex-direction:column;
+  display:flex;
+  flex-direction:column;
 }
-.card figure { aspect-ratio: 4/3; position:relative; overflow:hidden; border-bottom:1px solid var(--accent); }
-.card img { width:100%; height:100%; object-fit:contain; background:#000; cursor:zoom-in; display:block; }
-.card .meta { display:flex; flex-direction:column; gap:8px; padding:10px; }
-.card .name { font-weight:700; color:#fff; text-shadow:1px 1px #000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.media-actions { display:flex; gap:8px; flex-wrap:wrap; }
-.btn {
+.card figure { margin:0; }
+.card img {
+  display:block;
+  width:100%;
+  height:auto;
+  object-fit:cover;
+  cursor:zoom-in;
+  border-bottom:1px solid var(--accent);
+}
+.card .meta {
+  display:flex; gap:8px; align-items:center; justify-content:space-between; padding:10px; flex-wrap:wrap;
+}
+.meta .name { color:#b7ffe6; font-size:0.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ===== Controls under images ===== */
+.media-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.media-actions .btn {
   cursor:pointer;
   background: linear-gradient(to bottom, #2a2a2a, #111);
   border:2px outset var(--accent); color:var(--accent);
-  padding:6px 10px; border-radius:8px; text-shadow:1px 1px #000;
+  padding:6px 10px; font-size:12px; text-shadow:1px 1px #000;
+  text-decoration:none;
 }
-.btn:active { transform: translateY(1px); }
+.media-actions .btn:active { transform: translateY(1px); }
 
-/* Missing file indicator */
-.missing { opacity: 0.4; filter: grayscale(0.6) contrast(0.8); }
-.warn { color: var(--warn); font-size: 12px; padding: 6px 10px; }
-
-/* ===== Lightbox ===== */
+/* ===== Lightbox (reused) ===== */
 .lightbox {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.85);
-  display: none; place-items: center;
-  z-index: 9999; padding: 16px;
+  position: fixed; inset: 0; display: none; place-items: center;
+  background: rgba(0,0,0,0.88);
+  z-index: 2000;
+  padding:
+    max(10px, env(safe-area-inset-top))
+    max(10px, env(safe-area-inset-right))
+    max(10px, env(safe-area-inset-bottom))
+    max(10px, env(safe-area-inset-left));
+  height: 100dvh;
+  height: calc(var(--vh, 1vh) * 100);
 }
 .lightbox.open { display: grid; }
-.lightbox-inner {
-  max-width: min(1200px, 100vw - 24px);
-  max-height: min(92vh, 100dvh - 24px);
-  width: 100%; height: auto;
-  display: grid; grid-template-rows: auto 1fr;
-  gap: 8px;
-}
-.lightbox-bar {
-  display:flex; align-items:center; justify-content:space-between; gap:8px;
-}
-.lightbox-title { color:#fff; text-shadow:1px 1px #000; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.lightbox-actions { display:flex; align-items:center; gap:8px; }
-.lightbox-img {
-  width: 100%; height: 100%;
-  object-fit: contain; background:#000;
-  border:2px solid var(--accent); border-radius:8px;
-}
 
-/* Buttons inside lightbox */
+.lightbox-inner {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 100%;
+  overflow: hidden;
+}
+.lightbox-img {
+  width: 100%; height: 100%; max-width: 100%; max-height: 100%;
+  object-fit: contain; background:#000; border:2px solid var(--accent);
+  box-shadow:0 0 12px var(--accent-soft); box-sizing:border-box;
+}
+.lightbox-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.lightbox-title { flex:1 1 auto; min-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#b7ffe6; font-size:0.95rem; opacity:0.95; }
+.lightbox-actions { display:flex; gap:8px; flex-wrap:wrap; }
 .lightbox .btn {
   cursor:pointer;
   background: linear-gradient(to bottom, #2a2a2a, #111);
@@ -143,45 +155,51 @@ body { overflow:auto; }
   </style>
 </head>
 <body>
+  <div class="desktop" id="desktop" aria-hidden="false"></div>
+
   <div class="taskbar">
-    <button class="menu-button" onclick="toggleMenu()">MENU</button>
-    <div class="menu-popup" id="menuPopup" role="menu" aria-hidden="true">
-      <a href="/" role="menuitem">Home</a>
-      <a href="/posts/" role="menuitem">Posts</a>
-      <a href="/images/" role="menuitem" aria-current="page">Images</a>
-      <a href="javascript:void(0)" role="menuitem" onclick="doABarrelRoll()">Spin page</a>
+    <div class="menu-area">
+      <div class="menu-button" onclick="toggleMenu()">Menu</div>
+      <div class="menu-popup" id="menuPopup">
+        <a href="/" target="_blank">🏠 Home</a>
+        <a href="/images" target="_blank">🖼️ Images</a>
+        <a href="/sounds" target="_blank">🔊 Sounds</a>
+      </div>
     </div>
-    <div class="task-buttons">
-      <button class="taskbtn active">Images</button>
-    </div>
-    <div class="taskbar-title">Welcome to theinternetisdead.org • You may never leave</div>
-    <div id="clock" class="clock" title="system time"></div>
+    <div class="taskbar-title" title="You may never leave.">Welcome to theinternetisdead.org — Images</div>
+    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
+    <div class="clock" id="clock" onclick="doABarrelRoll()">--:-- 🌀</div>
   </div>
 
-  <div class="desktop" aria-hidden="true"></div>
+  <!-- ===== Gallery ===== -->
+  <div id="gallery" class="gallery-container">
+    <h1 class="gallery-title">IMAGE ARCHIVE</h1>
+    <div id="grid" class="grid" aria-live="polite"></div>
+    <p id="emptyMsg" style="text-align:center; padding:18px; display:none; color:#b7ffe6;">
+      No images found. Add a manifest at <code>/images/index.json</code>.
+    </p>
+  </div>
 
-  <main class="gallery-container">
-    <h1 class="gallery-title">/images manifest</h1>
-
-    <div id="emptyMsg" class="warn" style="display:none">No images found in /images manifest(s).</div>
-    <section id="grid" class="grid" aria-live="polite"></section>
-  </main>
-
-  <!-- Lightbox -->
-  <div id="lightbox" class="lightbox" aria-modal="true" aria-hidden="true" role="dialog">
-    <div class="lightbox-inner">
+  <!-- Lightbox modal -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
+      <img id="lightboxImg" class="lightbox-img" alt="">
       <div class="lightbox-bar">
-        <div id="lightboxTitle" class="lightbox-title">Preview</div>
+        <div id="lightboxTitle" class="lightbox-title"></div>
         <div class="lightbox-actions">
-          <a id="lightboxDownload" class="btn" href="#" download>⬇ Download</a>
+          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
           <button id="lightboxClose" class="btn" type="button">✕ Close</button>
         </div>
       </div>
-      <img id="lightboxImg" class="lightbox-img" src="" alt="" />
     </div>
   </div>
 
+<!-- ===== JS ===== -->
 <script>
+  /* viewport shim for mobile 100vh weirdness */
+  function setVhUnit(){ document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
+  setVhUnit(); window.addEventListener('resize', setVhUnit, { passive:true }); window.addEventListener('orientationchange', setVhUnit, { passive:true });
+
   /* clock */
   function updateClock(){
     const clock=document.getElementById('clock'); const now=new Date();
@@ -195,8 +213,7 @@ body { overflow:auto; }
     const menu=document.getElementById('menuPopup');
     menu.style.display=menu.style.display==='flex'?'none':'flex';
   }
-  document.addEventListener('click',(e)=>{ const m=document.getElementById('menuPopup'); 
-    const b=document.querySelector('.menu-button'); if(m&&b&&!m.contains(e.target)&&!b.contains(e.target)) m.style.display='none'; });
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menuPopup'); const b=document.querySelector('.menu-button'); if(m&&b&&!m.contains(e.target)&&!b.contains(e.target)) m.style.display='none'; });
 
   function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
 
@@ -209,17 +226,12 @@ body { overflow:auto; }
       document.addEventListener('keydown', escClose);
     },
     close(){
-      this.root.classList.remove('open'); this.root.setAttribute('aria-hidden','true');
-      this.img.src=''; document.removeEventListener('keydown', escClose);
+      this.root.classList.remove('open'); this.root.setAttribute('aria-hidden','true'); this.img.src=''; document.removeEventListener('keydown', escClose);
     }
   };
   function escClose(e){ if(e.key==='Escape') lb.close(); }
   function initLightbox(){
-    lb.root=document.getElementById('lightbox');
-    lb.img=document.getElementById('lightboxImg');
-    lb.title=document.getElementById('lightboxTitle');
-    lb.dl=document.getElementById('lightboxDownload');
-    lb.closeBtn=document.getElementById('lightboxClose');
+    lb.root=document.getElementById('lightbox'); lb.img=document.getElementById('lightboxImg'); lb.title=document.getElementById('lightboxTitle'); lb.dl=document.getElementById('lightboxDownload'); lb.closeBtn=document.getElementById('lightboxClose');
     lb.root.addEventListener('click',(e)=>{ if(e.target===lb.root) lb.close(); }); lb.closeBtn.addEventListener('click',()=>lb.close());
   }
 
@@ -238,16 +250,6 @@ body { overflow:auto; }
     img.decoding='async';
     img.src=src;
     img.alt=alt;
-
-    // error hint if file is missing
-    img.onerror = () => {
-      img.classList.add('missing');
-      img.alt = `Missing file: ${filename}`;
-      const warn = document.createElement('div');
-      warn.className = 'warn';
-      warn.textContent = `⚠ File not found: ${filename}`;
-      card.appendChild(warn);
-    };
 
     img.addEventListener('click',()=>lb.open(src, alt, filename));
 
@@ -271,7 +273,7 @@ body { overflow:auto; }
     dl.className='btn';
     dl.textContent='⬇ Download';
     dl.href=src;
-    dl.setAttribute('download', filename.replace(/\\s+/g,'_'));
+    dl.setAttribute('download', filename.replace(/\s+/g,'_'));
 
     actions.appendChild(expandBtn);
     actions.appendChild(dl);
@@ -285,24 +287,12 @@ body { overflow:auto; }
     return card;
   }
 
-  async function exists(url){
-    try { const r = await fetch(url, { method:'HEAD', cache:'no-cache' }); return r.ok; }
-    catch { return false; }
-  }
-
   /* Load images from manifest(s) */
   async function loadImages(){
     const grid=document.getElementById('grid');
     const emptyMsg=document.getElementById('emptyMsg');
 
-    const candidates=[
-  './index.json',             // relative path (works with /images/index.html + index.json)
-  '/images/index.json',       // absolute path (works if deployed at root)
-  './_manifest.json',
-  './manifest.json',
-  '/images/_manifest.json',
-  '/images/manifest.json'
-];
+    const candidates=['/images/index.json', '/images/_manifest.json', '/images/manifest.json'];
 
     let data=null;
     for(const url of candidates){
@@ -317,40 +307,27 @@ body { overflow:auto; }
       return;
     }
 
-    // normalize shapes: array<string> OR array<object> OR {images:[...]} OR { files:[...] }
+    // normalize shapes: array<string> OR array<object> OR {images:[...]}
     let items=[];
     if(Array.isArray(data)){
       items=data.map(x=> typeof x==='string' ? { src:`/images/${x}` } : x);
-    }else if(Array.isArray(data.images||data.files)){
-      const a = data.images || data.files;
-      items=a.map(x=> typeof x==='string' ? { src:`/images/${x}` } : x);
+    }else if(Array.isArray(data.images)){
+      items=data.images.map(x=> typeof x==='string' ? { src:`/images/${x}` } : x);
     }else{
       // last-ditch: keys of object { filename: meta }
       items=Object.keys(data).map(k=> ({ src:`/images/${k}`, ...(typeof data[k]==='object'?data[k]:{}) }));
     }
 
-    // filter for common image extensions just in case and normalize src paths
-    const ok=/\\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
+    // filter for common image extensions just in case
+    const ok=/\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
     items = items
       .map(it => ({ ...it, src: it.src?.startsWith('/images/') ? it.src : `/images/${it.src}` }))
       .filter(it => ok.test(it.src));
 
-    // dedupe, sort by filename
-    const seen=new Set();
-    items = items.filter(it => { const k=it.src.toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true; })
-                 .sort((a,b)=> a.src.localeCompare(b.src));
-
     if(items.length===0){ emptyMsg.style.display='block'; return; }
 
-    // probe existence so missing files still get a card with warning
-    const presentOrMissing = [];
-    for (const it of items) {
-      if(await exists(it.src)) presentOrMissing.push({ ...it, _exists:true });
-      else presentOrMissing.push({ ...it, _exists:false });
-    }
-
     const frag=document.createDocumentFragment();
-    for(const it of presentOrMissing){ frag.appendChild(makeCard(it)); }
+    for(const it of items){ frag.appendChild(makeCard(it)); }
     grid.appendChild(frag);
   }
 
