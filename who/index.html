@@ -1,4 +1,3 @@
-
 <!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -9,33 +8,36 @@
 :root { --accent:#00ff99; --accent-soft:#00ff9977; }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
 html, body { height:100%; background:#000; color:var(--accent); }
-body { overflow:auto; }.desktop { position: fixed; top: 40px; bottom: 0; left: 0; right: 0; z-index: 0; background: repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px), radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%), linear-gradient(135deg, #000 0%, #141414 50%, #000 100%); animation: scanScroll 22s linear infinite; } @keyframes scanScroll { from { background-position:0 0; } to { background-position:800px 800px; } }
+body { overflow:auto; }/* ===== Animated desktop backdrop ===== */ .desktop { position: fixed; top: 40px; bottom: 0; left: 0; right: 0; z-index: 0; background: repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px), radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%), linear-gradient(135deg, #000 0%, #141414 50%, #000 100%); animation: scanScroll 22s linear infinite; } @keyframes scanScroll { from { background-position:0 0; } to { background-position:800px 800px; } }
 
-.taskbar { position: sticky; top: 0; width: 100%; height: 40px; background: linear-gradient(to bottom, #444, #222); border-bottom: 2px solid var(--accent); display: flex; align-items: center; gap: 8px; padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent); } .menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; cursor: pointer; } .clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); cursor: pointer; }
+/* ===== Taskbar ===== */ .taskbar { position: sticky; top: 0; width: 100%; height: 40px; background: linear-gradient(to bottom, #444, #222); border-bottom: 2px solid var(--accent); display: flex; align-items: center; gap: 8px; padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent); } .menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; cursor: pointer; } .taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; } .clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); cursor: pointer; }
 
-.profile-section { text-align:center; margin-top:40px; } .profile-section img { width:200px; height:200px; border-radius:50%; border:4px solid var(--accent); } .profile-text { color:lime; font-weight:bold; font-size:18px; margin-top:20px; white-space:pre-line; }
+/* ===== Profile (replaces posts) ===== / .profile-section{ position: relative; z-index: 1; display: grid; place-items: center; gap: 18px; padding: 24px 16px; margin: 56px auto 24px; / clears sticky taskbar on mobile / max-width: 860px; text-align:center; } .profile-link{ display:inline-block; } .profile-img{ inline-size: clamp(120px, 38vw, 220px); aspect-ratio: 1; border-radius: 50%; border: 4px solid var(--accent); display: block; box-shadow: 0 0 12px var(--accent-soft); } .profile-link:hover .profile-img{ box-shadow: 0 0 14px var(--accent), 0 0 22px rgba(0,255,153,0.35); transform: translateY(-1px); transition: box-shadow .2s, transform .2s; } .profile-text{ color:#00ff00; / lime / font-weight:700; font-size: clamp(16px, 2.8vw, 22px); line-height:1.45; white-space: pre-line; / respect line breaks */ }
 
-.footer-glitch { margin-top: 40px; padding: 16px; text-align: center; font-size: 14px; color: #00ff99; background: linear-gradient(to right, #000, #111, #000); border-top: 2px solid var(--accent); text-shadow: 0 0 4px #00ff99, 0 0 8px #ff00ff, 0 0 12px #00ffff; } </style>
+@media (max-width: 640px){ .profile-section{ margin-top: 64px; padding: 20px 14px; } .clock{ min-width: 56px; } }
+
+/* ===== Footer ===== */ .footer-glitch { margin-top: 40px; padding: 16px; text-align: center; font-size: 14px; color: #00ff99; background: linear-gradient(to right, #000, #111, #000); border-top: 2px solid var(--accent); text-shadow: 0 0 4px #00ff99, 0 0 8px #ff00ff, 0 0 12px #00ffff; } </style>
 
 </head>
 <body>
+  <!-- Background audio (kept for vibes) -->
   <audio id="bgAudio" src="/sounds/harmony.mp3" preload="auto" loop></audio>
   <div class="desktop"></div>  <div class="taskbar">
     <div class="menu-area">
       <div class="menu-button">Menu</div>
     </div>
     <div class="taskbar-title">theinternetisdead.org 🏠 Home</div>
-    <div class="clock">--:-- 🌀</div>
-  </div>  <div class="profile-section">
-    <a href="https://theinternetisdead.org/who">
-      <img src="/images/face.png" alt="Profile Picture">
-    </a>
-    <div class="profile-text">
-Thomas Harrison
-Webmaster of theinternetisdead.org
-28 year old neurodivergent interdisciplinary artist and rapper from Muskoka, Ontario, CanadaRap name: Tektite (2014-present) YouTube: Honestly Thomas @Honestly_Thomas (2008-present) </div>
+    <div class="clock" title="Time">--:-- 🌀</div>
+  </div>  <!-- Profile replaces posts -->  <section id="profile" class="profile-section">
+    <a href="https://theinternetisdead.org/who" class="profile-link" aria-label="About Thomas Harrison">
+      <img src="/images/face.png" alt="Thomas Harrison" class="profile-img" />
+    </a><div class="profile-text">
 
-  </div>  <footer class="footer-glitch">
+Thomas Harrison Webmaster of theinternetisdead.org 28 year old neurodivergent interdisciplinary artist and rapper from Muskoka, Ontario, Canada
+
+Rap name: Tektite (2014-present) YouTube: Honestly Thomas @Honestly_Thomas (2008-present) </div>
+
+  </section>  <footer class="footer-glitch">
     Thomas Harrison - theinternetisdead.org - Copyright 2025
   </footer>
 </body>
