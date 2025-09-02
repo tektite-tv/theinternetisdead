@@ -222,20 +222,6 @@ input[type="range"].vol::-moz-range-thumb {
     <!-- Add more links here -->
   </div>
 
-  <!-- Lightbox modal (kept for future) -->
-  <div id="lightbox" class="lightbox" aria-hidden="true">
-    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
-      <img id="lightboxImg" class="lightbox-img" alt="">
-      <div class="lightbox-bar">
-        <div id="lightboxTitle" class="lightbox-title"></div>
-        <div class="lightbox-actions">
-          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
-          <button id="lightboxClose" class="btn" type="button">✕ Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
 <!-- ===== JS (restored) ===== -->
 <script>
   function setVhUnit(){ document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
@@ -313,12 +299,6 @@ input[type="range"].vol::-moz-range-thumb {
 
   clockEl.addEventListener('click', ()=>{ if(mqMobile.matches) toggleTrayPopup(); else doABarrelRoll(); });
   spinBtn.addEventListener('click', ()=>{ doABarrelRoll(); closeTrayPopup(); });
-
-  // Optional: click image to open lightbox
-  document.querySelectorAll('.game-links img').forEach(img=>{
-    img.style.cursor='zoom-in';
-    img.addEventListener('click', (e)=>{ e.preventDefault(); lb.open(img.src, img.alt, img.src.split('/').pop()); });
-  });
 </script>
 
 <footer class="footer-glitch">
