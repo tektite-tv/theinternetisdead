@@ -6,141 +6,118 @@
   <link rel="icon" href="/images/internet-rip.png" type="image/png">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-/* ===== Theme & reset (carried over) ===== */
 :root { --accent:#00ff99; --accent-soft:#00ff9977; }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
 html, body { height:100%; background:#000; color:var(--accent); transition:transform 1s ease-in-out; }
 body { overflow:auto; }
 
-/* ===== Animated desktop backdrop ===== */
-.desktop{
-  position:fixed; top:40px; bottom:0; left:0; right:0; z-index:0;
+/* animated backdrop */
+.desktop {
+  position: fixed; top: 40px; bottom: 0; left: 0; right: 0;
+  z-index: 0;
   background:
     repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
     radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
     linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
-  background-size:auto,100% 100%,100% 100%;
-  --scan-speed:22s; animation:scanScroll var(--scan-speed) linear infinite;
+  background-size: auto, 100% 100%, 100% 100%;
+  --scan-speed: 22s;
+  animation: scanScroll var(--scan-speed) linear infinite;
 }
-@keyframes scanScroll { from{background-position:800px 800px,0 0,0 0;} to{background-position:0 0,0 0,0 0;} }
-.rotate{ transform:rotate(360deg); }
+@keyframes scanScroll { from { background-position: 0 0,0 0,0 0; } to { background-position: 800px 800px,0 0,0 0; } }
+.rotate { transform: rotate(360deg); }
 
-/* ===== Taskbar (same layout) ===== */
-.taskbar{
-  position:sticky; top:0; left:0; width:100%; height:40px;
-  background:linear-gradient(to bottom,#444,#222); border-bottom:2px solid var(--accent);
-  display:flex; align-items:center; gap:8px; padding:0 8px; z-index:1000; text-shadow:1px 1px #000; color:var(--accent);
+/* taskbar */
+.taskbar {
+  position: sticky; top: 0; left: 0; width: 100%; height: 40px;
+  background: linear-gradient(to bottom, #444, #222);
+  border-bottom: 2px solid var(--accent);
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent);
 }
-.menu-button{ background:linear-gradient(to bottom,#333,#111); border:2px outset var(--accent); color:var(--accent); padding:6px 12px; text-shadow:1px 1px #000; cursor:pointer; }
-.menu-button:active{ transform:translateY(1px); }
-.menu-popup,.tray-popup{
-  position:absolute; top:42px; background:#111; border:2px outset var(--accent);
-  box-shadow:0 0 5px var(--accent-soft); display:none; flex-direction:column; z-index:1001; width:220px;
+.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer; }
+.menu-button:active { transform: translateY(1px); }
+.menu-popup, .tray-popup {
+  position: absolute; top: 42px; background: #111; border: 2px outset var(--accent);
+  box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; width: 220px;
 }
-.menu-popup{ left:8px; }
-.menu-popup a,.menu-popup button,.tray-popup button,.tray-popup label{
-  color:var(--accent); padding:12px; text-decoration:none; border-bottom:1px solid var(--accent);
-  background:transparent; text-align:left; cursor:pointer; font:inherit;
+.menu-popup { left: 8px; }
+.menu-popup a, .menu-popup button, .tray-popup button, .tray-popup label {
+  color: var(--accent); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--accent);
+  background: transparent; text-align: left; cursor: pointer; font: inherit;
 }
-.menu-popup a:hover,.menu-popup button:hover,.tray-popup button:hover{ background:#222; }
-.clock{ background:#111; padding:4px 10px; border:2px inset var(--accent); color:var(--accent); text-shadow:1px 1px #000; cursor:pointer; }
-.task-buttons{ display:flex; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:thin; -webkit-overflow-scrolling:touch; flex:1; }
-.taskbtn{ background:linear-gradient(to bottom,#2a2a2a,#111); border:2px outset var(--accent); color:var(--accent); padding:6px 10px; font-size:12px; white-space:nowrap; cursor:pointer; text-shadow:1px 1px #000; }
-.taskbtn.active{ outline:1px solid var(--accent); }
-.taskbar-title{ flex:1; text-align:left; font-weight:700; letter-spacing:0.5px; }
+.menu-popup a:hover, .menu-popup button:hover, .tray-popup button:hover { background: #222; }
+.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
+.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
+.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
+.taskbtn.active { outline: 1px solid var(--accent); }
+.taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
 
-/* ===== System tray (volume) ===== */
-.tray{ display:flex; align-items:center; gap:6px; }
-.tray .vol-icon{ font-size:14px; line-height:1; }
-input[type="range"].vol{
-  -webkit-appearance:none; appearance:none; height:6px; width:120px; background:#0b0b0b; border:2px inset var(--accent); border-radius:6px;
+/* tray volume */
+.tray { display:flex; align-items:center; gap:6px; }
+.tray .vol-icon { font-size:14px; line-height:1; }
+input[type="range"].vol {
+  -webkit-appearance: none; appearance: none;
+  height: 6px; width: 120px; background: #0b0b0b; border: 2px inset var(--accent); border-radius: 6px;
 }
-input[type="range"].vol::-webkit-slider-thumb{
-  -webkit-appearance:none; appearance:none; width:14px; height:14px; background:var(--accent); border:1px solid #00331a; border-radius:50%; cursor:pointer; box-shadow:0 0 6px var(--accent-soft);
+input[type="range"].vol::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; background: var(--accent); border: 1px solid #00331a; border-radius: 50%;
+  cursor: pointer; box-shadow: 0 0 6px var(--accent-soft);
 }
-input[type="range"].vol::-moz-range-thumb{
-  width:14px; height:14px; background:var(--accent); border:1px solid #00331a; border-radius:50%; cursor:pointer; box-shadow:0 0 6px var(--accent-soft);
-}
-
-/* ===== Gallery container ===== */
-.gallery-container{ position:relative; z-index:1; margin-top:20px; padding:16px; max-width:1200px; width:100%; margin-left:auto; margin-right:auto; }
-
-/* Header: title left, toggle right */
-.gallery-header{
-  display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0 14px; border-bottom:1px dashed var(--accent-soft);
-}
-.gallery-title{
-  color:#FF0040; text-decoration:underline; text-underline-offset:3px; letter-spacing:0.5px; font-size:1.4rem;
-}
-.view-toggle{
-  background:linear-gradient(to bottom,#2a2a2a,#111); border:2px outset var(--accent); color:var(--accent);
-  padding:6px 10px; text-shadow:1px 1px #000; cursor:pointer; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px;
-}
-.view-toggle:active{ transform:translateY(1px); }
-.view-toggle .chev{ font-size:0.9rem; opacity:0.9; }
-
-/* ===== Responsive grid (default) ===== */
-.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-@media (max-width:980px){ .grid{ grid-template-columns:repeat(2,1fr); } }
-@media (max-width:640px){ .grid{ grid-template-columns:1fr; } }
-
-/* ===== Video Card ===== */
-.card{
-  background:#111; border:2px solid var(--accent); border-radius:8px; box-shadow:0 0 8px var(--accent-soft);
-  overflow:hidden; display:flex; flex-direction:column;
-}
-.thumb-wrap{ position:relative; aspect-ratio:16/9; background:#000; border-bottom:1px solid var(--accent); }
-.thumb{ width:100%; height:100%; object-fit:cover; display:block; }
-.play-btn{
-  position:absolute; inset:auto auto 10px 10px; background:linear-gradient(to bottom,#2a2a2a,#111);
-  border:2px outset var(--accent); color:var(--accent); padding:6px 10px; font-size:12px; text-shadow:1px 1px #000; cursor:pointer;
-}
-.embed{ width:100%; aspect-ratio:16/9; border:0; display:none; }
-.card.playing .thumb-wrap{ display:none; }
-.card.playing .embed{ display:block; }
-
-.card .meta{ display:flex; gap:8px; align-items:center; justify-content:space-between; padding:10px; flex-wrap:wrap; }
-.meta .name{ color:#b7ffe6; font-size:0.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.media-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.media-actions .btn{
-  cursor:pointer; background:linear-gradient(to bottom,#2a2a2a,#111); border:2px outset var(--accent); color:var(--accent);
-  padding:6px 10px; font-size:12px; text-shadow:1px 1px #000; text-decoration:none;
-}
-.media-actions .btn:active{ transform:translateY(1px); }
-
-/* ===== List view overrides ===== */
-.grid.list{ display:flex; flex-direction:column; gap:12px; }
-.grid.list .card{ flex-direction:row; }
-.grid.list .thumb-wrap{ flex:0 0 320px; max-width:320px; border-right:1px solid var(--accent); border-bottom:0; }
-.grid.list .embed{ flex:0 0 320px; max-width:320px; }
-.grid.list .card .meta{ flex:1 1 auto; }
-@media (max-width:640px){
-  .grid.list .card{ flex-direction:column; }
-  .grid.list .thumb-wrap{ max-width:100%; border-right:0; border-bottom:1px solid var(--accent); }
+input[type="range"].vol::-moz-range-thumb {
+  width: 14px; height: 14px; background: var(--accent); border: 1px solid #00331a; border-radius: 50%; cursor: pointer;
+  box-shadow: 0 0 6px var(--accent-soft);
 }
 
-/* ===== Mobile layout & tray popup ===== */
-@media (max-width:640px){
-  html,body{ height:auto; }
-  .desktop{ display:block; top:44px; opacity:.55; --scan-speed:36s; }
-  .taskbar{ height:44px; padding:0 10px; }
-  .taskbar-title{ font-size:12px; padding:0 4px; }
-  .menu-button{ padding:6px 10px; }
-  .clock{ padding:2px 6px; min-width:52px; font-size:.75rem; border-width:1px; flex-shrink:0; }
-  .gallery-container{ margin-top:56px; padding:12px; max-width:720px; }
-  .tray-popup{ right:8px; left:auto; }
-  .tray-popup .popup-row{ padding:12px; display:flex; align-items:center; gap:10px; }
-  .tray-popup input[type="range"].vol{ width:100%; }
+/* videos list */
+.page-container { position: relative; z-index: 1; margin-top: 20px; padding: 16px; max-width: 1200px; width: 100%; margin-left: auto; margin-right: auto; }
+.header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0 14px; border-bottom:1px dashed var(--accent-soft); }
+.page-title { color:#FF0040; text-decoration:underline; text-underline-offset:3px; letter-spacing:0.5px; font-size:1.4rem; }
+
+#videoList { display:flex; flex-direction:column; gap:18px; margin-top:14px; }
+.video-card {
+  background:#111; border:2px solid var(--accent); border-radius:8px; box-shadow:0 0 8px var(--accent-soft); overflow:hidden;
+}
+.video-embed { aspect-ratio: 16/9; width:100%; border:0; display:block; }
+.video-meta { display:flex; flex-direction:column; gap:6px; padding:10px; }
+.video-title { color:#b7ffe6; font-size:1rem; line-height:1.3; }
+.video-date { opacity:0.8; font-size:0.9rem; }
+.video-desc { opacity:0.9; font-size:0.95rem; white-space:pre-wrap; }
+
+/* mobile */
+@media (max-width: 640px) {
+  html, body { height: auto; }
+  .desktop { display: block; top: 44px; opacity: 0.55; --scan-speed: 36s;
+    background:
+      repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+      radial-gradient(900px 900px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
+      linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
+    background-size: auto, 100% 100%, 100% 100%;
+    transform: translateZ(0);
+  }
+  .taskbar { height: 44px; padding: 0 10px; }
+  .taskbar-title { font-size: 12px; padding: 0 4px; }
+  .menu-button { padding: 6px 10px; }
+  .clock { padding: 2px 6px; min-width: 52px; font-size: 0.75rem; border-width: 1px; flex-shrink: 0; }
+  .page-container { margin-top: 56px; padding: 12px; max-width: 720px; }
+
+  .tray-popup { right: 8px; left: auto; }
+  .tray-popup .popup-row { padding: 12px; display: flex; align-items: center; gap: 10px; }
+  .tray-popup .popup-row .label { flex: 0 0 auto; }
+  .tray-popup .popup-row .range-wrap { flex: 1 1 auto; }
+  .tray-popup input[type="range"].vol { width: 100%; }
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce){
-  .desktop{ animation:none; background-position:0 0,0 0,0 0; }
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .desktop { animation: none; background-position: 0 0,0 0,0 0; }
 }
   </style>
 </head>
 <body>
+  <!-- background audio -->
   <audio id="bgAudio" src="/sounds/harmony.mp3" preload="auto" loop></audio>
+
   <div class="desktop" id="desktop" aria-hidden="false"></div>
 
   <div class="taskbar">
@@ -173,34 +150,37 @@ input[type="range"].vol::-moz-range-thumb{
     </div>
   </div>
 
-  <div id="gallery" class="gallery-container">
-    <div class="gallery-header">
-      <h1 class="gallery-title" id="galleryTitle">VIDEOS ARCHIVE</h1>
-      <button id="viewToggle" class="view-toggle" type="button" aria-pressed="false" aria-label="Toggle video view">
-        <span id="viewLabel">View: Grid</span><span class="chev" id="viewChev">▼</span>
-      </button>
+  <!-- videos -->
+  <div class="page-container">
+    <div class="header-row">
+      <h1 class="page-title">LATEST FROM @Honestly_Thomas</h1>
+      <button id="refreshBtn" class="menu-button" type="button">Refresh</button>
     </div>
-
-    <div id="grid" class="grid" aria-live="polite"></div>
+    <div id="videoList" aria-live="polite"></div>
     <p id="emptyMsg" style="text-align:center; padding:18px; display:none; color:#b7ffe6;">
-      No videos found. Either your Netlify Function isn’t deployed yet or your channel has no uploads. You can also add a fallback JSON at <code>/videos/link-list.json</code>.
+      No videos found. If this is new, give the feed a minute.
     </p>
   </div>
 
 <script>
-/* viewport shim for mobile 100vh weirdness */
+/* viewport shim */
 function setVhUnit(){ document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
 setVhUnit(); window.addEventListener('resize', setVhUnit, { passive:true }); window.addEventListener('orientationchange', setVhUnit, { passive:true });
 
 /* clock */
-function updateClockText(){
-  const clock=document.getElementById('clock'); const now=new Date();
-  let h=now.getHours(); const m=now.getMinutes().toString().padStart(2,'0'); const ampm=h>=12?'PM':'AM'; h=h%12||12;
-  clock.innerHTML=`${h}:${m} 🌀`; clock.title=`${h}:${m} ${ampm}`;
+function updateClockText() {
+  const clock = document.getElementById('clock');
+  const now = new Date();
+  let h = now.getHours();
+  const m = now.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  clock.innerHTML = `${h}:${m} 🌀`;
+  clock.title = `${h}:${m} ${ampm}`;
 }
 setInterval(updateClockText, 1000); updateClockText();
 
-/* menu + tray */
+/* menu */
 function toggleMenu(){
   const menu=document.getElementById('menuPopup');
   menu.style.display=menu.style.display==='flex'?'none':'flex';
@@ -211,146 +191,129 @@ document.addEventListener('click',(e)=>{
   const tp=document.getElementById('trayPopup');
   const clock=document.getElementById('clock');
   if(m && b && !m.contains(e.target) && !b.contains(e.target)) m.style.display='none';
-  if(tp && !tp.contains(e.target) && e.target!==clock) closeTrayPopup();
+  if(tp && !tp.contains(e.target) && e.target !== clock) closeTrayPopup();
 });
 function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
 
-/* audio controls */
-const audio=document.getElementById('bgAudio');
-const menuSoundsBtn=document.getElementById('menuSounds');
-const volSlider=document.getElementById('volumeSlider');
-const volIcon=document.getElementById('volIcon');
-const tray=document.getElementById('tray');
-const trayPopup=document.getElementById('trayPopup');
-const rangeWrap=document.getElementById('rangeWrap');
-const spinBtn=document.getElementById('spinBtn');
-const clockEl=document.getElementById('clock');
+/* audio + tray (same as your other page) */
+const audio = document.getElementById('bgAudio');
+const menuSoundsBtn = document.getElementById('menuSounds');
+const volSlider = document.getElementById('volumeSlider');
+const volIcon = document.getElementById('volIcon');
+const tray = document.getElementById('tray');
+const trayPopup = document.getElementById('trayPopup');
+const rangeWrap = document.getElementById('rangeWrap');
+const spinBtn = document.getElementById('spinBtn');
+const clock = document.getElementById('clock');
 
-audio.volume=parseFloat(localStorage.getItem('tiid_vol') ?? volSlider.value);
-volSlider.value=audio.volume.toString();
-function updateVolIcon(v){ if(v==0||audio.muted) volIcon.textContent='🔇'; else if(v<.34) volIcon.textContent='🔈'; else if(v<.67) volIcon.textContent='🔉'; else volIcon.textContent='🔊'; }
+audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? volSlider.value);
+volSlider.value = audio.volume.toString();
+function updateVolIcon(v){ if (v == 0 || audio.muted) volIcon.textContent='🔇'; else if (v < 0.34) volIcon.textContent='🔈'; else if (v < 0.67) volIcon.textContent='🔉'; else volIcon.textContent='🔊'; }
 updateVolIcon(audio.volume);
-volSlider.addEventListener('input',()=>{ audio.muted=false; audio.volume=parseFloat(volSlider.value); localStorage.setItem('tiid_vol', audio.volume.toString()); updateVolIcon(audio.volume); });
-async function toggleAudio(){ try{ if(audio.paused){ await audio.play(); menuSoundsBtn.textContent='🔊 Sounds: On'; } else { audio.pause(); menuSoundsBtn.textContent='🔇 Sounds: Off'; } }catch(e){ console.warn('Audio toggle blocked until user gesture:', e); } }
-menuSoundsBtn.addEventListener('click',e=>{ e.preventDefault(); toggleAudio(); });
-volIcon.addEventListener('click',()=>{ if(audio.muted||audio.volume===0){ audio.muted=false; audio.volume=parseFloat(localStorage.getItem('tiid_vol') ?? '0.6')||0.6; volSlider.value=audio.volume.toString(); } else { audio.muted=true; volSlider.value='0'; } updateVolIcon(parseFloat(volSlider.value)); });
+volSlider.addEventListener('input', () => {
+  audio.muted = false; audio.volume = parseFloat(volSlider.value);
+  localStorage.setItem('tiid_vol', audio.volume.toString()); updateVolIcon(audio.volume);
+});
+async function toggleAudio() {
+  try {
+    if (audio.paused) { await audio.play(); menuSoundsBtn.textContent = '🔊 Sounds: On'; }
+    else { audio.pause(); menuSoundsBtn.textContent = '🔇 Sounds: Off'; }
+  } catch (err) { console.warn('Audio toggle blocked until user gesture:', err); }
+}
+menuSoundsBtn.addEventListener('click', (e) => { e.preventDefault(); toggleAudio(); });
+volIcon.addEventListener('click', () => {
+  if (audio.muted || audio.volume === 0) {
+    audio.muted = false; audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? '0.6') || 0.6; volSlider.value = audio.volume.toString();
+  } else { audio.muted = true; volSlider.value = '0'; }
+  updateVolIcon(parseFloat(volSlider.value));
+});
 
-/* mobile tray popup */
-const mqMobile=window.matchMedia('(max-width: 640px)');
-function openTrayPopup(){ trayPopup.style.display='flex'; trayPopup.setAttribute('aria-hidden','false'); }
-function closeTrayPopup(){ trayPopup.style.display='none'; trayPopup.setAttribute('aria-hidden','true'); }
-function toggleTrayPopup(){ if(trayPopup.style.display==='flex') closeTrayPopup(); else openTrayPopup(); }
-function relocateSlider(){ if(mqMobile.matches){ if(!rangeWrap.contains(volSlider)) rangeWrap.appendChild(volSlider); tray.style.gap='6px'; } else { if(!tray.contains(volSlider)) tray.appendChild(volSlider); closeTrayPopup(); } }
+/* tray popup */
+const mqMobile = window.matchMedia('(max-width: 640px)');
+function openTrayPopup(){ trayPopup.style.display = 'flex'; trayPopup.setAttribute('aria-hidden','false'); }
+function closeTrayPopup(){ trayPopup.style.display = 'none'; trayPopup.setAttribute('aria-hidden','true'); }
+function toggleTrayPopup(){ if (trayPopup.style.display === 'flex') closeTrayPopup(); else openTrayPopup(); }
+function relocateSlider(){
+  if (mqMobile.matches) { if (!rangeWrap.contains(volSlider)) rangeWrap.appendChild(volSlider); tray.style.gap = '6px'; }
+  else { if (!tray.contains(volSlider)) tray.appendChild(volSlider); closeTrayPopup(); }
+}
 relocateSlider(); mqMobile.addEventListener('change', relocateSlider);
-clockEl.addEventListener('click',()=>{ if(mqMobile.matches) toggleTrayPopup(); else doABarrelRoll(); });
-spinBtn.addEventListener('click',()=>{ doABarrelRoll(); closeTrayPopup(); });
+clock.addEventListener('click', () => { if (mqMobile.matches) toggleTrayPopup(); else doABarrelRoll(); });
+spinBtn.addEventListener('click', () => { doABarrelRoll(); closeTrayPopup(); });
 
-/* ===== Video rendering ===== */
-const gridEl=document.getElementById('grid');
-const emptyMsg=document.getElementById('emptyMsg');
-const viewToggleBtn=document.getElementById('viewToggle');
-const viewLabel=document.getElementById('viewLabel');
-const viewChev=document.getElementById('viewChev');
+/* ---------- YouTube RSS rendering ---------- */
+const CHANNEL_ID = 'UCn3WLZT7k8nO24XimlJVJVQ'; // @Honestly_Thomas
+const PROXY = '/.netlify/functions/youtube-rss?channel_id=' + encodeURIComponent(CHANNEL_ID);
 
-function setView(mode){
-  if(mode==='list'){ gridEl.classList.add('list'); viewToggleBtn.setAttribute('aria-pressed','true'); viewLabel.textContent='View: List'; viewChev.textContent='▲'; localStorage.setItem('tiid_view','list'); }
-  else { gridEl.classList.remove('list'); viewToggleBtn.setAttribute('aria-pressed','false'); viewLabel.textContent='View: Grid'; viewChev.textContent='▼'; localStorage.setItem('tiid_view','grid'); }
+function htmlDecode(str){ const d=document.createElement('textarea'); d.innerHTML=str; return d.value; }
+function formatDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
 }
-function applySavedView(){ const saved=localStorage.getItem('tiid_view') || 'grid'; setView(saved==='list' ? 'list' : 'grid'); }
-viewToggleBtn.addEventListener('click',()=>{ const next=gridEl.classList.contains('list')?'grid':'list'; setView(next); });
+function videoIdFromEntry(entry){
+  // <yt:videoId>VIDEO_ID</yt:videoId>
+  const el = entry.querySelector('yt\\:videoId, videoId');
+  return el ? el.textContent.trim() : null;
+}
+function text(el, sel, fallback=''){ const n=el.querySelector(sel); return n ? n.textContent : fallback; }
 
-function makeVideoCard(item){
-  const { id, title, thumbnail, embedUrl, watchUrl, published } = item;
+async function loadFeed(){
+  const list = document.getElementById('videoList');
+  const empty = document.getElementById('emptyMsg');
+  list.innerHTML = '';
+  empty.style.display = 'none';
 
-  const card=document.createElement('div'); card.className='card';
+  try{
+    const res = await fetch(PROXY, { cache:'no-cache' });
+    if(!res.ok) throw new Error('Feed fetch failed: ' + res.status);
+    const xml = await res.text();
 
-  // thumb
-  const tw=document.createElement('div'); tw.className='thumb-wrap';
-  const img=document.createElement('img'); img.className='thumb'; img.loading='lazy'; img.decoding='async';
-  img.src=thumbnail; img.alt=title;
-  const play=document.createElement('button'); play.className='play-btn'; play.type='button'; play.textContent='▶ Play';
-  tw.appendChild(img); tw.appendChild(play);
+    const doc = new window.DOMParser().parseFromString(xml, 'application/xml');
+    const entries = Array.from(doc.querySelectorAll('entry'));
 
-  // iframe, lazy init on click
-  const iframe=document.createElement('iframe'); iframe.className='embed'; iframe.title=title;
-  iframe.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-  iframe.referrerPolicy='strict-origin-when-cross-origin'; // less tracking
-  iframe.loading='lazy'; // extra chill
-  // we set src on click to avoid loading a dozen players at once
-  function startPlayback(){
-    if(!iframe.src){ iframe.src=`${embedUrl}?autoplay=1&rel=0`; }
-    card.classList.add('playing');
+    if(entries.length === 0){ empty.style.display = 'block'; return; }
+
+    const frag = document.createDocumentFragment();
+    for(const entry of entries){
+      const vid = videoIdFromEntry(entry);
+      if(!vid) continue;
+
+      const url = 'https://www.youtube.com/embed/' + vid;
+      const title = text(entry, 'title', '(untitled)');
+      const published = text(entry, 'published', '');
+      const desc = text(entry, 'media\\:group > media\\:description, description, summary', '').slice(0, 500);
+
+      const card = document.createElement('article'); card.className = 'video-card';
+
+      const iframe = document.createElement('iframe');
+      iframe.className = 'video-embed';
+      iframe.src = url;
+      iframe.title = title;
+      iframe.loading = 'lazy';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      iframe.allowFullscreen = true;
+
+      const meta = document.createElement('div'); meta.className = 'video-meta';
+      const h3 = document.createElement('div'); h3.className = 'video-title'; h3.textContent = title;
+      const date = document.createElement('div'); date.className = 'video-date'; date.textContent = published ? `Published ${formatDate(published)}` : '';
+      const p = document.createElement('div'); p.className = 'video-desc'; p.textContent = desc;
+
+      meta.appendChild(h3); if(date.textContent) meta.appendChild(date); if(desc) meta.appendChild(p);
+      card.appendChild(iframe); card.appendChild(meta);
+      frag.appendChild(card);
+    }
+
+    list.appendChild(frag);
+  }catch(err){
+    console.error(err);
+    empty.textContent = 'Could not load YouTube feed. If you just deployed the function, try again.';
+    empty.style.display = 'block';
   }
-  play.addEventListener('click', startPlayback);
-  img.addEventListener('click', startPlayback);
-
-  // meta/actions
-  const meta=document.createElement('div'); meta.className='meta';
-  const name=document.createElement('div'); name.className='name';
-  name.textContent=title;
-
-  const actions=document.createElement('div'); actions.className='media-actions';
-  const yt=document.createElement('a'); yt.className='btn'; yt.href=watchUrl; yt.target='_blank'; yt.rel='noopener noreferrer'; yt.textContent='▶ Open on YouTube';
-  const copy=document.createElement('button'); copy.className='btn'; copy.type='button'; copy.textContent='⎘ Copy embed';
-  copy.addEventListener('click', async ()=>{
-    const code = `<iframe src="${embedUrl}" title="${title}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0"></iframe>`;
-    try{ await navigator.clipboard.writeText(code); copy.textContent='✔ Copied'; setTimeout(()=>copy.textContent='⎘ Copy embed', 1500); }catch{ copy.textContent='❌ Copy failed'; setTimeout(()=>copy.textContent='⎘ Copy embed', 1500); }
-  });
-
-  actions.appendChild(yt); actions.appendChild(copy);
-  meta.appendChild(name); meta.appendChild(actions);
-
-  card.appendChild(tw); card.appendChild(iframe); card.appendChild(meta);
-  return card;
 }
 
-async function fetchVideos(){
-  // Primary: serverless proxy
-  const endpoint='/.netlify/functions/youtube-feed?handle=Honestly_Thomas';
-  try{
-    const r=await fetch(endpoint, { cache:'no-cache' });
-    if(r.ok){
-      const data=await r.json();
-      if(Array.isArray(data) && data.length){
-        const frag=document.createDocumentFragment();
-        data.forEach(item=> frag.appendChild(makeVideoCard(item)));
-        gridEl.appendChild(frag);
-        applySavedView();
-        return;
-      }
-    }
-  }catch(e){ /* fall through to JSON fallback */ }
-
-  // Fallback: static JSON you maintain manually if needed
-  try{
-    const r=await fetch('/videos/link-list.json', { cache:'no-cache' });
-    if(r.ok){
-      const list=await r.json();
-      if(Array.isArray(list) && list.length){
-        const items=list.map(u=>{
-          const id = (u.match(/v=([^&]+)/)?.[1]) || (u.match(/youtu\.be\/([^?]+)/)?.[1]) || '';
-          return {
-            id,
-            title: u, // if you want names, store {title,url} objects instead
-            thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
-            embedUrl: `https://www.youtube-nocookie.com/embed/${id}`,
-            watchUrl: `https://www.youtube.com/watch?v=${id}`,
-            published: ''
-          }
-        });
-        const frag=document.createDocumentFragment();
-        items.forEach(item=> frag.appendChild(makeVideoCard(item)));
-        gridEl.appendChild(frag);
-        applySavedView();
-        return;
-      }
-    }
-  }catch(e){ /* no-op */ }
-
-  emptyMsg.style.display='block';
-}
-
-fetchVideos();
+document.getElementById('refreshBtn').addEventListener('click', loadFeed);
+loadFeed();
 </script>
 </body>
 </html>
