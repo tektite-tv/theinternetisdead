@@ -70,8 +70,23 @@ input[type="range"].vol::-moz-range-thumb {
   box-shadow: 0 0 6px var(--accent-soft);
 }
 
+/* ===== Lightbox (kept) ===== */
+.lightbox { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,0.88); z-index: 2000;
+  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  height: 100dvh; height: calc(var(--vh, 1vh) * 100);
+}
+.lightbox.open { display: grid; }
+.lightbox-inner { display: grid; grid-template-rows: 1fr auto; gap: 10px; width: 100%; max-width: 100vw; max-height: 100%; overflow: hidden; }
+.lightbox-img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; background: #000; border: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent-soft); box-sizing: border-box; }
+.lightbox-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.lightbox-title { flex: 1 1 auto; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b7ffe6; font-size: 0.95rem; opacity: 0.95; }
+.lightbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.lightbox .btn { cursor: pointer; background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000; }
+
 /* ===== Game Links Grid ===== */
 .game-links {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 20px;
@@ -84,6 +99,7 @@ input[type="range"].vol::-moz-range-thumb {
   border: 2px solid var(--accent);
   border-radius: 8px;
 }
+.posts-title h1 { display:block; text-align:center; padding:10px; text-decoration:underline; color:#FF0040; }
 
 .game-links a {
   display: block;
@@ -95,12 +111,10 @@ input[type="range"].vol::-moz-range-thumb {
   box-shadow: 0 0 8px var(--accent-soft);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
 .game-links a:hover {
   transform: scale(1.05);
   box-shadow: 0 0 12px var(--accent), 0 0 18px var(--accent-soft);
 }
-
 .game-links img {
   max-width: 100%;
   height: auto;
@@ -108,7 +122,6 @@ input[type="range"].vol::-moz-range-thumb {
   border-radius: 6px;
   box-shadow: 0 0 6px var(--accent-soft);
 }
-
 .game-links .caption {
   margin-top: 8px;
   font-size: 14px;
@@ -116,7 +129,35 @@ input[type="range"].vol::-moz-range-thumb {
   text-shadow: 1px 1px #000;
 }
 
-/* ===== Footer glitch ===== */
+/* ===== Mobile layout & tray popup ===== */
+@media (max-width: 640px) {
+  html, body { height: auto; }
+  .desktop { display: block; top: 44px; opacity: 0.55; --scan-speed: 36s;
+    background:
+      repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+      radial-gradient(900px 900px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
+      linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
+    background-size: auto, 100% 100%, 100% 100%;
+    transform: translateZ(0);
+  }
+  .taskbar { height: 44px; padding: 0 10px; }
+  .taskbar-title { font-size: 12px; padding: 0 4px; }
+  .menu-button { padding: 6px 10px; }
+  .clock { padding: 2px 6px; min-width: 52px; font-size: 0.75rem; border-width: 1px; flex-shrink: 0; }
+  .game-links { margin-top: 56px; }
+  .tray-popup { right: 8px; left: auto; }
+  .tray-popup .popup-row { padding: 12px; display: flex; align-items: center; gap: 10px; }
+  .tray-popup .popup-row .label { flex: 0 0 auto; }
+  .tray-popup .popup-row .range-wrap { flex: 1 1 auto; }
+  input[type="range"].vol { width: 100%; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .desktop { animation: none; background-position: 0 0,0 0,0 0; }
+}
+
+/* ===== Footer ===== */
 .footer-glitch {
   position: relative; z-index: 2; margin-top: 40px; padding: 16px; text-align: center; font-size: 14px; color: #00ff99;
   background: linear-gradient(to right, #000, #111, #000); border-top: 2px solid var(--accent);
@@ -146,7 +187,6 @@ input[type="range"].vol::-moz-range-thumb {
         <a href="/videos" target="_blank">📺 Videos</a>
         <a href="/camera" target="_blank">📷 Camera</a>
         <a href="/games" target="_blank">🎲 Games</a>
-        <!-- Sounds toggles audio -->
         <button id="menuSounds" type="button">🔊 Sounds: Off</button>
       </div>
     </div>
@@ -154,7 +194,6 @@ input[type="range"].vol::-moz-range-thumb {
     <div class="taskbar-title" title="You may never leave.">theinternetisdead.org 🎲 Games</div>
     <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
 
-    <!-- System tray (desktop shows slider here; mobile moves it into popup) -->
     <div class="tray" id="tray" title="Volume">
       <span class="vol-icon" id="volIcon" aria-hidden="true">🔈</span>
       <input id="volumeSlider" class="vol" type="range" min="0" max="1" step="0.01" value="0.6" aria-label="Volume">
@@ -162,21 +201,20 @@ input[type="range"].vol::-moz-range-thumb {
 
     <div class="clock" id="clock">--:-- 🌀</div>
 
-    <!-- Mobile tray popup (top-right) -->
     <div class="tray-popup" id="trayPopup" role="menu" aria-hidden="true">
       <button id="spinBtn" type="button">🌀 Spin</button>
       <div class="popup-row">
         <span class="label">🔊 Volume</span>
-        <div class="range-wrap" id="rangeWrap"><!-- slider moved here on mobile --></div>
+        <div class="range-wrap" id="rangeWrap"></div>
       </div>
     </div>
   </div>
 
-  <!-- ===== Fixed Game Links Section ===== -->
-  <div class="game-links">
+  <!-- ===== Game Links ===== -->
+  <div class="game-links" id="games">
     <div class="posts-title"><h1>Game Links</h1></div>
 
-    <a href="/jad">
+    <a href="/jad" aria-label="Open Jad Simulator">
       <img src="/images/jad-simulator.png" alt="Jad Simulator">
       <div class="caption">Jad Simulator</div>
     </a>
@@ -184,8 +222,107 @@ input[type="range"].vol::-moz-range-thumb {
     <!-- Add more links here -->
   </div>
 
-  <footer class="footer-glitch">
-    Thomas Harrison - theinternetisdead.org - Copyright 2025
-  </footer>
+  <!-- Lightbox modal (kept for future) -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
+      <img id="lightboxImg" class="lightbox-img" alt="">
+      <div class="lightbox-bar">
+        <div id="lightboxTitle" class="lightbox-title"></div>
+        <div class="lightbox-actions">
+          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
+          <button id="lightboxClose" class="btn" type="button">✕ Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- ===== JS (restored) ===== -->
+<script>
+  function setVhUnit(){ document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
+  setVhUnit(); window.addEventListener('resize', setVhUnit, { passive:true }); window.addEventListener('orientationchange', setVhUnit, { passive:true });
+
+  function updateClockText(){
+    const clock = document.getElementById('clock');
+    const now = new Date(); let h = now.getHours(); const m = now.getMinutes().toString().padStart(2,'0'); const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12; clock.innerHTML = `${h}:${m} 🌀`; clock.title = `${h}:${m} ${ampm}`;
+  }
+  setInterval(updateClockText, 1000); updateClockText();
+
+  function toggleMenu(){
+    const menu = document.getElementById('menuPopup');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+  }
+  document.addEventListener('click',(e)=>{
+    const m=document.getElementById('menuPopup'); const b=document.querySelector('.menu-button');
+    const tp=document.getElementById('trayPopup'); const clock=document.getElementById('clock');
+    if(m && b && !m.contains(e.target) && !b.contains(e.target)) m.style.display='none';
+    if(tp && !tp.contains(e.target) && e.target !== clock) closeTrayPopup();
+  });
+
+  function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
+
+  // Lightbox init
+  const lb = { root:null, img:null, title:null, dl:null, closeBtn:null,
+    open(src, alt, filename){ this.img.src=src; this.img.alt=alt||''; this.title.textContent=alt||filename||src.split('/').pop();
+      this.dl.href=src; this.dl.download=filename||src.split('/').pop(); this.root.classList.add('open'); this.root.setAttribute('aria-hidden','false');
+      document.addEventListener('keydown', escClose); },
+    close(){ this.root.classList.remove('open'); this.root.setAttribute('aria-hidden','true'); this.img.src=''; document.removeEventListener('keydown', escClose); }
+  };
+  function escClose(e){ if(e.key==='Escape') lb.close(); }
+  (function initLightbox(){ lb.root=document.getElementById('lightbox'); lb.img=document.getElementById('lightboxImg'); lb.title=document.getElementById('lightboxTitle'); lb.dl=document.getElementById('lightboxDownload'); lb.closeBtn=document.getElementById('lightboxClose'); lb.root.addEventListener('click',(e)=>{ if(e.target===lb.root) lb.close(); }); lb.closeBtn.addEventListener('click',()=>lb.close()); })();
+
+  // Audio + tray
+  const audio=document.getElementById('bgAudio');
+  const menuSoundsBtn=document.getElementById('menuSounds');
+  const volSlider=document.getElementById('volumeSlider');
+  const volIcon=document.getElementById('volIcon');
+  const tray=document.getElementById('tray');
+  const trayPopup=document.getElementById('trayPopup');
+  const rangeWrap=document.getElementById('rangeWrap');
+  const spinBtn=document.getElementById('spinBtn');
+  const clockEl=document.getElementById('clock');
+  const mqMobile=window.matchMedia('(max-width: 640px)');
+
+  audio.volume=parseFloat(localStorage.getItem('tiid_vol') ?? volSlider.value);
+  volSlider.value=audio.volume.toString();
+
+  function updateVolIcon(v){ if(v==0 || audio.muted) volIcon.textContent='🔇'; else if(v<0.34) volIcon.textContent='🔈'; else if(v<0.67) volIcon.textContent='🔉'; else volIcon.textContent='🔊'; }
+  updateVolIcon(audio.volume);
+
+  volSlider.addEventListener('input', ()=>{ audio.muted=false; audio.volume=parseFloat(volSlider.value); localStorage.setItem('tiid_vol', audio.volume.toString()); updateVolIcon(audio.volume); });
+
+  async function toggleAudio(){ try{ if(audio.paused){ await audio.play(); menuSoundsBtn.textContent='🔊 Sounds: On'; } else { audio.pause(); menuSoundsBtn.textContent='🔇 Sounds: Off'; } } catch(err){ console.warn('Audio toggle blocked until user gesture:', err); } }
+  menuSoundsBtn.addEventListener('click', (e)=>{ e.preventDefault(); toggleAudio(); });
+
+  volIcon.addEventListener('click', ()=>{ if(audio.muted || audio.volume===0){ audio.muted=false; audio.volume=parseFloat(localStorage.getItem('tiid_vol') ?? '0.6') || 0.6; volSlider.value=audio.volume.toString(); } else { audio.muted=true; volSlider.value='0'; } updateVolIcon(parseFloat(volSlider.value)); });
+
+  function openTrayPopup(){ trayPopup.style.display='flex'; trayPopup.setAttribute('aria-hidden','false'); }
+  function closeTrayPopup(){ trayPopup.style.display='none'; trayPopup.setAttribute('aria-hidden','true'); }
+  function toggleTrayPopup(){ if(trayPopup.style.display==='flex') closeTrayPopup(); else openTrayPopup(); }
+
+  function relocateSlider(){
+    if(mqMobile.matches){
+      if(!rangeWrap.contains(volSlider)) rangeWrap.appendChild(volSlider);
+      tray.style.gap='6px';
+    } else {
+      if(!tray.contains(volSlider)) tray.appendChild(volSlider);
+      closeTrayPopup();
+    }
+  }
+  relocateSlider(); mqMobile.addEventListener('change', relocateSlider);
+
+  clockEl.addEventListener('click', ()=>{ if(mqMobile.matches) toggleTrayPopup(); else doABarrelRoll(); });
+  spinBtn.addEventListener('click', ()=>{ doABarrelRoll(); closeTrayPopup(); });
+
+  // Optional: click image to open lightbox
+  document.querySelectorAll('.game-links img').forEach(img=>{
+    img.style.cursor='zoom-in';
+    img.addEventListener('click', (e)=>{ e.preventDefault(); lb.open(img.src, img.alt, img.src.split('/').pop()); });
+  });
+</script>
+
+<footer class="footer-glitch">
+  Thomas Harrison - theinternetisdead.org - Copyright 2025
+</footer>
 </body>
 </html>
