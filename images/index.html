@@ -3,80 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Images</title>
+  <title>Images (Scoped)</title>
   <style>
-    :root {
+    /* SCOPED: everything lives under #images-app so your global CSS stays chill. */
+    #images-app {
       --bg: #000;
       --fg: #e6e6e6;
       --muted: #9aa0a6;
       --card: #111;
       --accent: #00ff99;
-    }
-    html, body {
-      height: 100%;
-      background: var(--bg);
+      font-family: inherit;
       color: var(--fg);
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
     }
-    header {
+    #images-app a,
+    #images-app button,
+    #images-app input { all: unset; }
+    #images-app button { cursor: pointer; }
+    #images-app .ia-wrap {
+      background: transparent;
+    }
+    #images-app .ia-header {
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 1;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.75rem 1rem;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(6px);
+      gap: .75rem;
+      padding: .5rem .75rem;
+      background: color-mix(in oklab, black 70%, transparent);
+      backdrop-filter: blur(4px);
       border-bottom: 1px solid #222;
     }
-    header h1 {
-      font-size: 1rem;
+    #images-app .ia-title {
+      font-size: .95rem;
       font-weight: 600;
-      letter-spacing: 0.02em;
       margin: 0;
-      color: var(--fg);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-left: auto;
-    }
-    button {
-      appearance: none;
+    #images-app .ia-actions { margin-left: auto; display: flex; gap: .5rem; align-items: center; }
+    #images-app .ia-chip {
       border: 1px solid #222;
       background: #0a0a0a;
-      color: var(--fg);
-      padding: 0.5rem 0.75rem;
+      padding: .35rem .6rem;
       border-radius: 10px;
-      cursor: pointer;
+      font-size: .85rem;
+    }
+    #images-app .ia-btn {
+      border: 1px solid #222;
+      background: #0a0a0a;
+      padding: .45rem .7rem;
+      border-radius: 10px;
       font-weight: 600;
     }
-    button:hover { border-color: #333; }
-    button:active { transform: translateY(1px); }
-    .hint {
-      color: var(--muted);
-      font-size: 0.85rem;
-    }
-    main { padding: 1rem; }
-    #grid {
+    #images-app .ia-main { padding: .75rem; }
+    #images-app .ia-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
     @media (min-width: 560px) {
-      #grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      #images-app .ia-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (min-width: 900px) {
-      #grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      #images-app .ia-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
-    .card {
+    #images-app .ia-card {
       background: var(--card);
       border: 1px solid #1a1a1a;
       border-radius: 12px;
@@ -85,33 +78,28 @@
       flex-direction: column;
       min-height: 0;
     }
-    .thumb {
+    #images-app .ia-thumb {
       width: 100%;
       aspect-ratio: 1 / 1;
       object-fit: cover;
       background: #050505;
       display: block;
     }
-    .meta {
+    #images-app .ia-meta {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.5rem;
-      padding: 0.5rem 0.6rem;
+      gap: .5rem;
+      padding: .5rem .6rem;
     }
-    .meta .name {
-      font-size: 0.85rem;
-      color: var(--fg);
+    #images-app .ia-name {
+      font-size: .85rem;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .meta .size {
-      font-size: 0.75rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-    .empty {
+    #images-app .ia-size { font-size: .75rem; color: var(--muted); }
+    #images-app .ia-empty {
       color: var(--muted);
       text-align: center;
       padding: 10vh 1rem;
@@ -119,130 +107,117 @@
   </style>
 </head>
 <body>
-  <header>
-    <h1>Images</h1>
-    <div class="actions">
-      <span id="count" class="hint">0</span>
-      <button id="refreshBtn" title="Reload images">Refresh</button>
-    </div>
-  </header>
+  <!-- SCOPED WIDGET START -->
+  <div id="images-app">
+    <div class="ia-wrap">
+      <div class="ia-header">
+        <h1 class="ia-title">Images</h1>
+        <div class="ia-actions">
+          <span id="ia-count" class="ia-chip">0</span>
+          <button id="ia-refresh" class="ia-btn" title="Reload images">Refresh</button>
+        </div>
+      </div>
 
-  <main>
-    <div id="grid" aria-live="polite"></div>
-    <p id="emptyMsg" class="empty" hidden>No images found. Add filenames to <code>/images/index.json</code>.</p>
-  </main>
+      <main class="ia-main">
+        <div id="ia-grid" class="ia-grid" aria-live="polite"></div>
+        <p id="ia-empty" class="ia-empty" hidden>No images found. Add filenames to <code>/images/index.json</code>.</p>
+      </main>
+    </div>
+  </div>
+  <!-- SCOPED WIDGET END -->
 
   <script>
-    const grid = document.getElementById('grid');
-    const count = document.getElementById('count');
-    const emptyMsg = document.getElementById('emptyMsg');
-    const refreshBtn = document.getElementById('refreshBtn');
+    (function ImagesApp(){
+      const root   = document.getElementById('images-app');
+      const grid   = document.getElementById('ia-grid');
+      const count  = document.getElementById('ia-count');
+      const empty  = document.getElementById('ia-empty');
+      const btn    = document.getElementById('ia-refresh');
 
-    function normalizeSrc(s) {
-      if (!s) return '';
-      // leave full URLs and rooted paths untouched
-      if (/^https?:\/\//i.test(s) || s.startsWith('/')) return s;
-      // strip leading ./ or / and a leading 'images/' if present
-      s = s.replace(/^\.?\/*/, '');
-      s = s.replace(/^images\//i, '');
-      return `/images/${s}`;
-    }
-
-    function deriveNameFromPath(p) {
-      try {
-        const u = new URL(p, location.origin);
-        const parts = u.pathname.split('/').filter(Boolean);
-        return parts[parts.length - 1] || p;
-      } catch {
-        // not a URL, do a basic split
-        const parts = p.split('/').filter(Boolean);
-        return parts[parts.length - 1] || p;
+      function normalizeSrc(s) {
+        if (!s) return '';
+        if (/^https?:\/\//i.test(s) || s.startsWith('/')) return s;
+        s = s.replace(/^\.?\/*/, '');
+        s = s.replace(/^images\//i, '');
+        return `/images/${s}`;
       }
-    }
-
-    async function fetchIndex(bust = false) {
-      const url = `/images/index.json${bust ? `?v=${Date.now()}` : ''}`;
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`Failed to fetch index.json: ${res.status}`);
-      return res.json();
-    }
-
-    function normalizeItems(data) {
-      // Accept: array<string>, array<object>, or { images: [...] } or even { "file.png": {...} }
-      let items = [];
-      if (Array.isArray(data)) {
-        items = data.map(x => (typeof x === 'string' ? { src: x } : x));
-      } else if (Array.isArray(data?.images)) {
-        items = data.images.map(x => (typeof x === 'string' ? { src: x } : x));
-      } else if (data && typeof data === 'object') {
-        items = Object.keys(data).map(k => (typeof data[k] === 'object' ? { src: k, ...data[k] } : { src: k }));
+      function nameFromPath(p) {
+        try {
+          const u = new URL(p, location.origin);
+          const parts = u.pathname.split('/').filter(Boolean);
+          return parts.at(-1) || p;
+        } catch {
+          const parts = p.split('/').filter(Boolean);
+          return parts.at(-1) || p;
+        }
       }
-      // Robust src normalization
-      items = items.map(it => {
-        const raw = it.src || it.url || it.path || '';
-        const src = normalizeSrc(raw);
-        return { ...it, src };
-      });
-      // Filter to known image types and rooted/URL paths
-      const ok = /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
-      items = items.filter(it => ok.test(it.src));
-      return items;
-    }
-
-    function render(items) {
-      grid.replaceChildren();
-      if (!items.length) {
-        emptyMsg.hidden = false;
-        count.textContent = '0';
-        return;
+      async function fetchIndex(bust=false){
+        const url = `/images/index.json${bust ? `?v=${Date.now()}` : ''}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('index.json fetch failed ' + res.status);
+        return res.json();
       }
-      emptyMsg.hidden = true;
-      for (const it of items) {
-        const figure = document.createElement('figure');
-        figure.className = 'card';
-
-        const img = document.createElement('img');
-        img.className = 'thumb';
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        img.src = it.src;
-        if (it.alt) img.alt = it.alt;
-        figure.appendChild(img);
-
-        const meta = document.createElement('figcaption');
-        meta.className = 'meta';
-        const name = document.createElement('span');
-        name.className = 'name';
-        name.textContent = it.name || it.title || deriveNameFromPath(it.src);
-        const size = document.createElement('span');
-        size.className = 'size';
-        size.textContent = it.dim || '';
-        meta.appendChild(name);
-        meta.appendChild(size);
-        figure.appendChild(meta);
-
-        grid.appendChild(figure);
+      function normalizeItems(data){
+        let items = [];
+        if (Array.isArray(data)) {
+          items = data.map(x => typeof x === 'string' ? { src: x } : x);
+        } else if (Array.isArray(data?.images)) {
+          items = data.images.map(x => typeof x === 'string' ? { src: x } : x);
+        } else if (data && typeof data === 'object') {
+          items = Object.keys(data).map(k => (typeof data[k] === 'object' ? { src: k, ...data[k] } : { src: k }));
+        }
+        items = items.map(it => {
+          const raw = it.src || it.url || it.path || '';
+          const src = normalizeSrc(raw);
+          return { ...it, src };
+        });
+        const ok = /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i;
+        return items.filter(it => ok.test(it.src));
       }
-      count.textContent = String(items.length);
-    }
-
-    async function loadImages({ bust = false } = {}) {
-      try {
-        const data = await fetchIndex(bust);
-        const items = normalizeItems(data);
-        render(items);
-      } catch (err) {
-        console.error(err);
+      function render(items){
         grid.replaceChildren();
-        emptyMsg.hidden = false;
-        emptyMsg.textContent = 'Error loading images. Check console and ensure /images/index.json exists.';
-        count.textContent = '0';
+        if (!items.length){
+          empty.hidden = false;
+          count.textContent = '0';
+          return;
+        }
+        empty.hidden = true;
+        for (const it of items){
+          const fig = document.createElement('figure');
+          fig.className = 'ia-card';
+          const img = document.createElement('img');
+          img.className = 'ia-thumb';
+          img.loading = 'lazy';
+          img.decoding = 'async';
+          img.src = it.src;
+          img.alt = it.alt || '';
+          fig.appendChild(img);
+          const meta = document.createElement('figcaption');
+          meta.className = 'ia-meta';
+          const name = document.createElement('span');
+          name.className = 'ia-name';
+          name.textContent = it.name || it.title || nameFromPath(it.src);
+          const size = document.createElement('span');
+          size.className = 'ia-size';
+          size.textContent = it.dim || '';
+          meta.appendChild(name);
+          meta.appendChild(size);
+          fig.appendChild(meta);
+          grid.appendChild(fig);
+        }
+        count.textContent = String(items.length);
       }
-    }
-
-    refreshBtn?.addEventListener('click', () => loadImages({ bust: true }));
-    // initial load
-    loadImages();
-  </script>
-</body>
-</html>
+      async function load({bust=false}={}){
+        try {
+          const data = await fetchIndex(bust);
+          render(normalizeItems(data));
+        } catch (e) {
+          console.error(e);
+          grid.replaceChildren();
+          empty.hidden = false;
+          empty.textContent = 'Error loading images. Ensure /images/index.json exists.';
+          count.textContent = '0';
+        }
+      }
+      btn?.addEventListener('click', () => load({bust:true}));
+      load();
