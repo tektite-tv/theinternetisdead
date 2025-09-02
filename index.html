@@ -210,6 +210,31 @@ body { overflow:auto; }
 @media (prefers-reduced-motion: reduce) {
   .desktop { animation: none; background-position: 0 0,0 0,0 0; }
 }
+
+.footer-glitch {
+  position: relative;
+  z-index: 2;
+  margin-top: 40px;
+  padding: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #00ff99;
+  background: linear-gradient(to right, #000, #111, #000);
+  border-top: 2px solid var(--accent);
+  text-shadow:
+    0 0 4px #00ff99,
+    0 0 8px #ff00ff,
+    0 0 12px #00ffff;
+  animation: glitch-flicker 2.4s infinite;
+}
+
+@keyframes glitch-flicker {
+  0%, 100% { opacity: 0.95; transform: translate(0, 0); }
+  20% { opacity: 1; transform: translate(-1px, 0); }
+  40% { opacity: 0.9; transform: translate(1px, 0); }
+  60% { opacity: 1; transform: translate(0, -1px); }
+  80% { opacity: 0.95; transform: translate(0, 1px); }
+}    
 </style>
 </head>
 <body>
@@ -405,5 +430,8 @@ body { overflow:auto; }
   script.onload = loadPosts;
   document.head.appendChild(script);
 </script>
+<footer class="footer-glitch">
+  Thomas Harrison - Copyright 2025
+</footer>
 </body>
 </html>
