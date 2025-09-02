@@ -72,9 +72,30 @@ input[type="range"].vol::-moz-range-thumb {
 
 /* ===== Gallery container ===== */
 .gallery-container { position: relative; z-index: 1; margin-top: 20px; padding: 16px; max-width: 1200px; width: 100%; margin-left: auto; margin-right: auto; }
-.gallery-title { text-align:center; padding:10px 0 14px; text-decoration:underline; color:#FF0040; }
 
-/* ===== Responsive grid ===== */
+/* Header: title left, toggle right */
+.gallery-header {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:10px 0 14px; border-bottom:1px dashed var(--accent-soft);
+}
+.gallery-title {
+  color:#FF0040; text-decoration:underline; text-underline-offset:3px; letter-spacing:0.5px;
+  font-size:1.4rem;
+}
+.view-toggle {
+  background: linear-gradient(to bottom, #2a2a2a, #111);
+  border: 2px outset var(--accent);
+  color: var(--accent);
+  padding: 6px 10px;
+  text-shadow: 1px 1px #000;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display:inline-flex; align-items:center; gap:8px;
+}
+.view-toggle:active { transform: translateY(1px); }
+.view-toggle .chev { font-size: 0.9rem; opacity: 0.9; }
+
+/* ===== Responsive grid (default) ===== */
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -83,6 +104,7 @@ input[type="range"].vol::-moz-range-thumb {
 @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
 
+/* ===== Card ===== */
 .card {
   background:#111;
   border:2px solid var(--accent);
@@ -153,6 +175,39 @@ input[type="range"].vol::-moz-range-thumb {
   background: linear-gradient(to bottom, #2a2a2a, #111);
   border:2px outset var(--accent); color:var(--accent);
   padding:6px 10px; font-size:12px; text-shadow:1px 1px #000;
+}
+
+/* ===== List view overrides ===== */
+.grid.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.grid.list .card {
+  flex-direction: row;
+  align-items: stretch;
+}
+.grid.list .card figure {
+  flex: 0 0 240px;
+  max-width: 240px;
+  border-right: 1px solid var(--accent);
+}
+.grid.list .card img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  border-bottom: 0;
+}
+.grid.list .card .meta {
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+}
+/* On small screens, stack again so nothing breaks */
+@media (max-width: 640px) {
+  .grid.list .card { flex-direction: column; }
+  .grid.list .card figure { max-width: 100%; flex-basis: auto; border-right: 0; }
+  .grid.list .card img { border-bottom: 1px solid var(--accent); }
 }
 
 /* ===== Mobile site layout & tray popup (same behavior as index.html) ===== */
@@ -226,7 +281,14 @@ input[type="range"].vol::-moz-range-thumb {
 
   <!-- ===== Gallery ===== -->
   <div id="gallery" class="gallery-container">
-    <h1 class="gallery-title">IMAGE ARCHIVE</h1>
+    <div class="gallery-header">
+      <h1 class="gallery-title" id="galleryTitle">IMAGES ARCHIVE</h1>
+      <button id="viewToggle" class="view-toggle" type="button" aria-pressed="false" aria-label="Toggle image view">
+        <span id="viewLabel">View: Grid</span>
+        <span class="chev" id="viewChev">▼</span>
+      </button>
+    </div>
+
     <div id="grid" class="grid" aria-live="polite"></div>
     <p id="emptyMsg" style="text-align:center; padding:18px; display:none; color:#b7ffe6;">
       No images found. Add a manifest at <code>/images/index.json</code>.
@@ -455,7 +517,42 @@ input[type="range"].vol::-moz-range-thumb {
     const frag=document.createDocumentFragment();
     for(const it of items){ frag.appendChild(makeCard(it)); }
     grid.appendChild(frag);
+
+    // apply persisted view after content exists
+    applySavedView();
   }
+
+  /* ===== View toggle: Grid/List with chevron and persistence ===== */
+  const viewToggleBtn = document.getElementById('viewToggle');
+  const viewLabel = document.getElementById('viewLabel');
+  const viewChev = document.getElementById('viewChev');
+  const gridEl = document.getElementById('grid');
+
+  function setView(mode){
+    if(mode === 'list'){
+      gridEl.classList.add('list');
+      viewToggleBtn.setAttribute('aria-pressed','true');
+      viewLabel.textContent = 'View: List';
+      viewChev.textContent = '▲'; // up chevron for list
+      localStorage.setItem('tiid_view','list');
+    }else{
+      gridEl.classList.remove('list');
+      viewToggleBtn.setAttribute('aria-pressed','false');
+      viewLabel.textContent = 'View: Grid';
+      viewChev.textContent = '▼'; // down chevron for grid
+      localStorage.setItem('tiid_view','grid');
+    }
+  }
+
+  function applySavedView(){
+    const saved = localStorage.getItem('tiid_view') || 'grid';
+    setView(saved === 'list' ? 'list' : 'grid');
+  }
+
+  viewToggleBtn.addEventListener('click', () => {
+    const next = gridEl.classList.contains('list') ? 'grid' : 'list';
+    setView(next);
+  });
 
   /* boot */
   initLightbox();
