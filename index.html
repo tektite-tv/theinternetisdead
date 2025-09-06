@@ -214,7 +214,7 @@ input[type="range"].vol::-moz-range-thumb {
 <div class="clock" id="clock">--:-- 🌀</div>
 <div aria-hidden="true" id="clockDropdown" role="menu">
 <button id="toggleSoundsBtn">🔊 Sounds: Off</button>
-<button href="#" class="notifications-link" ...>📜 Notifications</button>
+<button ...="" class="notifications-link" href="#">📜 Notifications</button>
 <button id="spinBtnClock">🌀 Spin</button>
 </div>
 <!-- Mobile tray popup (top-right) -->
@@ -336,7 +336,6 @@ input[type="range"].vol::-moz-range-thumb {
 
   /* ----- Audio: toggle + volume ----- */
   const audio = document.getElementById('bgAudio');
-  const menuSoundsBtn = document.getElementById('menuSounds');
   const volSlider = document.getElementById('volumeSlider');
   const volIcon = document.getElementById('volIcon');
   const tray = document.getElementById('tray');
@@ -368,17 +367,14 @@ input[type="range"].vol::-moz-range-thumb {
     try {
       if (audio.paused) {
         await audio.play();
-        menuSoundsBtn.textContent = '🔊 Sounds: On';
       } else {
         audio.pause();
-        menuSoundsBtn.textContent = '🔇 Sounds: Off';
       }
     } catch (err) {
       console.warn('Audio toggle blocked until user gesture:', err);
     }
   }
 
-  menuSoundsBtn.addEventListener('click', (e) => { e.preventDefault(); toggleAudio(); });
 
   // Quick mute via icon
   volIcon.addEventListener('click', () => {
