@@ -472,11 +472,7 @@ input[type="range"].vol::-moz-range-thumb {
   const toggleSoundsBtn = document.getElementById('toggleSoundsBtn');
 
   function updateSoundToggleText() {
-    if (audio.paused || audio.muted) {
-      toggleSoundsBtn.textContent = '🔇 Sounds: Off';
-    } else {
-      toggleSoundsBtn.textContent = '🔊 Sounds: On';
-    }
+    toggleSoundsBtn.textContent = (audio.paused || audio.muted) ? '🔇 Sounds: Off' : '🔊 Sounds: On';
   }
 
   async function toggleAudio() {
@@ -499,10 +495,10 @@ input[type="range"].vol::-moz-range-thumb {
   });
 
   function updateVolIcon(v) {
-    if (v == 0 || audio.muted) volIcon.textContent = '🔇';
-    else if (v < 0.34) volIcon.textContent = '🔈';
-    else if (v < 0.67) volIcon.textContent = '🔉';
-    else volIcon.textContent = '🔊';
+    volIcon.textContent =
+      (v == 0 || audio.muted) ? '🔇' :
+      (v < 0.34) ? '🔈' :
+      (v < 0.67) ? '🔉' : '🔊';
   }
 
   audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? volSlider.value);
@@ -530,6 +526,7 @@ input[type="range"].vol::-moz-range-thumb {
     updateSoundToggleText();
   });
 
+  // Clock dropdown logic
   const clock = document.getElementById('clock');
   const clockDropdown = document.getElementById('clockDropdown');
   const notificationsBtn = document.getElementById('notificationsBtn');
@@ -540,8 +537,7 @@ input[type="range"].vol::-moz-range-thumb {
     clockDropdown.style.display = isVisible ? 'none' : 'flex';
     clockDropdown.setAttribute('aria-hidden', isVisible ? 'true' : 'false');
     const rect = clock.getBoundingClientRect();
-    clockDropdown.style.position = 'absolute';
-    clockDropdown.style.top = `${rect.bottom + 2}px`;
+    clockDropdown.style.top = `${rect.bottom + window.scrollY}px`;
     clockDropdown.style.right = '8px';
   }
 
@@ -563,15 +559,12 @@ input[type="range"].vol::-moz-range-thumb {
   });
 
   spinBtnClock.addEventListener('click', () => {
-    doABarrelRoll();
-    clockDropdown.style.display = 'none';
-  });
-
-  function doABarrelRoll() {
     document.body.classList.add('rotate');
     setTimeout(() => document.body.classList.remove('rotate'), 1000);
-  }
+    clockDropdown.style.display = 'none';
+  });
 </script>
+
 
 
 </body>
