@@ -70,6 +70,19 @@ input[type="range"].vol::-moz-range-thumb {
   box-shadow: 0 0 6px var(--accent-soft);
 }
 
+.notifications-link {
+  margin-right: 10px;
+  padding: 4px 10px;
+  border: 2px inset var(--accent);
+  background: #111;
+  text-shadow: 1px 1px #000;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.notifications-link:hover {
+  background: #222;
+}
+
 /* ===== Posts container ===== */
 .posts-container { display:block; position: relative; z-index: 1; margin-top: 20px; padding: 16px; max-width: 960px; width: 100%; margin-left: auto; margin-right: auto; background-color:rgba(85, 0, 151, 0.3); }
 .posts-title h1 { display:block; text-align:center; padding:10px; text-decoration:underline; color: #FF0040;}
@@ -179,7 +192,10 @@ input[type="range"].vol::-moz-range-thumb {
       <input id="volumeSlider" class="vol" type="range" min="0" max="1" step="0.01" value="0.6" aria-label="Volume">
     </div>
 
-    <div class="clock" id="clock">--:-- 🌀</div>
+    
+<a href="/notifications" class="notifications-link" style="text-decoration: none; color: var(--accent); font-weight: bold;">Notifications 📜</a>
+<div class="clock" id="clock">--:-- 🌀</div>
+
 
     <!-- Mobile tray popup (top-right) -->
     <div class="tray-popup" id="trayPopup" role="menu" aria-hidden="true">
