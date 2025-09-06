@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<title>theinternetisdead.org 🏠 Home</title>
-<link href="/images/internet-rip.png" rel="icon" type="image/png"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<style>
+  <meta charset="UTF-8" />
+  <title>theinternetisdead.org 🏠 Home</title>
+  <link rel="icon" href="/images/internet-rip.png" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
 /* ===== Theme & reset ===== */
 :root { --accent:#00ff99; --accent-soft:#00ff9977; }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
@@ -162,88 +161,72 @@ input[type="range"].vol::-moz-range-thumb {
   60% { opacity: 1; transform: translate(0, -1px); }
   80% { opacity: 0.95; transform: translate(0, 1px); }
 }
-  
-/* clock dropdown popup */
-#clockDropdown {
-  display: none;
-  flex-direction: column;
-  position: absolute;
-  background: #111;
-  border: 2px outset var(--accent);
-  box-shadow: 0 0 5px var(--accent-soft);
-  z-index: 1001;
-  width: 220px;
-}
-#clockDropdown button {
-  color: var(--accent);
-  padding: 12px;
-  background: transparent;
-  text-align: left;
-  border-bottom: 1px solid var(--accent);
-  font: inherit;
-  cursor: pointer;
-}
-#clockDropdown button:hover {
-  background: #222;
-}
-</style>
+  </style>
 </head>
 <body>
-<!-- Background audio -->
-<audio id="bgAudio" loop="" preload="auto" src="/sounds/harmony.mp3"></audio>
-<div aria-hidden="false" class="desktop" id="desktop"></div>
-<div class="taskbar">
-<div class="menu-area">
-<div class="menu-button" onclick="toggleMenu()">Menu</div>
-<div class="menu-popup" id="menuPopup">
-<a href="/" target="_blank">🏠 Home</a>
-<a href="/images" target="_blank">🖼️ Images</a>
-<a href="/videos" target="_blank">📺 Videos</a>
-<a href="/camera" target="_blank">📷 Camera</a>
-<a href="/games" target="_blank">🎲 Games</a>
-<!-- Sounds toggles audio -->
-</div>
-</div>
-<div class="taskbar-title" title="You may never leave.">theinternetisdead.org 🏠 Home</div>
-<div aria-label="Windows" class="task-buttons" id="taskButtons"></div>
-<!-- System tray (desktop shows slider here; mobile moves it into popup) -->
-<div class="tray" id="tray" title="Volume">
-<span aria-hidden="true" class="vol-icon" id="volIcon">🔈</span>
-<input aria-label="Volume" class="vol" id="volumeSlider" max="1" min="0" step="0.01" type="range" value="0.6"/>
-</div>
+  <!-- Background audio -->
+  <audio id="bgAudio" src="/sounds/harmony.mp3" preload="auto" loop></audio>
+
+  <div class="desktop" id="desktop" aria-hidden="false"></div>
+
+  <div class="taskbar">
+    <div class="menu-area">
+      <div class="menu-button" onclick="toggleMenu()">Menu</div>
+      <div class="menu-popup" id="menuPopup">
+        <a href="/" target="_blank">🏠 Home</a>
+        <a href="/images" target="_blank">🖼️ Images</a>
+        <a href="/videos" target="_blank">📺 Videos</a>
+        <a href="/camera" target="_blank">📷 Camera</a>
+        <a href="/games" target="_blank">🎲 Games</a>
+        <!-- Sounds toggles audio -->
+        <button id="menuSounds" type="button">🔊 Sounds: Off</button>
+      </div>
+    </div>
+
+    <div class="taskbar-title" title="You may never leave.">theinternetisdead.org 🏠 Home</div>
+    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
+
+    <!-- System tray (desktop shows slider here; mobile moves it into popup) -->
+    <div class="tray" id="tray" title="Volume">
+      <span class="vol-icon" id="volIcon" aria-hidden="true">🔈</span>
+      <input id="volumeSlider" class="vol" type="range" min="0" max="1" step="0.01" value="0.6" aria-label="Volume">
+    </div>
+
+    
+<a href="#" class="notifications-link" style="text-decoration: none; color: var(--accent); font-weight: bold;">Notifications 📜</a>
 <div class="clock" id="clock">--:-- 🌀</div>
-<div id="clockDropdown" style="display: none;" role="menu">
-  <button id="toggleSoundsBtn">🔊 Sounds: Off</button>
-  <a href="/notifications" id="notificationsBtn">📜 Notifications</a>
-  <button id="spinBtnClock">🌀 Spin</button>
-</div>
-<!-- Mobile tray popup (top-right) -->
-<div aria-hidden="true" class="tray-popup" id="trayPopup" role="menu">
-<button id="spinBtn" type="button">🌀 Spin</button>
-<div class="popup-row">
-<span class="label">🔊 Volume</span>
-<div class="range-wrap" id="rangeWrap"><!-- slider moved here on mobile --></div>
-</div>
-</div>
-</div>
-<div class="posts-container" id="posts">
-<div class="posts-title"><h1>Hello World!</h1></div>
-<a href="https://theinternetisdead.org/who"><img alt="Face" class="face-img" src="/images/face.png"/></a>
-<div class="posts-title"><h1>WEBMASTER POSTS:</h1></div>
-</div>
-<!-- Lightbox modal -->
-<div aria-hidden="true" class="lightbox" id="lightbox">
-<div aria-label="Image preview" aria-modal="true" class="lightbox-inner" role="dialog">
-<img alt="" class="lightbox-img" id="lightboxImg"/>
-<div class="lightbox-bar">
-<div class="lightbox-title" id="lightboxTitle"></div>
-<div class="lightbox-actions">
-<a class="btn" download="" id="lightboxDownload">⬇ Download</a>
-<button class="btn" id="lightboxClose" type="button">✕ Close</button>
-</div>
-</div>
-</div>
-</div>
+
+
+    <!-- Mobile tray popup (top-right) -->
+    <div class="tray-popup" id="trayPopup" role="menu" aria-hidden="true">
+      <button id="spinBtn" type="button">🌀 Spin</button>
+      <div class="popup-row">
+        <span class="label">🔊 Volume</span>
+        <div class="range-wrap" id="rangeWrap"><!-- slider moved here on mobile --></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="posts" class="posts-container">
+    <div class="posts-title"><h1>Hello World!</h1></div>
+    <a href="https://theinternetisdead.org/who"><img src="/images/face.png" alt="Face" class="face-img"></a>
+    <div class="posts-title"><h1>WEBMASTER POSTS:</h1></div>
+  </div>
+
+  <!-- Lightbox modal -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
+      <img id="lightboxImg" class="lightbox-img" alt="">
+      <div class="lightbox-bar">
+        <div id="lightboxTitle" class="lightbox-title"></div>
+        <div class="lightbox-actions">
+          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
+          <button id="lightboxClose" class="btn" type="button">✕ Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <!-- ===== JS ===== -->
 <script>
   /* viewport shim for mobile 100vh weirdness */
@@ -336,6 +319,7 @@ input[type="range"].vol::-moz-range-thumb {
 
   /* ----- Audio: toggle + volume ----- */
   const audio = document.getElementById('bgAudio');
+  const menuSoundsBtn = document.getElementById('menuSounds');
   const volSlider = document.getElementById('volumeSlider');
   const volIcon = document.getElementById('volIcon');
   const tray = document.getElementById('tray');
@@ -367,14 +351,17 @@ input[type="range"].vol::-moz-range-thumb {
     try {
       if (audio.paused) {
         await audio.play();
+        menuSoundsBtn.textContent = '🔊 Sounds: On';
       } else {
         audio.pause();
+        menuSoundsBtn.textContent = '🔇 Sounds: Off';
       }
     } catch (err) {
       console.warn('Audio toggle blocked until user gesture:', err);
     }
   }
 
+  menuSoundsBtn.addEventListener('click', (e) => { e.preventDefault(); toggleAudio(); });
 
   // Quick mute via icon
   volIcon.addEventListener('click', () => {
@@ -424,6 +411,15 @@ input[type="range"].vol::-moz-range-thumb {
   relocateSlider();
   mqMobile.addEventListener('change', relocateSlider);
 
+  // Clock/spiral click behavior: mobile opens popup; desktop spins
+  clock.addEventListener('click', () => {
+    if (mqMobile.matches) {
+      toggleTrayPopup();
+    } else {
+      doABarrelRoll();
+    }
+  });
+
   // Spin button inside popup
   spinBtn.addEventListener('click', () => {
     doABarrelRoll();
@@ -460,112 +456,12 @@ input[type="range"].vol::-moz-range-thumb {
         } catch (err) { console.warn("Skipping invalid file:", file, err); }
       }
     } catch (err) { console.error("Error loading posts:", err); }
-  }</script>
+  }
+</script>
+
 <footer class="footer-glitch">
   Thomas Harrison - theinternetisdead.org - Copyright 2025
 </footer>
-<script src="/js/notifications.js"></script>
-<script>
-  const audio = document.getElementById('bgAudio');
-  const volSlider = document.getElementById('volumeSlider');
-  const volIcon = document.getElementById('volIcon');
-  const toggleSoundsBtn = document.getElementById('toggleSoundsBtn');
-
-  function updateSoundToggleText() {
-    toggleSoundsBtn.textContent = (audio.paused || audio.muted) ? '🔇 Sounds: Off' : '🔊 Sounds: On';
-  }
-
-  async function toggleAudio() {
-    try {
-      if (audio.paused) {
-        await audio.play();
-      } else {
-        audio.pause();
-      }
-      updateSoundToggleText();
-      updateVolIcon(audio.volume);
-    } catch (err) {
-      console.warn('Audio toggle blocked until user gesture:', err);
-    }
-  }
-
-  toggleSoundsBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    await toggleAudio();
-  });
-
-  function updateVolIcon(v) {
-    volIcon.textContent =
-      (v == 0 || audio.muted) ? '🔇' :
-      (v < 0.34) ? '🔈' :
-      (v < 0.67) ? '🔉' : '🔊';
-  }
-
-  audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? volSlider.value);
-  volSlider.value = audio.volume.toString();
-  updateVolIcon(audio.volume);
-  updateSoundToggleText();
-
-  volSlider.addEventListener('input', () => {
-    audio.muted = false;
-    audio.volume = parseFloat(volSlider.value);
-    localStorage.setItem('tiid_vol', audio.volume.toString());
-    updateVolIcon(audio.volume);
-  });
-
-  volIcon.addEventListener('click', () => {
-    if (audio.muted || audio.volume === 0) {
-      audio.muted = false;
-      audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? '0.6') || 0.6;
-      volSlider.value = audio.volume.toString();
-    } else {
-      audio.muted = true;
-      volSlider.value = '0';
-    }
-    updateVolIcon(parseFloat(volSlider.value));
-    updateSoundToggleText();
-  });
-
-  // Clock dropdown logic
-  const clock = document.getElementById('clock');
-  const clockDropdown = document.getElementById('clockDropdown');
-  const notificationsBtn = document.getElementById('notificationsBtn');
-  const spinBtnClock = document.getElementById('spinBtnClock');
-
-  function toggleClockDropdown() {
-    const isVisible = clockDropdown.style.display === 'flex';
-    clockDropdown.style.display = isVisible ? 'none' : 'flex';
-    clockDropdown.setAttribute('aria-hidden', isVisible ? 'true' : 'false');
-    const rect = clock.getBoundingClientRect();
-    clockDropdown.style.top = `${rect.bottom + window.scrollY}px`;
-    clockDropdown.style.right = '8px';
-  }
-
-  clock.addEventListener('click', (e) => {
-    e.stopPropagation();
-    toggleClockDropdown();
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!clockDropdown.contains(e.target) && e.target !== clock) {
-      clockDropdown.style.display = 'none';
-      clockDropdown.setAttribute('aria-hidden', 'true');
-    }
-  });
-
-  notificationsBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    window.location.href = "/notifications";
-  });
-
-  spinBtnClock.addEventListener('click', () => {
-    document.body.classList.add('rotate');
-    setTimeout(() => document.body.classList.remove('rotate'), 1000);
-    clockDropdown.style.display = 'none';
-  });
-</script>
-
-
-
+  <script src="/js/notifications.js"></script>
 </body>
 </html>
