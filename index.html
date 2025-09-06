@@ -180,6 +180,8 @@ input[type="range"].vol::-moz-range-thumb {
         <a href="/games" target="_blank">🎲 Games</a>
         <!-- Sounds toggles audio -->
         <button id="menuSounds" type="button">🔊 Sounds: Off</button>
+        <!-- Notifications moved here for mobile + desktop -->
+        <a href="#" id="menuNotifications" class="notifications-link" style="text-decoration:none; color:var(--accent); font-weight:bold;">📜 Notifications</a>
       </div>
     </div>
 
@@ -192,10 +194,9 @@ input[type="range"].vol::-moz-range-thumb {
       <input id="volumeSlider" class="vol" type="range" min="0" max="1" step="0.01" value="0.6" aria-label="Volume">
     </div>
 
-    
-<a href="#" class="notifications-link" style="text-decoration: none; color: var(--accent); font-weight: bold;">Notifications 📜</a>
-<div class="clock" id="clock">--:-- 🌀</div>
+    <!-- Removed the stray Notifications link that was next to the clock -->
 
+    <div class="clock" id="clock">--:-- 🌀</div>
 
     <!-- Mobile tray popup (top-right) -->
     <div class="tray-popup" id="trayPopup" role="menu" aria-hidden="true">
@@ -251,7 +252,10 @@ input[type="range"].vol::-moz-range-thumb {
   setInterval(updateClockText, 1000); updateClockText();
 
   /* menus */
-  function toggleMenu(){ const menu = document.getElementById('menuPopup'); menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex'; }
+  function toggleMenu(){
+    const menu = document.getElementById('menuPopup');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+  }
   document.addEventListener('click',(e)=>{
     const m=document.getElementById('menuPopup');
     const b=document.querySelector('.menu-button');
@@ -263,7 +267,7 @@ input[type="range"].vol::-moz-range-thumb {
 
   function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
 
-  /* timezone for post timestamps if needed */
+  /* timezone for post timestamps */
   const tz = 'America/Toronto';
   const fmt = new Intl.DateTimeFormat('en-CA', {
     year: 'numeric', month: 'short', day: '2-digit',
@@ -457,6 +461,31 @@ input[type="range"].vol::-moz-range-thumb {
       }
     } catch (err) { console.error("Error loading posts:", err); }
   }
+
+  /* ===== Notifications link handler (mobile-safe) ===== */
+  (function initNotificationsLink(){
+    const notif = document.getElementById('menuNotifications');
+    if (!notif) return;
+    notif.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Close menu on mobile after tap
+      const menu = document.getElementById('menuPopup');
+      if (menu) menu.style.display = 'none';
+      // Try any site-provided hooks first
+      if (typeof window.tiidRequestNotifications === 'function') {
+        window.tiidRequestNotifications();
+        return;
+      }
+      if (typeof window.requestNotificationPermission === 'function') {
+        window.requestNotificationPermission();
+        return;
+      }
+      // Fallback to browser API
+      if ('Notification' in window && Notification.requestPermission) {
+        Notification.requestPermission().catch(()=>{});
+      }
+    });
+  })();
 </script>
 
 <footer class="footer-glitch">
