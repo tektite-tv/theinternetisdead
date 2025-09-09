@@ -1,1 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>theinternetisdead.org 🕷️ Cold Void</title>
+  <link rel="icon" href="/images/internet-rip.png" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+/* ===== Theme & reset ===== */
+:root { --accent:#00ff99; --accent-soft:#00ff9977; }
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
+html, body { height:100%; background:#000; color:var(--accent); transition:transform 1s ease-in-out; }
+body { overflow:auto; }
 
+/* ===== Animated desktop backdrop ===== */
+.desktop {
+  position: fixed; top: 40px; bottom: 0; left: 0; right: 0;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
+    radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
+    linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
+  background-size: auto, 100% 100%, 100% 100%;
+  --scan-speed: 22s;
+  animation: scanScroll var(--scan-speed) linear infinite;
+}
+@keyframes scanScroll { from { background-position: 0 0,0 0,0 0; } to { background-position: 800px 800px,0 0,0 0; } }
+.rotate { transform: rotate(360deg); }
+
+/* ===== Taskbar ===== */
+.taskbar {
+  position: sticky; top: 0; left: 0; width: 100%; height: 40px;
+  background: linear-gradient(to bottom, #444, #222);
+  border-bottom: 2px solid var(--accent);
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent);
+}
+.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer; }
+.menu-button:active { transform: translateY(1px); }
+.menu-popup, .tray-popup {
+  position: absolute; top: 42px; background: #111; border: 2px outset var(--accent);
+  box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; width: 220px;
+}
+.menu-popup { left: 8px; }
+.menu-popup a, .menu-popup button, .tray-popup button, .tray-popup label {
+  color: var(--accent); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--accent);
+  background: transparent; text-align: left; cursor: pointer; font: inherit;
+}
+.menu-popup a:hover, .menu-popup button:hover, .tray-popup button:hover { background: #222; }
+.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
+.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
+.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
+.taskbtn.active { outline: 1px solid var(--accent); }
+.taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
+
+/* ===== System tray (volume) ===== */
+.tray { display:flex; align-items:center; gap:6px; }
+.tray .vol-icon { font-size:14px; line-height:1; }
+input[type="range"].vol {
+  -webkit-appearance: none; appearance: none;
+  height: 6px; width: 120px; background: #0b0b0b; border: 2px inset var(--accent); border-radius: 6px;
+}
+input[type="range"].vol::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; background: var(--accent); border: 1px solid #00331a; border-radius: 50%;
+  cursor: pointer; box-shadow: 0 0 6px var(--accent-soft);
+}
+input[type="range"].vol::-moz-range-thumb {
+  width: 14px; height: 14px; background: var(--accent); border: 1px solid #00331a; border-radius: 50%; cursor: pointer;
+  box-shadow: 0 0 6px var(--accent-soft);
+}
+
+/* ===== Mobile layout & tray popup ===== */
+@media (max-width: 640px) {
+  html, body { height: auto; }
+  .desktop { display: block; top: 44px; opacity: 0.55; --scan-speed: 36s; }
+  .taskbar { height: 44px; padding: 0 10px; }
+  .taskbar-title { font-size: 12px; padding: 0 4px; }
+  .menu-button { padding: 6px 10px; }
+  .clock { padding: 2px 6px; min-width: 52px; font-size: 0.75rem; border-width: 1px; flex-shrink: 0; }
+  .tray-popup { right: 8px; left: auto; }
+  .tray-popup .popup-row { padding: 12px; display: flex; align-items: center; gap: 10px; }
+  .tray-popup .popup-row .label { flex: 0 0 auto; }
+  .tray-popup .popup-row .range-wrap { flex: 1 1 auto; }
+  .tray-popup input[type="range"].vol { width: 100%; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .desktop { animation: none; background-position: 0 0,0 0,0 0; }
+}
+  </style>
+</head>
+<body>
+  <!-- Background audio -->
+  <audio id="bgAudio" src="/sounds/harmony.mp3" preload="auto" loop></audio>
+
+  <div class="desktop" id="desktop" aria-hidden="false"></div>
+
+  <div class="taskbar">
+    <div class="menu-area">
+      <div class="menu-button" onclick="toggleMenu()">Menu</div>
+      <div class="menu-popup" id="menuPopup">
+        <a href="/" target="_blank">🏠 Home</a>
+        <a href="/images" target="_blank">🖼️ Images</a>
+        <a href="/videos" target="_blank">📺 Videos</a>
+        <a href="/camera" target="_blank">📷 Camera</a>
+        <a href="/games" target="_blank">🎲 Games</a>
+        <button id="menuSounds" type="button">🔊 Sounds: Off</button>
+      </div>
+    </div>
+
+    <div class="taskbar-title" title="You may never leave.">theinternetisdead.org 🕷️ Cold Void</div>
+    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
+
+    <div class="tray" id="tray" title="Volume">
+      <span class="vol-icon" id="volIcon" aria-hidden="true">🔈</span>
+      <input id="volumeSlider" class="vol" type="range" min="0" max="1" step="0.01" value="0.6" aria-label="Volume">
+    </div>
+
+    <div class="clock" id="clock">--:-- 🌀</div>
+
+    <div class="tray-popup" id="trayPopup" role="menu" aria-hidden="true">
+      <button id="spinBtn" type="button">🌀 Spin</button>
+      <div class="popup-row">
+        <span class="label">🔊 Volume</span>
+        <div class="range-wrap" id="rangeWrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Just the iframe -->
+  <div style="position:relative; z-index: 2; padding-top: 0;">
+  <iframe
+    src="https://coldvoid.com/"
+    width="100%"
+    style="border:none; display:block; margin:0; padding:0; min-height: calc(100vh - 40px);"
+    referrerpolicy="no-referrer"
+    loading="eager"
+    allow="fullscreen; autoplay; xr-spatial-tracking"
+  ></iframe>
+</div>
+
+<!-- ===== JS ===== -->
+<script>
+  function setVhUnit() {
+    document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+  }
+  setVhUnit();
+  window.addEventListener('resize', setVhUnit, { passive: true });
+  window.addEventListener('orientationchange', setVhUnit, { passive: true });
+
+  function updateClockText() {
+    const clock = document.getElementById('clock');
+    const now = new Date();
+    let h = now.getHours();
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    clock.innerHTML = `${h}:${m} 🌀`;
+    clock.title = `${h}:${m} ${ampm}`;
+  }
+  setInterval(updateClockText, 1000); updateClockText();
+
+  function toggleMenu(){ 
+    const menu = document.getElementById('menuPopup'); 
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex'; 
+  }
+  document.addEventListener('click',(e)=>{
+    const m=document.getElementById('menuPopup');
+    const b=document.querySelector('.menu-button');
+    const tp=document.getElementById('trayPopup');
+    const clock=document.getElementById('clock');
+    if(m && b && !m.contains(e.target) && !b.contains(e.target)) m.style.display='none';
+    if(tp && !tp.contains(e.target) && e.target !== clock) closeTrayPopup();
+  });
+
+  function doABarrelRoll(){ 
+    document.body.classList.add('rotate'); 
+    setTimeout(()=>document.body.classList.remove('rotate'),1000); 
+  }
+
+  const audio = document.getElementById('bgAudio');
+  const menuSoundsBtn = document.getElementById('menuSounds');
+  const volSlider = document.getElementById('volumeSlider');
+  const volIcon = document.getElementById('volIcon');
+  const tray = document.getElementById('tray');
+  const trayPopup = document.getElementById('trayPopup');
+  const rangeWrap = document.getElementById('rangeWrap');
+  const spinBtn = document.getElementById('spinBtn');
+  const clock = document.getElementById('clock');
+
+  audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? volSlider.value);
+  volSlider.value = audio.volume.toString();
+
+  function updateVolIcon(v){
+    if (v == 0 || audio.muted) volIcon.textContent = '🔇';
+    else if (v < 0.34) volIcon.textContent = '🔈';
+    else if (v < 0.67) volIcon.textContent = '🔉';
+    else volIcon.textContent = '🔊';
+  }
+  updateVolIcon(audio.volume);
+
+  volSlider.addEventListener('input', () => {
+    audio.muted = false;
+    audio.volume = parseFloat(volSlider.value);
+    localStorage.setItem('tiid_vol', audio.volume.toString());
+    updateVolIcon(audio.volume);
+  });
+
+  async function toggleAudio() {
+    try {
+      if (audio.paused) {
+        await audio.play();
+        menuSoundsBtn.textContent = '🔊 Sounds: On';
+      } else {
+        audio.pause();
+        menuSoundsBtn.textContent = '🔇 Sounds: Off';
+      }
+    } catch (err) {
+      console.warn('Audio toggle blocked until user gesture:', err);
+    }
+  }
+
+  menuSoundsBtn.addEventListener('click', (e) => { e.preventDefault(); toggleAudio(); });
+
+  volIcon.addEventListener('click', () => {
+    if (audio.muted || audio.volume === 0) {
+      audio.muted = false;
+      audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? '0.6') || 0.6;
+      volSlider.value = audio.volume.toString();
+    } else {
+      audio.muted = true;
+      volSlider.value = '0';
+    }
+    updateVolIcon(parseFloat(volSlider.value));
+  });
+
+  const mqMobile = window.matchMedia('(max-width: 640px)');
+  function openTrayPopup(){
+    trayPopup.style.display = 'flex';
+    trayPopup.setAttribute('aria-hidden','false');
+  }
+  function closeTrayPopup(){
+    trayPopup.style.display = 'none';
+    trayPopup.setAttribute('aria-hidden','true');
+  }
+  function toggleTrayPopup(){
+    if (trayPopup.style.display === 'flex') closeTrayPopup(); else openTrayPopup();
+  }
+
+  function relocateSlider(){
+    if (mqMobile.matches) {
+      if (!rangeWrap.contains(volSlider)) {
+        rangeWrap.appendChild(volSlider);
+      }
+      tray.style.gap = '6px';
+    } else {
+      if (!tray.contains(volSlider)) {
+        tray.appendChild(volSlider);
+      }
+      closeTrayPopup();
+    }
+  }
+  relocateSlider();
+  mqMobile.addEventListener('change', relocateSlider);
+
+  clock.addEventListener('click', () => {
+    if (mqMobile.matches) {
+      toggleTrayPopup();
+    } else {
+      doABarrelRoll();
+    }
+  });
+
+  spinBtn.addEventListener('click', () => {
+    doABarrelRoll();
+    closeTrayPopup();
+  });
+</script>
+</body>
+</html>
