@@ -1,2 +1,0 @@
-# I made this site using ChatGPT if that isn't already obvious.
-I told it from the get go I wanted the site to have a Windows 95 taskbar style top bar with a Start menu style button for navigation, and a system tray with a clock. I added a spiral emoji to the clock to make the entire site do a barrel roll because why not? It's my site I can do what I want thats the beauty of the internet you can pour your entire soul into a website and no one will ever see it, thank you, or tell you you're not crazy. You'll be lucky if someone calls it "neat" which I made a whole zine about.
