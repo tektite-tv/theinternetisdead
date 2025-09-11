@@ -1,496 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>theinternetisdead.org 🏠 Home</title>
-  <link rel="icon" href="/images/internet-rip.png" type="image/png">
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>theinternetisdead.org - Home</title>
   <style>
-/* ===== Theme & reset ===== */
-:root { --accent:#00ff99; --accent-soft:#00ff9977; }
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Courier New',monospace; }
-html, body { height:100%; background:#000; color:var(--accent); transition:transform 1s ease-in-out; }
-body { overflow:auto; }
-
-/* ===== Animated desktop backdrop ===== */
-.desktop {
-  position: fixed; top: 40px; bottom: 0; left: 0; right: 0;
-  z-index: 0;
-  background:
-    repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
-    radial-gradient(1200px 1200px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
-    linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
-  background-size: auto, 100% 100%, 100% 100%;
-  --scan-speed: 22s;
-  animation: scanScroll var(--scan-speed) linear infinite;
-}
-@keyframes scanScroll { from { background-position: 0 0,0 0,0 0; } to { background-position: 800px 800px,0 0,0 0; } }
-.rotate { transform: rotate(360deg); }
-
-/* ===== Taskbar ===== */
-.taskbar {
-  position: sticky; top: 0; left: 0; width: 100%; height: 40px;
-  background: linear-gradient(to bottom, #444, #222);
-  border-bottom: 2px solid var(--accent);
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 8px; z-index: 1000; text-shadow: 1px 1px #000; color: var(--accent);
-}
-.menu-button { background: linear-gradient(to bottom, #333, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 12px; text-shadow: 1px 1px #000; cursor: pointer; }
-.menu-button:active { transform: translateY(1px); }
-.menu-popup, .tray-popup {
-  position: absolute; top: 42px; background: #111; border: 2px outset var(--accent);
-  box-shadow: 0 0 5px var(--accent-soft); display: none; flex-direction: column; z-index: 1001; width: 220px;
-}
-.menu-popup { left: 8px; }
-.menu-popup a, .menu-popup button, .tray-popup button, .tray-popup label {
-  color: var(--accent); padding: 12px; text-decoration: none; border-bottom: 1px solid var(--accent);
-  background: transparent; text-align: left; cursor: pointer; font: inherit;
-}
-.menu-popup a:hover, .menu-popup button:hover, .tray-popup button:hover { background: #222; }
-.clock { background: #111; padding: 4px 10px; border: 2px inset var(--accent); color: var(--accent); text-shadow: 1px 1px #000; cursor: pointer; }
-.task-buttons { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; flex: 1; }
-.taskbtn { background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; white-space: nowrap; cursor: pointer; text-shadow: 1px 1px #000; }
-.taskbtn.active { outline: 1px solid var(--accent); }
-.taskbar-title { flex: 1; text-align: left; font-weight: 700; letter-spacing: 0.5px; }
-
-/* ===== System tray (volume) ===== */
-.tray { display:flex; align-items:center; gap:6px; }
-.tray .vol-icon { font-size:14px; line-height:1; }
-input[type="range"].vol {
-  -webkit-appearance: none; appearance: none;
-  height: 6px; width: 120px; background: #0b0b0b; border: 2px inset var(--accent); border-radius: 6px;
-}
-input[type="range"].vol::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 14px; height: 14px; background: var(--accent); border: 1px solid #00331a; border-radius: 50%;
-  cursor: pointer; box-shadow: 0 0 6px var(--accent-soft);
-}
-input[type="range"].vol::-moz-range-thumb {
-  width: 14px; height: 14px; background: var(--accent); border: 1px solid #00331a; border-radius: 50%; cursor: pointer;
-  box-shadow: 0 0 6px var(--accent-soft);
-}
-
-.notifications-link {
-  margin-right: 10px;
-  padding: 4px 10px;
-  border: 2px inset var(--accent);
-  background: #111;
-  text-shadow: 1px 1px #000;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.notifications-link:hover {
-  background: #222;
-}
-
-/* ===== Posts container ===== */
-.posts-container { display:block; position: relative; z-index: 1; margin-top: 20px; padding: 16px; max-width: 960px; width: 100%; margin-left: auto; margin-right: auto; background-color:rgba(85, 0, 151, 0.3); }
-.posts-title h1 { display:block; text-align:center; padding:10px; text-decoration:underline; color: #FF0040;}
-
-/* Face image above posts */
-.face-img { display:block; margin: 0 auto 0 auto; width: 20%; border-radius: 50%; border: 2px solid var(--accent); }
-    
-.post { background: #111; border: 2px solid var(--accent); margin-bottom: 20px; padding: 16px; box-shadow: 0 0 8px var(--accent-soft); border-radius: 8px; overflow-wrap: anywhere; }
-.post h1, .post h2, .post h3 { color: #FF0040; line-height: 1.2; }
-.post p, .post li { line-height: 1.6; color: var(--accent); }
-
-/* Timestamp */
-.post-meta { font-size: 0.85rem; color: #b7ffe6; opacity: 0.95; margin-bottom: 10px; border-bottom: 1px dashed #00ff9955; padding-bottom: 8px; }
-
-/* Media */
-.post img, .post video, .post iframe { max-width: 50%; height: auto; display: block; margin: 12px auto; border: 1px solid var(--accent); }
-
-/* Code blocks */
-.post pre { overflow-x: auto; padding: 12px; background: #0b0b0b; border: 1px dashed var(--accent); border-radius: 6px; }
-.post code { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Courier New',monospace; }
-
-/* ===== Lightbox (fully responsive) ===== */
-.lightbox { position: fixed; inset: 0; display: none; place-items: center; background: rgba(0,0,0,0.88); z-index: 2000;
-  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
-  height: 100dvh; height: calc(var(--vh, 1vh) * 100);
-}
-.lightbox.open { display: grid; }
-.lightbox-inner { display: grid; grid-template-rows: 1fr auto; gap: 10px; width: 100%; max-width: 100vw; max-height: 100%; overflow: hidden; }
-.lightbox-img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; background: #000; border: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent-soft); box-sizing: border-box; }
-.lightbox-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.lightbox-title { flex: 1 1 auto; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b7ffe6; font-size: 0.95rem; opacity: 0.95; }
-.lightbox-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.lightbox .btn { cursor: pointer; background: linear-gradient(to bottom, #2a2a2a, #111); border: 2px outset var(--accent); color: var(--accent); padding: 6px 10px; font-size: 12px; text-shadow: 1px 1px #000; }
-
-/* ===== Mobile layout & tray popup ===== */
-@media (max-width: 640px) {
-  html, body { height: auto; }
-  .desktop { display: block; top: 44px; opacity: 0.55; --scan-speed: 36s;
-    background:
-      repeating-linear-gradient(135deg, rgba(0,255,153,0.10) 0px, rgba(0,255,153,0.10) 2px, rgba(0,0,0,0.0) 2px, rgba(0,0,0,0.0) 6px),
-      radial-gradient(900px 900px at 0% 0%, rgba(0,255,153,0.12) 0%, rgba(0,255,153,0.05) 30%, rgba(0,0,0,0.0) 60%),
-      linear-gradient(135deg, #000 0%, #141414 50%, #000 100%);
-    background-size: auto, 100% 100%, 100% 100%;
-    transform: translateZ(0);
-  }
-  .taskbar { height: 44px; padding: 0 10px; }
-  .taskbar-title { font-size: 12px; padding: 0 4px; }
-  .menu-button { padding: 6px 10px; }
-  .clock { padding: 2px 6px; min-width: 52px; font-size: 0.75rem; border-width: 1px; flex-shrink: 0; }
-  .posts-container { margin-top: 56px; padding: 12px; max-width: 720px; }
-  .post { padding: 14px; }
-  .post img, .post video, .post iframe { max-width: 100%; }
-
-  /* Tray popup sits at top-right */
-  .tray-popup { right: 8px; left: auto; }
-  .tray-popup .popup-row { padding: 12px; display: flex; align-items: center; gap: 10px; }
-  .tray-popup .popup-row .label { flex: 0 0 auto; }
-  .tray-popup .popup-row .range-wrap { flex: 1 1 auto; }
-  .tray-popup input[type="range"].vol { width: 100%; }
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .desktop { animation: none; background-position: 0 0,0 0,0 0; }
-}
-
-.footer-glitch {
-  position: relative; z-index: 2; margin-top: 40px; padding: 16px; text-align: center; font-size: 14px; color: #00ff99;
-  background: linear-gradient(to right, #000, #111, #000); border-top: 2px solid var(--accent);
-  text-shadow: 0 0 4px #00ff99, 0 0 8px #ff00ff, 0 0 12px #00ffff; animation: glitch-flicker 2.4s infinite;
-}
-@keyframes glitch-flicker {
-  0%, 100% { opacity: 0.95; transform: translate(0, 0); }
-  20% { opacity: 1; transform: translate(-1px, 0); }
-  40% { opacity: 0.9; transform: translate(1px, 0); }
-  60% { opacity: 1; transform: translate(0, -1px); }
-  80% { opacity: 0.95; transform: translate(0, 1px); }
-}
+    html, body { height: 100%; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #000;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      color: white;
+    }
+    canvas#grid {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      filter: contrast(115%) saturate(115%);
+      z-index: 0;
+    }
+    .grain {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: .3;
+      mix-blend-mode: overlay;
+      z-index: 0;
+    }
+    .main-content {
+      position: relative;
+      z-index: 1;
+      padding: 2rem;
+      text-align: center;
+    }
+    .main-content h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    .main-content p {
+      max-width: 600px;
+      margin: 0 auto 2rem auto;
+    }
+    .main-content button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      cursor: pointer;
+    }
+    .main-content button:hover {
+      background: rgba(255,255,255,0.35);
+    }
   </style>
 </head>
 <body>
-  <!-- Background audio -->
-  <audio id="bgAudio" src="/sounds/harmony.mp3" preload="auto" loop></audio>
+  <canvas id="grid" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
 
-  <div class="desktop" id="desktop" aria-hidden="false"></div>
-
-  <div class="taskbar">
-    <div class="menu-area">
-      <div class="menu-button" onclick="toggleMenu()">Menu</div>
-      <div class="menu-popup" id="menuPopup">
-        <a href="/" target="_blank">🏠 Home</a>
-        <a href="/images" target="_blank">🖼️ Images</a>
-        <a href="/videos" target="_blank">📺 Videos</a>
-        <a href="/camera" target="_blank">📷 Camera</a>
-        <a href="/games" target="_blank">🎲 Games</a>
-        <!-- Sounds toggles audio -->
-        <button id="menuSounds" type="button">🔊 Sounds: Off</button>
-        <!-- Notifications moved here for mobile + desktop -->
-        <a href="#" id="menuNotifications" class="notifications-link" style="text-decoration:none; color:var(--accent); font-weight:bold;">📜 Notifications</a>
-      </div>
-    </div>
-
-    <div class="taskbar-title" title="You may never leave.">theinternetisdead.org 🏠 Home</div>
-    <div class="task-buttons" id="taskButtons" aria-label="Windows"></div>
-
-    <!-- System tray (desktop shows slider here; mobile moves it into popup) -->
-    <div class="tray" id="tray" title="Volume">
-      <span class="vol-icon" id="volIcon" aria-hidden="true">🔈</span>
-      <input id="volumeSlider" class="vol" type="range" min="0" max="1" step="0.01" value="0.6" aria-label="Volume">
-    </div>
-
-    <!-- Removed the stray Notifications link that was next to the clock -->
-
-    <div class="clock" id="clock">--:-- 🌀</div>
-
-    <!-- Mobile tray popup (top-right) -->
-    <div class="tray-popup" id="trayPopup" role="menu" aria-hidden="true">
-      <button id="spinBtn" type="button">🌀 Spin</button>
-      <div class="popup-row">
-        <span class="label">🔊 Volume</span>
-        <div class="range-wrap" id="rangeWrap"><!-- slider moved here on mobile --></div>
-      </div>
-    </div>
+  <div class="main-content">
+    <h1>Welcome to My Site</h1>
+    <p>This text floats above the trippy RGB hex background. You can replace this with anything you want — navigation, forms, videos, whatever.</p>
+    <button>Click me</button>
   </div>
 
-  <div id="posts" class="posts-container">
-    <div class="posts-title"><h1>Hello World!</h1></div>
-    <a href="https://theinternetisdead.org/who"><img src="/images/face.png" alt="Face" class="face-img"></a>
-    <div class="posts-title"><h1>WEBMASTER POSTS:</h1></div>
-  </div>
+  <script>
+    const DPR = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    const canvas = document.getElementById('grid');
+    const ctx = canvas.getContext('2d');
+    let W = 0, H = 0;
+    let hexR = 10;
+    let points = [];
+    let t = 0;
+    const timeScale = 0.00035;
+    const fieldScale = 0.013;
+    const pointer = { x: 0, y: 0, active: false };
 
-  <!-- Lightbox modal -->
-  <div id="lightbox" class="lightbox" aria-hidden="true">
-    <div class="lightbox-inner" role="dialog" aria-modal="true" aria-label="Image preview">
-      <img id="lightboxImg" class="lightbox-img" alt="">
-      <div class="lightbox-bar">
-        <div id="lightboxTitle" class="lightbox-title"></div>
-        <div class="lightbox-actions">
-          <a id="lightboxDownload" class="btn" download>⬇ Download</a>
-          <button id="lightboxClose" class="btn" type="button">✕ Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-<!-- ===== JS ===== -->
-<script>
-  /* viewport shim for mobile 100vh weirdness */
-  function setVhUnit() {
-    document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-  }
-  setVhUnit();
-  window.addEventListener('resize', setVhUnit, { passive: true });
-  window.addEventListener('orientationchange', setVhUnit, { passive: true });
-
-  /* clock display */
-  function updateClockText() {
-    const clock = document.getElementById('clock');
-    const now = new Date();
-    let h = now.getHours();
-    const m = now.getMinutes().toString().padStart(2, '0');
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    clock.innerHTML = `${h}:${m} 🌀`;
-    clock.title = `${h}:${m} ${ampm}`;
-  }
-  setInterval(updateClockText, 1000); updateClockText();
-
-  /* menus */
-  function toggleMenu(){
-    const menu = document.getElementById('menuPopup');
-    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-  }
-  document.addEventListener('click',(e)=>{
-    const m=document.getElementById('menuPopup');
-    const b=document.querySelector('.menu-button');
-    const tp=document.getElementById('trayPopup');
-    const clock=document.getElementById('clock');
-    if(m && b && !m.contains(e.target) && !b.contains(e.target)) m.style.display='none';
-    if(tp && !tp.contains(e.target) && e.target !== clock) closeTrayPopup();
-  });
-
-  function doABarrelRoll(){ document.body.classList.add('rotate'); setTimeout(()=>document.body.classList.remove('rotate'),1000); }
-
-  /* timezone for post timestamps */
-  const tz = 'America/Toronto';
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric', month: 'short', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz
-  });
-
-  /* Lightbox helpers */
-  const lb = {
-    root: null, img: null, title: null, dl: null, closeBtn: null,
-    open(src, alt, filename){
-      this.img.src = src;
-      this.img.alt = alt || '';
-      this.title.textContent = alt || filename || src.split('/').pop();
-      this.dl.href = src;
-      this.dl.download = filename || src.split('/').pop();
-      this.root.classList.add('open');
-      this.root.setAttribute('aria-hidden','false');
-      document.addEventListener('keydown', escClose);
-    },
-    close(){
-      this.root.classList.remove('open');
-      this.root.setAttribute('aria-hidden','true');
-      this.img.src = '';
-      document.removeEventListener('keydown', escClose);
+    function palette(v) {
+      const u = (v + 1) * 0.5;
+      if (u < 0.33) return 'rgba(255,0,0,0.8)';
+      else if (u < 0.66) return 'rgba(0,255,0,0.8)';
+      else return 'rgba(0,0,255,0.8)';
     }
-  };
-  function escClose(e){ if(e.key === 'Escape') lb.close(); }
-  function initLightbox(){
-    lb.root = document.getElementById('lightbox');
-    lb.img = document.getElementById('lightboxImg');
-    lb.title = document.getElementById('lightboxTitle');
-    lb.dl = document.getElementById('lightboxDownload');
-    lb.closeBtn = document.getElementById('lightboxClose');
-    lb.root.addEventListener('click', (e)=>{ if(e.target === lb.root) lb.close(); });
-    lb.closeBtn.addEventListener('click', ()=> lb.close());
-  }
 
-  /* Enhance images: add Expand + Download controls */
-  function enhancePostMedia(scope){
-    const imgs = scope.querySelectorAll('img');
-    imgs.forEach(img => {
-      if (img.closest('.media-wrap')) return;
-      const wrapper = document.createElement('div'); wrapper.className = 'media-wrap';
-      const actions = document.createElement('div'); actions.className = 'media-actions';
-      const expandBtn = document.createElement('button'); expandBtn.className = 'btn'; expandBtn.type='button'; expandBtn.textContent='🔍 Expand';
-      const downloadLink = document.createElement('a'); downloadLink.className='btn'; downloadLink.textContent='⬇ Download'; downloadLink.href=img.src; downloadLink.setAttribute('download', (img.alt || img.src.split('/').pop() || 'image').replace(/\s+/g,'_'));
-      expandBtn.addEventListener('click', ()=>{ const nameGuess = img.getAttribute('alt') || img.src.split('/').pop(); lb.open(img.src, img.getAttribute('alt'), nameGuess); });
-      img.style.cursor = 'zoom-in'; img.addEventListener('click', ()=> expandBtn.click());
-      actions.appendChild(expandBtn); actions.appendChild(downloadLink);
-      img.parentNode.insertBefore(wrapper, img); wrapper.appendChild(img); wrapper.appendChild(actions);
-    });
-  }
-
-  /* ----- Audio: toggle + volume ----- */
-  const audio = document.getElementById('bgAudio');
-  const menuSoundsBtn = document.getElementById('menuSounds');
-  const volSlider = document.getElementById('volumeSlider');
-  const volIcon = document.getElementById('volIcon');
-  const tray = document.getElementById('tray');
-  const trayPopup = document.getElementById('trayPopup');
-  const rangeWrap = document.getElementById('rangeWrap');
-  const spinBtn = document.getElementById('spinBtn');
-  const clock = document.getElementById('clock');
-
-  // Initial state
-  audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? volSlider.value);
-  volSlider.value = audio.volume.toString();
-
-  function updateVolIcon(v){
-    if (v == 0 || audio.muted) volIcon.textContent = '🔇';
-    else if (v < 0.34) volIcon.textContent = '🔈';
-    else if (v < 0.67) volIcon.textContent = '🔉';
-    else volIcon.textContent = '🔊';
-  }
-  updateVolIcon(audio.volume);
-
-  volSlider.addEventListener('input', () => {
-    audio.muted = false;
-    audio.volume = parseFloat(volSlider.value);
-    localStorage.setItem('tiid_vol', audio.volume.toString());
-    updateVolIcon(audio.volume);
-  });
-
-  async function toggleAudio() {
-    try {
-      if (audio.paused) {
-        await audio.play();
-        menuSoundsBtn.textContent = '🔊 Sounds: On';
-      } else {
-        audio.pause();
-        menuSoundsBtn.textContent = '🔇 Sounds: Off';
-      }
-    } catch (err) {
-      console.warn('Audio toggle blocked until user gesture:', err);
+    function resize() {
+      W = Math.floor(window.innerWidth);
+      H = Math.floor(window.innerHeight);
+      canvas.width = Math.floor(W * DPR);
+      canvas.height = Math.floor(H * DPR);
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      const targetCols = Math.max(24, Math.round(W / 36));
+      hexR = Math.max(6, Math.min(22, Math.round(W / targetCols)));
+      buildGrid();
     }
-  }
 
-  menuSoundsBtn.addEventListener('click', (e) => { e.preventDefault(); toggleAudio(); });
-
-  // Quick mute via icon
-  volIcon.addEventListener('click', () => {
-    if (audio.muted || audio.volume === 0) {
-      audio.muted = false;
-      audio.volume = parseFloat(localStorage.getItem('tiid_vol') ?? '0.6') || 0.6;
-      volSlider.value = audio.volume.toString();
-    } else {
-      audio.muted = true;
-      volSlider.value = '0';
+    function buildGrid() {
+      points.length = 0;
+      const r = hexR;
+      const hexW = r * 2;
+      const hexH = Math.sqrt(3) * r;
+      const margin = Math.max(40, r * 3);
+      for (let y = -margin, row = 0; y < H + margin; y += hexH, row++) {
+        const offsetX = (row % 2) ? hexW * 0.5 : 0;
+        for (let x = -margin + offsetX; x < W + margin; x += hexW) {
+          points.push({ x, y });
+        }
+      }
     }
-    updateVolIcon(parseFloat(volSlider.value));
-  });
 
-  /* ===== Mobile tray popup behavior ===== */
-  const mqMobile = window.matchMedia('(max-width: 640px)');
-
-  function openTrayPopup(){
-    trayPopup.style.display = 'flex';
-    trayPopup.setAttribute('aria-hidden','false');
-  }
-  function closeTrayPopup(){
-    trayPopup.style.display = 'none';
-    trayPopup.setAttribute('aria-hidden','true');
-  }
-  function toggleTrayPopup(){
-    if (trayPopup.style.display === 'flex') closeTrayPopup(); else openTrayPopup();
-  }
-
-  // Move slider between tray and popup based on screen width
-  function relocateSlider(){
-    if (mqMobile.matches) {
-      // move slider into popup
-      if (!rangeWrap.contains(volSlider)) {
-        rangeWrap.appendChild(volSlider);
-      }
-      // hide desktop tray slider but keep icon to indicate mute state
-      tray.style.gap = '6px';
-    } else {
-      // move slider back to tray
-      if (!tray.contains(volSlider)) {
-        tray.appendChild(volSlider);
-      }
-      closeTrayPopup();
+    function setPointer(e) {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = (e.clientX - rect.left);
+      pointer.y = (e.clientY - rect.top);
+      pointer.active = true;
     }
-  }
-  relocateSlider();
-  mqMobile.addEventListener('change', relocateSlider);
+    window.addEventListener('pointermove', setPointer);
+    window.addEventListener('pointerdown', setPointer);
+    window.addEventListener('pointerleave', () => (pointer.active = false));
+    window.addEventListener('blur', () => (pointer.active = false));
 
-  // Clock/spiral click behavior: mobile opens popup; desktop spins
-  clock.addEventListener('click', () => {
-    if (mqMobile.matches) {
-      toggleTrayPopup();
-    } else {
-      doABarrelRoll();
+    let lastTS = 0;
+    function frame(ts) {
+      const dt = Math.min(32, ts - lastTS || 16.7);
+      lastTS = ts;
+      t += dt;
+      draw();
+      requestAnimationFrame(frame);
     }
-  });
 
-  // Spin button inside popup
-  spinBtn.addEventListener('click', () => {
-    doABarrelRoll();
-    closeTrayPopup();
-  });
-
-  /* Lightbox init */
-  initLightbox();
-
-  // bring in marked for markdown parsing, then load posts
-  const script = document.createElement('script');
-  script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
-  script.onload = loadPosts;
-  document.head.appendChild(script);
-
-  async function loadPosts() {
-    const container = document.getElementById('posts');
-    try {
-      const resp = await fetch('/posts/index.json');
-      if (!resp.ok) { console.warn("No index.json found"); return; }
-      const posts = await resp.json(); // [{file, updated}, ...]
-      for (const { file, updated } of posts) {
-        try {
-          const r = await fetch('/posts/' + file, { cache: 'no-cache' });
-          if (!r.ok) continue;
-          const text = (await r.text()).trim();
-          if (!text) continue;
-          const stamp = updated ? `<div class="post-meta">Updated: ${fmt.format(new Date(updated))}</div>` : "";
-          const el = document.createElement('div');
-          el.className = 'post';
-          el.innerHTML = `${stamp}${marked.parse(text)}`;
-          container.appendChild(el);
-          enhancePostMedia(el);
-        } catch (err) { console.warn("Skipping invalid file:", file, err); }
+    function draw() {
+      ctx.fillStyle = 'rgba(5,8,12,0.16)';
+      ctx.fillRect(0, 0, W, H);
+      const rBase = Math.max(1.2, Math.min(3.2, hexR * 0.18));
+      const inflRad = Math.max(W, H) * 0.18;
+      const inflRad2 = inflRad * inflRad;
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+        const n = snoise3(p.x * fieldScale, p.y * fieldScale, t * timeScale);
+        const ang = n * Math.PI * 2;
+        const ox = Math.cos(ang) * hexR * 0.15;
+        const oy = Math.sin(ang) * hexR * 0.15;
+        let x = p.x + ox;
+        let y = p.y + oy;
+        if (pointer.active) {
+          const dx = pointer.x - x;
+          const dy = pointer.y - y;
+          const d2 = dx*dx + dy*dy;
+          if (d2 < inflRad2) {
+            const d = Math.sqrt(d2);
+            const g = 1 - d / inflRad;
+            const pull = g * g * hexR * 0.9;
+            x += (dx / d) * pull;
+            y += (dy / d) * pull;
+          }
+        }
+        let r = rBase + Math.max(0, n) * rBase * 1.4;
+        ctx.fillStyle = palette(n);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
       }
-    } catch (err) { console.error("Error loading posts:", err); }
-  }
+    }
 
-  /* ===== Notifications link handler (mobile-safe) ===== */
-  (function initNotificationsLink(){
-    const notif = document.getElementById('menuNotifications');
-    if (!notif) return;
-    notif.addEventListener('click', (e) => {
-      e.preventDefault();
-      // Close menu on mobile after tap
-      const menu = document.getElementById('menuPopup');
-      if (menu) menu.style.display = 'none';
-      // Try any site-provided hooks first
-      if (typeof window.tiidRequestNotifications === 'function') {
-        window.tiidRequestNotifications();
-        return;
-      }
-      if (typeof window.requestNotificationPermission === 'function') {
-        window.requestNotificationPermission();
-        return;
-      }
-      // Fallback to browser API
-      if ('Notification' in window && Notification.requestPermission) {
-        Notification.requestPermission().catch(()=>{});
-      }
-    });
-  })();
-</script>
+    const grad3 = [ [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1] ];
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    (function(){ let seed = (performance.now() * 1000)|0; function rnd(){ seed ^= seed<<13; seed ^= seed>>>17; seed ^= seed<<5; return (seed>>>0)/4294967296; } for (let i=255;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=p[i]; p[i]=p[j]; p[j]=t; } })();
+    const perm = new Uint8Array(512);
+    const permMod12 = new Uint8Array(512);
+    for (let i = 0; i < 512; i++) { perm[i] = p[i & 255]; permMod12[i] = perm[i] % 12; }
+    function dot(g, x, y, z){ return g[0]*x + g[1]*y + g[2]*z; }
+    function snoise3(xin, yin, zin) {
+      const F3=1/3, G3=1/6; let n0,n1,n2,n3;
+      const s=(xin+yin+zin)*F3; const i=Math.floor(xin+s); const j=Math.floor(yin+s); const k=Math.floor(zin+s);
+      const t=(i+j+k)*G3; const X0=i-t, Y0=j-t, Z0=k-t;
+      const x0=xin-X0, y0=yin-Y0, z0=zin-Z0;
+      let i1,j1,k1,i2,j2,k2;
+      if(x0>=y0){ if(y0>=z0){i1=1;j1=0;k1=0;i2=1;j2=1;k2=0;} else if(x0>=z0){i1=1;j1=0;k1=0;i2=1;j2=0;k2=1;} else {i1=0;j1=0;k1=1;i2=1;j2=0;k2=1;} } else { if(y0<z0){i1=0;j1=0;k1=1;i2=0;j2=1;k2=1;} else if(x0<z0){i1=0;j1=1;k1=0;i2=0;j2=1;k2=1;} else {i1=0;j1=1;k1=0;i2=1;j2=1;k2=0;} }
+      const x1=x0-i1+G3, y1=y0-j1+G3, z1=z0-k1+G3;
+      const x2=x0-i2+2*G3, y2=y0-j2+2*G3, z2=z0-k2+2*G3;
+      const x3=x0-1+3*G3, y3=y0-1+3*G3, z3=z0-1+3*G3;
+      const ii=i&255, jj=j&255, kk=k&255;
+      const gi0=grad3[permMod12[ii+perm[jj+perm[kk]]]];
+      const gi1=grad3[permMod12[ii+i1+perm[jj+j1+perm[kk+k1]]]];
+      const gi2=grad3[permMod12[ii+i2+perm[jj+j2+perm[kk+k2]]]];
+      const gi3=grad3[permMod12[ii+1+perm[jj+1+perm[kk+1]]]];
+      let t0=0.6-x0*x0-y0*y0-z0*z0; if(t0<0)n0=0; else {t0*=t0;n0=t0*t0*dot(gi0,x0,y0,z0);} let t1=0.6-x1*x1-y1*y1-z1*z1; if(t1<0)n1=0; else {t1*=t1;n1=t1*t1*dot(gi1,x1,y1,z1);} let t2=0.6-x2*x2-y2*y2-z2*z2; if(t2<0)n2=0; else {t2*=t2;n2=t2*t2*dot(gi2,x2,y2,z2);} let t3=0.6-x3*x3-y3*y3-z3*z3; if(t3<0)n3=0; else {t3*=t3;n3=t3*t3*dot(gi3,x3,y3,z3);} return 32*(n0+n1+n2+n3);
+    }
 
-<footer class="footer-glitch">
-  Thomas Harrison - theinternetisdead.org - Copyright 2025
-</footer>
-  <script src="/js/notifications.js"></script>
+    resize();
+    window.addEventListener('resize', resize);
+    requestAnimationFrame(frame);
+  </script>
 </body>
 </html>
