@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Scanlines + Moiré + Psychedelic Lava (Mutations)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --period: 4px;              /* spacing between 1px lines */
+      --line-color: hsla(0,0%,100%,0.9);
+      --angle: 0deg;              /* rotation for horizontal grid */
+      --bgx: 0px;                 /* background jitter X */
+      --bgy: 0px;                 /* background jitter Y */
+      --skx: 0deg;                /* meltdown skew X */
+      --sky: 0deg;                /* meltdown skew Y */
+      --sc: 1;                    /* meltdown scale */
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #000;
+      color: #eee;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    .app { position: relative; height: 100%; overflow: hidden; }
+
+    canvas#lava {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      display: block; z-index: 0;
+    }
+
+    .layers {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      pointer-events: none; z-index: 1;
+      transition: filter 80ms linear;
+    }
+    .layers.invert { filter: invert(1); }
+
+    .vertical, .horizontal {
+      background-position: var(--bgx) var(--bgy);
+    }
+
+    .vertical {
+      position: absolute; inset: 0;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          var(--line-color) 0 1px,
+          transparent 1px var(--period)
+        );
+      mix-blend-mode: screen;
+    }
+
+    .horizontal-wrap {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      transform: rotate(var(--angle)) skewX(var(--skx)) skewY(var(--sky)) scale(var(--sc));
+      transform-origin: 50% 50%;
+      will-change: transform;
+    }
+    .horizontal {
+      position: absolute; inset: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          var(--line-color) 0 1px,
+          transparent 1px var(--period)
+        );
+      mix-blend-mode: screen;
+    }
+
+    .controls {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: 16px; background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px; padding: 10px 14px;
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; gap: 10px; z-index: 10; user-select: none;
+      flex-wrap: wrap; max-width: min(94vw, 1200px);
+    }
+    .controls label { font-size: 14px; display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+    .controls input[type="range"] { width: min(40vw, 360px); accent-color: #fff; }
+    .value { font-variant-numeric: tabular-nums; min-width: 62px; text-align: right; opacity: 0.9; }
+
+    .btn {
+      pointer-events: auto;
+      background: rgba(30,30,35,0.8);
+      border: 1px solid rgba(255,255,255,0.25);
+      color: #eee; padding: 6px 10px; border-radius: 10px;
+      font-size: 13px; cursor: pointer;
+      transition: transform .06s ease, background .2s ease, border-color .2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn[aria-pressed="true"] {
+      background: rgba(80,160,255,0.22);
+      border-color: rgba(150,200,255,0.9);
+    }
+    .spacer { flex: 1 0 12px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <canvas id="lava"></canvas>
+
+    <div class="layers" id="layerRoot">
+      <div class="vertical"></div>
+      <div class="horizontal-wrap" id="hwrap">
+        <div class="horizontal"></div>
+      </div>
+    </div>
+
+    <form class="controls" onsubmit="return false">
+      <label for="angle">
+        Rotate:
+        <input id="angle" type="range" min="-45" max="45" step="0.1" value="0" />
+      </label>
+      <div class="value" id="angleVal">0.0°</div>
+      <div class="spacer"></div>
+      <button type="button" class="btn" id="spinOnce">Spin 360°</button>
+      <button type="button" class="btn" id="spinLoop" aria-pressed="false">Spin Loop</button>
+      <button type="button" class="btn" id="pulse" aria-pressed="false">Pulse Lines</button>
+      <button type="button" class="btn" id="strobe" aria-pressed="false">Strobe Glitch</button>
+      <button type="button" class="btn" id="cycle" aria-pressed="false">Cycle Line Color</button>
+      <button type="button" class="btn" id="meltdown" aria-pressed="false">Meltdown Warp</button>
+      <button type="button" class="btn" id="stop">Stop</button>
+    </form>
+  </div>
+
+  <script>
+    // --- Angle control ---
+    const root = document.documentElement;
+    const angleInput = document.getElementById('angle');
+    const angleVal = document.getElementById('angleVal');
+    const layersEl = document.getElementById('layerRoot');
+
+    function setAngle(deg){
+      root.style.setProperty('--angle', deg + 'deg');
+      angleVal.textContent = `${Number(deg).toFixed(1)}°`;
+    }
+    angleInput.addEventListener('input', e => {
+      state.manualAngle = parseFloat(e.target.value);
+      if (!state.spinLoop && !state.spinOnce.active) setAngle(state.manualAngle);
+    });
+    setAngle(angleInput.value);
+
+    // --- Lava lamp background ---
+    const canvas = document.getElementById('lava');
+    const ctx = canvas.getContext('2d');
+    let w, h, t = 0;
+    function resize(){
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function rainbow(x, y, time){
+      const r = Math.sin(0.0008 * x + time) * 127 + 128;
+      const g = Math.sin(0.0008 * y + time + 2) * 127 + 128;
+      const b = Math.sin(0.0008 * (x+y) + time + 4) * 127 + 128;
+      return [r|0,g|0,b|0];
+    }
+
+    // --- Animation state ---
+    const state = {
+      manualAngle: parseFloat(angleInput.value),
+      spinLoop: false,
+      spinSpeed: 12,               // deg/s loop
+      spinOnce: { active:false, start:0, duration:3000, from:0, to:0 },
+
+      pulse: false,
+      basePeriod: 4, minPeriod: 2, maxPeriod: 12, pulseHz: 0.6,
+
+      strobe: false,
+      strobeHz: 7,                 // flashes per second
+      jitter: 0,                   // internal
+
+      cycle: false,
+      hue: 0,                      // 0..360
+      hueSpeed: 40,                // deg per second
+
+      meltdown: false,
+      meltAmpSkew: 10,             // deg
+      meltAmpScale: 0.12,          // +/- around 1
+      meltHz: 0.33
+    };
+
+    // Buttons
+    const el = id => document.getElementById(id);
+    const btnSpinOnce = el('spinOnce');
+    const btnSpinLoop = el('spinLoop');
+    const btnPulse    = el('pulse');
+    const btnStrobe   = el('strobe');
+    const btnCycle    = el('cycle');
+    const btnMeltdown = el('meltdown');
+    const btnStop     = el('stop');
+
+    btnSpinOnce.addEventListener('click', () => {
+      state.spinOnce.active = true;
+      state.spinOnce.start = performance.now();
+      state.spinOnce.from = getCurrentAngle();
+      state.spinOnce.to = state.spinOnce.from + 360;
+    });
+    btnSpinLoop.addEventListener('click', () => {
+      state.spinLoop = !state.spinLoop;
+      btnSpinLoop.setAttribute('aria-pressed', String(state.spinLoop));
+    });
+    btnPulse.addEventListener('click', () => {
+      state.pulse = !state.pulse;
+      btnPulse.setAttribute('aria-pressed', String(state.pulse));
+      if (!state.pulse) root.style.setProperty('--period', state.basePeriod + 'px');
+    });
+    btnStrobe.addEventListener('click', () => {
+      state.strobe = !state.strobe;
+      btnStrobe.setAttribute('aria-pressed', String(state.strobe));
+      if (!state.strobe) {
+        layersEl.classList.remove('invert');
+        root.style.setProperty('--bgx','0px');
+        root.style.setProperty('--bgy','0px');
+      }
+    });
+    btnCycle.addEventListener('click', () => {
+      state.cycle = !state.cycle;
+      btnCycle.setAttribute('aria-pressed', String(state.cycle));
+      if (!state.cycle) root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)');
+    });
+    btnMeltdown.addEventListener('click', () => {
+      state.meltdown = !state.meltdown;
+      btnMeltdown.setAttribute('aria-pressed', String(state.meltdown));
+      if (!state.meltdown){
+        root.style.setProperty('--skx','0deg');
+        root.style.setProperty('--sky','0deg');
+        root.style.setProperty('--sc','1');
+      }
+    });
+    btnStop.addEventListener('click', () => stopAll());
+
+    function stopAll(){
+      state.spinLoop = false;
+      state.spinOnce.active = false;
+      state.pulse = false;
+      state.strobe = false;
+      state.cycle = false;
+      state.meltdown = false;
+      [btnSpinLoop, btnPulse, btnStrobe, btnCycle, btnMeltdown].forEach(b => b.setAttribute('aria-pressed','false'));
+      setAngle(state.manualAngle);
+      root.style.setProperty('--period', state.basePeriod + 'px');
+      root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)');
+      root.style.setProperty('--bgx','0px'); root.style.setProperty('--bgy','0px');
+      root.style.setProperty('--skx','0deg'); root.style.setProperty('--sky','0deg'); root.style.setProperty('--sc','1');
+      layersEl.classList.remove('invert');
+    }
+
+    function getCurrentAngle(){
+      const v = getComputedStyle(root).getPropertyValue('--angle').trim();
+      return parseFloat(v.endsWith('deg') ? v.slice(0,-3) : v);
+    }
+
+    // --- Main RAF ---
+    let last = performance.now();
+    function tick(now){
+      const dt = (now - last) / 1000; // seconds
+      last = now;
+
+      // Spin once easing
+      if (state.spinOnce.active){
+        const p = Math.min(1, (now - state.spinOnce.start) / state.spinOnce.duration);
+        const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2*p + 2, 3) / 2;
+        const a = state.spinOnce.from + (state.spinOnce.to - state.spinOnce.from) * ease;
+        setAngle(a);
+        if (p >= 1) {
+          state.spinOnce.active = false;
+          state.manualAngle = a % 360;
+          angleInput.value = state.manualAngle;
+        }
+      } else if (state.spinLoop){
+        const a = getCurrentAngle() + state.spinSpeed * dt;
+        setAngle(a);
+      }
+
+      // Pulse period
+      if (state.pulse){
+        const omega = 2 * Math.PI * state.pulseHz;
+        const time = now / 1000;
+        const s = (Math.sin(omega * time) + 1) / 2; // 0..1
+        const period = state.minPeriod + s * (state.maxPeriod - state.minPeriod);
+        root.style.setProperty('--period', period.toFixed(2) + 'px');
+      }
+
+      // Strobe + jitter
+      if (state.strobe){
+        // occasional inversion flash
+        const flash = Math.random() < state.strobeHz * dt * 0.5;
+        if (flash) layersEl.classList.toggle('invert');
+        // background jitter
+        state.jitter = (Math.random() - 0.5) * 2; // -1..1
+        root.style.setProperty('--bgx', (state.jitter*6).toFixed(1) + 'px');
+        root.style.setProperty('--bgy', (state.jitter*6).toFixed(1) + 'px');
+        // tiny angle glitch
+        const a = getCurrentAngle();
+        setAngle(a + (Math.random() - 0.5) * 2);
+      }
+
+      // Cycle line color (HSL rainbow)
+      if (state.cycle){
+        state.hue = (state.hue + state.hueSpeed * dt) % 360;
+        const col = `hsla(${state.hue.toFixed(1)}, 95%, 70%, 0.95)`;
+        root.style.setProperty('--line-color', col);
+      }
+
+      // Meltdown warp
+      if (state.meltdown){
+        const tsec = now / 1000;
+        const skx = Math.sin(2*Math.PI*state.meltHz * tsec) * state.meltAmpSkew;
+        const sky = Math.cos(2*Math.PI*state.meltHz * tsec * 0.8) * state.meltAmpSkew;
+        const sc  = 1 + Math.sin(2*Math.PI*state.meltHz * tsec * 1.3) * state.meltAmpScale;
+        root.style.setProperty('--skx', skx.toFixed(2) + 'deg');
+        root.style.setProperty('--sky', sky.toFixed(2) + 'deg');
+        root.style.setProperty('--sc', sc.toFixed(3));
+      }
+
+      // draw lava every frame at half-res for speed
+      const img = ctx.createImageData(w, h);
+      const d = img.data;
+      for(let y=0; y<h; y+=2){
+        for(let x=0; x<w; x+=2){
+          const [r,g,b] = rainbow(x, y, t*0.02);
+          const idx = (y*w + x)*4;
+          d[idx] = r; d[idx+1] = g; d[idx+2] = b; d[idx+3] = 255;
+        }
+      }
+      ctx.putImageData(img,0,0);
+      t++;
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
