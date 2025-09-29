@@ -118,7 +118,6 @@
       color: #fff;
     }
 
-    /* Helper content area so users see the requested title next to Menu */
     .spacer { flex: 1; }
 
     .header-title {
@@ -142,12 +141,55 @@
       user-select: none;
     }
 
+    /* Hero content (on top of stars, below taskbar) */
+    .hero {
+      position: fixed;
+      top: 60px;             /* just below the 40px taskbar with a bit of air */
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      z-index: 1;            /* above starfield, below taskbar/menu */
+    }
+
+    .hero img {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.65);
+      box-shadow: 0 0 0 2px #000, 0 12px 28px rgba(0,0,0,0.55);
+      image-rendering: crisp-edges;
+      background: #111;
+      object-fit: cover;
+    }
+
+    .hero .caption {
+      font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+      font-size: 28px;
+      line-height: 1.1;
+      color: #fff;
+      text-shadow:
+        2px 2px 0 #000,
+        4px 4px 0 #000;
+      letter-spacing: 0.5px;
+      text-align: center;
+      padding: 2px 8px;
+    }
+
+    @media (max-width: 520px) {
+      .hero { top: 56px; }
+      .hero img { width: 140px; height: 140px; }
+      .hero .caption { font-size: 22px; }
+    }
+
     /* Optional: a subtle CRT-ish mask to boost retro vibes */
     .scanline-overlay {
       position: fixed;
       inset: 0;
       pointer-events: none;
-      z-index: 1;
+      z-index: 1; /* sits with hero; pointer-events none so it won't block clicks */
       background: repeating-linear-gradient(
         to bottom,
         rgba(255,255,255,0.03) 0px,
@@ -180,6 +222,12 @@
     <div class="menu-item" role="menuitem" id="toggleTwinkle">✨&nbsp; Toggle Twinkle</div>
     <div class="menu-item" role="menuitem" id="moreStars">🌌&nbsp; More Stars</div>
     <div class="menu-item" role="menuitem" id="lessStars">🕳️&nbsp; Fewer Stars</div>
+  </div>
+
+  <!-- New hero block -->
+  <div class="hero" aria-label="Welcome">
+    <img src="/images/face.png" alt="Site avatar" />
+    <div class="caption">Welcome to theinternetisdead.org</div>
   </div>
 
   <div class="scanline-overlay" aria-hidden="true"></div>
