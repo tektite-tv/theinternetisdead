@@ -258,13 +258,14 @@
       for (const post of posts) {
         const mdText = await fetch(post.file).then(r => r.text());
 
-        // Fix image paths inside markdown without breaking external or absolute URLs
+        const siteRoot = window.location.origin;
+
+        // Fix image paths to always point to your site's root uploads directory
         const fixedMd = mdText.replace(/!\[(.*?)\]\((.*?)\)/g, (m, alt, path) => {
-          if (path.startsWith("http")) return m;  // external image
-          if (path.startsWith("/")) return m;     // already absolute path
+          if (path.startsWith("http")) return m;
+          if (path.startsWith("/")) return m;
           if (path.startsWith("./")) path = path.slice(2);
-          // redirect relative paths to /images/uploads/
-          return `![${alt}](/images/uploads/${path})`;
+          return `![${alt}](${siteRoot}/images/uploads/${path})`;
         });
 
         const html = marked.parse(fixedMd);
