@@ -21,10 +21,12 @@ jobs:
           first=true
           for file in _posts/*.md; do
             [ -e "$file" ] || continue
-            title=$(grep -m 1 '^title:' "$file" | cut -d '"' -f2)
-            date=$(grep -m 1 '^date:' "$file" | awk '{print $2}')
+            # extract and clean title (remove 'title:' and quotes)
+            rawtitle=$(grep -m 1 '^title:' "$file" | sed 's/title:[[:space:]]*//; s/"//g')
+            # extract date (leave as is)
+            date=$(grep -m 1 '^date:' "$file" | sed 's/date:[[:space:]]*//')
             if [ "$first" = true ]; then first=false; else echo "," >> _posts/index.json; fi
-            echo "  {\"title\": \"$title\", \"date\": \"$date\", \"file\": \"$file\"}" >> _posts/index.json
+            echo "  {\"title\": \"${rawtitle}\", \"date\": \"${date}\", \"file\": \"${file}\"}" >> _posts/index.json
           done
           echo "]" >> _posts/index.json
 
