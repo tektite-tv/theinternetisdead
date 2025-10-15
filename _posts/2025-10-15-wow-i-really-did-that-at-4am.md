@@ -1,5 +1,5 @@
 ---
-title: Wow, I really did that at 4am!!
+title: Wow, I really did that at 4am!! OMGWOW
 date: 2025-10-15T21:58:37.145Z
 ---
 I﻿ built this site and photoshopped Hubble Deep Field Imagery into deep fried pixel funkland. Here's that:
