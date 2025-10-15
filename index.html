@@ -30,6 +30,12 @@
     .video a:hover { text-decoration: underline; }
     iframe { width: 100%; aspect-ratio: 16 / 9; border: none; border-radius: 4px; }
 
+    h1 {
+  font-size: 1.8em;
+  text-shadow: 0 0 6px #fff2, 0 0 12px #0ff4;
+  letter-spacing: 1px;
+}
+
     @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -51,16 +57,18 @@
   </header>
 
   <main>
-    <section class="column" id="posts">
-      <h2>Latest Posts</h2>
-      <p>Loading posts...</p>
-    </section>
+  <section class="column" id="posts">
+    <h1 style="text-align:center; color:#ff66cc; margin-bottom:10px;">🌀 The Daily Spiral</h1>
+    <h2>Latest Posts</h2>
+    <p>Loading posts...</p>
+  </section>
 
-    <section class="column" id="youtube">
-      <h2>Latest Videos</h2>
-      <p>Loading videos...</p>
-    </section>
-  </main>
+  <section class="column" id="youtube">
+    <h1 style="text-align:center; color:#66ccff; margin-bottom:10px;">My Latest Broadcast</h1>
+    <h2>Latest Videos</h2>
+    <p>Loading videos...</p>
+  </section>
+</main>
 
   <script>
     async function loadPosts() {
