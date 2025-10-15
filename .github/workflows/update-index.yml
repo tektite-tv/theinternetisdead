@@ -1,4 +1,4 @@
-name: Auto-update _posts/index.json
+name: Auto-update posts/index.json
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # allows committing back to repo
+  contents: write
 
 jobs:
   rebuild-index:
@@ -21,47 +21,42 @@ jobs:
 
       - name: Ensure posts directory exists
         run: |
-          if [ ! -d "_posts" ]; then
-            echo "Creating missing _posts directory..."
-            mkdir _posts
+          if [ ! -d "posts" ]; then
+            echo "Creating missing posts directory..."
+            mkdir posts
           fi
 
       - name: Generate new index.json
         shell: bash
         run: |
           set -e
-          echo "[" > _posts/index.json
+          echo "[" > posts/index.json
           first=true
-          for file in $(find _posts -maxdepth 1 -type f -name "*.md" | sort); do
-            # extract frontmatter
-            title=$(grep -m1 '^title:' "$file" | sed 's/^title:[[:space:]]*//;s/^"//;s/"$//')
-            date=$(grep -m1 '^date:' "$file" | sed 's/^date:[[:space:]]*//;s/^"//;s/"$//')
-            image=$(grep -m1 '^image:' "$file" | sed 's/^image:[[:space:]]*//;s/^"//;s/"$//')
 
-            # default fallback values
-            [ -z "$title" ] && title=$(basename "$file" .md)
-            [ -z "$date" ] && date=$(date -Iseconds)
+          for file in $(find posts -maxdepth 1 -type f -name "*.md" | sort); do
+            title=$(grep -m1 "^title:" "$file" | sed 's/^title:[[:space:]]*//;s/"//g')
+            date=$(grep -m1 "^date:" "$file" | sed 's/^date:[[:space:]]*//;s/"//g')
+            image=$(grep -m1 "^image:" "$file" | sed 's/^image:[[:space:]]*//;s/"//g')
+            filename=$(basename "$file")
 
-            # escape quotes for JSON safety
-            esc_title=$(echo "$title" | sed 's/"/\\"/g')
-            esc_date=$(echo "$date" | sed 's/"/\\"/g')
-            esc_file=$(echo "$file" | sed 's/"/\\"/g')
-            esc_image=$(echo "$image" | sed 's/"/\\"/g')
-
-            # write JSON entry
             if [ "$first" = true ]; then
               first=false
             else
-              echo "," >> _posts/index.json
+              echo "," >> posts/index.json
             fi
 
-            if [ -n "$esc_image" ]; then
-              echo "  {\"title\": \"$esc_title\", \"date\": \"$esc_date\", \"file\": \"$esc_file\", \"image\": \"$esc_image\"}" >> _posts/index.json
-            else
-              echo "  {\"title\": \"$esc_title\", \"date\": \"$esc_date\", \"file\": \"$esc_file\"}" >> _posts/index.json
-            fi
+            echo "  {" >> posts/index.json
+            echo "    \"title\": \"$title\"," >> posts/index.json
+            echo "    \"date\": \"$date\"," >> posts/index.json
+            echo "    \"image\": \"$image\"," >> posts/index.json
+            echo "    \"filename\": \"$filename\"" >> posts/index.json
+            echo -n "  }" >> posts/index.json
           done
-          echo "]" >> _posts/index.json
+
+          echo "]" >> posts/index.json
+
+      - name: Debug output
+        run: cat posts/index.json
 
       - name: Commit and push index.json
         env:
@@ -69,10 +64,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet; then
-            git add _posts/index.json
-            git commit -m "Auto-update index.json"
+          git add posts/index.json
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Auto-update posts/index.json"
             git push
           else
-            echo "No changes to commit"
+            echo "No changes to commit."
           fi
