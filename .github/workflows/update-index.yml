@@ -19,26 +19,36 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Ensure posts directory exists
+        run: |
+          if [ ! -d "_posts" ]; then
+            echo "Creating missing _posts directory..."
+            mkdir _posts
+          fi
+
       - name: Generate new index.json
         shell: bash
         run: |
-          mkdir -p _posts
+          set -e
           echo "[" > _posts/index.json
           first=true
-          for file in _posts/*.md; do
-            # pull values from YAML frontmatter safely
+          for file in $(find _posts -maxdepth 1 -type f -name "*.md" | sort); do
+            # extract frontmatter
             title=$(grep -m1 '^title:' "$file" | sed 's/^title:[[:space:]]*//;s/^"//;s/"$//')
             date=$(grep -m1 '^date:' "$file" | sed 's/^date:[[:space:]]*//;s/^"//;s/"$//')
             image=$(grep -m1 '^image:' "$file" | sed 's/^image:[[:space:]]*//;s/^"//;s/"$//')
 
+            # default fallback values
             [ -z "$title" ] && title=$(basename "$file" .md)
             [ -z "$date" ] && date=$(date -Iseconds)
 
+            # escape quotes for JSON safety
             esc_title=$(echo "$title" | sed 's/"/\\"/g')
             esc_date=$(echo "$date" | sed 's/"/\\"/g')
             esc_file=$(echo "$file" | sed 's/"/\\"/g')
             esc_image=$(echo "$image" | sed 's/"/\\"/g')
 
+            # write JSON entry
             if [ "$first" = true ]; then
               first=false
             else
