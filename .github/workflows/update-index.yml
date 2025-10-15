@@ -27,33 +27,38 @@ jobs:
           fi
 
       - name: Generate new index.json
-        shell: bash
-        run: |
-          set -e
-          echo "[" > posts/index.json
-          first=true
+  shell: bash
+  run: |
+    set +e
+    echo "[" > posts/index.json
+    first=true
 
-          for file in $(find posts -maxdepth 1 -type f -name "*.md" | sort); do
-            title=$(grep -m1 "^title:" "$file" | sed 's/^title:[[:space:]]*//;s/"//g')
-            date=$(grep -m1 "^date:" "$file" | sed 's/^date:[[:space:]]*//;s/"//g')
-            image=$(grep -m1 "^image:" "$file" | sed 's/^image:[[:space:]]*//;s/"//g')
-            filename=$(basename "$file")
+    echo "Finding markdown files in posts..."
+    ls -la posts || echo "No posts folder found!"
+    find posts -maxdepth 1 -type f -name "*.md" | sort
 
-            if [ "$first" = true ]; then
-              first=false
-            else
-              echo "," >> posts/index.json
-            fi
+    for file in $(find posts -maxdepth 1 -type f -name "*.md" | sort); do
+      echo "Processing $file"
+      title=$(grep -m1 "^title:" "$file" | sed 's/^title:[[:space:]]*//;s/"//g')
+      date=$(grep -m1 "^date:" "$file" | sed 's/^date:[[:space:]]*//;s/"//g')
+      image=$(grep -m1 "^image:" "$file" | sed 's/^image:[[:space:]]*//;s/"//g')
+      filename=$(basename "$file")
 
-            echo "  {" >> posts/index.json
-            echo "    \"title\": \"$title\"," >> posts/index.json
-            echo "    \"date\": \"$date\"," >> posts/index.json
-            echo "    \"image\": \"$image\"," >> posts/index.json
-            echo "    \"filename\": \"$filename\"" >> posts/index.json
-            echo -n "  }" >> posts/index.json
-          done
+      if [ "$first" = true ]; then
+        first=false
+      else
+        echo "," >> posts/index.json
+      fi
 
-          echo "]" >> posts/index.json
+      echo "  {" >> posts/index.json
+      echo "    \"title\": \"$title\"," >> posts/index.json
+      echo "    \"date\": \"$date\"," >> posts/index.json
+      echo "    \"image\": \"$image\"," >> posts/index.json
+      echo "    \"filename\": \"$filename\"" >> posts/index.json
+      echo -n "  }" >> posts/index.json
+    done
+
+    echo "]" >> posts/index.json
 
       - name: Debug output
         run: cat posts/index.json
