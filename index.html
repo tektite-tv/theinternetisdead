@@ -2,66 +2,117 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>theinternetisdead.org</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>theinternetisdead.org - OldTube</title>
   <style>
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
-      font-family: 'Courier New', Courier, monospace;
-      background-color: #0e0e0e;
-      color: #fff;
+      padding: 0;
+      font-family: "Courier New", monospace;
     }
 
-    .navbar {
+    body {
+      background-color: black;
+    }
+
+    header {
       display: flex;
       align-items: center;
-      padding: 1rem 2rem;
-      background-color: rgba(102, 0, 204, 0.5);
-      border-bottom: 2px solid #333;
+      justify-content: space-between;
+      background-color: grey;
+      color: white;
+      padding: 8px 16px;
+    }
+
+    .left-section, .right-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .menu {
+      cursor: pointer;
+      font-size: 22px;
+      font-weight: bold;
+      background: none;
+      border: none;
+      color: white;
     }
 
     .logo {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
+      height: 28px;
+      width: auto;
     }
 
-    .logo img {
-      width: 200px;
-      height: auto;
-      display: block;
-    }
-
-    .greeting {
-      margin-left: 1.5rem;
-      font-size: 1.25rem;
-      max-width: 100%;
+    .search-bar {
       flex: 1;
-      color:lime;
-      font-weight:strong;
+      max-width: 600px;
+      display: flex;
+      margin: 0 16px;
+    }
+
+    .search-bar input {
+      flex: 1;
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-right: none;
+      font-size: 14px;
+    }
+
+    .search-bar button {
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      background-color: #f1f1f1;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .login-btn {
+      background-color: white;
+      color: #cc181e;
+      border: 1px solid white;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .login-btn:hover {
+      background-color: #eee;
     }
 
     @media (max-width: 600px) {
-      .navbar {
-        flex-direction: column;
-        align-items: flex-start;
+      .search-bar {
+        max-width: none;
       }
-      .greeting {
-        margin-left: 0;
-        margin-top: 1rem;
-        font-size: 1rem;
+      .search-bar input {
+        font-size: 12px;
+      }
+      .search-bar button {
+        font-size: 12px;
       }
     }
   </style>
 </head>
 <body>
-  <nav class="navbar">
-    <a href="https://theinternetisdead.org/" class="logo">
-      <img src="/images/deadlogo.png" alt="The Dead Logo" />
-    </a>
-    <div class="greeting">
-      <marquee>Hello World and welcome to theinternetisdead.org • The webmaster is not harvesting your soul for profit! Ins't that nice? • I have too much time on my hands...</marquee>
+  <header>
+    <div class="left-section">
+      <button class="menu">&#9776;</button>
+      <img class="logo" src="logo-placeholder.png" alt="Logo" />
     </div>
-  </nav>
+
+    <div class="search-bar">
+      <input type="text" placeholder="Search" />
+      <button>Search</button>
+    </div>
+
+    <div class="right-section">
+      <button class="login-btn">Login</button>
+    </div>
+  </header>
+
+  <main style="padding: 20px;">
+    <p>Welcome to the golden age of the internet. Enjoy the silence before autoplay.</p>
+  </main>
 </body>
 </html>
