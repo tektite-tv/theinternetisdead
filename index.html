@@ -252,12 +252,15 @@
     try {
       const res = await fetch("/_posts/index.json");
       const posts = await res.json();
+
+      // Sort newest to oldest
+      posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+
       container.innerHTML =
         '<h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1><h2>Latest Posts</h2>';
 
       for (const post of posts) {
         const mdText = await fetch(post.file).then(r => r.text());
-
         const siteRoot = window.location.origin;
 
         // Fix image paths to always point to your site's root uploads directory
