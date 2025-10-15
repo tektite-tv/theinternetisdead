@@ -4,10 +4,10 @@ on:
   push:
     paths:
       - "_posts/*.md"
-  delete:
-    paths:
-      - "_posts/*.md"
   workflow_dispatch:
+
+permissions:
+  contents: write  # allows committing back to repo
 
 jobs:
   rebuild-index:
@@ -16,35 +16,35 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Generate _posts/index.json
+      - name: Generate new index.json
         shell: bash
         run: |
+          mkdir -p _posts
           echo "[" > _posts/index.json
           first=true
           for file in _posts/*.md; do
-            # Extract frontmatter safely
+            # pull values from YAML frontmatter safely
             title=$(grep -m1 '^title:' "$file" | sed 's/^title:[[:space:]]*//;s/^"//;s/"$//')
             date=$(grep -m1 '^date:' "$file" | sed 's/^date:[[:space:]]*//;s/^"//;s/"$//')
             image=$(grep -m1 '^image:' "$file" | sed 's/^image:[[:space:]]*//;s/^"//;s/"$//')
-            
-            # Default fallbacks
+
             [ -z "$title" ] && title=$(basename "$file" .md)
             [ -z "$date" ] && date=$(date -Iseconds)
-            
-            # Escape quotes for JSON
+
             esc_title=$(echo "$title" | sed 's/"/\\"/g')
             esc_date=$(echo "$date" | sed 's/"/\\"/g')
             esc_file=$(echo "$file" | sed 's/"/\\"/g')
             esc_image=$(echo "$image" | sed 's/"/\\"/g')
-            
-            # Write JSON entry
+
             if [ "$first" = true ]; then
               first=false
             else
               echo "," >> _posts/index.json
             fi
-            
+
             if [ -n "$esc_image" ]; then
               echo "  {\"title\": \"$esc_title\", \"date\": \"$esc_date\", \"file\": \"$esc_file\", \"image\": \"$esc_image\"}" >> _posts/index.json
             else
@@ -53,7 +53,9 @@ jobs:
           done
           echo "]" >> _posts/index.json
 
-      - name: Commit and push changes
+      - name: Commit and push index.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
