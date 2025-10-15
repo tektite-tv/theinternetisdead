@@ -1,353 +1,66 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>theinternetisdead.org - Home</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>theinternetisdead.org</title>
   <style>
-    :root {
-      --taskbar-bg: #c0c0c0;           /* Windows 95 gray */
-      --taskbar-dark: #808080;         /* dark shadow */
-      --taskbar-darker: #404040;       /* deepest shadow */
-      --taskbar-light: #ffffff;        /* highlight */
-      --btn-bg: #c0c0c0;
-      --menu-bg: #f0f0f0;
-      --menu-border: #000;
-    }
-
-    * { box-sizing: border-box; }
-    html, body {
-      height: 100%;
+    body {
       margin: 0;
-      background: #000; /* fallback under canvas */
-      overflow: hidden; /* prevent scroll from menu */
-      font-family: "MS Sans Serif", Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    /* Pixelated starfield canvas sits behind everything */
-    #starfield {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      image-rendering: pixelated;   /* crispy pixels */
-      image-rendering: crisp-edges;
-      z-index: 0;
-      background: #000; /* in case canvas fails */
-    }
-
-    /* Win95-style top taskbar */
-    .taskbar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 40px;
-      background: var(--taskbar-bg);
-      border-bottom: 2px solid var(--taskbar-darker);
-      box-shadow:
-        inset 0 1px 0 var(--taskbar-light),
-        inset 0 -1px 0 var(--taskbar-dark);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 4px 10px;
-      z-index: 2;
-      user-select: none;
-    }
-
-    .start-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      height: 30px;
-      padding: 0 12px;
-      background: var(--btn-bg);
-      border: 2px solid #000;
-      border-right-color: var(--taskbar-light);
-      border-bottom-color: var(--taskbar-light);
-      border-top-color: var(--taskbar-dark);
-      border-left-color: var(--taskbar-dark);
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .start-btn:active {
-      border-right-color: var(--taskbar-dark);
-      border-bottom-color: var(--taskbar-dark);
-      border-top-color: var(--taskbar-light);
-      border-left-color: var(--taskbar-light);
-      padding-top: 1px;
-    }
-
-    .title {
-      font-size: 14px;
-      color: #111;
-      opacity: 0.95;
-      white-space: nowrap;
-    }
-
-    /* Dropdown menu */
-    .menu {
-      position: fixed;
-      top: 40px; /* just under the taskbar */
-      left: 8px;
-      width: 220px;
-      background: var(--menu-bg);
-      border: 2px solid #000;
-      box-shadow:
-        inset -1px -1px 0 var(--taskbar-dark),
-        inset 1px 1px 0 var(--taskbar-light),
-        2px 2px 0 rgba(0,0,0,0.25);
-      z-index: 3;
-      display: none;
-    }
-
-    .menu.open { display: block; }
-
-    .menu-item {
-      padding: 8px 10px;
-      font-size: 14px;
-      color: #000;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: default;
-    }
-    .menu-item:hover {
-      background: #0a246a; /* Win95 selection blue */
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #0e0e0e;
       color: #fff;
     }
 
-    .spacer { flex: 1; }
-
-    .header-title {
-      font-size: 15px;
-      color: #000;
-      opacity: 0.9;
-    }
-
-    /* Retro clock style */
-    .clock {
-      font-size: 14px;
-      background: var(--btn-bg);
-      border: 2px solid #000;
-      border-right-color: var(--taskbar-light);
-      border-bottom-color: var(--taskbar-light);
-      border-top-color: var(--taskbar-dark);
-      border-left-color: var(--taskbar-dark);
-      padding: 4px 8px;
-      min-width: 60px;
-      text-align: center;
-      user-select: none;
-    }
-
-    /* Hero content (on top of stars, below taskbar) */
-    .hero {
-      position: fixed;
-      top: 60px;             /* just below the 40px taskbar with a bit of air */
-      left: 0;
-      right: 0;
+    .navbar {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 10px;
-      z-index: 1;            /* above starfield, below taskbar/menu */
+      padding: 1rem 2rem;
+      background-color: #1a1a1a;
+      border-bottom: 2px solid #333;
     }
 
-    .hero img {
-      width: 180px;
-      height: 180px;
-      border-radius: 50%;
-      border: 4px solid rgba(255,255,255,0.65);
-      box-shadow: 0 0 0 2px #000, 0 12px 28px rgba(0,0,0,0.55);
-      image-rendering: crisp-edges;
-      background: #111;
-      object-fit: cover;
+    .logo {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
     }
 
-    .hero .caption {
-      font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
-      font-size: 28px;
-      line-height: 1.1;
-      color: #fff;
-      text-shadow:
-        2px 2px 0 #000,
-        4px 4px 0 #000;
-      letter-spacing: 0.5px;
-      text-align: center;
-      padding: 2px 8px;
+    .logo img {
+      width: 200px;
+      height: auto;
+      display: block;
     }
 
-
-    @media (max-width: 520px) {
-      .hero { top: 56px; }
-      .hero img { width: 140px; height: 140px; }
-      .hero .caption { font-size: 22px; }
+    .greeting {
+      margin-left: 1.5rem;
+      font-size: 1.25rem;
+      max-width: 100%;
+      flex: 1;
     }
 
-    /* Optional: a subtle CRT-ish mask to boost retro vibes */
-    .scanline-overlay {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 1; /* sits with hero; pointer-events none so it won't block clicks */
-      background: repeating-linear-gradient(
-        to bottom,
-        rgba(255,255,255,0.03) 0px,
-        rgba(255,255,255,0.03) 1px,
-        rgba(0,0,0,0.03) 2px,
-        rgba(0,0,0,0.03) 3px
-      );
-      mix-blend-mode: overlay;
-      opacity: 0.35;
+    @media (max-width: 600px) {
+      .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .greeting {
+        margin-left: 0;
+        margin-top: 1rem;
+        font-size: 1rem;
+      }
     }
-
-    /* Anchor default look inside menu */
-    .menu a { color: inherit; text-decoration: none; display: block; width: 100%; }
   </style>
 </head>
 <body>
-  <canvas id="starfield"></canvas>
-
-  <div class="taskbar" role="navigation" aria-label="Top taskbar">
-    <button class="start-btn" id="startBtn" aria-haspopup="true" aria-expanded="false">Menu</button>
-    <div class="title header-title">theinternetisdead.org - Home</div>
-    <div class="spacer"></div>
-    <div class="clock" id="clock">00:00</div>
-  </div>
-
-  <div class="menu" id="startMenu" role="menu" aria-label="Start menu">
-    <div class="menu-item" role="menuitem"><a href="/index.html">🏠 HOME</a></div>
-    <div class="menu-item" role="menuitem"><a href="/deadtv.html">☠️ Dead TV</a></div>
-    <div class="menu-item" role="menuitem"><a href="/admin">⚠️ ADMIN</a></div>
-  </div>
-
-  <!-- New hero block -->
-  <div class="hero" aria-label="Welcome">
-    <img src="/images/face.png" alt="Site avatar" />
-    <div class="caption">Welcome to theinternetisdead.org</div>
-  </div>
-
-  <div class="scanline-overlay" aria-hidden="true"></div>
-
-  <script>
-    // ===== Windows 95-ish Menu Toggle =====
-    const startBtn = document.getElementById('startBtn');
-    const startMenu = document.getElementById('startMenu');
-
-    function closeMenu() {
-      startMenu.classList.remove('open');
-      startBtn.setAttribute('aria-expanded', 'false');
-    }
-
-    startBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = startMenu.classList.toggle('open');
-      startBtn.setAttribute('aria-expanded', String(isOpen));
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!startMenu.contains(e.target) && e.target !== startBtn) {
-        closeMenu();
-      }
-    });
-
-    // ===== Pixelated Starfield =====
-    const canvas = document.getElementById('starfield');
-    const ctx = canvas.getContext('2d', { alpha: false });
-
-    let scale = 3;
-    let starCount = 350;
-    let twinkle = true;
-    let stars = [];
-
-    function resize() {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      canvas.width = Math.ceil(w / scale);
-      canvas.height = Math.ceil(h / scale);
-      canvas.style.width = w + 'px';
-      canvas.style.height = h + 'px';
-      buildStars();
-    }
-
-    function rand(n) { return Math.random() * n; }
-
-    function buildStars() {
-      const w = canvas.width;
-      const h = canvas.height;
-      stars = new Array(starCount).fill(0).map(() => ({
-        x: rand(w),
-        y: rand(h),
-        z: Math.random(),
-        b: 0.7 + Math.random() * 0.3,
-        t: Math.random() * 1000
-      }));
-    }
-
-    function draw(t) {
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, w, h);
-
-      const g = ctx.createRadialGradient(w*0.5, h*0.5, 0, w*0.5, h*0.5, Math.max(w, h));
-      g.addColorStop(0, '#02020a');
-      g.addColorStop(1, '#000000');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-
-      for (let i = 0; i < stars.length; i++) {
-        const s = stars[i];
-        let bright = s.b;
-        if (twinkle) {
-          bright *= 0.7 + 0.3 * Math.abs(Math.cos((t * 0.001) + s.t));
-        }
-        const size = s.z > 0.8 ? 2 : 1;
-        const shade = Math.floor(180 + bright * 75);
-        ctx.fillStyle = `rgb(${shade},${shade},${255})`;
-        ctx.fillRect(s.x | 0, s.y | 0, size, size);
-      }
-
-      for (let i = 0; i < stars.length; i++) {
-        const s = stars[i];
-        s.y += 0.01 + s.z * 0.02;
-        if (s.y > h) { s.y = -2; s.x = rand(w); }
-      }
-
-      requestAnimationFrame(draw);
-    }
-
-    // Menu actions
-    document.getElementById('toggleTwinkle').addEventListener('click', (e) => {
-      twinkle = !twinkle;
-      closeMenu();
-    });
-    document.getElementById('moreStars').addEventListener('click', () => {
-      starCount = Math.min(starCount + 100, 2000);
-      buildStars();
-      closeMenu();
-    });
-    document.getElementById('lessStars').addEventListener('click', () => {
-      starCount = Math.max(starCount - 100, 50);
-      buildStars();
-      closeMenu();
-    });
-
-    // ===== Clock =====
-    function updateClock() {
-      const now = new Date();
-      const hh = now.getHours().toString().padStart(2, '0');
-      const mm = now.getMinutes().toString().padStart(2, '0');
-      document.getElementById('clock').textContent = `${hh}:${mm}`;
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // Init
-    window.addEventListener('resize', resize);
-    resize();
-    requestAnimationFrame(draw);
-  </script>
+  <nav class="navbar">
+    <a href="https://theinternetisdead.org/" class="logo">
+      <img src="logo-placeholder.png" alt="The Internet Is Dead Logo" />
+    </a>
+    <div class="greeting">
+      Hello World and welcome to theinternetisdead.org
+    </div>
+  </nav>
 </body>
 </html>
