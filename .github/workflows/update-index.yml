@@ -1,68 +1,66 @@
-name: Update Blog Index
+name: Auto-update _posts/index.json
 
 on:
   push:
     paths:
-      - '_posts/*.md'
+      - "_posts/*.md"
+  delete:
+    paths:
+      - "_posts/*.md"
+  workflow_dispatch:
 
 jobs:
-  update-index:
+  rebuild-index:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install gray-matter
-
-      - name: Generate index.json
+      - name: Generate _posts/index.json
+        shell: bash
         run: |
-          node <<'EOF'
-          const fs = require('fs');
-          const path = require('path');
-          const matter = require('gray-matter');
+          echo "[" > _posts/index.json
+          first=true
+          for file in _posts/*.md; do
+            # Extract frontmatter safely
+            title=$(grep -m1 '^title:' "$file" | sed 's/^title:[[:space:]]*//;s/^"//;s/"$//')
+            date=$(grep -m1 '^date:' "$file" | sed 's/^date:[[:space:]]*//;s/^"//;s/"$//')
+            image=$(grep -m1 '^image:' "$file" | sed 's/^image:[[:space:]]*//;s/^"//;s/"$//')
+            
+            # Default fallbacks
+            [ -z "$title" ] && title=$(basename "$file" .md)
+            [ -z "$date" ] && date=$(date -Iseconds)
+            
+            # Escape quotes for JSON
+            esc_title=$(echo "$title" | sed 's/"/\\"/g')
+            esc_date=$(echo "$date" | sed 's/"/\\"/g')
+            esc_file=$(echo "$file" | sed 's/"/\\"/g')
+            esc_image=$(echo "$image" | sed 's/"/\\"/g')
+            
+            # Write JSON entry
+            if [ "$first" = true ]; then
+              first=false
+            else
+              echo "," >> _posts/index.json
+            fi
+            
+            if [ -n "$esc_image" ]; then
+              echo "  {\"title\": \"$esc_title\", \"date\": \"$esc_date\", \"file\": \"$esc_file\", \"image\": \"$esc_image\"}" >> _posts/index.json
+            else
+              echo "  {\"title\": \"$esc_title\", \"date\": \"$esc_date\", \"file\": \"$esc_file\"}" >> _posts/index.json
+            fi
+          done
+          echo "]" >> _posts/index.json
 
-          // Get the repo root directory
-          const root = process.env.GITHUB_WORKSPACE || '.';
-          const postsDir = path.join(root, '_posts');
-          const outputFile = path.join(postsDir, 'index.json');
-
-          if (!fs.existsSync(postsDir)) {
-            console.error("❌ _posts directory not found");
-            process.exit(1);
-          }
-
-          // Get all markdown files in _posts
-          const files = fs.readdirSync(postsDir).filter(file => file.endsWith('.md'));
-
-          // Read frontmatter from each post
-          const posts = files.map(file => {
-            const filePath = path.join(postsDir, file);
-            const content = fs.readFileSync(filePath, 'utf8');
-            const { data } = matter(content);
-
-            return {
-              title: data.title || file.replace('.md', ''),
-              date: data.date || file.slice(0, 10),
-              filename: file
-            };
-          }).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-          // Write the index.json
-          fs.writeFileSync(outputFile, JSON.stringify(posts, null, 2));
-          console.log(`✅ Wrote ${posts.length} posts to ${outputFile}`);
-          EOF
-
-      - name: Commit and push index.json
+      - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add _posts/index.json
-          git diff --cached --quiet || (git commit -m "Auto-update index.json" && git push)
-
+          if ! git diff --quiet; then
+            git add _posts/index.json
+            git commit -m "Auto-update index.json"
+            git push
+          else
+            echo "No changes to commit"
+          fi
