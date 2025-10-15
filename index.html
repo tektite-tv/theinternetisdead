@@ -260,10 +260,11 @@
 
         // Fix image paths inside markdown without breaking external or absolute URLs
         const fixedMd = mdText.replace(/!\[(.*?)\]\((.*?)\)/g, (m, alt, path) => {
-          if (path.startsWith("http")) return m;  // external images
+          if (path.startsWith("http")) return m;  // external image
           if (path.startsWith("/")) return m;     // already absolute path
           if (path.startsWith("./")) path = path.slice(2);
-          return `![${alt}](/images/${path})`;    // assume local /images/ folder
+          // redirect relative paths to /images/uploads/
+          return `![${alt}](/images/uploads/${path})`;
         });
 
         const html = marked.parse(fixedMd);
