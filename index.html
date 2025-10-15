@@ -14,6 +14,7 @@
 
     body {
       background-color: black;
+      color: white;
     }
 
     header {
@@ -81,15 +82,51 @@
       background-color: #eee;
     }
 
-    @media (max-width: 600px) {
-      .search-bar {
-        max-width: none;
-      }
-      .search-bar input {
-        font-size: 12px;
-      }
-      .search-bar button {
-        font-size: 12px;
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .column {
+      background-color: #1a1a1a;
+      padding: 15px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      min-height: 400px;
+      overflow-y: auto;
+    }
+
+    .post {
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #444;
+    }
+
+    .video {
+      margin-bottom: 16px;
+    }
+
+    .video a {
+      color: #cc181e;
+      text-decoration: none;
+    }
+
+    .video a:hover {
+      text-decoration: underline;
+    }
+
+    iframe {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: none;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -111,8 +148,73 @@
     </div>
   </header>
 
-  <main style="padding: 20px;">
-    <p>Welcome to the golden age of the internet. Enjoy the silence before autoplay.</p>
+  <main>
+    <section class="column" id="posts">
+      <h2>Latest Posts</h2>
+      <p>Loading posts...</p>
+    </section>
+
+    <section class="column" id="youtube">
+      <h2>Latest Videos</h2>
+      <p>Loading videos...</p>
+    </section>
   </main>
+
+  <script>
+    // Load .md posts from _posts directory
+    async function loadPosts() {
+      const container = document.getElementById("posts");
+      try {
+        const response = await fetch("/_posts/");
+        const text = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "text/html");
+        const links = [...doc.querySelectorAll("a[href$='.md']")];
+
+        if (!links.length) {
+          container.innerHTML = "<p>No posts found.</p>";
+          return;
+        }
+
+        container.innerHTML = "";
+        for (const link of links) {
+          const url = link.getAttribute("href");
+          const mdText = await fetch(url).then(r => r.text());
+          const postDiv = document.createElement("div");
+          postDiv.className = "post";
+          postDiv.innerHTML = `<h3>${url.split("/").pop()}</h3><pre>${mdText}</pre>`;
+          container.appendChild(postDiv);
+        }
+      } catch (err) {
+        container.innerHTML = "<p>Error loading posts.</p>";
+      }
+    }
+
+    // Load YouTube RSS feed
+    async function loadYouTube() {
+      const container = document.getElementById("youtube");
+      const rssUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+      try {
+        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`);
+        const data = await response.json();
+        container.innerHTML = "";
+        data.items.forEach(item => {
+          const div = document.createElement("div");
+          div.className = "video";
+          const videoId = item.link.split("v=")[1];
+          div.innerHTML = `
+            <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
+            <p><a href="${item.link}" target="_blank">${item.title}</a></p>
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        container.innerHTML = "<p>Error loading YouTube feed.</p>";
+      }
+    }
+
+    loadPosts();
+    loadYouTube();
+  </script>
 </body>
 </html>
