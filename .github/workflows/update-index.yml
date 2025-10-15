@@ -1,79 +1,37 @@
-name: Auto-update posts/index.json
+name: Update index.json
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
-
-permissions:
-  contents: write
+    paths:
+      - "_posts/*.md"
 
 jobs:
-  rebuild-index:
+  update-index:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Ensure posts directory exists
+      - name: Generate index.json
         run: |
-          if [ ! -d "posts" ]; then
-            echo "Creating missing posts directory..."
-            mkdir posts
-          fi
-
-      - name: Generate new index.json
-  shell: bash
-  run: |
-    set +e
-    echo "[" > posts/index.json
-    first=true
-
-    echo "Finding markdown files in posts..."
-    ls -la posts || echo "No posts folder found!"
-    find posts -maxdepth 1 -type f -name "*.md" | sort
-
-    for file in $(find posts -maxdepth 1 -type f -name "*.md" | sort); do
-      echo "Processing $file"
-      title=$(grep -m1 "^title:" "$file" | sed 's/^title:[[:space:]]*//;s/"//g')
-      date=$(grep -m1 "^date:" "$file" | sed 's/^date:[[:space:]]*//;s/"//g')
-      image=$(grep -m1 "^image:" "$file" | sed 's/^image:[[:space:]]*//;s/"//g')
-      filename=$(basename "$file")
-
-      if [ "$first" = true ]; then
-        first=false
-      else
-        echo "," >> posts/index.json
-      fi
-
-      echo "  {" >> posts/index.json
-      echo "    \"title\": \"$title\"," >> posts/index.json
-      echo "    \"date\": \"$date\"," >> posts/index.json
-      echo "    \"image\": \"$image\"," >> posts/index.json
-      echo "    \"filename\": \"$filename\"" >> posts/index.json
-      echo -n "  }" >> posts/index.json
-    done
-
-    echo "]" >> posts/index.json
-
-      - name: Debug output
-        run: cat posts/index.json
+          mkdir -p _posts
+          echo "[" > _posts/index.json
+          first=true
+          for file in _posts/*.md; do
+            [ -e "$file" ] || continue
+            title=$(grep -m 1 '^title:' "$file" | cut -d '"' -f2)
+            date=$(grep -m 1 '^date:' "$file" | awk '{print $2}')
+            if [ "$first" = true ]; then first=false; else echo "," >> _posts/index.json; fi
+            echo "  {\"title\": \"$title\", \"date\": \"$date\", \"file\": \"$file\"}" >> _posts/index.json
+          done
+          echo "]" >> _posts/index.json
 
       - name: Commit and push index.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add posts/index.json
-
-          if ! git diff --cached --quiet; then
-            git commit -m "Auto-update posts/index.json"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add _posts/index.json
+          git commit -m "Update _posts index" || exit 0
+          git push
