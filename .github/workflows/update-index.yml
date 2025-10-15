@@ -6,10 +6,11 @@ on:
       - '_posts/*.md'
 
 jobs:
-  build:
+  update-index:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -17,7 +18,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install gray-matter
+      - name: Install dependencies
         run: npm install gray-matter
 
       - name: Generate index.json
@@ -27,13 +28,25 @@ jobs:
           const path = require('path');
           const matter = require('gray-matter');
 
-          const postsDir = path.join(__dirname, '..', '..', '_posts');
+          // Get the repo root directory
+          const root = process.env.GITHUB_WORKSPACE || '.';
+          const postsDir = path.join(root, '_posts');
+          const outputFile = path.join(postsDir, 'index.json');
+
+          if (!fs.existsSync(postsDir)) {
+            console.error("❌ _posts directory not found");
+            process.exit(1);
+          }
+
+          // Get all markdown files in _posts
           const files = fs.readdirSync(postsDir).filter(file => file.endsWith('.md'));
 
+          // Read frontmatter from each post
           const posts = files.map(file => {
             const filePath = path.join(postsDir, file);
             const content = fs.readFileSync(filePath, 'utf8');
             const { data } = matter(content);
+
             return {
               title: data.title || file.replace('.md', ''),
               date: data.date || file.slice(0, 10),
@@ -41,7 +54,9 @@ jobs:
             };
           }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-          fs.writeFileSync(path.join(postsDir, 'index.json'), JSON.stringify(posts, null, 2));
+          // Write the index.json
+          fs.writeFileSync(outputFile, JSON.stringify(posts, null, 2));
+          console.log(`✅ Wrote ${posts.length} posts to ${outputFile}`);
           EOF
 
       - name: Commit and push index.json
@@ -49,5 +64,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add _posts/index.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update index.json"
-          git push
+          git diff --cached --quiet || (git commit -m "Auto-update index.json" && git push)
+
