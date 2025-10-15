@@ -271,7 +271,8 @@
           return `![${alt}](${siteRoot}/images/uploads/${path})`;
         });
 
-        const html = marked.parse(fixedMd);
+        const cleanMd = fixedMd.replace(/^---[\s\S]*?---/, "").trim();
+        const html = marked.parse(cleanMd);
         const div = document.createElement("div");
         div.className = "post";
         div.innerHTML = `<h3>${post.title}</h3><small>${post.date}</small><div>${html}</div>`;
