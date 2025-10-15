@@ -12,24 +12,32 @@
       padding: 0;
       font-family: "Courier New", monospace;
     }
-    body {
-      background-color: black;
-      color: white;
+
+    html, body {
+      height: auto;
+      min-height: 100%;
+      background-color: #000;
+      color: #ddd;
+      overflow-y: auto;
     }
+
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background-color: grey;
+      background-color: #111;
       color: white;
       padding: 8px 16px;
+      border-bottom: 2px solid #cc181e;
     }
+
     .left-section,
     .right-section {
       display: flex;
       align-items: center;
       gap: 12px;
     }
+
     .menu {
       cursor: pointer;
       font-size: 22px;
@@ -38,40 +46,53 @@
       border: none;
       color: white;
     }
+
     .logo {
       height: 28px;
       width: auto;
     }
+
     .search-bar {
       flex: 1;
       max-width: 600px;
       display: flex;
       margin: 0 16px;
     }
+
     .search-bar input {
       flex: 1;
       padding: 6px 8px;
-      border: 1px solid #ccc;
+      border: 1px solid #333;
       border-right: none;
-      font-size: 14px;
+      background: #000;
+      color: #fff;
     }
+
     .search-bar button {
       padding: 6px 12px;
-      border: 1px solid #ccc;
-      background-color: #f1f1f1;
+      border: 1px solid #333;
+      background-color: #222;
+      color: #fff;
       cursor: pointer;
-      font-size: 14px;
     }
+
+    .search-bar button:hover {
+      background-color: #333;
+    }
+
     .login-btn {
-      background-color: white;
-      color: #cc181e;
-      border: 1px solid white;
-      padding: 6px 10px;
-      cursor: pointer;
+      background: #cc181e;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 3px;
       font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
     }
+
     .login-btn:hover {
-      background-color: #eee;
+      background: #ff4444;
     }
 
     main {
@@ -79,36 +100,60 @@
       grid-template-columns: 1fr 1fr;
       gap: 20px;
       padding: 20px;
+      align-items: start;
+      background: transparent;
     }
+
     .column {
-      background-color: #1a1a1a;
+      background: rgba(0, 0, 0, 0.9);
       padding: 15px;
       border: 1px solid #333;
       border-radius: 4px;
-      min-height: 400px;
-      overflow-y: auto;
+      overflow: visible;
     }
+
     .post {
       margin-bottom: 20px;
       padding-bottom: 10px;
       border-bottom: 1px dashed #444;
     }
+
+    .post h3 {
+      color: #ff66cc;
+      margin-bottom: 4px;
+    }
+
+    .post small {
+      display: block;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    .post p {
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
     .video {
       margin-bottom: 16px;
     }
+
     .video a {
       color: #cc181e;
       text-decoration: none;
     }
+
     .video a:hover {
       text-decoration: underline;
     }
+
     iframe {
       width: 100%;
       aspect-ratio: 16 / 9;
       border: none;
       border-radius: 4px;
     }
+
     h1 {
       font-size: 1.8em;
       text-shadow: 0 0 6px #fff2, 0 0 12px #0ff4;
@@ -116,13 +161,23 @@
       margin-bottom: 10px;
       text-align: center;
     }
-    @media (max-width: 900px) {
+
+    h2 {
+      color: #777;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 1100px) {
       main {
         grid-template-columns: 1fr;
+      }
+      .column {
+        margin-bottom: 20px;
       }
     }
   </style>
 </head>
+
 <body>
   <header>
     <div class="left-section">
@@ -158,7 +213,7 @@
     async function loadPosts() {
       const container = document.getElementById("posts");
       try {
-        const res = await fetch("/_posts/index.json");
+        const res = await fetch("_posts/index.json");
         const posts = await res.json();
         container.innerHTML = '<h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1><h2>Latest Posts</h2>';
         for (const post of posts) {
