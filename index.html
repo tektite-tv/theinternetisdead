@@ -4,131 +4,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>theinternetisdead.org - OldTube</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: "Courier New", monospace;
-    }
-
-    body {
-      background-color: black;
-      color: white;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Courier New", monospace; }
+    body { background-color: black; color: white; }
 
     header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background-color: grey;
-      color: white;
-      padding: 8px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      background-color: grey; color: white; padding: 8px 16px;
     }
+    .left-section, .right-section { display: flex; align-items: center; gap: 12px; }
+    .menu { cursor: pointer; font-size: 22px; font-weight: bold; background: none; border: none; color: white; }
+    .logo { height: 28px; width: auto; }
+    .search-bar { flex: 1; max-width: 600px; display: flex; margin: 0 16px; }
+    .search-bar input { flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-right: none; font-size: 14px; }
+    .search-bar button { padding: 6px 12px; border: 1px solid #ccc; background-color: #f1f1f1; cursor: pointer; font-size: 14px; }
+    .login-btn { background-color: white; color: #cc181e; border: 1px solid white; padding: 6px 10px; cursor: pointer; font-weight: bold; }
+    .login-btn:hover { background-color: #eee; }
 
-    .left-section, .right-section {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    main { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+    .column { background-color: #1a1a1a; padding: 15px; border: 1px solid #333; border-radius: 4px; min-height: 400px; overflow-y: auto; }
+    .post { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px dashed #444; }
+    .video { margin-bottom: 16px; }
+    .video a { color: #cc181e; text-decoration: none; }
+    .video a:hover { text-decoration: underline; }
+    iframe { width: 100%; aspect-ratio: 16 / 9; border: none; border-radius: 4px; }
 
-    .menu {
-      cursor: pointer;
-      font-size: 22px;
-      font-weight: bold;
-      background: none;
-      border: none;
-      color: white;
-    }
-
-    .logo {
-      height: 28px;
-      width: auto;
-    }
-
-    .search-bar {
-      flex: 1;
-      max-width: 600px;
-      display: flex;
-      margin: 0 16px;
-    }
-
-    .search-bar input {
-      flex: 1;
-      padding: 6px 8px;
-      border: 1px solid #ccc;
-      border-right: none;
-      font-size: 14px;
-    }
-
-    .search-bar button {
-      padding: 6px 12px;
-      border: 1px solid #ccc;
-      background-color: #f1f1f1;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .login-btn {
-      background-color: white;
-      color: #cc181e;
-      border: 1px solid white;
-      padding: 6px 10px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .login-btn:hover {
-      background-color: #eee;
-    }
-
-    main {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      padding: 20px;
-    }
-
-    .column {
-      background-color: #1a1a1a;
-      padding: 15px;
-      border: 1px solid #333;
-      border-radius: 4px;
-      min-height: 400px;
-      overflow-y: auto;
-    }
-
-    .post {
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px dashed #444;
-    }
-
-    .video {
-      margin-bottom: 16px;
-    }
-
-    .video a {
-      color: #cc181e;
-      text-decoration: none;
-    }
-
-    .video a:hover {
-      text-decoration: underline;
-    }
-
-    iframe {
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      border: none;
-      border-radius: 4px;
-    }
-
-    @media (max-width: 900px) {
-      main {
-        grid-template-columns: 1fr;
-      }
-    }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -161,36 +63,25 @@
   </main>
 
   <script>
-    // Load .md posts from _posts directory
     async function loadPosts() {
       const container = document.getElementById("posts");
       try {
-        const response = await fetch("/_posts/");
-        const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, "text/html");
-        const links = [...doc.querySelectorAll("a[href$='.md']")];
-
-        if (!links.length) {
-          container.innerHTML = "<p>No posts found.</p>";
-          return;
-        }
-
+        const res = await fetch("/_posts/index.json");
+        const posts = await res.json();
         container.innerHTML = "";
-        for (const link of links) {
-          const url = link.getAttribute("href");
-          const mdText = await fetch(url).then(r => r.text());
-          const postDiv = document.createElement("div");
-          postDiv.className = "post";
-          postDiv.innerHTML = `<h3>${url.split("/").pop()}</h3><pre>${mdText}</pre>`;
-          container.appendChild(postDiv);
+        for (const post of posts) {
+          const md = await fetch(post.file).then(r => r.text());
+          const html = marked.parse(md);
+          const div = document.createElement("div");
+          div.className = "post";
+          div.innerHTML = `<h3>${post.title}</h3><small>${post.date}</small><div>${html}</div>`;
+          container.appendChild(div);
         }
-      } catch (err) {
+      } catch {
         container.innerHTML = "<p>Error loading posts.</p>";
       }
     }
 
-    // Load YouTube RSS feed
     async function loadYouTube() {
       const container = document.getElementById("youtube");
       const rssUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
@@ -204,11 +95,10 @@
           const videoId = item.link.split("v=")[1];
           div.innerHTML = `
             <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
-            <p><a href="${item.link}" target="_blank">${item.title}</a></p>
-          `;
+            <p><a href="${item.link}" target="_blank">${item.title}</a></p>`;
           container.appendChild(div);
         });
-      } catch (err) {
+      } catch {
         container.innerHTML = "<p>Error loading YouTube feed.</p>";
       }
     }
