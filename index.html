@@ -585,6 +585,7 @@ function createPostPopup() {
     popup.innerHTML = `
       <div class="popup-inner">
         <button class="close-btn">✕</button>
+        <div class="popup-header"></div>
         <div class="popup-content"><em>Loading...</em></div>
       </div>
     `;
@@ -592,6 +593,7 @@ function createPostPopup() {
     popup.querySelector(".close-btn").addEventListener("click", () => {
       popup.style.display = "none";
       popup.querySelector(".popup-content").innerHTML = "";
+      popup.querySelector(".popup-header").innerHTML = "";
     });
   }
   return popup;
@@ -599,16 +601,33 @@ function createPostPopup() {
 
 async function handlePostClick(url) {
   if (!url.endsWith(".md")) return window.open(url, "_blank");
+
   const popup = createPostPopup();
   popup.style.display = "flex";
   popup.querySelector(".popup-content").innerHTML = "<em>Loading...</em>";
+
   try {
-    const res = await fetch(url);
-    let text = await res.text();
+    // Fetch JSON for title/date lookup
+    const res = await fetch("/_posts/index.json");
+    const posts = await res.json();
+    const meta = posts.find(p => p.file === url);
+
+    // Fetch Markdown
+    const res2 = await fetch(url);
+    let text = await res2.text();
     if (text.startsWith('---')) {
       const end = text.indexOf('---', 3);
       if (end !== -1) text = text.slice(end + 3);
     }
+
+    const title = meta?.title || "Untitled";
+    const date = meta?.date ? new Date(meta.date).toLocaleString() : "";
+
+    popup.querySelector(".popup-header").innerHTML = `
+      <h2 style="color:#0f0; margin-bottom:6px;">${title}</h2>
+      <small style="color:#7f7;">${date}</small>
+      <hr style="border:1px solid #0f0; margin:10px 0;">
+    `;
     popup.querySelector(".popup-content").innerHTML = marked.parse(text.trim());
   } catch {
     popup.querySelector(".popup-content").innerHTML = "<em>Error loading post.</em>";
