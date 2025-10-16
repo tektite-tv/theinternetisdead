@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>theinternetisdead.org - Glitch TV</title>
+  <title>Scanlines + Moiré + Psychedelic Lava (Mutations)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -72,46 +72,43 @@
     }
 
     .controls {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 16px;
-  background: rgba(0,0,0,0.6);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 12px;
-  padding: 10px 14px;
-  backdrop-filter: blur(6px);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 10;
-  user-select: none;
-  flex-wrap: wrap;
-  max-width: min(94vw, 1200px);
-  opacity: 0;
-  transition: opacity 0.4s ease;
-}
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 16px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 10px 14px;
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+      user-select: none;
+      flex-wrap: wrap;
+      max-width: min(94vw, 1200px);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
 
-/* the invisible hover zone around controls */
-.controls::before {
-  content: '';
-  position: absolute;
-  inset: -20px;
-  z-index: -1;
-}
+    .controls::before {
+      content: '';
+      position: absolute;
+      inset: -20px;
+      z-index: -1;
+    }
 
-/* fade in on hover or hover within children */
-.controls:hover,
-.controls:has(:hover) {
-  opacity: 1;
-}
+    .controls:hover,
+    .controls:has(:hover) {
+      opacity: 1;
+    }
 
-/* important fix: allow children to be clickable */
-.controls:hover,
-.controls:has(:hover),
-.controls * {
-  pointer-events: auto;
-}
+    .controls:hover,
+    .controls:has(:hover),
+    .controls * {
+      pointer-events: auto;
+    }
     
     .controls label { font-size: 14px; display: flex; gap: 8px; align-items: center; white-space: nowrap; }
     .controls input[type="range"] { width: min(40vw, 360px); accent-color: #fff; }
@@ -158,17 +155,14 @@
       <button type="button" class="btn" id="cycle" aria-pressed="false">Cycle Line Color</button>
       <button type="button" class="btn" id="meltdown" aria-pressed="false">Meltdown Warp</button>
       <button type="button" class="btn" id="stop">Stop</button>
+      <button type="button" class="btn" id="drawMode" aria-pressed="false">🖍️ Draw Mode</button>
       <button type="button" class="btn" id="saveShot" title="Save Screenshot">💾 Save</button>
     </form>
   </div>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script>
+  <script>
   // --- Angle control ---
   const root = document.documentElement;
   const angleInput = document.getElementById('angle');
@@ -224,7 +218,65 @@
   const btnMeltdown = el('meltdown');
   const btnStop = el('stop');
   const btnSave = el('saveShot');
+  const btnDraw = el('drawMode');
 
+  // --- Draw mode ---
+  let drawing = false;
+  let drawEnabled = false;
+  let drawCtx;
+  let drawCanvas;
+
+  function initDrawCanvas() {
+    drawCanvas = document.createElement('canvas');
+    drawCanvas.id = 'drawCanvas';
+    drawCanvas.width = window.innerWidth;
+    drawCanvas.height = window.innerHeight;
+    drawCanvas.style.position = 'absolute';
+    drawCanvas.style.top = '0';
+    drawCanvas.style.left = '0';
+    drawCanvas.style.zIndex = '5';
+    drawCanvas.style.pointerEvents = 'none';
+    document.body.appendChild(drawCanvas);
+    drawCtx = drawCanvas.getContext('2d');
+    drawCtx.lineCap = 'round';
+    drawCtx.lineJoin = 'round';
+    drawCtx.lineWidth = 8;
+  }
+
+  initDrawCanvas();
+  window.addEventListener('resize', () => {
+    drawCanvas.width = window.innerWidth;
+    drawCanvas.height = window.innerHeight;
+  });
+
+  btnDraw.addEventListener('click', () => {
+    drawEnabled = !drawEnabled;
+    btnDraw.setAttribute('aria-pressed', String(drawEnabled));
+    drawCanvas.style.pointerEvents = drawEnabled ? 'auto' : 'none';
+  });
+
+  let hue = 0;
+  drawCanvas.addEventListener('mousedown', e => {
+    if (!drawEnabled) return;
+    drawing = true;
+    drawCtx.beginPath();
+    drawCtx.moveTo(e.clientX, e.clientY);
+  });
+  drawCanvas.addEventListener('mousemove', e => {
+    if (!drawEnabled || !drawing) return;
+    hue = (hue + 2) % 360;
+    drawCtx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+    drawCtx.lineTo(e.clientX, e.clientY);
+    drawCtx.stroke();
+  });
+  window.addEventListener('mouseup', () => {
+    if (drawing) {
+      drawing = false;
+      drawCtx.closePath();
+    }
+  });
+
+  // --- Button logic ---
   btnSpinOnce.addEventListener('click', () => {
     state.spinOnce.active = true;
     state.spinOnce.start = performance.now();
@@ -367,22 +419,21 @@
       controls.style.display = 'none';
       await new Promise(r => setTimeout(r, 100));
 
-      // base lava
       const lava = document.getElementById('lava');
       const layers = document.getElementById('layerRoot');
 
-      // create a new blank canvas to merge them
       const off = document.createElement('canvas');
       off.width = lava.width;
       off.height = lava.height;
       const offctx = off.getContext('2d');
       offctx.drawImage(lava, 0, 0);
 
-      // draw the scanline layers on top
       const layerCanvas = await html2canvas(layers, { useCORS: true, backgroundColor: null });
       offctx.drawImage(layerCanvas, 0, 0);
 
-      // save result
+      // add drawn doodles too
+      offctx.drawImage(drawCanvas, 0, 0);
+
       const link = document.createElement('a');
       link.download = 'screenshot.png';
       link.href = off.toDataURL('image/png');
@@ -398,7 +449,6 @@
   btnSave.addEventListener('click', saveComposite);
 
   requestAnimationFrame(tick);
-</script>
-
+  </script>
 </body>
 </html>
