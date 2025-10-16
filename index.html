@@ -255,8 +255,79 @@
   <div class="footer">
 Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
 </div>
+  
+<script>
+async function loadContent() {
+  const postsContainer = document.getElementById("posts");
+  const youtubeContainer = document.getElementById("youtube");
 
-  <script>
+  // Load blog posts from /_posts/index.json
+  try {
+    const res = await fetch("/_posts/index.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const posts = await res.json();
+
+    if (!posts.length) {
+      postsContainer.innerHTML += "<p>No posts yet.</p>";
+      return;
+    }
+
+    const sorted = posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const html = sorted
+      .map(
+        p => `
+        <div class="post">
+          <h3>${p.title}</h3>
+          <small>${new Date(p.date).toLocaleString()}</small>
+          <a href="${p.file.replace(/^_/, '')}" target="_blank">Read Post</a>
+        </div>
+      `
+      )
+      .join("");
+    postsContainer.innerHTML = `
+      <h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1>
+      <h2>Latest Posts</h2>
+      ${html}
+    `;
+  } catch (err) {
+    console.error("Post load failed:", err);
+    postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${err.message}</p>`;
+  }
+
+  // Load YouTube videos
+  try {
+    const feedUrl =
+      "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+    const rssRes = await fetch(
+      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`
+    );
+    if (!rssRes.ok) throw new Error(`HTTP ${rssRes.status}`);
+    const rssData = await rssRes.json();
+    const videos = rssData.items.slice(0, 4);
+    const vidsHTML = videos
+      .map(
+        v => `
+        <div class="video">
+          <iframe src="https://www.youtube.com/embed/${v.guid.split(':').pop()}" allowfullscreen></iframe>
+          <a href="${v.link}" target="_blank">${v.title}</a>
+        </div>
+      `
+      )
+      .join("");
+    youtubeContainer.innerHTML = `
+      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
+      <h2>Latest Videos</h2>
+      ${vidsHTML}
+    `;
+  } catch (err) {
+    console.error("Video load failed:", err);
+    youtubeContainer.innerHTML += `<p style="color:red;">Error loading videos: ${err.message}</p>`;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadContent);
+
+// Bouncing banana
 (() => {
   const IMG_SRC = "/images/bananamanarama.gif";
   const AUDIO_SRC = "/audio/do-that-there.mp3";
@@ -295,8 +366,12 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
   let hue = 0, hasPointer = false;
 
   banana.addEventListener("click", () => {
-    if (audio.paused) { audio.currentTime = 0; audio.play(); }
-    else audio.pause();
+    if (audio.paused) {
+      audio.currentTime = 0;
+      audio.play();
+    } else {
+      audio.pause();
+    }
   });
 
   window.addEventListener("mousemove", e => {
