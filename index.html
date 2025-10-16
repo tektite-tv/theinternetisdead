@@ -212,6 +212,10 @@
         margin-top: 8px;
       }
     }
+
+    .footer {
+      
+    }
   </style>
 </head>
 
@@ -247,152 +251,158 @@
   </main>
   
 <script>
-async function loadPosts() {
-  const container = document.getElementById("posts");
-  try {
-    const res = await fetch("/_posts/index.json");
-    const posts = await res.json();
-    posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+(() => {
+  // --- config you might touch if you get picky ---
+  const IMG_SRC = "/images/bananamanarama.gif";
+  const AUDIO_SRC = "/audio/do-that-there.mp3";
+  const START_SIZE_PX = 160;     // banana size
+  const SPEED_PX_PER_SEC = 220;  // base speed
+  const SATURATION = 200;        // percent
+  const BRIGHTNESS = 110;        // percent
 
-    container.innerHTML = `
-      <h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1>
-      <h2>Latest Posts</h2>
-    `;
+  // --- create elements ---
+  const banana = document.createElement("img");
+  banana.src = IMG_SRC;
+  banana.alt = "Dancing Banana";
+  banana.style.position = "fixed";
+  banana.style.left = "100px";
+  banana.style.top = "100px";
+  banana.style.width = START_SIZE_PX + "px";
+  banana.style.opacity = "0.5";
+  banana.style.pointerEvents = "auto";
+  banana.style.cursor = "pointer";
+  banana.style.userSelect = "none";
+  banana.style.zIndex = "99999";
+  banana.style.willChange = "transform, filter";
+  banana.style.filter = `hue-rotate(0deg) saturate(${SATURATION}%) brightness(${BRIGHTNESS}%)`;
+  // optional: helps neon pop on dark bg; comment out if it clashes
+  banana.style.mixBlendMode = "screen";
 
-    const postElements = [];
-    for (const post of posts) {
-      const mdText = await fetch(post.file).then(r => r.text());
-      const siteRoot = window.location.origin;
-      const fixedMd = mdText.replace(/!\[(.*?)\]\((.*?)\)/g, (m, alt, path) => {
-        if (path.startsWith("http") || path.startsWith("/")) return m;
-        if (path.startsWith("./")) path = path.slice(2);
-        return `![${alt}](${siteRoot}/images/uploads/${path})`;
-      });
+  const audio = document.createElement("audio");
+  audio.src = AUDIO_SRC;
+  audio.preload = "none";
 
-      const cleanMd = fixedMd.replace(/^---[\s\S]*?---/, "").trim();
-      const html = marked.parse(cleanMd);
-      const div = document.createElement("div");
-      div.className = "post";
-      const cleanTitle = post.title.replace(/^title:\s*/i, "").trim();
-      div.innerHTML = `<h3>${cleanTitle}</h3><small>${post.date}</small><div>${html}</div>`;
-      div.style.display = "none";
-      postElements.push(div);
-      container.appendChild(div);
-    }
+  document.body.appendChild(banana);
+  document.body.appendChild(audio);
 
-    let visibleCount = 0;
-    const step = window.innerWidth <= 1100 ? 1 : 3;
+  // --- motion state ---
+  let x = 100, y = 100;
+  let w = START_SIZE_PX, h = START_SIZE_PX;
+  const randDir = () => (Math.random() < 0.5 ? -1 : 1);
+  // randomize initial direction a bit so it looks alive
+  let vx = randDir() * SPEED_PX_PER_SEC * (0.7 + Math.random() * 0.6);
+  let vy = randDir() * SPEED_PX_PER_SEC * (0.7 + Math.random() * 0.6);
 
-    const btn = document.createElement("button");
-    btn.textContent = "Load More";
-    btn.style.display = "block";
-    btn.style.margin = "0 auto";
-    btn.style.background = "#222";
-    btn.style.color = "#fff";
-    btn.style.border = "1px solid #444";
-    btn.style.padding = "8px 16px";
-    btn.style.cursor = "pointer";
+  const viewport = () => ({ W: window.innerWidth, H: window.innerHeight });
 
-    function showNext() {
-      for (let i = visibleCount; i < visibleCount + step && i < postElements.length; i++) {
-        postElements[i].style.display = "block";
+  // --- hue control ---
+  let hasPointer = false;
+  let autoHue = 0;
+  const setHue = deg => {
+    banana.style.filter =
+      `hue-rotate(${deg % 360}deg) saturate(${SATURATION}%) brightness(${BRIGHTNESS}%)`;
+  };
+
+  // track mouse position for hue mapping
+  window.addEventListener("mousemove", e => {
+    hasPointer = true;
+    const { innerWidth: W, innerHeight: H } = window;
+    const hx = (e.clientX / Math.max(1, W)) * 360;
+    const hy = (e.clientY / Math.max(1, H)) * 360;
+    // blend X and Y so moving diagonally feels trippy
+    setHue((hx * 0.7 + hy * 0.3) % 360);
+  }, { passive: true });
+
+  // fallback: auto-cycling hue for touch/idle
+  let lastHueTime = 0;
+
+  // --- click to play/pause ---
+  banana.addEventListener("click", () => {
+    try {
+      if (audio.paused) {
+        audio.currentTime = 0;
+        audio.play();
+      } else {
+        audio.pause();
       }
-      visibleCount += step;
-      if (visibleCount >= postElements.length) btn.remove();
+    } catch (_) {
+      // if the browser throws a fit about autoplay, that click still counts as a gesture
+    }
+  });
+
+  // --- accessibility nicety ---
+  banana.setAttribute("role", "button");
+  banana.setAttribute("aria-label", "Play or pause Do That There");
+  banana.tabIndex = 0;
+  banana.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      banana.click();
+    }
+  });
+
+  // --- animation loop ---
+  let prev = performance.now();
+  const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
+  function tick(now) {
+    const dt = Math.min(0.05, (now - prev) / 1000); // cap big frame jumps
+    prev = now;
+
+    // auto hue if no pointer recently
+    if (!hasPointer) {
+      const elapsed = now - lastHueTime;
+      if (elapsed > 16) {
+        autoHue = (autoHue + 45 * dt) % 360;
+        setHue(autoHue);
+        lastHueTime = now;
+      }
     }
 
-    btn.onclick = showNext;
-    container.appendChild(btn);
-    showNext();
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = "<p>Error loading posts.</p>";
+    const { W, H } = viewport();
+    // update size in case of zoom or responsive adjustments
+    w = banana.getBoundingClientRect().width || w;
+    h = banana.getBoundingClientRect().height || h;
+
+    // move
+    x += vx * dt;
+    y += vy * dt;
+
+    // bounce with a tiny extra nudge so it doesn’t get stuck on edges
+    if (x <= 0) {
+      x = 0; vx = Math.abs(vx);
+    } else if (x + w >= W) {
+      x = W - w; vx = -Math.abs(vx);
+    }
+    if (y <= 0) {
+      y = 0; vy = Math.abs(vy);
+    } else if (y + h >= H) {
+      y = H - h; vy = -Math.abs(vy);
+    }
+
+    banana.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+
+    requestAnimationFrame(tick);
   }
-}
+  requestAnimationFrame(tick);
 
-async function loadYouTube() {
-  const container = document.getElementById("youtube");
-  const rssUrl =
-    "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-  try {
-    const response = await fetch(
-      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`
-    );
-    const data = await response.json();
+  // keep inside the window on resize
+  window.addEventListener("resize", () => {
+    const { W, H } = viewport();
+    x = clamp(x, 0, Math.max(0, W - w));
+    y = clamp(y, 0, Math.max(0, H - h));
+  });
 
-    container.innerHTML = `
-      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
-      <h2>Latest Videos</h2>
-    `;
-
-    const videoElements = data.items.map(item => {
-      const div = document.createElement("div");
-      div.className = "video";
-      const videoId = item.link.split("v=")[1];
-      div.innerHTML = `
-        <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
-        <p><a href="${item.link}" target="_blank">${item.title}</a></p>`;
-      div.style.display = "none";
-      container.appendChild(div);
-      return div;
-    });
-
-    let visibleCount = 0;
-    const step = window.innerWidth <= 1100 ? 1 : 3;
-
-    const btn = document.createElement("button");
-    btn.textContent = "Load More";
-    btn.style.display = "block";
-    btn.style.margin = "0 auto";
-    btn.style.background = "#222";
-    btn.style.color = "#fff";
-    btn.style.border = "1px solid #444";
-    btn.style.padding = "8px 16px";
-    btn.style.cursor = "pointer";
-
-    function showNext() {
-      for (let i = visibleCount; i < visibleCount + step && i < videoElements.length; i++) {
-        videoElements[i].style.display = "block";
-      }
-      visibleCount += step;
-      if (visibleCount >= videoElements.length) {
-        btn.remove();
-        addWatchOnYouTubeButton();
-      }
-    }
-
-    function addWatchOnYouTubeButton() {
-      const watchBtn = document.createElement("a");
-      watchBtn.href = "https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ";
-      watchBtn.target = "_blank";
-      watchBtn.textContent = "Watch on YouTube";
-      watchBtn.style.display = "block";
-      watchBtn.style.textAlign = "center";
-      watchBtn.style.margin = "20px auto";
-      watchBtn.style.background = "#cc181e";
-      watchBtn.style.color = "#fff";
-      watchBtn.style.border = "none";
-      watchBtn.style.padding = "10px 20px";
-      watchBtn.style.fontWeight = "bold";
-      watchBtn.style.borderRadius = "4px";
-      watchBtn.style.textDecoration = "none";
-      watchBtn.onmouseover = () => (watchBtn.style.background = "#ff4444");
-      watchBtn.onmouseout = () => (watchBtn.style.background = "#cc181e");
-      container.appendChild(watchBtn);
-    }
-
-    btn.onclick = showNext;
-    container.appendChild(btn);
-    showNext();
-  } catch (err) {
-    console.error(err);
-    container.innerHTML = "<p>Error loading YouTube feed.</p>";
+  // optional: respect reduced motion users because we’re not monsters
+  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (prefersReduced.matches) {
+    vx = 0; vy = 0;
   }
-}
-
-loadPosts();
-loadYouTube();
+})();
 </script>
-  
+
+<div class="footer">
+Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
+</div>
 </body>
 </html>
