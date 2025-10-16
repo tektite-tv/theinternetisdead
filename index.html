@@ -40,6 +40,30 @@
     z-index: 10;
   }
 
+  /* SUBMIT BUTTON ------------------------------------------- */
+.submit-btn {
+  display: inline-block;
+  padding: 8px 20px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid #0f0;
+  color: #0f0;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-decoration: none;
+  transition: all 0.25s ease-in-out;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+}
+
+.submit-btn:hover {
+  background: #0f0;
+  color: #000;
+  box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
+  transform: scale(1.05);
+}
+
   .left-section,
   .right-section {
     display: flex;
@@ -425,21 +449,21 @@
 
 <body>
   <header>
-    <div class="left-section">
-      <button class="menu">&#9776;</button>
-
-      <!-- ⬇️ INSERT THIS RIGHT HERE ⬇️ -->
-      <div id="menu-popup" class="menu-popup">
-        <a href="/" class="menu-item">Home</a>
-        <a href="/admin" class="menu-item">Admin</a>
-      </div>
-      <!-- ⬆️ END INSERTION ⬆️ -->
-
-      <a href="index.html">
-        <img class="logo" src="/images/oldtube.png" alt="OldTube Logo" />
-      </a>
+  <div class="left-section">
+    <button class="menu">&#9776;</button>
+    <div id="menu-popup" class="menu-popup">
+      <a href="/" class="menu-item">Home</a>
+      <a href="/admin" class="menu-item">Admin</a>
     </div>
-  </header>
+    <a href="index.html">
+      <img class="logo" src="/images/oldtube.png" alt="OldTube Logo" />
+    </a>
+  </div>
+
+  <div class="right-section">
+    <a href="mailto:nobody@theinternetisdead.org" class="submit-btn">Submit</a>
+  </div>
+</header>
 
   <main>
     <section class="column" id="posts">
