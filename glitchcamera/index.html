@@ -148,6 +148,29 @@
       50%{filter:hue-rotate(45deg)contrast(1.3)saturate(1.4)}
       100%{filter:hue-rotate(0deg)contrast(1)saturate(1)}
     }
+
+    .fullscreen-btn {
+  position: fixed;
+  top: 16px;
+  left: 80px; /* keeps it to the right of the menu icon */
+  width: 44px;
+  height: 44px;
+  background: #cc181e;
+  border: 2px solid #ff5555;
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  display: none;
+  z-index: 10000;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.fullscreen-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 16px rgba(255,0,0,0.6);
+}
+
   </style>
 </head>
 <body>
@@ -169,8 +192,11 @@
   </header>
 
   <main>
-    <button id="enableGlitchCam" class="glitch-btn">Enable Glitch Camera</button>
-  </main>
+  <button id="enableGlitchCam" class="glitch-btn">Enable Glitch Camera</button>
+</main>
+
+<!-- Hidden fullscreen toggle button -->
+<button id="fullscreenToggle" class="fullscreen-btn" title="Toggle fullscreen">⛶</button>
 
   <footer>
     Press ESC or click header/footer to exit camera mode
