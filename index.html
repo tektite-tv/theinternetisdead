@@ -544,21 +544,21 @@
 </header>
 
 <!-- CONTACT POPUP -->
-<div id="contact-popup" class="contact-popup">
-  <div class="contact-inner">
-    <button class="close-contact">✕</button>
-    <h2>Send a Message</h2>
-    <form id="contact-form" action="mailto:nobody@theinternetisdead.org" method="post" enctype="text/plain">
-      <label>Name:</label>
-      <input type="text" name="name" required>
-      <label>Email:</label>
-      <input type="email" name="email" required>
-      <label>Message:</label>
-      <textarea name="message" rows="4" required></textarea>
-      <button type="submit" class="send-btn">Send</button>
-    </form>
-  </div>
-</div>
+<form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+  <input type="hidden" name="form-name" value="contact">
+  <input type="hidden" name="bot-field" />
+
+  <label>Name:</label>
+  <input type="text" name="name" required>
+
+  <label>Email:</label>
+  <input type="email" name="email" required>
+
+  <label>Message:</label>
+  <textarea name="message" rows="4" required></textarea>
+
+  <button type="submit" class="send-btn">Send</button>
+</form>
 
   <main>
     <section class="column" id="posts">
@@ -1015,6 +1015,19 @@ async function handlePostClick(url) {
   });
   btn.addEventListener('click', () => checkTerm(input.value));
 })();
+
+document.getElementById('contact-form').addEventListener('submit', function(e){
+  e.preventDefault();
+  const form = e.target;
+  const data = new FormData(form);
+  fetch('/', { method: 'POST', body: data })
+    .then(() => {
+      form.innerHTML = '<p style="color:#0f0">Thanks — message sent.</p>';
+    }).catch(() => {
+      form.innerHTML = '<p style="color:#f55">Send failed. Try again or use mailto.</p>';
+    });
+});
+    
 </script>
 
 </body>
