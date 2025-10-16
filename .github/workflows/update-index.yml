@@ -1,13 +1,20 @@
 name: Update posts index
+
 on:
   push:
+    branches:
+      - main
     paths:
-      - '_posts/**/*.md'
+      - "_posts/**/*.md"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -15,31 +22,33 @@ jobs:
       - name: Generate index.json
         shell: bash
         run: |
+          set -e
           echo "[" > _posts/index.json
-          files=(_posts/*.md)
-          total=${#files[@]}
-          i=0
-          for f in "${files[@]}"; do
-            title=$(grep '^title:' "$f" | head -n1 | cut -d':' -f2- | xargs)
-            date=$(grep '^date:' "$f" | head -n1 | cut -d':' -f2- | xargs)
-            image=$(grep '^image:' "$f" | head -n1 | cut -d':' -f2- | xargs)
-            i=$((i+1))
+          first=true
+          for f in _posts/*.md; do
+            # Extract fields from YAML frontmatter
+            title=$(grep -m1 '^title:' "$f" | sed 's/^title:[[:space:]]*//')
+            date=$(grep -m1 '^date:' "$f" | sed 's/^date:[[:space:]]*//')
+            image=$(grep -m1 '^image:' "$f" | sed 's/^image:[[:space:]]*//')
+
             if [ -n "$title" ] && [ -n "$date" ]; then
-              json="{\"title\": \"$title\", \"date\": \"$date\", \"file\": \"$f\""
-              if [ -n "$image" ]; then
-                json="$json, \"image\": \"$image\""
+              if [ "$first" = false ]; then
+                echo "," >> _posts/index.json
               fi
+              first=false
+              json="{\"title\": \"$title\", \"date\": \"$date\", \"file\": \"$f\""
+              [ -n "$image" ] && json="$json, \"image\": \"$image\""
               json="$json}"
               echo "  $json" >> _posts/index.json
-              [ $i -lt $total ] && echo "," >> _posts/index.json
             fi
           done
           echo "]" >> _posts/index.json
+          cat _posts/index.json
 
       - name: Commit and push index.json
         run: |
           git config user.name "actions-user"
           git config user.email "actions@github.com"
           git add _posts/index.json
-          git commit -m "Update _posts index" || echo "No changes to commit"
+          git diff --cached --quiet || git commit -m "Auto-update _posts index"
           git push
