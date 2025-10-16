@@ -324,6 +324,25 @@
       startCamera();
     });
   })();
+
+      // Screenshot with "S" key while camera active
+    document.addEventListener("keydown", e => {
+      if (e.key.toLowerCase() === "s" && camWrap && stream) {
+        const video = camWrap.querySelector("video.main") || camWrap.querySelector("video");
+        if (!video) return;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `glitchcam_${Date.now()}.png`;
+        link.click();
+      }
+    });
 </script>
 
 </body>
