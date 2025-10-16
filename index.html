@@ -275,7 +275,8 @@
         const html = marked.parse(cleanMd);
         const div = document.createElement("div");
         div.className = "post";
-        div.innerHTML = `<h3>${post.title}</h3><small>${post.date}</small><div>${html}</div>`;
+        const cleanTitle = post.title.replace(/^title:\s*/i, "").trim();
+        div.innerHTML = `<h3>${cleanTitle}</h3><small>${post.date}</small><div>${html}</div>`;
         container.appendChild(div);
       }
     } catch (err) {
