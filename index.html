@@ -42,28 +42,28 @@
   }
 
   /* SUBMIT BUTTON ------------------------------------------- */
-.submit-btn {
-  display: inline-block;
-  padding: 8px 20px;
-  background: rgba(0, 0, 0, 0.85);
-  border: 2px solid #0f0;
-  color: #0f0;
-  font-family: "Courier New", monospace;
-  font-size: 14px;
-  border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  text-decoration: none;
-  transition: all 0.25s ease-in-out;
-  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
-}
+  .submit-btn {
+    display: inline-block;
+    padding: 8px 20px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #0f0;
+    color: #0f0;
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-decoration: none;
+    transition: all 0.25s ease-in-out;
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+  }
 
-.submit-btn:hover {
-  background: #0f0;
-  color: #000;
-  box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
-  transform: scale(1.05);
-}
+  .submit-btn:hover {
+    background: #0f0;
+    color: #000;
+    box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
+    transform: scale(1.05);
+  }
 
   .left-section,
   .right-section {
@@ -142,7 +142,32 @@
     padding: 32px;
     background: #000;
     align-items: start;
+    position: relative;
+    overflow: hidden;
   }
+
+  /* Animated dark green diagonal scanlines */
+  main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(0, 255, 153, 0.18) 0px,
+    rgba(0, 255, 153, 0.18) 3px,
+    rgba(0, 255, 153, 0.02) 3px,
+    rgba(0, 255, 153, 0.02) 12px
+  );
+  animation: scan-drift 40s linear infinite; /* slower motion */
+  pointer-events: none;
+  z-index: 0;
+  filter: brightness(1.2) blur(0.15px);
+}
+
+@keyframes scan-drift {
+  from { background-position: 0 0; }
+  to { background-position: 600px 600px; }
+}
 
   .column {
     background: #0a0a0a;
@@ -151,6 +176,8 @@
     border-radius: 6px;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
     overflow: visible;
+    position: relative;
+    z-index: 1;
   }
 
   h1 {
@@ -173,10 +200,6 @@
     margin-bottom: 28px;
     padding-bottom: 14px;
     border-bottom: 1px dashed #333;
-  }
-
-  .post h1 {
-    color:#00ff99;
   }
 
   .post h3 {
@@ -209,15 +232,6 @@
     margin-bottom: 24px;
   }
 
-  .video a {
-    color: #cc181e;
-    text-decoration: none;
-  }
-
-  .video a:hover {
-    text-decoration: underline;
-  }
-
   iframe {
     width: 100%;
     aspect-ratio: 16 / 9;
@@ -248,299 +262,23 @@
     margin-top: 40px;
     color: #ccc;
   }
-
-  /* HACKER TERMINAL SEARCH POPUP --------------------------- */
-  .search-wrapper { position: relative; width: 100%; }
-  .search-input { width: 100%; }
-
-  #search-popup {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 100%;
-    margin-top: 8px;
-    background: rgba(0, 0, 0, 0.85);
-    border: 1px solid #0f0;
-    box-shadow: 0 0 12px #0f07;
-    border-radius: 6px;
-    padding: 8px;
-    max-height: 420px;
-    overflow-y: auto;
-    display: none;
-    z-index: 9999;
-    font-family: "Courier New", monospace;
-  }
-
-  #search-popup .promptline {
-    color: #0f0;
-    opacity: 0.85;
-    font-size: 12px;
-    margin: 4px 8px 8px;
-  }
-
-  .search-result {
-    padding: 10px 12px;
-    border: 1px solid #0f0;
-    border-radius: 4px;
-    margin: 8px 0;
-    background: rgba(0, 20, 0, 0.35);
-    cursor: pointer;
-  }
-
-  .search-result:hover,
-  .search-result.active {
-    background: rgba(0, 40, 0, 0.6);
-    outline: 1px dashed #0f0;
-  }
-
-  .search-result .kind { color: #9f9; font-size: 12px; margin-right: 6px; }
-  .search-result .title { color: #0f0; font-weight: bold; display: block; }
-  .search-result .meta { color: #7f7; font-size: 12px; margin-top: 2px; }
-  .search-result .snippet { color: #bfb; font-size: 13px; margin-top: 6px; opacity: 0.85; }
-  .no-results { color: #7f7; padding: 8px 12px; }
-
-  /* POST POPUP / MODAL ------------------------------------ */
-  #post-popup {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(4px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-  }
-
-  #post-popup .popup-inner {
-    position: relative;
-    background: rgba(0, 20, 0, 0.9);
-    border: 2px solid #0f0;
-    box-shadow: 0 0 20px #0f05;
-    padding: 24px;
-    max-width: 800px;
-    max-height: 80vh;
-    overflow-y: auto;
-    color: #0f0;
-    font-family: "Courier New", monospace;
-    border-radius: 8px;
-  }
-
-  #post-popup .close-btn {
-    position: absolute;
-    top: 8px;
-    right: 12px;
-    background: transparent;
-    border: none;
-    color: #0f0;
-    font-size: 22px;
-    cursor: pointer;
-    transition: color 0.2s;
-  }
-
-  #post-popup .close-btn:hover {
-    color: #ff4444;
-  }
-
-  #post-popup img {
-    max-width: 100%;
-    border-radius: 6px;
-    margin: 12px 0;
-  }
-
-  /* BUTTON FIX / STYLE UPGRADE ------------------------------- */
-.load-more,
-.youtube-btn {
-  display: inline-block;
-  margin: 20px auto 0;
-  padding: 10px 24px;
-  background: rgba(0, 0, 0, 0.8);
-  border: 2px solid #0f0;
-  border-radius: 8px;
-  color: #0f0;
-  font-family: "Courier New", monospace;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: all 0.25s ease-in-out;
-  text-align: center;
-  box-shadow: 0 0 12px rgba(0, 255, 0, 0.2);
-}
-
-.load-more:hover,
-.youtube-btn:hover {
-  background: #0f0;
-  color: #000;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
-  transform: scale(1.05);
-}
-
-.youtube-btn {
-  background: rgba(204, 24, 30, 0.1);
-  border-color: #cc181e;
-  color: #cc181e;
-  margin-left: 8px;
-}
-
-.youtube-btn:hover {
-  background: #cc181e;
-  color: #fff;
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
-}
-
-/* center them in their column cleanly */
-#loadMorePosts,
-#loadMoreVideos {
-  display: block;
-  margin: 20px auto;
-}
-
-/* Center both Watch More and Watch on YouTube buttons */
-#loadMoreVideos,
-.youtube-btn {
-  display: block;
-  margin: 20px auto;
-  text-align: center;
-}
-
-/* Optional: tighten spacing so they stack nicely */
-#loadMoreVideos + .youtube-btn {
-  margin-top: 10px;
-}
-
-/* HAMBURGER DROPDOWN -------------------------------------- */
-.menu-popup {
-  position: absolute;
-  top: 60px; /* adjust to sit under header */
-  left: 32px;
-  background: rgba(0, 0, 0, 0.85);
-  border: 1px solid #0f0;
-  box-shadow: 0 0 12px #0f07;
-  border-radius: 6px;
-  padding: 8px;
-  display: none;
-  flex-direction: column;
-  z-index: 9999;
-  font-family: "Courier New", monospace;
-  min-width: 160px;
-}
-
-.menu-item {
-  color: #0f0;
-  padding: 10px 12px;
-  border-radius: 4px;
-  text-decoration: none;
-  transition: all 0.2s ease-in-out;
-  display: block;
-}
-
-.menu-item:hover {
-  background: rgba(0, 40, 0, 0.6);
-  outline: 1px dashed #0f0;
-  color: #000;
-}
-
-.menu-popup.visible {
-  display: flex;
-}
-
-/* CONTACT POPUP ------------------------------------------ */
-.contact-popup {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-  backdrop-filter: blur(4px);
-}
-.contact-inner {
-  background: rgba(0,20,0,0.9);
-  border: 2px solid #0f0;
-  padding: 24px;
-  border-radius: 8px;
-  color: #0f0;
-  width: 90%;
-  max-width: 400px;
-  font-family: "Courier New", monospace;
-  box-shadow: 0 0 20px #0f05;
-}
-.contact-inner h2 {
-  margin-bottom: 12px;
-}
-.contact-inner label {
-  display: block;
-  margin-top: 8px;
-  margin-bottom: 4px;
-}
-.contact-inner input,
-.contact-inner textarea {
-  width: 100%;
-  background: #000;
-  color: #0f0;
-  border: 1px solid #0f0;
-  border-radius: 4px;
-  padding: 6px;
-  font-family: inherit;
-}
-.send-btn {
-  margin-top: 12px;
-  background: #0f0;
-  color: #000;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.2s;
-}
-.send-btn:hover {
-  background: #7f7;
-}
-.close-contact {
-  position: absolute;
-  right: 12px;
-  top: 8px;
-  background: transparent;
-  border: none;
-  color: #0f0;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-</style>
-
+  </style>
 </head>
 
 <body>
   <header>
     <div class="left-section">
       <button class="menu">&#9776;</button>
-
-      <div id="menu-popup" class="menu-popup">
-        <a href="/" class="menu-item">Home</a>
-        <a href="/glitchtv" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Glitch TV</a>
-        <a href="/glitchcamera" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Glitch Camera</a>
-        <a href="/admin" class="menu-item">Admin</a>
-      </div>
-
-      <!-- LOGO + MESSAGE -->
       <a href="index.html" class="flex items-center gap-3">
         <img class="logo" src="/images/oldtube.png" alt="OldTube Logo" />
-        <span style="color:#00ff99; font-family:'Courier New', monospace; font-size:14px; text-align:center;">
+        <span style="color:#00ff99; font-size:14px;">
           The webmaster is not harvesting your soul for profit. Isn't that wonderful?
         </span>
       </a>
     </div>
 
-    <!-- SEARCH BAR (restored) -->
     <div class="search-bar search-wrapper">
-      <input
-        type="text"
-        class="search-input"
-        placeholder="Search posts and videos..."
-      />
+      <input type="text" class="search-input" placeholder="Search posts and videos..." />
       <button class="search-btn">Search</button>
       <div id="search-popup"></div>
     </div>
@@ -549,27 +287,6 @@
       <a href="mailto:nobody@theinternetisdead.org" class="submit-btn">Submit</a>
     </div>
   </header>
-</body>
-
-
-<!-- CONTACT POPUP -->
-<div id="contact-popup" class="contact-popup">
-  <div class="contact-inner">
-    <button class="close-contact">✕</button>
-    <h2>Send a Message</h2>
-    <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-      <input type="hidden" name="form-name" value="contact">
-      <input type="hidden" name="bot-field" />
-      <label>Name:</label>
-      <input type="text" name="name" required>
-      <label>Email:</label>
-      <input type="email" name="email" required>
-      <label>Message:</label>
-      <textarea name="message" rows="4" required></textarea>
-      <button type="submit" class="send-btn">Send</button>
-    </form>
-  </div>
-</div>
 
   <main>
     <section class="column" id="posts">
@@ -584,462 +301,10 @@
       <p>Loading videos...</p>
     </section>
   </main>
+
   <div class="footer">
-Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
-</div>
-  
-  <script>
-async function loadContent() {
-  const postsContainer = document.getElementById("posts");
-  const youtubeContainer = document.getElementById("youtube");
-  const searchInput = document.querySelector(".search-input");
-  const searchBtn = document.querySelector(".search-btn");
-  const popup = document.getElementById("search-popup");
-
-  let allPosts = [];
-  let visiblePosts = 3;
-  let allVideos = [];
-  let visibleVideos = 3;
-  let INDEX = [];
-  let activeIndex = -1;
-
-  // === Load Posts =========================================
-  try {
-    const res = await fetch("/_posts/index.json");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    allPosts = await res.json();
-    allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
-    renderPosts();
-  } catch (err) {
-    console.error("Post load failed:", err);
-    postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${err.message}</p>`;
-  }
-
-  async function renderPosts() {
-    postsContainer.innerHTML = `
-      <h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1>
-      <h2>Latest Posts</h2>
-    `;
-    const displayed = allPosts.slice(0, visiblePosts);
-    for (const p of displayed) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "post";
-      wrapper.innerHTML = `
-        <h3>${p.title}</h3>
-        <small>${new Date(p.date).toLocaleString()}</small>
-        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy">` : ""}
-        <div class="content"><em>Loading...</em></div>
-      `;
-      postsContainer.appendChild(wrapper);
-
-      try {
-        const res = await fetch(p.file);
-        let text = await res.text();
-        if (text.startsWith('---')) {
-          const end = text.indexOf('---', 3);
-          if (end !== -1) text = text.slice(end + 3);
-        }
-        wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
-      } catch {
-        wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
-      }
-    }
-    if (visiblePosts < allPosts.length) {
-      const btn = document.createElement("button");
-      btn.id = "loadMorePosts";
-      btn.className = "load-more";
-      btn.textContent = "Read More";
-      btn.onclick = () => { visiblePosts += 3; renderPosts(); };
-      postsContainer.appendChild(btn);
-    }
-  }
-
-  // === Load YouTube Feed ==================================
-  try {
-    const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-    const rssRes = await fetch(
-      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`
-    );
-    if (!rssRes.ok) throw new Error(`HTTP ${rssRes.status}`);
-    const rssData = await rssRes.json();
-    allVideos = rssData.items || [];
-    renderVideos();
-  } catch (err) {
-    console.error("Video load failed:", err);
-    youtubeContainer.innerHTML += `<p style="color:red;">Error loading videos: ${err.message}</p>`;
-  }
-
-  function renderVideos() {
-    const displayed = allVideos.slice(0, visibleVideos);
-    const vidsHTML = displayed.map(v => {
-      const id = v.guid?.split(":").pop() || "";
-      return `
-        <div class="video">
-          <iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe>
-          <a href="${v.link}" target="_blank">${v.title}</a>
-        </div>`;
-    }).join("");
-
-    youtubeContainer.innerHTML = `
-      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
-      <h2>Latest Videos</h2>
-      ${vidsHTML}
-      ${visibleVideos < allVideos.length ? `<button id="loadMoreVideos" class="load-more">Watch More</button>` : ""}
-      <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" target="_blank" class="youtube-btn">Watch on YouTube</a>
-    `;
-    const btn = document.getElementById("loadMoreVideos");
-    if (btn) btn.addEventListener("click", () => { visibleVideos += 3; renderVideos(); });
-  }
-
-  // === Build unified search index ==========================
-  try {
-    const postDocs = await Promise.all(allPosts.map(async p => {
-      try {
-        const r = await fetch(p.file);
-        let txt = await r.text();
-        if (txt.startsWith('---')) {
-          const end = txt.indexOf('---', 3);
-          if (end !== -1) txt = txt.slice(end + 3);
-        }
-        const plain = txt.replace(/[#>*_`\[\]\(\)!-]/g, " ").replace(/\s+/g, " ").trim();
-        return { kind: "post", title: p.title || "Untitled", url: p.file, date: p.date || "", snippet: (plain || "").slice(0, 200) };
-      } catch {
-        return { kind: "post", title: p.title || "Untitled", url: p.file, date: p.date || "", snippet: "" };
-      }
-    }));
-
-    const videoDocs = (allVideos || []).map(v => ({
-      kind: "video",
-      title: v.title || "Untitled",
-      url: v.link,
-      date: v.pubDate || "",
-      snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
-    }));
-
-    INDEX = [...postDocs, ...videoDocs];
-  } catch (e) {
-    console.warn("Index build issue:", e);
-    INDEX = [];
-  }
-
-  // === Search UI ===========================================
-  function showPopup() { popup.style.display = "block"; }
-  function hidePopup() { popup.style.display = "none"; activeIndex = -1; }
-  function isShown() { return popup.style.display !== "none"; }
-
-  function highlightMove(dir) {
-    const items = Array.from(popup.querySelectorAll(".search-result"));
-    if (!items.length) return;
-    activeIndex = (activeIndex + dir + items.length) % items.length;
-    items.forEach((el, i) => el.classList.toggle("active", i === activeIndex));
-    items[activeIndex].scrollIntoView({ block: "nearest" });
-  }
-
-  function goToActive() {
-    const items = Array.from(popup.querySelectorAll(".search-result"));
-    if (!items.length) return;
-    const el = items[activeIndex] || items[0];
-    const url = el?.dataset?.url;
-    if (url) handlePostClick(url);
-  }
-
-  function renderResults(q) {
-    const header = `<div class="promptline">$ grep -i "${escapeHtml(q)}" {posts,videos}</div>`;
-    if (!q) {
-      popup.innerHTML = header + `<div class="no-results">Type to search posts and videos.</div>`;
-      showPopup(); return;
-    }
-    const query = q.trim().toLowerCase();
-    const hits = INDEX.filter(d =>
-      (d.title && d.title.toLowerCase().includes(query)) ||
-      (d.snippet && d.snippet.toLowerCase().includes(query))
-    ).slice(0, 50);
-
-    if (!hits.length) {
-      popup.innerHTML = header + `<div class="no-results">No matches. Try fewer words.</div>`;
-      showPopup(); return;
-    }
-
-    popup.innerHTML = header + hits.map((d, i) => `
-      <div class="search-result${i === 0 ? " active" : ""}" data-url="${escapeAttr(d.url)}">
-        <span class="kind">[${d.kind}]</span>
-        <span class="title">${escapeHtml(d.title)}</span>
-        <div class="meta">${d.date ? new Date(d.date).toLocaleString() : ""}</div>
-        ${d.snippet ? `<div class="snippet">${escapeHtml(d.snippet)}</div>` : ""}
-      </div>
-    `).join("");
-
-    activeIndex = 0;
-    popup.querySelectorAll(".search-result").forEach(el => {
-      el.addEventListener("click", () => handlePostClick(el.dataset.url));
-      el.addEventListener("mouseenter", () => {
-        popup.querySelectorAll(".search-result").forEach(x => x.classList.remove("active"));
-        el.classList.add("active");
-        activeIndex = Array.from(popup.querySelectorAll(".search-result")).indexOf(el);
-      });
-    });
-    showPopup();
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
-
-  searchInput.addEventListener("input", () => renderResults(searchInput.value));
-  searchInput.addEventListener("focus", () => renderResults(searchInput.value));
-  searchBtn.addEventListener("click", () => renderResults(searchInput.value));
-
-  searchInput.addEventListener("keydown", e => {
-    if (!isShown()) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); highlightMove(1); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); highlightMove(-1); }
-    else if (e.key === "Enter") { e.preventDefault(); goToActive(); }
-    else if (e.key === "Escape") { hidePopup(); }
-  });
-
-  document.addEventListener("click", e => {
-    const within = e.target.closest(".search-wrapper");
-    if (!within) hidePopup();
-  });
-} // end loadContent
-
-document.addEventListener("DOMContentLoaded", loadContent);
-
-// === POST POPUP HANDLER =======================================
-function createPostPopup() {
-  let popup = document.getElementById("post-popup");
-  if (!popup) {
-    popup = document.createElement("div");
-    popup.id = "post-popup";
-    popup.innerHTML = `
-      <div class="popup-inner">
-        <button class="close-btn">✕</button>
-        <div class="popup-header"></div>
-        <div class="popup-content"><em>Loading...</em></div>
-      </div>
-    `;
-    document.body.appendChild(popup);
-    popup.querySelector(".close-btn").addEventListener("click", () => {
-      popup.style.display = "none";
-      popup.querySelector(".popup-content").innerHTML = "";
-      popup.querySelector(".popup-header").innerHTML = "";
-    });
-  }
-  return popup;
-}
-
-async function handlePostClick(url) {
-  if (!url.endsWith(".md")) return window.open(url, "_blank");
-
-  const popup = createPostPopup();
-  popup.style.display = "flex";
-  popup.querySelector(".popup-content").innerHTML = "<em>Loading...</em>";
-
-  try {
-    // Fetch JSON for title/date lookup
-    const res = await fetch("/_posts/index.json");
-    const posts = await res.json();
-    const meta = posts.find(p => p.file === url);
-
-    // Fetch Markdown
-    const res2 = await fetch(url);
-    let text = await res2.text();
-    if (text.startsWith('---')) {
-      const end = text.indexOf('---', 3);
-      if (end !== -1) text = text.slice(end + 3);
-    }
-
-    const title = meta?.title || "Untitled";
-    const date = meta?.date ? new Date(meta.date).toLocaleString() : "";
-
-    popup.querySelector(".popup-header").innerHTML = `
-      <h2 style="color:#0f0; margin-bottom:6px;">${title}</h2>
-      <small style="color:#7f7;">${date}</small>
-      <hr style="border:1px solid #0f0; margin:10px 0;">
-    `;
-    popup.querySelector(".popup-content").innerHTML = marked.parse(text.trim());
-  } catch {
-    popup.querySelector(".popup-content").innerHTML = "<em>Error loading post.</em>";
-  }
-}
-
-// === CONTACT POPUP HANDLER ===============================
-(function() {
-  const submitBtn = document.querySelector('.submit-btn');
-  const popup = document.getElementById('contact-popup');
-  const closeBtn = popup.querySelector('.close-contact');
-
-  if (!submitBtn || !popup) return;
-
-  submitBtn.addEventListener('click', e => {
-    e.preventDefault();
-    popup.style.display = 'flex';
-  });
-  closeBtn.addEventListener('click', () => {
-    popup.style.display = 'none';
-  });
-  document.addEventListener('click', e => {
-    if (!popup.contains(e.target) && !submitBtn.contains(e.target)) {
-      popup.style.display = 'none';
-    }
-  });
-})();
-    
-// === HAMBURGER DROPDOWN MENU ===============================
-(function() {
-  const menuBtn = document.querySelector('.menu');
-  const menuPopup = document.getElementById('menu-popup');
-
-  if (!menuBtn || !menuPopup) return;
-
-  menuBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    menuPopup.classList.toggle('visible');
-  });
-
-  // Close menu if clicking anywhere else
-  document.addEventListener('click', e => {
-    if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) {
-      menuPopup.classList.remove('visible');
-    }
-  });
-})();
-
-// === BOUNCING BANANA ==========================================
-(() => {
-  const IMG_SRC = "/images/bananamanarama.gif";
-  const AUDIO_SRC = "/audio/do-that-there.mp3";
-  const SIZE = 160, SPEED = 220, SAT = 200, BRT = 110;
-  const banana = document.createElement("img");
-  banana.src = IMG_SRC;
-  Object.assign(banana.style, {
-    position: "fixed", left: "100px", top: "100px", width: SIZE+"px",
-    opacity: "1", cursor: "pointer", userSelect: "none",
-    mixBlendMode: "screen", filter: `hue-rotate(0deg) saturate(${SAT}%) brightness(${BRT}%)`,
-    zIndex: "1000"
-  });
-  const audio = document.createElement("audio");
-  audio.src = AUDIO_SRC;
-  document.body.appendChild(banana);
-  document.body.appendChild(audio);
-  let x=100, y=100, vx=(Math.random()>0.5?1:-1)*SPEED, vy=(Math.random()>0.5?1:-1)*SPEED, hue=0, hasPointer=false;
-  banana.addEventListener("click", ()=>{ if(audio.paused){audio.currentTime=0;audio.play();} else audio.pause(); });
-  window.addEventListener("mousemove", e=>{
-    hasPointer=true;
-    const W=window.innerWidth,H=window.innerHeight;
-    hue=((e.clientX/W)*360+(e.clientY/H)*180)%360;
-    banana.style.filter=`hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
-  },{passive:true});
-  let prev=performance.now();
-  const tick=now=>{
-    const dt=Math.min(0.05,(now-prev)/1000); prev=now;
-    if(!hasPointer){hue=(hue+45*dt)%360; banana.style.filter=`hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`; }
-    x+=vx*dt; y+=vy*dt;
-    const W=window.innerWidth,H=window.innerHeight;
-    if(x<=0||x+SIZE>=W) vx*=-1;
-    if(y<=0||y+SIZE>=H) vy*=-1;
-    banana.style.transform=`translate(${x}px,${y}px)`;
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-})();
-
-// === EASTER EGG: THE INTERNET IS DEAD =====================
-(function() {
-  const input = document.querySelector('.search-input');
-  const btn = document.querySelector('.search-btn');
-
-  function disintegrateTheInternet() {
-    const body = document.body;
-    const all = [...body.querySelectorAll('*')];
-    let delay = 0;
-    all.forEach(el => {
-      if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
-      el.style.transition = 'all 0.6s ease-out';
-      el.style.transformOrigin = 'center';
-      setTimeout(() => {
-        el.style.filter = 'blur(4px) brightness(2)';
-        el.style.opacity = '0';
-        el.style.transform = `rotate(${(Math.random()-0.5)*60}deg) scale(${0.5+Math.random()}) translate(${(Math.random()-0.5)*300}px, ${(Math.random()-0.5)*300}px)`;
-      }, delay);
-      delay += 10;
-    });
-
-    // white fade over everything
-    const overlay = document.createElement('div');
-    Object.assign(overlay.style, {
-      position: 'fixed',
-      inset: '0',
-      background: '#fff',
-      opacity: '0',
-      transition: 'opacity 5s ease-in',
-      zIndex: '999999'
-    });
-    document.body.appendChild(overlay);
-    setTimeout(() => overlay.style.opacity = '1', 2000);
-
-    // after 7 seconds, clear body, then add revival button
-    setTimeout(() => {
-      document.body.innerHTML = '';
-      const revive = document.createElement('button');
-      revive.textContent = 'Revive The Internet';
-      Object.assign(revive.style, {
-        position: 'fixed',
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)',
-        background: 'black',
-        color: 'lime',
-        fontFamily: '"Courier New", monospace',
-        fontSize: '18px',
-        border: '2px solid lime',
-        borderRadius: '50%',
-        width: '200px',
-        height: '200px',
-        cursor: 'pointer',
-        opacity: '0',
-        transition: 'opacity 1.5s ease-in, transform 0.3s ease-in-out',
-        zIndex: '1000000',
-        boxShadow: '0 0 30px #0f0'
-      });
-      revive.addEventListener('mouseover', () => {
-        revive.style.transform = 'translate(-50%, -50%) scale(1.1)';
-        revive.style.boxShadow = '0 0 50px #0f0';
-      });
-      revive.addEventListener('mouseout', () => {
-        revive.style.transform = 'translate(-50%, -50%) scale(1)';
-        revive.style.boxShadow = '0 0 30px #0f0';
-      });
-      revive.addEventListener('click', () => location.reload());
-      document.body.appendChild(revive);
-      setTimeout(() => revive.style.opacity = '1', 2000);
-    }, 7000);
-  }
-
-  function checkTerm(term) {
-    if (term.trim().toLowerCase() === 'theinternetisdead') disintegrateTheInternet();
-  }
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') checkTerm(input.value);
-  });
-  btn.addEventListener('click', () => checkTerm(input.value));
-})();
-
-document.getElementById('contact-form').addEventListener('submit', function(e){
-  e.preventDefault();
-  const form = e.target;
-  const data = new FormData(form);
-  fetch('/', { method: 'POST', body: data })
-    .then(() => {
-      form.innerHTML = '<p style="color:#0f0">Thanks — message sent.</p>';
-    }).catch(() => {
-      form.innerHTML = '<p style="color:#f55">Send failed. Try again or use mailto.</p>';
-    });
-});
-    
-</script>
-
+    Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
+  </div>
 </body>
 </html>
+
