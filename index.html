@@ -255,20 +255,18 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
 
   <script>
 (() => {
-  // === CONFIG ===
   const IMG_SRC = "/images/bananamanarama.gif";
   const AUDIO_SRC = "/audio/do-that-there.mp3";
-  const SIZE = 160; // banana size px
-  const SPEED = 220; // pixels per second
-  const SAT = 200;  // hue saturation %
-  const BRT = 110;  // brightness %
+  const SIZE = 160;
+  const SPEED = 220;
+  const SAT = 200;
+  const BRT = 110;
 
-  // === ELEMENTS ===
   const banana = document.createElement("img");
   banana.src = IMG_SRC;
   banana.alt = "Bananamanarama";
   Object.assign(banana.style, {
-    position: "absolute",
+    position: "fixed",
     left: "100px",
     top: "100px",
     width: SIZE + "px",
@@ -277,30 +275,22 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
     userSelect: "none",
     mixBlendMode: "screen",
     filter: `hue-rotate(0deg) saturate(${SAT}%) brightness(${BRT}%)`,
-    zIndex: 50
+    zIndex: "1000",
+    pointerEvents: "auto",
   });
 
   const audio = document.createElement("audio");
   audio.src = AUDIO_SRC;
   audio.preload = "none";
 
-  const main = document.querySelector("main") || document.body;
-  main.style.position = "relative";
-  main.appendChild(banana);
+  document.body.appendChild(banana);
   document.body.appendChild(audio);
 
-  // === STATE ===
   let x = 100, y = 100;
   let vx = (Math.random() > 0.5 ? 1 : -1) * SPEED;
   let vy = (Math.random() > 0.5 ? 1 : -1) * SPEED;
   let hue = 0, hasPointer = false;
 
-  const viewport = () => ({
-    W: main.clientWidth || window.innerWidth,
-    H: main.clientHeight || window.innerHeight
-  });
-
-  // === EVENTS ===
   banana.addEventListener("click", () => {
     if (audio.paused) { audio.currentTime = 0; audio.play(); }
     else audio.pause();
@@ -308,31 +298,25 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
 
   window.addEventListener("mousemove", e => {
     hasPointer = true;
-    const { innerWidth: W, innerHeight: H } = window;
+    const W = window.innerWidth, H = window.innerHeight;
     hue = ((e.clientX / W) * 360 + (e.clientY / H) * 180) % 360;
     banana.style.filter = `hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
   }, { passive: true });
 
-  // === ANIMATION ===
   let prev = performance.now();
   const tick = now => {
     const dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
-
     if (!hasPointer) {
       hue = (hue + 45 * dt) % 360;
       banana.style.filter = `hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
     }
-
     x += vx * dt;
     y += vy * dt;
-    const { W, H } = viewport();
-
+    const W = window.innerWidth, H = window.innerHeight;
     if (x <= 0 || x + SIZE >= W) vx *= -1;
     if (y <= 0 || y + SIZE >= H) vy *= -1;
-
     banana.style.transform = `translate(${x}px, ${y}px)`;
-
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
