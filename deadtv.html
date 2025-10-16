@@ -319,23 +319,28 @@
     requestAnimationFrame(tick);
   }
 
-  // --- Screenshot Functionality ---
+    // --- Screenshot from the actual lava canvas ---
   const controls = document.querySelector('.controls');
-  async function takeScreenshot() {
+  const saveButton = document.getElementById('saveShot');
+
+  saveButton.addEventListener('click', () => {
     try {
-      controls.style.display = 'none';
-      await new Promise(r => setTimeout(r, 100));
-      const shot = await html2canvas(document.body, {useCORS:true, logging:false, backgroundColor:null});
-      controls.style.display = '';
-      const link = document.createElement('a');
-      link.download = 'screenshot.png';
-      link.href = shot.toDataURL('image/png');
-      link.click();
+      controls.style.display = 'none'; // hide the UI
+      setTimeout(() => {
+        const dataURL = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = 'screenshot.png';
+        link.href = dataURL;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        controls.style.display = ''; // restore UI
+      }, 100); // short delay so the hide takes effect
     } catch (err) {
       console.error('Screenshot failed:', err);
       controls.style.display = '';
     }
-  }
+  });
 
   // Press 'S' to save screenshot
   document.addEventListener('keydown', e => {
