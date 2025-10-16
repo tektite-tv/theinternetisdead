@@ -245,8 +245,8 @@
       <p>Loading videos...</p>
     </section>
   </main>
-
-  <script>
+  
+<script>
 async function loadPosts() {
   const container = document.getElementById("posts");
   try {
@@ -283,14 +283,6 @@ async function loadPosts() {
     let visibleCount = 0;
     const step = window.innerWidth <= 1100 ? 1 : 3;
 
-    function showNext() {
-      for (let i = visibleCount; i < visibleCount + step && i < postElements.length; i++) {
-        postElements[i].style.display = "block";
-      }
-      visibleCount += step;
-      if (visibleCount >= postElements.length) btn.remove();
-    }
-
     const btn = document.createElement("button");
     btn.textContent = "Load More";
     btn.style.display = "block";
@@ -300,8 +292,16 @@ async function loadPosts() {
     btn.style.border = "1px solid #444";
     btn.style.padding = "8px 16px";
     btn.style.cursor = "pointer";
-    btn.onclick = showNext;
 
+    function showNext() {
+      for (let i = visibleCount; i < visibleCount + step && i < postElements.length; i++) {
+        postElements[i].style.display = "block";
+      }
+      visibleCount += step;
+      if (visibleCount >= postElements.length) btn.remove();
+    }
+
+    btn.onclick = showNext;
     container.appendChild(btn);
     showNext();
   } catch (err) {
@@ -340,14 +340,6 @@ async function loadYouTube() {
     let visibleCount = 0;
     const step = window.innerWidth <= 1100 ? 1 : 3;
 
-    function showNext() {
-      for (let i = visibleCount; i < visibleCount + step && i < videoElements.length; i++) {
-        videoElements[i].style.display = "block";
-      }
-      visibleCount += step;
-      if (visibleCount >= videoElements.length) btn.remove();
-    }
-
     const btn = document.createElement("button");
     btn.textContent = "Load More";
     btn.style.display = "block";
@@ -357,8 +349,39 @@ async function loadYouTube() {
     btn.style.border = "1px solid #444";
     btn.style.padding = "8px 16px";
     btn.style.cursor = "pointer";
-    btn.onclick = showNext;
 
+    function showNext() {
+      for (let i = visibleCount; i < visibleCount + step && i < videoElements.length; i++) {
+        videoElements[i].style.display = "block";
+      }
+      visibleCount += step;
+      if (visibleCount >= videoElements.length) {
+        btn.remove();
+        addWatchOnYouTubeButton();
+      }
+    }
+
+    function addWatchOnYouTubeButton() {
+      const watchBtn = document.createElement("a");
+      watchBtn.href = "https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ";
+      watchBtn.target = "_blank";
+      watchBtn.textContent = "Watch on YouTube";
+      watchBtn.style.display = "block";
+      watchBtn.style.textAlign = "center";
+      watchBtn.style.margin = "20px auto";
+      watchBtn.style.background = "#cc181e";
+      watchBtn.style.color = "#fff";
+      watchBtn.style.border = "none";
+      watchBtn.style.padding = "10px 20px";
+      watchBtn.style.fontWeight = "bold";
+      watchBtn.style.borderRadius = "4px";
+      watchBtn.style.textDecoration = "none";
+      watchBtn.onmouseover = () => (watchBtn.style.background = "#ff4444");
+      watchBtn.onmouseout = () => (watchBtn.style.background = "#cc181e");
+      container.appendChild(watchBtn);
+    }
+
+    btn.onclick = showNext;
     container.appendChild(btn);
     showNext();
   } catch (err) {
