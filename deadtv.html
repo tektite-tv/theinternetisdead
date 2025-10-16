@@ -72,14 +72,33 @@
     }
 
     .controls {
-      position: fixed; left: 50%; transform: translateX(-50%);
-      bottom: 16px; background: rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 12px; padding: 10px 14px;
-      backdrop-filter: blur(6px);
-      display: flex; align-items: center; gap: 10px; z-index: 10; user-select: none;
-      flex-wrap: wrap; max-width: min(94vw, 1200px);
-    }
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 10px 14px;
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10;
+  user-select: none;
+  flex-wrap: wrap;
+  max-width: min(94vw, 1200px);
+  opacity: 0;                  /* hidden by default */
+  pointer-events: none;        /* not clickable when hidden */
+  transition: opacity 0.4s ease;
+}
+
+.controls:hover,
+.app:hover .controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+    
     .controls label { font-size: 14px; display: flex; gap: 8px; align-items: center; white-space: nowrap; }
     .controls input[type="range"] { width: min(40vw, 360px); accent-color: #fff; }
     .value { font-variant-numeric: tabular-nums; min-width: 62px; text-align: right; opacity: 0.9; }
