@@ -171,6 +171,7 @@
 }
 
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
   <header>
@@ -313,22 +314,20 @@
           }
         };
 
-        // Press "S" to take a screenshot while camera active
-        document.addEventListener("keydown", e => {
-          if (e.key.toLowerCase() === "s" && camWrap) {
-            const video = camWrap.querySelector("video.main") || camWrap.querySelector("video");
-            if (!video || video.readyState < 2) return; // Not ready
-            const canvas = document.createElement("canvas");
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const link = document.createElement("a");
-            link.download = `glitchcam_${Date.now()}.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-          }
-        });
+        // Press "S" to take a screenshot while camera active (with glitch effects)
+document.addEventListener("keydown", e => {
+  if (e.key.toLowerCase() === "s" && camWrap) {
+    html2canvas(camWrap, {
+      useCORS: true,
+      backgroundColor: "#000"
+    }).then(canvas => {
+      const link = document.createElement("a");
+      link.download = `glitchcam_${Date.now()}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }).catch(err => console.error("Screenshot failed:", err));
+  }
+});
 
       } catch (err) {
         console.error(err);
