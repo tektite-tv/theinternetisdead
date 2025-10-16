@@ -9,33 +9,36 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build index.json
+      - name: Generate index.json
         run: |
           echo "[" > _posts/index.json
-          first=true
+          count=0
           for f in _posts/*.md; do
             title=$(grep '^title:' "$f" | head -n1 | cut -d':' -f2- | xargs)
             date=$(grep '^date:' "$f" | head -n1 | cut -d':' -f2- | xargs)
             image=$(grep '^image:' "$f" | head -n1 | cut -d':' -f2- | xargs)
-            if [ "$first" = true ]; then
-              first=false
-            else
-              echo "," >> _posts/index.json
+
+            # only add valid posts
+            if [ -n "$title" ] && [ -n "$date" ]; then
+              [ $count -gt 0 ] && echo "," >> _posts/index.json
+              json="{\"title\": \"$title\", \"date\": \"$date\", \"file\": \"$f\""
+              if [ -n "$image" ]; then
+                json="$json, \"image\": \"$image\""
+              fi
+              json="$json}"
+              echo "$json" >> _posts/index.json
+              count=$((count+1))
             fi
-            printf '{"title": "%s", "date": "%s", "file": "%s"%s}' \
-              "$title" "$date" "$f" \
-              $( [ -n "$image" ] && printf ', "image": "%s"' "$image" )
-            >> _posts/index.json
           done
           echo "]" >> _posts/index.json
 
-      - name: Commit and push
+      - name: Commit and push index.json
         run: |
           git config user.name "actions-user"
           git config user.email "actions@github.com"
           git add _posts/index.json
-          git commit -m "Update _posts index" || echo "No changes"
+          git commit -m "Update _posts index" || echo "No changes to commit"
           git push
