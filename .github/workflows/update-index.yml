@@ -14,13 +14,15 @@ permissions:
 jobs:
   update-index:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-            - name: Generate index.json
+      - name: Generate index.json
         shell: bash
         run: |
+          set -e
           echo "[" > _posts/index.json
           first=true
           for f in _posts/*.md; do
@@ -45,19 +47,9 @@ jobs:
           done
           echo "]" >> _posts/index.json
 
-      - name: Check for changes
-        run: |
-          git diff --quiet _posts/index.json || echo "index.json changed"
-
-      - name: Commit and push if changed
+      - name: Commit and push index.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add _posts/index.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Auto-update index.json from workflow"
-            git push
-          else
-            echo "No changes to commit."
-          fi
-
+          git diff --cached --quiet && echo "No visible changes" || (git commit -m "Auto-update index.json" && git push)
