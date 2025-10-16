@@ -1162,6 +1162,57 @@ document.getElementById('contact-form').addEventListener('submit', function(e){
     }
   }, true);
 })();
+
+let spaceCount = 0;
+let timeout;
+
+document.addEventListener('keydown', function (e) {
+  if (e.code === 'Space') {
+    spaceCount++;
+    clearTimeout(timeout); // Reset decay timeout
+    timeout = setTimeout(() => spaceCount = 0, 2000); // Reset if no keypress in 2s
+
+    if (spaceCount >= 10) {
+      goToSpace();
+    }
+  } else {
+    spaceCount = 0; // Reset if any other key is pressed
+  }
+});
+
+function goToSpace() {
+  document.body.innerHTML = '';
+  document.body.style.margin = '0';
+  document.body.style.overflow = 'hidden';
+  document.body.style.background = 'black';
+
+  const starfield = document.createElement('div');
+  starfield.style.position = 'fixed';
+  starfield.style.top = 0;
+  starfield.style.left = 0;
+  starfield.style.width = '100vw';
+  starfield.style.height = '100vh';
+  starfield.style.zIndex = 9999;
+  starfield.style.backgroundImage = 'url(https://media.tenor.com/p0G_bmA2vSYAAAAC/space-stars.gif)';
+  starfield.style.backgroundSize = 'cover';
+  starfield.style.backgroundPosition = 'center';
+
+  document.body.appendChild(starfield);
+
+  const msg = document.createElement('div');
+  msg.innerText = 'You have entered space.';
+  msg.style.position = 'absolute';
+  msg.style.top = '50%';
+  msg.style.left = '50%';
+  msg.style.transform = 'translate(-50%, -50%)';
+  msg.style.fontSize = '2em';
+  msg.style.color = '#ffffff';
+  msg.style.fontFamily = 'monospace';
+  msg.style.textShadow = '0 0 10px #0ff';
+
+  starfield.appendChild(msg);
+}
+    
 </script>
 
 </body>
