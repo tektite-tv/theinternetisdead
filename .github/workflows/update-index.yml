@@ -5,13 +5,15 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '*/10 * * * *'  # every 10 minutes
+    - cron: '*/10 * * * *'
 
 jobs:
   update-index:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # required for git log timestamps
 
       - name: Rebuild _posts/index.json
         run: |
@@ -21,8 +23,13 @@ jobs:
             [ "$first" = true ] || echo "," >> _posts/index.json
             first=false
             title=$(grep -m1 '^title:' "$file" | sed 's/title:[[:space:]]*//')
-            date=$(echo "$file" | sed -E 's#_posts/([0-9-]+)-.*#\1#')
-            echo "  {\"title\": \"$title\", \"date\": \"$date\", \"file\": \"$file\"}" >> _posts/index.json
+            # grab date from frontmatter if exists
+            fmdate=$(grep -m1 '^date:' "$file" | sed 's/date:[[:space:]]*//')
+            # if missing, use git commit time
+            if [ -z "$fmdate" ]; then
+              fmdate=$(git log -1 --format="%aI" "$file" || date -u +"%Y-%m-%dT%H:%M:%SZ")
+            fi
+            echo "  {\"title\": \"$title\", \"date\": \"$fmdate\", \"file\": \"$file\"}" >> _posts/index.json
           done
           echo "]" >> _posts/index.json
 
