@@ -1,35 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Internet Is Dead – Glitch Camera</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>theinternetisdead.org – Glitch Camera</title>
   <style>
+    /* Minimal carryover styling */
     body {
       margin: 0;
-      font-family: monospace;
       background: #000;
       color: #fff;
+      font-family: "Courier New", monospace;
+      overflow-x: hidden;
+    }
+    header {
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #1a0033;
+      color: #fff;
+      padding: 16px 32px;
+      border-bottom: 3px solid #cc181e;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .left-section, .right-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .menu {
+      cursor: pointer;
+      font-size: 26px;
+      background: none;
+      border: none;
+      color: #fff;
+    }
+    .menu-popup {
+      display: none;
       flex-direction: column;
-      min-height: 100vh;
+      position: absolute;
+      top: 60px;
+      background: #000;
+      border: 1px solid #0f0;
+      padding: 8px;
+      box-shadow: 0 0 10px #0f07;
     }
-    header, footer {
-      text-align: center;
-      padding: 1rem;
-      background: #111;
-      color: #00ff99;
-      user-select: none;
+    .menu-popup.visible { display: flex; }
+    .menu-item { color: #0f0; text-decoration: none; padding: 6px; }
+    .menu-item:hover { background: rgba(0, 40, 0, 0.6); }
+
+    .logo {
+      height: 36px;
+      width: auto;
+      display: block;
     }
-    main {
+    .search-bar {
       flex: 1;
+      display: flex;
+      align-items: center;
+      max-width: 600px;
+    }
+    .search-bar input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #444;
+      border-right: none;
+      background: #000;
+      color: #fff;
+    }
+    .search-bar button {
+      padding: 8px 16px;
+      border: 1px solid #444;
+      background: #222;
+      color: #fff;
+      cursor: pointer;
+    }
+    .submit-btn {
+      padding: 8px 20px;
+      background: rgba(0,0,0,0.85);
+      border: 2px solid #0f0;
+      color: #0f0;
+      border-radius: 6px;
+      text-transform: uppercase;
+      font-size: 14px;
+      transition: all 0.25s;
+    }
+    .submit-btn:hover {
+      background: #0f0;
+      color: #000;
+      transform: scale(1.05);
+    }
+
+    /* Big red button */
+    main {
       display: flex;
       justify-content: center;
       align-items: center;
+      height: calc(100vh - 120px);
       background: #000;
     }
-
-    /* === GLITCH CAMERA STYLES === */
     .glitch-btn {
       padding: 22px 32px;
       background: #cc181e;
@@ -50,78 +121,84 @@
       box-shadow: 0 0 36px rgba(255,0,0,.55);
     }
 
+    footer {
+      text-align: center;
+      padding: 1rem;
+      background: #111;
+      color: #00ff99;
+    }
+
+    /* Glitch camera visuals */
     #camWrap {
-      position: fixed;
-      inset: 0;
-      z-index: 999999;
+      position: fixed; inset: 0; z-index: 999999;
       background: #000;
       overflow: hidden;
     }
     #camWrap video {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
       object-fit: cover;
       filter: var(--cam-filter, none);
-      transform: translateZ(0);
     }
-    #camWrap .layer {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
+    #camWrap .layer { position: absolute; inset: 0; pointer-events: none; }
     #camWrap .scanlines {
-      background: repeating-linear-gradient(
-        to bottom,
-        rgba(0,0,0,0) 0px,
-        rgba(0,0,0,0) 2px,
-        rgba(0,0,0,.35) 3px
-      );
+      background: repeating-linear-gradient(to bottom,rgba(0,0,0,0)0px,rgba(0,0,0,0)2px,rgba(0,0,0,.35)3px);
       mix-blend-mode: multiply;
-      opacity: .5;
+      opacity:.5;
       animation: slither 6s linear infinite;
     }
     #camWrap .noise {
-      opacity: .12;
-      background-image: url('data:image/svg+xml;utf8,\
-        <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160">\
-          <filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".95" numOctaves="1" stitchTiles="stitch"/></filter>\
-          <rect width="100%" height="100%" filter="url(%23n)"/></svg>');
-      background-size: cover;
-      mix-blend-mode: screen;
-      animation: grain .8s steps(2,end) infinite;
+      opacity:.12;
+      background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".95" numOctaves="1" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)"/></svg>');
+      background-size:cover;
+      mix-blend-mode:screen;
+      animation:grain .8s steps(2,end) infinite;
     }
-    #camWrap .twist { animation: twist 2.2s infinite cubic-bezier(.3,.7,.2,1); }
-    #camWrap .jitter { animation: jitter .25s infinite; }
-    #camWrap .rgbA, #camWrap .rgbB {
-      mix-blend-mode: screen;
-      opacity: .6;
-      filter: hue-rotate(200deg) saturate(180%);
-    }
-    #camWrap .rgbB {
-      filter: hue-rotate(20deg) saturate(180%);
-    }
+    #camWrap .rgbA,#camWrap .rgbB{mix-blend-mode:screen;opacity:.6;}
+    #camWrap .rgbA{filter:hue-rotate(200deg) saturate(180%);}
+    #camWrap .rgbB{filter:hue-rotate(20deg) saturate(180%);}
+    .twist{animation:twist 2.2s infinite cubic-bezier(.3,.7,.2,1);}
+    .jitter{animation:jitter .25s infinite;}
 
-    @keyframes grain { 50% { opacity: .2 } }
-    @keyframes slither { 0% { background-position-y: 0 } 100% { background-position-y: 120px } }
-    @keyframes jitter {
-      0% { transform: translate(0,0) }
-      25% { transform: translate(1px,-1px) }
-      50% { transform: translate(-1px,1px) }
-      75% { transform: translate(1px,1px) }
-      100% { transform: translate(0,0) }
+    @keyframes grain{50%{opacity:.2}}
+    @keyframes slither{0%{background-position-y:0}100%{background-position-y:120px}}
+    @keyframes jitter{
+      0%{transform:translate(0,0)}
+      25%{transform:translate(1px,-1px)}
+      50%{transform:translate(-1px,1px)}
+      75%{transform:translate(1px,1px)}
+      100%{transform:translate(0,0)}
     }
-    @keyframes twist {
-      0% { filter: hue-rotate(0deg) contrast(1) saturate(1) }
-      50% { filter: hue-rotate(45deg) contrast(1.3) saturate(1.4) }
-      100% { filter: hue-rotate(0deg) contrast(1) saturate(1) }
+    @keyframes twist{
+      0%{filter:hue-rotate(0deg)contrast(1)saturate(1)}
+      50%{filter:hue-rotate(45deg)contrast(1.3)saturate(1.4)}
+      100%{filter:hue-rotate(0deg)contrast(1)saturate(1)}
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>⚠️ The Internet Is Dead ⚠️</h1>
+    <div class="left-section">
+      <button class="menu">&#9776;</button>
+      <div id="menu-popup" class="menu-popup">
+        <a href="/" class="menu-item">Home</a>
+        <a href="/glitchtv" class="menu-item">Glitch TV</a>
+        <a href="/admin" class="menu-item">Admin</a>
+      </div>
+      <a href="index.html">
+        <img class="logo" src="/images/oldtube.png" alt="OldTube Logo" />
+        <span style="color:#00ff99;font-size:14px;text-align:center;">
+          The webmaster is not harvesting your soul for profit. Isn't that wonderful?
+        </span>
+      </a>
+    </div>
+    <div class="search-bar">
+      <input type="text" placeholder="Search posts and videos..." />
+      <button>Search</button>
+    </div>
+    <div class="right-section">
+      <a href="mailto:nobody@theinternetisdead.org" class="submit-btn">Submit</a>
+    </div>
   </header>
 
   <main>
@@ -129,81 +206,72 @@
   </main>
 
   <footer>
-    <p>Press ESC or click the header/footer to exit the void</p>
+    Press ESC or click header/footer to exit camera mode
   </footer>
 
   <script>
-    (function() {
+    // Toggle the burger menu
+    document.querySelector(".menu").onclick = () => {
+      document.getElementById("menu-popup").classList.toggle("visible");
+    };
+
+    // Glitch camera logic
+    (function(){
       const btn = document.getElementById("enableGlitchCam");
-      const FILTER_PRESETS = [
+      const FILTERS = [
         "contrast(1.25) saturate(1.6) hue-rotate(10deg)",
         "contrast(1.4) saturate(1.2) hue-rotate(120deg)",
         "invert(0.05) contrast(1.2) saturate(1.8) hue-rotate(-40deg)",
         "grayscale(.05) contrast(1.35) saturate(1.7) hue-rotate(200deg)",
         "brightness(1.05) contrast(1.5) saturate(1.9) hue-rotate(300deg)"
       ];
-      const preset = FILTER_PRESETS[Math.floor(Math.random() * FILTER_PRESETS.length)];
-
-      btn.addEventListener("click", async () => {
-        try {
+      const preset = FILTERS[Math.floor(Math.random()*FILTERS.length)];
+      btn.addEventListener("click", async ()=>{
+        try{
           btn.disabled = true;
           const wrap = document.createElement("div");
           wrap.id = "camWrap";
-          document.body.appendChild(wrap);
-          document.documentElement.style.overflow = "hidden";
-
-          const vMain = document.createElement("video");
-          vMain.autoplay = true;
-          vMain.playsInline = true;
-          vMain.muted = true;
           wrap.style.setProperty("--cam-filter", preset);
-          wrap.appendChild(vMain);
+          document.body.appendChild(wrap);
+          document.documentElement.style.overflow="hidden";
 
-          const vA = document.createElement("video");
-          const vB = document.createElement("video");
-          [vA, vB].forEach(v => {
-            v.autoplay = true;
-            v.playsInline = true;
-            v.muted = true;
+          const vids = ["main","rgbA","rgbB"].map(cls=>{
+            const v=document.createElement("video");
+            v.autoplay=v.playsInline=v.muted=true;
+            if(cls!=="main")v.className=cls+" layer";
             wrap.appendChild(v);
+            return v;
           });
-          vA.className = "rgbA layer";
-          vB.className = "rgbB layer";
+          const [vMain,vA,vB]=vids;
+          const scan=document.createElement("div");
+          scan.className="scanlines layer";
+          const noise=document.createElement("div");
+          noise.className="noise layer";
+          wrap.append(scan,noise);
 
-          const scan = document.createElement("div");
-          scan.className = "scanlines layer";
-          wrap.appendChild(scan);
-          const noise = document.createElement("div");
-          noise.className = "noise layer";
-          wrap.appendChild(noise);
+          if(Math.random()>.5)wrap.classList.add("twist");
+          if(Math.random()>.5)wrap.classList.add("jitter");
 
-          if (Math.random() > .5) wrap.classList.add("twist");
-          if (Math.random() > .5) wrap.classList.add("jitter");
+          const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+          vids.forEach(v=>v.srcObject=stream);
 
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          [vMain, vA, vB].forEach(v => v.srcObject = stream);
-
-          const offset = () => `${Math.round((Math.random() * 2 - 1) * 2)}px`;
-          const applyOffsets = () => {
-            vA.style.transform = `translate(${offset()}, ${offset()})`;
-            vB.style.transform = `translate(${offset()}, ${offset()})`;
-          };
+          const offset=()=>`${Math.round((Math.random()*2-1)*2)}px`;
+          const applyOffsets=()=>{vA.style.transform=`translate(${offset()},${offset()})`;vB.style.transform=`translate(${offset()},${offset()})`;};
           applyOffsets();
-          setInterval(applyOffsets, 180);
+          setInterval(applyOffsets,180);
 
-          const kill = () => {
-            try { stream.getTracks().forEach(t => t.stop()); } catch {}
+          const kill=()=>{
+            try{stream.getTracks().forEach(t=>t.stop());}catch{}
             wrap.remove();
-            document.documentElement.style.overflow = "";
-            btn.disabled = false;
+            document.documentElement.style.overflow="";
+            btn.disabled=false;
           };
-          document.addEventListener("keydown", e => { if (e.key === "Escape") kill(); }, { once: true });
-          [document.querySelector("header"), document.querySelector("footer")].forEach(el => el.addEventListener("click", kill, { once: true }));
-
-        } catch (err) {
+          document.addEventListener("keydown",e=>{if(e.key==="Escape")kill();},{once:true});
+          [document.querySelector("header"),document.querySelector("footer")].forEach(el=>el.addEventListener("click",kill,{once:true}));
+        }catch(err){
           console.error(err);
-          alert("Camera access denied or unavailable.");
-          btn.disabled = false;
+          alert("Camera permission denied or unavailable.");
+          btn.disabled=false;
         }
       });
     })();
