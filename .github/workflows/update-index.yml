@@ -1,45 +1,42 @@
-permissions:
-  contents: write
-  actions: write
-  id-token: write
-
 name: Update index.json on new posts
 
 on:
   push:
     branches:
-      - main
+      - '**'                # trigger on any branch
     paths:
-      - "_posts/**/*.md"
-      - ".github/workflows/update-index.yml"
+      - "_posts/**/*.md"    # any markdown file in _posts
+  workflow_dispatch:         # allows manual run from Actions tab
 
 permissions:
   contents: write
+  actions: write
+  id-token: write
 
 jobs:
   update-index:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Debug directory contents
+      - name: List repo contents
         run: |
-          echo "== Directory tree =="
-          ls -R .
-          echo "== Post files =="
-          ls -l _posts || true
+          echo "=== Root ==="
+          ls -al
+          echo "=== _posts ==="
+          ls -al _posts || echo "_posts missing"
 
-      - name: Generate _posts/index.json
+      - name: Generate valid _posts/index.json
         shell: bash
         run: |
           set -e
           mkdir -p _posts
           echo "[" > _posts/index.json
           first=true
-
           shopt -s nullglob
+
           for f in _posts/*.md; do
             echo "Processing $f"
             title=$(grep -m1 '^title:' "$f" | sed 's/^title:[[:space:]]*//')
@@ -62,18 +59,20 @@ jobs:
             fi
             echo "  $json" >> _posts/index.json
           done
+
           echo "]" >> _posts/index.json
-          echo "== Resulting JSON =="
+          echo "=== index.json generated ==="
           cat _posts/index.json
 
-      - name: Commit and push changes
+      - name: Commit and push index.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add _posts/index.json
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            echo "No changes to commit."
           else
-            git commit -m "Auto-update index.json"
+            git commit -m "Auto-update index.json from workflow"
             git push
           fi
+
