@@ -203,71 +203,89 @@
   </footer>
 
   <script>
-    // Toggle the burger menu
-    document.querySelector(".menu").onclick = () => {
-      document.getElementById("menu-popup").classList.toggle("visible");
-    };
+  // Toggle the burger menu
+  document.querySelector(".menu").onclick = () => {
+    document.getElementById("menu-popup").classList.toggle("visible");
+  };
 
-    // Glitch camera logic
-    (function(){
-      const btn = document.getElementById("enableGlitchCam");
-      const FILTERS = [
-        "contrast(1.25) saturate(1.6) hue-rotate(10deg)",
-        "contrast(1.4) saturate(1.2) hue-rotate(120deg)",
-        "invert(0.05) contrast(1.2) saturate(1.8) hue-rotate(-40deg)",
-        "grayscale(.05) contrast(1.35) saturate(1.7) hue-rotate(200deg)",
-        "brightness(1.05) contrast(1.5) saturate(1.9) hue-rotate(300deg)"
-      ];
-      const preset = FILTERS[Math.floor(Math.random()*FILTERS.length)];
-      btn.addEventListener("click", async ()=>{
-        try{
-          btn.disabled = true;
-          const wrap = document.createElement("div");
-          wrap.id = "camWrap";
-          wrap.style.setProperty("--cam-filter", preset);
-          document.body.appendChild(wrap);
-          document.documentElement.style.overflow="hidden";
+  // Glitch camera logic
+  (function(){
+    const btn = document.getElementById("enableGlitchCam");
+    const fsBtn = document.getElementById("fullscreenToggle");
+    const FILTERS = [
+      "contrast(1.25) saturate(1.6) hue-rotate(10deg)",
+      "contrast(1.4) saturate(1.2) hue-rotate(120deg)",
+      "invert(0.05) contrast(1.2) saturate(1.8) hue-rotate(-40deg)",
+      "grayscale(.05) contrast(1.35) saturate(1.7) hue-rotate(200deg)",
+      "brightness(1.05) contrast(1.5) saturate(1.9) hue-rotate(300deg)"
+    ];
+    const preset = FILTERS[Math.floor(Math.random()*FILTERS.length)];
 
-          const vids = ["main","rgbA","rgbB"].map(cls=>{
-            const v=document.createElement("video");
-            v.autoplay=v.playsInline=v.muted=true;
-            if(cls!=="main")v.className=cls+" layer";
-            wrap.appendChild(v);
-            return v;
-          });
-          const [vMain,vA,vB]=vids;
-          const scan=document.createElement("div");
-          scan.className="scanlines layer";
-          const noise=document.createElement("div");
-          noise.className="noise layer";
-          wrap.append(scan,noise);
+    btn.addEventListener("click", async ()=>{
+      try{
+        btn.disabled = true;
+        const wrap = document.createElement("div");
+        wrap.id = "camWrap";
+        wrap.style.setProperty("--cam-filter", preset);
+        document.body.appendChild(wrap);
+        document.documentElement.style.overflow="hidden";
 
-          if(Math.random()>.5)wrap.classList.add("twist");
-          if(Math.random()>.5)wrap.classList.add("jitter");
+        const vids = ["main","rgbA","rgbB"].map(cls=>{
+          const v=document.createElement("video");
+          v.autoplay=v.playsInline=v.muted=true;
+          if(cls!=="main")v.className=cls+" layer";
+          wrap.appendChild(v);
+          return v;
+        });
+        const [vMain,vA,vB]=vids;
+        const scan=document.createElement("div");
+        scan.className="scanlines layer";
+        const noise=document.createElement("div");
+        noise.className="noise layer";
+        wrap.append(scan,noise);
 
-          const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-          vids.forEach(v=>v.srcObject=stream);
+        if(Math.random()>.5)wrap.classList.add("twist");
+        if(Math.random()>.5)wrap.classList.add("jitter");
 
-          const offset=()=>`${Math.round((Math.random()*2-1)*2)}px`;
-          const applyOffsets=()=>{vA.style.transform=`translate(${offset()},${offset()})`;vB.style.transform=`translate(${offset()},${offset()})`;};
-          applyOffsets();
-          setInterval(applyOffsets,180);
+        const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+        vids.forEach(v=>v.srcObject=stream);
 
-          const kill=()=>{
-            try{stream.getTracks().forEach(t=>t.stop());}catch{}
-            wrap.remove();
-            document.documentElement.style.overflow="";
-            btn.disabled=false;
-          };
-          document.addEventListener("keydown",e=>{if(e.key==="Escape")kill();},{once:true});
-          [document.querySelector("header"),document.querySelector("footer")].forEach(el=>el.addEventListener("click",kill,{once:true}));
-        }catch(err){
-          console.error(err);
-          alert("Camera permission denied or unavailable.");
+        const offset=()=>`${Math.round((Math.random()*2-1)*2)}px`;
+        const applyOffsets=()=>{vA.style.transform=`translate(${offset()},${offset()})`;vB.style.transform=`translate(${offset()},${offset()})`;};
+        applyOffsets();
+        setInterval(applyOffsets,180);
+
+        // Show fullscreen toggle button
+        fsBtn.style.display = "block";
+
+        const kill=()=>{
+          try{stream.getTracks().forEach(t=>t.stop());}catch{}
+          wrap.remove();
+          document.documentElement.style.overflow="";
           btn.disabled=false;
-        }
-      });
-    })();
-  </script>
+          fsBtn.style.display = "none";
+        };
+
+        document.addEventListener("keydown",e=>{if(e.key==="Escape")kill();},{once:true});
+        [document.querySelector("header"),document.querySelector("footer")].forEach(el=>el.addEventListener("click",kill,{once:true}));
+
+        // Fullscreen toggle behavior
+        fsBtn.onclick = () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => console.error(err));
+          } else {
+            document.exitFullscreen();
+          }
+        };
+
+      }catch(err){
+        console.error(err);
+        alert("Camera permission denied or unavailable.");
+        btn.disabled=false;
+      }
+    });
+  })();
+</script>
+
 </body>
 </html>
