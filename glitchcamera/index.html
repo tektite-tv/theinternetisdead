@@ -199,14 +199,12 @@
   <footer>
     Press ESC or click header/footer to exit camera mode
   </footer>
-
-  <script>
+<script>
   // Toggle the burger menu
   document.querySelector(".menu").onclick = () => {
     document.getElementById("menu-popup").classList.toggle("visible");
   };
 
-  // Glitch camera logic
   (function(){
     const btn = document.getElementById("enableGlitchCam");
     const fsBtn = document.getElementById("fullscreenToggle");
@@ -219,80 +217,96 @@
       "grayscale(.05) contrast(1.35) saturate(1.7) hue-rotate(200deg)",
       "brightness(1.05) contrast(1.5) saturate(1.9) hue-rotate(300deg)"
     ];
-    const preset = FILTERS[Math.floor(Math.random()*FILTERS.length)];
 
-    btn.addEventListener("click", async ()=>{
-      try{
-        btn.disabled = true;
-        const wrap = document.createElement("div");
-        wrap.id = "camWrap";
-        wrap.style.setProperty("--cam-filter", preset);
-        document.body.appendChild(wrap);
-        document.documentElement.style.overflow="hidden";
+    let camWrap = null;
+    let stream = null;
+    let jitterTimer = null;
+    let expanded = false;
 
-        const vids = ["main","rgbA","rgbB"].map(cls=>{
-          const v=document.createElement("video");
-          v.autoplay=v.playsInline=v.muted=true;
-          if(cls!=="main")v.className=cls+" layer";
-          wrap.appendChild(v);
+    const startCamera = async () => {
+      if (camWrap) return; // already running
+      try {
+        const preset = FILTERS[Math.floor(Math.random() * FILTERS.length)];
+        camWrap = document.createElement("div");
+        camWrap.id = "camWrap";
+        camWrap.style.setProperty("--cam-filter", preset);
+        document.body.appendChild(camWrap);
+        document.documentElement.style.overflow = "hidden";
+
+        const vids = ["main", "rgbA", "rgbB"].map(cls => {
+          const v = document.createElement("video");
+          v.autoplay = v.playsInline = v.muted = true;
+          if (cls !== "main") v.className = cls + " layer";
+          camWrap.appendChild(v);
           return v;
         });
-        const [vMain,vA,vB]=vids;
+        const [vMain, vA, vB] = vids;
 
-        const scan=document.createElement("div");
-        scan.className="scanlines layer";
-        const noise=document.createElement("div");
-        noise.className="noise layer";
-        wrap.append(scan,noise);
+        const scan = document.createElement("div");
+        scan.className = "scanlines layer";
+        const noise = document.createElement("div");
+        noise.className = "noise layer";
+        camWrap.append(scan, noise);
 
-        if(Math.random()>.5)wrap.classList.add("twist");
-        if(Math.random()>.5)wrap.classList.add("jitter");
+        if (Math.random() > .5) camWrap.classList.add("twist");
+        if (Math.random() > .5) camWrap.classList.add("jitter");
 
-        const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-        vids.forEach(v=>v.srcObject=stream);
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        vids.forEach(v => v.srcObject = stream);
 
-        const offset=()=>`${Math.round((Math.random()*2-1)*2)}px`;
-        const applyOffsets=()=>{
-          vA.style.transform=`translate(${offset()},${offset()})`;
-          vB.style.transform=`translate(${offset()},${offset()})`;
+        const offset = () => `${Math.round((Math.random() * 2 - 1) * 2)}px`;
+        const applyOffsets = () => {
+          vA.style.transform = `translate(${offset()},${offset()})`;
+          vB.style.transform = `translate(${offset()},${offset()})`;
         };
         applyOffsets();
-        const jitterTimer=setInterval(applyOffsets,180);
+        jitterTimer = setInterval(applyOffsets, 180);
 
-        // show the header fullscreen button
-        fsBtn.style.display="inline-flex";
+        fsBtn.style.display = "inline-flex";
 
-        const kill=()=>{
-          try{stream.getTracks().forEach(t=>t.stop());}catch{}
+        const kill = () => {
+          if (!camWrap) return;
+          try { stream?.getTracks().forEach(t => t.stop()); } catch {}
           clearInterval(jitterTimer);
-          wrap.remove();
-          document.documentElement.style.overflow="";
-          btn.disabled=false;
-          fsBtn.style.display="none";
+          camWrap.remove();
+          camWrap = null;
+          stream = null;
+          document.documentElement.style.overflow = "";
+          btn.disabled = false;
+          fsBtn.style.display = "none";
+          expanded = false;
         };
 
-        document.addEventListener("keydown",e=>{if(e.key==="Escape")kill();},{once:true});
-        [document.querySelector("header"),document.querySelector("footer")]
-          .forEach(el=>el.addEventListener("click",kill,{once:true}));
+        document.addEventListener("keydown", e => {
+          if (e.key === "Escape") kill();
+        }, { once: true });
 
-        // Toggle camera fill expansion
-        let expanded = true;
+        ["header", "footer"].forEach(sel => {
+          document.querySelector(sel).addEventListener("click", kill, { once: true });
+        });
+
+        // toggle expansion of camera only
         fsBtn.onclick = () => {
+          if (!camWrap) return;
           expanded = !expanded;
-          if(expanded){
-            wrap.style.top = "var(--header-height, 80px)";
-            wrap.style.bottom = "var(--footer-height, 60px)";
+          if (expanded) {
+            camWrap.style.top = "0";
+            camWrap.style.bottom = "0";
           } else {
-            wrap.style.top = "0";
-            wrap.style.bottom = "0";
+            camWrap.style.top = "var(--header-height, 80px)";
+            camWrap.style.bottom = "var(--footer-height, 60px)";
           }
         };
 
-      }catch(err){
+      } catch (err) {
         console.error(err);
         alert("Camera permission denied or unavailable.");
-        btn.disabled=false;
       }
+    };
+
+    btn.addEventListener("click", () => {
+      btn.disabled = true;
+      startCamera();
     });
   })();
 </script>
