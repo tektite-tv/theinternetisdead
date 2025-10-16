@@ -89,20 +89,27 @@
   flex-wrap: wrap;
   max-width: min(94vw, 1200px);
   opacity: 0;
-  pointer-events: none;
   transition: opacity 0.4s ease;
 }
 
-/* new container hitbox */
+/* the invisible hover zone around controls */
 .controls::before {
   content: '';
   position: absolute;
-  inset: -20px;              /* 20px around controls = hitbox area */
+  inset: -20px;
+  z-index: -1;
 }
 
+/* fade in on hover or hover within children */
 .controls:hover,
 .controls:has(:hover) {
   opacity: 1;
+}
+
+/* important fix: allow children to be clickable */
+.controls:hover,
+.controls:has(:hover),
+.controls * {
   pointer-events: auto;
 }
     
