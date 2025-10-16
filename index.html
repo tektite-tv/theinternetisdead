@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="icon" type="image/png" href="/images/face.png">
   <style>
-  /* GLOBAL RESET AND BASE --------------------------------- */
+  /* RESET + BASE -------------------------------------------------- */
   * {
     margin: 0;
     padding: 0;
@@ -17,14 +17,14 @@
 
   html, body {
     height: 100%;
-    background-color: #000;
+    background: #000;
     color: #ddd;
     overflow-y: auto;
   }
 
   a { color: inherit; text-decoration: none; }
 
-  /* HEADER / TASKBAR -------------------------------------- */
+  /* HEADER -------------------------------------------------------- */
   header {
     display: flex;
     align-items: center;
@@ -35,33 +35,11 @@
     border-bottom: 3px solid #cc181e;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 100;
   }
 
-  .submit-btn {
-    display: inline-block;
-    padding: 8px 20px;
-    background: rgba(0, 0, 0, 0.85);
-    border: 2px solid #0f0;
-    color: #0f0;
-    font-family: "Courier New", monospace;
-    font-size: 14px;
-    border-radius: 6px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-decoration: none;
-    transition: all 0.25s ease-in-out;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
-  }
-
-  .submit-btn:hover {
-    background: #0f0;
-    color: #000;
-    box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
-    transform: scale(1.05);
-  }
-
-  .left-section, .right-section {
+  .left-section,
+  .right-section {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -76,7 +54,10 @@
     color: #fff;
   }
 
-  .logo { height: 36px; width: auto; }
+  .logo {
+    height: 36px;
+    width: auto;
+  }
 
   .search-bar {
     flex: 1;
@@ -98,26 +79,43 @@
   .search-bar button {
     padding: 8px 16px;
     border: 1px solid #444;
-    background-color: #222;
+    background: #222;
     color: #fff;
     cursor: pointer;
     transition: background 0.2s;
   }
-  .search-bar button:hover { background-color: #333; }
 
-  /* MAIN CONTENT LAYOUT ----------------------------------- */
+  .search-bar button:hover { background: #333; }
+
+  .submit-btn {
+    padding: 8px 20px;
+    border: 2px solid #0f0;
+    background: rgba(0, 0, 0, 0.85);
+    color: #0f0;
+    border-radius: 6px;
+    text-transform: uppercase;
+    transition: all 0.25s ease-in-out;
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(0,255,0,0.3);
+  }
+  .submit-btn:hover {
+    background: #0f0;
+    color: #000;
+    transform: scale(1.05);
+  }
+
+  /* MAIN ---------------------------------------------------------- */
   main {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
     padding: 32px;
     background: #000;
-    align-items: start;
     position: relative;
     overflow: hidden;
   }
 
-  /* Animated bright green diagonal scanlines */
+  /* Animated green scanlines */
   main::before {
     content: "";
     position: absolute;
@@ -129,7 +127,7 @@
       rgba(0, 255, 153, 0.02) 3px,
       rgba(0, 255, 153, 0.02) 12px
     );
-    animation: scan-drift 60s linear infinite; /* slower, gentle drift */
+    animation: scan-drift 60s linear infinite;
     pointer-events: none;
     z-index: 0;
     filter: brightness(1.2);
@@ -151,21 +149,23 @@
   }
 
   h1 {
-    font-size: 1.8em;
-    font-weight: bold;
     text-align: center;
+    font-size: 1.8em;
     text-shadow: 0 0 6px #fff2, 0 0 12px #0ff4;
-    margin-bottom: 8px;
   }
 
   h2 {
     text-align: center;
     color: #888;
-    font-weight: normal;
     margin-bottom: 20px;
   }
 
-  .post { margin-bottom: 28px; border-bottom: 1px dashed #333; padding-bottom: 14px; }
+  .post {
+    margin-bottom: 28px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed #333;
+  }
+
   .post h3 { color: #00ff99; margin-bottom: 6px; }
   .post small { color: #888; display: block; margin-bottom: 8px; }
 
@@ -179,6 +179,8 @@
 
   @media (max-width: 1100px) {
     main { grid-template-columns: 1fr; }
+    header { flex-wrap: wrap; gap: 12px; }
+    .search-bar { order: 3; width: 100%; margin-top: 8px; }
   }
 
   .footer {
@@ -194,13 +196,15 @@
     <div class="left-section">
       <button class="menu">&#9776;</button>
       <a href="index.html">
-        <img class="logo" src="/images/oldtube.png" alt="OldTube Logo" />
-        <span style="color:#00ff99; font-size:14px;">The webmaster is not harvesting your soul for profit. Isn't that wonderful?</span>
+        <img class="logo" src="/images/oldtube.png" alt="OldTube Logo">
+        <span style="color:#00ff99; font-size:14px;">
+          The webmaster is not harvesting your soul for profit. Isn't that wonderful?
+        </span>
       </a>
     </div>
 
     <div class="search-bar">
-      <input type="text" class="search-input" placeholder="Search posts and videos..." />
+      <input type="text" class="search-input" placeholder="Search posts and videos...">
       <button class="search-btn">Search</button>
     </div>
 
@@ -231,22 +235,18 @@
   async function loadContent() {
     const postsContainer = document.getElementById("posts");
     const youtubeContainer = document.getElementById("youtube");
-
     let allPosts = [];
     let visiblePosts = 3;
     let allVideos = [];
     let visibleVideos = 3;
 
-    // === Load Posts ===
     try {
       const res = await fetch("/_posts/index.json");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       allPosts = await res.json();
-      allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+      allPosts.sort((a,b) => new Date(b.date) - new Date(a.date));
       renderPosts();
-    } catch (err) {
-      console.error("Post load failed:", err);
-      postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${err.message}</p>`;
+    } catch (e) {
+      postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${e.message}</p>`;
     }
 
     async function renderPosts() {
@@ -258,7 +258,7 @@
         wrapper.innerHTML = `
           <h3>${p.title}</h3>
           <small>${new Date(p.date).toLocaleString()}</small>
-          ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy">` : ""}
+          ${p.image ? `<img src="${p.image}" alt="${p.title}">` : ""}
           <div class="content"><em>Loading...</em></div>
         `;
         postsContainer.appendChild(wrapper);
@@ -271,7 +271,7 @@
           }
           wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
         } catch {
-          wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
+          wrapper.querySelector(".content").innerHTML = "<em>Failed to load post.</em>";
         }
       }
       if (visiblePosts < allPosts.length) {
@@ -283,16 +283,14 @@
       }
     }
 
-    // === Load YouTube ===
     try {
       const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
       const rssRes = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
       const rssData = await rssRes.json();
       allVideos = rssData.items || [];
       renderVideos();
-    } catch (err) {
-      console.error("Video load failed:", err);
-      youtubeContainer.innerHTML += `<p style="color:red;">Error loading videos: ${err.message}</p>`;
+    } catch (e) {
+      youtubeContainer.innerHTML += `<p style="color:red;">Error loading videos: ${e.message}</p>`;
     }
 
     function renderVideos() {
