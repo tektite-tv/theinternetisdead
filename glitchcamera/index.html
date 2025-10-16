@@ -276,20 +276,30 @@
           expanded = false;
         };
 
-        // ESC key or footer click closes the camera
+        // ESC now first collapses fullscreen, then closes camera
         document.addEventListener("keydown", e => {
-          if (e.key === "Escape") kill();
-        }, { once: true });
+          if (e.key === "Escape") {
+            if (expanded) {
+              expanded = false;
+              camWrap.style.top = "var(--header-height, 80px)";
+              camWrap.style.bottom = "var(--footer-height, 60px)";
+            } else {
+              kill();
+            }
+          }
+        });
+
+        // Footer click always closes camera
         document.querySelector("footer").addEventListener("click", kill, { once: true });
 
-        // Clicking anywhere else on the header except the fullscreen button closes the camera
+        // Clicking anywhere else on header except ⛶ closes camera
         document.querySelector("header").addEventListener("click", e => {
           if (e.target.id !== "fullscreenToggle") kill();
         }, { once: true });
 
-        // toggle camera fill expansion (now doesn’t bubble to header)
+        // Toggle expand/shrink when ⛶ clicked
         fsBtn.onclick = e => {
-          e.stopPropagation(); // <- THIS prevents header click from killing camera
+          e.stopPropagation();
           if (!camWrap) return;
           expanded = !expanded;
           if (expanded) {
