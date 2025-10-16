@@ -710,7 +710,43 @@ async function handlePostClick(url) {
     });
     document.body.appendChild(overlay);
     setTimeout(() => overlay.style.opacity = '1', 2000);
-    setTimeout(() => document.body.innerHTML = '', 7000);
+
+    // after 7 seconds, clear body, then add revival button
+    setTimeout(() => {
+      document.body.innerHTML = '';
+      const revive = document.createElement('button');
+      revive.textContent = 'Revive The Internet';
+      Object.assign(revive.style, {
+        position: 'fixed',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        background: 'black',
+        color: 'lime',
+        fontFamily: '"Courier New", monospace',
+        fontSize: '18px',
+        border: '2px solid lime',
+        borderRadius: '50%',
+        width: '200px',
+        height: '200px',
+        cursor: 'pointer',
+        opacity: '0',
+        transition: 'opacity 1.5s ease-in, transform 0.3s ease-in-out',
+        zIndex: '1000000',
+        boxShadow: '0 0 30px #0f0'
+      });
+      revive.addEventListener('mouseover', () => {
+        revive.style.transform = 'translate(-50%, -50%) scale(1.1)';
+        revive.style.boxShadow = '0 0 50px #0f0';
+      });
+      revive.addEventListener('mouseout', () => {
+        revive.style.transform = 'translate(-50%, -50%) scale(1)';
+        revive.style.boxShadow = '0 0 30px #0f0';
+      });
+      revive.addEventListener('click', () => location.reload());
+      document.body.appendChild(revive);
+      setTimeout(() => revive.style.opacity = '1', 2000);
+    }, 7000);
   }
 
   function checkTerm(term) {
@@ -721,7 +757,7 @@ async function handlePostClick(url) {
     if (e.key === 'Enter') checkTerm(input.value);
   });
   btn.addEventListener('click', () => checkTerm(input.value));
-})();    
+})();
 </script>
 
 </body>
