@@ -250,10 +250,15 @@
   });
 
   btnDraw.addEventListener('click', () => {
-    drawEnabled = !drawEnabled;
-    btnDraw.setAttribute('aria-pressed', String(drawEnabled));
-    drawCanvas.style.pointerEvents = drawEnabled ? 'auto' : 'none';
-  });
+  drawEnabled = !drawEnabled;
+  btnDraw.setAttribute('aria-pressed', String(drawEnabled));
+  drawCanvas.style.pointerEvents = drawEnabled ? 'auto' : 'none';
+  
+  // Clear drawings when turning off draw mode
+  if (!drawEnabled) {
+    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+  }
+});
 
   let hue = 0;
   drawCanvas.addEventListener('mousedown', e => {
