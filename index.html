@@ -265,7 +265,7 @@ async function loadContent() {
   let allVideos = [];
   let visibleVideos = 3;
 
-  // --- Load Posts ---
+  // === Load Posts from /_posts/index.json ===
   try {
     const res = await fetch("/_posts/index.json");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -277,34 +277,50 @@ async function loadContent() {
     postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${err.message}</p>`;
   }
 
-  function renderPosts() {
-    const displayed = allPosts.slice(0, visiblePosts);
-    const html = displayed
-      .map(
-        p => `
-        <div class="post">
-          <h3>${p.title}</h3>
-          <small>${new Date(p.date).toLocaleString()}</small>
-        </div>
-      `
-      )
-      .join("");
+  // Render all visible posts with full Markdown
+  async function renderPosts() {
     postsContainer.innerHTML = `
       <h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1>
       <h2>Latest Posts</h2>
-      ${html}
-      ${visiblePosts < allPosts.length
-        ? `<button id="loadMorePosts" class="load-more">Read More</button>`
-        : ""}
     `;
-    const btn = document.getElementById("loadMorePosts");
-    if (btn) btn.addEventListener("click", () => {
-      visiblePosts += 3;
-      renderPosts();
-    });
+
+    const displayed = allPosts.slice(0, visiblePosts);
+    for (const p of displayed) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "post";
+      wrapper.innerHTML = `
+        <h3>${p.title}</h3>
+        <small>${new Date(p.date).toLocaleString()}</small>
+        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy">` : ""}
+        <div class="content"><em>Loading...</em></div>
+      `;
+      postsContainer.appendChild(wrapper);
+
+      try {
+        const res = await fetch(p.file);
+        if (!res.ok) throw new Error(res.status);
+        const text = await res.text();
+        wrapper.querySelector(".content").innerHTML = marked.parse(text);
+      } catch (e) {
+        wrapper.querySelector(".content").innerHTML =
+          "<em>Unable to load post content.</em>";
+      }
+    }
+
+    if (visiblePosts < allPosts.length) {
+      const btn = document.createElement("button");
+      btn.id = "loadMorePosts";
+      btn.className = "load-more";
+      btn.textContent = "Read More";
+      btn.onclick = () => {
+        visiblePosts += 3;
+        renderPosts();
+      };
+      postsContainer.appendChild(btn);
+    }
   }
 
-  // --- Load YouTube Videos ---
+  // === Load YouTube RSS Feed ===
   try {
     const feedUrl =
       "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
@@ -340,19 +356,20 @@ async function loadContent() {
       ${visibleVideos < allVideos.length
         ? `<button id="loadMoreVideos" class="load-more">Watch More</button>`
         : ""}
-      <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" 
+      <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ"
          target="_blank" class="youtube-btn">Watch on YouTube</a>
     `;
 
     const btn = document.getElementById("loadMoreVideos");
-    if (btn) btn.addEventListener("click", () => {
-      visibleVideos += 3;
-      renderVideos();
-    });
+    if (btn)
+      btn.addEventListener("click", () => {
+        visibleVideos += 3;
+        renderVideos();
+      });
   }
 }
 
-// --- Buttons Styling ---
+// === Button + Post Styling ===
 const style = document.createElement("style");
 style.textContent = `
   .load-more, .youtube-btn {
@@ -367,24 +384,26 @@ style.textContent = `
     transition: background 0.2s;
     text-align: center;
   }
-  .load-more:hover, .youtube-btn:hover {
-    background: #333;
-  }
+  .load-more:hover, .youtube-btn:hover { background: #333; }
   .youtube-btn {
     background: #cc181e;
     border-color: #cc181e;
     text-decoration: none;
     font-weight: bold;
   }
-  .youtube-btn:hover {
-    background: #ff4444;
+  .youtube-btn:hover { background: #ff4444; }
+  .post img {
+    max-width: 100%;
+    border-radius: 4px;
+    margin: 12px 0;
   }
+  .post .content { margin-top: 8px; line-height: 1.5; }
 `;
 document.head.appendChild(style);
 
 document.addEventListener("DOMContentLoaded", loadContent);
 
-// --- Bouncing Banana ---
+// === Bouncing Banana ===
 (() => {
   const IMG_SRC = "/images/bananamanarama.gif";
   const AUDIO_SRC = "/audio/do-that-there.mp3";
@@ -452,6 +471,7 @@ document.addEventListener("DOMContentLoaded", loadContent);
   requestAnimationFrame(tick);
 })();
 </script>
+
 
 </body>
 </html>
