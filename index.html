@@ -252,155 +252,92 @@
   <div class="footer">
 Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
 </div>
-<script>
+
+  <script>
 (() => {
-  // --- config you might touch if you get picky ---
+  // === CONFIG ===
   const IMG_SRC = "/images/bananamanarama.gif";
   const AUDIO_SRC = "/audio/do-that-there.mp3";
-  const START_SIZE_PX = 160;     // banana size
-  const SPEED_PX_PER_SEC = 220;  // base speed
-  const SATURATION = 200;        // percent
-  const BRIGHTNESS = 110;        // percent
+  const SIZE = 160; // banana size px
+  const SPEED = 220; // pixels per second
+  const SAT = 200;  // hue saturation %
+  const BRT = 110;  // brightness %
 
-  // --- create elements ---
+  // === ELEMENTS ===
   const banana = document.createElement("img");
   banana.src = IMG_SRC;
-  banana.alt = "Dancing Banana";
-  banana.style.position = "fixed";
-  banana.style.left = "100px";
-  banana.style.top = "100px";
-  banana.style.width = START_SIZE_PX + "px";
-  banana.style.opacity = "0.5";
-  banana.style.pointerEvents = "auto";
-  banana.style.cursor = "pointer";
-  banana.style.userSelect = "none";
-  banana.style.zIndex = "99999";
-  banana.style.willChange = "transform, filter";
-  banana.style.filter = `hue-rotate(0deg) saturate(${SATURATION}%) brightness(${BRIGHTNESS}%)`;
-  // optional: helps neon pop on dark bg; comment out if it clashes
-  banana.style.mixBlendMode = "screen";
+  banana.alt = "Bananamanarama";
+  Object.assign(banana.style, {
+    position: "absolute",
+    left: "100px",
+    top: "100px",
+    width: SIZE + "px",
+    opacity: "0.5",
+    cursor: "pointer",
+    userSelect: "none",
+    mixBlendMode: "screen",
+    filter: `hue-rotate(0deg) saturate(${SAT}%) brightness(${BRT}%)`,
+    zIndex: 50
+  });
 
   const audio = document.createElement("audio");
   audio.src = AUDIO_SRC;
   audio.preload = "none";
 
-  document.body.appendChild(banana);
+  const main = document.querySelector("main") || document.body;
+  main.style.position = "relative";
+  main.appendChild(banana);
   document.body.appendChild(audio);
 
-  // --- motion state ---
+  // === STATE ===
   let x = 100, y = 100;
-  let w = START_SIZE_PX, h = START_SIZE_PX;
-  const randDir = () => (Math.random() < 0.5 ? -1 : 1);
-  // randomize initial direction a bit so it looks alive
-  let vx = randDir() * SPEED_PX_PER_SEC * (0.7 + Math.random() * 0.6);
-  let vy = randDir() * SPEED_PX_PER_SEC * (0.7 + Math.random() * 0.6);
+  let vx = (Math.random() > 0.5 ? 1 : -1) * SPEED;
+  let vy = (Math.random() > 0.5 ? 1 : -1) * SPEED;
+  let hue = 0, hasPointer = false;
 
-  const viewport = () => ({ W: window.innerWidth, H: window.innerHeight });
+  const viewport = () => ({
+    W: main.clientWidth || window.innerWidth,
+    H: main.clientHeight || window.innerHeight
+  });
 
-  // --- hue control ---
-  let hasPointer = false;
-  let autoHue = 0;
-  const setHue = deg => {
-    banana.style.filter =
-      `hue-rotate(${deg % 360}deg) saturate(${SATURATION}%) brightness(${BRIGHTNESS}%)`;
-  };
+  // === EVENTS ===
+  banana.addEventListener("click", () => {
+    if (audio.paused) { audio.currentTime = 0; audio.play(); }
+    else audio.pause();
+  });
 
-  // track mouse position for hue mapping
   window.addEventListener("mousemove", e => {
     hasPointer = true;
     const { innerWidth: W, innerHeight: H } = window;
-    const hx = (e.clientX / Math.max(1, W)) * 360;
-    const hy = (e.clientY / Math.max(1, H)) * 360;
-    // blend X and Y so moving diagonally feels trippy
-    setHue((hx * 0.7 + hy * 0.3) % 360);
+    hue = ((e.clientX / W) * 360 + (e.clientY / H) * 180) % 360;
+    banana.style.filter = `hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
   }, { passive: true });
 
-  // fallback: auto-cycling hue for touch/idle
-  let lastHueTime = 0;
-
-  // --- click to play/pause ---
-  banana.addEventListener("click", () => {
-    try {
-      if (audio.paused) {
-        audio.currentTime = 0;
-        audio.play();
-      } else {
-        audio.pause();
-      }
-    } catch (_) {
-      // if the browser throws a fit about autoplay, that click still counts as a gesture
-    }
-  });
-
-  // --- accessibility nicety ---
-  banana.setAttribute("role", "button");
-  banana.setAttribute("aria-label", "Play or pause Do That There");
-  banana.tabIndex = 0;
-  banana.addEventListener("keydown", e => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      banana.click();
-    }
-  });
-
-  // --- animation loop ---
+  // === ANIMATION ===
   let prev = performance.now();
-  const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
-
-  function tick(now) {
-    const dt = Math.min(0.05, (now - prev) / 1000); // cap big frame jumps
+  const tick = now => {
+    const dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
 
-    // auto hue if no pointer recently
     if (!hasPointer) {
-      const elapsed = now - lastHueTime;
-      if (elapsed > 16) {
-        autoHue = (autoHue + 45 * dt) % 360;
-        setHue(autoHue);
-        lastHueTime = now;
-      }
+      hue = (hue + 45 * dt) % 360;
+      banana.style.filter = `hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
     }
 
-    const { W, H } = viewport();
-    // update size in case of zoom or responsive adjustments
-    w = banana.getBoundingClientRect().width || w;
-    h = banana.getBoundingClientRect().height || h;
-
-    // move
     x += vx * dt;
     y += vy * dt;
+    const { W, H } = viewport();
 
-    // bounce with a tiny extra nudge so it doesn’t get stuck on edges
-    if (x <= 0) {
-      x = 0; vx = Math.abs(vx);
-    } else if (x + w >= W) {
-      x = W - w; vx = -Math.abs(vx);
-    }
-    if (y <= 0) {
-      y = 0; vy = Math.abs(vy);
-    } else if (y + h >= H) {
-      y = H - h; vy = -Math.abs(vy);
-    }
+    if (x <= 0 || x + SIZE >= W) vx *= -1;
+    if (y <= 0 || y + SIZE >= H) vy *= -1;
 
-    banana.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    banana.style.transform = `translate(${x}px, ${y}px)`;
 
     requestAnimationFrame(tick);
-  }
+  };
   requestAnimationFrame(tick);
-
-  // keep inside the window on resize
-  window.addEventListener("resize", () => {
-    const { W, H } = viewport();
-    x = clamp(x, 0, Math.max(0, W - w));
-    y = clamp(y, 0, Math.max(0, H - h));
-  });
-
-  // optional: respect reduced motion users because we’re not monsters
-  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-  if (prefersReduced.matches) {
-    vx = 0; vy = 0;
-  }
 })();
 </script>
+  
 </body>
 </html>
