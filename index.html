@@ -247,73 +247,118 @@
   </main>
 
   <script>
-  async function loadPosts() {
-    const container = document.getElementById("posts");
-    try {
-      const res = await fetch("/_posts/index.json");
-      const posts = await res.json();
+async function loadPosts() {
+  const container = document.getElementById("posts");
+  try {
+    const res = await fetch("/_posts/index.json");
+    const posts = await res.json();
+    posts.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-      // Sort newest to oldest
-      posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+    container.innerHTML = `
+      <h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1>
+      <h2>Latest Posts</h2>
+    `;
 
-      container.innerHTML =
-        '<h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1><h2>Latest Posts</h2>';
+    const postElements = [];
 
-      for (const post of posts) {
-        const mdText = await fetch(post.file).then(r => r.text());
-        const siteRoot = window.location.origin;
-
-        // Fix image paths to always point to your site's root uploads directory
-        const fixedMd = mdText.replace(/!\[(.*?)\]\((.*?)\)/g, (m, alt, path) => {
-          if (path.startsWith("http")) return m;
-          if (path.startsWith("/")) return m;
-          if (path.startsWith("./")) path = path.slice(2);
-          return `![${alt}](${siteRoot}/images/uploads/${path})`;
-        });
-
-        const cleanMd = fixedMd.replace(/^---[\s\S]*?---/, "").trim();
-        const html = marked.parse(cleanMd);
-        const div = document.createElement("div");
-        div.className = "post";
-        const cleanTitle = post.title.replace(/^title:\s*/i, "").trim();
-        div.innerHTML = `<h3>${cleanTitle}</h3><small>${post.date}</small><div>${html}</div>`;
-        container.appendChild(div);
-      }
-    } catch (err) {
-      console.error(err);
-      container.innerHTML = "<p>Error loading posts.</p>";
-    }
-  }
-
-  async function loadYouTube() {
-    const container = document.getElementById("youtube");
-    const rssUrl =
-      "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-    try {
-      const response = await fetch(
-        `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`
-      );
-      const data = await response.json();
-      container.innerHTML =
-        '<h1 style="color:#66ccff;">My Latest Broadcast</h1><h2>Latest Videos</h2>';
-      data.items.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "video";
-        const videoId = item.link.split("v=")[1];
-        div.innerHTML = `
-          <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
-          <p><a href="${item.link}" target="_blank">${item.title}</a></p>`;
-        container.appendChild(div);
+    for (const post of posts) {
+      const mdText = await fetch(post.file).then(r => r.text());
+      const siteRoot = window.location.origin;
+      const fixedMd = mdText.replace(/!\[(.*?)\]\((.*?)\)/g, (m, alt, path) => {
+        if (path.startsWith("http") || path.startsWith("/")) return m;
+        if (path.startsWith("./")) path = path.slice(2);
+        return `![${alt}](${siteRoot}/images/uploads/${path})`;
       });
-    } catch (err) {
-      console.error(err);
-      container.innerHTML = "<p>Error loading YouTube feed.</p>";
+
+      const cleanMd = fixedMd.replace(/^---[\s\S]*?---/, "").trim();
+      const html = marked.parse(cleanMd);
+      const div = document.createElement("div");
+      div.className = "post";
+      const cleanTitle = post.title.replace(/^title:\s*/i, "").trim();
+      div.innerHTML = `<h3>${cleanTitle}</h3><small>${post.date}</small><div>${html}</div>`;
+      postElements.push(div);
     }
+
+    postElements.forEach((div, i) => {
+      if (i === 0 || window.innerWidth > 1100) div.style.display = "block";
+      else div.style.display = "none";
+      container.appendChild(div);
+    });
+
+    if (window.innerWidth <= 1100 && postElements.length > 1) {
+      const btn = document.createElement("button");
+      btn.textContent = "Read More";
+      btn.style.display = "block";
+      btn.style.margin = "0 auto";
+      btn.style.background = "#222";
+      btn.style.color = "#fff";
+      btn.style.border = "1px solid #444";
+      btn.style.padding = "8px 16px";
+      btn.style.cursor = "pointer";
+      btn.onclick = () => {
+        postElements.forEach(div => (div.style.display = "block"));
+        btn.remove();
+      };
+      container.appendChild(btn);
+    }
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = "<p>Error loading posts.</p>";
   }
+}
 
-  loadPosts();
-  loadYouTube();
+async function loadYouTube() {
+  const container = document.getElementById("youtube");
+  const rssUrl =
+    "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+  try {
+    const response = await fetch(
+      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`
+    );
+    const data = await response.json();
+    container.innerHTML = `
+      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
+      <h2>Latest Videos</h2>
+    `;
+
+    const videoElements = data.items.map((item, i) => {
+      const div = document.createElement("div");
+      div.className = "video";
+      const videoId = item.link.split("v=")[1];
+      div.innerHTML = `
+        <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
+        <p><a href="${item.link}" target="_blank">${item.title}</a></p>`;
+      if (i > 0 && window.innerWidth <= 1100) div.style.display = "none";
+      return div;
+    });
+
+    videoElements.forEach(div => container.appendChild(div));
+
+    if (window.innerWidth <= 1100 && videoElements.length > 1) {
+      const btn = document.createElement("button");
+      btn.textContent = "Watch More";
+      btn.style.display = "block";
+      btn.style.margin = "0 auto";
+      btn.style.background = "#222";
+      btn.style.color = "#fff";
+      btn.style.border = "1px solid #444";
+      btn.style.padding = "8px 16px";
+      btn.style.cursor = "pointer";
+      btn.onclick = () => {
+        videoElements.forEach(div => (div.style.display = "block"));
+        btn.remove();
+      };
+      container.appendChild(btn);
+    }
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = "<p>Error loading YouTube feed.</p>";
+  }
+}
+
+loadPosts();
+loadYouTube();
 </script>
-
+  
 </body>
 </html>
