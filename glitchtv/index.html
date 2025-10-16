@@ -89,31 +89,32 @@
 
   /* THE GOOD STUFF */
   .toggle-btn {
-    display: inline-block;
-    padding: 8px 20px;
-    background: rgba(0, 0, 0, 0.85);
-    border: 2px solid #0f0;
-    color: #0f0;
-    border-radius: 6px;
-    text-transform: uppercase;
-    box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
-    cursor: pointer;
-    opacity: 0;                /* Start invisible */
-    transition: opacity 0.6s ease, background 0.25s ease, color 0.25s ease, transform 0.25s ease;
-    position: fixed;           /* Keep it on screen even if header gone */
-    top: 16px;
-    right: 32px;
-    z-index: 3;                /* Behind iframe until hovered */
-  }
+  display: inline-block;
+  padding: 8px 20px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid #0f0;
+  color: #0f0;
+  border-radius: 6px;
+  text-transform: uppercase;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+  cursor: pointer;
+  opacity: 0;                     /* Invisible by default */
+  transition: opacity 0.6s ease, background 0.25s ease, color 0.25s ease, transform 0.25s ease;
+  position: fixed;
+  top: 16px;
+  right: 32px;
+  z-index: 9999;                  /* Always above iframe */
+  pointer-events: auto;           /* Still detects hover/click even at low opacity */
+}
 
-  .toggle-btn:hover {
-    opacity: 1;
-    background: #0f0;
-    color: #000;
-    box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
-    transform: scale(1.05);
-    z-index: 20;               /* Comes to front when hovered */
-  }
+.toggle-btn:hover {
+  opacity: 1;
+  background: #0f0;
+  color: #000;
+  box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
+  transform: scale(1.05);
+}
+
 
   main {
     position: relative;
