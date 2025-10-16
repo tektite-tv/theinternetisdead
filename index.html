@@ -219,6 +219,56 @@
     margin-top: 40px;
     color: #ccc;
   }
+
+  /* Hacker terminal popup ----------------------------------- */
+.search-wrapper { position: relative; width: 100%; }
+.search-input { width: 100%; }
+
+#search-popup {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid #0f0;
+  box-shadow: 0 0 12px #0f07;
+  border-radius: 6px;
+  padding: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  display: none;
+  z-index: 9999;
+  font-family: "Courier New", monospace;
+}
+
+#search-popup .promptline {
+  color: #0f0;
+  opacity: 0.85;
+  font-size: 12px;
+  margin: 4px 8px 8px;
+}
+
+.search-result {
+  padding: 10px 12px;
+  border: 1px solid #0f0;
+  border-radius: 4px;
+  margin: 8px 0;
+  background: rgba(0, 20, 0, 0.35);
+  cursor: pointer;
+}
+
+.search-result:hover, .search-result.active {
+  background: rgba(0, 40, 0, 0.6);
+  outline: 1px dashed #0f0;
+}
+
+.search-result .kind { color: #9f9; font-size: 12px; margin-right: 6px; }
+.search-result .title { color: #0f0; font-weight: bold; display: block; }
+.search-result .meta  { color: #7f7; font-size: 12px; margin-top: 2px; }
+.search-result .snippet { color: #bfb; font-size: 13px; margin-top: 6px; opacity: 0.85; }
+.no-results { color: #7f7; padding: 8px 12px; }
+
 </style>
 
 </head>
