@@ -131,6 +131,8 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
   // --- Angle control ---
   const root = document.documentElement;
@@ -170,27 +172,14 @@
   const state = {
     manualAngle: parseFloat(angleInput.value),
     spinLoop: false,
-    spinSpeed: 12,               // deg/s loop
+    spinSpeed: 12,
     spinOnce: { active:false, start:0, duration:3000, from:0, to:0 },
-
-    pulse: false,
-    basePeriod: 4, minPeriod: 2, maxPeriod: 12, pulseHz: 0.6,
-
-    strobe: false,
-    strobeHz: 7,                 // flashes per second
-    jitter: 0,                   // internal
-
-    cycle: false,
-    hue: 0,                      // 0..360
-    hueSpeed: 40,                // deg per second
-
-    meltdown: false,
-    meltAmpSkew: 10,             // deg
-    meltAmpScale: 0.12,          // +/- around 1
-    meltHz: 0.33
+    pulse: false, basePeriod: 4, minPeriod: 2, maxPeriod: 12, pulseHz: 0.6,
+    strobe: false, strobeHz: 7, jitter: 0,
+    cycle: false, hue: 0, hueSpeed: 40,
+    meltdown: false, meltAmpSkew: 10, meltAmpScale: 0.12, meltHz: 0.33
   };
 
-  // Buttons
   const el = id => document.getElementById(id);
   const btnSpinOnce = el('spinOnce');
   const btnSpinLoop = el('spinLoop');
@@ -264,10 +253,9 @@
   // --- Main RAF ---
   let last = performance.now();
   function tick(now){
-    const dt = (now - last) / 1000; // seconds
+    const dt = (now - last) / 1000;
     last = now;
 
-    // Spin once easing
     if (state.spinOnce.active){
       const p = Math.min(1, (now - state.spinOnce.start) / state.spinOnce.duration);
       const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2*p + 2, 3) / 2;
@@ -283,37 +271,30 @@
       setAngle(a);
     }
 
-    // Pulse period
     if (state.pulse){
       const omega = 2 * Math.PI * state.pulseHz;
       const time = now / 1000;
-      const s = (Math.sin(omega * time) + 1) / 2; // 0..1
+      const s = (Math.sin(omega * time) + 1) / 2;
       const period = state.minPeriod + s * (state.maxPeriod - state.minPeriod);
       root.style.setProperty('--period', period.toFixed(2) + 'px');
     }
 
-    // Strobe + jitter
     if (state.strobe){
-      // occasional inversion flash
       const flash = Math.random() < state.strobeHz * dt * 0.5;
       if (flash) layersEl.classList.toggle('invert');
-      // background jitter
-      state.jitter = (Math.random() - 0.5) * 2; // -1..1
+      state.jitter = (Math.random() - 0.5) * 2;
       root.style.setProperty('--bgx', (state.jitter*6).toFixed(1) + 'px');
       root.style.setProperty('--bgy', (state.jitter*6).toFixed(1) + 'px');
-      // tiny angle glitch
       const a = getCurrentAngle();
       setAngle(a + (Math.random() - 0.5) * 2);
     }
 
-    // Cycle line color (HSL rainbow)
     if (state.cycle){
       state.hue = (state.hue + state.hueSpeed * dt) % 360;
       const col = `hsla(${state.hue.toFixed(1)}, 95%, 70%, 0.95)`;
       root.style.setProperty('--line-color', col);
     }
 
-    // Meltdown warp
     if (state.meltdown){
       const tsec = now / 1000;
       const skx = Math.sin(2*Math.PI*state.meltHz * tsec) * state.meltAmpSkew;
@@ -324,7 +305,6 @@
       root.style.setProperty('--sc', sc.toFixed(3));
     }
 
-    // draw lava every frame at half-res for speed
     const img = ctx.createImageData(w, h);
     const d = img.data;
     for(let y=0; y<h; y+=2){
@@ -339,31 +319,27 @@
     requestAnimationFrame(tick);
   }
 
-  // --- Screenshot Button ---
+  // --- Screenshot Functionality ---
   const controls = document.querySelector('.controls');
-  const screenshotBtn = document.createElement('button');
-  screenshotBtn.textContent = '💾 Save Screenshot';
-  screenshotBtn.className = 'btn';
-  controls.appendChild(screenshotBtn);
-
-  screenshotBtn.addEventListener('click', async () => {
+  async function takeScreenshot() {
     try {
-      controls.style.display = 'none'; // hide controls
-      await new Promise(r => setTimeout(r, 100)); // delay to make sure it's hidden
-      const canvasShot = await html2canvas(document.body, {
-        useCORS: true,
-        logging: false,
-        backgroundColor: null
-      });
-      controls.style.display = ''; // restore controls
+      controls.style.display = 'none';
+      await new Promise(r => setTimeout(r, 100));
+      const shot = await html2canvas(document.body, {useCORS:true, logging:false, backgroundColor:null});
+      controls.style.display = '';
       const link = document.createElement('a');
       link.download = 'screenshot.png';
-      link.href = canvasShot.toDataURL('image/png');
+      link.href = shot.toDataURL('image/png');
       link.click();
     } catch (err) {
       console.error('Screenshot failed:', err);
       controls.style.display = '';
     }
+  }
+
+  // Press 'S' to save screenshot
+  document.addEventListener('keydown', e => {
+    if (e.key.toLowerCase() === 's') takeScreenshot();
   });
 
   requestAnimationFrame(tick);
