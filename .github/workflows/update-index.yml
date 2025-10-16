@@ -13,24 +13,25 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Generate index.json
+        shell: bash
         run: |
           echo "[" > _posts/index.json
-          count=0
-          for f in _posts/*.md; do
+          files=(_posts/*.md)
+          total=${#files[@]}
+          i=0
+          for f in "${files[@]}"; do
             title=$(grep '^title:' "$f" | head -n1 | cut -d':' -f2- | xargs)
             date=$(grep '^date:' "$f" | head -n1 | cut -d':' -f2- | xargs)
             image=$(grep '^image:' "$f" | head -n1 | cut -d':' -f2- | xargs)
-
-            # only add valid posts
+            i=$((i+1))
             if [ -n "$title" ] && [ -n "$date" ]; then
-              [ $count -gt 0 ] && echo "," >> _posts/index.json
               json="{\"title\": \"$title\", \"date\": \"$date\", \"file\": \"$f\""
               if [ -n "$image" ]; then
                 json="$json, \"image\": \"$image\""
               fi
               json="$json}"
-              echo "$json" >> _posts/index.json
-              count=$((count+1))
+              echo "  $json" >> _posts/index.json
+              [ $i -lt $total ] && echo "," >> _posts/index.json
             fi
           done
           echo "]" >> _posts/index.json
