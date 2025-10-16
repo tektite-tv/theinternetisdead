@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/10 * * * *'  # every 10 minutes (UTC)
 
 jobs:
   update-index:
@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # required for git log timestamps
+          fetch-depth: 0  # allows git log timestamps to work
 
       - name: Rebuild _posts/index.json
         run: |
@@ -22,18 +22,26 @@ jobs:
           for file in _posts/*.md; do
             [ "$first" = true ] || echo "," >> _posts/index.json
             first=false
-            title=$(grep -m1 '^title:' "$file" | sed 's/title:[[:space:]]*//')
-            # grab date from frontmatter if exists
+
+            # extract title and sanitize it for JSON
+            title=$(grep -m1 '^title:' "$file" | sed 's/title:[[:space:]]*//' | sed 's/"/\\"/g')
+            
+            # get date from frontmatter if available, otherwise use git commit time
             fmdate=$(grep -m1 '^date:' "$file" | sed 's/date:[[:space:]]*//')
-            # if missing, use git commit time
             if [ -z "$fmdate" ]; then
               fmdate=$(git log -1 --format="%aI" "$file" || date -u +"%Y-%m-%dT%H:%M:%SZ")
             fi
+
+            # escape for JSON safety
+            title=$(echo "$title" | sed 's/\\/\\\\/g; s/"/\\"/g')
+            fmdate=$(echo "$fmdate" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+            # append entry to JSON array
             echo "  {\"title\": \"$title\", \"date\": \"$fmdate\", \"file\": \"$file\"}" >> _posts/index.json
           done
           echo "]" >> _posts/index.json
 
-      - name: Commit and push
+      - name: Commit and push index.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
