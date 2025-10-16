@@ -382,7 +382,43 @@
 #loadMoreVideos + .youtube-btn {
   margin-top: 10px;
 }
-    
+
+/* HAMBURGER DROPDOWN -------------------------------------- */
+.menu-popup {
+  position: absolute;
+  top: 60px; /* adjust to sit under header */
+  left: 32px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid #0f0;
+  box-shadow: 0 0 12px #0f07;
+  border-radius: 6px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  z-index: 9999;
+  font-family: "Courier New", monospace;
+  min-width: 160px;
+}
+
+.menu-item {
+  color: #0f0;
+  padding: 10px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  display: block;
+}
+
+.menu-item:hover {
+  background: rgba(0, 40, 0, 0.6);
+  outline: 1px dashed #0f0;
+  color: #000;
+}
+
+.menu-popup.visible {
+  display: flex;
+}
+
 </style>
 
 </head>
@@ -391,19 +427,17 @@
   <header>
     <div class="left-section">
       <button class="menu">&#9776;</button>
-      <a href="index.html"><img class="logo" src="/images/oldtube.png" alt="OldTube Logo" /></a>
-    </div>
 
-    <div class="search-bar">
-  <div class="search-wrapper" style="flex:1; display:flex; align-items:center; gap:0;">
-    <input class="search-input" type="text" placeholder="Search" />
-    <button class="search-btn">Search</button>
-    <div id="search-popup"></div>
-  </div>
-</div>
+      <!-- ⬇️ INSERT THIS RIGHT HERE ⬇️ -->
+      <div id="menu-popup" class="menu-popup">
+        <a href="/" class="menu-item">Home</a>
+        <a href="/admin" class="menu-item">Admin</a>
+      </div>
+      <!-- ⬆️ END INSERTION ⬆️ -->
 
-    <div class="right-section">
-      <a href="/admin" class="login-btn">Login</a>
+      <a href="index.html">
+        <img class="logo" src="/images/oldtube.png" alt="OldTube Logo" />
+      </a>
     </div>
   </header>
 
