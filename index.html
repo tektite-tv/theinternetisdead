@@ -443,6 +443,71 @@
   display: flex;
 }
 
+/* CONTACT POPUP ------------------------------------------ */
+.contact-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+.contact-inner {
+  background: rgba(0,20,0,0.9);
+  border: 2px solid #0f0;
+  padding: 24px;
+  border-radius: 8px;
+  color: #0f0;
+  width: 90%;
+  max-width: 400px;
+  font-family: "Courier New", monospace;
+  box-shadow: 0 0 20px #0f05;
+}
+.contact-inner h2 {
+  margin-bottom: 12px;
+}
+.contact-inner label {
+  display: block;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.contact-inner input,
+.contact-inner textarea {
+  width: 100%;
+  background: #000;
+  color: #0f0;
+  border: 1px solid #0f0;
+  border-radius: 4px;
+  padding: 6px;
+  font-family: inherit;
+}
+.send-btn {
+  margin-top: 12px;
+  background: #0f0;
+  color: #000;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+.send-btn:hover {
+  background: #7f7;
+}
+.close-contact {
+  position: absolute;
+  right: 12px;
+  top: 8px;
+  background: transparent;
+  border: none;
+  color: #0f0;
+  font-size: 20px;
+  cursor: pointer;
+}
+
 </style>
 
 </head>
@@ -477,6 +542,23 @@
     <a href="mailto:nobody@theinternetisdead.org" class="submit-btn">Submit</a>
   </div>
 </header>
+
+<!-- CONTACT POPUP -->
+<div id="contact-popup" class="contact-popup">
+  <div class="contact-inner">
+    <button class="close-contact">✕</button>
+    <h2>Send a Message</h2>
+    <form id="contact-form" action="mailto:nobody@theinternetisdead.org" method="post" enctype="text/plain">
+      <label>Name:</label>
+      <input type="text" name="name" required>
+      <label>Email:</label>
+      <input type="email" name="email" required>
+      <label>Message:</label>
+      <textarea name="message" rows="4" required></textarea>
+      <button type="submit" class="send-btn">Send</button>
+    </form>
+  </div>
+</div>
 
   <main>
     <section class="column" id="posts">
@@ -770,6 +852,28 @@ async function handlePostClick(url) {
     popup.querySelector(".popup-content").innerHTML = "<em>Error loading post.</em>";
   }
 }
+
+// === CONTACT POPUP HANDLER ===============================
+(function() {
+  const submitBtn = document.querySelector('.submit-btn');
+  const popup = document.getElementById('contact-popup');
+  const closeBtn = popup.querySelector('.close-contact');
+
+  if (!submitBtn || !popup) return;
+
+  submitBtn.addEventListener('click', e => {
+    e.preventDefault();
+    popup.style.display = 'flex';
+  });
+  closeBtn.addEventListener('click', () => {
+    popup.style.display = 'none';
+  });
+  document.addEventListener('click', e => {
+    if (!popup.contains(e.target) && !submitBtn.contains(e.target)) {
+      popup.style.display = 'none';
+    }
+  });
+})();
     
 // === HAMBURGER DROPDOWN MENU ===============================
 (function() {
