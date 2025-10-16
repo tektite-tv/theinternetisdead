@@ -256,30 +256,35 @@
 Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
 </div>
   
-<script>
+  <script>
 async function loadContent() {
   const postsContainer = document.getElementById("posts");
   const youtubeContainer = document.getElementById("youtube");
+  let allPosts = [];
+  let visiblePosts = 3;
+  let allVideos = [];
+  let visibleVideos = 3;
 
-  // Load blog posts from /_posts/index.json
+  // --- Load Posts ---
   try {
     const res = await fetch("/_posts/index.json");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const posts = await res.json();
+    allPosts = await res.json();
+    allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+    renderPosts();
+  } catch (err) {
+    console.error("Post load failed:", err);
+    postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${err.message}</p>`;
+  }
 
-    if (!posts.length) {
-      postsContainer.innerHTML += "<p>No posts yet.</p>";
-      return;
-    }
-
-    const sorted = posts.sort((a, b) => new Date(b.date) - new Date(a.date));
-    const html = sorted
+  function renderPosts() {
+    const displayed = allPosts.slice(0, visiblePosts);
+    const html = displayed
       .map(
         p => `
         <div class="post">
           <h3>${p.title}</h3>
           <small>${new Date(p.date).toLocaleString()}</small>
-          <a href="${p.file.replace(/^_/, '')}" target="_blank">Read Post</a>
         </div>
       `
       )
@@ -288,13 +293,18 @@ async function loadContent() {
       <h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1>
       <h2>Latest Posts</h2>
       ${html}
+      ${visiblePosts < allPosts.length
+        ? `<button id="loadMorePosts" class="load-more">Read More</button>`
+        : ""}
     `;
-  } catch (err) {
-    console.error("Post load failed:", err);
-    postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${err.message}</p>`;
+    const btn = document.getElementById("loadMorePosts");
+    if (btn) btn.addEventListener("click", () => {
+      visiblePosts += 3;
+      renderPosts();
+    });
   }
 
-  // Load YouTube videos
+  // --- Load YouTube Videos ---
   try {
     const feedUrl =
       "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
@@ -303,8 +313,16 @@ async function loadContent() {
     );
     if (!rssRes.ok) throw new Error(`HTTP ${rssRes.status}`);
     const rssData = await rssRes.json();
-    const videos = rssData.items.slice(0, 4);
-    const vidsHTML = videos
+    allVideos = rssData.items;
+    renderVideos();
+  } catch (err) {
+    console.error("Video load failed:", err);
+    youtubeContainer.innerHTML += `<p style="color:red;">Error loading videos: ${err.message}</p>`;
+  }
+
+  function renderVideos() {
+    const displayed = allVideos.slice(0, visibleVideos);
+    const vidsHTML = displayed
       .map(
         v => `
         <div class="video">
@@ -314,20 +332,59 @@ async function loadContent() {
       `
       )
       .join("");
+
     youtubeContainer.innerHTML = `
       <h1 style="color:#66ccff;">My Latest Broadcast</h1>
       <h2>Latest Videos</h2>
       ${vidsHTML}
+      ${visibleVideos < allVideos.length
+        ? `<button id="loadMoreVideos" class="load-more">Watch More</button>`
+        : ""}
+      <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" 
+         target="_blank" class="youtube-btn">Watch on YouTube</a>
     `;
-  } catch (err) {
-    console.error("Video load failed:", err);
-    youtubeContainer.innerHTML += `<p style="color:red;">Error loading videos: ${err.message}</p>`;
+
+    const btn = document.getElementById("loadMoreVideos");
+    if (btn) btn.addEventListener("click", () => {
+      visibleVideos += 3;
+      renderVideos();
+    });
   }
 }
 
+// --- Buttons Styling ---
+const style = document.createElement("style");
+style.textContent = `
+  .load-more, .youtube-btn {
+    display: block;
+    margin: 14px auto;
+    padding: 8px 16px;
+    background: #222;
+    border: 1px solid #555;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+    text-align: center;
+  }
+  .load-more:hover, .youtube-btn:hover {
+    background: #333;
+  }
+  .youtube-btn {
+    background: #cc181e;
+    border-color: #cc181e;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  .youtube-btn:hover {
+    background: #ff4444;
+  }
+`;
+document.head.appendChild(style);
+
 document.addEventListener("DOMContentLoaded", loadContent);
 
-// Bouncing banana
+// --- Bouncing Banana ---
 (() => {
   const IMG_SRC = "/images/bananamanarama.gif";
   const AUDIO_SRC = "/audio/do-that-there.mp3";
@@ -356,7 +413,6 @@ document.addEventListener("DOMContentLoaded", loadContent);
   const audio = document.createElement("audio");
   audio.src = AUDIO_SRC;
   audio.preload = "none";
-
   document.body.appendChild(banana);
   document.body.appendChild(audio);
 
@@ -366,12 +422,8 @@ document.addEventListener("DOMContentLoaded", loadContent);
   let hue = 0, hasPointer = false;
 
   banana.addEventListener("click", () => {
-    if (audio.paused) {
-      audio.currentTime = 0;
-      audio.play();
-    } else {
-      audio.pause();
-    }
+    if (audio.paused) { audio.currentTime = 0; audio.play(); }
+    else audio.pause();
   });
 
   window.addEventListener("mousemove", e => {
@@ -400,6 +452,6 @@ document.addEventListener("DOMContentLoaded", loadContent);
   requestAnimationFrame(tick);
 })();
 </script>
-  
+
 </body>
 </html>
