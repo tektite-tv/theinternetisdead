@@ -88,13 +88,20 @@
   user-select: none;
   flex-wrap: wrap;
   max-width: min(94vw, 1200px);
-  opacity: 0;                  /* hidden by default */
-  pointer-events: none;        /* not clickable when hidden */
+  opacity: 0;
+  pointer-events: none;
   transition: opacity 0.4s ease;
 }
 
+/* new container hitbox */
+.controls::before {
+  content: '';
+  position: absolute;
+  inset: -20px;              /* 20px around controls = hitbox area */
+}
+
 .controls:hover,
-.app:hover .controls {
+.controls:has(:hover) {
   opacity: 1;
   pointer-events: auto;
 }
