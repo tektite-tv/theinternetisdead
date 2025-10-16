@@ -1163,6 +1163,7 @@ document.getElementById('contact-form').addEventListener('submit', function(e){
   }, true);
 })();
 
+// === SPACEBAR TO STARFIELD MODE ====================================================
 let spaceCount = 0;
 let timeout;
 
@@ -1241,6 +1242,32 @@ function goToSpace() {
   msg.style.textShadow = '0 0 10px #0ff';
   msg.style.zIndex = '10000';
   document.body.appendChild(msg);
+
+  // === EARTH MODE TRIGGERED BY BACKSPACE ===
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Backspace') {
+      const earth = document.createElement('div');
+      earth.textContent = '🌍';
+      Object.assign(earth.style, {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: '200px',
+        cursor: 'pointer',
+        zIndex: '10001',
+        transition: 'transform 0.3s ease-in-out'
+      });
+      document.body.appendChild(earth);
+
+      earth.addEventListener('click', () => {
+        earth.textContent = '💥';
+        earth.style.transform = 'translate(-50%, -50%) scale(2.5) rotate(720deg)';
+        earth.style.transition = 'transform 0.8s ease-out';
+        setTimeout(() => earth.remove(), 1500);
+      });
+    }
+  });
 }
     
 </script>
