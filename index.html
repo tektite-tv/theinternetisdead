@@ -1264,7 +1264,10 @@ function goToSpace() {
         earth.textContent = '💥';
         earth.style.transform = 'translate(-50%, -50%) scale(2.5) rotate(720deg)';
         earth.style.transition = 'transform 0.8s ease-out';
-        setTimeout(() => earth.remove(), 1500);
+        setTimeout(() => {
+          earth.remove();
+          location.reload();
+        }, 1500);
       });
     }
   });
