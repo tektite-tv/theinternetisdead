@@ -1,39 +1,41 @@
-name: Update index.json
-
+name: Update posts index
 on:
   push:
-    branches:
-      - main
     paths:
-      - "_posts/*.md"
+      - '_posts/**/*.md'
+  workflow_dispatch:
 
 jobs:
-  update-index:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Generate index.json
+      - name: Build index.json
         run: |
-          mkdir -p _posts
           echo "[" > _posts/index.json
           first=true
-          for file in _posts/*.md; do
-            [ -e "$file" ] || continue
-            # extract and clean title (remove 'title:' and quotes)
-            rawtitle=$(grep -m 1 '^title:' "$file" | sed 's/title:[[:space:]]*//; s/"//g')
-            # extract date (leave as is)
-            date=$(grep -m 1 '^date:' "$file" | sed 's/date:[[:space:]]*//')
-            if [ "$first" = true ]; then first=false; else echo "," >> _posts/index.json; fi
-            echo "  {\"title\": \"${rawtitle}\", \"date\": \"${date}\", \"file\": \"${file}\"}" >> _posts/index.json
+          for f in _posts/*.md; do
+            title=$(grep '^title:' "$f" | head -n1 | cut -d':' -f2- | xargs)
+            date=$(grep '^date:' "$f" | head -n1 | cut -d':' -f2- | xargs)
+            image=$(grep '^image:' "$f" | head -n1 | cut -d':' -f2- | xargs)
+            if [ "$first" = true ]; then
+              first=false
+            else
+              echo "," >> _posts/index.json
+            fi
+            printf '{"title": "%s", "date": "%s", "file": "%s"%s}' \
+              "$title" "$date" "$f" \
+              $( [ -n "$image" ] && printf ', "image": "%s"' "$image" )
+            >> _posts/index.json
           done
           echo "]" >> _posts/index.json
 
-      - name: Commit and push index.json
+      - name: Commit and push
         run: |
-          git config user.name "github-actions"
+          git config user.name "actions-user"
           git config user.email "actions@github.com"
           git add _posts/index.json
-          git commit -m "Update _posts index" || exit 0
+          git commit -m "Update _posts index" || echo "No changes"
           git push
