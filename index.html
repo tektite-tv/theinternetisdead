@@ -220,55 +220,103 @@
     color: #ccc;
   }
 
-  /* Hacker terminal popup ----------------------------------- */
-.search-wrapper { position: relative; width: 100%; }
-.search-input { width: 100%; }
+  /* HACKER TERMINAL SEARCH POPUP --------------------------- */
+  .search-wrapper { position: relative; width: 100%; }
+  .search-input { width: 100%; }
 
-#search-popup {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  margin-top: 8px;
-  background: rgba(0, 0, 0, 0.85);
-  border: 1px solid #0f0;
-  box-shadow: 0 0 12px #0f07;
-  border-radius: 6px;
-  padding: 8px;
-  max-height: 420px;
-  overflow-y: auto;
-  display: none;
-  z-index: 9999;
-  font-family: "Courier New", monospace;
-}
+  #search-popup {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 8px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #0f0;
+    box-shadow: 0 0 12px #0f07;
+    border-radius: 6px;
+    padding: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    display: none;
+    z-index: 9999;
+    font-family: "Courier New", monospace;
+  }
 
-#search-popup .promptline {
-  color: #0f0;
-  opacity: 0.85;
-  font-size: 12px;
-  margin: 4px 8px 8px;
-}
+  #search-popup .promptline {
+    color: #0f0;
+    opacity: 0.85;
+    font-size: 12px;
+    margin: 4px 8px 8px;
+  }
 
-.search-result {
-  padding: 10px 12px;
-  border: 1px solid #0f0;
-  border-radius: 4px;
-  margin: 8px 0;
-  background: rgba(0, 20, 0, 0.35);
-  cursor: pointer;
-}
+  .search-result {
+    padding: 10px 12px;
+    border: 1px solid #0f0;
+    border-radius: 4px;
+    margin: 8px 0;
+    background: rgba(0, 20, 0, 0.35);
+    cursor: pointer;
+  }
 
-.search-result:hover, .search-result.active {
-  background: rgba(0, 40, 0, 0.6);
-  outline: 1px dashed #0f0;
-}
+  .search-result:hover,
+  .search-result.active {
+    background: rgba(0, 40, 0, 0.6);
+    outline: 1px dashed #0f0;
+  }
 
-.search-result .kind { color: #9f9; font-size: 12px; margin-right: 6px; }
-.search-result .title { color: #0f0; font-weight: bold; display: block; }
-.search-result .meta  { color: #7f7; font-size: 12px; margin-top: 2px; }
-.search-result .snippet { color: #bfb; font-size: 13px; margin-top: 6px; opacity: 0.85; }
-.no-results { color: #7f7; padding: 8px 12px; }
+  .search-result .kind { color: #9f9; font-size: 12px; margin-right: 6px; }
+  .search-result .title { color: #0f0; font-weight: bold; display: block; }
+  .search-result .meta { color: #7f7; font-size: 12px; margin-top: 2px; }
+  .search-result .snippet { color: #bfb; font-size: 13px; margin-top: 6px; opacity: 0.85; }
+  .no-results { color: #7f7; padding: 8px 12px; }
 
+  /* POST POPUP / MODAL ------------------------------------ */
+  #post-popup {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  }
+
+  #post-popup .popup-inner {
+    position: relative;
+    background: rgba(0, 20, 0, 0.9);
+    border: 2px solid #0f0;
+    box-shadow: 0 0 20px #0f05;
+    padding: 24px;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: #0f0;
+    font-family: "Courier New", monospace;
+    border-radius: 8px;
+  }
+
+  #post-popup .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #0f0;
+    font-size: 22px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  #post-popup .close-btn:hover {
+    color: #ff4444;
+  }
+
+  #post-popup img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 12px 0;
+  }
 </style>
 
 </head>
@@ -314,23 +362,18 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
 async function loadContent() {
   const postsContainer = document.getElementById("posts");
   const youtubeContainer = document.getElementById("youtube");
-
-  // Search UI handles
   const searchInput = document.querySelector(".search-input");
-  const searchBtn   = document.querySelector(".search-btn");
-  const popup       = document.getElementById("search-popup");
+  const searchBtn = document.querySelector(".search-btn");
+  const popup = document.getElementById("search-popup");
 
-  // Data
   let allPosts = [];
   let visiblePosts = 3;
   let allVideos = [];
   let visibleVideos = 3;
-
-  // Search index [{kind:'post'|'video', title, url, date, snippet}]
   let INDEX = [];
-  let activeIndex = -1; // keyboard highlight
+  let activeIndex = -1;
 
-  // === Load Posts from /_posts/index.json ===
+  // === Load Posts =========================================
   try {
     const res = await fetch("/_posts/index.json");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -342,7 +385,6 @@ async function loadContent() {
     postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${err.message}</p>`;
   }
 
-  // Render posts with full Markdown
   async function renderPosts() {
     postsContainer.innerHTML = `
       <h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1>
@@ -362,16 +404,14 @@ async function loadContent() {
 
       try {
         const res = await fetch(p.file);
-        if (!res.ok) throw new Error(res.status);
         let text = await res.text();
         if (text.startsWith('---')) {
           const end = text.indexOf('---', 3);
           if (end !== -1) text = text.slice(end + 3);
         }
         wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
-      } catch (e) {
-        wrapper.querySelector(".content").innerHTML =
-          "<em>Unable to load post content.</em>";
+      } catch {
+        wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
       }
     }
     if (visiblePosts < allPosts.length) {
@@ -384,10 +424,9 @@ async function loadContent() {
     }
   }
 
-  // === Load YouTube RSS Feed ===
+  // === Load YouTube Feed ==================================
   try {
-    const feedUrl =
-      "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+    const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
     const rssRes = await fetch(
       `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`
     );
@@ -418,39 +457,24 @@ async function loadContent() {
       ${visibleVideos < allVideos.length ? `<button id="loadMoreVideos" class="load-more">Watch More</button>` : ""}
       <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" target="_blank" class="youtube-btn">Watch on YouTube</a>
     `;
-
     const btn = document.getElementById("loadMoreVideos");
     if (btn) btn.addEventListener("click", () => { visibleVideos += 3; renderVideos(); });
   }
 
-  // === Build unified search index (posts + videos) ===
-  // We fetch minimal content for posts to make snippets. Cheap and cheerful.
+  // === Build unified search index ==========================
   try {
     const postDocs = await Promise.all(allPosts.map(async p => {
       try {
         const r = await fetch(p.file);
-        if (!r.ok) throw 0;
         let txt = await r.text();
         if (txt.startsWith('---')) {
           const end = txt.indexOf('---', 3);
           if (end !== -1) txt = txt.slice(end + 3);
         }
         const plain = txt.replace(/[#>*_`\[\]\(\)!-]/g, " ").replace(/\s+/g, " ").trim();
-        return {
-          kind: "post",
-          title: p.title || "Untitled",
-          url: p.file,
-          date: p.date || "",
-          snippet: (plain || "").slice(0, 200)
-        };
+        return { kind: "post", title: p.title || "Untitled", url: p.file, date: p.date || "", snippet: (plain || "").slice(0, 200) };
       } catch {
-        return {
-          kind: "post",
-          title: p.title || "Untitled",
-          url: p.file,
-          date: p.date || "",
-          snippet: ""
-        };
+        return { kind: "post", title: p.title || "Untitled", url: p.file, date: p.date || "", snippet: "" };
       }
     }));
 
@@ -468,7 +492,7 @@ async function loadContent() {
     INDEX = [];
   }
 
-  // === Search UI behavior ===
+  // === Search UI ===========================================
   function showPopup() { popup.style.display = "block"; }
   function hidePopup() { popup.style.display = "none"; activeIndex = -1; }
   function isShown() { return popup.style.display !== "none"; }
@@ -486,17 +510,15 @@ async function loadContent() {
     if (!items.length) return;
     const el = items[activeIndex] || items[0];
     const url = el?.dataset?.url;
-    if (url) window.open(url, "_blank");
+    if (url) handlePostClick(url);
   }
 
   function renderResults(q) {
-    // Green terminal header line
     const header = `<div class="promptline">$ grep -i "${escapeHtml(q)}" {posts,videos}</div>`;
     if (!q) {
       popup.innerHTML = header + `<div class="no-results">Type to search posts and videos.</div>`;
       showPopup(); return;
     }
-
     const query = q.trim().toLowerCase();
     const hits = INDEX.filter(d =>
       (d.title && d.title.toLowerCase().includes(query)) ||
@@ -518,17 +540,14 @@ async function loadContent() {
     `).join("");
 
     activeIndex = 0;
-
-    // Click to open
     popup.querySelectorAll(".search-result").forEach(el => {
-      el.addEventListener("click", () => window.open(el.dataset.url, "_blank"));
+      el.addEventListener("click", () => handlePostClick(el.dataset.url));
       el.addEventListener("mouseenter", () => {
         popup.querySelectorAll(".search-result").forEach(x => x.classList.remove("active"));
         el.classList.add("active");
         activeIndex = Array.from(popup.querySelectorAll(".search-result")).indexOf(el);
       });
     });
-
     showPopup();
   }
 
@@ -537,12 +556,10 @@ async function loadContent() {
   }
   function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
 
-  // Wire up interactions
   searchInput.addEventListener("input", () => renderResults(searchInput.value));
   searchInput.addEventListener("focus", () => renderResults(searchInput.value));
   searchBtn.addEventListener("click", () => renderResults(searchInput.value));
 
-  // Keyboard: Up/Down/Enter/Escape
   searchInput.addEventListener("keydown", e => {
     if (!isShown()) return;
     if (e.key === "ArrowDown") { e.preventDefault(); highlightMove(1); }
@@ -551,110 +568,87 @@ async function loadContent() {
     else if (e.key === "Escape") { hidePopup(); }
   });
 
-  // Hide when clicking outside
   document.addEventListener("click", e => {
     const within = e.target.closest(".search-wrapper");
     if (!within) hidePopup();
   });
-
-} // loadContent end
-
-// === Button + Post Styling (unchanged) ===
-const style = document.createElement("style");
-style.textContent = `
-  .load-more, .youtube-btn {
-    display: block;
-    margin: 14px auto;
-    padding: 8px 16px;
-    background: #222;
-    border: 1px solid #555;
-    color: #fff;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background 0.2s;
-    text-align: center;
-  }
-  .load-more:hover, .youtube-btn:hover { background: #333; }
-  .youtube-btn {
-    background: #cc181e;
-    border-color: #cc181e;
-    text-decoration: none;
-    font-weight: bold;
-  }
-  .youtube-btn:hover { background: #ff4444; }
-  .post img {
-    max-width: 100%;
-    border-radius: 4px;
-    margin: 12px 0;
-  }
-  .post .content { margin-top: 8px; line-height: 1.5; }
-`;
-document.head.appendChild(style);
+} // end loadContent
 
 document.addEventListener("DOMContentLoaded", loadContent);
 
-// === Bouncing Banana (left intact because chaos is brand) ===
+// === POST POPUP HANDLER =======================================
+function createPostPopup() {
+  let popup = document.getElementById("post-popup");
+  if (!popup) {
+    popup = document.createElement("div");
+    popup.id = "post-popup";
+    popup.innerHTML = `
+      <div class="popup-inner">
+        <button class="close-btn">✕</button>
+        <div class="popup-content"><em>Loading...</em></div>
+      </div>
+    `;
+    document.body.appendChild(popup);
+    popup.querySelector(".close-btn").addEventListener("click", () => {
+      popup.style.display = "none";
+      popup.querySelector(".popup-content").innerHTML = "";
+    });
+  }
+  return popup;
+}
+
+async function handlePostClick(url) {
+  if (!url.endsWith(".md")) return window.open(url, "_blank");
+  const popup = createPostPopup();
+  popup.style.display = "flex";
+  popup.querySelector(".popup-content").innerHTML = "<em>Loading...</em>";
+  try {
+    const res = await fetch(url);
+    let text = await res.text();
+    if (text.startsWith('---')) {
+      const end = text.indexOf('---', 3);
+      if (end !== -1) text = text.slice(end + 3);
+    }
+    popup.querySelector(".popup-content").innerHTML = marked.parse(text.trim());
+  } catch {
+    popup.querySelector(".popup-content").innerHTML = "<em>Error loading post.</em>";
+  }
+}
+
+// === BOUNCING BANANA ==========================================
 (() => {
   const IMG_SRC = "/images/bananamanarama.gif";
   const AUDIO_SRC = "/audio/do-that-there.mp3";
-  const SIZE = 160;
-  const SPEED = 220;
-  const SAT = 200;
-  const BRT = 110;
-
+  const SIZE = 160, SPEED = 220, SAT = 200, BRT = 110;
   const banana = document.createElement("img");
   banana.src = IMG_SRC;
-  banana.alt = "Bananamanarama";
   Object.assign(banana.style, {
-    position: "fixed",
-    left: "100px",
-    top: "100px",
-    width: SIZE + "px",
-    opacity: "0.5",
-    cursor: "pointer",
-    userSelect: "none",
-    mixBlendMode: "screen",
-    filter: `hue-rotate(0deg) saturate(${SAT}%) brightness(${BRT}%)`,
-    zIndex: "1000",
-    pointerEvents: "auto",
+    position: "fixed", left: "100px", top: "100px", width: SIZE+"px",
+    opacity: "0.5", cursor: "pointer", userSelect: "none",
+    mixBlendMode: "screen", filter: `hue-rotate(0deg) saturate(${SAT}%) brightness(${BRT}%)`,
+    zIndex: "1000"
   });
-
   const audio = document.createElement("audio");
   audio.src = AUDIO_SRC;
-  audio.preload = "none";
   document.body.appendChild(banana);
   document.body.appendChild(audio);
-
-  let x = 100, y = 100;
-  let vx = (Math.random() > 0.5 ? 1 : -1) * SPEED;
-  let vy = (Math.random() > 0.5 ? 1 : -1) * SPEED;
-  let hue = 0, hasPointer = false;
-
-  banana.addEventListener("click", () => {
-    if (audio.paused) { audio.currentTime = 0; audio.play(); }
-    else audio.pause();
-  });
-
-  window.addEventListener("mousemove", e => {
-    hasPointer = true;
-    const W = window.innerWidth, H = window.innerHeight;
-    hue = ((e.clientX / W) * 360 + (e.clientY / H) * 180) % 360;
-    banana.style.filter = `hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
-  }, { passive: true });
-
-  let prev = performance.now();
-  const tick = now => {
-    const dt = Math.min(0.05, (now - prev) / 1000);
-    prev = now;
-    if (!hasPointer) {
-      hue = (hue + 45 * dt) % 360;
-      banana.style.filter = `hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
-    }
-    x += vx * dt; y += vy * dt;
-    const W = window.innerWidth, H = window.innerHeight;
-    if (x <= 0 || x + SIZE >= W) vx *= -1;
-    if (y <= 0 || y + SIZE >= H) vy *= -1;
-    banana.style.transform = `translate(${x}px, ${y}px)`;
+  let x=100, y=100, vx=(Math.random()>0.5?1:-1)*SPEED, vy=(Math.random()>0.5?1:-1)*SPEED, hue=0, hasPointer=false;
+  banana.addEventListener("click", ()=>{ if(audio.paused){audio.currentTime=0;audio.play();} else audio.pause(); });
+  window.addEventListener("mousemove", e=>{
+    hasPointer=true;
+    const W=window.innerWidth,H=window.innerHeight;
+    hue=((e.clientX/W)*360+(e.clientY/H)*180)%360;
+    banana.style.filter=`hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
+  },{passive:true});
+  let prev=performance.now();
+  const tick=now=>{
+    const dt=Math.min(0.05,(now-prev)/1000); prev=now;
+    if(!hasPointer){hue=(hue+45*dt)%360; banana.style.filter=`hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`; }
+    x+=vx*dt; y+=vy*dt;
+    const W=window.innerWidth,H=window.innerHeight;
+    if(x<=0||x+SIZE>=W) vx*=-1;
+    if(y<=0||y+SIZE>=H) vy*=-1;
+    banana.style.transform=`translate(${x}px,${y}px)`;
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
