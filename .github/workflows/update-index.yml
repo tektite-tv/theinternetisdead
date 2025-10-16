@@ -18,17 +18,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate index.json
+            - name: Generate index.json
+        shell: bash
         run: |
           echo "[" > _posts/index.json
           first=true
           for f in _posts/*.md; do
-            # Extract frontmatter values
             title=$(grep -m1 '^title:' "$f" | sed 's/^title:[[:space:]]*//')
             date=$(grep -m1 '^date:' "$f" | sed 's/^date:[[:space:]]*//')
             image=$(grep -m1 '^image:' "$f" | sed 's/^image:[[:space:]]*//')
-            if [ "$first" = true ]; then first=false; else echo "," >> _posts/index.json; fi
-            echo "{\"title\": \"${title}\", \"date\": \"${date}\", \"image\": \"${image}\", \"file\": \"${f}\"}" >> _posts/index.json
+            [ -z "$title" ] && title="Untitled"
+            [ -z "$date" ] && date=$(date -Iseconds)
+
+            json="{\"title\": \"${title//\"/\\\"}\", \"date\": \"${date//\"/\\\"}\", \"file\": \"${f//\"/\\\"}\""
+            if [ -n "$image" ]; then
+              json="$json, \"image\": \"${image//\"/\\\"}\""
+            fi
+            json="$json}"
+
+            if [ "$first" = true ]; then
+              first=false
+            else
+              echo "," >> _posts/index.json
+            fi
+            echo "  $json" >> _posts/index.json
           done
           echo "]" >> _posts/index.json
 
