@@ -149,23 +149,21 @@
       100%{filter:hue-rotate(0deg)contrast(1)saturate(1)}
     }
 
-    .fullscreen-btn {
-  position: fixed;
-  top: 16px;
-  right: 32px; /* moved from left to right side */
-  width: 44px;
-  height: 44px;
-  background: #cc181e;
-  border: 2px solid #ff5555;
-  color: #fff;
-  font-size: 22px;
-  font-weight: bold;
-  border-radius: 6px;
-  cursor: pointer;
-  display: none;
-  z-index: 10000;
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
+    /* Header fullscreen toggle */
+.fullscreen-btn{
+  display:none;            /* hidden until camera starts */
+  padding:8px 12px;
+  background:#cc181e;
+  border:2px solid #ff5555;
+  color:#fff;
+  font-size:18px;
+  line-height:1;
+  border-radius:6px;
+  cursor:pointer;
 }
+.right-section { gap: 12px; }           /* you already have this; keeping it tidy */
+.camera-active .fullscreen-btn{ display:inline-flex; }
+
 .fullscreen-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 0 16px rgba(255,0,0,0.6);
@@ -203,15 +201,16 @@
   </footer>
 
   <script>
-  // Toggle the burger menu
+  // burger
   document.querySelector(".menu").onclick = () => {
     document.getElementById("menu-popup").classList.toggle("visible");
   };
 
-  // Glitch camera logic
   (function(){
-    const btn = document.getElementById("enableGlitchCam");
+    const btn   = document.getElementById("enableGlitchCam");
     const fsBtn = document.getElementById("fullscreenToggle");
+    const header = document.querySelector("header");
+
     const FILTERS = [
       "contrast(1.25) saturate(1.6) hue-rotate(10deg)",
       "contrast(1.4) saturate(1.2) hue-rotate(120deg)",
@@ -224,6 +223,8 @@
     btn.addEventListener("click", async ()=>{
       try{
         btn.disabled = true;
+
+        // create camera wrapper that fills between header and footer (not over them)
         const wrap = document.createElement("div");
         wrap.id = "camWrap";
         wrap.style.setProperty("--cam-filter", preset);
@@ -238,10 +239,9 @@
           return v;
         });
         const [vMain,vA,vB]=vids;
-        const scan=document.createElement("div");
-        scan.className="scanlines layer";
-        const noise=document.createElement("div");
-        noise.className="noise layer";
+
+        const scan=document.createElement("div"); scan.className="scanlines layer";
+        const noise=document.createElement("div"); noise.className="noise layer";
         wrap.append(scan,noise);
 
         if(Math.random()>.5)wrap.classList.add("twist");
@@ -251,28 +251,33 @@
         vids.forEach(v=>v.srcObject=stream);
 
         const offset=()=>`${Math.round((Math.random()*2-1)*2)}px`;
-        const applyOffsets=()=>{vA.style.transform=`translate(${offset()},${offset()})`;vB.style.transform=`translate(${offset()},${offset()})`;};
+        const applyOffsets=()=>{
+          vA.style.transform=`translate(${offset()},${offset()})`;
+          vB.style.transform=`translate(${offset()},${offset()})`;
+        };
         applyOffsets();
-        setInterval(applyOffsets,180);
+        const jitterTimer = setInterval(applyOffsets,180);
 
-        // Show fullscreen toggle button
-        fsBtn.style.display = "block";
+        // show the header button without overlapping logo
+        header.classList.add("camera-active");
 
         const kill=()=>{
-          try{stream.getTracks().forEach(t=>t.stop());}catch{}
+          try{ stream.getTracks().forEach(t=>t.stop()); }catch{}
+          clearInterval(jitterTimer);
           wrap.remove();
           document.documentElement.style.overflow="";
           btn.disabled=false;
-          fsBtn.style.display = "none";
+          header.classList.remove("camera-active");
         };
 
-        document.addEventListener("keydown",e=>{if(e.key==="Escape")kill();},{once:true});
-        [document.querySelector("header"),document.querySelector("footer")].forEach(el=>el.addEventListener("click",kill,{once:true}));
+        document.addEventListener("keydown",e=>{ if(e.key==="Escape") kill(); },{once:true});
+        [document.querySelector("header"),document.querySelector("footer")]
+          .forEach(el=>el.addEventListener("click",kill,{once:true}));
 
-        // Fullscreen toggle behavior
+        // fullscreen toggle
         fsBtn.onclick = () => {
           if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => console.error(err));
+            document.documentElement.requestFullscreen().catch(console.error);
           } else {
             document.exitFullscreen();
           }
