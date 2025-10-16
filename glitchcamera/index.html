@@ -208,7 +208,6 @@
   (function(){
     const btn = document.getElementById("enableGlitchCam");
     const fsBtn = document.getElementById("fullscreenToggle");
-    const header = document.querySelector("header");
 
     const FILTERS = [
       "contrast(1.25) saturate(1.6) hue-rotate(10deg)",
@@ -277,16 +276,20 @@
           expanded = false;
         };
 
+        // ESC key or footer click closes the camera
         document.addEventListener("keydown", e => {
           if (e.key === "Escape") kill();
         }, { once: true });
+        document.querySelector("footer").addEventListener("click", kill, { once: true });
 
-        ["header", "footer"].forEach(sel => {
-          document.querySelector(sel).addEventListener("click", kill, { once: true });
-        });
+        // Clicking anywhere else on the header except the fullscreen button closes the camera
+        document.querySelector("header").addEventListener("click", e => {
+          if (e.target.id !== "fullscreenToggle") kill();
+        }, { once: true });
 
-        // toggle expansion of camera only
-        fsBtn.onclick = () => {
+        // toggle camera fill expansion (now doesn’t bubble to header)
+        fsBtn.onclick = e => {
+          e.stopPropagation(); // <- THIS prevents header click from killing camera
           if (!camWrap) return;
           expanded = !expanded;
           if (expanded) {
