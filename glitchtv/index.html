@@ -12,6 +12,7 @@
     box-sizing: border-box;
     font-family: "Courier New", monospace;
   }
+
   html, body {
     height: 100%;
     background-color: #000;
@@ -27,15 +28,14 @@
     color: #fff;
     padding: 16px 32px;
     border-bottom: 3px solid #cc181e;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    transition: transform 0.6s ease, opacity 0.4s ease;
+    position: relative;
+    z-index: 5;
+    transition: opacity 0.3s ease;
   }
 
   header.hidden {
-    transform: translateY(-100%);
     opacity: 0;
+    z-index: -1;
   }
 
   .menu {
@@ -107,21 +107,27 @@
   }
 
   main {
+    position: relative;
     width: 100%;
     height: calc(100vh - 90px);
-    overflow: hidden;
-    transition: height 0.6s ease;
+    transition: all 0.4s ease;
+    z-index: 1;
   }
 
   main.fullscreen {
     height: 100vh;
+    top: 0;
   }
 
   iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     border: none;
     background: #000;
+    z-index: 2;
   }
   </style>
 </head>
@@ -158,27 +164,27 @@
 </main>
 
 <script>
-// Hamburger toggle
+// Hamburger menu toggle
 document.querySelector('.menu').addEventListener('click', e => {
   const popup = document.getElementById('menu-popup');
   popup.style.display = popup.style.display === 'none' ? 'flex' : 'none';
 });
 
-// Search easter egg
+// Easter egg
 document.querySelector('.search-btn').addEventListener('click', () => {
   const term = document.querySelector('.search-input').value.trim().toLowerCase();
   if (term === 'theinternetisdead') alert("It always was.");
 });
 
-// Slide header and expand iframe
+// Header yeet logic
 const header = document.getElementById('page-header');
 const main = document.getElementById('main-content');
 const toggleBtn = document.getElementById('toggleHeader');
-let headerHidden = false;
+let hidden = false;
 
 toggleBtn.addEventListener('click', () => {
-  headerHidden = !headerHidden;
-  if (headerHidden) {
+  hidden = !hidden;
+  if (hidden) {
     header.classList.add('hidden');
     main.classList.add('fullscreen');
   } else {
