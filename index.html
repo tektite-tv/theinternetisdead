@@ -298,9 +298,16 @@ async function loadContent() {
 
       try {
         const res = await fetch(p.file);
-        if (!res.ok) throw new Error(res.status);
-        const text = await res.text();
-        wrapper.querySelector(".content").innerHTML = marked.parse(text);
+if (!res.ok) throw new Error(res.status);
+let text = await res.text();
+
+// remove YAML front-matter if present
+if (text.startsWith('---')) {
+  const end = text.indexOf('---', 3);
+  if (end !== -1) text = text.slice(end + 3);
+}
+
+wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
       } catch (e) {
         wrapper.querySelector(".content").innerHTML =
           "<em>Unable to load post content.</em>";
