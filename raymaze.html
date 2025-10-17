@@ -413,8 +413,8 @@ if (Math.hypot(player.x - goal.x, player.y - goal.y) < reachDist) {
 // Minimap
 function drawMini() {
   const s = CONFIG.miniScale;
-  mini.width = Math.min(180, mapW*s);
-  mini.height = Math.min(180, mapH*s);
+  mini.width  = mapW * CONFIG.miniScale;
+  mini.height = mapH * CONFIG.miniScale;
 
   // Map tiles
   for (let y=0; y<mapH; y++) {
