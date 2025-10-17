@@ -355,7 +355,7 @@ function renderScene(dt) {
 // Movement
 function tryMove(nx, ny) {
   // Simple AABB collision against walls
-  const pad = 0.2;
+  const pad = 0.1;
   if (!isWall(nx - pad, ny - pad) && !isWall(nx + pad, ny - pad) &&
       !isWall(nx - pad, ny + pad) && !isWall(nx + pad, ny + pad)) {
     player.x = nx; player.y = ny; return true;
