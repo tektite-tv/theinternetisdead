@@ -917,20 +917,45 @@ function lightsOut() {
 }
 
 function whisper() {
-  const audio = new Audio('/audio/whisper.mp3');
-  audio.volume = 0.4;
-  audio.play().catch(()=>{});
+  // optional audio if the file exists
+  try {
+    const audio = new Audio('/audio/whisper.mp3');
+    audio.volume = 0.4;
+    audio.play().catch(()=>{});
+  } catch(e){}
+
+  // create whisper text overlay
   const text = document.createElement('div');
   text.textContent = 'Do you hear it?';
   Object.assign(text.style, {
-    position: 'fixed', bottom: '20px', right: '20px',
-    color: '#0f0', fontFamily: '"Courier New", monospace',
-    opacity: '0', transition: 'opacity 3s'
+    position: 'fixed',
+    bottom: '40px',
+    right: '40px',
+    color: '#0f0',
+    fontFamily: '"Courier New", monospace',
+    fontSize: '1.2em',
+    opacity: '0',
+    transition: 'opacity 3s ease-in-out',
+    zIndex: '100000',
+    pointerEvents: 'none',
+    textShadow: '0 0 8px #0f0, 0 0 16px #0f0'
   });
   document.body.appendChild(text);
-  setTimeout(()=>text.style.opacity='1',100);
-  setTimeout(()=>text.style.opacity='0',7000);
-  setTimeout(()=>text.remove(),10000);
+
+  // ensure a paint frame before fading in
+  requestAnimationFrame(() => {
+    text.style.opacity = '1';
+  });
+
+  // fade back out
+  setTimeout(() => {
+    text.style.opacity = '0';
+  }, 7000);
+
+  // remove it once it’s invisible
+  setTimeout(() => {
+    if (text.parentNode) text.remove();
+  }, 11000);
 }
 
 // === STARFIELD (SPACE MODE) =======================================
