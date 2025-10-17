@@ -669,7 +669,6 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
       </div>
     </div>
   </div>
-
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
   // === DOM SHORTCUTS ===
@@ -684,7 +683,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const menuBtn = document.querySelector(".menu");
   const menuPopup = document.getElementById("menu-popup");
 
-  // lightbox elements
   const lightbox = document.getElementById("img-lightbox");
   const lightboxImg = lightbox.querySelector("img");
   const lightboxFilename = lightbox.querySelector(".filename");
@@ -693,6 +691,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let allPosts = [], allVideos = [], INDEX = [];
   let visiblePosts = 3, visibleVideos = 3;
+  let bananaInterval = null;
 
   // === LOAD POSTS ===
   async function loadPosts() {
@@ -739,7 +738,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.onclick = () => { visiblePosts += 3; renderPosts(); };
       postsContainer.appendChild(btn);
     }
-    activateLightbox(); // activate lightbox on post images
+    activateLightbox();
   }
 
   // === LOAD VIDEOS ===
@@ -796,9 +795,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     INDEX = [...postDocs, ...videoDocs];
   }
 
-  // === SEARCH BAR ===
+  // === SEARCH BAR + COMMANDS ===
+  const COMMANDS = [
+    { cmd: "/help", desc: "List available commands", action: showHelp },
+    { cmd: "/revive", desc: "Reload the page", action: () => location.reload() },
+    { cmd: "/die", desc: "Turn off the lights", action: die },
+    { cmd: "/space", desc: "Go to space", action: goToSpace },
+    { cmd: "/glitchtv", desc: "Open Glitch TV", action: () => window.location.href = "/glitchtv" },
+    { cmd: "/glitchcamera", desc: "Open Glitch Camera", action: () => window.location.href = "/glitchcamera" },
+    { cmd: "/mazegame", desc: "Open Maze Game", action: () => window.location.href = "/mazegame" },
+    { cmd: "/summon bananarama.gif", desc: "Summon the bouncing banana", action: summonBanana }
+  ];
+
   function renderResults(q) {
     const header = `<div class="promptline">$ grep -i "${q}" {posts,videos}</div>`;
+    if (q.startsWith("/")) return showCommandSuggestions();
     const query = q.toLowerCase();
     const hits = INDEX.filter(d =>
       (d.title && d.title.toLowerCase().includes(query)) ||
@@ -821,49 +832,129 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  function showPopupOnFocus() {
-    const q = searchInput.value.trim();
-    const header = `<div class="promptline">$ grep -i "${q || ''}" {posts,videos}</div>`;
-    popup.innerHTML = q
-      ? header
-      : header + `<div class="no-results">Type to search posts and videos.</div>`;
+  function showCommandSuggestions() {
+    const header = `<div class="promptline">$ /</div>`;
+    popup.innerHTML = header + COMMANDS.map(c => `
+      <div class="search-result" data-cmd="${c.cmd}">
+        <span class="kind">[cmd]</span>
+        <span class="title">${c.cmd}</span>
+        <div class="snippet">${c.desc}</div>
+      </div>`).join("");
+    popup.style.display = "block";
+    popup.querySelectorAll(".search-result").forEach(el =>
+      el.addEventListener("click", () => runCommand(el.dataset.cmd))
+    );
+  }
+
+  function showHelp() {
+    popup.innerHTML = `<div class="promptline">$ /help</div>
+      <div class="no-results"><b>Available commands:</b><br>
+      ${COMMANDS.map(c => `<span style="color:#0f0">${c.cmd}</span> - ${c.desc}`).join("<br>")}</div>`;
     popup.style.display = "block";
   }
 
+  function runCommand(cmd) {
+    const match = COMMANDS.find(c => c.cmd === cmd);
+    if (match) match.action();
+    else popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
+  }
+
+  // === SEARCH INTERACTION ===
   searchInput.addEventListener("input", () => {
     const val = searchInput.value.trim();
     if (val) renderResults(val);
     else showPopupOnFocus();
   });
   searchInput.addEventListener("focus", showPopupOnFocus);
+  searchInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const val = searchInput.value.trim();
+      if (val.startsWith("/")) runCommand(val);
+    } else if (e.key === "Escape") popup.style.display = "none";
+  });
   searchBtn.addEventListener("click", () => renderResults(searchInput.value.trim()));
   document.addEventListener("click", e => {
     if (!popup.contains(e.target) && !searchInput.contains(e.target)) popup.style.display = "none";
   });
 
-  // === NETLIFY CONTACT POPUP ===
-  if (submitBtn) submitBtn.addEventListener("click", e => {
-    e.preventDefault();
-    contactPopup.style.display = "flex";
-  });
-  if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
-  contactPopup.addEventListener("click", e => {
-    if (e.target === contactPopup) contactPopup.style.display = "none";
-  });
-
-  // === MENU DROPDOWN ===
-  if (menuBtn && menuPopup) {
-    menuBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      menuPopup.classList.toggle("visible");
-    });
-    document.addEventListener("click", e => {
-      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
-        menuPopup.classList.remove("visible");
-    });
+  function showPopupOnFocus() {
+    const q = searchInput.value.trim();
+    const header = `<div class="promptline">$ grep -i "${q || ''}" {posts,videos}</div>`;
+    popup.innerHTML = q
+      ? header
+      : header + `<div class="no-results">Type to search posts, videos, or enter /help</div>`;
+    popup.style.display = "block";
   }
 
-  // === IMAGE LIGHTBOX ===
+  // === COMMAND FUNCTIONS ===
+  function die() {
+    let overlay = document.createElement("div");
+    Object.assign(overlay.style, {
+      position: "fixed", inset: "0", background: "#000",
+      zIndex: "9999999", opacity: "0", transition: "opacity 1s ease"
+    });
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.style.opacity = "1");
+    setTimeout(() => overlay.style.cursor = "none", 1000);
+  }
+
+  function goToSpace() {
+    document.body.innerHTML = "";
+    const canvas = document.createElement("canvas");
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext("2d");
+    const stars = Array.from({ length: 400 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      z: Math.random() * canvas.width
+    }));
+    (function animate() {
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      for (const s of stars) {
+        s.z -= 4;
+        if (s.z <= 0) s.z = canvas.width;
+        const k = 128 / s.z;
+        const px = (s.x - canvas.width / 2) * k + canvas.width / 2;
+        const py = (s.y - canvas.height / 2) * k + canvas.height / 2;
+        const size = (1 - s.z / canvas.width) * 3;
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      requestAnimationFrame(animate);
+    })();
+  }
+
+  function summonBanana() {
+    if (document.getElementById("bananarama")) return; // already summoned
+    const banana = document.createElement("img");
+    banana.src = "/images/bananarama.gif";
+    banana.id = "bananarama";
+    banana.style.position = "fixed";
+    banana.style.width = "120px";
+    banana.style.height = "auto";
+    banana.style.zIndex = "999999";
+    banana.style.left = "50px";
+    banana.style.top = "50px";
+    banana.style.pointerEvents = "none";
+    document.body.appendChild(banana);
+
+    let x = 50, y = 50, dx = 3, dy = 3;
+    bananaInterval = setInterval(() => {
+      x += dx;
+      y += dy;
+      if (x + 120 >= window.innerWidth || x <= 0) dx *= -1;
+      if (y + 120 >= window.innerHeight || y <= 0) dy *= -1;
+      banana.style.left = `${x}px`;
+      banana.style.top = `${y}px`;
+    }, 16);
+  }
+
+  // === LIGHTBOX ===
   function activateLightbox() {
     postsContainer.querySelectorAll("img").forEach(img => {
       img.style.cursor = "zoom-in";
@@ -879,9 +970,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   lightboxClose.addEventListener("click", () => lightbox.classList.remove("visible"));
-  lightbox.addEventListener("click", e => {
-    if (e.target === lightbox) lightbox.classList.remove("visible");
+  lightbox.addEventListener("click", e => { if (e.target === lightbox) lightbox.classList.remove("visible"); });
+
+  // === NETLIFY CONTACT POPUP ===
+  if (submitBtn) submitBtn.addEventListener("click", e => {
+    e.preventDefault();
+    contactPopup.style.display = "flex";
   });
+  if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
+  contactPopup.addEventListener("click", e => { if (e.target === contactPopup) contactPopup.style.display = "none"; });
+
+  // === MENU DROPDOWN ===
+  if (menuBtn && menuPopup) {
+    menuBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      menuPopup.classList.toggle("visible");
+    });
+    document.addEventListener("click", e => {
+      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) menuPopup.classList.remove("visible");
+    });
+  }
 
   // === INIT ===
   await loadPosts();
