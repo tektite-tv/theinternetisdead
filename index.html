@@ -895,36 +895,85 @@ async function loadContent() {
 document.addEventListener("DOMContentLoaded", loadContent);
 
 // === HAUNTED COMMAND FUNCTIONS ======================================
+// BULLETPROOF BLACKOUT that cannot be out-z-indexed or bleached
 function lightsOut() {
-  document.body.style.transition = 'background 5s ease-out';
-  document.body.style.background = 'black';
-  document.querySelectorAll('*').forEach(el => {
-    if (el !== document.body) {
-      el.style.transition = 'opacity 3s ease-out';
-      el.style.opacity = '0';
-    }
-  });
-  setTimeout(() => {
-    const flicker = document.createElement('div');
-    flicker.textContent = '_';
-    Object.assign(flicker.style, {
-      position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-      color: '#0f0', fontSize: '3em', textShadow: '0 0 10px #0f0', fontFamily: '"Courier New", monospace'
+  // 1) kill any bright backgrounds at the root to avoid the white flash
+  document.documentElement.style.background = '#000';
+  document.body.style.background = '#000';
+
+  // 2) add a full-viewport overlay that sits above literally everything
+  let overlay = document.getElementById('blackout-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'blackout-overlay';
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      inset: '0',
+      background: '#000',
+      opacity: '0',
+      transition: 'opacity 800ms ease',
+      zIndex: '2147483647',        // enjoy your new king of stacks
+      pointerEvents: 'none'        // don’t trap clicks unless you want to
     });
-    document.body.appendChild(flicker);
-    setInterval(() => flicker.style.visibility = (flicker.style.visibility === 'hidden' ? 'visible' : 'hidden'), 200);
-  }, 4000);
+    document.body.appendChild(overlay);
+  }
+
+  // 3) fade to black above all your scanlines, columns, and other chaos
+  //    (your main has moving scanlines on a ::before layer; this covers them) :contentReference[oaicite:0]{index=0}
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+
+  // 4) after it’s dark, add a flickering terminal cursor on top
+  setTimeout(() => {
+    if (!document.getElementById('blackout-cursor')) {
+      const cursor = document.createElement('div');
+      cursor.id = 'blackout-cursor';
+      cursor.textContent = '_';
+      Object.assign(cursor.style, {
+        position: 'fixed',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        color: '#0f0',
+        fontSize: '3em',
+        fontFamily: '"Courier New", monospace',
+        textShadow: '0 0 10px #0f0',
+        zIndex: '2147483647'
+      });
+      document.body.appendChild(cursor);
+      setInterval(() => {
+        cursor.style.visibility = (cursor.style.visibility === 'hidden' ? 'visible' : 'hidden');
+      }, 200);
+    }
+  }, 900);
 }
 
+// “WHISPER” THAT ACTUALLY SHOWS, EVEN IN YOUR GLOWSTICK FOG
 function whisper() {
-  // optional audio if the file exists
-  try {
-    const audio = new Audio('/audio/whisper.mp3');
-    audio.volume = 0.4;
-    audio.play().catch(()=>{});
-  } catch(e){}
+  // try to play external audio; if it fails, synth a low hum so it’s never silent
+  const tryFile = () => {
+    const a = new Audio('/audio/whisper.mp3');
+    a.volume = 0.4;
+    a.play().catch(() => synthHum());
+  };
+  const synthHum = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 62;          // very low, unsettling
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.4);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      // fade out after ~6s
+      gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 6);
+      osc.stop(ctx.currentTime + 6.1);
+    } catch {}
+  };
+  tryFile();
 
-  // create whisper text overlay
+  // spectral text overlay that cannot be hidden by your other layers
   const text = document.createElement('div');
   text.textContent = 'Do you hear it?';
   Object.assign(text.style, {
@@ -933,29 +982,22 @@ function whisper() {
     right: '40px',
     color: '#0f0',
     fontFamily: '"Courier New", monospace',
-    fontSize: '1.2em',
+    fontSize: '1.5em',
+    textShadow: '0 0 10px #0f0, 0 0 20px #0f0',
+    zIndex: '2147483646',   // just under the blackout overlay
     opacity: '0',
-    transition: 'opacity 3s ease-in-out',
-    zIndex: '100000',
     pointerEvents: 'none',
-    textShadow: '0 0 8px #0f0, 0 0 16px #0f0'
+    transition: 'opacity 1200ms ease-in-out'
   });
   document.body.appendChild(text);
 
-  // ensure a paint frame before fading in
-  requestAnimationFrame(() => {
-    text.style.opacity = '1';
-  });
+  // force a paint, then fade in; this bypasses any layout thrash
+  void text.offsetWidth;
+  text.style.opacity = '1';
 
-  // fade back out
-  setTimeout(() => {
-    text.style.opacity = '0';
-  }, 7000);
-
-  // remove it once it’s invisible
-  setTimeout(() => {
-    if (text.parentNode) text.remove();
-  }, 11000);
+  // linger, fade, remove
+  setTimeout(() => { text.style.opacity = '0'; }, 5000);
+  setTimeout(() => { if (text.parentNode) text.remove(); }, 6500);
 }
 
 // === STARFIELD (SPACE MODE) =======================================
