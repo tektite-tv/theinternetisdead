@@ -659,7 +659,7 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
       </div>
     </div>
   </div>
-  
+
   <script>
 async function loadContent() {
   const postsContainer = document.getElementById("posts");
@@ -729,9 +729,7 @@ async function loadContent() {
   // === Load YouTube Feed ==================================
   try {
     const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-    const rssRes = await fetch(
-      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`
-    );
+    const rssRes = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
     if (!rssRes.ok) throw new Error(`HTTP ${rssRes.status}`);
     const rssData = await rssRes.json();
     allVideos = rssData.items || [];
@@ -779,403 +777,130 @@ async function loadContent() {
         return { kind: "post", title: p.title || "Untitled", url: p.file, date: p.date || "", snippet: "" };
       }
     }));
-
     const videoDocs = (allVideos || []).map(v => ({
-      kind: "video",
-      title: v.title || "Untitled",
-      url: v.link,
-      date: v.pubDate || "",
-      snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
+      kind: "video", title: v.title || "Untitled", url: v.link,
+      date: v.pubDate || "", snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
     }));
-
     INDEX = [...postDocs, ...videoDocs];
   } catch (e) {
     console.warn("Index build issue:", e);
     INDEX = [];
   }
 
-  // === Search UI ===========================================
-  function showPopup() { popup.style.display = "block"; }
-  function hidePopup() { popup.style.display = "none"; activeIndex = -1; }
-  function isShown() { return popup.style.display !== "none"; }
+  // === Search and Command Interface ==========================
+  let commandMode = false;
+  const COMMANDS = [
+    { cmd: '/help', desc: 'List available commands', action: showHelp },
+    { cmd: '/revive', desc: 'Reload the page', action: () => location.reload() },
+    { cmd: '/space', desc: 'Engage starfield mode', action: goToSpace },
+    { cmd: '/lightsout', desc: 'Turn off the lights', action: lightsOut },
+    { cmd: '/whisper', desc: 'Play the whisper of the void', action: whisper },
+  ];
 
-  function highlightMove(dir) {
-    const items = Array.from(popup.querySelectorAll(".search-result"));
-    if (!items.length) return;
-    activeIndex = (activeIndex + dir + items.length) % items.length;
-    items.forEach((el, i) => el.classList.toggle("active", i === activeIndex));
-    items[activeIndex].scrollIntoView({ block: "nearest" });
-  }
-
-  function goToActive() {
-    const items = Array.from(popup.querySelectorAll(".search-result"));
-    if (!items.length) return;
-    const el = items[activeIndex] || items[0];
-    const url = el?.dataset?.url;
-    if (url) handlePostClick(url);
-  }
-
-  function renderResults(q) {
-    const header = `<div class="promptline">$ grep -i "${escapeHtml(q)}" {posts,videos}</div>`;
-    if (!q) {
-      popup.innerHTML = header + `<div class="no-results">Type to search posts and videos.</div>`;
-      showPopup(); return;
-    }
-    const query = q.trim().toLowerCase();
-    const hits = INDEX.filter(d =>
-      (d.title && d.title.toLowerCase().includes(query)) ||
-      (d.snippet && d.snippet.toLowerCase().includes(query))
-    ).slice(0, 50);
-
-    if (!hits.length) {
-      popup.innerHTML = header + `<div class="no-results">No matches. Try fewer words.</div>`;
-      showPopup(); return;
-    }
-
-    popup.innerHTML = header + hits.map((d, i) => `
-      <div class="search-result${i === 0 ? " active" : ""}" data-url="${escapeAttr(d.url)}">
-        <span class="kind">[${d.kind}]</span>
-        <span class="title">${escapeHtml(d.title)}</span>
-        <div class="meta">${d.date ? new Date(d.date).toLocaleString() : ""}</div>
-        ${d.snippet ? `<div class="snippet">${escapeHtml(d.snippet)}</div>` : ""}
-      </div>
-    `).join("");
-
-    activeIndex = 0;
-    popup.querySelectorAll(".search-result").forEach(el => {
-      el.addEventListener("click", () => handlePostClick(el.dataset.url));
-      el.addEventListener("mouseenter", () => {
-        popup.querySelectorAll(".search-result").forEach(x => x.classList.remove("active"));
-        el.classList.add("active");
-        activeIndex = Array.from(popup.querySelectorAll(".search-result")).indexOf(el);
+  function showSuggestions() {
+    const header = `<div class="promptline">$ /</div>`;
+    const list = COMMANDS.map(c => `
+      <div class="search-result" data-cmd="${c.cmd}">
+        <span class="kind">[cmd]</span>
+        <span class="title">${c.cmd}</span>
+        <div class="snippet">${c.desc}</div>
+      </div>`).join('');
+    popup.innerHTML = header + list;
+    popup.style.display = 'block';
+    popup.querySelectorAll('.search-result').forEach(el => {
+      el.addEventListener('click', () => {
+        const cmd = el.dataset.cmd;
+        searchInput.value = cmd;
+        runCommand(cmd);
       });
     });
-    showPopup();
   }
 
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function showHelp() {
+    popup.innerHTML = `
+      <div class="promptline">$ /help</div>
+      <div class="no-results"><b>Available commands:</b><br>
+        ${COMMANDS.map(c => `<span style="color:#0f0">${c.cmd}</span> - ${c.desc}`).join('<br>')}
+      </div>`;
+    popup.style.display = 'block';
   }
-  function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
 
-  searchInput.addEventListener("input", () => renderResults(searchInput.value));
-  searchInput.addEventListener("focus", () => renderResults(searchInput.value));
-  searchBtn.addEventListener("click", () => renderResults(searchInput.value));
+  function runCommand(cmd) {
+    const match = COMMANDS.find(c => c.cmd === cmd);
+    if (match) match.action();
+    else {
+      popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
+      popup.style.display = 'block';
+    }
+  }
 
-  searchInput.addEventListener("keydown", e => {
-    if (!isShown()) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); highlightMove(1); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); highlightMove(-1); }
-    else if (e.key === "Enter") { e.preventDefault(); goToActive(); }
-    else if (e.key === "Escape") { hidePopup(); }
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === '/' && !commandMode) {
+      commandMode = true; showSuggestions();
+    } else if (e.key === 'Enter' && commandMode) {
+      e.preventDefault(); runCommand(searchInput.value.trim());
+    } else if (e.key === 'Escape' && commandMode) {
+      commandMode = false; popup.style.display = 'none';
+    }
   });
 
-  document.addEventListener("click", e => {
-    const within = e.target.closest(".search-wrapper");
-    if (!within) hidePopup();
+  document.addEventListener('click', e => {
+    if (!popup.contains(e.target) && !searchInput.contains(e.target)) {
+      popup.style.display = 'none';
+      commandMode = false;
+    }
   });
 } // end loadContent
 
 document.addEventListener("DOMContentLoaded", loadContent);
 
-// === POST POPUP HANDLER =======================================
-function createPostPopup() {
-  let popup = document.getElementById("post-popup");
-  if (!popup) {
-    popup = document.createElement("div");
-    popup.id = "post-popup";
-    popup.innerHTML = `
-      <div class="popup-inner">
-        <button class="close-btn">✕</button>
-        <div class="popup-header"></div>
-        <div class="popup-content"><em>Loading...</em></div>
-      </div>
-    `;
-    document.body.appendChild(popup);
-    popup.querySelector(".close-btn").addEventListener("click", () => {
-      popup.style.display = "none";
-      popup.querySelector(".popup-content").innerHTML = "";
-      popup.querySelector(".popup-header").innerHTML = "";
+// === HAUNTED COMMAND FUNCTIONS ======================================
+function lightsOut() {
+  document.body.style.transition = 'background 5s ease-out';
+  document.body.style.background = 'black';
+  document.querySelectorAll('*').forEach(el => {
+    if (el !== document.body) {
+      el.style.transition = 'opacity 3s ease-out';
+      el.style.opacity = '0';
+    }
+  });
+  setTimeout(() => {
+    const flicker = document.createElement('div');
+    flicker.textContent = '_';
+    Object.assign(flicker.style, {
+      position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+      color: '#0f0', fontSize: '3em', textShadow: '0 0 10px #0f0', fontFamily: '"Courier New", monospace'
     });
-  }
-  return popup;
+    document.body.appendChild(flicker);
+    setInterval(() => flicker.style.visibility = (flicker.style.visibility === 'hidden' ? 'visible' : 'hidden'), 200);
+  }, 4000);
 }
 
-async function handlePostClick(url) {
-  if (!url.endsWith(".md")) return window.open(url, "_blank");
-
-  const popup = createPostPopup();
-  popup.style.display = "flex";
-  popup.querySelector(".popup-content").innerHTML = "<em>Loading...</em>";
-
-  try {
-    // Fetch JSON for title/date lookup
-    const res = await fetch("/_posts/index.json");
-    const posts = await res.json();
-    const meta = posts.find(p => p.file === url);
-
-    // Fetch Markdown
-    const res2 = await fetch(url);
-    let text = await res2.text();
-    if (text.startsWith('---')) {
-      const end = text.indexOf('---', 3);
-      if (end !== -1) text = text.slice(end + 3);
-    }
-
-    const title = meta?.title || "Untitled";
-    const date = meta?.date ? new Date(meta.date).toLocaleString() : "";
-
-    popup.querySelector(".popup-header").innerHTML = `
-      <h2 style="color:#0f0; margin-bottom:6px;">${title}</h2>
-      <small style="color:#7f7;">${date}</small>
-      <hr style="border:1px solid #0f0; margin:10px 0;">
-    `;
-    popup.querySelector(".popup-content").innerHTML = marked.parse(text.trim());
-  } catch {
-    popup.querySelector(".popup-content").innerHTML = "<em>Error loading post.</em>";
-  }
+function whisper() {
+  const audio = new Audio('/audio/whisper.mp3');
+  audio.volume = 0.4;
+  audio.play().catch(()=>{});
+  const text = document.createElement('div');
+  text.textContent = 'Do you hear it?';
+  Object.assign(text.style, {
+    position: 'fixed', bottom: '20px', right: '20px',
+    color: '#0f0', fontFamily: '"Courier New", monospace',
+    opacity: '0', transition: 'opacity 3s'
+  });
+  document.body.appendChild(text);
+  setTimeout(()=>text.style.opacity='1',100);
+  setTimeout(()=>text.style.opacity='0',7000);
+  setTimeout(()=>text.remove(),10000);
 }
 
-// === CONTACT POPUP HANDLER ===============================
-(function() {
-  const submitBtn = document.querySelector('.submit-btn');
-  const popup = document.getElementById('contact-popup');
-  const closeBtn = popup.querySelector('.close-contact');
-
-  if (!submitBtn || !popup) return;
-
-  submitBtn.addEventListener('click', e => {
-    e.preventDefault();
-    popup.style.display = 'flex';
-  });
-  closeBtn.addEventListener('click', () => {
-    popup.style.display = 'none';
-  });
-  document.addEventListener('click', e => {
-    if (!popup.contains(e.target) && !submitBtn.contains(e.target)) {
-      popup.style.display = 'none';
-    }
-  });
-})();
-    
-// === HAMBURGER DROPDOWN MENU ===============================
-(function() {
-  const menuBtn = document.querySelector('.menu');
-  const menuPopup = document.getElementById('menu-popup');
-
-  if (!menuBtn || !menuPopup) return;
-
-  menuBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    menuPopup.classList.toggle('visible');
-  });
-
-  // Close menu if clicking anywhere else
-  document.addEventListener('click', e => {
-    if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) {
-      menuPopup.classList.remove('visible');
-    }
-  });
-})();
-
-// === BOUNCING BANANA ==========================================
-(() => {
-  const IMG_SRC = "/images/bananamanarama.gif";
-  const AUDIO_SRC = "/audio/do-that-there.mp3";
-  const SIZE = 160, SPEED = 220, SAT = 200, BRT = 110;
-  const banana = document.createElement("img");
-  banana.src = IMG_SRC;
-  Object.assign(banana.style, {
-    position: "fixed", left: "100px", top: "100px", width: SIZE+"px",
-    opacity: "1", cursor: "pointer", userSelect: "none",
-    mixBlendMode: "screen", filter: `hue-rotate(0deg) saturate(${SAT}%) brightness(${BRT}%)`,
-    zIndex: "1000"
-  });
-  const audio = document.createElement("audio");
-  audio.src = AUDIO_SRC;
-  document.body.appendChild(banana);
-  document.body.appendChild(audio);
-  let x=100, y=100, vx=(Math.random()>0.5?1:-1)*SPEED, vy=(Math.random()>0.5?1:-1)*SPEED, hue=0, hasPointer=false;
-  banana.addEventListener("click", ()=>{ if(audio.paused){audio.currentTime=0;audio.play();} else audio.pause(); });
-  window.addEventListener("mousemove", e=>{
-    hasPointer=true;
-    const W=window.innerWidth,H=window.innerHeight;
-    hue=((e.clientX/W)*360+(e.clientY/H)*180)%360;
-    banana.style.filter=`hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`;
-  },{passive:true});
-  let prev=performance.now();
-  const tick=now=>{
-    const dt=Math.min(0.05,(now-prev)/1000); prev=now;
-    if(!hasPointer){hue=(hue+45*dt)%360; banana.style.filter=`hue-rotate(${hue}deg) saturate(${SAT}%) brightness(${BRT}%)`; }
-    x+=vx*dt; y+=vy*dt;
-    const W=window.innerWidth,H=window.innerHeight;
-    if(x<=0||x+SIZE>=W) vx*=-1;
-    if(y<=0||y+SIZE>=H) vy*=-1;
-    banana.style.transform=`translate(${x}px,${y}px)`;
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-})();
-
-// === EASTER EGG: THE INTERNET IS DEAD =====================
-(function() {
-  const input = document.querySelector('.search-input');
-  const btn = document.querySelector('.search-btn');
-
-  function disintegrateTheInternet() {
-    const body = document.body;
-    const all = [...body.querySelectorAll('*')];
-    let delay = 0;
-    all.forEach(el => {
-      if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return;
-      el.style.transition = 'all 0.6s ease-out';
-      el.style.transformOrigin = 'center';
-      setTimeout(() => {
-        el.style.filter = 'blur(4px) brightness(2)';
-        el.style.opacity = '0';
-        el.style.transform = `rotate(${(Math.random()-0.5)*60}deg) scale(${0.5+Math.random()}) translate(${(Math.random()-0.5)*300}px, ${(Math.random()-0.5)*300}px)`;
-      }, delay);
-      delay += 10;
-    });
-
-    // white fade over everything
-    const overlay = document.createElement('div');
-    Object.assign(overlay.style, {
-      position: 'fixed',
-      inset: '0',
-      background: '#fff',
-      opacity: '0',
-      transition: 'opacity 5s ease-in',
-      zIndex: '999999'
-    });
-    document.body.appendChild(overlay);
-    setTimeout(() => overlay.style.opacity = '1', 2000);
-
-    // after 7 seconds, clear body, then add revival button
-    setTimeout(() => {
-      document.body.innerHTML = '';
-      const revive = document.createElement('button');
-      revive.textContent = 'Revive The Internet';
-      Object.assign(revive.style, {
-        position: 'fixed',
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)',
-        background: 'black',
-        color: 'lime',
-        fontFamily: '"Courier New", monospace',
-        fontSize: '18px',
-        border: '2px solid lime',
-        borderRadius: '50%',
-        width: '200px',
-        height: '200px',
-        cursor: 'pointer',
-        opacity: '0',
-        transition: 'opacity 1.5s ease-in, transform 0.3s ease-in-out',
-        zIndex: '1000000',
-        boxShadow: '0 0 30px #0f0'
-      });
-      revive.addEventListener('mouseover', () => {
-        revive.style.transform = 'translate(-50%, -50%) scale(1.1)';
-        revive.style.boxShadow = '0 0 50px #0f0';
-      });
-      revive.addEventListener('mouseout', () => {
-        revive.style.transform = 'translate(-50%, -50%) scale(1)';
-        revive.style.boxShadow = '0 0 30px #0f0';
-      });
-      revive.addEventListener('click', () => location.reload());
-      document.body.appendChild(revive);
-      setTimeout(() => revive.style.opacity = '1', 2000);
-    }, 7000);
-  }
-
-  function checkTerm(term) {
-    if (term.trim().toLowerCase() === 'theinternetisdead') disintegrateTheInternet();
-  }
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') checkTerm(input.value);
-  });
-  btn.addEventListener('click', () => checkTerm(input.value));
-})();
-
-document.getElementById('contact-form').addEventListener('submit', function(e){
-  e.preventDefault();
-  const form = e.target;
-  const data = new FormData(form);
-  fetch('/', { method: 'POST', body: data })
-    .then(() => {
-      form.innerHTML = '<p style="color:#0f0">Thanks — message sent.</p>';
-    }).catch(() => {
-      form.innerHTML = '<p style="color:#f55">Send failed. Try again or use mailto.</p>';
-    });
-});
-
-/* UNIVERSAL IMAGE LIGHTBOX ---------------------------------------- */
-(function(){
-  const box = document.getElementById('img-lightbox');
-  if(!box) return;
-  const img = box.querySelector('img');
-  const dl  = box.querySelector('.download-btn');
-  const nameSpan = box.querySelector('.filename');
-
-  let banana;
-  function hideBanana(){
-    banana = document.querySelector('img[src*="banana"]');
-    if(banana) banana.style.display = 'none';
-  }
-  function showBanana(){
-    if(banana) banana.style.display = '';
-  }
-
-  function openLightbox(src, alt){
-    hideBanana();
-    img.src = src;
-    img.alt = alt || '';
-    dl.href = src;
-    nameSpan.textContent = (src.split('/').pop() || 'image');
-    box.classList.add('visible');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeLightbox(){
-    showBanana();
-    box.classList.remove('visible');
-    img.src = '';
-    document.body.style.overflow = '';
-  }
-
-  box.addEventListener('click', e => { if(e.target === box) closeLightbox(); });
-  box.querySelector('.close-x').addEventListener('click', closeLightbox);
-  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox(); });
-
-  document.addEventListener('click', e => {
-    const el = e.target;
-    if (
-      el && el.tagName === 'IMG' &&
-      !el.closest('#img-lightbox') &&
-      !el.dataset.noLightbox
-    ){
-      e.preventDefault();
-      e.stopPropagation();
-      const src = el.currentSrc || el.src;
-      openLightbox(src, el.alt);
-    }
-  }, true);
-})();
-
-// === SPACEBAR TO STARFIELD MODE ====================================================
-let spaceCount = 0;
-let timeout;
-
+// === STARFIELD (SPACE MODE) =======================================
+let spaceCount = 0, timeout;
 document.addEventListener('keydown', function (e) {
   if (e.code === 'Space') {
-    spaceCount++;
-    clearTimeout(timeout);
+    spaceCount++; clearTimeout(timeout);
     timeout = setTimeout(() => spaceCount = 0, 2000);
     if (spaceCount >= 10) goToSpace();
-  } else {
-    spaceCount = 0;
-  }
+  } else spaceCount = 0;
 });
 
 function goToSpace() {
@@ -1192,7 +917,6 @@ function goToSpace() {
   canvas.style.left = 0;
   canvas.style.zIndex = 9999;
   document.body.appendChild(canvas);
-
   const ctx = canvas.getContext('2d');
   const stars = [];
   for (let i = 0; i < 400; i++) {
@@ -1202,10 +926,8 @@ function goToSpace() {
       z: Math.random() * canvas.width
     });
   }
-
   function animate() {
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < stars.length; i++) {
       let star = stars[i];
       star.z -= 4;
@@ -1227,112 +949,34 @@ function goToSpace() {
     }
     requestAnimationFrame(animate);
   }
-
   animate();
 
   const msg = document.createElement('div');
   msg.innerText = 'Fine, you like space so much? Go to space.';
-  msg.style.position = 'absolute';
-  msg.style.top = '50%';
-  msg.style.left = '50%';
-  msg.style.transform = 'translate(-50%, -50%)';
-  msg.style.fontSize = '2em';
-  msg.style.color = '#00ffff';
-  msg.style.fontFamily = 'monospace';
-  msg.style.textShadow = '0 0 10px #0ff';
-  msg.style.zIndex = '10000';
+  Object.assign(msg.style, {
+    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+    fontSize: '2em', color: '#00ffff', fontFamily: 'monospace', textShadow: '0 0 10px #0ff', zIndex: '10000'
+  });
   document.body.appendChild(msg);
 
-  // === EARTH MODE TRIGGERED BY BACKSPACE ===
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Backspace') {
       const earth = document.createElement('div');
       earth.textContent = '🌍';
       Object.assign(earth.style, {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        fontSize: '200px',
-        cursor: 'pointer',
-        zIndex: '10001',
-        transition: 'transform 0.3s ease-in-out'
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)', fontSize: '200px', cursor: 'pointer',
+        zIndex: '10001', transition: 'transform 0.3s ease-in-out'
       });
       document.body.appendChild(earth);
-
       earth.addEventListener('click', () => {
         earth.textContent = '💥';
         earth.style.transform = 'translate(-50%, -50%) scale(2.5) rotate(720deg)';
-        earth.style.transition = 'transform 0.8s ease-out';
-        setTimeout(() => {
-          earth.remove();
-          location.reload();
-        }, 1500);
+        setTimeout(() => { earth.remove(); location.reload(); }, 1500);
       });
     }
   });
 }
-
-// === COMMAND MODE ================================================
-(function() {
-  const input = document.querySelector('.search-input');
-  const popup = document.getElementById('search-popup');
-
-  const COMMANDS = [
-    { cmd: '/help', desc: 'List available commands', action: showHelp },
-    { cmd: '/revive', desc: 'Reload the page', action: () => location.reload() },
-    { cmd: '/space', desc: 'Engage starfield mode', action: goToSpace },
-  ];
-
-  let commandMode = false;
-
-  function showSuggestions() {
-    const header = `<div class="promptline">$ /</div>`;
-    const list = COMMANDS.map(c =>
-      `<div class="search-result" data-cmd="${c.cmd}">
-         <span class="kind">[cmd]</span>
-         <span class="title">${c.cmd}</span>
-         <div class="snippet">${c.desc}</div>
-       </div>`
-    ).join('');
-    popup.innerHTML = header + list;
-    popup.style.display = 'block';
-    popup.querySelectorAll('.search-result').forEach(el => {
-      el.addEventListener('click', () => runCommand(el.dataset.cmd));
-    });
-  }
-
-  function showHelp() {
-    popup.innerHTML = `
-      <div class="promptline">$ /help</div>
-      <div class="no-results">
-        Available commands:<br>
-        ${COMMANDS.map(c => `<b>${c.cmd}</b> - ${c.desc}`).join('<br>')}
-      </div>`;
-    popup.style.display = 'block';
-  }
-
-  function runCommand(cmd) {
-    const match = COMMANDS.find(c => c.cmd === cmd);
-    if (match) match.action();
-    else popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
-  }
-
-  input.addEventListener('keydown', e => {
-    if (e.key === '/' && !commandMode) {
-      commandMode = true;
-      showSuggestions();
-    } else if (e.key === 'Enter' && commandMode) {
-      e.preventDefault();
-      runCommand(input.value.trim());
-    } else if (e.key === 'Escape' && commandMode) {
-      commandMode = false;
-      popup.style.display = 'none';
-    }
-  });
-})();
-    
 </script>
-
 </body>
 </html>
