@@ -382,9 +382,9 @@ const dy = Math.sin(player.dir);
 
 let nx = player.x, ny = player.y;
 
-// Forward/backward
-if (forward) { nx -= dx * speed; ny -= dy * speed; }
-if (back)    { nx += dx * speed; ny += dy * speed; }
+// Forward/backward (correct)
+if (forward) { nx += dx * speed; ny += dy * speed; }
+if (back)    { nx -= dx * speed; ny -= dy * speed; }
 
 // Strafe (unchanged, feels correct in practice)
 if (left)  { nx +=  dy * speed; ny -= dx * speed; }
