@@ -671,37 +671,39 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
   </div>
 
 <script>
-async function loadContent() {
+document.addEventListener("DOMContentLoaded", async () => {
+  // === DOM ELEMENTS ===
   const postsContainer = document.getElementById("posts");
   const youtubeContainer = document.getElementById("youtube");
   const searchInput = document.querySelector(".search-input");
   const searchBtn = document.querySelector(".search-btn");
   const popup = document.getElementById("search-popup");
+  const contactPopup = document.getElementById("contact-popup");
+  const submitBtn = document.querySelector(".submit-btn");
+  const closeContact = document.querySelector(".close-contact");
+  const menuBtn = document.querySelector(".menu");
+  const menuPopup = document.getElementById("menu-popup");
 
-  let allPosts = [];
-  let visiblePosts = 3;
-  let allVideos = [];
-  let visibleVideos = 3;
-  let INDEX = [];
-  let activeIndex = -1;
+  let allPosts = [], allVideos = [], INDEX = [];
+  let visiblePosts = 3, visibleVideos = 3;
 
-  // === Load Posts =========================================
-  try {
-    const res = await fetch("/_posts/index.json");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    allPosts = await res.json();
-    allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
-    renderPosts();
-  } catch (err) {
-    console.error("Post load failed:", err);
-    postsContainer.innerHTML += `<p style="color:red;">Error loading posts: ${err.message}</p>`;
+  // === RENDER POSTS ===
+  async function loadPosts() {
+    try {
+      const res = await fetch("/_posts/index.json");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allPosts = await res.json();
+      allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+      renderPosts();
+    } catch (err) {
+      postsContainer.innerHTML = `<p style="color:red;">Error loading posts: ${err.message}</p>`;
+    }
   }
 
   async function renderPosts() {
     postsContainer.innerHTML = `
       <h1 style="color:#ff66cc;">🌀 The Daily Spiral</h1>
-      <h2>Latest Blog Posts</h2>
-    `;
+      <h2>Latest Blog Posts</h2>`;
     const displayed = allPosts.slice(0, visiblePosts);
     for (const p of displayed) {
       const wrapper = document.createElement("div");
@@ -710,12 +712,10 @@ async function loadContent() {
         <h3>${p.title}</h3>
         <small>${new Date(p.date).toLocaleString()}</small>
         ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy">` : ""}
-        <div class="content"><em>Loading...</em></div>
-      `;
+        <div class="content"><em>Loading...</em></div>`;
       postsContainer.appendChild(wrapper);
       try {
-        const res = await fetch(p.file);
-        let text = await res.text();
+        let text = await (await fetch(p.file)).text();
         if (text.startsWith('---')) {
           const end = text.indexOf('---', 3);
           if (end !== -1) text = text.slice(end + 3);
@@ -727,7 +727,6 @@ async function loadContent() {
     }
     if (visiblePosts < allPosts.length) {
       const btn = document.createElement("button");
-      btn.id = "loadMorePosts";
       btn.className = "load-more";
       btn.textContent = "Read More";
       btn.onclick = () => { visiblePosts += 3; renderPosts(); };
@@ -735,34 +734,31 @@ async function loadContent() {
     }
   }
 
-  // === Load YouTube Feed ==================================
-  try {
-    const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-    const rssRes = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
-    if (!rssRes.ok) throw new Error(`HTTP ${rssRes.status}`);
-    const rssData = await rssRes.json();
-    allVideos = rssData.items || [];
-    renderVideos();
-  } catch (err) {
-    console.error("Video load failed:", err);
-    youtubeContainer.innerHTML += `<p style="color:red;">Error loading videos: ${err.message}</p>`;
+  // === RENDER YOUTUBE ===
+  async function loadVideos() {
+    try {
+      const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+      const rssRes = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
+      const rssData = await rssRes.json();
+      allVideos = rssData.items || [];
+      renderVideos();
+    } catch (err) {
+      youtubeContainer.innerHTML = `<p style="color:red;">Error loading videos: ${err.message}</p>`;
+    }
   }
 
   function renderVideos() {
     const displayed = allVideos.slice(0, visibleVideos);
-    const vidsHTML = displayed.map(v => {
-      const id = v.guid?.split(":").pop() || "";
-      return `
-        <div class="video">
-          <iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe>
-          <a href="${v.link}" target="_blank">${v.title}</a>
-        </div>`;
-    }).join("");
-
     youtubeContainer.innerHTML = `
       <h1 style="color:#66ccff;">My Latest Broadcast</h1>
       <h2>Honestly Thomas (Tektite) on YouTube</h2>
-      ${vidsHTML}
+      ${displayed.map(v => {
+        const id = v.guid?.split(":").pop() || "";
+        return `<div class="video">
+          <iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe>
+          <a href="${v.link}" target="_blank">${v.title}</a>
+        </div>`;
+      }).join("")}
       ${visibleVideos < allVideos.length ? `<button id="loadMoreVideos" class="load-more">Watch More</button>` : ""}
       <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" target="_blank" class="youtube-btn">Watch on YouTube</a>
     `;
@@ -770,344 +766,90 @@ async function loadContent() {
     if (btn) btn.addEventListener("click", () => { visibleVideos += 3; renderVideos(); });
   }
 
-  // === Build unified search index ==========================
-  try {
+  // === SEARCH INDEX ===
+  async function buildIndex() {
     const postDocs = await Promise.all(allPosts.map(async p => {
       try {
-        const r = await fetch(p.file);
-        let txt = await r.text();
+        let txt = await (await fetch(p.file)).text();
         if (txt.startsWith('---')) {
           const end = txt.indexOf('---', 3);
           if (end !== -1) txt = txt.slice(end + 3);
         }
         const plain = txt.replace(/[#>*_`\[\]\(\)!-]/g, " ").replace(/\s+/g, " ").trim();
-        return { kind: "post", title: p.title || "Untitled", url: p.file, date: p.date || "", snippet: (plain || "").slice(0, 200) };
-      } catch {
-        return { kind: "post", title: p.title || "Untitled", url: p.file, date: p.date || "", snippet: "" };
-      }
+        return { kind: "post", title: p.title, url: p.file, date: p.date, snippet: plain.slice(0, 200) };
+      } catch { return { kind: "post", title: p.title, url: p.file, date: p.date, snippet: "" }; }
     }));
-    const videoDocs = (allVideos || []).map(v => ({
-      kind: "video", title: v.title || "Untitled", url: v.link,
-      date: v.pubDate || "", snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
+    const videoDocs = allVideos.map(v => ({
+      kind: "video", title: v.title, url: v.link, date: v.pubDate,
+      snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
     }));
     INDEX = [...postDocs, ...videoDocs];
-  } catch (e) {
-    console.warn("Index build issue:", e);
-    INDEX = [];
   }
 
-  // === Search and Command Interface ==========================
-  const COMMANDS = [
-    { cmd: '/help', desc: 'List available commands', action: showHelp },
-    { cmd: '/revive', desc: 'Reload the page', action: () => location.reload() },
-    { cmd: '/space', desc: 'Engage starfield mode', action: goToSpace },
-    { cmd: '/lightsout', desc: 'Turn off the lights', action: lightsOut },
-    { cmd: '/whisper', desc: 'Play the whisper of the void', action: whisper },
-  ];
-
+  // === SEARCH BAR ===
   function renderResults(q) {
-    const header = `<div class="promptline">$ grep -i "${escapeHtml(q)}" {posts,videos}</div>`;
-    if (!q) {
-      popup.innerHTML = header + `<div class="no-results">Type to search posts and videos.</div>`;
-      popup.style.display = 'block'; return;
-    }
-    const query = q.trim().toLowerCase();
+    const query = q.toLowerCase();
     const hits = INDEX.filter(d =>
-      (d.title && d.title.toLowerCase().includes(query)) ||
-      (d.snippet && d.snippet.toLowerCase().includes(query))
+      d.title.toLowerCase().includes(query) || d.snippet.toLowerCase().includes(query)
     ).slice(0, 50);
-
-    if (!hits.length) {
-      popup.innerHTML = header + `<div class="no-results">No matches. Try fewer words.</div>`;
-      popup.style.display = 'block'; return;
-    }
-
-    popup.innerHTML = header + hits.map(d => `
-      <div class="search-result" data-url="${escapeAttr(d.url)}">
-        <span class="kind">[${d.kind}]</span>
-        <span class="title">${escapeHtml(d.title)}</span>
-        <div class="meta">${d.date ? new Date(d.date).toLocaleString() : ""}</div>
-        ${d.snippet ? `<div class="snippet">${escapeHtml(d.snippet)}</div>` : ""}
-      </div>`).join("");
-
-    popup.querySelectorAll(".search-result").forEach(el => {
-      el.addEventListener("click", () => handlePostClick(el.dataset.url));
-    });
-    popup.style.display = 'block';
+    popup.innerHTML = hits.length
+      ? hits.map(d => `
+        <div class="search-result" data-url="${d.url}">
+          <span class="kind">[${d.kind}]</span>
+          <span class="title">${d.title}</span>
+          <div class="meta">${new Date(d.date).toLocaleString()}</div>
+          <div class="snippet">${d.snippet}</div>
+        </div>`).join("")
+      : `<div class="no-results">No matches.</div>`;
+    popup.style.display = "block";
+    popup.querySelectorAll(".search-result").forEach(el =>
+      el.addEventListener("click", () => window.open(el.dataset.url, "_blank"))
+    );
   }
-
-  function showCommandSuggestions() {
-    const header = `<div class="promptline">$ /</div>`;
-    const list = COMMANDS.map(c => `
-      <div class="search-result" data-cmd="${c.cmd}">
-        <span class="kind">[cmd]</span>
-        <span class="title">${c.cmd}</span>
-        <div class="snippet">${c.desc}</div>
-      </div>`).join('');
-    popup.innerHTML = header + list;
-    popup.style.display = 'block';
-    popup.querySelectorAll('.search-result').forEach(el => {
-      el.addEventListener('click', () => {
-        const cmd = el.dataset.cmd;
-        searchInput.value = cmd;
-        runCommand(cmd);
-      });
-    });
-  }
-
-  function showHelp() {
-    popup.innerHTML = `
-      <div class="promptline">$ /help</div>
-      <div class="no-results"><b>Available commands:</b><br>
-        ${COMMANDS.map(c => `<span style="color:#0f0">${c.cmd}</span> - ${c.desc}`).join('<br>')}
-      </div>`;
-    popup.style.display = 'block';
-  }
-
-  function runCommand(cmd) {
-    const match = COMMANDS.find(c => c.cmd === cmd);
-    if (match) match.action();
-    else popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
 
   searchInput.addEventListener("input", () => {
     const val = searchInput.value.trim();
-    if (val.startsWith('/')) showCommandSuggestions();
-    else renderResults(val);
-  });
-  searchInput.addEventListener("focus", () => {
-    const val = searchInput.value.trim();
-    if (val.startsWith('/')) showCommandSuggestions();
-    else renderResults(val);
+    popup.style.display = val ? "block" : "none";
+    if (val) renderResults(val);
   });
   searchBtn.addEventListener("click", () => {
     const val = searchInput.value.trim();
-    if (val.startsWith('/')) showCommandSuggestions();
-    else renderResults(val);
+    if (val) renderResults(val);
   });
-  searchInput.addEventListener("keydown", e => {
-    if (e.key === 'Enter') {
-      const val = searchInput.value.trim();
-      if (val.startsWith('/')) runCommand(val);
-    } else if (e.key === 'Escape') popup.style.display = 'none';
-  });
-
   document.addEventListener("click", e => {
-    if (!popup.contains(e.target) && !searchInput.contains(e.target)) popup.style.display = 'none';
+    if (!popup.contains(e.target) && !searchInput.contains(e.target)) popup.style.display = "none";
   });
-} // end loadContent
 
-document.addEventListener("DOMContentLoaded", loadContent);
+  // === NETLIFY CONTACT POPUP ===
+  if (submitBtn) submitBtn.addEventListener("click", e => {
+    e.preventDefault();
+    contactPopup.style.display = "flex";
+  });
+  if (closeContact) closeContact.addEventListener("click", () => {
+    contactPopup.style.display = "none";
+  });
+  contactPopup.addEventListener("click", e => {
+    if (e.target === contactPopup) contactPopup.style.display = "none";
+  });
 
-// === HAUNTED COMMAND FUNCTIONS ======================================
-// BULLETPROOF BLACKOUT that cannot be out-z-indexed or bleached
-function lightsOut() {
-  // 1) kill any bright backgrounds at the root to avoid the white flash
-  document.documentElement.style.background = '#000';
-  document.body.style.background = '#000';
-
-  // 2) add a full-viewport overlay that sits above literally everything
-  let overlay = document.getElementById('blackout-overlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'blackout-overlay';
-    Object.assign(overlay.style, {
-      position: 'fixed',
-      inset: '0',
-      background: '#000',
-      opacity: '0',
-      transition: 'opacity 800ms ease',
-      zIndex: '2147483647',        // enjoy your new king of stacks
-      pointerEvents: 'none'        // don’t trap clicks unless you want to
+  // === MENU DROPDOWN ===
+  if (menuBtn && menuPopup) {
+    menuBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      menuPopup.classList.toggle("visible");
     });
-    document.body.appendChild(overlay);
+    document.addEventListener("click", e => {
+      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) {
+        menuPopup.classList.remove("visible");
+      }
+    });
   }
 
-  // 3) fade to black above all your scanlines, columns, and other chaos
-  //    (your main has moving scanlines on a ::before layer; this covers them) 
-  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
-
-  // 4) after it’s dark, add a flickering terminal cursor on top
-  setTimeout(() => {
-    if (!document.getElementById('blackout-cursor')) {
-      const cursor = document.createElement('div');
-      cursor.id = 'blackout-cursor';
-      cursor.textContent = '_';
-      Object.assign(cursor.style, {
-        position: 'fixed',
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)',
-        color: '#0f0',
-        fontSize: '3em',
-        fontFamily: '"Courier New", monospace',
-        textShadow: '0 0 10px #0f0',
-        zIndex: '2147483647'
-      });
-      document.body.appendChild(cursor);
-      setInterval(() => {
-        cursor.style.visibility = (cursor.style.visibility === 'hidden' ? 'visible' : 'hidden');
-      }, 200);
-    }
-  }, 900);
-}
-
-// “WHISPER” THAT ACTUALLY SHOWS, EVEN IN YOUR GLOWSTICK FOG
-function whisper() {
-  // try to play external audio; if it fails, synth a low hum so it’s never silent
-  const tryFile = () => {
-    const a = new Audio('/audio/whisper.mp3');
-    a.volume = 0.4;
-    a.play().catch(() => synthHum());
-  };
-  const synthHum = () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 62;          // very low, unsettling
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.4);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      // fade out after ~6s
-      gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 6);
-      osc.stop(ctx.currentTime + 6.1);
-    } catch {}
-  };
-  tryFile();
-
-  // spectral text overlay that cannot be hidden by your other layers
-  const text = document.createElement('div');
-  text.textContent = 'Do you hear it?';
-  Object.assign(text.style, {
-    position: 'fixed',
-    bottom: '40px',
-    right: '40px',
-    color: '#0f0',
-    fontFamily: '"Courier New", monospace',
-    fontSize: '1.5em',
-    textShadow: '0 0 10px #0f0, 0 0 20px #0f0',
-    zIndex: '2147483646',   // just under the blackout overlay
-    opacity: '0',
-    pointerEvents: 'none',
-    transition: 'opacity 1200ms ease-in-out'
-  });
-  document.body.appendChild(text);
-
-  // force a paint, then fade in; this bypasses any layout thrash
-  void text.offsetWidth;
-  text.style.opacity = '1';
-
-  // linger, fade, remove
-  setTimeout(() => { text.style.opacity = '0'; }, 5000);
-  setTimeout(() => { if (text.parentNode) text.remove(); }, 6500);
-}
-
-// === STARFIELD (SPACE MODE) =======================================
-let spaceCount = 0, timeout;
-document.addEventListener('keydown', function (e) {
-  if (e.code === 'Space') {
-    spaceCount++; clearTimeout(timeout);
-    timeout = setTimeout(() => spaceCount = 0, 2000);
-    if (spaceCount >= 10) goToSpace();
-  } else spaceCount = 0;
+  // === INIT LOAD ===
+  await loadPosts();
+  await loadVideos();
+  await buildIndex();
 });
-
-function goToSpace() {
-  document.body.innerHTML = '';
-  document.body.style.margin = '0';
-  document.body.style.overflow = 'hidden';
-  document.body.style.background = 'black';
-
-  const canvas = document.createElement('canvas');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  canvas.style.position = 'fixed';
-  canvas.style.top = 0;
-  canvas.style.left = 0;
-  canvas.style.zIndex = 9999;
-  document.body.appendChild(canvas);
-  const ctx = canvas.getContext('2d');
-  const stars = [];
-  for (let i = 0; i < 400; i++) {
-    stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, z: Math.random()*canvas.width });
-  }
-  function animate() {
-    ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < stars.length; i++) {
-      let star = stars[i];
-      star.z -= 4;
-      if (star.z <= 0) {
-        star.z = canvas.width; star.x = Math.random()*canvas.width; star.y = Math.random()*canvas.height;
-      }
-      let k = 128.0 / star.z;
-      let px = (star.x - canvas.width/2) * k + canvas.width/2;
-      let py = (star.y - canvas.height/2) * k + canvas.height/2;
-      if (px>=0 && px<=canvas.width && py>=0 && py<=canvas.height) {
-        let size = (1 - star.z/canvas.width) * 3;
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(px, py, size, 0, Math.PI*2);
-        ctx.fill();
-      }
-    }
-    requestAnimationFrame(animate);
-  }
-  animate();
-
-  const msg = document.createElement('div');
-  msg.innerText = 'Fine, you like space so much? Go to space.';
-  Object.assign(msg.style, {
-    position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-    fontSize:'2em', color:'#00ffff', fontFamily:'monospace', textShadow:'0 0 10px #0ff', zIndex:'10000'
-  });
-  document.body.appendChild(msg);
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Backspace') {
-      const earth = document.createElement('div');
-      earth.textContent = '🌍';
-      Object.assign(earth.style, {
-        position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-        fontSize:'200px', cursor:'pointer', zIndex:'10001', transition:'transform 0.3s ease-in-out'
-      });
-      document.body.appendChild(earth);
-      earth.addEventListener('click', () => {
-        earth.textContent = '💥';
-        earth.style.transform = 'translate(-50%, -50%) scale(2.5) rotate(720deg)';
-        setTimeout(() => { earth.remove(); location.reload(); }, 1500);
-      });
-    }
-  });
-}
-
-// === HAMBURGER DROPDOWN MENU RE-ENABLED ==============================
-(function() {
-  const menuBtn = document.querySelector('.menu');
-  const menuPopup = document.getElementById('menu-popup');
-
-  if (!menuBtn || !menuPopup) return;
-
-  menuBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    menuPopup.classList.toggle('visible');
-  });
-
-  // close if clicking outside
-  document.addEventListener('click', e => {
-    if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) {
-      menuPopup.classList.remove('visible');
-    }
-  });
-})();
-  
 </script>
   
 </body>
