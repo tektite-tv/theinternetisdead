@@ -813,13 +813,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  function togglePopup(q) {
-    if (!q) { popup.style.display = "none"; return; }
-    renderResults(q);
+  function showPopupOnFocus() {
+    const q = searchInput.value.trim();
+    const header = `<div class="promptline">$ grep -i "${q || ''}" {posts,videos}</div>`;
+    popup.innerHTML = q
+      ? header
+      : header + `<div class="no-results">Type to search posts and videos.</div>`;
+    popup.style.display = "block";
   }
 
-  searchInput.addEventListener("input", () => togglePopup(searchInput.value.trim()));
-  searchBtn.addEventListener("click", () => togglePopup(searchInput.value.trim()));
+  // events
+  searchInput.addEventListener("input", () => {
+    const val = searchInput.value.trim();
+    if (val) renderResults(val);
+    else showPopupOnFocus();
+  });
+  searchInput.addEventListener("focus", showPopupOnFocus);
+  searchBtn.addEventListener("click", () => renderResults(searchInput.value.trim()));
   document.addEventListener("click", e => {
     if (!popup.contains(e.target) && !searchInput.contains(e.target)) popup.style.display = "none";
   });
