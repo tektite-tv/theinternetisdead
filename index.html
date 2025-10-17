@@ -1272,6 +1272,65 @@ function goToSpace() {
     }
   });
 }
+
+// === COMMAND MODE ================================================
+(function() {
+  const input = document.querySelector('.search-input');
+  const popup = document.getElementById('search-popup');
+
+  const COMMANDS = [
+    { cmd: '/help', desc: 'List available commands', action: showHelp },
+    { cmd: '/revive', desc: 'Reload the page', action: () => location.reload() },
+    { cmd: '/space', desc: 'Engage starfield mode', action: goToSpace },
+  ];
+
+  let commandMode = false;
+
+  function showSuggestions() {
+    const header = `<div class="promptline">$ /</div>`;
+    const list = COMMANDS.map(c =>
+      `<div class="search-result" data-cmd="${c.cmd}">
+         <span class="kind">[cmd]</span>
+         <span class="title">${c.cmd}</span>
+         <div class="snippet">${c.desc}</div>
+       </div>`
+    ).join('');
+    popup.innerHTML = header + list;
+    popup.style.display = 'block';
+    popup.querySelectorAll('.search-result').forEach(el => {
+      el.addEventListener('click', () => runCommand(el.dataset.cmd));
+    });
+  }
+
+  function showHelp() {
+    popup.innerHTML = `
+      <div class="promptline">$ /help</div>
+      <div class="no-results">
+        Available commands:<br>
+        ${COMMANDS.map(c => `<b>${c.cmd}</b> - ${c.desc}`).join('<br>')}
+      </div>`;
+    popup.style.display = 'block';
+  }
+
+  function runCommand(cmd) {
+    const match = COMMANDS.find(c => c.cmd === cmd);
+    if (match) match.action();
+    else popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === '/' && !commandMode) {
+      commandMode = true;
+      showSuggestions();
+    } else if (e.key === 'Enter' && commandMode) {
+      e.preventDefault();
+      runCommand(input.value.trim());
+    } else if (e.key === 'Escape' && commandMode) {
+      commandMode = false;
+      popup.style.display = 'none';
+    }
+  });
+})();
     
 </script>
 
