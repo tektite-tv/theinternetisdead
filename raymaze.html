@@ -114,25 +114,24 @@
     <div id="center-msg">Maze Complete</div>
     <div id="crosshair" aria-hidden="true"></div>
   </div>
-
+  
 <script>
 // ------------------------
-// RayMaze: minimal 2.5D raycaster with procedural maze
-// Drop-in: place this file somewhere and link/iframe it, or copy the JS into your page.
+// RayMaze: minimal 2.5D raycaster with procedural maze + Banana Easter Egg
 // ------------------------
 
 // Config
 const CONFIG = {
-  fov: Math.PI / 3,            // 60 degrees
-  renderWidth: 640,            // logical width for raycast
-  renderHeight: 360,           // logical height
-  moveSpeed: 3.0,              // units per second
-  rotSpeed: 2.0,               // radians per second
+  fov: Math.PI / 3,
+  renderWidth: 640,
+  renderHeight: 360,
+  moveSpeed: 3.0,
+  rotSpeed: 2.0,
   sprintMultiplier: 1.7,
   wallHeight: 1.0,
   maxDepth: 40,
   cellSize: 1.0,
-  miniScale: 6                 // pixels per map cell on minimap
+  miniScale: 6
 };
 
 // DOM
@@ -144,6 +143,11 @@ const msgEl = document.getElementById('msg');
 const centerMsg = document.getElementById('center-msg');
 const mini = document.getElementById('minimap');
 const miniCtx = mini.getContext('2d', { alpha: true });
+
+// === Banana Easter Egg ===
+const banana = new Image();
+banana.src = "/images/bananarama.gif";
+let bananaCell = null;
 
 // Resize handling
 function resize() {
@@ -169,7 +173,6 @@ window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 root.addEventListener('click', () => {
   if (document.pointerLockElement !== root) root.requestPointerLock({ unadjustedMovement: true }).catch(()=>{});
 });
-document.addEventListener('pointerlockchange', () => {});
 document.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement === root) {
     player.dir += e.movementX * 0.0025; // sensitivity
@@ -190,10 +193,10 @@ function generateMaze(cols, rows) {
   function neighbors(i) {
     const c = i % cols, r = (i / cols)|0;
     const out = [];
-    if (r > 0) out.push({i: cell(c, r-1), d:0});      // top
-    if (c < cols-1) out.push({i: cell(c+1, r), d:1}); // right
-    if (r < rows-1) out.push({i: cell(c, r+1), d:2}); // bottom
-    if (c > 0) out.push({i: cell(c-1, r), d:3});      // left
+    if (r > 0) out.push({i: cell(c, r-1), d:0});
+    if (c < cols-1) out.push({i: cell(c+1, r), d:1});
+    if (r < rows-1) out.push({i: cell(c, r+1), d:2});
+    if (c > 0) out.push({i: cell(c-1, r), d:3});
     return out.filter(n => !grid[n.i].visited);
   }
 
@@ -212,38 +215,28 @@ function generateMaze(cols, rows) {
     } else break;
   }
 
-  // Convert to a solid grid with carved corridors: 1 = wall, 0 = empty
-  // Final map has walls outlining each maze cell.
   const MW = cols*2+1, MH = rows*2+1;
   const arr = Array.from({length: MW*MH}, () => 1);
   for (let r=0; r<rows; r++) {
     for (let c=0; c<cols; c++) {
       const g = grid[cell(c,r)];
       const mr = r*2+1, mc = c*2+1;
-      arr[mr*MW + mc] = 0; // cell
-      if (!g.walls[1]) arr[mr*MW + (mc+1)] = 0; // right passage
-      if (!g.walls[2]) arr[(mr+1)*MW + mc] = 0; // bottom passage
+      arr[mr*MW + mc] = 0;
+      if (!g.walls[1]) arr[mr*MW + (mc+1)] = 0;
+      if (!g.walls[2]) arr[(mr+1)*MW + mc] = 0;
     }
   }
   return { data: arr, w: MW, h: MH };
 }
 
 // Player
-const player = {
-  x: 1.5,
-  y: 1.5,
-  dir: 0
-};
-
+const player = { x: 1.5, y: 1.5, dir: 0 };
 let goal = { x: 0, y: 0 };
 
 function placePlayerAndGoal() {
-  // Player near top-left open space
   player.x = 1.5;
   player.y = 1.5;
   player.dir = 0;
-
-  // Goal near bottom-right, but guarantee it’s in an empty cell
   for (let y = mapH - 3; y > 0; y--) {
     for (let x = mapW - 3; x > 0; x--) {
       if (map[y * mapW + x] === 0) {
@@ -255,7 +248,7 @@ function placePlayerAndGoal() {
   }
 }
 
-// Collision and helpers
+// Collision
 function isWall(x, y) {
   const cx = Math.floor(x), cy = Math.floor(y);
   if (cx < 0 || cy < 0 || cx >= mapW || cy >= mapH) return true;
@@ -265,11 +258,9 @@ function isWall(x, y) {
 // Raycasting render
 function renderScene(dt) {
   const { renderWidth: W, renderHeight: H, fov, maxDepth } = CONFIG;
-  // Clear
   ctx.fillStyle = '#000';
   ctx.fillRect(0,0,W,H);
 
-  // Sky and floor gradient
   const sky = ctx.createLinearGradient(0,0,0,H/2);
   sky.addColorStop(0, '#07071a');
   sky.addColorStop(1, '#12002b');
@@ -282,64 +273,43 @@ function renderScene(dt) {
   ctx.fillStyle = floor;
   ctx.fillRect(0,H/2,W,H/2);
 
-  // Cast columns
+  // Raycast
   for (let x=0; x<W; x++) {
-    const camX = 2 * x / W - 1; // -1..1
+    const camX = 2 * x / W - 1;
     const rayAngle = player.dir + Math.atan(camX * Math.tan(fov/2));
-
     const stepX = Math.cos(rayAngle);
     const stepY = Math.sin(rayAngle);
 
-    let dist = 0;
-    let hit = false;
-    let side = 0; // 0 vertical-ish, 1 horizontal-ish
-
-    // DDA grid stepping
-    let mapX = Math.floor(player.x);
-    let mapY = Math.floor(player.y);
-
+    let dist = 0, hit = false, side = 0;
+    let mapX = Math.floor(player.x), mapY = Math.floor(player.y);
     const deltaDistX = Math.abs(1 / stepX);
     const deltaDistY = Math.abs(1 / stepY);
-
-    let rayStepX, rayStepY;
-    let sideDistX, sideDistY;
+    let rayStepX, rayStepY, sideDistX, sideDistY;
 
     if (stepX < 0) { rayStepX = -1; sideDistX = (player.x - mapX) * deltaDistX; }
-    else { rayStepX = 1; sideDistX = (mapX + 1.0 - player.x) * deltaDistX; }
+    else { rayStepX = 1; sideDistX = (mapX + 1 - player.x) * deltaDistX; }
 
     if (stepY < 0) { rayStepY = -1; sideDistY = (player.y - mapY) * deltaDistY; }
-    else { rayStepY = 1; sideDistY = (mapY + 1.0 - player.y) * deltaDistY; }
+    else { rayStepY = 1; sideDistY = (mapY + 1 - player.y) * deltaDistY; }
 
     while (!hit && dist < maxDepth) {
-      if (sideDistX < sideDistY) {
-        sideDistX += deltaDistX;
-        mapX += rayStepX;
-        side = 0;
-      } else {
-        sideDistY += deltaDistY;
-        mapY += rayStepY;
-        side = 1;
-      }
+      if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += rayStepX; side = 0; }
+      else { sideDistY += deltaDistY; mapY += rayStepY; side = 1; }
       if (mapX < 0 || mapY < 0 || mapX >= mapW || mapY >= mapH) break;
       if (map[mapY*mapW + mapX] === 1) {
         hit = true;
-        if (side === 0) dist = (mapX - player.x + (1 - rayStepX)/2) / stepX;
-        else dist = (mapY - player.y + (1 - rayStepY)/2) / stepY;
+        dist = (side === 0)
+          ? (mapX - player.x + (1 - rayStepX)/2) / stepX
+          : (mapY - player.y + (1 - rayStepY)/2) / stepY;
       }
     }
 
     if (!hit) continue;
-
-    // Perceived height of wall slice
-    const lineH = Math.min(H, (H / (dist * Math.cos(rayAngle - player.dir))));
-
+    const lineH = Math.min(H, H / (dist * Math.cos(rayAngle - player.dir)));
     const y0 = (H - lineH) / 2;
     const y1 = y0 + lineH;
-
-    // Simple faux texturing by shading
-    // Base color cycling creates a subtle glitch vibe without external images
     const hue = (mapX * 13 + mapY * 7) % 360;
-    let col = `hsl(${hue}, 60%, ${side ? 38 : 55}%)`;
+    const col = `hsl(${hue}, 60%, ${side ? 38 : 55}%)`;
     ctx.strokeStyle = col;
     ctx.beginPath();
     ctx.moveTo(x + 0.5, y0);
@@ -347,9 +317,8 @@ function renderScene(dt) {
     ctx.stroke();
   }
 
-  // Draw exit beacon as 2D billboard
-  const dx = goal.x - player.x;
-  const dy = goal.y - player.y;
+  // Draw goal
+  const dx = goal.x - player.x, dy = goal.y - player.y;
   const distToGoal = Math.hypot(dx, dy);
   if (distToGoal > 0.3) {
     const angleTo = Math.atan2(dy, dx) - player.dir;
@@ -360,11 +329,29 @@ function renderScene(dt) {
     ctx.fillRect(screenX - size/2, H*0.55 - size, size, size);
     ctx.globalAlpha = 1;
   }
+
+  // Draw banana Easter egg
+  if (bananaCell) {
+    const dx = bananaCell.x + 0.5 - player.x;
+    const dy = bananaCell.y + 0.5 - player.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < CONFIG.maxDepth) {
+      const angleTo = Math.atan2(dy, dx) - player.dir;
+      if (Math.abs(angleTo) < CONFIG.fov / 2) {
+        const screenX = (Math.tan(angleTo) / Math.tan(CONFIG.fov / 2) * (CONFIG.renderWidth / 2)) + CONFIG.renderWidth / 2;
+        const size = Math.max(12, 100 / (dist + 0.2));
+        ctx.drawImage(banana, screenX - size / 2, CONFIG.renderHeight * 0.55 - size, size, size);
+      }
+      if (dist < 0.8) {
+        showCenter("You found the BANANA!");
+        bananaCell = null;
+      }
+    }
+  }
 }
 
 // Movement
 function tryMove(nx, ny) {
-  // Simple AABB collision against walls
   const pad = 0.1;
   if (!isWall(nx - pad, ny - pad) && !isWall(nx + pad, ny - pad) &&
       !isWall(nx - pad, ny + pad) && !isWall(nx + pad, ny + pad)) {
@@ -377,46 +364,35 @@ function update(dt) {
   let speed = CONFIG.moveSpeed * dt;
   if (keys.has('shift')) speed *= CONFIG.sprintMultiplier;
 
-  // Rotation
   if (keys.has('arrowleft') || keys.has('q')) player.dir -= CONFIG.rotSpeed * dt;
   if (keys.has('arrowright') || keys.has('e')) player.dir += CONFIG.rotSpeed * dt;
 
-  // Translate relative to facing (fixed: forward actually goes forward)
-const forward = (keys.has('w') || keys.has('arrowup')) ? 1 : 0;
-const back    = (keys.has('s') || keys.has('arrowdown')) ? 1 : 0;
-const left    = keys.has('a') ? 1 : 0;
-const right   = keys.has('d') ? 1 : 0;
+  const forward = (keys.has('w') || keys.has('arrowup')) ? 1 : 0;
+  const back    = (keys.has('s') || keys.has('arrowdown')) ? 1 : 0;
+  const left    = keys.has('a') ? 1 : 0;
+  const right   = keys.has('d') ? 1 : 0;
+  const dx = Math.cos(player.dir), dy = Math.sin(player.dir);
+  let nx = player.x, ny = player.y;
 
-const dx = Math.cos(player.dir);
-const dy = Math.sin(player.dir);
+  if (forward) { nx += dx * speed; ny += dy * speed; }
+  if (back)    { nx -= dx * speed; ny -= dy * speed; }
+  if (left)  { nx +=  dy * speed; ny -= dx * speed; }
+  if (right) { nx -=  dy * speed; ny += dx * speed; }
 
-let nx = player.x, ny = player.y;
+  tryMove(nx, ny);
 
-// Forward/backward (correct)
-if (forward) { nx += dx * speed; ny += dy * speed; }
-if (back)    { nx -= dx * speed; ny -= dy * speed; }
-
-// Strafe (unchanged, feels correct in practice)
-if (left)  { nx +=  dy * speed; ny -= dx * speed; }
-if (right) { nx -=  dy * speed; ny += dx * speed; }
-
-tryMove(nx, ny);
-
-// Check if player reached goal
-const reachDist = 0.6; // adjust how close you need to be
-if (Math.hypot(player.x - goal.x, player.y - goal.y) < reachDist) {
-  showCenter("Maze Complete!");
-  setTimeout(() => newLevel(), 1000); // brief pause before regenerating
-}
+  const reachDist = 0.6;
+  if (Math.hypot(player.x - goal.x, player.y - goal.y) < reachDist) {
+    showCenter("Maze Complete!");
+    setTimeout(() => newLevel(), 1000);
+  }
 }
 
 // Minimap
 function drawMini() {
   const s = CONFIG.miniScale;
-  mini.width  = mapW * CONFIG.miniScale;
-  mini.height = mapH * CONFIG.miniScale;
-
-  // Map tiles
+  mini.width = mapW * s;
+  mini.height = mapH * s;
   for (let y=0; y<mapH; y++) {
     for (let x=0; x<mapW; x++) {
       const v = map[y*mapW + x];
@@ -424,15 +400,12 @@ function drawMini() {
       miniCtx.fillRect(x*s, y*s, s, s);
     }
   }
-  // Goal
   miniCtx.fillStyle = '#00ff99';
   miniCtx.fillRect(goal.x*s - 2, goal.y*s - 2, 4, 4);
-  // Player
   miniCtx.fillStyle = '#ffea00';
   miniCtx.beginPath();
   miniCtx.arc(player.x*s, player.y*s, 2.2, 0, Math.PI*2);
   miniCtx.fill();
-  // Facing line
   miniCtx.strokeStyle = '#ffea00';
   miniCtx.beginPath();
   miniCtx.moveTo(player.x*s, player.y*s);
@@ -448,10 +421,7 @@ function showCenter(text) {
   clearTimeout(centerTimeout);
   centerTimeout = setTimeout(() => centerMsg.style.opacity = '0', 900);
 }
-
-function setMsg(text) {
-  msgEl.textContent = text;
-}
+function setMsg(text) { msgEl.textContent = text; }
 
 // Level management
 function newLevel() {
@@ -460,46 +430,39 @@ function newLevel() {
   const m = generateMaze(cols, rows);
   map = m.data; mapW = m.w; mapH = m.h;
   placePlayerAndGoal();
+
+  // Random chance to spawn banana
+  if (Math.random() < 0.35) {
+    const empties = [];
+    for (let y=1; y<mapH-1; y++) for (let x=1; x<mapW-1; x++) if (!map[y*mapW+x]) empties.push({x,y});
+    if (empties.length) bananaCell = empties[Math.floor(Math.random()*empties.length)];
+  } else bananaCell = null;
+
   drawMini();
   setMsg('Find the exit');
 }
 
-// FPS
-let last = performance.now();
-let acc = 0, frames = 0, fps = 0;
-
+// FPS + Loop
+let last = performance.now(), acc = 0, frames = 0;
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   update(dt);
   renderScene(dt);
   drawMini();
-
-  // FPS meter
   acc += dt; frames++;
   if (acc >= 0.5) {
-    fps = Math.round(frames / acc);
-    fpsEl.textContent = 'FPS: ' + fps;
+    fpsEl.textContent = 'FPS: ' + Math.round(frames / acc);
     acc = 0; frames = 0;
   }
   requestAnimationFrame(loop);
 }
 
-// Buttons
-document.getElementById('newMaze').addEventListener('click', () => {
-  newLevel();
-  showCenter('New Maze');
-});
-
-// Boot
-function start() {
-  resize();
-  newLevel();
-  last = performance.now();
-  requestAnimationFrame(loop);
-}
-
+// Buttons + Boot
+document.getElementById('newMaze').addEventListener('click', () => { newLevel(); showCenter('New Maze'); });
+function start() { resize(); newLevel(); last = performance.now(); requestAnimationFrame(loop); }
 start();
 </script>
+
 </body>
 </html>
