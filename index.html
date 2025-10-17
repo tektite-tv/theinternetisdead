@@ -660,7 +660,7 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
     </div>
   </div>
 
-  <script>
+<script>
 async function loadContent() {
   const postsContainer = document.getElementById("posts");
   const youtubeContainer = document.getElementById("youtube");
@@ -703,7 +703,6 @@ async function loadContent() {
         <div class="content"><em>Loading...</em></div>
       `;
       postsContainer.appendChild(wrapper);
-
       try {
         const res = await fetch(p.file);
         let text = await res.text();
@@ -788,7 +787,6 @@ async function loadContent() {
   }
 
   // === Search and Command Interface ==========================
-  let commandMode = false;
   const COMMANDS = [
     { cmd: '/help', desc: 'List available commands', action: showHelp },
     { cmd: '/revive', desc: 'Reload the page', action: () => location.reload() },
@@ -797,7 +795,38 @@ async function loadContent() {
     { cmd: '/whisper', desc: 'Play the whisper of the void', action: whisper },
   ];
 
-  function showSuggestions() {
+  function renderResults(q) {
+    const header = `<div class="promptline">$ grep -i "${escapeHtml(q)}" {posts,videos}</div>`;
+    if (!q) {
+      popup.innerHTML = header + `<div class="no-results">Type to search posts and videos.</div>`;
+      popup.style.display = 'block'; return;
+    }
+    const query = q.trim().toLowerCase();
+    const hits = INDEX.filter(d =>
+      (d.title && d.title.toLowerCase().includes(query)) ||
+      (d.snippet && d.snippet.toLowerCase().includes(query))
+    ).slice(0, 50);
+
+    if (!hits.length) {
+      popup.innerHTML = header + `<div class="no-results">No matches. Try fewer words.</div>`;
+      popup.style.display = 'block'; return;
+    }
+
+    popup.innerHTML = header + hits.map(d => `
+      <div class="search-result" data-url="${escapeAttr(d.url)}">
+        <span class="kind">[${d.kind}]</span>
+        <span class="title">${escapeHtml(d.title)}</span>
+        <div class="meta">${d.date ? new Date(d.date).toLocaleString() : ""}</div>
+        ${d.snippet ? `<div class="snippet">${escapeHtml(d.snippet)}</div>` : ""}
+      </div>`).join("");
+
+    popup.querySelectorAll(".search-result").forEach(el => {
+      el.addEventListener("click", () => handlePostClick(el.dataset.url));
+    });
+    popup.style.display = 'block';
+  }
+
+  function showCommandSuggestions() {
     const header = `<div class="promptline">$ /</div>`;
     const list = COMMANDS.map(c => `
       <div class="search-result" data-cmd="${c.cmd}">
@@ -828,27 +857,38 @@ async function loadContent() {
   function runCommand(cmd) {
     const match = COMMANDS.find(c => c.cmd === cmd);
     if (match) match.action();
-    else {
-      popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
-      popup.style.display = 'block';
-    }
+    else popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
   }
 
-  searchInput.addEventListener('keydown', e => {
-    if (e.key === '/' && !commandMode) {
-      commandMode = true; showSuggestions();
-    } else if (e.key === 'Enter' && commandMode) {
-      e.preventDefault(); runCommand(searchInput.value.trim());
-    } else if (e.key === 'Escape' && commandMode) {
-      commandMode = false; popup.style.display = 'none';
-    }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
+
+  searchInput.addEventListener("input", () => {
+    const val = searchInput.value.trim();
+    if (val.startsWith('/')) showCommandSuggestions();
+    else renderResults(val);
+  });
+  searchInput.addEventListener("focus", () => {
+    const val = searchInput.value.trim();
+    if (val.startsWith('/')) showCommandSuggestions();
+    else renderResults(val);
+  });
+  searchBtn.addEventListener("click", () => {
+    const val = searchInput.value.trim();
+    if (val.startsWith('/')) showCommandSuggestions();
+    else renderResults(val);
+  });
+  searchInput.addEventListener("keydown", e => {
+    if (e.key === 'Enter') {
+      const val = searchInput.value.trim();
+      if (val.startsWith('/')) runCommand(val);
+    } else if (e.key === 'Escape') popup.style.display = 'none';
   });
 
-  document.addEventListener('click', e => {
-    if (!popup.contains(e.target) && !searchInput.contains(e.target)) {
-      popup.style.display = 'none';
-      commandMode = false;
-    }
+  document.addEventListener("click", e => {
+    if (!popup.contains(e.target) && !searchInput.contains(e.target)) popup.style.display = 'none';
   });
 } // end loadContent
 
@@ -920,11 +960,7 @@ function goToSpace() {
   const ctx = canvas.getContext('2d');
   const stars = [];
   for (let i = 0; i < 400; i++) {
-    stars.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      z: Math.random() * canvas.width
-    });
+    stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, z: Math.random()*canvas.width });
   }
   function animate() {
     ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -932,18 +968,16 @@ function goToSpace() {
       let star = stars[i];
       star.z -= 4;
       if (star.z <= 0) {
-        star.z = canvas.width;
-        star.x = Math.random() * canvas.width;
-        star.y = Math.random() * canvas.height;
+        star.z = canvas.width; star.x = Math.random()*canvas.width; star.y = Math.random()*canvas.height;
       }
       let k = 128.0 / star.z;
-      let px = (star.x - canvas.width / 2) * k + canvas.width / 2;
-      let py = (star.y - canvas.height / 2) * k + canvas.height / 2;
-      if (px >= 0 && px <= canvas.width && py >= 0 && py <= canvas.height) {
-        let size = (1 - star.z / canvas.width) * 3;
+      let px = (star.x - canvas.width/2) * k + canvas.width/2;
+      let py = (star.y - canvas.height/2) * k + canvas.height/2;
+      if (px>=0 && px<=canvas.width && py>=0 && py<=canvas.height) {
+        let size = (1 - star.z/canvas.width) * 3;
         ctx.fillStyle = 'white';
         ctx.beginPath();
-        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.arc(px, py, size, 0, Math.PI*2);
         ctx.fill();
       }
     }
@@ -954,8 +988,8 @@ function goToSpace() {
   const msg = document.createElement('div');
   msg.innerText = 'Fine, you like space so much? Go to space.';
   Object.assign(msg.style, {
-    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-    fontSize: '2em', color: '#00ffff', fontFamily: 'monospace', textShadow: '0 0 10px #0ff', zIndex: '10000'
+    position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
+    fontSize:'2em', color:'#00ffff', fontFamily:'monospace', textShadow:'0 0 10px #0ff', zIndex:'10000'
   });
   document.body.appendChild(msg);
 
@@ -964,9 +998,8 @@ function goToSpace() {
       const earth = document.createElement('div');
       earth.textContent = '🌍';
       Object.assign(earth.style, {
-        position: 'fixed', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)', fontSize: '200px', cursor: 'pointer',
-        zIndex: '10001', transition: 'transform 0.3s ease-in-out'
+        position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
+        fontSize:'200px', cursor:'pointer', zIndex:'10001', transition:'transform 0.3s ease-in-out'
       });
       document.body.appendChild(earth);
       earth.addEventListener('click', () => {
@@ -978,5 +1011,6 @@ function goToSpace() {
   });
 }
 </script>
+  
 </body>
 </html>
