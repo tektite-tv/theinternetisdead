@@ -684,6 +684,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const menuBtn = document.querySelector(".menu");
   const menuPopup = document.getElementById("menu-popup");
 
+  // lightbox elements
+  const lightbox = document.getElementById("img-lightbox");
+  const lightboxImg = lightbox.querySelector("img");
+  const lightboxFilename = lightbox.querySelector(".filename");
+  const lightboxDownload = lightbox.querySelector(".download-btn");
+  const lightboxClose = lightbox.querySelector(".close-x");
+
   let allPosts = [], allVideos = [], INDEX = [];
   let visiblePosts = 3, visibleVideos = 3;
 
@@ -732,6 +739,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.onclick = () => { visiblePosts += 3; renderPosts(); };
       postsContainer.appendChild(btn);
     }
+    activateLightbox(); // activate lightbox on post images
   }
 
   // === LOAD VIDEOS ===
@@ -822,7 +830,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     popup.style.display = "block";
   }
 
-  // events
   searchInput.addEventListener("input", () => {
     const val = searchInput.value.trim();
     if (val) renderResults(val);
@@ -855,6 +862,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         menuPopup.classList.remove("visible");
     });
   }
+
+  // === IMAGE LIGHTBOX ===
+  function activateLightbox() {
+    postsContainer.querySelectorAll("img").forEach(img => {
+      img.style.cursor = "zoom-in";
+      img.addEventListener("click", () => {
+        const src = img.getAttribute("src");
+        const filename = src.split("/").pop();
+        lightboxImg.src = src;
+        lightboxFilename.textContent = filename;
+        lightboxDownload.href = src;
+        lightbox.classList.add("visible");
+      });
+    });
+  }
+
+  lightboxClose.addEventListener("click", () => lightbox.classList.remove("visible"));
+  lightbox.addEventListener("click", e => {
+    if (e.target === lightbox) lightbox.classList.remove("visible");
+  });
 
   // === INIT ===
   await loadPosts();
