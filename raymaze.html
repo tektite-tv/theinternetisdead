@@ -401,6 +401,13 @@ if (left)  { nx +=  dy * speed; ny -= dx * speed; }
 if (right) { nx -=  dy * speed; ny += dx * speed; }
 
 tryMove(nx, ny);
+
+// Check if player reached goal
+const reachDist = 0.6; // adjust how close you need to be
+if (Math.hypot(player.x - goal.x, player.y - goal.y) < reachDist) {
+  showCenter("Maze Complete!");
+  setTimeout(() => newLevel(), 1000); // brief pause before regenerating
+}
 }
 
 // Minimap
