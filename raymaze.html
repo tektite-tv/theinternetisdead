@@ -239,10 +239,20 @@ let goal = { x: 0, y: 0 };
 
 function placePlayerAndGoal() {
   // Player near top-left open space
-  player.x = 1.5; player.y = 1.5; player.dir = 0;
-  // Goal near bottom-right
-  goal.x = mapW - 2.5;
-  goal.y = mapH - 2.5;
+  player.x = 1.5;
+  player.y = 1.5;
+  player.dir = 0;
+
+  // Goal near bottom-right, but guarantee it’s in an empty cell
+  for (let y = mapH - 3; y > 0; y--) {
+    for (let x = mapW - 3; x > 0; x--) {
+      if (map[y * mapW + x] === 0) {
+        goal.x = x + 0.5;
+        goal.y = y + 0.5;
+        return;
+      }
+    }
+  }
 }
 
 // Collision and helpers
