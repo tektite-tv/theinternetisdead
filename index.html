@@ -669,10 +669,10 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
       </div>
     </div>
   </div>
-  
+
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-  // === DOM SHORTCUTS ===
+  // === DOM ELEMENTS ===
   const postsContainer = document.getElementById("posts");
   const youtubeContainer = document.getElementById("youtube");
   const searchInput = document.querySelector(".search-input");
@@ -684,16 +684,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const menuBtn = document.querySelector(".menu");
   const menuPopup = document.getElementById("menu-popup");
 
-  const lightbox = document.getElementById("img-lightbox");
-  const lightboxImg = lightbox.querySelector("img");
-  const lightboxFilename = lightbox.querySelector(".filename");
-  const lightboxDownload = lightbox.querySelector(".download-btn");
-  const lightboxClose = lightbox.querySelector(".close-x");
-
   let allPosts = [], allVideos = [], INDEX = [];
   let visiblePosts = 3, visibleVideos = 3;
 
-  // === LOAD POSTS ===
+  // === RENDER POSTS ===
   async function loadPosts() {
     try {
       const res = await fetch("/_posts/index.json");
@@ -712,23 +706,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       <h2>Latest Blog Posts</h2>`;
     const displayed = allPosts.slice(0, visiblePosts);
     for (const p of displayed) {
-      const wrap = document.createElement("div");
-      wrap.className = "post";
-      wrap.innerHTML = `
+      const wrapper = document.createElement("div");
+      wrapper.className = "post";
+      wrapper.innerHTML = `
         <h3>${p.title}</h3>
         <small>${new Date(p.date).toLocaleString()}</small>
         ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy">` : ""}
         <div class="content"><em>Loading...</em></div>`;
-      postsContainer.appendChild(wrap);
+      postsContainer.appendChild(wrapper);
       try {
         let text = await (await fetch(p.file)).text();
         if (text.startsWith('---')) {
           const end = text.indexOf('---', 3);
           if (end !== -1) text = text.slice(end + 3);
         }
-        wrap.querySelector(".content").innerHTML = marked.parse(text.trim());
+        wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
       } catch {
-        wrap.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
+        wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
       }
     }
     if (visiblePosts < allPosts.length) {
@@ -738,10 +732,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.onclick = () => { visiblePosts += 3; renderPosts(); };
       postsContainer.appendChild(btn);
     }
-    activateLightbox();
   }
 
-  // === LOAD VIDEOS ===
+  // === RENDER YOUTUBE ===
   async function loadVideos() {
     try {
       const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
@@ -773,7 +766,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (btn) btn.addEventListener("click", () => { visibleVideos += 3; renderVideos(); });
   }
 
-  // === BUILD SEARCH INDEX ===
+  // === SEARCH INDEX ===
   async function buildIndex() {
     const postDocs = await Promise.all(allPosts.map(async p => {
       try {
@@ -784,209 +777,60 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         const plain = txt.replace(/[#>*_`\[\]\(\)!-]/g, " ").replace(/\s+/g, " ").trim();
         return { kind: "post", title: p.title, url: p.file, date: p.date, snippet: plain.slice(0, 200) };
-      } catch {
-        return { kind: "post", title: p.title, url: p.file, date: p.date, snippet: "" };
-      }
+      } catch { return { kind: "post", title: p.title, url: p.file, date: p.date, snippet: "" }; }
     }));
     const videoDocs = allVideos.map(v => ({
-      kind: "video", title: v.title, url: v.link,
-      date: v.pubDate, snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
+      kind: "video", title: v.title, url: v.link, date: v.pubDate,
+      snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
     }));
     INDEX = [...postDocs, ...videoDocs];
   }
 
-  // === COMMANDS ===
-  const COMMANDS = [
-    { cmd: "/help", desc: "List available commands", action: showHelp },
-    { cmd: "/revive", desc: "Reload the page", action: () => location.reload() },
-    { cmd: "/die", desc: "Turn off the lights", action: die },
-    { cmd: "/space", desc: "Go to space", action: goToSpace },
-    { cmd: "/glitchtv", desc: "Open Glitch TV", action: () => window.location.href = "/glitchtv" },
-    { cmd: "/glitchcamera", desc: "Open Glitch Camera", action: () => window.location.href = "/glitchcamera" },
-    { cmd: "/mazegame", desc: "Open Maze Game", action: () => window.location.href = "/mazegame" },
-    { cmd: "/youtube", desc: "Visit my YouTube channel", action: () => window.open("https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ", "_blank") }
-  ];
-
-  function runCommand(cmd) {
-    const match = COMMANDS.find(c => c.cmd === cmd);
-    if (match) return match.action();
-
-    // Dynamic summon handler
-    if (cmd.startsWith("/summon ")) {
-      const filename = cmd.replace("/summon ", "").trim();
-      if (filename) summonImage(filename);
-      else popup.innerHTML = `<div class="no-results">Usage: /summon [image filename]</div>`;
-      return;
-    }
-
-    popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
-  }
-
-  // === SEARCH INTERACTION ===
-  searchInput.addEventListener("input", () => {
-    const val = searchInput.value.trim();
-    if (val) renderResults(val);
-    else showPopupOnFocus();
-  });
-  searchInput.addEventListener("focus", showPopupOnFocus);
-  searchInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-      const val = searchInput.value.trim();
-      if (val.startsWith("/")) runCommand(val);
-    } else if (e.key === "Escape") popup.style.display = "none";
-  });
-  searchBtn.addEventListener("click", () => renderResults(searchInput.value.trim()));
-  document.addEventListener("click", e => {
-    if (!popup.contains(e.target) && !searchInput.contains(e.target)) popup.style.display = "none";
-  });
-
-  function showPopupOnFocus() {
-    const q = searchInput.value.trim();
-    const header = `<div class="promptline">$ grep -i "${q || ''}" {posts,videos}</div>`;
-    popup.innerHTML = q
-      ? header
-      : header + `<div class="no-results">Type to search posts, videos, or enter /help</div>`;
-    popup.style.display = "block";
-  }
-
+  // === SEARCH BAR ===
   function renderResults(q) {
-    const header = `<div class="promptline">$ grep -i "${q}" {posts,videos}</div>`;
-    if (q.startsWith("/")) return showCommandSuggestions();
     const query = q.toLowerCase();
     const hits = INDEX.filter(d =>
-      (d.title && d.title.toLowerCase().includes(query)) ||
-      (d.snippet && d.snippet.toLowerCase().includes(query))
+      d.title.toLowerCase().includes(query) || d.snippet.toLowerCase().includes(query)
     ).slice(0, 50);
-
     popup.innerHTML = hits.length
-      ? header + hits.map(d => `
-          <div class="search-result" data-url="${d.url}">
-            <span class="kind">[${d.kind}]</span>
-            <span class="title">${d.title}</span>
-            <div class="meta">${d.date ? new Date(d.date).toLocaleString() : ""}</div>
-            ${d.snippet ? `<div class="snippet">${d.snippet}</div>` : ""}
-          </div>`).join("")
-      : header + `<div class="no-results">No matches found.</div>`;
-
+      ? hits.map(d => `
+        <div class="search-result" data-url="${d.url}">
+          <span class="kind">[${d.kind}]</span>
+          <span class="title">${d.title}</span>
+          <div class="meta">${new Date(d.date).toLocaleString()}</div>
+          <div class="snippet">${d.snippet}</div>
+        </div>`).join("")
+      : `<div class="no-results">No matches.</div>`;
     popup.style.display = "block";
     popup.querySelectorAll(".search-result").forEach(el =>
       el.addEventListener("click", () => window.open(el.dataset.url, "_blank"))
     );
   }
 
-  function showCommandSuggestions() {
-    const header = `<div class="promptline">$ /</div>`;
-    popup.innerHTML = header + COMMANDS.map(c => `
-      <div class="search-result" data-cmd="${c.cmd}">
-        <span class="kind">[cmd]</span>
-        <span class="title">${c.cmd}</span>
-        <div class="snippet">${c.desc}</div>
-      </div>`).join("") + `
-      <div class="search-result" data-cmd="/summon [filename]">
-        <span class="kind">[cmd]</span>
-        <span class="title">/summon [filename]</span>
-        <div class="snippet">Summon any image from /images/uploads/</div>
-      </div>`;
-    popup.style.display = "block";
-    popup.querySelectorAll(".search-result").forEach(el =>
-      el.addEventListener("click", () => runCommand(el.dataset.cmd))
-    );
-  }
-
-  // === COMMAND FUNCTIONS ===
-  function die() {
-    let overlay = document.createElement("div");
-    Object.assign(overlay.style, {
-      position: "fixed", inset: "0", background: "#000",
-      zIndex: "9999999", opacity: "0", transition: "opacity 1s ease"
-    });
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.style.opacity = "1");
-    setTimeout(() => overlay.style.cursor = "none", 1000);
-  }
-
-  function goToSpace() {
-    document.body.innerHTML = "";
-    const canvas = document.createElement("canvas");
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
-    document.body.appendChild(canvas);
-    const ctx = canvas.getContext("2d");
-    const stars = Array.from({ length: 400 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      z: Math.random() * canvas.width
-    }));
-    (function animate() {
-      ctx.fillStyle = "black";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      for (const s of stars) {
-        s.z -= 4;
-        if (s.z <= 0) s.z = canvas.width;
-        const k = 128 / s.z;
-        const px = (s.x - canvas.width / 2) * k + canvas.width / 2;
-        const py = (s.y - canvas.height / 2) * k + canvas.height / 2;
-        const size = (1 - s.z / canvas.width) * 3;
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.arc(px, py, size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      requestAnimationFrame(animate);
-    })();
-  }
-
-  function summonImage(filename) {
-    const id = `summon-${filename.replace(/\W/g, "_")}`;
-    if (document.getElementById(id)) return;
-    const img = document.createElement("img");
-    img.src = `/images/uploads/${filename}`;
-    img.id = id;
-    img.style.position = "fixed";
-    img.style.width = "120px";
-    img.style.height = "auto";
-    img.style.zIndex = "999999";
-    img.style.left = "50px";
-    img.style.top = "50px";
-    img.style.pointerEvents = "none";
-    document.body.appendChild(img);
-
-    let x = 50, y = 50, dx = 3, dy = 3;
-    setInterval(() => {
-      x += dx;
-      y += dy;
-      if (x + 120 >= window.innerWidth || x <= 0) dx *= -1;
-      if (y + 120 >= window.innerHeight || y <= 0) dy *= -1;
-      img.style.left = `${x}px`;
-      img.style.top = `${y}px`;
-    }, 16);
-  }
-
-  // === LIGHTBOX ===
-  function activateLightbox() {
-    postsContainer.querySelectorAll("img").forEach(img => {
-      img.style.cursor = "zoom-in";
-      img.addEventListener("click", () => {
-        const src = img.getAttribute("src");
-        const filename = src.split("/").pop();
-        lightboxImg.src = src;
-        lightboxFilename.textContent = filename;
-        lightboxDownload.href = src;
-        lightbox.classList.add("visible");
-      });
-    });
-  }
-
-  lightboxClose.addEventListener("click", () => lightbox.classList.remove("visible"));
-  lightbox.addEventListener("click", e => { if (e.target === lightbox) lightbox.classList.remove("visible"); });
+  searchInput.addEventListener("input", () => {
+    const val = searchInput.value.trim();
+    popup.style.display = val ? "block" : "none";
+    if (val) renderResults(val);
+  });
+  searchBtn.addEventListener("click", () => {
+    const val = searchInput.value.trim();
+    if (val) renderResults(val);
+  });
+  document.addEventListener("click", e => {
+    if (!popup.contains(e.target) && !searchInput.contains(e.target)) popup.style.display = "none";
+  });
 
   // === NETLIFY CONTACT POPUP ===
   if (submitBtn) submitBtn.addEventListener("click", e => {
     e.preventDefault();
     contactPopup.style.display = "flex";
   });
-  if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
-  contactPopup.addEventListener("click", e => { if (e.target === contactPopup) contactPopup.style.display = "none"; });
+  if (closeContact) closeContact.addEventListener("click", () => {
+    contactPopup.style.display = "none";
+  });
+  contactPopup.addEventListener("click", e => {
+    if (e.target === contactPopup) contactPopup.style.display = "none";
+  });
 
   // === MENU DROPDOWN ===
   if (menuBtn && menuPopup) {
@@ -995,82 +839,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       menuPopup.classList.toggle("visible");
     });
     document.addEventListener("click", e => {
-      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) menuPopup.classList.remove("visible");
-    });
-  }
-
-  // === KEYBOARD EASTER EGG ===
-  let spacePresses = 0;
-  let earthSpawned = false;
-
-  document.addEventListener("keydown", e => {
-    if (e.code === "Space" && e.target === document.body) {
-      e.preventDefault();
-      spacePresses++;
-      if (spacePresses === 10) {
-        goToSpace();
-        showSpaceText();
-        spacePresses = 0;
+      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) {
+        menuPopup.classList.remove("visible");
       }
-    }
-
-    if (e.code === "Backspace" && e.target === document.body) {
-      e.preventDefault();
-      if (!earthSpawned) {
-        spawnEarth();
-        earthSpawned = true;
-      } else {
-        location.reload();
-      }
-    }
-  });
-
-  function showSpaceText() {
-    const text = document.createElement("div");
-    text.textContent = "You have ascended beyond the atmosphere.";
-    Object.assign(text.style, {
-      position: "fixed",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      color: "#0f0",
-      fontFamily: '"Courier New", monospace',
-      fontSize: "2em",
-      textShadow: "0 0 10px #0f0, 0 0 20px #0f0",
-      zIndex: "999999"
     });
-    document.body.appendChild(text);
-    setTimeout(() => text.remove(), 4000);
   }
 
-  function spawnEarth() {
-    if (document.getElementById("earth-emoji")) return;
-    const earth = document.createElement("div");
-    earth.id = "earth-emoji";
-    earth.textContent = "🌍";
-    Object.assign(earth.style, {
-      position: "fixed",
-      fontSize: "200px",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      zIndex: "999999",
-      cursor: "pointer",
-      animation: "spin 8s linear infinite"
-    });
-    document.body.appendChild(earth);
-    earth.addEventListener("click", () => earth.remove());
-
-    const style = document.createElement("style");
-    style.textContent = `
-      @keyframes spin {
-        from { transform: translate(-50%, -50%) rotate(0deg); }
-        to { transform: translate(-50%, -50%) rotate(360deg); }
-      }`;
-    document.head.appendChild(style);
-  }
-
-    // === INIT ===
+  // === INIT LOAD ===
   await loadPosts();
   await loadVideos();
   await buildIndex();
