@@ -4,7 +4,131 @@
   <meta charset="utf-8" />
   <title>Scanlines + Moiré + Psychedelic Lava (Mutations)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="assets/deadtv.css">
+  <style>
+  :root{
+    --period: 4px;
+    --line-color: hsla(0,0%,100%,0.9);
+    --angle: 0deg;
+    --bgx: 0px;
+    --bgy: 0px;
+    --skx: 0deg;
+    --sky: 0deg;
+    --sc: 1;
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #000;
+    color: #eee;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    overflow: hidden;
+  }
+
+  .app { position: relative; height: 100%; width: 100%; overflow: hidden; }
+
+  /* Visual layers */
+  canvas#lava { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+  .layers { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 1; transition: filter 80ms linear; }
+  .layers.invert { filter: invert(1); }
+  .vertical, .horizontal { background-position: var(--bgx) var(--bgy); }
+  .vertical {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, var(--line-color) 0 1px, transparent 1px var(--period));
+    mix-blend-mode: screen;
+  }
+  .horizontal-wrap {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    transform: rotate(var(--angle)) skewX(var(--skx)) skewY(var(--sky)) scale(var(--sc));
+    transform-origin: 50% 50%;
+    will-change: transform;
+  }
+  .horizontal {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, var(--line-color) 0 1px, transparent 1px var(--period));
+    mix-blend-mode: screen;
+  }
+
+  /* Desktop controls: anchored bar */
+  .controls {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.65);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 12px;
+    padding: 10px 14px;
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+    user-select: none;
+    flex-wrap: wrap;
+    max-width: min(94vw, 1200px);
+  }
+  .controls label { font-size: 14px; display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+  .controls input[type="range"] { width: min(40vw, 360px); accent-color: #fff; }
+  .value { font-variant-numeric: tabular-nums; min-width: 62px; text-align: right; opacity: 0.9; }
+
+  .btn {
+    pointer-events: auto;
+    background: rgba(30,30,35,0.85);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #eee; padding: 6px 10px; border-radius: 10px;
+    font-size: 13px; cursor: pointer;
+    transition: transform .06s ease, background .2s ease, border-color .2s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn[aria-pressed="true"] {
+    background: rgba(80,160,255,0.22);
+    border-color: rgba(150,200,255,0.9);
+  }
+  .spacer { flex: 1 0 12px; }
+
+  /* Mobile drawer + FAB */
+  .drawer-toggle {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    z-index: 20;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid #0f0;
+    color: #0f0;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
+  }
+
+  .controls.drawer {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    transform: translateY(100%);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: none;
+    padding: 12px;
+    gap: 8px;
+    justify-content: center;
+  }
+  .controls.drawer.open { transform: translateY(0%); }
+  .controls.drawer,
+  .controls.drawer.open {
+    transition: transform 220ms ease;
+  }
+  .controls.drawer label { width: 100%; justify-content: space-between; }
+  .controls.drawer input[type="range"] { width: 100%; }
+
+  /* Breakpoint switch */
+  @media (max-width: 768px) {
+    .controls { display: none; }          /* hide desktop bar */
+    .controls.drawer { display: flex; }   /* show drawer version */
+    .drawer-toggle { display: inline-flex; align-items: center; gap: 8px; }
+  }
+</style>
 </head>
 <body>
   <div class="app">
