@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Scanlines + Moiré + Psychedelic Lava (Mutations)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DeadTV</title>
+<style>
   :root{
     --period: 4px;
     --line-color: hsla(0,0%,100%,0.9);
@@ -141,7 +141,8 @@
       </div>
     </div>
 
-    <form class="controls" onsubmit="return false">
+    <!-- Desktop controls -->
+    <form class="controls" id="controlsDesktop" onsubmit="return false" aria-label="Controls">
       <label for="angle">
         Rotate:
         <input id="angle" type="range" min="-45" max="45" step="0.1" value="0" />
@@ -158,302 +159,399 @@
       <button type="button" class="btn" id="drawMode" aria-pressed="false">🖍️ Draw Mode</button>
       <button type="button" class="btn" id="saveShot" title="Save Screenshot">💾 Save</button>
     </form>
+
+    <!-- Mobile drawer -->
+    <button class="drawer-toggle" id="drawerToggle" aria-expanded="false">Controls</button>
+    <form class="controls drawer" id="controlsMobile" onsubmit="return false" aria-label="Controls Drawer">
+      <label for="angle_m">Rotate <input id="angle_m" type="range" min="-45" max="45" step="0.1" value="0"></label>
+      <div class="row" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
+        <button type="button" class="btn" data-act="spinOnce">Spin 360°</button>
+        <button type="button" class="btn" data-act="spinLoop" aria-pressed="false">Spin Loop</button>
+        <button type="button" class="btn" data-act="pulse" aria-pressed="false">Pulse Lines</button>
+        <button type="button" class="btn" data-act="strobe" aria-pressed="false">Strobe Glitch</button>
+        <button type="button" class="btn" data-act="cycle" aria-pressed="false">Cycle Line Color</button>
+        <button type="button" class="btn" data-act="meltdown" aria-pressed="false">Meltdown Warp</button>
+        <button type="button" class="btn" data-act="stop">Stop</button>
+        <button type="button" class="btn" data-act="draw" aria-pressed="false">🖍️ Draw Mode</button>
+        <button type="button" class="btn" data-act="save" title="Save Screenshot">💾 Save</button>
+      </div>
+    </form>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
+  <!-- html2canvas is loaded only on desktop via JS to avoid mobile cost -->
   <script>
-  // --- Angle control ---
-  const root = document.documentElement;
-  const angleInput = document.getElementById('angle');
-  const angleVal = document.getElementById('angleVal');
-  const layersEl = document.getElementById('layerRoot');
+    const isMobile = matchMedia('(max-width: 768px)').matches;
 
-  function setAngle(deg) {
-    root.style.setProperty('--angle', deg + 'deg');
-    angleVal.textContent = `${Number(deg).toFixed(1)}°`;
-  }
-  angleInput.addEventListener('input', e => {
-    state.manualAngle = parseFloat(e.target.value);
-    if (!state.spinLoop && !state.spinOnce.active) setAngle(state.manualAngle);
-  });
-  setAngle(angleInput.value);
-
-  // --- Lava lamp background ---
-  const canvas = document.getElementById('lava');
-  const ctx = canvas.getContext('2d');
-  let w, h, t = 0;
-  function resize() {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  function rainbow(x, y, time) {
-    const r = Math.sin(0.0008 * x + time) * 127 + 128;
-    const g = Math.sin(0.0008 * y + time + 2) * 127 + 128;
-    const b = Math.sin(0.0008 * (x + y) + time + 4) * 127 + 128;
-    return [r | 0, g | 0, b | 0];
-  }
-
-  // --- Animation state ---
-  const state = {
-    manualAngle: parseFloat(angleInput.value),
-    spinLoop: false,
-    spinSpeed: 12,
-    spinOnce: { active: false, start: 0, duration: 3000, from: 0, to: 0 },
-    pulse: false, basePeriod: 4, minPeriod: 2, maxPeriod: 12, pulseHz: 0.6,
-    strobe: false, strobeHz: 7, jitter: 0,
-    cycle: false, hue: 0, hueSpeed: 40,
-    meltdown: false, meltAmpSkew: 10, meltAmpScale: 0.12, meltHz: 0.33
-  };
-
-  const el = id => document.getElementById(id);
-  const btnSpinOnce = el('spinOnce');
-  const btnSpinLoop = el('spinLoop');
-  const btnPulse = el('pulse');
-  const btnStrobe = el('strobe');
-  const btnCycle = el('cycle');
-  const btnMeltdown = el('meltdown');
-  const btnStop = el('stop');
-  const btnSave = el('saveShot');
-  const btnDraw = el('drawMode');
-
-  // --- Draw mode ---
-  let drawing = false;
-  let drawEnabled = false;
-  let drawCtx;
-  let drawCanvas;
-
-  function initDrawCanvas() {
-    drawCanvas = document.createElement('canvas');
-    drawCanvas.id = 'drawCanvas';
-    drawCanvas.width = window.innerWidth;
-    drawCanvas.height = window.innerHeight;
-    drawCanvas.style.position = 'absolute';
-    drawCanvas.style.top = '0';
-    drawCanvas.style.left = '0';
-    drawCanvas.style.zIndex = '5';
-    drawCanvas.style.pointerEvents = 'none';
-    document.body.appendChild(drawCanvas);
-    drawCtx = drawCanvas.getContext('2d');
-    drawCtx.lineCap = 'round';
-    drawCtx.lineJoin = 'round';
-    drawCtx.lineWidth = 8;
-  }
-
-  initDrawCanvas();
-  window.addEventListener('resize', () => {
-    drawCanvas.width = window.innerWidth;
-    drawCanvas.height = window.innerHeight;
-  });
-
-  btnDraw.addEventListener('click', () => {
-  drawEnabled = !drawEnabled;
-  btnDraw.setAttribute('aria-pressed', String(drawEnabled));
-  drawCanvas.style.pointerEvents = drawEnabled ? 'auto' : 'none';
-  
-  // Clear drawings when turning off draw mode
-  if (!drawEnabled) {
-    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-  }
-});
-
-  let hue = 0;
-  drawCanvas.addEventListener('mousedown', e => {
-    if (!drawEnabled) return;
-    drawing = true;
-    drawCtx.beginPath();
-    drawCtx.moveTo(e.clientX, e.clientY);
-  });
-  drawCanvas.addEventListener('mousemove', e => {
-    if (!drawEnabled || !drawing) return;
-    hue = (hue + 2) % 360;
-    drawCtx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-    drawCtx.lineTo(e.clientX, e.clientY);
-    drawCtx.stroke();
-  });
-  window.addEventListener('mouseup', () => {
-    if (drawing) {
-      drawing = false;
-      drawCtx.closePath();
+    // Lazy load html2canvas only for desktop
+    let html2canvasReady = false;
+    if (!isMobile) {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      s.onload = () => html2canvasReady = true;
+      document.head.appendChild(s);
     }
-  });
 
-  // --- Button logic ---
-  btnSpinOnce.addEventListener('click', () => {
-    state.spinOnce.active = true;
-    state.spinOnce.start = performance.now();
-    state.spinOnce.from = getCurrentAngle();
-    state.spinOnce.to = state.spinOnce.from + 360;
-  });
-  btnSpinLoop.addEventListener('click', () => {
-    state.spinLoop = !state.spinLoop;
-    btnSpinLoop.setAttribute('aria-pressed', String(state.spinLoop));
-  });
-  btnPulse.addEventListener('click', () => {
-    state.pulse = !state.pulse;
-    btnPulse.setAttribute('aria-pressed', String(state.pulse));
-    if (!state.pulse) root.style.setProperty('--period', state.basePeriod + 'px');
-  });
-  btnStrobe.addEventListener('click', () => {
-    state.strobe = !state.strobe;
-    btnStrobe.setAttribute('aria-pressed', String(state.strobe));
-    if (!state.strobe) {
-      layersEl.classList.remove('invert');
+    // Elements
+    const root = document.documentElement;
+    const angleInput = document.getElementById('angle');
+    const angleInputM = document.getElementById('angle_m');
+    const angleVal = document.getElementById('angleVal');
+    const layersEl = document.getElementById('layerRoot');
+    const controlsDesktop = document.getElementById('controlsDesktop');
+    const controlsMobile = document.getElementById('controlsMobile');
+    const drawerToggle = document.getElementById('drawerToggle');
+
+    // Drawer behavior
+    if (isMobile) {
+      drawerToggle.addEventListener('click', () => {
+        const open = controlsMobile.classList.toggle('open');
+        drawerToggle.setAttribute('aria-expanded', String(open));
+        drawerToggle.textContent = open ? 'Hide Controls' : 'Controls';
+      });
+    }
+
+    function setAngle(deg) {
+      root.style.setProperty('--angle', deg + 'deg');
+      angleVal.textContent = `${Number(deg).toFixed(1)}°`;
+    }
+
+    // Keep both sliders in sync
+    function syncSliders(fromMobile) {
+      const v = fromMobile ? parseFloat(angleInputM.value) : parseFloat(angleInput.value);
+      angleInput.value = v;
+      angleInputM.value = v;
+      state.manualAngle = v;
+      if (!state.spinLoop && !state.spinOnce.active) setAngle(state.manualAngle);
+    }
+    angleInput.addEventListener('input', () => syncSliders(false));
+    angleInputM.addEventListener('input', () => syncSliders(true));
+    setAngle(angleInput.value);
+
+    // Canvas
+    const canvas = document.getElementById('lava');
+    const ctx = canvas.getContext('2d', { willReadFrequently: false });
+
+    // Adaptive resolution: halve pixels on mobile to save frames
+    let w, h, t = 0, renderScale = isMobile ? 0.5 : 1;
+    function resize() {
+      const cssW = canvas.clientWidth | 0;
+      const cssH = canvas.clientHeight | 0;
+      w = canvas.width = Math.max(2, Math.floor(cssW * renderScale));
+      h = canvas.height = Math.max(2, Math.floor(cssH * renderScale));
+      // ensure CSS stretches to viewport
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+    }
+    addEventListener('resize', resize);
+    resize();
+
+    // Rainbow plasma, sampled in 2x2 blocks to reduce per-frame work
+    function rainbow(x, y, time) {
+      const r = Math.sin(0.0008 * x + time) * 127 + 128;
+      const g = Math.sin(0.0008 * y + time + 2) * 127 + 128;
+      const b = Math.sin(0.0008 * (x + y) + time + 4) * 127 + 128;
+      return [r | 0, g | 0, b | 0];
+    }
+
+    // State
+    const state = {
+      manualAngle: parseFloat(angleInput.value),
+      spinLoop: false,
+      spinSpeed: 12,
+      spinOnce: { active: false, start: 0, duration: 3000, from: 0, to: 0 },
+      pulse: false, basePeriod: 4, minPeriod: 2, maxPeriod: 12, pulseHz: 0.6,
+      strobe: false, strobeHz: 7, jitter: 0,
+      cycle: false, hue: 0, hueSpeed: 40,
+      meltdown: false, meltAmpSkew: 10, meltAmpScale: 0.12, meltHz: 0.33
+    };
+
+    // Buttons (desktop)
+    const el = id => document.getElementById(id);
+    const btnSpinOnce = el('spinOnce');
+    const btnSpinLoop = el('spinLoop');
+    const btnPulse = el('pulse');
+    const btnStrobe = el('strobe');
+    const btnCycle = el('cycle');
+    const btnMeltdown = el('meltdown');
+    const btnStop = el('stop');
+    const btnSave = el('saveShot');
+    const btnDraw = el('drawMode');
+
+    // Buttons (mobile delegate)
+    function setPressed(btn, val) {
+      btn.setAttribute('aria-pressed', String(val));
+    }
+
+    // Draw mode
+    let drawing = false;
+    let drawEnabled = false;
+    let drawCtx, drawCanvas;
+
+    function initDrawCanvas() {
+      drawCanvas = document.createElement('canvas');
+      drawCanvas.id = 'drawCanvas';
+      drawCanvas.width = innerWidth;
+      drawCanvas.height = innerHeight;
+      drawCanvas.style.position = 'absolute';
+      drawCanvas.style.top = '0';
+      drawCanvas.style.left = '0';
+      drawCanvas.style.zIndex = '5';
+      drawCanvas.style.pointerEvents = 'none';
+      document.body.appendChild(drawCanvas);
+      drawCtx = drawCanvas.getContext('2d');
+      drawCtx.lineCap = 'round';
+      drawCtx.lineJoin = 'round';
+      drawCtx.lineWidth = 8;
+    }
+    initDrawCanvas();
+    addEventListener('resize', () => {
+      drawCanvas.width = innerWidth;
+      drawCanvas.height = innerHeight;
+    });
+
+    function toggleDraw() {
+      drawEnabled = !drawEnabled;
+      btnDraw && setPressed(btnDraw, drawEnabled);
+      // toggle corresponding mobile button if open
+      const mobDraw = controlsMobile.querySelector('[data-act="draw"]');
+      if (mobDraw) setPressed(mobDraw, drawEnabled);
+      drawCanvas.style.pointerEvents = drawEnabled ? 'auto' : 'none';
+      if (!drawEnabled) drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    }
+
+    let hue = 0;
+    drawCanvas.addEventListener('mousedown', e => {
+      if (!drawEnabled) return;
+      drawing = true;
+      drawCtx.beginPath();
+      drawCtx.moveTo(e.clientX, e.clientY);
+    });
+    drawCanvas.addEventListener('mousemove', e => {
+      if (!drawEnabled || !drawing) return;
+      hue = (hue + 2) % 360;
+      drawCtx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      drawCtx.lineTo(e.clientX, e.clientY);
+      drawCtx.stroke();
+    });
+    addEventListener('mouseup', () => {
+      if (drawing) { drawing = false; drawCtx.closePath(); }
+    });
+
+    // Logic
+    function getCurrentAngle() {
+      const v = getComputedStyle(root).getPropertyValue('--angle').trim();
+      return parseFloat(v.endsWith('deg') ? v.slice(0, -3) : v);
+    }
+
+    function stopAll() {
+      state.spinLoop = false;
+      state.spinOnce.active = false;
+      state.pulse = false;
+      state.strobe = false;
+      state.cycle = false;
+      state.meltdown = false;
+      [btnSpinLoop, btnPulse, btnStrobe, btnCycle, btnMeltdown].forEach(b => b && setPressed(b, false));
+      const mobBtns = controlsMobile.querySelectorAll('[data-act][aria-pressed="true"]');
+      mobBtns.forEach(b => setPressed(b, false));
+      setAngle(state.manualAngle);
+      root.style.setProperty('--period', state.basePeriod + 'px');
+      root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)');
       root.style.setProperty('--bgx', '0px');
       root.style.setProperty('--bgy', '0px');
-    }
-  });
-  btnCycle.addEventListener('click', () => {
-    state.cycle = !state.cycle;
-    btnCycle.setAttribute('aria-pressed', String(state.cycle));
-    if (!state.cycle) root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)');
-  });
-  btnMeltdown.addEventListener('click', () => {
-    state.meltdown = !state.meltdown;
-    btnMeltdown.setAttribute('aria-pressed', String(state.meltdown));
-    if (!state.meltdown) {
       root.style.setProperty('--skx', '0deg');
       root.style.setProperty('--sky', '0deg');
       root.style.setProperty('--sc', '1');
+      layersEl.classList.remove('invert');
     }
-  });
-  btnStop.addEventListener('click', () => stopAll());
 
-  function stopAll() {
-    state.spinLoop = false;
-    state.spinOnce.active = false;
-    state.pulse = false;
-    state.strobe = false;
-    state.cycle = false;
-    state.meltdown = false;
-    [btnSpinLoop, btnPulse, btnStrobe, btnCycle, btnMeltdown].forEach(b =>
-      b.setAttribute('aria-pressed', 'false')
-    );
-    setAngle(state.manualAngle);
-    root.style.setProperty('--period', state.basePeriod + 'px');
-    root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)');
-    root.style.setProperty('--bgx', '0px');
-    root.style.setProperty('--bgy', '0px');
-    root.style.setProperty('--skx', '0deg');
-    root.style.setProperty('--sky', '0deg');
-    root.style.setProperty('--sc', '1');
-    layersEl.classList.remove('invert');
-  }
-
-  function getCurrentAngle() {
-    const v = getComputedStyle(root).getPropertyValue('--angle').trim();
-    return parseFloat(v.endsWith('deg') ? v.slice(0, -3) : v);
-  }
-
-  // --- Main RAF ---
-  let last = performance.now();
-  function tick(now) {
-    const dt = (now - last) / 1000;
-    last = now;
-
-    if (state.spinOnce.active) {
-      const p = Math.min(1, (now - state.spinOnce.start) / state.spinOnce.duration);
-      const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-      const a = state.spinOnce.from + (state.spinOnce.to - state.spinOnce.from) * ease;
-      setAngle(a);
-      if (p >= 1) {
-        state.spinOnce.active = false;
-        state.manualAngle = a % 360;
-        angleInput.value = state.manualAngle;
+    // Bind desktop buttons
+    btnSpinOnce.addEventListener('click', () => {
+      state.spinOnce.active = true;
+      state.spinOnce.start = performance.now();
+      state.spinOnce.from = getCurrentAngle();
+      state.spinOnce.to = state.spinOnce.from + 360;
+    });
+    btnSpinLoop.addEventListener('click', () => {
+      state.spinLoop = !state.spinLoop;
+      setPressed(btnSpinLoop, state.spinLoop);
+    });
+    btnPulse.addEventListener('click', () => {
+      state.pulse = !state.pulse;
+      setPressed(btnPulse, state.pulse);
+      if (!state.pulse) root.style.setProperty('--period', state.basePeriod + 'px');
+    });
+    btnStrobe.addEventListener('click', () => {
+      state.strobe = !state.strobe;
+      setPressed(btnStrobe, state.strobe);
+      if (!state.strobe) {
+        layersEl.classList.remove('invert');
+        root.style.setProperty('--bgx', '0px');
+        root.style.setProperty('--bgy', '0px');
       }
-    } else if (state.spinLoop) {
-      const a = getCurrentAngle() + state.spinSpeed * dt;
-      setAngle(a);
-    }
+    });
+    btnCycle.addEventListener('click', () => {
+      state.cycle = !state.cycle;
+      setPressed(btnCycle, state.cycle);
+      if (!state.cycle) root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)');
+    });
+    btnMeltdown.addEventListener('click', () => {
+      state.meltdown = !state.meltdown;
+      setPressed(btnMeltdown, state.meltdown);
+      if (!state.meltdown) {
+        root.style.setProperty('--skx', '0deg');
+        root.style.setProperty('--sky', '0deg');
+        root.style.setProperty('--sc', '1');
+      }
+    });
+    btnStop.addEventListener('click', stopAll);
+    btnDraw.addEventListener('click', toggleDraw);
 
-    if (state.pulse) {
-      const omega = 2 * Math.PI * state.pulseHz;
-      const time = now / 1000;
-      const s = (Math.sin(omega * time) + 1) / 2;
-      const period = state.minPeriod + s * (state.maxPeriod - state.minPeriod);
-      root.style.setProperty('--period', period.toFixed(2) + 'px');
-    }
-
-    if (state.strobe) {
-      const flash = Math.random() < state.strobeHz * dt * 0.5;
-      if (flash) layersEl.classList.toggle('invert');
-      state.jitter = (Math.random() - 0.5) * 2;
-      root.style.setProperty('--bgx', (state.jitter * 6).toFixed(1) + 'px');
-      root.style.setProperty('--bgy', (state.jitter * 6).toFixed(1) + 'px');
-      const a = getCurrentAngle();
-      setAngle(a + (Math.random() - 0.5) * 2);
-    }
-
-    if (state.cycle) {
-      state.hue = (state.hue + state.hueSpeed * dt) % 360;
-      const col = `hsla(${state.hue.toFixed(1)}, 95%, 70%, 0.95)`;
-      root.style.setProperty('--line-color', col);
-    }
-
-    if (state.meltdown) {
-      const tsec = now / 1000;
-      const skx = Math.sin(2 * Math.PI * state.meltHz * tsec) * state.meltAmpSkew;
-      const sky = Math.cos(2 * Math.PI * state.meltHz * tsec * 0.8) * state.meltAmpSkew;
-      const sc = 1 + Math.sin(2 * Math.PI * state.meltHz * tsec * 1.3) * state.meltAmpScale;
-      root.style.setProperty('--skx', skx.toFixed(2) + 'deg');
-      root.style.setProperty('--sky', sky.toFixed(2) + 'deg');
-      root.style.setProperty('--sc', sc.toFixed(3));
-    }
-
-    const img = ctx.createImageData(w, h);
-    const d = img.data;
-    for (let y = 0; y < h; y += 2) {
-      for (let x = 0; x < w; x += 2) {
-        const [r, g, b] = rainbow(x, y, t * 0.02);
-        const idx = (y * w + x) * 4;
-        d[idx] = r; d[idx + 1] = g; d[idx + 2] = b; d[idx + 3] = 255;
+    async function saveComposite() {
+      // Skip on mobile to avoid pain
+      if (isMobile || !html2canvasReady || !window.html2canvas) return;
+      try {
+        controlsDesktop.style.visibility = 'hidden';
+        const off = document.createElement('canvas');
+        off.width = canvas.width;
+        off.height = canvas.height;
+        const offctx = off.getContext('2d');
+        offctx.drawImage(canvas, 0, 0);
+        const layerCanvas = await html2canvas(layersEl, { useCORS: true, backgroundColor: null });
+        offctx.drawImage(layerCanvas, 0, 0);
+        offctx.drawImage(drawCanvas, 0, 0);
+        const link = document.createElement('a');
+        link.download = 'screenshot.png';
+        link.href = off.toDataURL('image/png');
+        link.click();
+      } catch (err) {
+        console.error('Screenshot failed:', err);
+      } finally {
+        controlsDesktop.style.visibility = '';
       }
     }
-    ctx.putImageData(img, 0, 0);
-    t++;
+    btnSave.addEventListener('click', saveComposite);
+
+    // Mobile control delegation
+    controlsMobile.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-act]');
+      if (!b) return;
+      const act = b.getAttribute('data-act');
+      switch (act) {
+        case 'spinOnce':
+          state.spinOnce.active = true;
+          state.spinOnce.start = performance.now();
+          state.spinOnce.from = getCurrentAngle();
+          state.spinOnce.to = state.spinOnce.from + 360;
+          break;
+        case 'spinLoop':
+          state.spinLoop = !state.spinLoop; setPressed(b, state.spinLoop);
+          break;
+        case 'pulse':
+          state.pulse = !state.pulse; setPressed(b, state.pulse);
+          if (!state.pulse) root.style.setProperty('--period', state.basePeriod + 'px');
+          break;
+        case 'strobe':
+          state.strobe = !state.strobe; setPressed(b, state.strobe);
+          if (!state.strobe) {
+            layersEl.classList.remove('invert');
+            root.style.setProperty('--bgx', '0px');
+            root.style.setProperty('--bgy', '0px');
+          }
+          break;
+        case 'cycle':
+          state.cycle = !state.cycle; setPressed(b, state.cycle);
+          if (!state.cycle) root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)');
+          break;
+        case 'meltdown':
+          state.meltdown = !state.meltdown; setPressed(b, state.meltdown);
+          if (!state.meltdown) {
+            root.style.setProperty('--skx', '0deg');
+            root.style.setProperty('--sky', '0deg');
+            root.style.setProperty('--sc', '1');
+          }
+          break;
+        case 'stop':
+          stopAll(); break;
+        case 'draw':
+          toggleDraw(); break;
+        case 'save':
+          // intentionally no-op on mobile
+          break;
+      }
+    });
+
+    // Animation loop with throttle on mobile (drop every other frame)
+    let last = performance.now();
+    let skip = false;
+    function tick(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+
+      if (state.spinOnce.active) {
+        const p = Math.min(1, (now - state.spinOnce.start) / state.spinOnce.duration);
+        const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+        const a = state.spinOnce.from + (state.spinOnce.to - state.spinOnce.from) * ease;
+        setAngle(a);
+        if (p >= 1) {
+          state.spinOnce.active = false;
+          state.manualAngle = a % 360;
+          angleInput.value = state.manualAngle;
+          angleInputM.value = state.manualAngle;
+        }
+      } else if (state.spinLoop) {
+        setAngle(getCurrentAngle() + state.spinSpeed * dt);
+      }
+
+      if (state.pulse) {
+        const omega = 2 * Math.PI * state.pulseHz;
+        const time = now / 1000;
+        const s = (Math.sin(omega * time) + 1) / 2;
+        const period = state.minPeriod + s * (state.maxPeriod - state.minPeriod);
+        root.style.setProperty('--period', period.toFixed(2) + 'px');
+      }
+
+      if (state.strobe) {
+        const flash = Math.random() < state.strobeHz * dt * 0.5;
+        if (flash) layersEl.classList.toggle('invert');
+        root.style.setProperty('--bgx', ((Math.random() - 0.5) * 12).toFixed(1) + 'px');
+        root.style.setProperty('--bgy', ((Math.random() - 0.5) * 12).toFixed(1) + 'px');
+      }
+
+      if (state.cycle) {
+        state.hue = (state.hue + state.hueSpeed * dt) % 360;
+        root.style.setProperty('--line-color', `hsla(${state.hue.toFixed(1)}, 95%, 70%, 0.95)`);
+      }
+
+      if (state.meltdown) {
+        const tsec = now / 1000;
+        const skx = Math.sin(2 * Math.PI * state.meltHz * tsec) * state.meltAmpSkew;
+        const sky = Math.cos(2 * Math.PI * state.meltHz * tsec * 0.8) * state.meltAmpSkew;
+        const sc  = 1 + Math.sin(2 * Math.PI * state.meltHz * tsec * 1.3) * state.meltAmpScale;
+        root.style.setProperty('--skx', skx.toFixed(2) + 'deg');
+        root.style.setProperty('--sky', sky.toFixed(2) + 'deg');
+        root.style.setProperty('--sc', sc.toFixed(3));
+      }
+
+      // Mobile frame skip to keep 60hz UI responsive
+      if (isMobile) {
+        skip = !skip;
+        if (skip) { requestAnimationFrame(tick); return; }
+      }
+
+      const img = ctx.createImageData(w, h);
+      const d = img.data;
+      for (let y = 0; y < h; y += 2) {
+        for (let x = 0; x < w; x += 2) {
+          const [r, g, b] = rainbow(x, y, t * 0.02);
+          const idx = (y * w + x) * 4;
+          d[idx] = r; d[idx + 1] = g; d[idx + 2] = b; d[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+      t++;
+      requestAnimationFrame(tick);
+    }
     requestAnimationFrame(tick);
-  }
-
-  // --- Screenshot Composite ---
-  const controls = document.querySelector('.controls');
-  async function saveComposite() {
-    try {
-      controls.style.display = 'none';
-      await new Promise(r => setTimeout(r, 100));
-
-      const lava = document.getElementById('lava');
-      const layers = document.getElementById('layerRoot');
-
-      const off = document.createElement('canvas');
-      off.width = lava.width;
-      off.height = lava.height;
-      const offctx = off.getContext('2d');
-      offctx.drawImage(lava, 0, 0);
-
-      const layerCanvas = await html2canvas(layers, { useCORS: true, backgroundColor: null });
-      offctx.drawImage(layerCanvas, 0, 0);
-
-      // add drawn doodles too
-      offctx.drawImage(drawCanvas, 0, 0);
-
-      const link = document.createElement('a');
-      link.download = 'screenshot.png';
-      link.href = off.toDataURL('image/png');
-      link.click();
-
-      controls.style.display = '';
-    } catch (err) {
-      console.error('Screenshot failed:', err);
-      controls.style.display = '';
-    }
-  }
-
-  btnSave.addEventListener('click', saveComposite);
-
-  requestAnimationFrame(tick);
   </script>
 </body>
 </html>
