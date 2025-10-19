@@ -814,23 +814,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   function handleCommand(cmd) {
     const body = document.body;
     popup.innerHTML = "";
+
     switch (cmd) {
       case "/help":
         popup.innerHTML = `
           <div class="promptline">Available Commands:</div>
-          <div class="search-result">/help - List all commands</div>
-          <div class="search-result">/revive - Revive the internet</div>
-          <div class="search-result">/die - Kill the lights</div>
-          <div class="search-result">/lightsout - Fade to black</div>
-          <div class="search-result">/whisper - Make everything quiet and dim</div>
+          <div class="search-result command" data-cmd="/help">/help - List all commands</div>
+          <div class="search-result command" data-cmd="/revive">/revive - Revive the internet</div>
+          <div class="search-result command" data-cmd="/die">/die - Kill the lights</div>
+          <div class="search-result command" data-cmd="/lightsout">/lightsout - Fade to black</div>
+          <div class="search-result command" data-cmd="/whisper">/whisper - Make everything quiet and dim</div>
         `;
         popup.style.display = "block";
+        popup.querySelectorAll(".command").forEach(el => {
+          el.addEventListener("click", () => handleCommand(el.dataset.cmd));
+        });
         break;
+
       case "/die":
       case "/lightsout":
         document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "none");
         body.style.background = "#000";
         break;
+
       case "/revive":
         const flash = document.createElement("div");
         flash.style.position = "fixed";
@@ -845,10 +851,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => flash.remove(), 2000);
         document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "");
         break;
+
       case "/whisper":
         document.querySelectorAll("*").forEach(el => el.style.transition = "opacity 1s ease");
         document.querySelectorAll("*").forEach(el => el.style.opacity = 0.2);
         break;
+
       default:
         popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
         popup.style.display = "block";
@@ -858,8 +866,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   // === SEARCH RESULTS ===
   function renderResults(q) {
     const query = q.toLowerCase();
-
-    // Don't execute command immediately; show preview
     if (query.startsWith("/")) {
       popup.innerHTML = `<div class="search-result">${query} (press Enter to run)</div>`;
       popup.style.display = "block";
@@ -882,7 +888,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       : `<div class="no-results">No matches.</div>`;
 
     popup.style.display = "block";
-
     popup.querySelectorAll(".search-result").forEach(el =>
       el.addEventListener("click", () => window.open(el.dataset.url, "_blank"))
     );
@@ -901,7 +906,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderResults(val);
     });
 
-    // Press Enter to execute commands
     searchInput.addEventListener("keydown", e => {
       if (e.key === "Enter") {
         const val = searchInput.value.trim();
