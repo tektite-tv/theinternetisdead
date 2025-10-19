@@ -686,23 +686,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allPosts = [], allVideos = [], INDEX = [];
   let visiblePosts = 3, visibleVideos = 3;
 
-  // === LOAD POSTS & MARKDOWN ===
+  console.log("Initializing site...");
+
   async function loadPosts() {
     try {
       const res = await fetch("/_posts/index.json");
+      if (!res.ok) throw new Error("Posts index not found");
       allPosts = await res.json();
       allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
       renderPosts();
+      console.log(`Loaded ${allPosts.length} posts`);
     } catch (err) {
+      console.warn("Failed to load posts:", err);
       postsContainer.innerHTML = `<p style="color:red;">Error loading posts: ${err.message}</p>`;
     }
   }
 
   async function renderPosts() {
-    postsContainer.innerHTML = `
-      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-      <h2>Latest Blog Posts</h2>
-    `;
+    postsContainer.innerHTML = `<h1 style="color:#00ff99;">🌀 The Daily Spiral</h1><h2>Latest Blog Posts</h2>`;
     const displayed = allPosts.slice(0, visiblePosts);
     for (const p of displayed) {
       const wrapper = document.createElement("div");
@@ -710,13 +711,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       wrapper.innerHTML = `
         <h3>${p.title}</h3>
         <small>${new Date(p.date).toLocaleString()}</small>
-        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy">` : ""}
+        ${p.image ? `<img src="${p.image}" alt="${p.title}">` : ""}
         <div class="content"><em>Loading...</em></div>`;
       postsContainer.appendChild(wrapper);
       try {
         let text = await (await fetch(p.file)).text();
-        if (text.startsWith('---')) {
-          const end = text.indexOf('---', 3);
+        if (text.startsWith("---")) {
+          const end = text.indexOf("---", 3);
           if (end !== -1) text = text.slice(end + 3);
         }
         wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
@@ -724,24 +725,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
       }
     }
-    if (visiblePosts < allPosts.length) {
-      const btn = document.createElement("button");
-      btn.className = "load-more";
-      btn.textContent = "Read More";
-      btn.onclick = () => { visiblePosts += 3; renderPosts(); };
-      postsContainer.appendChild(btn);
-    }
   }
 
-  // === LOAD VIDEOS ===
   async function loadVideos() {
     try {
-      const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-      const rssRes = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
-      const rssData = await rssRes.json();
-      allVideos = rssData.items || [];
+      const feed = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed)}`);
+      const data = await res.json();
+      allVideos = data.items || [];
       renderVideos();
+      console.log(`Loaded ${allVideos.length} videos`);
     } catch (err) {
+      console.warn("Failed to load videos:", err);
       youtubeContainer.innerHTML = `<p style="color:red;">Error loading videos: ${err.message}</p>`;
     }
   }
@@ -758,85 +753,51 @@ document.addEventListener("DOMContentLoaded", async () => {
           <a href="${v.link}" target="_blank">${v.title}</a>
         </div>`;
       }).join("")}
-      ${visibleVideos < allVideos.length ? `<button id="loadMoreVideos" class="load-more">Watch More</button>` : ""}
-      <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" target="_blank" class="youtube-btn">Watch on YouTube</a>
     `;
-    const btn = document.getElementById("loadMoreVideos");
-    if (btn) btn.addEventListener("click", () => { visibleVideos += 3; renderVideos(); });
   }
 
-  // === BUILD SEARCH INDEX ===
   async function buildIndex() {
+    console.log("Building search index...");
     const postDocs = await Promise.all(allPosts.map(async p => {
       try {
         let txt = await (await fetch(p.file)).text();
-        if (txt.startsWith('---')) {
-          const end = txt.indexOf('---', 3);
+        if (txt.startsWith("---")) {
+          const end = txt.indexOf("---", 3);
           if (end !== -1) txt = txt.slice(end + 3);
         }
         const plain = txt.replace(/[#>*_`\[\]\(\)!-]/g, " ").replace(/\s+/g, " ").trim();
         return { kind: "post", title: p.title, url: p.file.replace(".md", ".html"), date: p.date, snippet: plain.slice(0, 200) };
       } catch {
-        return { kind: "post", title: p.title, url: p.file.replace(".md", ".html"), date: p.date, snippet: "" };
+        return { kind: "post", title: p.title, url: p.file, date: p.date, snippet: "" };
       }
     }));
     const videoDocs = allVideos.map(v => ({
       kind: "video", title: v.title, url: v.link, date: v.pubDate,
       snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
     }));
-    INDEX = [...postDocs, ...videoDocs];
+    INDEX = [...postDocs, ...videoDocs, { kind: "test", title: "Search Works", url: "#", date: new Date(), snippet: "If you see this, the popup works." }];
+    console.log("Index built:", INDEX.length, "entries");
   }
 
-  // === COMMAND HANDLER ===
   function handleCommand(cmd) {
-    const body = document.body;
     popup.innerHTML = "";
-    switch (cmd) {
-      case "/help":
-        popup.innerHTML = `
-          <div class="promptline">Available Commands:</div>
-          <div class="search-result">/help - List all commands</div>
-          <div class="search-result">/revive - Revive the internet</div>
-          <div class="search-result">/die - Kill the lights</div>
-          <div class="search-result">/lightsout - Fade to black</div>
-          <div class="search-result">/whisper - Make everything quiet and dim</div>
-        `;
-        popup.style.display = "block";
-        break;
-      case "/die":
-      case "/lightsout":
-        document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "none");
-        body.style.background = "#000";
-        break;
-      case "/revive":
-        const flash = document.createElement("div");
-        flash.style.position = "fixed";
-        flash.style.inset = 0;
-        flash.style.background = "#fff";
-        flash.style.zIndex = 99999;
-        flash.style.animation = "reviveFlash 2s forwards";
-        document.body.appendChild(flash);
-        const style = document.createElement("style");
-        style.textContent = "@keyframes reviveFlash{0%{opacity:1;}100%{opacity:0;display:none;}}";
-        document.head.appendChild(style);
-        setTimeout(() => flash.remove(), 2000);
-        document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "");
-        break;
-      case "/whisper":
-        document.querySelectorAll("*").forEach(el => el.style.transition = "opacity 1s ease");
-        document.querySelectorAll("*").forEach(el => el.style.opacity = 0.2);
-        break;
-      default:
-        popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
-        popup.style.display = "block";
+    if (cmd === "/help") {
+      popup.innerHTML = `
+        <div class="promptline">Commands:</div>
+        <div class="search-result">/help - show this list</div>
+        <div class="search-result">/revive - revive the internet</div>
+        <div class="search-result">/die - kill the lights</div>
+      `;
+      popup.style.display = "block";
+      return;
     }
+    popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
+    popup.style.display = "block";
   }
 
-  // === SEARCH BAR ===
   function renderResults(q) {
     const query = q.toLowerCase();
     if (query.startsWith("/")) return handleCommand(query);
-
     const hits = INDEX.filter(d =>
       d.title.toLowerCase().includes(query) ||
       d.snippet.toLowerCase().includes(query)
@@ -856,10 +817,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
+  // SEARCH LISTENERS
   searchInput.addEventListener("input", () => {
     const val = searchInput.value.trim();
-    popup.style.display = val ? "block" : "none";
-    if (val) renderResults(val);
+    if (!val) return popup.style.display = "none";
+    renderResults(val);
   });
   searchBtn.addEventListener("click", () => {
     const val = searchInput.value.trim();
@@ -869,28 +831,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!popup.contains(e.target) && !searchInput.contains(e.target)) popup.style.display = "none";
   });
 
-  // === CONTACT + MENU ===
+  // CONTACT POPUP
   if (submitBtn) submitBtn.addEventListener("click", e => {
     e.preventDefault(); contactPopup.style.display = "flex";
   });
   if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
-  contactPopup.addEventListener("click", e => {
-    if (e.target === contactPopup) contactPopup.style.display = "none";
-  });
+
+  // MENU DROPDOWN
   if (menuBtn && menuPopup) {
     menuBtn.addEventListener("click", e => {
-      e.stopPropagation(); menuPopup.classList.toggle("visible");
+      e.stopPropagation();
+      menuPopup.classList.toggle("visible");
     });
     document.addEventListener("click", e => {
-      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
-        menuPopup.classList.remove("visible");
+      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) menuPopup.classList.remove("visible");
     });
   }
 
-  // === INIT ===
   await loadPosts();
   await loadVideos();
   await buildIndex();
+  console.log("Everything loaded.");
 });
 </script>
   
