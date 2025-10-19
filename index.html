@@ -692,8 +692,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     popup.innerHTML = `
       <div class="promptline">Search the Archives</div>
       <div class="search-result">
-        Type to search posts/videos, or try commands: 
-        <b>/help</b> <b>/revive</b> <b>/die</b> <b>/lightsout</b> <b>/whisper</b>
+        Type to search posts/videos, or try commands: <b>/help</b>
       </div>
     `;
   }
@@ -822,8 +821,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="search-result command" data-cmd="/help">/help - List all commands</div>
           <div class="search-result command" data-cmd="/revive">/revive - Revive the internet</div>
           <div class="search-result command" data-cmd="/die">/die - Kill the lights</div>
-          <div class="search-result command" data-cmd="/lightsout">/lightsout - Fade to black</div>
-          <div class="search-result command" data-cmd="/whisper">/whisper - Make everything quiet and dim</div>
         `;
         popup.style.display = "block";
         popup.querySelectorAll(".command").forEach(el => {
@@ -832,7 +829,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         break;
 
       case "/die":
-      case "/lightsout":
         document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "none");
         body.style.background = "#000";
         break;
@@ -850,11 +846,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.head.appendChild(style);
         setTimeout(() => flash.remove(), 2000);
         document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "");
-        break;
-
-      case "/whisper":
-        document.querySelectorAll("*").forEach(el => el.style.transition = "opacity 1s ease");
-        document.querySelectorAll("*").forEach(el => el.style.opacity = 0.2);
         break;
 
       default:
