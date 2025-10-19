@@ -672,7 +672,7 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-  // === DOM SHORTCUTS (unchanged selectors) ===
+  // === DOM SHORTCUTS ===
   const postsContainer = document.getElementById("posts");
   const youtubeContainer = document.getElementById("youtube");
   const searchInput = document.querySelector(".search-input");
@@ -687,12 +687,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allPosts = [], allVideos = [], INDEX = [];
   let visiblePosts = 3, visibleVideos = 3;
 
-  // === UTIL: Popup control that won't wreck anything ===
+  // === POPUP HELPERS ===
   function renderPlaceholder() {
     popup.innerHTML = `
       <div class="promptline">Search the Archives</div>
       <div class="search-result">
-        Type to search posts and videos, or try commands: <b>/help</b>, <b>/revive</b>, <b>/die</b>, <b>/lightsout</b>, <b>/whisper</b>
+        Type to search posts/videos, or try commands: 
+        <b>/help</b> <b>/revive</b> <b>/die</b> <b>/lightsout</b> <b>/whisper</b>
       </div>
     `;
   }
@@ -706,7 +707,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     popup.style.display = "none";
   }
 
-  // === LOAD POSTS & MARKDOWN ===
+  // === LOAD POSTS ===
   async function loadPosts() {
     try {
       const res = await fetch("/_posts/index.json");
@@ -745,7 +746,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
       }
     }
-    // load more button
     if (visiblePosts < allPosts.length) {
       const btn = document.createElement("button");
       btn.className = "load-more";
@@ -810,7 +810,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     INDEX = [...postDocs, ...videoDocs];
   }
 
-  // === COMMAND HANDLER (same commands, just displayed reliably) ===
+  // === COMMAND HANDLER ===
   function handleCommand(cmd) {
     const body = document.body;
     popup.innerHTML = "";
@@ -855,10 +855,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // === SEARCH RESULTS RENDERER ===
+  // === SEARCH RESULTS ===
   function renderResults(q) {
     const query = q.toLowerCase();
-    if (query.startsWith("/")) return handleCommand(query);
+
+    // Don't execute command immediately; show preview
+    if (query.startsWith("/")) {
+      popup.innerHTML = `<div class="search-result">${query} (press Enter to run)</div>`;
+      popup.style.display = "block";
+      return;
+    }
 
     const hits = INDEX.filter(d =>
       d.title.toLowerCase().includes(query) ||
@@ -882,21 +888,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  // === SEARCH BAR BEHAVIOR: open on click/focus, placeholder when empty ===
+  // === SEARCH BEHAVIOR ===
   if (searchInput && popup) {
-    const showOnInteract = () => { openPopup(); /* placeholder appears if empty */ };
+    const showOnInteract = () => openPopup();
     searchInput.addEventListener("focus", showOnInteract);
     searchInput.addEventListener("click", showOnInteract);
     if (searchBtn) searchBtn.addEventListener("click", showOnInteract);
 
-    // live typing
     searchInput.addEventListener("input", () => {
       const val = searchInput.value.trim();
       if (!val) { openPopup(); renderPlaceholder(); return; }
       renderResults(val);
     });
 
-    // close when clicking outside
+    // Press Enter to execute commands
+    searchInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        const val = searchInput.value.trim();
+        if (val.startsWith("/")) handleCommand(val.toLowerCase());
+        else if (val) renderResults(val);
+      }
+    });
+
     document.addEventListener("click", e => {
       const inside = popup.contains(e.target) || searchInput.contains(e.target) || (searchBtn && searchBtn.contains(e.target));
       if (!inside) closePopup();
@@ -923,16 +936,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // === INIT: content first, then index (so search has data when you type) ===
+  // === INIT ===
   await loadPosts();
   await loadVideos();
   await buildIndex();
-
-  // Open popup on page load if the input already has value (edge case)
-  if (searchInput && searchInput.value.trim()) {
-    openPopup();
-    renderResults(searchInput.value.trim());
-  }
 });
 </script>
   
