@@ -731,7 +731,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       wrapper.innerHTML = `
         <h3>${p.title}</h3>
         <small>${new Date(p.date).toLocaleString()}</small>
-        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy">` : ""}
+        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
         <div class="content"><em>Loading...</em></div>`;
       postsContainer.appendChild(wrapper);
       try {
@@ -753,6 +753,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.onclick = () => { visiblePosts += 3; renderPosts(); };
       postsContainer.appendChild(btn);
     }
+
+    // === IMAGE LIGHTBOX ===
+    const allImgs = postsContainer.querySelectorAll("img");
+    allImgs.forEach(img => {
+      img.addEventListener("click", () => {
+        const overlay = document.createElement("div");
+        overlay.id = "lightbox-overlay";
+        overlay.style.cssText = `
+          position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 99999;
+        `;
+        overlay.innerHTML = `
+          <div style="position: relative; max-width: 90%; max-height: 90%;">
+            <img src="${img.src}" style="max-width:100%; max-height:100%; border-radius: 8px; box-shadow:0 0 30px #000;">
+            <a href="${img.src}" download style="
+              position:absolute; bottom:10px; left:10px; color:white;
+              background:#0008; padding:6px 12px; border-radius:6px; text-decoration:none;">
+              Download
+            </a>
+            <button id="close-lightbox" style="
+              position:absolute; top:10px; right:10px;
+              background:#000c; color:white; border:none;
+              font-size:24px; cursor:pointer; border-radius:4px; line-height:20px;">
+              ×
+            </button>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        const close = () => overlay.remove();
+        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+        document.getElementById("close-lightbox").addEventListener("click", close);
+        document.addEventListener("keydown", e => { if (e.key === "Escape") close(); }, { once: true });
+      });
+    });
   }
 
   // === LOAD VIDEOS ===
