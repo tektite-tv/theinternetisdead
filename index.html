@@ -928,7 +928,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const ctx = canvas.getContext("2d");
         let stars = [];
         let w, h, cx, cy;
-        let speed = 0.05;
+        let baseSpeed = 0.02;
+        let speed = baseSpeed;
+        let hue = 120;
         let count = 600;
 
         function resize() {
@@ -945,10 +947,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.addEventListener("resize", resize);
         resize();
 
+        function updateFromPointer(x, y) {
+          const nx = x / w;
+          const ny = y / h;
+          speed = baseSpeed + nx * 0.1;
+          hue = (ny * 360) % 360;
+        }
+
+        document.addEventListener("mousemove", e => updateFromPointer(e.clientX, e.clientY), { passive: true });
+        document.addEventListener("touchmove", e => {
+          if (e.touches[0]) updateFromPointer(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
         function animate() {
-          ctx.fillStyle = "rgba(0,0,0,0.4)";
+          ctx.fillStyle = "rgba(0,0,0,0.35)";
           ctx.fillRect(0, 0, w, h);
-          ctx.fillStyle = "#0f0";
+          ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+
           for (let s of stars) {
             s.z -= speed * w;
             if (s.z <= 0) s.z = w;
@@ -960,8 +975,10 @@ document.addEventListener("DOMContentLoaded", async () => {
               ctx.fillRect(px, py, size, size);
             }
           }
+
           requestAnimationFrame(animate);
         }
+
         animate();
         popup.style.display = "none";
         break;
