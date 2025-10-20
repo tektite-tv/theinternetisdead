@@ -537,37 +537,91 @@
 }
 
 /* LIGHTBOX ADDON ------------------------------------------------ */
-  #img-lightbox{
-    position:fixed; inset:0; display:none;
-    align-items:center; justify-content:center;
-    background:rgba(0,0,0,0.9); z-index:100000;
-  }
-  #img-lightbox.visible{ display:flex; }
-  #img-lightbox .inner{
-    position:relative; max-width:min(92vw,1400px); max-height:90vh;
-    display:flex; flex-direction:column; gap:12px;
-    padding:8px;
-  }
-  #img-lightbox img{
-    max-width:100%; max-height:80vh;
-    border-radius:8px; border:1px solid #0f0; box-shadow:0 0 24px #0f06;
-  }
-  #img-lightbox .toolbar{
-    display:flex; align-items:center; justify-content:space-between;
-    font-family:"Courier New", monospace; color:#0f0;
-  }
-  #img-lightbox .download-btn, #img-lightbox .close-x{
-    background:rgba(0,0,0,0.85); color:#0f0; border:2px solid #0f0;
-    border-radius:6px; padding:8px 12px; cursor:pointer; text-decoration:none;
-    transition:all .2s ease-in-out;
-  }
-  #img-lightbox .download-btn:hover, #img-lightbox .close-x:hover{
-    background:#0f0; color:#000; box-shadow:0 0 18px rgba(0,255,0,.6);
-  }
-  #img-lightbox .close-x{
-    position:absolute; right:-10px; top:-10px;
-    width:36px; height:36px; border-radius:999px; display:flex; align-items:center; justify-content:center;
-  }
+#img-lightbox,
+#post-lightbox {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 100000;
+}
+#img-lightbox.visible,
+#post-lightbox.visible {
+  display: flex;
+}
+#img-lightbox .inner,
+#post-lightbox .inner {
+  position: relative;
+  max-width: min(92vw, 1400px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #0f0;
+  background: #000;
+  box-shadow: 0 0 24px #0f06;
+  color: #0f0;
+  font-family: "Courier New", monospace;
+  overflow-y: auto;
+}
+#img-lightbox img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 8px;
+  border: 1px solid #0f0;
+  box-shadow: 0 0 24px #0f06;
+}
+#img-lightbox .toolbar,
+#post-lightbox .toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: "Courier New", monospace;
+  color: #0f0;
+}
+#img-lightbox .download-btn,
+#img-lightbox .close-x,
+#post-lightbox .close-x {
+  background: rgba(0, 0, 0, 0.85);
+  color: #0f0;
+  border: 2px solid #0f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+}
+#img-lightbox .download-btn:hover,
+#img-lightbox .close-x:hover,
+#post-lightbox .close-x:hover {
+  background: #0f0;
+  color: #000;
+  box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
+}
+#img-lightbox .close-x,
+#post-lightbox .close-x {
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#post-lightbox .post-content {
+  line-height: 1.6;
+  color: #0f0;
+}
+#post-lightbox .title-bar {
+  font-size: 1.2em;
+  font-weight: bold;
+}
     
 @media (max-width: 768px) {
   #main-content {
@@ -672,7 +726,6 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-  // === DOM SHORTCUTS ===
   const postsContainer = document.getElementById("posts");
   const youtubeContainer = document.getElementById("youtube");
   const searchInput = document.querySelector(".search-input");
@@ -720,82 +773,78 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function renderPosts() {
-  postsContainer.innerHTML = `
-    <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-    <h2>Latest Blog Posts</h2>
-  `;
-  const displayed = allPosts.slice(0, visiblePosts);
-  for (const p of displayed) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "post";
-    wrapper.innerHTML = `
-      <h3>${p.title}</h3>
-      <small>${new Date(p.date).toLocaleString()}</small>
-      ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
-      <div class="content"><em>Loading...</em></div>`;
-    postsContainer.appendChild(wrapper);
-    try {
-      let text = await (await fetch(p.file)).text();
-      if (text.startsWith('---')) {
-        const end = text.indexOf('---', 3);
-        if (end !== -1) text = text.slice(end + 3);
-      }
-      wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
-    } catch {
-      wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
-    }
-  }
-
-  if (visiblePosts < allPosts.length) {
-    const btn = document.createElement("button");
-    btn.className = "load-more";
-    btn.id = "loadMorePosts";
-    btn.textContent = "Read More";
-    btn.onclick = () => { visiblePosts += 3; renderPosts(); };
-    postsContainer.appendChild(btn);
-  }
-
-  // === USE EXISTING GREEN LIGHTBOX ===
-  // create lightbox element if it doesn't exist yet
-  if (!document.getElementById("img-lightbox")) {
-    const box = document.createElement("div");
-    box.id = "img-lightbox";
-    box.innerHTML = `
-      <div class="inner">
-        <div class="toolbar">
-          <a class="download-btn" target="_blank" download>Download</a>
-          <div class="close-x">×</div>
-        </div>
-        <img src="" alt="Expanded image">
-      </div>
+    postsContainer.innerHTML = `
+      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
+      <h2>Latest Blog Posts</h2>
     `;
-    document.body.appendChild(box);
-  }
+    const displayed = allPosts.slice(0, visiblePosts);
+    for (const p of displayed) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "post";
+      wrapper.innerHTML = `
+        <h3>${p.title}</h3>
+        <small>${new Date(p.date).toLocaleString()}</small>
+        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
+        <div class="content"><em>Loading...</em></div>`;
+      postsContainer.appendChild(wrapper);
+      try {
+        let text = await (await fetch(p.file)).text();
+        if (text.startsWith('---')) {
+          const end = text.indexOf('---', 3);
+          if (end !== -1) text = text.slice(end + 3);
+        }
+        wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
+      } catch {
+        wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
+      }
+    }
+    if (visiblePosts < allPosts.length) {
+      const btn = document.createElement("button");
+      btn.className = "load-more";
+      btn.id = "loadMorePosts";
+      btn.textContent = "Read More";
+      btn.onclick = () => { visiblePosts += 3; renderPosts(); };
+      postsContainer.appendChild(btn);
+    }
 
-  const lightbox = document.getElementById("img-lightbox");
-  const lightImg = lightbox.querySelector("img");
-  const dlBtn = lightbox.querySelector(".download-btn");
-  const closeBtn = lightbox.querySelector(".close-x");
+    // === IMAGE LIGHTBOX ===
+    if (!document.getElementById("img-lightbox")) {
+      const box = document.createElement("div");
+      box.id = "img-lightbox";
+      box.innerHTML = `
+        <div class="inner">
+          <div class="toolbar">
+            <a class="download-btn" target="_blank" download>Download</a>
+            <div class="close-x">×</div>
+          </div>
+          <img src="" alt="Expanded image">
+        </div>
+      `;
+      document.body.appendChild(box);
+    }
 
-  // click to open
-  postsContainer.querySelectorAll("img").forEach(img => {
-    img.addEventListener("click", () => {
-      lightImg.src = img.src;
-      dlBtn.href = img.src;
-      lightbox.classList.add("visible");
+    const lightbox = document.getElementById("img-lightbox");
+    const lightImg = lightbox.querySelector("img");
+    const dlBtn = lightbox.querySelector(".download-btn");
+    const closeBtn = lightbox.querySelector(".close-x");
+
+    postsContainer.querySelectorAll("img").forEach(img => {
+      img.addEventListener("click", () => {
+        lightImg.src = img.src;
+        dlBtn.href = img.src;
+        lightbox.classList.add("visible");
+      });
     });
-  });
 
-  // close behavior
-  const closeLightbox = () => lightbox.classList.remove("visible");
-  closeBtn.addEventListener("click", closeLightbox);
-  lightbox.addEventListener("click", e => {
-    if (e.target === lightbox) closeLightbox();
-  });
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape") closeLightbox();
-  });
-}
+    const closeLightbox = () => lightbox.classList.remove("visible");
+    closeBtn.addEventListener("click", closeLightbox);
+    lightbox.addEventListener("click", e => {
+      if (e.target === lightbox) closeLightbox();
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") closeLightbox();
+    });
+  }
 
   // === LOAD VIDEOS ===
   async function loadVideos() {
@@ -869,12 +918,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           el.addEventListener("click", () => handleCommand(el.dataset.cmd));
         });
         break;
-
       case "/die":
         document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "none");
         body.style.background = "#000";
         break;
-
       case "/revive":
         const flash = document.createElement("div");
         flash.style.position = "fixed";
@@ -889,7 +936,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => flash.remove(), 2000);
         document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "");
         break;
-
       default:
         popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
         popup.style.display = "block";
@@ -912,7 +958,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     popup.innerHTML = hits.length
       ? hits.map(d => `
-        <div class="search-result" data-url="${d.url}">
+        <div class="search-result" data-kind="${d.kind}" data-url="${d.url}">
           <span class="kind">[${d.kind}]</span>
           <span class="title">${d.title}</span>
           <div class="meta">${new Date(d.date).toLocaleString()}</div>
@@ -921,9 +967,64 @@ document.addEventListener("DOMContentLoaded", async () => {
       : `<div class="no-results">No matches.</div>`;
 
     popup.style.display = "block";
-    popup.querySelectorAll(".search-result").forEach(el =>
-      el.addEventListener("click", () => window.open(el.dataset.url, "_blank"))
-    );
+
+    popup.querySelectorAll(".search-result").forEach(el => {
+      el.addEventListener("click", async () => {
+        const kind = el.dataset.kind;
+        const url = el.dataset.url;
+
+        if (kind === "video") {
+          window.open(url, "_blank");
+          return;
+        }
+
+        // === POST LIGHTBOX ===
+        let postText = "";
+        try {
+          let txt = await (await fetch(url.replace(".html", ".md"))).text();
+          if (txt.startsWith('---')) {
+            const end = txt.indexOf('---', 3);
+            if (end !== -1) txt = txt.slice(end + 3);
+          }
+          postText = marked.parse(txt.trim());
+        } catch {
+          postText = "<p style='color:red;'>Error loading post.</p>";
+        }
+
+        if (!document.getElementById("post-lightbox")) {
+          const postBox = document.createElement("div");
+          postBox.id = "post-lightbox";
+          postBox.innerHTML = `
+            <div class="inner">
+              <div class="toolbar">
+                <div class="title-bar"></div>
+                <div class="close-x">×</div>
+              </div>
+              <div class="post-content"></div>
+            </div>
+          `;
+          document.body.appendChild(postBox);
+        }
+
+        const postBox = document.getElementById("post-lightbox");
+        const titleBar = postBox.querySelector(".title-bar");
+        const contentDiv = postBox.querySelector(".post-content");
+        const closeBtn = postBox.querySelector(".close-x");
+
+        titleBar.textContent = el.querySelector(".title").textContent;
+        contentDiv.innerHTML = postText;
+        postBox.classList.add("visible");
+
+        const closePostBox = () => postBox.classList.remove("visible");
+        closeBtn.addEventListener("click", closePostBox);
+        postBox.addEventListener("click", e => {
+          if (e.target === postBox) closePostBox();
+        });
+        document.addEventListener("keydown", e => {
+          if (e.key === "Escape") closePostBox();
+        }, { once: true });
+      });
+    });
   }
 
   // === SEARCH BEHAVIOR ===
