@@ -7,180 +7,579 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="icon" type="image/png" href="/images/face.png">
   <style>
-/* === GLOBAL RESET === */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Courier New", monospace;
-}
-html, body {
-  height: 100%;
-  background: #000;
-  color: #ddd;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #0f0 #000;
-}
-a {
-  color: inherit;
-  text-decoration: none;
-}
-body::-webkit-scrollbar {
-  width: 8px;
-}
-body::-webkit-scrollbar-thumb {
-  background: #0f0;
-  border-radius: 4px;
-}
-body::-webkit-scrollbar-track {
-  background: #000;
-}
+  /* GLOBAL RESET AND BASE --------------------------------- */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Courier New", monospace;
+  }
 
-/* === HEADER === */
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #1a0033;
-  color: #fff;
-  padding: 16px 32px;
-  border-bottom: 3px solid #cc181e;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-.left-section, .right-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.menu {
-  cursor: pointer;
-  font-size: 26px;
-  font-weight: bold;
-  background: none;
-  border: none;
-  color: #fff;
-  padding: 4px 0;
-}
-.logo {
-  height: 36px;
-  width: auto;
-  display: block;
-}
-.search-bar {
-  flex: 1;
-  max-width: 600px;
-  display: flex;
-  align-items: center;
-  margin: 0 24px;
-  position: relative;
-}
-.search-bar input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #444;
-  border-right: none;
-  background: #000;
-  color: #fff;
-  font-size: 14px;
-}
-.search-bar button {
-  padding: 8px 16px;
-  border: 1px solid #444;
-  background: #222;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.search-bar button:hover {
-  background: #333;
-}
+  html, body {
+    height: 100%;
+    background-color: #000;
+    color: #ddd;
+    overflow-y: auto;
+  }
 
-/* === BUTTONS === */
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* HEADER / TASKBAR -------------------------------------- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #1a0033;
+    color: #fff;
+    padding: 16px 32px;
+    border-bottom: 3px solid #cc181e;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* SUBMIT BUTTON ------------------------------------------- */
 .submit-btn {
+  display: inline-block;
   padding: 8px 20px;
-  background: rgba(0,0,0,.85);
+  background: rgba(0, 0, 0, 0.85);
   border: 2px solid #0f0;
   color: #0f0;
+  font-family: "Courier New", monospace;
   font-size: 14px;
   border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  transition: .25s;
-  box-shadow: 0 0 8px rgba(0,255,0,.3);
+  text-decoration: none;
+  transition: all 0.25s ease-in-out;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
 }
+
 .submit-btn:hover {
   background: #0f0;
   color: #000;
-  box-shadow: 0 0 18px rgba(0,255,0,.6);
+  box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
   transform: scale(1.05);
 }
 
-/* === MAIN LAYOUT === */
-main {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 24px;
-  padding: 32px;
-  background: #000;
-  align-items: start;
-  position: relative;
-  overflow: hidden;
+  .left-section,
+  .right-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .menu {
+    cursor: pointer;
+    font-size: 26px;
+    font-weight: bold;
+    background: none;
+    border: none;
+    color: #fff;
+    padding: 4px 0;
+  }
+
+  .logo {
+    height: 36px;
+    width: auto;
+    display: block;
+  }
+
+  .search-bar {
+    flex: 1;
+    max-width: 600px;
+    display: flex;
+    align-items: center;
+    margin: 0 24px;
+  }
+
+  .search-bar input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #444;
+    border-right: none;
+    background: #000;
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .search-bar button {
+    padding: 8px 16px;
+    border: 1px solid #444;
+    background-color: #222;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .search-bar button:hover {
+    background-color: #333;
+  }
+
+  .login-btn {
+    background: #cc181e;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .login-btn:hover {
+    background: #ff4444;
+  }
+
+  /* MAIN CONTENT LAYOUT ----------------------------------- */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 32px;
+    background: #000;
+    align-items: start;
+    position: relative;   /* added for scanline layer */
+    overflow: hidden;     /* added for scanline layer */
+  }
+
+  /* DIAGONAL MOVING SCANLINES BEHIND COLUMNS (added) */
+  main::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      135deg,
+      rgba(0, 255, 153, 0.18) 0px,
+      rgba(0, 255, 153, 0.18) 3px,
+      rgba(0, 255, 153, 0.02) 3px,
+      rgba(0, 255, 153, 0.02) 12px
+    );
+    animation: scan-drift 60s linear infinite; /* slow, you liked the seam */
+    pointer-events: none;
+    z-index: 0;
+    filter: brightness(1.2);
+  }
+
+  @keyframes scan-drift {
+    from { background-position: 0 0; }
+    to   { background-position: 600px 600px; }
+  }
+
+  .column {
+    background: #0a0a0a;
+    padding: 20px;
+    border: 1px solid #222;
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+    overflow: visible;
+    position: relative;  /* ensure content is above scanlines */
+    z-index: 1;          /* ensure content is above scanlines */
+  }
+
+  h1 {
+    font-size: 1.8em;
+    font-weight: bold;
+    text-align: center;
+    text-shadow: 0 0 6px #fff2, 0 0 12px #0ff4;
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    text-align: center;
+    color: #888;
+    font-weight: normal;
+    margin-bottom: 20px;
+  }
+
+  /* POSTS ------------------------------------------------- */
+  .post {
+    margin-bottom: 28px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed #333;
+  }
+
+  .post h1 {
+    color:#00ff99;
+  }
+
+  .post h3 {
+    color: #00ff99;
+    font-size: 1.2em;
+    margin-bottom: 6px;
+  }
+
+  .post small {
+    display: block;
+    color: #888;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+  }
+
+  .post p {
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .post img {
+    display: block;
+    max-width: 100%;
+    border-radius: 4px;
+    margin: 12px 0;
+  }
+
+  /* YOUTUBE VIDEOS ---------------------------------------- */
+  .video {
+    margin-bottom: 24px;
+  }
+
+  .video a {
+    color: #cc181e;
+    text-decoration: none;
+  }
+
+  .video a:hover {
+    text-decoration: underline;
+  }
+
+  iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  /* RESPONSIVE -------------------------------------------- */
+  @media (max-width: 1100px) {
+    main {
+      grid-template-columns: 1fr;
+    }
+    header {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .search-bar {
+      order: 3;
+      width: 100%;
+      margin-top: 8px;
+    }
+  }
+
+  .footer {
+    position: relative;
+    text-align: center;
+    margin-top: 40px;
+    color: #ccc;
+  }
+
+  /* HACKER TERMINAL SEARCH POPUP --------------------------- */
+  .search-wrapper { position: relative; width: 100%; }
+  .search-input { width: 100%; }
+
+  #search-popup {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 8px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #0f0;
+    box-shadow: 0 0 12px #0f07;
+    border-radius: 6px;
+    padding: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    display: none;
+    z-index: 9999;
+    font-family: "Courier New", monospace;
+  }
+
+  #search-popup .promptline {
+    color: #0f0;
+    opacity: 0.85;
+    font-size: 12px;
+    margin: 4px 8px 8px;
+  }
+
+  .search-result {
+    padding: 10px 12px;
+    border: 1px solid #0f0;
+    border-radius: 4px;
+    margin: 8px 0;
+    background: rgba(0, 20, 0, 0.35);
+    cursor: pointer;
+  }
+
+  .search-result:hover,
+  .search-result.active {
+    background: rgba(0, 40, 0, 0.6);
+    outline: 1px dashed #0f0;
+  }
+
+  .search-result .kind { color: #9f9; font-size: 12px; margin-right: 6px; }
+  .search-result .title { color: #0f0; font-weight: bold; display: block; }
+  .search-result .meta { color: #7f7; font-size: 12px; margin-top: 2px; }
+  .search-result .snippet { color: #bfb; font-size: 13px; margin-top: 6px; opacity: 0.85; }
+  .no-results { color: #7f7; padding: 8px 12px; }
+
+  /* POST POPUP / MODAL ------------------------------------ */
+  #post-popup {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  }
+
+  #post-popup .popup-inner {
+    position: relative;
+    background: rgba(0, 20, 0, 0.9);
+    border: 2px solid #0f0;
+    box-shadow: 0 0 20px #0f05;
+    padding: 24px;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: #0f0;
+    font-family: "Courier New", monospace;
+    border-radius: 8px;
+  }
+
+  #post-popup .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #0f0;
+    font-size: 22px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  #post-popup .close-btn:hover {
+    color: #ff4444;
+  }
+
+  #post-popup img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 12px 0;
+  }
+
+  /* BUTTON FIX / STYLE UPGRADE ------------------------------- */
+.load-more,
+.youtube-btn {
+  display: inline-block;
+  margin: 20px auto 0;
+  padding: 10px 24px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #0f0;
+  border-radius: 8px;
+  color: #0f0;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
+  text-align: center;
+  box-shadow: 0 0 12px rgba(0, 255, 0, 0.2);
 }
-main::before {
-  content: "";
+
+.load-more:hover,
+.youtube-btn:hover {
+  background: #0f0;
+  color: #000;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+  transform: scale(1.05);
+}
+
+.youtube-btn {
+  background: rgba(204, 24, 30, 0.1);
+  border-color: #cc181e;
+  color: #cc181e;
+  margin-left: 8px;
+}
+
+.youtube-btn:hover {
+  background: #cc181e;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+}
+
+/* center them in their column cleanly */
+#loadMorePosts,
+#loadMoreVideos {
+  display: block;
+  margin: 20px auto;
+}
+
+/* Center both Watch More and Watch on YouTube buttons */
+#loadMoreVideos,
+.youtube-btn {
+  display: block;
+  margin: 20px auto;
+  text-align: center;
+}
+
+/* Optional: tighten spacing so they stack nicely */
+#loadMoreVideos + .youtube-btn {
+  margin-top: 10px;
+}
+
+/* HAMBURGER DROPDOWN -------------------------------------- */
+.menu-popup {
   position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    135deg,
-    rgba(0,255,153,.18) 0,
-    rgba(0,255,153,.18) 3px,
-    rgba(0,255,153,.02) 3px,
-    rgba(0,255,153,.02) 12px
-  );
-  animation: scan-drift 60s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-  filter: brightness(1.2);
-}
-@keyframes scan-drift {
-  from { background-position: 0 0; }
-  to { background-position: 600px 600px; }
-}
-.column {
-  background: #0a0a0a;
-  padding: 20px;
-  border: 1px solid #222;
+  top: 60px; /* adjust to sit under header */
+  left: 32px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid #0f0;
+  box-shadow: 0 0 12px #0f07;
   border-radius: 6px;
-  box-shadow: 0 0 10px rgba(255,255,255,.05);
-  position: relative;
-  z-index: 1;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  z-index: 9999;
+  font-family: "Courier New", monospace;
+  min-width: 160px;
 }
 
-/* === POSTS & VIDEOS === */
-.post {
-  margin-bottom: 28px;
-  padding-bottom: 14px;
-  border-bottom: 1px dashed #333;
-}
-.post h3 {
-  color: #00ff99;
-  font-size: 1.2em;
-  margin-bottom: 6px;
-}
-.post small {
+.menu-item {
+  color: #0f0;
+  padding: 10px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
   display: block;
-  color: #888;
-  margin-bottom: 8px;
-  font-size: .9em;
 }
-.post img {
-  display: block;
-  max-width: 100%
 
-  </style>
+.menu-item:hover {
+  background: rgba(0, 40, 0, 0.6);
+  outline: 1px dashed #0f0;
+  color: #000;
+}
+
+.menu-popup.visible {
+  display: flex;
+}
+
+/* CONTACT POPUP ------------------------------------------ */
+.contact-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+.contact-inner {
+  background: rgba(0,20,0,0.9);
+  border: 2px solid #0f0;
+  padding: 24px;
+  border-radius: 8px;
+  color: #0f0;
+  width: 90%;
+  max-width: 400px;
+  font-family: "Courier New", monospace;
+  box-shadow: 0 0 20px #0f05;
+}
+.contact-inner h2 {
+  margin-bottom: 12px;
+}
+.contact-inner label {
+  display: block;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.contact-inner input,
+.contact-inner textarea {
+  width: 100%;
+  background: #000;
+  color: #0f0;
+  border: 1px solid #0f0;
+  border-radius: 4px;
+  padding: 6px;
+  font-family: inherit;
+}
+.send-btn {
+  margin-top: 12px;
+  background: #0f0;
+  color: #000;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+.send-btn:hover {
+  background: #7f7;
+}
+.close-contact {
+  position: absolute;
+  right: 12px;
+  top: 8px;
+  background: transparent;
+  border: none;
+  color: #0f0;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* LIGHTBOX ADDON ------------------------------------------------ */
+  #img-lightbox{
+    position:fixed; inset:0; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.9); z-index:100000;
+  }
+  #img-lightbox.visible{ display:flex; }
+  #img-lightbox .inner{
+    position:relative; max-width:min(92vw,1400px); max-height:90vh;
+    display:flex; flex-direction:column; gap:12px;
+    padding:8px;
+  }
+  #img-lightbox img{
+    max-width:100%; max-height:80vh;
+    border-radius:8px; border:1px solid #0f0; box-shadow:0 0 24px #0f06;
+  }
+  #img-lightbox .toolbar{
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:"Courier New", monospace; color:#0f0;
+  }
+  #img-lightbox .download-btn, #img-lightbox .close-x{
+    background:rgba(0,0,0,0.85); color:#0f0; border:2px solid #0f0;
+    border-radius:6px; padding:8px 12px; cursor:pointer; text-decoration:none;
+    transition:all .2s ease-in-out;
+  }
+  #img-lightbox .download-btn:hover, #img-lightbox .close-x:hover{
+    background:#0f0; color:#000; box-shadow:0 0 18px rgba(0,255,0,.6);
+  }
+  #img-lightbox .close-x{
+    position:absolute; right:-10px; top:-10px;
+    width:36px; height:36px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+  }
+    
+@media (max-width: 768px) {
+  #main-content {
+    height: 100dvh;
+  }
+  #main-iframe {
+    height: 100dvh;
+  }
+}
+    
+</style>
+
 </head>
 
 <body>
@@ -273,6 +672,7 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
+  // === DOM SHORTCUTS ===
   const postsContainer = document.getElementById("posts");
   const youtubeContainer = document.getElementById("youtube");
   const searchInput = document.querySelector(".search-input");
@@ -320,78 +720,82 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function renderPosts() {
-    postsContainer.innerHTML = `
-      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-      <h2>Latest Blog Posts</h2>
-    `;
-    const displayed = allPosts.slice(0, visiblePosts);
-    for (const p of displayed) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "post";
-      wrapper.innerHTML = `
-        <h3>${p.title}</h3>
-        <small>${new Date(p.date).toLocaleString()}</small>
-        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
-        <div class="content"><em>Loading...</em></div>`;
-      postsContainer.appendChild(wrapper);
-      try {
-        let text = await (await fetch(p.file)).text();
-        if (text.startsWith('---')) {
-          const end = text.indexOf('---', 3);
-          if (end !== -1) text = text.slice(end + 3);
-        }
-        wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
-      } catch {
-        wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
+  postsContainer.innerHTML = `
+    <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
+    <h2>Latest Blog Posts</h2>
+  `;
+  const displayed = allPosts.slice(0, visiblePosts);
+  for (const p of displayed) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "post";
+    wrapper.innerHTML = `
+      <h3>${p.title}</h3>
+      <small>${new Date(p.date).toLocaleString()}</small>
+      ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
+      <div class="content"><em>Loading...</em></div>`;
+    postsContainer.appendChild(wrapper);
+    try {
+      let text = await (await fetch(p.file)).text();
+      if (text.startsWith('---')) {
+        const end = text.indexOf('---', 3);
+        if (end !== -1) text = text.slice(end + 3);
       }
+      wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
+    } catch {
+      wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
     }
-    if (visiblePosts < allPosts.length) {
-      const btn = document.createElement("button");
-      btn.className = "load-more";
-      btn.id = "loadMorePosts";
-      btn.textContent = "Read More";
-      btn.onclick = () => { visiblePosts += 3; renderPosts(); };
-      postsContainer.appendChild(btn);
-    }
-
-    // === IMAGE LIGHTBOX ===
-    if (!document.getElementById("img-lightbox")) {
-      const box = document.createElement("div");
-      box.id = "img-lightbox";
-      box.innerHTML = `
-        <div class="inner">
-          <div class="toolbar">
-            <a class="download-btn" target="_blank" download>Download</a>
-            <div class="close-x">×</div>
-          </div>
-          <img src="" alt="Expanded image">
-        </div>
-      `;
-      document.body.appendChild(box);
-    }
-
-    const lightbox = document.getElementById("img-lightbox");
-    const lightImg = lightbox.querySelector("img");
-    const dlBtn = lightbox.querySelector(".download-btn");
-    const closeBtn = lightbox.querySelector(".close-x");
-
-    postsContainer.querySelectorAll("img").forEach(img => {
-      img.addEventListener("click", () => {
-        lightImg.src = img.src;
-        dlBtn.href = img.src;
-        lightbox.classList.add("visible");
-      });
-    });
-
-    const closeLightbox = () => lightbox.classList.remove("visible");
-    closeBtn.addEventListener("click", closeLightbox);
-    lightbox.addEventListener("click", e => {
-      if (e.target === lightbox) closeLightbox();
-    });
-    document.addEventListener("keydown", e => {
-      if (e.key === "Escape") closeLightbox();
-    });
   }
+
+  if (visiblePosts < allPosts.length) {
+    const btn = document.createElement("button");
+    btn.className = "load-more";
+    btn.id = "loadMorePosts";
+    btn.textContent = "Read More";
+    btn.onclick = () => { visiblePosts += 3; renderPosts(); };
+    postsContainer.appendChild(btn);
+  }
+
+  // === USE EXISTING GREEN LIGHTBOX ===
+  // create lightbox element if it doesn't exist yet
+  if (!document.getElementById("img-lightbox")) {
+    const box = document.createElement("div");
+    box.id = "img-lightbox";
+    box.innerHTML = `
+      <div class="inner">
+        <div class="toolbar">
+          <a class="download-btn" target="_blank" download>Download</a>
+          <div class="close-x">×</div>
+        </div>
+        <img src="" alt="Expanded image">
+      </div>
+    `;
+    document.body.appendChild(box);
+  }
+
+  const lightbox = document.getElementById("img-lightbox");
+  const lightImg = lightbox.querySelector("img");
+  const dlBtn = lightbox.querySelector(".download-btn");
+  const closeBtn = lightbox.querySelector(".close-x");
+
+  // click to open
+  postsContainer.querySelectorAll("img").forEach(img => {
+    img.addEventListener("click", () => {
+      lightImg.src = img.src;
+      dlBtn.href = img.src;
+      lightbox.classList.add("visible");
+    });
+  });
+
+  // close behavior
+  const closeLightbox = () => lightbox.classList.remove("visible");
+  closeBtn.addEventListener("click", closeLightbox);
+  lightbox.addEventListener("click", e => {
+    if (e.target === lightbox) closeLightbox();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeLightbox();
+  });
+}
 
   // === LOAD VIDEOS ===
   async function loadVideos() {
@@ -465,10 +869,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           el.addEventListener("click", () => handleCommand(el.dataset.cmd));
         });
         break;
+
       case "/die":
         document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "none");
         body.style.background = "#000";
         break;
+
       case "/revive":
         const flash = document.createElement("div");
         flash.style.position = "fixed";
@@ -483,6 +889,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => flash.remove(), 2000);
         document.querySelectorAll("main, header, .footer").forEach(e => e.style.display = "");
         break;
+
       default:
         popup.innerHTML = `<div class="no-results">Unknown command: ${cmd}</div>`;
         popup.style.display = "block";
@@ -505,7 +912,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     popup.innerHTML = hits.length
       ? hits.map(d => `
-        <div class="search-result" data-kind="${d.kind}" data-url="${d.url}">
+        <div class="search-result" data-url="${d.url}">
           <span class="kind">[${d.kind}]</span>
           <span class="title">${d.title}</span>
           <div class="meta">${new Date(d.date).toLocaleString()}</div>
@@ -514,64 +921,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       : `<div class="no-results">No matches.</div>`;
 
     popup.style.display = "block";
-
-    popup.querySelectorAll(".search-result").forEach(el => {
-      el.addEventListener("click", async () => {
-        const kind = el.dataset.kind;
-        const url = el.dataset.url;
-
-        if (kind === "video") {
-          window.open(url, "_blank");
-          return;
-        }
-
-        // === POST LIGHTBOX ===
-        let postText = "";
-        try {
-          let txt = await (await fetch(url.replace(".html", ".md"))).text();
-          if (txt.startsWith('---')) {
-            const end = txt.indexOf('---', 3);
-            if (end !== -1) txt = txt.slice(end + 3);
-          }
-          postText = marked.parse(txt.trim());
-        } catch {
-          postText = "<p style='color:red;'>Error loading post.</p>";
-        }
-
-        if (!document.getElementById("post-lightbox")) {
-          const postBox = document.createElement("div");
-          postBox.id = "post-lightbox";
-          postBox.innerHTML = `
-            <div class="inner">
-              <div class="toolbar">
-                <div class="title-bar"></div>
-                <div class="close-x">×</div>
-              </div>
-              <div class="post-content"></div>
-            </div>
-          `;
-          document.body.appendChild(postBox);
-        }
-
-        const postBox = document.getElementById("post-lightbox");
-        const titleBar = postBox.querySelector(".title-bar");
-        const contentDiv = postBox.querySelector(".post-content");
-        const closeBtn = postBox.querySelector(".close-x");
-
-        titleBar.textContent = el.querySelector(".title").textContent;
-        contentDiv.innerHTML = postText;
-        postBox.classList.add("visible");
-
-        const closePostBox = () => postBox.classList.remove("visible");
-        closeBtn.addEventListener("click", closePostBox);
-        postBox.addEventListener("click", e => {
-          if (e.target === postBox) closePostBox();
-        });
-        document.addEventListener("keydown", e => {
-          if (e.key === "Escape") closePostBox();
-        }, { once: true });
-      });
-    });
+    popup.querySelectorAll(".search-result").forEach(el =>
+      el.addEventListener("click", () => window.open(el.dataset.url, "_blank"))
+    );
   }
 
   // === SEARCH BEHAVIOR ===
