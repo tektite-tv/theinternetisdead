@@ -720,75 +720,82 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function renderPosts() {
-    postsContainer.innerHTML = `
-      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-      <h2>Latest Blog Posts</h2>
-    `;
-    const displayed = allPosts.slice(0, visiblePosts);
-    for (const p of displayed) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "post";
-      wrapper.innerHTML = `
-        <h3>${p.title}</h3>
-        <small>${new Date(p.date).toLocaleString()}</small>
-        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
-        <div class="content"><em>Loading...</em></div>`;
-      postsContainer.appendChild(wrapper);
-      try {
-        let text = await (await fetch(p.file)).text();
-        if (text.startsWith('---')) {
-          const end = text.indexOf('---', 3);
-          if (end !== -1) text = text.slice(end + 3);
-        }
-        wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
-      } catch {
-        wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
+  postsContainer.innerHTML = `
+    <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
+    <h2>Latest Blog Posts</h2>
+  `;
+  const displayed = allPosts.slice(0, visiblePosts);
+  for (const p of displayed) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "post";
+    wrapper.innerHTML = `
+      <h3>${p.title}</h3>
+      <small>${new Date(p.date).toLocaleString()}</small>
+      ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
+      <div class="content"><em>Loading...</em></div>`;
+    postsContainer.appendChild(wrapper);
+    try {
+      let text = await (await fetch(p.file)).text();
+      if (text.startsWith('---')) {
+        const end = text.indexOf('---', 3);
+        if (end !== -1) text = text.slice(end + 3);
       }
+      wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
+    } catch {
+      wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
     }
-    if (visiblePosts < allPosts.length) {
-      const btn = document.createElement("button");
-      btn.className = "load-more";
-      btn.id = "loadMorePosts";
-      btn.textContent = "Read More";
-      btn.onclick = () => { visiblePosts += 3; renderPosts(); };
-      postsContainer.appendChild(btn);
-    }
-
-    // === IMAGE LIGHTBOX ===
-    const allImgs = postsContainer.querySelectorAll("img");
-    allImgs.forEach(img => {
-      img.addEventListener("click", () => {
-        const overlay = document.createElement("div");
-        overlay.id = "lightbox-overlay";
-        overlay.style.cssText = `
-          position: fixed; inset: 0; background: rgba(0,0,0,0.85);
-          display: flex; align-items: center; justify-content: center;
-          z-index: 99999;
-        `;
-        overlay.innerHTML = `
-          <div style="position: relative; max-width: 90%; max-height: 90%;">
-            <img src="${img.src}" style="max-width:100%; max-height:100%; border-radius: 8px; box-shadow:0 0 30px #000;">
-            <a href="${img.src}" download style="
-              position:absolute; bottom:10px; left:10px; color:white;
-              background:#0008; padding:6px 12px; border-radius:6px; text-decoration:none;">
-              Download
-            </a>
-            <button id="close-lightbox" style="
-              position:absolute; top:10px; right:10px;
-              background:#000c; color:white; border:none;
-              font-size:24px; cursor:pointer; border-radius:4px; line-height:20px;">
-              ×
-            </button>
-          </div>
-        `;
-        document.body.appendChild(overlay);
-        const close = () => overlay.remove();
-        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
-        document.getElementById("close-lightbox").addEventListener("click", close);
-        document.addEventListener("keydown", e => { if (e.key === "Escape") close(); }, { once: true });
-      });
-    });
   }
+
+  if (visiblePosts < allPosts.length) {
+    const btn = document.createElement("button");
+    btn.className = "load-more";
+    btn.id = "loadMorePosts";
+    btn.textContent = "Read More";
+    btn.onclick = () => { visiblePosts += 3; renderPosts(); };
+    postsContainer.appendChild(btn);
+  }
+
+  // === USE EXISTING GREEN LIGHTBOX ===
+  // create lightbox element if it doesn't exist yet
+  if (!document.getElementById("img-lightbox")) {
+    const box = document.createElement("div");
+    box.id = "img-lightbox";
+    box.innerHTML = `
+      <div class="inner">
+        <div class="toolbar">
+          <a class="download-btn" target="_blank" download>Download</a>
+          <div class="close-x">×</div>
+        </div>
+        <img src="" alt="Expanded image">
+      </div>
+    `;
+    document.body.appendChild(box);
+  }
+
+  const lightbox = document.getElementById("img-lightbox");
+  const lightImg = lightbox.querySelector("img");
+  const dlBtn = lightbox.querySelector(".download-btn");
+  const closeBtn = lightbox.querySelector(".close-x");
+
+  // click to open
+  postsContainer.querySelectorAll("img").forEach(img => {
+    img.addEventListener("click", () => {
+      lightImg.src = img.src;
+      dlBtn.href = img.src;
+      lightbox.classList.add("visible");
+    });
+  });
+
+  // close behavior
+  const closeLightbox = () => lightbox.classList.remove("visible");
+  closeBtn.addEventListener("click", closeLightbox);
+  lightbox.addEventListener("click", e => {
+    if (e.target === lightbox) closeLightbox();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeLightbox();
+  });
+}
 
   // === LOAD VIDEOS ===
   async function loadVideos() {
