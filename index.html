@@ -1111,32 +1111,33 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // === CONTACT POPUP ===
   if (submitBtn) submitBtn.addEventListener("click", e => {
-    e.preventDefault(); contactPopup.style.display = "flex";
+    e.preventDefault();
+    contactPopup.style.display = "flex";
   });
-  if (closeContact) closeContact.addEventListener("click", () => contactPopup.style
-    if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
+  if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
   if (contactPopup) contactPopup.addEventListener("click", e => {
     if (e.target === contactPopup) contactPopup.style.display = "none";
-  });
+});
 
-  // === MENU DROPDOWN ===
-  if (menuBtn && menuPopup) {
-    menuBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      menuPopup.classList.toggle("visible");
-    });
-    document.addEventListener("click", e => {
-      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
-        menuPopup.classList.remove("visible");
-    });
-  }
+// === MENU DROPDOWN ===
+if (menuBtn && menuPopup) {
+menuBtn.addEventListener("click", e => {
+e.stopPropagation();
+menuPopup.classList.toggle("visible");
+});
+document.addEventListener("click", e => {
+if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
+menuPopup.classList.remove("visible");
+});
+}
 
-  // === INIT ===
-  await loadPosts();
-  await loadVideos();
-  await buildIndex();
+// === INIT ===
+await loadPosts();
+await loadVideos();
+await buildIndex();
 });
 </script>
+
   
 </body>
 </html>
