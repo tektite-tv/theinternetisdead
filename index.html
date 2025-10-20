@@ -705,7 +705,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let allPosts = [], allVideos = [], INDEX = [];
   let visiblePosts = 3, visibleVideos = 3;
-  let summoned = [];
+  let summoned = []; // active bouncing <img> nodes
 
   // === POPUP HELPERS ===
   function renderPlaceholder() {
@@ -868,21 +868,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     INDEX = [...postDocs, ...videoDocs];
   }
 
-  // === GIF SUMMON FUNCTION ===
+  // === GIF SUMMON: physics-y bounce ===
   function spawnGif(src) {
     const gif = document.createElement("img");
     gif.src = src;
     gif.className = "summoned-gif";
     gif.style.position = "fixed";
-    gif.style.left = Math.random() * (window.innerWidth - 100) + "px";
-    gif.style.top = Math.random() * (window.innerHeight - 100) + "px";
-    gif.style.width = "100px";
+    gif.style.left = Math.random() * (window.innerWidth - 120) + "px";
+    gif.style.top = Math.random() * (window.innerHeight - 120) + "px";
+    gif.style.width = "120px";
     gif.style.zIndex = 99999;
     gif.style.pointerEvents = "none";
+    gif.alt = "summoned";
     document.body.appendChild(gif);
 
-    let vx = (Math.random() - 0.5) * 10;
-    let vy = (Math.random() - 0.5) * 10;
+    let vx = (Math.random() - 0.5) * 12;
+    let vy = (Math.random() - 0.5) * 12;
 
     function bounce() {
       const rect = gif.getBoundingClientRect();
@@ -901,8 +902,46 @@ document.addEventListener("DOMContentLoaded", async () => {
     summoned.push(gif);
   }
 
+  function clearSummoned() {
+    for (const el of summoned) el.remove();
+    summoned = [];
+  }
+
+  // === Discover GIFs in /images/gifs (manifest-first, then directory scrape) ===
+  async function listGifs() {
+    // Try manifest
+    try {
+      const res = await fetch("/images/gifs/index.json", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        // Accept ["a.gif","b.gif"] or [{name:"a.gif"}] or [{file:"a.gif"}]
+        const names = (Array.isArray(data) ? data : []).map(item =>
+          typeof item === "string" ? item : (item?.name || item?.file || "")
+        ).filter(n => /\.(gif|webp|png)$/i.test(n));
+        if (names.length) return names;
+      }
+    } catch (_) {}
+
+    // Try directory HTML
+    try {
+      const res = await fetch("/images/gifs/", { cache: "no-store" });
+      if (res.ok) {
+        const html = await res.text();
+        const matches = [...html.matchAll(/href="([^"]+\.(?:gif|webp|png))"/gi)]
+          .map(m => m[1])
+          // strip possible "./" or absolute URLs to get just the filename
+          .map(h => h.split("/").pop())
+          .filter(Boolean);
+        const unique = [...new Set(matches)];
+        if (unique.length) return unique;
+      }
+    } catch (_) {}
+
+    return []; // nothing found
+  }
+
   // === COMMAND HANDLER ===
-  function handleCommand(cmd) {
+  async function handleCommand(cmd) {
     const body = document.body;
     popup.innerHTML = "";
 
@@ -915,6 +954,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="search-result command" data-cmd="/die">/die - Kill the lights</div>
           <div class="search-result command" data-cmd="/space">/space - Fly through space</div>
           <div class="search-result command" data-cmd="/summon">/summon - Summon bouncing GIFs</div>
+          <div class="search-result command" data-cmd="/unsummon">/unsummon - Clear summoned GIFs</div>
         `;
         popup.style.display = "block";
         popup.querySelectorAll(".command").forEach(el =>
@@ -922,24 +962,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
         break;
 
-      case "/summon":
-        popup.innerHTML = `<div class="promptline">Summon from /images/gifs/</div>`;
-        const gifList = [
-          "bananarama.gif",
-          "skullwave.gif",
-          "crtstatic.gif",
-          "spiderdance.gif",
-          "glitchface.gif"
-        ];
-        gifList.forEach(name => {
-          const el = document.createElement("div");
-          el.className = "search-result";
-          el.innerHTML = `<span class="title">${name}</span>`;
+      case "/summon": {
+        popup.innerHTML = `
+          <div class="promptline">Scanning /images/gifs/...</div>
+          <div class="search-result"><em>Loading...</em></div>
+        `;
+        popup.style.display = "block";
+
+        const names = await listGifs();
+        if (!names.length) {
+          popup.innerHTML = `
+            <div class="promptline">No GIFs found in /images/gifs/</div>
+            <div class="no-results">Add files to <code>/images/gifs/</code> or create <code>/images/gifs/index.json</code>.</div>
+          `;
+          break;
+        }
+
+        popup.innerHTML = `
+          <div class="promptline">Summon from /images/gifs/</div>
+          ${names.map(n => `
+            <div class="search-result summon-item" data-name="${n}">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <img src="/images/gifs/${encodeURIComponent(n)}" alt="${n}" style="width:48px; height:48px; object-fit:cover; border:1px solid #0f0; border-radius:4px;" loading="lazy">
+                <span class="title">${n}</span>
+              </div>
+            </div>
+          `).join("")}
+        `;
+
+        popup.querySelectorAll(".summon-item").forEach(el => {
           el.addEventListener("click", () => {
-            spawnGif("/images/gifs/" + name);
+            const name = el.dataset.name;
+            spawnGif(`/images/gifs/${name}`);
           });
-          popup.appendChild(el);
         });
+        break;
+      }
+
+      case "/unsummon":
+        clearSummoned();
+        popup.innerHTML = `<div class="search-result">Cleared summoned GIFs.</div>`;
         popup.style.display = "block";
         break;
 
@@ -967,15 +1029,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         const main = document.querySelector("main");
         main.classList.add("space-mode");
         main.innerHTML = "";
+        main.style.position = "relative";
+        main.style.overflow = "hidden";
+
         const canvas = document.createElement("canvas");
         canvas.id = "space-canvas";
+        Object.assign(canvas.style, {
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          display: "block"
+        });
         main.appendChild(canvas);
+
         const ctx = canvas.getContext("2d");
-        let stars = [], w, h, cx, cy, speed = 0.02, hue = 120, count = 600;
+        let stars = [];
+        let w, h, cx, cy;
+        let baseSpeed = 0.02;
+        let speed = baseSpeed;
+        let hue = 120;
+        let count = 600;
+
         function resize() {
           w = canvas.width = window.innerWidth;
           h = canvas.height = window.innerHeight - document.querySelector("header").offsetHeight;
-          cx = w / 2; cy = h / 2;
+          cx = w / 2;
+          cy = h / 2;
           stars = Array.from({ length: count }, () => ({
             x: (Math.random() - 0.5) * w,
             y: (Math.random() - 0.5) * h,
@@ -984,10 +1064,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         window.addEventListener("resize", resize);
         resize();
+
+        function updateFromPointer(x, y) {
+          const nx = x / w;
+          const ny = y / h;
+          speed = baseSpeed + nx * 0.1;
+          hue = (ny * 360) % 360;
+        }
+
+        document.addEventListener("mousemove", e => updateFromPointer(e.clientX, e.clientY), { passive: true });
+        document.addEventListener("touchmove", e => {
+          if (e.touches[0]) updateFromPointer(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
         function animate() {
           ctx.fillStyle = "rgba(0,0,0,0.35)";
           ctx.fillRect(0, 0, w, h);
           ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+
           for (let s of stars) {
             s.z -= speed * w;
             if (s.z <= 0) s.z = w;
@@ -1001,6 +1095,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
           requestAnimationFrame(animate);
         }
+
         animate();
         popup.style.display = "none";
         break;
@@ -1049,7 +1144,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           const res = await fetch(url.replace(".html", ".md"));
           let text = await res.text();
           if (text.startsWith("---")) {
-            const end = text.indexOf("---", 3);
+            const end = text.indexOf('---', 3);
             if (end !== -1) text = text.slice(end + 3);
           }
           const html = marked.parse(text.trim());
@@ -1117,27 +1212,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
   if (contactPopup) contactPopup.addEventListener("click", e => {
     if (e.target === contactPopup) contactPopup.style.display = "none";
-});
+  });
 
-// === MENU DROPDOWN ===
-if (menuBtn && menuPopup) {
-menuBtn.addEventListener("click", e => {
-e.stopPropagation();
-menuPopup.classList.toggle("visible");
-});
-document.addEventListener("click", e => {
-if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
-menuPopup.classList.remove("visible");
-});
-}
+  // === MENU DROPDOWN ===
+  if (menuBtn && menuPopup) {
+    menuBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      menuPopup.classList.toggle("visible");
+    });
+    document.addEventListener("click", e => {
+      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
+        menuPopup.classList.remove("visible");
+    });
+  }
 
-// === INIT ===
-await loadPosts();
-await loadVideos();
-await buildIndex();
+  // === INIT ===
+  await loadPosts();
+  await loadVideos();
+  await buildIndex();
 });
 </script>
-
   
 </body>
 </html>
