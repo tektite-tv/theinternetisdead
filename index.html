@@ -893,6 +893,66 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  case "/space":
+  // clear everything under the header
+  document.querySelector("main").innerHTML = "";
+  document.querySelector("main").style.position = "relative";
+  document.querySelector("main").style.overflow = "hidden";
+
+  // create canvas
+  const canvas = document.createElement("canvas");
+  canvas.id = "space-canvas";
+  canvas.style.position = "absolute";
+  canvas.style.inset = "0";
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  canvas.style.display = "block";
+  document.querySelector("main").appendChild(canvas);
+
+  const ctx = canvas.getContext("2d");
+  let stars = [];
+  let w, h, cx, cy;
+  let speed = 0.05; // how fast we move forward
+  let count = 600;  // number of stars
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight - document.querySelector("header").offsetHeight;
+    cx = w / 2;
+    cy = h / 2;
+    stars = Array.from({ length: count }, () => ({
+      x: (Math.random() - 0.5) * w,
+      y: (Math.random() - 0.5) * h,
+      z: Math.random() * w
+    }));
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function animate() {
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#0f0";
+
+    for (let s of stars) {
+      s.z -= speed * w;
+      if (s.z <= 0) s.z = w;
+      const k = 128 / s.z;
+      const px = s.x * k + cx;
+      const py = s.y * k + cy;
+      if (px >= 0 && px < w && py >= 0 && py < h) {
+        const size = (1 - s.z / w) * 2;
+        ctx.fillRect(px, py, size, size);
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+    animate();
+    popup.style.display = "none";
+    break;
+  }
+
   // === SEARCH RESULTS ===
   function renderResults(q) {
     const query = q.toLowerCase();
