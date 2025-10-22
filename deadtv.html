@@ -204,6 +204,35 @@ const controlsDesktop = document.getElementById('controlsDesktop');
 const controlsMobile = document.getElementById('controlsMobile');
 const drawerToggle = document.getElementById('drawerToggle');
 
+// --- NEW: Global Controls Toggle Button ---
+let hideBtn = document.getElementById('toggleControls');
+if (!hideBtn) {
+  hideBtn = document.createElement('button');
+  hideBtn.id = 'toggleControls';
+  hideBtn.textContent = 'Hide Controls';
+  hideBtn.style.position = 'fixed';
+  hideBtn.style.bottom = '1rem';
+  hideBtn.style.right = '1rem';
+  hideBtn.style.zIndex = '10';
+  hideBtn.style.padding = '0.5rem 1rem';
+  hideBtn.style.fontSize = '1rem';
+  hideBtn.style.border = 'none';
+  hideBtn.style.borderRadius = '6px';
+  hideBtn.style.background = 'rgba(0,0,0,0.6)';
+  hideBtn.style.color = '#fff';
+  hideBtn.style.cursor = 'pointer';
+  hideBtn.style.backdropFilter = 'blur(3px)';
+  document.body.appendChild(hideBtn);
+}
+
+let controlsVisible = true;
+hideBtn.addEventListener('click', () => {
+  controlsVisible = !controlsVisible;
+  controlsDesktop.style.display = controlsVisible ? '' : 'none';
+  controlsMobile.style.display = controlsVisible ? '' : 'none';
+  hideBtn.textContent = controlsVisible ? 'Hide Controls' : 'Show Controls';
+});
+
 // Drawer behavior
 if (isMobile) {
   drawerToggle.addEventListener('click', () => {
@@ -218,7 +247,6 @@ function setAngle(deg) {
   angleVal.textContent = `${Number(deg).toFixed(1)}°`;
 }
 
-// Keep both sliders in sync
 function syncSliders(fromMobile) {
   const v = fromMobile ? parseFloat(angleInputM.value) : parseFloat(angleInput.value);
   angleInput.value = v;
@@ -234,7 +262,7 @@ setAngle(angleInput.value);
 const canvas = document.getElementById('lava');
 const ctx = canvas.getContext('2d', { willReadFrequently: false });
 
-// Adaptive resolution: halve pixels on mobile to save frames
+// Adaptive resolution
 let w, h, t = 0, renderScale = isMobile ? 0.5 : 1;
 function resize() {
   const cssW = canvas.clientWidth | 0;
@@ -247,7 +275,6 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
-// Rainbow plasma
 function rainbow(x, y, time) {
   const r = Math.sin(0.0008 * x + time) * 127 + 128;
   const g = Math.sin(0.0008 * y + time + 2) * 127 + 128;
@@ -355,7 +382,7 @@ drawCanvas.addEventListener('pointerleave', () => {
     drawCtx.closePath();
   }
 });
-// === END UPDATED DRAW FEATURE ===
+// === END DRAW FEATURE ===
 
 function getCurrentAngle() {
   const v = getComputedStyle(root).getPropertyValue('--angle').trim();
