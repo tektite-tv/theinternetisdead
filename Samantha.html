@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>Samantha Harrison ✨ MySpace Glittercore</title>
+  <style>
+    html,body{margin:0;height:100%;background:#ffb6ff;overflow:hidden}
+    .ui{
+      position:relative; z-index:15; width:100%;
+      display:flex; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center;
+      padding-top:7vh;
+      font-family:"Comic Sans MS","Trebuchet MS",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      pointer-events:auto;
+    }
+    .title{
+      font-size:clamp(36px,10vw,120px); font-weight:900; color:transparent;
+      background:linear-gradient(45deg,#fff6fb,#ffd0ea,#ff96c9,#ff69b4,#ffb3f6);
+      background-size:200% 200%; background-clip:text; -webkit-background-clip:text;
+      text-shadow:0 0 20px rgba(255,170,220,0.9), 0 0 40px rgba(255,255,255,.8), 0 0 80px rgba(255,200,240,.9);
+      animation:shimmer 5s linear infinite; margin-bottom:20px; white-space:nowrap; user-select:none;
+    }
+    @keyframes shimmer{
+      0%{filter:hue-rotate(0deg); background-position:0% 50%}
+      50%{background-position:100% 50%}
+      100%{filter:hue-rotate(360deg); background-position:0% 50%}
+    }
+    .color-button{
+      font-size:18px; font-weight:bold; padding:12px 28px; border-radius:999px; border:none; cursor:pointer;
+      text-transform:uppercase; letter-spacing:1px; color:#fff;
+      background:linear-gradient(90deg,#ff99cc,#ff66ff,#cc66ff,#66ccff);
+      background-size:300% 300%; animation:colorflow 3s linear infinite;
+      box-shadow:0 0 25px rgba(255,100,220,0.6); transition:transform .2s ease, box-shadow .2s ease;
+      margin-bottom:16px;
+    }
+    .color-button:hover{transform:scale(1.08); box-shadow:0 0 40px rgba(255,180,255,.9);}
+    @keyframes colorflow{
+      0%{background-position:0% 50%; filter:hue-rotate(0deg)}
+      50%{background-position:100% 50%; filter:hue-rotate(180deg)}
+      100%{background-position:0% 50%; filter:hue-rotate(360deg)}
+    }
+    .piggy{
+      width:180px; height:180px; border-radius:50%; object-fit:cover; margin-bottom:20px;
+      box-shadow:0 0 25px rgba(255,100,200,0.7), 0 0 60px rgba(255,160,255,0.5);
+      border:4px solid rgba(255,255,255,0.6); user-select:none;
+    }
+    canvas#fx{position:fixed; top:0; left:0; width:100%; height:100%; z-index:1; display:block}
+    #pigpen{position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:12; pointer-events:none; contain:layout paint}
+    .pig{position:absolute; will-change:transform; font-size:28px; user-select:none; filter:drop-shadow(0 2px 2px rgba(0,0,0,.15)); touch-action:none}
+    .motion-btn{
+      position:fixed; bottom:12px; left:12px; z-index:20; font-size:12px; border:none; border-radius:999px; padding:8px 12px; cursor:pointer;
+      background:rgba(255,255,255,.6); backdrop-filter:blur(6px); box-shadow:0 6px 16px rgba(0,0,0,.2);
+    }
+    @media (prefers-reduced-motion: reduce){.title,.color-button{animation:none}}
+  </style>
+</head>
+<body>
+  <canvas id="fx"></canvas>
+  <div id="pigpen" aria-hidden="true"></div>
+
+  <div class="ui">
+    <div class="title">✧ Samantha&nbsp;Harrison ✧</div>
+    <button class="color-button" onclick="alert('Stay fabulous ✨')">Click Me</button>
+    <img class="piggy" src="/images/uploads/piggy.jpg" alt="Piggy Image"/>
+  </div>
+
+  <button id="motionBtn" class="motion-btn" style="display:none">Enable Motion</button>
+
+  <script>
+  // Utility: robust viewport size for mobile address bar shenanigans
+  function vw(){ return (window.visualViewport ? Math.floor(window.visualViewport.width) : window.innerWidth); }
+  function vh(){ return (window.visualViewport ? Math.floor(window.visualViewport.height) : window.innerHeight); }
+
+  // Hearts background sized by JS, not CSS vh
+  (()=>{
+    const DPR=Math.min(2,window.devicePixelRatio||1);
+    const canvas=document.getElementById('fx'); const ctx=canvas.getContext('2d',{alpha:true});
+    function resize(){
+      const W=vw(), H=vh();
+      canvas.width=W*DPR; canvas.height=H*DPR;
+      ctx.setTransform(1,0,0,1,0,0); ctx.scale(DPR,DPR);
+    }
+    addEventListener('resize', resize, {passive:true});
+    if(window.visualViewport){ visualViewport.addEventListener('resize', resize, {passive:true}); visualViewport.addEventListener('scroll', resize, {passive:true}); }
+    resize();
+    const hearts=[];
+    function newHeart(){ return { x:Math.random()*vw(), y:vh()+20, size:6+Math.random()*10, speed:1+Math.random()*2, opacity:0.6+Math.random()*0.4, hue:320+Math.random()*40, rot:Math.random()*Math.PI*2, rs:(Math.random()-0.5)*0.05 }; }
+    for(let i=0;i<180;i++) hearts.push(newHeart());
+    function drawHeart(x,y,s,hue,a,rot){
+      ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.scale(s/16,s/16);
+      ctx.beginPath(); ctx.moveTo(0,-5); ctx.bezierCurveTo(5,-12,15,-4,0,10); ctx.bezierCurveTo(-15,-4,-5,-12,0,-5);
+      const g=ctx.createRadialGradient(0,0,2,0,0,16); g.addColorStop(0,`hsla(${hue},100%,80%,${a})`); g.addColorStop(1,`hsla(${hue},90%,50%,0)`);
+      ctx.fillStyle=g; ctx.shadowBlur=12; ctx.shadowColor=`hsla(${hue},100%,70%,${a})`; ctx.fill(); ctx.restore();
+    }
+    function tick(){
+      const W=vw(), H=vh();
+      ctx.clearRect(0,0,W,H);
+      for(const h of hearts){
+        h.y-=h.speed; h.rot+=h.rs;
+        drawHeart(h.x,h.y,h.size,h.hue,h.opacity,h.rot);
+        if(h.y<-20){ Object.assign(h,newHeart()); h.y=H+20; }
+      }
+      requestAnimationFrame(tick);
+    }
+    tick();
+  })();
+
+  // Pigs with full-viewport bounds using visualViewport+innerHeight
+  (()=>{
+    const pen=document.getElementById('pigpen');
+    const EMOJIS=["🐷","🐖","🐽"]; const NUM=140;
+    const rng=(a,b)=>a+Math.random()*(b-a);
+
+    let W=vw(), H=vh();
+    function setArenaSize(){
+      W=vw(); H=vh();
+      // Size the arena explicitly to the true viewport
+      pen.style.width=W+'px'; pen.style.height=H+'px';
+      // Re-clamp pigs that drifted outside due to UI bar changes
+      for(const p of pigs){
+        if(p.x > W - p.size) p.x = Math.max(0, W - p.size);
+        if(p.y > H - p.size) p.y = Math.max(0, H - p.size);
+      }
+    }
+    addEventListener('resize', setArenaSize, {passive:true});
+    if(window.visualViewport){
+      visualViewport.addEventListener('resize', setArenaSize, {passive:true});
+      visualViewport.addEventListener('scroll', setArenaSize, {passive:true});
+    }
+    setArenaSize();
+
+    // Input state
+    let mouse={x:W/2,y:H/2,active:false};
+    let gravity={gx:0,gy:0};
+    let prevTouch=null;
+
+    addEventListener('mousemove', e=>{mouse.x=e.clientX;mouse.y=e.clientY;mouse.active=true;},{passive:true});
+    addEventListener('mouseleave', ()=>mouse.active=false,{passive:true});
+
+    // Flick with velocity-based impulse
+    addEventListener('touchstart', e=>{
+      const t=e.touches[0]; prevTouch={x:t.clientX,y:t.clientY,time:performance.now()};
+    },{passive:true});
+    addEventListener('touchmove', e=>{
+      const t=e.touches[0]; if(!prevTouch) return;
+      const now=performance.now(); const dt=Math.max(0.008,(now-prevTouch.time)/1000);
+      const vx=(t.clientX-prevTouch.x)/dt; const vy=(t.clientY-prevTouch.y)/dt;
+      const speed=Math.hypot(vx,vy);
+      if(speed>300){ applyImpulse(t.clientX,t.clientY,vx*0.08,vy*0.08,220); }
+      prevTouch={x:t.clientX,y:t.clientY,time:now};
+    },{passive:true});
+    addEventListener('touchend', ()=>{prevTouch=null;},{passive:true});
+
+    // Motion permission button
+    const motionBtn=document.getElementById('motionBtn');
+    const isTouch='ontouchstart'in window||navigator.maxTouchPoints>0;
+    function enableMotion(){
+      if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
+        DeviceMotionEvent.requestPermission().then(state=>{if(state==='granted'){wireMotion();motionBtn.style.display='none';}}).catch(()=>{});
+      }else{wireMotion();motionBtn.style.display='none';}
+    }
+    function wireMotion(){
+      addEventListener('deviceorientation', e=>{
+        const g=0.08;
+        gravity.gx=(e.gamma||0)*g;
+        gravity.gy=(e.beta||0)*g;
+      },{passive:true});
+    }
+    if(isTouch){ motionBtn.style.display='inline-block'; motionBtn.addEventListener('click', enableMotion); }
+
+    // Create pigs
+    const pigs=[];
+    function createPig(){
+      const el=document.createElement('span'); el.className='pig'; el.textContent=EMOJIS[(Math.random()*EMOJIS.length)|0];
+      const size=rng(20,50); el.style.fontSize=size+'px'; pen.appendChild(el);
+      return {el, x:rng(0,W-size), y:rng(0,H-size), vx:rng(-2.5,2.5), vy:rng(-2.5,2.5), size};
+    }
+    for(let i=0;i<NUM;i++) pigs.push(createPig());
+
+    function applyImpulse(cx,cy,ivx,ivy,radius){
+      const r2=radius*radius;
+      for(const p of pigs){
+        const px=p.x+p.size*0.5, py=p.y+p.size*0.5;
+        const dx=px-cx, dy=py-cy, d2=dx*dx+dy*dy;
+        if(d2<r2){
+          const falloff=1 - d2/r2;
+          p.vx += ivx*falloff*0.25;
+          p.vy += ivy*falloff*0.25;
+        }
+      }
+    }
+
+    // Physics loop
+    function step(){
+      W=vw(); H=vh(); // continuously trust true viewport
+      const maxSpeed=7;
+      for(const p of pigs){
+        // Forces
+        let ax=gravity.gx, ay=gravity.gy;
+        if(mouse.active){
+          const cx=p.x+p.size/2, cy=p.y+p.size/2;
+          const dx=cx-mouse.x, dy=cy-mouse.y;
+          const d2=dx*dx+dy*dy; const r=110, r2=r*r;
+          if(d2<r2 && d2>0.01){
+            const d=Math.sqrt(d2); const f=(1-d/r)*1.9;
+            ax += (dx/d)*f; ay += (dy/d)*f;
+          }
+        }
+        // Integrate
+        p.vx += ax; p.vy += ay;
+        const s=Math.hypot(p.vx,p.vy); if(s>maxSpeed){ p.vx=p.vx/s*maxSpeed; p.vy=p.vy/s*maxSpeed; }
+        p.x += p.vx; p.y += p.vy;
+        // Full-viewport wall bounces using inner size
+        if(p.x<0){p.x=0; p.vx = Math.abs(p.vx);}
+        if(p.x>W-p.size){p.x=W-p.size; p.vx = -Math.abs(p.vx);}
+        if(p.y<0){p.y=0; p.vy = Math.abs(p.vy);}
+        if(p.y>H-p.size){p.y=H-p.size; p.vy = -Math.abs(p.vy);}
+        // Render
+        p.el.style.transform = `translate3d(${p.x}px,${p.y}px,0)`;
+      }
+      requestAnimationFrame(step);
+    }
+    step();
+  })();
+  </script>
+</body>
+</html>
