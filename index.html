@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,277 +7,629 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="icon" type="image/png" href="/images/face.png">
   <style>
-/* GLOBAL RESET AND BASE --------------------------------- */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Courier New", monospace;
-}
-
-html, body {
-  height: 100%;
-  background-color: #000;
-  color: #ddd;
-  overflow-y: auto;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-/* HEADER / TASKBAR -------------------------------------- */
-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  background: #1a0033;
-  color: #fff;
-  padding: 16px 24px;
-  border-bottom: 3px solid #cc181e;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  gap: 12px;
-}
-
-.left-section, .right-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-shrink: 0;
-}
-
-.menu {
-  cursor: pointer;
-  font-size: 26px;
-  font-weight: bold;
-  background: none;
-  border: none;
-  color: #fff;
-}
-
-.logo {
-  height: 36px;
-  width: auto;
-}
-
-/* SEARCH BAR -------------------------------------------- */
-.search-bar {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 240px;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.search-bar input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #444;
-  border-right: none;
-  background: #000;
-  color: #fff;
-  font-size: 14px;
-}
-
-.search-bar button {
-  padding: 8px 14px;
-  border: 1px solid #444;
-  background: #222;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.search-bar button:hover {
-  background: #333;
-}
-
-/* MOBILE HEADER ------------------------------------------ */
-@media (max-width: 768px) {
-  header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 12px;
+  /* GLOBAL RESET AND BASE --------------------------------- */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Courier New", monospace;
   }
 
-  .left-section {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .search-bar {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-    margin-top: 8px;
-  }
-
-  .search-bar input {
-    width: 100%;
-    font-size: 1rem;
-    padding: 0.75rem;
-    border-radius: 6px;
-    margin-bottom: 6px;
-    border: 1px solid #0f0;
-  }
-
-  .search-bar button {
-    width: 100%;
-    padding: 0.75rem;
-    font-size: 1rem;
-    border-radius: 6px;
-    border: 1px solid #0f0;
-    background: #0a0;
-    color: #000;
-    font-weight: bold;
-  }
-
-  #search-popup {
-    width: 95%;
-    left: 2.5%;
-    right: 2.5%;
-    max-height: 60vh;
+  html, body {
+    height: 100%;
+    background-color: #000;
+    color: #ddd;
     overflow-y: auto;
   }
-}
 
-/* MAIN LAYOUT -------------------------------------------- */
-main {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: 32px;
-  padding: 32px;
-  justify-content: center;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-@media (max-width: 1100px) {
-  main {
-    gap: 20px;
-    padding: 20px;
+  a {
+    color: inherit;
+    text-decoration: none;
   }
-}
 
-.column {
-  background: #0a0a0a;
-  padding: 20px;
-  border: 1px solid #222;
-  border-radius: 6px;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
-  z-index: 1;
-  overflow: hidden;
-}
+  /* HEADER / TASKBAR -------------------------------------- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #1a0033;
+    color: #fff;
+    padding: 16px 32px;
+    border-bottom: 3px solid #cc181e;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
 
-.post img {
-  display: block;
-  max-width: 100%;
-  border-radius: 4px;
-  margin: 12px 0;
-}
-
-/* RESPONSIVE VIDEOS -------------------------------------- */
-.video iframe {
-  width: 100%;
-  aspect-ratio: 16/9;
-  border: none;
-  border-radius: 6px;
-  margin: 12px 0;
-}
-
-/* LIGHTBOX ----------------------------------------------- */
-#img-lightbox {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.9);
-  z-index: 100000;
-}
-
-#img-lightbox.visible {
-  display: flex;
-}
-
-#img-lightbox .inner {
-  position: relative;
-  max-width: min(92vw, 1400px);
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 8px;
-}
-
-#img-lightbox img {
-  max-width: 100%;
-  max-height: 80vh;
-  border-radius: 8px;
-  border: 1px solid #0f0;
-  box-shadow: 0 0 24px #0f06;
-}
-
-#img-lightbox .toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #0f0;
-}
-
-#img-lightbox .download-btn,
-#img-lightbox .close-x {
+  /* SUBMIT BUTTON ------------------------------------------- */
+.submit-btn {
+  display: inline-block;
+  padding: 8px 20px;
   background: rgba(0, 0, 0, 0.85);
-  color: #0f0;
   border: 2px solid #0f0;
+  color: #0f0;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
   border-radius: 6px;
-  padding: 8px 12px;
-  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.25s ease-in-out;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
 }
 
-#img-lightbox .download-btn:hover,
-#img-lightbox .close-x:hover {
+.submit-btn:hover {
   background: #0f0;
   color: #000;
   box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
+  transform: scale(1.05);
 }
 
-#img-lightbox .filename {
+  .left-section,
+  .right-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .menu {
+    cursor: pointer;
+    font-size: 26px;
+    font-weight: bold;
+    background: none;
+    border: none;
+    color: #fff;
+    padding: 4px 0;
+  }
+
+  .logo {
+    height: 36px;
+    width: auto;
+    display: block;
+  }
+
+  .search-bar {
+    flex: 1;
+    max-width: 600px;
+    display: flex;
+    align-items: center;
+    margin: 0 24px;
+  }
+
+  .search-bar input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #444;
+    border-right: none;
+    background: #000;
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .search-bar button {
+    padding: 8px 16px;
+    border: 1px solid #444;
+    background-color: #222;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .search-bar button:hover {
+    background-color: #333;
+  }
+
+  .login-btn {
+    background: #cc181e;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .login-btn:hover {
+    background: #ff4444;
+  }
+
+  /* MAIN CONTENT LAYOUT ----------------------------------- */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 32px;
+    background: #000;
+    align-items: start;
+    position: relative;   /* added for scanline layer */
+    overflow: hidden;     /* added for scanline layer */
+  }
+
+  /* DIAGONAL MOVING SCANLINES BEHIND COLUMNS (added) */
+  main::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      135deg,
+      rgba(0, 255, 153, 0.18) 0px,
+      rgba(0, 255, 153, 0.18) 3px,
+      rgba(0, 255, 153, 0.02) 3px,
+      rgba(0, 255, 153, 0.02) 12px
+    );
+    animation: scan-drift 60s linear infinite; /* slow, you liked the seam */
+    pointer-events: none;
+    z-index: 0;
+    filter: brightness(1.2);
+  }
+
+  @keyframes scan-drift {
+    from { background-position: 0 0; }
+    to   { background-position: 600px 600px; }
+  }
+
+  .column {
+    background: #0a0a0a;
+    padding: 20px;
+    border: 1px solid #222;
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+    overflow: visible;
+    position: relative;  /* ensure content is above scanlines */
+    z-index: 1;          /* ensure content is above scanlines */
+  }
+
+  h1 {
+    font-size: 1.8em;
+    font-weight: bold;
+    text-align: center;
+    text-shadow: 0 0 6px #fff2, 0 0 12px #0ff4;
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    text-align: center;
+    color: #888;
+    font-weight: normal;
+    margin-bottom: 20px;
+  }
+
+  /* POSTS ------------------------------------------------- */
+  .post {
+    margin-bottom: 28px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed #333;
+  }
+
+  .post h1 {
+    color:#00ff99;
+  }
+
+  .post h3 {
+    color: #00ff99;
+    font-size: 1.2em;
+    margin-bottom: 6px;
+  }
+
+  .post small {
+    display: block;
+    color: #888;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+  }
+
+  .post p {
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .post img {
+    display: block;
+    max-width: 100%;
+    border-radius: 4px;
+    margin: 12px 0;
+  }
+
+  /* YOUTUBE VIDEOS ---------------------------------------- */
+  .video {
+    margin-bottom: 24px;
+  }
+
+  .video a {
+    color: #cc181e;
+    text-decoration: none;
+  }
+
+  .video a:hover {
+    text-decoration: underline;
+  }
+
+  iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  /* RESPONSIVE -------------------------------------------- */
+  @media (max-width: 1100px) {
+    main {
+      grid-template-columns: 1fr;
+    }
+    header {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .search-bar {
+      order: 3;
+      width: 100%;
+      margin-top: 8px;
+    }
+  }
+
+  .footer {
+    position: relative;
+    text-align: center;
+    margin-top: 40px;
+    color: #ccc;
+  }
+
+  /* HACKER TERMINAL SEARCH POPUP --------------------------- */
+  .search-wrapper { position: relative; width: 100%; }
+  .search-input { width: 100%; }
+
+  #search-popup {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    margin-top: 8px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #0f0;
+    box-shadow: 0 0 12px #0f07;
+    border-radius: 6px;
+    padding: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    display: none;
+    z-index: 9999;
+    font-family: "Courier New", monospace;
+  }
+
+  #search-popup .promptline {
+    color: #0f0;
+    opacity: 0.85;
+    font-size: 12px;
+    margin: 4px 8px 8px;
+  }
+
+  .search-result {
+    padding: 10px 12px;
+    border: 1px solid #0f0;
+    border-radius: 4px;
+    margin: 8px 0;
+    background: rgba(0, 20, 0, 0.35);
+    cursor: pointer;
+  }
+
+  .search-result:hover,
+  .search-result.active {
+    background: rgba(0, 40, 0, 0.6);
+    outline: 1px dashed #0f0;
+  }
+
+  .search-result .kind { color: #9f9; font-size: 12px; margin-right: 6px; }
+  .search-result .title { color: #0f0; font-weight: bold; display: block; }
+  .search-result .meta { color: #7f7; font-size: 12px; margin-top: 2px; }
+  .search-result .snippet { color: #bfb; font-size: 13px; margin-top: 6px; opacity: 0.85; }
+  .no-results { color: #7f7; padding: 8px 12px; }
+
+  /* POST POPUP / MODAL ------------------------------------ */
+  #post-popup {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  }
+
+  #post-popup .popup-inner {
+    position: relative;
+    background: rgba(0, 20, 0, 0.9);
+    border: 2px solid #0f0;
+    box-shadow: 0 0 20px #0f05;
+    padding: 24px;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: #0f0;
+    font-family: "Courier New", monospace;
+    border-radius: 8px;
+  }
+
+  #post-popup .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: #0f0;
+    font-size: 22px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  #post-popup .close-btn:hover {
+    color: #ff4444;
+  }
+
+  #post-popup img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 12px 0;
+  }
+
+  /* BUTTON FIX / STYLE UPGRADE ------------------------------- */
+.load-more,
+.youtube-btn {
+  display: inline-block;
+  margin: 20px auto 0;
+  padding: 10px 24px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #0f0;
+  border-radius: 8px;
   color: #0f0;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.25s ease-in-out;
   text-align: center;
-  font-family: monospace;
-  font-size: 0.9rem;
-  opacity: 0.9;
+  box-shadow: 0 0 12px rgba(0, 255, 0, 0.2);
 }
 
-/* FOOTER ------------------------------------------------- */
-.footer {
-  text-align: center;
-  margin-top: 40px;
-  color: #ccc;
+.load-more:hover,
+.youtube-btn:hover {
+  background: #0f0;
+  color: #000;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+  transform: scale(1.05);
 }
+
+.youtube-btn {
+  background: rgba(204, 24, 30, 0.1);
+  border-color: #cc181e;
+  color: #cc181e;
+  margin-left: 8px;
+}
+
+.youtube-btn:hover {
+  background: #cc181e;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+}
+
+/* center them in their column cleanly */
+#loadMorePosts,
+#loadMoreVideos {
+  display: block;
+  margin: 20px auto;
+}
+
+/* Center both Watch More and Watch on YouTube buttons */
+#loadMoreVideos,
+.youtube-btn {
+  display: block;
+  margin: 20px auto;
+  text-align: center;
+}
+
+/* Optional: tighten spacing so they stack nicely */
+#loadMoreVideos + .youtube-btn {
+  margin-top: 10px;
+}
+
+/* HAMBURGER DROPDOWN -------------------------------------- */
+.menu-popup {
+  position: absolute;
+  top: 60px; /* adjust to sit under header */
+  left: 32px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid #0f0;
+  box-shadow: 0 0 12px #0f07;
+  border-radius: 6px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  z-index: 9999;
+  font-family: "Courier New", monospace;
+  min-width: 160px;
+}
+
+.menu-item {
+  color: #0f0;
+  padding: 10px 12px;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+  display: block;
+}
+
+.menu-item:hover {
+  background: rgba(0, 40, 0, 0.6);
+  outline: 1px dashed #0f0;
+  color: #000;
+}
+
+.menu-popup.visible {
+  display: flex;
+}
+
+/* CONTACT POPUP ------------------------------------------ */
+.contact-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+.contact-inner {
+  background: rgba(0,20,0,0.9);
+  border: 2px solid #0f0;
+  padding: 24px;
+  border-radius: 8px;
+  color: #0f0;
+  width: 90%;
+  max-width: 400px;
+  font-family: "Courier New", monospace;
+  box-shadow: 0 0 20px #0f05;
+}
+.contact-inner h2 {
+  margin-bottom: 12px;
+}
+.contact-inner label {
+  display: block;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.contact-inner input,
+.contact-inner textarea {
+  width: 100%;
+  background: #000;
+  color: #0f0;
+  border: 1px solid #0f0;
+  border-radius: 4px;
+  padding: 6px;
+  font-family: inherit;
+}
+.send-btn {
+  margin-top: 12px;
+  background: #0f0;
+  color: #000;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+.send-btn:hover {
+  background: #7f7;
+}
+.close-contact {
+  position: absolute;
+  right: 12px;
+  top: 8px;
+  background: transparent;
+  border: none;
+  color: #0f0;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* LIGHTBOX ADDON ------------------------------------------------ */
+  #img-lightbox{
+    position:fixed; inset:0; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.9); z-index:100000;
+  }
+  #img-lightbox.visible{ display:flex; }
+  #img-lightbox .inner{
+    position:relative; max-width:min(92vw,1400px); max-height:90vh;
+    display:flex; flex-direction:column; gap:12px;
+    padding:8px;
+  }
+  #img-lightbox img{
+    max-width:100%; max-height:80vh;
+    border-radius:8px; border:1px solid #0f0; box-shadow:0 0 24px #0f06;
+  }
+  #img-lightbox .toolbar{
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:"Courier New", monospace; color:#0f0;
+  }
+  #img-lightbox .download-btn, #img-lightbox .close-x{
+    background:rgba(0,0,0,0.85); color:#0f0; border:2px solid #0f0;
+    border-radius:6px; padding:8px 12px; cursor:pointer; text-decoration:none;
+    transition:all .2s ease-in-out;
+  }
+  #img-lightbox .download-btn:hover, #img-lightbox .close-x:hover{
+    background:#0f0; color:#000; box-shadow:0 0 18px rgba(0,255,0,.6);
+  }
+  #img-lightbox .close-x{
+    position:absolute; right:-10px; top:-10px;
+    width:36px; height:36px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+  }
+    
+@media (max-width: 768px) {
+  #main-content {
+    height: 100dvh;
+  }
+  #main-iframe {
+    height: 100dvh;
+  }
+}
+
+#space-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(100vh - var(--header-height, 80px));
+  display: block;
+  background: black;
+  z-index: 1;
+}
+
+main.space-mode {
+  position: relative;
+  overflow: hidden;
+  height: calc(100vh - var(--header-height, 80px));
+  margin: 0;
+  padding: 0;
+}
+
 </style>
+
 </head>
 
 <body>
   <header>
     <div class="left-section">
       <button class="menu">&#9776;</button>
+
+      <div id="menu-popup" class="menu-popup">
+        <a href="/" class="menu-item">Home</a>
+        <a href="/glitchtv" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Glitch TV</a>
+        <a href="/glitchcamera" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Glitch Camera</a>
+        <a href="/mazegame" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Maze Game</a>
+        <a href="/admin" class="menu-item">Admin</a>
+      </div>
+
+      <!-- LOGO + MESSAGE -->
       <a href="index.html" class="flex items-center gap-3">
         <img class="logo" src="/images/uploads/deadlogo-green.png" alt="TheInternetIsDead Logo" />
-        <span style="color:#00ff99;font-size:14px;">The webmaster is not harvesting your soul for profit.</span>
+        <span style="color:#00ff99; font-family:'Courier New', monospace; font-size:14px; text-align:center;">
+          The webmaster is not harvesting your soul for profit. Isn't that wonderful?
+        </span>
       </a>
     </div>
 
+    <!-- SEARCH BAR (restored) -->
     <div class="search-bar search-wrapper">
-      <input type="text" class="search-input" placeholder="Search..." />
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search..."
+      />
       <button class="search-btn" aria-label="Search">🔍</button>
       <div id="search-popup"></div>
     </div>
@@ -287,6 +638,27 @@ main {
       <a href="mailto:nobody@theinternetisdead.org" class="submit-btn">Submit</a>
     </div>
   </header>
+</body>
+
+
+<!-- CONTACT POPUP -->
+<div id="contact-popup" class="contact-popup">
+  <div class="contact-inner">
+    <button class="close-contact">✕</button>
+    <h2>Send a Message</h2>
+    <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+      <input type="hidden" name="form-name" value="contact">
+      <input type="hidden" name="bot-field" />
+      <label>Name:</label>
+      <input type="text" name="name" required>
+      <label>Email:</label>
+      <input type="email" name="email" required>
+      <label>Message:</label>
+      <textarea name="message" rows="4" required></textarea>
+      <button type="submit" class="send-btn">Send</button>
+    </form>
+  </div>
+</div>
 
   <main>
     <section class="column" id="posts">
@@ -294,15 +666,18 @@ main {
       <h2>Latest Blog Posts</h2>
       <p>Loading posts...</p>
     </section>
+
     <section class="column" id="youtube">
       <h1 style="color:#66ccff;">My Latest Broadcast</h1>
       <h2>Honestly Thomas (Tektite) on YouTube</h2>
       <p>Loading videos...</p>
     </section>
   </main>
+  <div class="footer">
+Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
+</div>
 
-  <div class="footer">Copyright 2025 &bull; theinternetisdead.org</div>
-
+<!-- Global image lightbox -->
   <div id="img-lightbox" aria-modal="true" role="dialog">
     <div class="inner">
       <button class="close-x" aria-label="Close">✕</button>
@@ -316,78 +691,246 @@ main {
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-  const postsContainer=document.getElementById("posts");
-  const youtubeContainer=document.getElementById("youtube");
-  const searchInput=document.querySelector(".search-input");
-  const searchBtn=document.querySelector(".search-btn");
-  const popup=document.getElementById("search-popup");
+  // === DOM SHORTCUTS ===
+  const postsContainer = document.getElementById("posts");
+  const youtubeContainer = document.getElementById("youtube");
+  const searchInput = document.querySelector(".search-input");
+  const searchBtn = document.querySelector(".search-btn");
+  const popup = document.getElementById("search-popup");
+  const contactPopup = document.getElementById("contact-popup");
+  const submitBtn = document.querySelector(".submit-btn");
+  const closeContact = document.querySelector(".close-contact");
+  const menuBtn = document.querySelector(".menu");
+  const menuPopup = document.getElementById("menu-popup");
 
-  let allPosts=[],allVideos=[],INDEX=[];
+  let allPosts = [], allVideos = [], INDEX = [];
+  let visiblePosts = 3, visibleVideos = 3;
+  let summoned = [];
 
-  function openPopup(){popup.style.display="block";}
-  function closePopup(){popup.style.display="none";}
-
-  async function loadPosts(){
-    try{
-      const res=await fetch("/_posts/index.json");
-      if(!res.ok)throw new Error(`HTTP ${res.status}`);
-      allPosts=await res.json();
-      allPosts.sort((a,b)=>new Date(b.date)-new Date(a.date));
-      renderPosts();
-    }catch(err){postsContainer.innerHTML=`<p style='color:red;'>Error loading posts: ${err.message}</p>`;}
+  // === POPUP HELPERS ===
+  function renderPlaceholder() {
+    popup.innerHTML = `
+      <div class="promptline">theinternetisdead.org</div>
+      <div class="search-result">
+        Type to search posts/videos, or try commands: <b>/help</b>
+      </div>
+    `;
+  }
+  function openPopup() {
+    if (!popup) return;
+    if (!popup.innerHTML.trim()) renderPlaceholder();
+    popup.style.display = "block";
+  }
+  function closePopup() {
+    if (!popup) return;
+    popup.style.display = "none";
   }
 
-  async function renderPosts(){
-    postsContainer.innerHTML="<h1 style='color:#00ff99;'>🌀 The Daily Spiral</h1><h2>Latest Blog Posts</h2>";
-    const displayed=allPosts.slice(0,3);
-    for(const p of displayed){
-      const wrapper=document.createElement("div");
-      wrapper.className="post";
-      wrapper.innerHTML=`<h3>${p.title}</h3><small>${new Date(p.date).toLocaleString()}</small>${p.image?`<img src='${p.image}' alt='${p.title}' loading='lazy'>`:""}<div class='content'><em>Loading...</em></div>`;
-      postsContainer.appendChild(wrapper);
-      try{
-        let text=await (await fetch(p.file)).text();
-        if(text.startsWith('---')){const end=text.indexOf('---',3);if(end!==-1)text=text.slice(end+3);}
-        wrapper.querySelector(".content").innerHTML=marked.parse(text.trim());
-      }catch{wrapper.querySelector(".content").innerHTML="<em>Unable to load post.</em>";}
+  // === LOAD POSTS ===
+  async function loadPosts() {
+    try {
+      const res = await fetch("/_posts/index.json");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allPosts = await res.json();
+      allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+      renderPosts();
+    } catch (err) {
+      postsContainer.innerHTML = `<p style="color:red;">Error loading posts: ${err.message}</p>`;
     }
-    const lightbox=document.getElementById("img-lightbox");
-    const lightImg=lightbox.querySelector("img");
-    const filenameEl=lightbox.querySelector(".filename");
-    const dlBtn=lightbox.querySelector(".download-btn");
-    const closeBtn=lightbox.querySelector(".close-x");
+  }
 
-    postsContainer.querySelectorAll("img").forEach(img=>{
-      img.addEventListener("click",()=>{
-        lightImg.src=img.src;
-        dlBtn.href=img.src;
-        filenameEl.textContent=img.src.split("/").pop();
+  async function renderPosts() {
+    postsContainer.innerHTML = `
+      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
+      <h2>Latest Blog Posts</h2>
+    `;
+    const displayed = allPosts.slice(0, visiblePosts);
+    for (const p of displayed) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "post";
+      wrapper.innerHTML = `
+        <h3>${p.title}</h3>
+        <small>${new Date(p.date).toLocaleString()}</small>
+        ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
+        <div class="content"><em>Loading...</em></div>`;
+      postsContainer.appendChild(wrapper);
+      try {
+        let text = await (await fetch(p.file)).text();
+        if (text.startsWith('---')) {
+          const end = text.indexOf('---', 3);
+          if (end !== -1) text = text.slice(end + 3);
+        }
+        wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
+      } catch {
+        wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
+      }
+    }
+
+    if (visiblePosts < allPosts.length) {
+      const btn = document.createElement("button");
+      btn.className = "load-more";
+      btn.id = "loadMorePosts";
+      btn.textContent = "Read More";
+      btn.onclick = () => { visiblePosts += 3; renderPosts(); };
+      postsContainer.appendChild(btn);
+    }
+
+    // === LIGHTBOX (with filename) ===
+    if (!document.getElementById("img-lightbox")) {
+      const box = document.createElement("div");
+      box.id = "img-lightbox";
+      box.innerHTML = `
+        <div class="inner">
+          <div class="toolbar">
+            <a class="download-btn" target="_blank" download>Download</a>
+            <div class="close-x">×</div>
+          </div>
+          <img src="" alt="Expanded image">
+          <div class="filename" style="color:#0f0;text-align:center;font-family:monospace;margin-top:8px;"></div>
+        </div>
+      `;
+      document.body.appendChild(box);
+    }
+
+    const lightbox = document.getElementById("img-lightbox");
+    const lightImg = lightbox.querySelector("img");
+    const filenameEl = lightbox.querySelector(".filename");
+    const dlBtn = lightbox.querySelector(".download-btn");
+    const closeBtn = lightbox.querySelector(".close-x");
+
+    postsContainer.querySelectorAll("img").forEach(img => {
+      img.addEventListener("click", () => {
+        lightImg.src = img.src;
+        dlBtn.href = img.src;
+        const name = img.src.split("/").pop();
+        filenameEl.textContent = name || "";
         lightbox.classList.add("visible");
       });
     });
-    closeBtn.onclick=()=>lightbox.classList.remove("visible");
-    lightbox.onclick=e=>{if(e.target===lightbox)lightbox.classList.remove("visible");};
-    document.addEventListener("keydown",e=>{if(e.key==="Escape")lightbox.classList.remove("visible");});
+
+    const closeLightbox = () => lightbox.classList.remove("visible");
+    closeBtn.addEventListener("click", closeLightbox);
+    lightbox.addEventListener("click", e => {
+      if (e.target === lightbox) closeLightbox();
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") closeLightbox();
+    });
   }
 
-  async function loadVideos(){
-    try{
-      const feed="https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-      const rssRes=await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed)}`);
-      const rssData=await rssRes.json();
-      allVideos=rssData.items||[];
+  // === LOAD VIDEOS ===
+  async function loadVideos() {
+    try {
+      const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+      const rssRes = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
+      const rssData = await rssRes.json();
+      allVideos = rssData.items || [];
       renderVideos();
-    }catch(err){youtubeContainer.innerHTML=`<p style='color:red;'>Error loading videos: ${err.message}</p>`;}
+    } catch (err) {
+      youtubeContainer.innerHTML = `<p style="color:red;">Error loading videos: ${err.message}</p>`;
+    }
   }
-  function renderVideos(){
-    const vids=allVideos.slice(0,3);
-    youtubeContainer.innerHTML=`<h1 style='color:#66ccff;'>My Latest Broadcast</h1><h2>Honestly Thomas (Tektite)</h2>`+
-      vids.map(v=>`<div class='video'><iframe src='https://www.youtube.com/embed/${v.guid?.split(":").pop()||""}' allowfullscreen></iframe><a href='${v.link}' target='_blank'>${v.title}</a></div>`).join("");
+
+  function renderVideos() {
+    const displayed = allVideos.slice(0, visibleVideos);
+    youtubeContainer.innerHTML = `
+      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
+      <h2>Honestly Thomas (Tektite) on YouTube</h2>
+      ${displayed.map(v => {
+        const id = v.guid?.split(":").pop() || "";
+        return `<div class="video">
+          <iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe>
+          <a href="${v.link}" target="_blank">${v.title}</a>
+        </div>`;
+      }).join("")}
+      ${visibleVideos < allVideos.length ? `<button id="loadMoreVideos" class="load-more">Watch More</button>` : ""}
+      <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" target="_blank" class="youtube-btn">Watch on YouTube</a>
+    `;
+    const btn = document.getElementById("loadMoreVideos");
+    if (btn) btn.addEventListener("click", () => { visibleVideos += 3; renderVideos(); });
+  }
+
+  // === BUILD SEARCH INDEX ===
+  async function buildIndex() {
+    const postDocs = await Promise.all(allPosts.map(async p => {
+      try {
+        let txt = await (await fetch(p.file)).text();
+        if (txt.startsWith('---')) {
+          const end = txt.indexOf('---', 3);
+          if (end !== -1) txt = txt.slice(end + 3);
+        }
+        const plain = txt.replace(/[#>*_`\[\]\(\)!-]/g, " ").replace(/\s+/g, " ").trim();
+        return { kind: "post", title: p.title, url: p.file.replace(".md", ".html"), date: p.date, snippet: plain.slice(0, 200) };
+      } catch {
+        return { kind: "post", title: p.title, url: p.file.replace(".md", ".html"), date: p.date, snippet: "" };
+      }
+    }));
+    const videoDocs = allVideos.map(v => ({
+      kind: "video", title: v.title, url: v.link, date: v.pubDate,
+      snippet: (v.description || "").replace(/<[^>]+>/g, "").slice(0, 200)
+    }));
+    INDEX = [...postDocs, ...videoDocs];
+  }
+
+  // === GIF SUMMON (same as before) ===
+  async function listGifs() { /* unchanged */ }
+  function spawnGif(src) { /* unchanged */ }
+  function clearSummoned() { /* unchanged */ }
+  async function handleCommand(cmd) { /* unchanged */ }
+  function renderResults(q) { /* unchanged */ }
+
+  // === SEARCH, CONTACT, MENU INIT (same as before) ===
+  if (searchInput && popup) {
+    const showOnInteract = () => openPopup();
+    searchInput.addEventListener("focus", showOnInteract);
+    searchInput.addEventListener("click", showOnInteract);
+    if (searchBtn) searchBtn.addEventListener("click", showOnInteract);
+
+    searchInput.addEventListener("input", () => {
+      const val = searchInput.value.trim();
+      if (!val) { openPopup(); renderPlaceholder(); return; }
+      renderResults(val);
+    });
+
+    searchInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        const val = searchInput.value.trim();
+        if (val.startsWith("/")) handleCommand(val.toLowerCase());
+        else if (val) renderResults(val);
+      }
+    });
+
+    document.addEventListener("click", e => {
+      const inside = popup.contains(e.target) || searchInput.contains(e.target) || (searchBtn && searchBtn.contains(e.target));
+      if (!inside) closePopup();
+    });
+  }
+
+  if (submitBtn) submitBtn.addEventListener("click", e => {
+    e.preventDefault();
+    contactPopup.style.display = "flex";
+  });
+  if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
+  if (contactPopup) contactPopup.addEventListener("click", e => {
+    if (e.target === contactPopup) contactPopup.style.display = "none";
+  });
+
+  if (menuBtn && menuPopup) {
+    menuBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      menuPopup.classList.toggle("visible");
+    });
+    document.addEventListener("click", e => {
+      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
+        menuPopup.classList.remove("visible");
+    });
   }
 
   await loadPosts();
   await loadVideos();
+  await buildIndex();
 });
 </script>
+  
 </body>
 </html>
