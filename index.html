@@ -725,7 +725,6 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
       </div>
     </div>
   </div>
-
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
   // === DOM SHORTCUTS ===
@@ -749,6 +748,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     popup.style.display = "block";
   }
   function closePopup() { popup.style.display = "none"; }
+
+  // === LIGHTBOX SETUP ===
+  if (!document.getElementById("img-lightbox")) {
+    const box = document.createElement("div");
+    box.id = "img-lightbox";
+    box.innerHTML = `
+      <div class="inner">
+        <div class="toolbar">
+          <a class="download-btn" target="_blank" download>Download</a>
+          <div class="close-x">×</div>
+        </div>
+        <img src="" alt="Expanded image">
+        <div class="filename" style="color:#0f0;text-align:center;font-family:monospace;margin-top:8px;"></div>
+      </div>
+    `;
+    document.body.appendChild(box);
+  }
+  const lightbox = document.getElementById("img-lightbox");
+  const lightImg = lightbox.querySelector("img");
+  const filenameEl = lightbox.querySelector(".filename");
+  const dlBtn = lightbox.querySelector(".download-btn");
+  const closeBtn = lightbox.querySelector(".close-x");
+
+  const closeLightbox = () => lightbox.classList.remove("visible");
+  closeBtn.addEventListener("click", closeLightbox);
+  lightbox.addEventListener("click", e => {
+    if (e.target === lightbox) closeLightbox();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeLightbox();
+  });
+
+  function showLightboxImage(src) {
+    lightImg.src = src;
+    dlBtn.href = src;
+    const name = src.split("/").pop();
+    filenameEl.textContent = name || "";
+    lightbox.classList.add("visible");
+  }
 
   // === LOAD POSTS ===
   async function loadPosts() {
@@ -788,6 +826,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         wrap.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
       }
     }
+    postsContainer.querySelectorAll("img").forEach(img => {
+      img.addEventListener("click", () => showLightboxImage(img.src));
+    });
     if (visiblePosts < allPosts.length) {
       const btn = document.createElement("button");
       btn.className = "load-more";
@@ -838,9 +879,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (end !== -1) txt = txt.slice(end + 3);
         }
         const plain = txt.replace(/[#>*_`\[\]\(\)!-]/g, " ").replace(/\s+/g, " ").trim();
-        return { kind: "post", title: p.title, url: p.file.replace(".md", ".html"), date: p.date, snippet: plain.slice(0, 200) };
+        return { kind: "post", title: p.title, url: p.file, date: p.date, snippet: plain.slice(0, 200), image: p.image };
       } catch {
-        return { kind: "post", title: p.title, url: p.file.replace(".md", ".html"), date: p.date, snippet: "" };
+        return { kind: "post", title: p.title, url: p.file, date: p.date, snippet: "" };
       }
     }));
     const videoDocs = allVideos.map(v => ({
@@ -856,7 +897,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     "/revive": "Reload posts and videos",
     "/die": "Clear the popup",
     "/space": "Engage cosmic flight mode",
-    "/gifs": "Summon a rain of gifs (experimental)"
+    "/gifs": "Summon gif rain (coming soon)"
   };
 
   // === COMMAND HANDLER ===
@@ -892,7 +933,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         openPopup(`<div class="search-result">Space mode engaged.</div>`);
         break;
       case "/gifs":
-        openPopup(`<div class="search-result">Gif summoning not implemented yet.</div>`);
+        openPopup(`<div class="search-result">Gif summoning not yet implemented.</div>`);
         break;
       default:
         openPopup(`<div class="search-result">Unknown command: ${cmd}</div>`);
@@ -903,7 +944,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function showCommandHints(q) {
     const filtered = Object.entries(COMMANDS)
       .filter(([k]) => k.startsWith(q.toLowerCase()))
-      .map(([k, v]) => `<div class="search-result"><b>${k}</b> — ${v}</div>`).join("");
+      .map(([k,v]) => `<div class="search-result"><b>${k}</b> — ${v}</div>`).join("");
     openPopup(filtered || `<div class="search-result no-results">No command found for "${q}"</div>`);
   }
 
@@ -915,7 +956,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     if (!results.length) return openPopup(`<div class="search-result no-results">No results for "${q}"</div>`);
     popup.innerHTML = results.map(r => `
-      <div class="search-result" data-url="${r.url}">
+      <div class="search-result" data-kind="${r.kind}" data-url="${r.url}" data-img="${r.image || ""}">
         <span class="kind">[${r.kind}]</span>
         <span class="title">${r.title}</span>
         <span class="meta">${new Date(r.date).toLocaleString()}</span>
@@ -923,7 +964,35 @@ document.addEventListener("DOMContentLoaded", async () => {
       </div>`).join("");
     popup.style.display = "block";
     popup.querySelectorAll(".search-result").forEach(res => {
-      res.addEventListener("click", () => window.open(res.dataset.url, "_blank"));
+      res.addEventListener("click", async () => {
+        if (res.dataset.kind === "video") {
+          window.open(res.dataset.url, "_blank");
+        } else {
+          const file = res.dataset.url;
+          try {
+            let text = await (await fetch(file)).text();
+            if (text.startsWith('---')) {
+              const end = text.indexOf('---', 3);
+              if (end !== -1) text = text.slice(end + 3);
+            }
+            const html = marked.parse(text.trim());
+            const tmp = document.createElement("div");
+            tmp.className = "popup-inner";
+            tmp.innerHTML = `
+              <button class="close-btn">×</button>
+              ${res.dataset.img ? `<img src="${res.dataset.img}" alt="">` : ""}
+              <h2>${res.querySelector(".title").textContent}</h2>
+              <div>${html}</div>`;
+            const postPopup = document.createElement("div");
+            postPopup.id = "post-popup";
+            postPopup.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:99999;";
+            postPopup.appendChild(tmp);
+            document.body.appendChild(postPopup);
+            tmp.querySelector(".close-btn").addEventListener("click",()=>postPopup.remove());
+            postPopup.addEventListener("click",e=>{if(e.target===postPopup)postPopup.remove();});
+          } catch { alert("Could not load post."); }
+        }
+      });
     });
   }
 
@@ -935,7 +1004,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (val.startsWith("/")) return showCommandHints(val);
       renderResults(val);
     });
-
     searchInput.addEventListener("keydown", e => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -945,7 +1013,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         else renderResults(val);
       }
     });
-
     if (searchBtn) {
       searchBtn.addEventListener("click", () => {
         const val = searchInput.value.trim();
@@ -954,33 +1021,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         else renderResults(val);
       });
     }
-
     document.addEventListener("click", e => {
       if (!popup.contains(e.target) && !searchInput.contains(e.target) && !searchBtn.contains(e.target))
         closePopup();
     });
   }
 
-  // === CONTACT POPUP ===
-  if (submitBtn) submitBtn.addEventListener("click", e => {
-    e.preventDefault();
-    contactPopup.style.display = "flex";
-  });
+  // === CONTACT & MENU ===
+  if (submitBtn) submitBtn.addEventListener("click", e => { e.preventDefault(); contactPopup.style.display = "flex"; });
   if (closeContact) closeContact.addEventListener("click", () => contactPopup.style.display = "none");
-  if (contactPopup) contactPopup.addEventListener("click", e => {
-    if (e.target === contactPopup) contactPopup.style.display = "none";
-  });
-
-  // === MENU ===
+  if (contactPopup) contactPopup.addEventListener("click", e => { if (e.target === contactPopup) contactPopup.style.display = "none"; });
   if (menuBtn && menuPopup) {
-    menuBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      menuPopup.classList.toggle("visible");
-    });
-    document.addEventListener("click", e => {
-      if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
-        menuPopup.classList.remove("visible");
-    });
+    menuBtn.addEventListener("click", e => { e.stopPropagation(); menuPopup.classList.toggle("visible"); });
+    document.addEventListener("click", e => { if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) menuPopup.classList.remove("visible"); });
   }
 
   await loadPosts();
