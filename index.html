@@ -742,26 +742,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let allPosts = [], allVideos = [], INDEX = [];
   let visiblePosts = 3, visibleVideos = 3;
-  let summoned = [];
 
   // === POPUP HELPERS ===
-  function renderPlaceholder() {
-    popup.innerHTML = `
-      <div class="promptline">theinternetisdead.org</div>
-      <div class="search-result">
-        Type to search posts/videos, or try commands: <b>/help</b>
-      </div>
-    `;
-  }
-  function openPopup() {
-    if (!popup) return;
-    if (!popup.innerHTML.trim()) renderPlaceholder();
+  function openPopup(html) {
+    popup.innerHTML = html || "";
     popup.style.display = "block";
   }
-  function closePopup() {
-    if (!popup) return;
-    popup.style.display = "none";
-  }
+  function closePopup() { popup.style.display = "none"; }
 
   // === LOAD POSTS ===
   async function loadPosts() {
@@ -779,80 +766,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function renderPosts() {
     postsContainer.innerHTML = `
       <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-      <h2>Latest Blog Posts</h2>
-    `;
+      <h2>Latest Blog Posts</h2>`;
     const displayed = allPosts.slice(0, visiblePosts);
     for (const p of displayed) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "post";
-      wrapper.innerHTML = `
+      const wrap = document.createElement("div");
+      wrap.className = "post";
+      wrap.innerHTML = `
         <h3>${p.title}</h3>
         <small>${new Date(p.date).toLocaleString()}</small>
         ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
         <div class="content"><em>Loading...</em></div>`;
-      postsContainer.appendChild(wrapper);
+      postsContainer.appendChild(wrap);
       try {
         let text = await (await fetch(p.file)).text();
         if (text.startsWith('---')) {
           const end = text.indexOf('---', 3);
           if (end !== -1) text = text.slice(end + 3);
         }
-        wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
+        wrap.querySelector(".content").innerHTML = marked.parse(text.trim());
       } catch {
-        wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
+        wrap.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
       }
     }
-
     if (visiblePosts < allPosts.length) {
       const btn = document.createElement("button");
       btn.className = "load-more";
-      btn.id = "loadMorePosts";
       btn.textContent = "Read More";
       btn.onclick = () => { visiblePosts += 3; renderPosts(); };
       postsContainer.appendChild(btn);
     }
-
-    // === LIGHTBOX (with filename) ===
-    if (!document.getElementById("img-lightbox")) {
-      const box = document.createElement("div");
-      box.id = "img-lightbox";
-      box.innerHTML = `
-        <div class="inner">
-          <div class="toolbar">
-            <a class="download-btn" target="_blank" download>Download</a>
-            <div class="close-x">×</div>
-          </div>
-          <img src="" alt="Expanded image">
-          <div class="filename" style="color:#0f0;text-align:center;font-family:monospace;margin-top:8px;"></div>
-        </div>
-      `;
-      document.body.appendChild(box);
-    }
-
-    const lightbox = document.getElementById("img-lightbox");
-    const lightImg = lightbox.querySelector("img");
-    const filenameEl = lightbox.querySelector(".filename");
-    const dlBtn = lightbox.querySelector(".download-btn");
-    const closeBtn = lightbox.querySelector(".close-x");
-
-    postsContainer.querySelectorAll("img").forEach(img => {
-      img.addEventListener("click", () => {
-        lightImg.src = img.src;
-        dlBtn.href = img.src;
-        const name = img.src.split("/").pop();
-        filenameEl.textContent = name || "";
-        lightbox.classList.add("visible");
-      });
-    });
-
-    const closeLightbox = () => lightbox.classList.remove("visible");
-    closeBtn.addEventListener("click", closeLightbox);
-    lightbox.addEventListener("click", e => {
-      if (e.target === lightbox) closeLightbox();
-    });
-    document.addEventListener("keydown", e => {
-      if (e.key === "Escape") closeLightbox();
-    });
   }
 
   // === LOAD VIDEOS ===
@@ -869,11 +811,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderVideos() {
-    const displayed = allVideos.slice(0, visibleVideos);
+    const shown = allVideos.slice(0, visibleVideos);
     youtubeContainer.innerHTML = `
       <h1 style="color:#66ccff;">My Latest Broadcast</h1>
       <h2>Honestly Thomas (Tektite) on YouTube</h2>
-      ${displayed.map(v => {
+      ${shown.map(v => {
         const id = v.guid?.split(":").pop() || "";
         return `<div class="video">
           <iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe>
@@ -881,8 +823,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>`;
       }).join("")}
       ${visibleVideos < allVideos.length ? `<button id="loadMoreVideos" class="load-more">Watch More</button>` : ""}
-      <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" target="_blank" class="youtube-btn">Watch on YouTube</a>
-    `;
+      <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" target="_blank" class="youtube-btn">Watch on YouTube</a>`;
     const btn = document.getElementById("loadMoreVideos");
     if (btn) btn.addEventListener("click", () => { visibleVideos += 3; renderVideos(); });
   }
@@ -909,110 +850,89 @@ document.addEventListener("DOMContentLoaded", async () => {
     INDEX = [...postDocs, ...videoDocs];
   }
 
-  // === COMMANDS & SEARCH ===================================
+  // === COMMAND DESCRIPTIONS ===
+  const COMMANDS = {
+    "/help": "Show this list of commands",
+    "/revive": "Reload posts and videos",
+    "/die": "Clear the popup",
+    "/space": "Engage cosmic flight mode",
+    "/gifs": "Summon a rain of gifs (experimental)"
+  };
+
+  // === COMMAND HANDLER ===
   async function handleCommand(cmd) {
     switch (cmd) {
       case "/help":
-        popup.innerHTML = `
-          <div class="promptline">theinternetisdead.org</div>
-          <div class="search-result">
-            Commands:<br>
-            /help — show this<br>
-            /revive — reload posts<br>
-            /die — clear popup<br>
-            /space — cosmic flight<br>
-            /gifs — summon gif rain
-          </div>`;
-        popup.style.display = "block";
+        openPopup(`<div class="promptline">Commands available:</div>
+          ${Object.entries(COMMANDS).map(([k,v]) => `<div class="search-result"><b>${k}</b> — ${v}</div>`).join("")}`);
         break;
-
       case "/revive":
-        await loadPosts();
-        await loadVideos();
-        popup.innerHTML = `<div class="search-result">Feeds revived.</div>`;
+        await loadPosts(); await loadVideos();
+        openPopup(`<div class="search-result">Feeds revived.</div>`);
         break;
-
       case "/die":
-        popup.innerHTML = "";
-        popup.style.display = "none";
+        closePopup();
         break;
-
       case "/space":
         if (!document.getElementById("space-canvas")) {
           const c = document.createElement("canvas");
-          c.id = "space-canvas";
-          document.body.appendChild(c);
+          c.id = "space-canvas"; document.body.appendChild(c);
           const ctx = c.getContext("2d");
           function stars() {
             const w = c.width = innerWidth, h = c.height = innerHeight;
-            ctx.fillStyle = "black"; ctx.fillRect(0, 0, w, h);
-            for (let i = 0; i < 400; i++) {
+            ctx.fillStyle = "black"; ctx.fillRect(0,0,w,h);
+            for (let i=0;i<400;i++){
               ctx.fillStyle = `rgba(0,255,${Math.random()*255|0},${Math.random()})`;
-              ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+              ctx.fillRect(Math.random()*w, Math.random()*h,2,2);
             }
             requestAnimationFrame(stars);
           }
           stars();
         }
-        popup.innerHTML = `<div class="search-result">Space mode engaged.</div>`;
-        popup.style.display = "block";
+        openPopup(`<div class="search-result">Space mode engaged.</div>`);
         break;
-
       case "/gifs":
-        popup.innerHTML = `<div class="search-result">Gifs summoning feature coming soon.</div>`;
-        popup.style.display = "block";
+        openPopup(`<div class="search-result">Gif summoning not implemented yet.</div>`);
         break;
-
       default:
-        popup.innerHTML = `<div class="search-result">Unknown command: ${cmd}</div>`;
-        popup.style.display = "block";
+        openPopup(`<div class="search-result">Unknown command: ${cmd}</div>`);
     }
   }
 
+  // === LIVE COMMAND HINTS ===
+  function showCommandHints(q) {
+    const filtered = Object.entries(COMMANDS)
+      .filter(([k]) => k.startsWith(q.toLowerCase()))
+      .map(([k, v]) => `<div class="search-result"><b>${k}</b> — ${v}</div>`).join("");
+    openPopup(filtered || `<div class="search-result no-results">No command found for "${q}"</div>`);
+  }
+
+  // === SEARCH RESULTS ===
   function renderResults(q) {
     const results = INDEX.filter(item =>
       item.title.toLowerCase().includes(q.toLowerCase()) ||
       item.snippet.toLowerCase().includes(q.toLowerCase())
     );
-
-    if (!results.length) {
-      popup.innerHTML = `<div class="search-result no-results">No results for "${q}"</div>`;
-      popup.style.display = "block";
-      return;
-    }
-
+    if (!results.length) return openPopup(`<div class="search-result no-results">No results for "${q}"</div>`);
     popup.innerHTML = results.map(r => `
       <div class="search-result" data-url="${r.url}">
         <span class="kind">[${r.kind}]</span>
         <span class="title">${r.title}</span>
         <span class="meta">${new Date(r.date).toLocaleString()}</span>
         <span class="snippet">${r.snippet}</span>
-      </div>
-    `).join("");
-
+      </div>`).join("");
     popup.style.display = "block";
     popup.querySelectorAll(".search-result").forEach(res => {
-      res.addEventListener("click", () => {
-        window.open(res.dataset.url, "_blank");
-      });
+      res.addEventListener("click", () => window.open(res.dataset.url, "_blank"));
     });
   }
 
-  // === SEARCH, CONTACT, MENU INIT ==========================
+  // === SEARCH BAR LOGIC ===
   if (searchInput && popup) {
-    const showOnInteract = () => openPopup();
-    searchInput.addEventListener("focus", showOnInteract);
-    searchInput.addEventListener("click", showOnInteract);
-    if (searchBtn) searchBtn.addEventListener("click", () => {
-      const val = searchInput.value.trim();
-      if (!val) openPopup();
-      else if (val.startsWith("/")) handleCommand(val.toLowerCase());
-      else renderResults(val);
-    });
-
     searchInput.addEventListener("input", () => {
       const val = searchInput.value.trim();
-      if (!val) { openPopup(); renderPlaceholder(); return; }
+      if (!val) return closePopup();
+      if (val.startsWith("/")) return showCommandHints(val);
       renderResults(val);
     });
 
@@ -1020,18 +940,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (e.key === "Enter") {
         e.preventDefault();
         const val = searchInput.value.trim();
+        if (!val) return;
         if (val.startsWith("/")) handleCommand(val.toLowerCase());
-        else if (val) renderResults(val);
+        else renderResults(val);
       }
     });
 
+    if (searchBtn) {
+      searchBtn.addEventListener("click", () => {
+        const val = searchInput.value.trim();
+        if (!val) return;
+        if (val.startsWith("/")) handleCommand(val.toLowerCase());
+        else renderResults(val);
+      });
+    }
+
     document.addEventListener("click", e => {
-      const inside = popup.contains(e.target) || searchInput.contains(e.target) || (searchBtn && searchBtn.contains(e.target));
-      if (!inside) closePopup();
+      if (!popup.contains(e.target) && !searchInput.contains(e.target) && !searchBtn.contains(e.target))
+        closePopup();
     });
   }
 
-  // === CONTACT POPUP ======================================
+  // === CONTACT POPUP ===
   if (submitBtn) submitBtn.addEventListener("click", e => {
     e.preventDefault();
     contactPopup.style.display = "flex";
@@ -1041,7 +971,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === contactPopup) contactPopup.style.display = "none";
   });
 
-  // === MENU ===============================================
+  // === MENU ===
   if (menuBtn && menuPopup) {
     menuBtn.addEventListener("click", e => {
       e.stopPropagation();
