@@ -130,7 +130,6 @@
     height: 100dvh;
   }
 }
-
   
 </style>
 </head>
@@ -204,33 +203,41 @@ const controlsDesktop = document.getElementById('controlsDesktop');
 const controlsMobile = document.getElementById('controlsMobile');
 const drawerToggle = document.getElementById('drawerToggle');
 
-// --- NEW: Global Controls Toggle Button ---
-let hideBtn = document.getElementById('toggleControls');
-if (!hideBtn) {
-  hideBtn = document.createElement('button');
-  hideBtn.id = 'toggleControls';
-  hideBtn.textContent = 'Hide Controls';
-  hideBtn.style.position = 'fixed';
-  hideBtn.style.bottom = '1rem';
-  hideBtn.style.right = '1rem';
-  hideBtn.style.zIndex = '10';
-  hideBtn.style.padding = '0.5rem 1rem';
-  hideBtn.style.fontSize = '1rem';
-  hideBtn.style.border = 'none';
-  hideBtn.style.borderRadius = '6px';
-  hideBtn.style.background = 'rgba(0,0,0,0.6)';
-  hideBtn.style.color = '#fff';
-  hideBtn.style.cursor = 'pointer';
-  hideBtn.style.backdropFilter = 'blur(3px)';
-  document.body.appendChild(hideBtn);
-}
+// --- NEW: Inline Hide/Show Controls Button ---
+const btnHideControls = document.createElement('button');
+btnHideControls.id = 'hideControls';
+btnHideControls.textContent = 'Hide Controls';
+btnHideControls.className = 'ctrl-btn'; // matches your button style
+const btnShowControls = document.createElement('button');
+btnShowControls.id = 'showControls';
+btnShowControls.textContent = 'Show Controls';
+btnShowControls.className = 'ctrl-btn';
+Object.assign(btnShowControls.style, {
+  position: 'fixed',
+  bottom: '1rem',
+  right: '1rem',
+  zIndex: '10',
+  display: 'none',
+  opacity: '0.85'
+});
+document.body.appendChild(btnShowControls);
 
+// append Hide Controls button into desktop controls (so it matches)
+if (controlsDesktop) controlsDesktop.appendChild(btnHideControls);
 let controlsVisible = true;
-hideBtn.addEventListener('click', () => {
-  controlsVisible = !controlsVisible;
-  controlsDesktop.style.display = controlsVisible ? '' : 'none';
-  controlsMobile.style.display = controlsVisible ? '' : 'none';
-  hideBtn.textContent = controlsVisible ? 'Hide Controls' : 'Show Controls';
+
+btnHideControls.addEventListener('click', () => {
+  controlsVisible = false;
+  controlsDesktop.style.display = 'none';
+  controlsMobile.style.display = 'none';
+  btnShowControls.style.display = 'block';
+});
+
+btnShowControls.addEventListener('click', () => {
+  controlsVisible = true;
+  controlsDesktop.style.display = '';
+  controlsMobile.style.display = '';
+  btnShowControls.style.display = 'none';
 });
 
 // Drawer behavior
@@ -262,7 +269,6 @@ setAngle(angleInput.value);
 const canvas = document.getElementById('lava');
 const ctx = canvas.getContext('2d', { willReadFrequently: false });
 
-// Adaptive resolution
 let w, h, t = 0, renderScale = isMobile ? 0.5 : 1;
 function resize() {
   const cssW = canvas.clientWidth | 0;
@@ -282,7 +288,6 @@ function rainbow(x, y, time) {
   return [r | 0, g | 0, b | 0];
 }
 
-// State
 const state = {
   manualAngle: parseFloat(angleInput.value),
   spinLoop: false,
@@ -294,7 +299,6 @@ const state = {
   meltdown: false, meltAmpSkew: 10, meltAmpScale: 0.12, meltHz: 0.33
 };
 
-// Buttons
 const el = id => document.getElementById(id);
 const btnSpinOnce = el('spinOnce');
 const btnSpinLoop = el('spinLoop');
@@ -351,7 +355,6 @@ function toggleDraw() {
 }
 
 let hue = 0;
-
 drawCanvas.addEventListener('pointerdown', e => {
   if (!drawEnabled) return;
   drawing = true;
@@ -359,7 +362,6 @@ drawCanvas.addEventListener('pointerdown', e => {
   drawCtx.moveTo(e.clientX, e.clientY);
   drawCanvas.setPointerCapture(e.pointerId);
 });
-
 drawCanvas.addEventListener('pointermove', e => {
   if (!drawEnabled || !drawing) return;
   hue = (hue + 2) % 360;
@@ -367,7 +369,6 @@ drawCanvas.addEventListener('pointermove', e => {
   drawCtx.lineTo(e.clientX, e.clientY);
   drawCtx.stroke();
 });
-
 drawCanvas.addEventListener('pointerup', e => {
   if (drawing) {
     drawing = false;
@@ -375,7 +376,6 @@ drawCanvas.addEventListener('pointerup', e => {
     drawCanvas.releasePointerCapture(e.pointerId);
   }
 });
-
 drawCanvas.addEventListener('pointerleave', () => {
   if (drawing) {
     drawing = false;
@@ -410,7 +410,7 @@ function stopAll() {
   layersEl.classList.remove('invert');
 }
 
-// Bind desktop buttons
+// Bind buttons
 btnSpinOnce.addEventListener('click', () => {
   state.spinOnce.active = true;
   state.spinOnce.start = performance.now();
@@ -482,45 +482,19 @@ controlsMobile.addEventListener('click', (e) => {
   if (!b) return;
   const act = b.getAttribute('data-act');
   switch (act) {
-    case 'spinOnce':
-      state.spinOnce.active = true;
-      state.spinOnce.start = performance.now();
-      state.spinOnce.from = getCurrentAngle();
-      state.spinOnce.to = state.spinOnce.from + 360;
-      break;
-    case 'spinLoop':
-      state.spinLoop = !state.spinLoop; setPressed(b, state.spinLoop);
-      break;
-    case 'pulse':
-      state.pulse = !state.pulse; setPressed(b, state.pulse);
-      if (!state.pulse) root.style.setProperty('--period', state.basePeriod + 'px');
-      break;
-    case 'strobe':
-      state.strobe = !state.strobe; setPressed(b, state.strobe);
-      if (!state.strobe) {
-        layersEl.classList.remove('invert');
-        root.style.setProperty('--bgx', '0px');
-        root.style.setProperty('--bgy', '0px');
-      }
-      break;
-    case 'cycle':
-      state.cycle = !state.cycle; setPressed(b, state.cycle);
-      if (!state.cycle) root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)');
-      break;
-    case 'meltdown':
-      state.meltdown = !state.meltdown; setPressed(b, state.meltdown);
-      if (!state.meltdown) {
-        root.style.setProperty('--skx', '0deg');
-        root.style.setProperty('--sky', '0deg');
-        root.style.setProperty('--sc', '1');
-      }
-      break;
-    case 'stop':
-      stopAll(); break;
-    case 'draw':
-      toggleDraw(); break;
-    case 'save':
-      break;
+    case 'spinOnce': state.spinOnce.active = true; state.spinOnce.start = performance.now();
+      state.spinOnce.from = getCurrentAngle(); state.spinOnce.to = state.spinOnce.from + 360; break;
+    case 'spinLoop': state.spinLoop = !state.spinLoop; setPressed(b, state.spinLoop); break;
+    case 'pulse': state.pulse = !state.pulse; setPressed(b, state.pulse);
+      if (!state.pulse) root.style.setProperty('--period', state.basePeriod + 'px'); break;
+    case 'strobe': state.strobe = !state.strobe; setPressed(b, state.strobe);
+      if (!state.strobe) { layersEl.classList.remove('invert'); root.style.setProperty('--bgx','0px'); root.style.setProperty('--bgy','0px'); } break;
+    case 'cycle': state.cycle = !state.cycle; setPressed(b, state.cycle);
+      if (!state.cycle) root.style.setProperty('--line-color', 'hsla(0,0%,100%,0.9)'); break;
+    case 'meltdown': state.meltdown = !state.meltdown; setPressed(b, state.meltdown);
+      if (!state.meltdown) { root.style.setProperty('--skx','0deg'); root.style.setProperty('--sky','0deg'); root.style.setProperty('--sc','1'); } break;
+    case 'stop': stopAll(); break;
+    case 'draw': toggleDraw(); break;
   }
 });
 
