@@ -26,7 +26,7 @@ export function initSearch() {
     if (!popup.contains(e.target) && !searchInput.contains(e.target)) closePopup();
   });
 
-  // === Actual search logic ===
+  // === Search logic ===
   function renderResults(query) {
     const index = window.INDEX || [];
     const results = index.filter(entry => {
@@ -55,7 +55,7 @@ export function initSearch() {
     `;
   }
 
-  // Event: input typing
+  // Input events
   searchInput.addEventListener("input", e => {
     const val = e.target.value.trim();
     if (!val) {
@@ -65,7 +65,6 @@ export function initSearch() {
     renderResults(val);
   });
 
-  // Event: hitting Enter
   searchInput.addEventListener("keydown", e => {
     if (e.key === "Enter") {
       const val = searchInput.value.trim();
@@ -74,7 +73,7 @@ export function initSearch() {
     }
   });
 
-  // Event: click on search result
+  // Handle clicking on results
   popup.addEventListener("click", e => {
     const result = e.target.closest(".search-result");
     if (!result) return;
@@ -89,7 +88,9 @@ export function initSearch() {
     }
 
     if (kind === "post") {
-      window.location.href = url; // open the markdown-converted HTML version
+      // Instead of navigating, trigger a custom event for postPopup.js
+      const event = new CustomEvent("openPostPopup", { detail: { url } });
+      document.dispatchEvent(event);
       closePopup();
     }
   });
