@@ -356,3 +356,50 @@ h2 {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* === MERGED PATCH === */
+/* === PATCH: keep the contact/submit bar from colliding with header === */
+/* If your contact form lives inside <header>, force it onto its own row. */
+header form {
+  order: 4 !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  margin-top: 8px !important;
+}
+
+/* Inputs inside that header form */
+header form input,
+header form textarea {
+  background: #000 !important;
+  color: #fff !important;
+  border: 1px solid #444 !important;
+  padding: 6px 8px !important;
+  border-radius: 4px !important;
+}
+
+/* Ensure the Submit button stays styled and doesn't jump into header controls */
+header form .submit-btn,
+header form button[type="submit"] {
+  padding: 8px 16px !important;
+  border: 2px solid #0f0 !important;
+  color: #0f0 !important;
+  background: rgba(0,0,0,.85) !important;
+  border-radius: 6px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  box-shadow: 0 0 8px rgba(0,255,0,.3) !important;
+}
+
+/* Desktop: keep header controls on one line, form below as a full-width bar */
+@media (min-width: 1101px) {
+  header { flex-wrap: wrap !important; }
+  .left-section, .right-section { flex: 0 0 auto !important; }
+  .search-bar { flex: 1 1 auto !important; min-width: 260px !important; }
+}
+
+/* Keep the hamburger popup above the form */
+#menu-popup { z-index: 3000 !important; }
