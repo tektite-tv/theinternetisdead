@@ -4,24 +4,16 @@ export async function loadVideos() {
 
   try {
     console.log("Fetching YouTube RSS feed...");
-    const RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-    const res = await fetch(RSS_URL);
+    const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+    // rss2json proxy converts RSS → JSON and avoids CORS errors
+    const res = await fetch(
+      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`
+    );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
 
-    const text = await res.text();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(text, "text/xml");
-
-    // Convert RSS <entry> nodes into objects
-    const entries = Array.from(xml.querySelectorAll("entry")).map(entry => ({
-      title: entry.querySelector("title")?.textContent || "Untitled",
-      url: entry.querySelector("link")?.getAttribute("href") || "",
-      date: entry.querySelector("published")?.textContent || "",
-      description:
-        entry.querySelector("media\\:description, description")?.textContent || ""
-    }));
-
-    setupVideos(youtubeContainer, entries);
+    const videos = data.items || [];
+    setupVideos(youtubeContainer, videos);
   } catch (err) {
     youtubeContainer.innerHTML = `<p style="color:red;">Error loading YouTube feed: ${err.message}</p>`;
   }
@@ -41,28 +33,24 @@ function appendVideos(container, videos) {
   const nextBatch = videos.slice(alreadyVisible, alreadyVisible + 3);
 
   nextBatch.forEach(v => {
+    const id = v.guid?.split(":").pop() || "";
     const wrapper = document.createElement("div");
-    wrapper.className = "video";
-
-    // Extract YouTube video ID safely
-    let id = "";
-    try {
-      const urlObj = new URL(v.url);
-      id = urlObj.searchParams.get("v") || v.url.split("/").pop();
-    } catch {
-      id = v.url.split("/").pop();
-    }
-
+    wrapper.className = "video-card";
     wrapper.innerHTML = `
-      <h3>${v.title}</h3>
-      <small>${new Date(v.date).toLocaleString()}</small>
-      <iframe
-        src="https://www.youtube.com/embed/${id}"
-        title="${v.title}"
-        loading="lazy"
-        allowfullscreen
-      ></iframe>
-      <p>${v.description}</p>
+      <div class="video-frame">
+        <iframe
+          src="https://www.youtube.com/embed/${id}"
+          title="${v.title}"
+          allowfullscreen
+          loading="lazy"
+        ></iframe>
+      </div>
+      <div class="video-info">
+        <h3 class="video-title">${v.title}</h3>
+        <small class="video-date">${new Date(v.pubDate).toLocaleString()}</small>
+        <p class="video-desc">${v.description}</p>
+        <a class="video-link" href="${v.link}" target="_blank">▶ Watch on YouTube</a>
+      </div>
     `;
     container.appendChild(wrapper);
   });
