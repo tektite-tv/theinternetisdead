@@ -6,10 +6,10 @@ export function initSearch() {
   if (!popup || !searchInput) return;
 
   const renderPlaceholder = () => {
-    popup.innerHTML = \`
-      <div class="promptline">theinternetisdead.org</div>
-      <div class="search-result">Type to search posts/videos, or try commands: <b>/help</b></div>
-    \`;
+    popup.innerHTML = `
+  <div class="promptline">theinternetisdead.org</div>
+  <div class="search-result">Type to search posts/videos, or try commands: <b>/help</b></div>
+`;
   };
 
   const openPopup = () => {
