@@ -4,64 +4,84 @@ export async function loadVideos() {
 
   try {
     console.log("Fetching YouTube RSS feed...");
-    const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-    // rss2json proxy converts the feed and bypasses CORS
-    const res = await fetch(
-      `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`
-    );
+    const RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+    const res = await fetch(RSS_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
 
-    const videos = data.items || [];
-    renderVideos(youtubeContainer, videos);
+    const text = await res.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, "text/xml");
+
+    // Convert RSS <entry> nodes into objects
+    const entries = Array.from(xml.querySelectorAll("entry")).map(entry => ({
+      title: entry.querySelector("title")?.textContent || "Untitled",
+      url: entry.querySelector("link")?.getAttribute("href") || "",
+      date: entry.querySelector("published")?.textContent || "",
+      description:
+        entry.querySelector("media\\:description, description")?.textContent || ""
+    }));
+
+    setupVideos(youtubeContainer, entries);
   } catch (err) {
     youtubeContainer.innerHTML = `<p style="color:red;">Error loading YouTube feed: ${err.message}</p>`;
   }
 }
 
-function renderVideos(container, allVideos) {
-  const visibleCount = parseInt(container.dataset.visible || "0");
-  const batch = allVideos.slice(visibleCount, visibleCount + 3);
+function setupVideos(container, videos) {
+  container.innerHTML = `
+    <h1 style="color:#00ccff;">📺 My Latest Broadcast</h1>
+    <h2>Honestly Thomas (Tektite) on YouTube</h2>
+  `;
+  container.dataset.visible = "0";
+  appendVideos(container, videos);
+}
 
-  if (visibleCount === 0) {
-    container.innerHTML = `
-      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
-      <h2>Honestly Thomas (Tektite) on YouTube</h2>
-    `;
-  }
+function appendVideos(container, videos) {
+  const alreadyVisible = parseInt(container.dataset.visible || "0");
+  const nextBatch = videos.slice(alreadyVisible, alreadyVisible + 3);
 
-  batch.forEach(v => {
-    const id = v.guid?.split(":").pop() || "";
-    const div = document.createElement("div");
-    div.className = "video";
-    div.innerHTML = `
-      <iframe src="https://www.youtube.com/embed/${id}" allowfullscreen loading="lazy"></iframe>
-      <a href="${v.link}" target="_blank">${v.title}</a>
+  nextBatch.forEach(v => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "video";
+
+    // Extract YouTube video ID safely
+    let id = "";
+    try {
+      const urlObj = new URL(v.url);
+      id = urlObj.searchParams.get("v") || v.url.split("/").pop();
+    } catch {
+      id = v.url.split("/").pop();
+    }
+
+    wrapper.innerHTML = `
+      <h3>${v.title}</h3>
+      <small>${new Date(v.date).toLocaleString()}</small>
+      <iframe
+        src="https://www.youtube.com/embed/${id}"
+        title="${v.title}"
+        loading="lazy"
+        allowfullscreen
+      ></iframe>
+      <p>${v.description}</p>
     `;
-    container.appendChild(div);
+    container.appendChild(wrapper);
   });
 
-  const newVisible = visibleCount + batch.length;
-  container.dataset.visible = newVisible.toString();
+  const totalVisible = alreadyVisible + nextBatch.length;
+  container.dataset.visible = totalVisible.toString();
 
+  // Remove old Watch More button if any
   const oldBtn = container.querySelector(".load-more");
   if (oldBtn) oldBtn.remove();
 
-  if (newVisible < allVideos.length) {
+  // Add Watch More button if more videos remain
+  if (totalVisible < videos.length) {
     const btn = document.createElement("button");
     btn.className = "load-more";
-    btn.id = "loadMoreVideos";
     btn.textContent = "Watch More";
-    btn.addEventListener("click", () => renderVideos(container, allVideos));
+    btn.addEventListener("click", () => appendVideos(container, videos));
     container.appendChild(btn);
   }
 
-  const ytBtn = document.createElement("a");
-  ytBtn.href = "https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ";
-  ytBtn.target = "_blank";
-  ytBtn.className = "youtube-btn";
-  ytBtn.textContent = "Watch on YouTube";
-  container.appendChild(ytBtn);
-
-  console.log(`Visible videos: ${newVisible}/${allVideos.length}`);
+  console.log(`Visible videos: ${totalVisible}/${videos.length}`);
 }
