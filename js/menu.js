@@ -10,7 +10,8 @@ export function initMenu() {
   });
 
   document.addEventListener("click", e => {
-    if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target))
+    if (!menuPopup.contains(e.target) && !menuBtn.contains(e.target)) {
       menuPopup.classList.remove("visible");
+    }
   });
 }
