@@ -1,13 +1,23 @@
-export default async (req, res) => {
+export async function handler(event, context) {
   try {
     const feed = await fetch(
       "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ"
     );
     const text = await feed.text();
-    res.setHeader("Content-Type", "application/xml");
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(200).send(text);
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/xml",
+        "Access-Control-Allow-Origin": "*"
+      },
+      body: text
+    };
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: err.message })
+    };
   }
-};
+}
