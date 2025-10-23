@@ -6,6 +6,9 @@ import { initContact } from "./contact.js";
 import { initMenu } from "./menu.js";
 import { initLightbox } from "./lightbox.js";
 import { initPostPopup } from "./postPopup.js";
+import { initContact } from '/js/contact.js';
+
+
 
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("Initializing site modules...");
@@ -27,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     initMenu();
     initLightbox();
     initPostPopup();
-
+    initContact();
     console.log("All modules initialized successfully.");
   } catch (err) {
     console.error("Error during module initialization:", err);
