@@ -6,45 +6,63 @@
   <title>theinternetisdead.org - Home</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="icon" type="image/png" href="/media/images/face.png">
-  <link rel="stylesheet" href="/css/main.css" type="text/css">
+  <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
+  <!-- HEADER -->
   <header>
     <div class="left-section">
       <button class="menu" aria-label="Open menu">&#9776;</button>
 
-      <!-- MENU POPUP (child of header so absolute positioning anchors correctly) -->
-      <div id="menu-popup" class="menu-popup" aria-hidden="true">
-        <a href="/" class="menu-item">Home</a>
-        <a href="/pages/glitch-tv" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Glitch TV</a>
-        <a href="/pages/glitch-camera" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Glitch Camera</a>
-        <a href="/pages/maze-game" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Maze Game</a>
-        <a href="/admin" class="menu-item">Admin</a>
+      <!-- MENU POPUP -->
+      <div id="menu-popup" aria-hidden="true">
+        <a href="/">Home</a>
+        <a href="/pages/glitch-tv">Glitch TV</a>
+        <a href="/pages/glitch-camera">Glitch Camera</a>
+        <a href="/pages/maze-game">Maze Game</a>
+        <a href="/admin">Admin</a>
       </div>
 
-      <!-- LOGO + MESSAGE -->
+      <!-- LOGO + MOTTO -->
       <a href="/" class="flex items-center gap-3">
         <img class="logo" src="/media/images/deadlogo-green.png" alt="TheInternetIsDead.org Logo" />
-        <span style="color:#00ff99; font-family:'Courier New', monospace; font-size:14px; text-align:center;">
+        <span style="color:#00ff99;font-family:'Courier New',monospace;font-size:14px;">
           The webmaster is not harvesting your soul for profit. Isn't that wonderful?
         </span>
       </a>
     </div>
 
-    <!-- SEARCH BAR -->
-    <div class="search-bar search-wrapper">
+    <!-- SEARCH -->
+    <div class="search-bar">
       <input type="text" class="search-input" placeholder="Search..." />
       <button class="search-btn" aria-label="Search">🔍</button>
     </div>
 
     <div class="right-section">
-      <!-- .submit-btn is intercepted by initContact() -->
-      <a href="mailto:nobody@theinternetisdead.org" class="submit-btn">Submit</a>
+      <button class="submit-btn">Submit</button>
     </div>
   </header>
-  <div id="search-popup"></div>
-  <!-- CONTACT POPUP (inside the single body where it belongs) -->
-  <div id="contact-popup" class="contact-popup" aria-hidden="true" role="dialog">
+
+  <!-- SEARCH POPUP (now outside header so it layers properly) -->
+  <div id="search-popup" style="display:none;"></div>
+
+  <!-- MAIN CONTENT -->
+  <main>
+    <section class="column" id="posts">
+      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
+      <h2>Latest Blog Posts</h2>
+      <p>Loading posts...</p>
+    </section>
+
+    <section class="column" id="youtube">
+      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
+      <h2>Honestly Thomas (Tektite) on YouTube</h2>
+      <p>Loading videos...</p>
+    </section>
+  </main>
+
+  <!-- CONTACT POPUP -->
+  <div id="contact-popup" class="contact-popup" aria-hidden="true" role="dialog" style="display:none;">
     <div class="contact-inner">
       <button class="close-contact" aria-label="Close">✕</button>
       <h2>Send a Message</h2>
@@ -62,27 +80,8 @@
     </div>
   </div>
 
-  <main>
-    <section class="column" id="posts">
-      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-      <h2>Latest Blog Posts</h2>
-      <p>Loading posts...</p>
-    </section>
-
-    <section class="column" id="youtube">
-      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
-      <h2>Honestly Thomas (Tektite) on YouTube</h2>
-      <p>Loading videos...</p>
-    </section>
-  </main>
-
-  <div class="footer">
-    Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> •
-    Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
-  </div>
-
-  <!-- Global image lightbox -->
-  <div id="img-lightbox" aria-modal="true" role="dialog">
+  <!-- IMAGE LIGHTBOX -->
+  <div id="img-lightbox" aria-modal="true" role="dialog" style="display:none;">
     <div class="inner">
       <button class="close-x" aria-label="Close">✕</button>
       <img src="" alt="">
@@ -93,7 +92,14 @@
     </div>
   </div>
 
-  <!-- Modules -->
+  <!-- FOOTER -->
+  <footer>
+    Thank you for browsing <a href="/">theinternetisdead.org</a> •
+    Copyright 2025 for Eternity by
+    <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
+  </footer>
+
+  <!-- SCRIPTS -->
   <script type="module" src="/js/main.js"></script>
 </body>
 </html>
