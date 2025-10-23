@@ -12,6 +12,7 @@ html, body {
   height: 100%;
   background-color: #000;
   color: #ddd;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -29,7 +30,7 @@ header {
   padding: 16px 24px;
   border-bottom: 3px solid #cc181e;
   position: relative;
-  z-index: 2000;
+  z-index: 1000;
 }
 
 .left-section, .right-section { display: flex; align-items: center; gap: 16px; }
@@ -74,7 +75,7 @@ header {
    =========================================================== */
 main {
   display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 32px;
-  background:#000; align-items: start; position: relative; overflow: hidden;
+  background:#000; align-items: start; position: relative;
 }
 main::before {
   content: ""; position: absolute; inset: 0;
@@ -128,188 +129,61 @@ h2 { text-align:center; color:#888; font-weight:normal; margin-bottom:20px; }
 .load-more:hover { background:#00ccff; color:#000; box-shadow:0 0 20px rgba(0,204,255,.4); }
 
 /* ===========================================================
-   FINAL POPUP STABILITY PATCH
+   POPUPS (Menu, Contact, Search, Lightbox)
    =========================================================== */
-
-/* MENU POPUP — below header */
 #menu-popup {
   position:absolute; top:100%; left:16px; margin-top:4px; display:none; flex-direction:column;
   background:rgba(0,0,0,.95); border:1px solid #00ff99; border-radius:8px; padding:12px 16px;
-  z-index:3000 !important; box-shadow:0 0 15px rgba(0,255,153,.3);
+  z-index:2000; box-shadow:0 0 15px rgba(0,255,153,.3);
 }
 #menu-popup.visible { display:flex; animation: popupFade .2s ease-out; }
 #menu-popup a { color:#00ff99; text-decoration:none; margin:6px 0; font-weight:bold; transition: color .2s; }
 #menu-popup a:hover { color:#fff; }
 
-/* CONTACT POPUP — overlay */
-#contact-popup, .contact-popup {
+#contact-popup {
   position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-  background:rgba(0,0,0,.85); backdrop-filter: blur(6px); z-index:10000 !important;
+  background:rgba(0,0,0,.85); backdrop-filter: blur(6px); z-index:10000;
 }
-
-/* CONTACT INNER — the modal box itself (this was missing on your page) */
 .contact-inner {
   background:#0a0a0a; border:2px solid #0f0; border-radius:8px; padding:24px; color:#0f0;
-  box-shadow:0 0 24px rgba(0,255,0,.4); width:90%; max-width:480px; font-family:"Courier New", monospace; position:relative;
+  box-shadow:0 0 24px rgba(0,255,0,.4); width:90%; max-width:480px; position:relative;
 }
-
-/* Close X */
-.close-contact {
-  position:absolute; top:8px; right:10px; background:transparent; border:none; color:#0f0; font-size:20px; cursor:pointer;
-}
+.close-contact { position:absolute; top:8px; right:10px; background:none; border:none; color:#0f0; font-size:20px; cursor:pointer; }
 .close-contact:hover { color:#ff4444; }
-
-/* CONTACT FORM FIX — stack fields vertically and center */
-#contact-popup form {
-  display:flex; flex-direction:column; gap:10px; width:100%; max-width:420px; margin:0 auto; text-align:left;
-}
+#contact-popup form { display:flex; flex-direction:column; gap:10px; }
 #contact-popup label { color:#0f0; font-weight:bold; font-size:14px; margin-top:6px; }
 #contact-popup input, #contact-popup textarea {
   width:100%; padding:8px 10px; border:1px solid #0f0; border-radius:4px; background:#000; color:#0f0;
-  font-family:"Courier New", monospace; resize:vertical;
+  resize:vertical;
 }
 #contact-popup .send-btn {
-  align-self:flex-end; background:#0f0; color:#000; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; transition: background .2s;
+  align-self:flex-end; background:#0f0; color:#000; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-weight:bold;
 }
 #contact-popup .send-btn:hover { background:#00cc00; }
 
-/* Fade animation */
-@keyframes popupFade { from { opacity:0; transform: scale(.95); } to { opacity:1; transform: scale(1); } }
-
-/* ===========================================================
-   SEARCH POPUP FIX (RESPONSIVE)
-   =========================================================== */
 #search-popup {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 4px;
-  background: rgba(0, 0, 0, 0.95);
-  border: 1px solid #00ff99;
-  border-radius: 8px;
-  padding: 12px;
-  color: #0f0;
-  z-index: 3500;
-  max-height: 400px;
-  overflow-y: auto;
-  font-size: 14px;
-  transition: all 0.25s ease-in-out;
+  position:fixed; top:80px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,.97); border:1px solid #00ff99; border-radius:10px;
+  padding:16px; color:#00ff99; width:min(90%,800px); max-height:70vh;
+  overflow-y:auto; display:none; z-index:3000; box-shadow:0 0 25px #00ff99; backdrop-filter:blur(6px);
 }
-
 #search-popup .search-result {
-  display: flex;
-  align-items: flex-start;
-  padding: 8px;
-  border-bottom: 1px dashed #004400;
-  cursor: pointer;
-  gap: 10px;
+  display:flex; align-items:flex-start; padding:10px; border-bottom:1px dashed #004400; gap:10px; cursor:pointer;
+}
+#search-popup .search-result:hover { background:rgba(0,255,153,.1); }
+#search-popup .title { font-weight:bold; color:#00ff99; margin-bottom:3px; }
+#search-popup .snippet { font-size:13px; color:#ccc; line-height:1.3; }
+
+#img-lightbox {
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.85); z-index:9000;
+}
+#img-lightbox img { max-width:90%; max-height:80vh; border:2px solid #00ff99; border-radius:8px; box-shadow:0 0 20px rgba(0,255,153,.4); }
+#img-lightbox .toolbar { margin-top:10px; text-align:center; color:#0f0; }
+
+@media (max-width:768px) {
+  main { grid-template-columns:1fr; }
+  #search-popup { top:60px; width:95%; max-height:80vh; }
 }
 
-#search-popup .search-result:hover {
-  background: rgba(0, 255, 153, 0.1);
-}
-
-#search-popup .thumbnail {
-  width: 100px;
-  height: auto;
-  flex-shrink: 0;
-  border-radius: 6px;
-}
-
-#search-popup .info {
-  flex: 1;
-  overflow: hidden;
-}
-
-#search-popup .title {
-  display: block;
-  font-weight: bold;
-  color: #00ff99;
-  margin-bottom: 3px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-#search-popup .snippet {
-  font-size: 13px;
-  color: #ccc;
-  line-height: 1.3;
-}
-
-#search-popup .kind {
-  font-family: monospace;
-  color: #888;
-  margin-right: 5px;
-}
-
-/* === MOBILE ADAPTATION === */
-@media (max-width: 768px) {
-  #search-popup {
-    position: fixed;
-    top: 70px;
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    max-height: none;
-    border-radius: 10px;
-    padding: 16px;
-    overflow-y: auto;
-    font-size: 15px;
-  }
-
-  #search-popup .search-result {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  #search-popup .thumbnail {
-    width: 80%;
-    max-width: 300px;
-  }
-
-  #search-popup .title {
-    white-space: normal;
-    text-overflow: unset;
-  }
-
-  #search-popup .snippet {
-    color: #aaa;
-    font-size: 14px;
-  }
-}
-
-/* === SEARCH POPUP EMERGENCY FIX === */
-#search-popup {
-  position: fixed !important;
-  top: 80px !important; /* below your purple header */
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  z-index: 99999 !important;
-  display: none;
-  background: rgba(0, 0, 0, 0.97);
-  border: 1px solid #00ff99;
-  border-radius: 10px;
-  padding: 16px;
-  width: min(90%, 800px);
-  max-height: 70vh;
-  overflow-y: auto;
-  box-shadow: 0 0 25px #00ff99;
-  backdrop-filter: blur(6px);
-  color: #00ff99;
-}
-
-#search-popup * {
-  color: #00ff99 !important;
-  font-family: "Courier New", monospace;
-}
-
-body, html {
-  overflow-x: hidden;
-}
-
-header {
-  z-index: 1000 !important;
-}
+@keyframes popupFade { from { opacity:0; transform:scale(.95); } to { opacity:1; transform:scale(1); } }
