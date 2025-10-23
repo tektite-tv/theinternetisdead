@@ -1,5 +1,5 @@
 /* ================================
-   main.css — compatible with index.html
+   main.css — compatible with index.html (hamburger + submit fix)
    ================================ */
 
 * {
@@ -261,7 +261,12 @@ iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 6px; marg
   box-shadow: 0 0 24px #0f06;
 }
 
-/* RESPONSIVE ---------------------------------- */
+/* RESPONSIVE + HEADER FIXES -------------------- */
+@media (min-width: 769px) {
+  .menu { display: none; }
+  .menu-popup { display: none !important; }
+  .submit-btn { display: inline-block; }
+}
 @media (max-width: 1100px) {
   main { grid-template-columns: 1fr; }
   header { flex-wrap: wrap; gap: 12px; }
@@ -273,4 +278,8 @@ iframe { width: 100%; aspect-ratio: 16/9; border: none; border-radius: 6px; marg
   .search-bar { width: 100%; margin: 8px 0; flex-wrap: wrap; }
   .search-bar input { width: 100%; border-radius: 6px; border-right: 1px solid #444; }
   .search-bar button { width: 100%; margin-top: 6px; border-radius: 6px; }
+  .menu { display: block; }
+  .menu-popup.visible { display: flex !important; }
+  .right-section { flex-direction: column; width: 100%; align-items: center; }
+  .submit-btn { width: 100%; max-width: 320px; margin-top: 8px; }
 }
