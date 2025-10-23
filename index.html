@@ -1,1 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>theinternetisdead.org</title>
 
+  <!-- SEO / Metadata -->
+  <meta name="description" content="A modular glitch-core blog and creative hub." />
+  <link rel="icon" type="image/png" href="assets/images/image.png" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="assets/css/main.css" />
+
+  <!-- Scripts -->
+  <script src="assets/js/main.js" defer></script>
+</head>
+
+<body>
+  <!-- ========== SITE WRAPPER ========== -->
+  <div id="app">
+
+    <!-- ========== HEADER / NAVBAR ========== -->
+    <header class="site-header">
+      <div class="logo">
+        <a href="index.html">
+          <img src="assets/images/image.png" alt="Site Logo" />
+        </a>
+        <h1>theinternetisdead.org</h1>
+      </div>
+
+      <nav class="main-nav">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="pages/blog.html">Blog</a></li>
+          <li><a href="pages/about.html">About</a></li>
+          <li><a href="pages/contact.html">Contact</a></li>
+        </ul>
+      </nav>
+
+      <button id="menuToggle" class="menu-btn">☰</button>
+    </header>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main id="content">
+      <!-- A section for dynamic content injection (posts, videos, etc.) -->
+      <section id="posts" class="content-section">
+        <h2>Latest Posts</h2>
+        <div id="post-container"></div>
+        <button id="loadMorePosts">Load More</button>
+      </section>
+
+      <section id="videos" class="content-section">
+        <h2>Recent Videos</h2>
+        <div id="youtube"></div>
+        <button id="loadMoreVideos">Watch More</button>
+      </section>
+    </main>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="site-footer">
+      <p>© <span id="year"></span> theinternetisdead.org</p>
+      <p><a href="mailto:contact@theinternetisdead.org">contact@theinternetisdead.org</a></p>
+    </footer>
+  </div>
+
+  <!-- ========== POPUPS / MODALS ========== -->
+  <div id="search-popup" class="popup hidden"></div>
+  <div id="menu-popup" class="popup hidden"></div>
+  <div id="contact-popup" class="popup hidden"></div>
+</body>
+</html>
