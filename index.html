@@ -13,60 +13,49 @@
   <header>
     <div class="left-section">
       <button class="menu">&#9776;</button>
-
       <div id="menu-popup" class="menu-popup">
         <a href="/" class="menu-item">Home</a>
-        <a href="/pages/glitch-tv/" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Glitch TV</a>
-        <a href="/pages/glitch-camera" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Glitch Camera</a>
-        <a href="/pages/maze-game" class="menu-item" style="color:#0f0; text-decoration:none; display:block; padding:6px;">Maze Game</a>
+        <a href="/pages/glitch-tv/" class="menu-item">Glitch TV</a>
+        <a href="/pages/glitch-camera" class="menu-item">Glitch Camera</a>
+        <a href="/pages/maze-game" class="menu-item">Maze Game</a>
         <a href="/admin" class="menu-item">Admin</a>
       </div>
 
-      <!-- LOGO + MESSAGE -->
       <a href="index.html" class="flex items-center gap-3">
         <img class="logo" src="/media/images/deadlogo-green.png" alt="TheInternetIsDead Logo" />
-        <span style="color:#00ff99; font-family:'Courier New', monospace; font-size:14px; text-align:center;">
-          The webmaster is not harvesting your soul for profit. Isn't that wonderful?
-        </span>
+        <span class="tagline">The webmaster is not harvesting your soul for profit.</span>
       </a>
     </div>
 
-    <!-- SEARCH BAR (restored) -->
+    <!-- SEARCH BAR -->
     <div class="search-bar search-wrapper">
-      <input
-        type="text"
-        class="search-input"
-        placeholder="Search..."
-      />
+      <input type="text" class="search-input" placeholder="Search..." />
       <button class="search-btn" aria-label="Search">🔍</button>
       <div id="search-popup"></div>
     </div>
-
-    <div class="right-section">
-      <a href="mailto:nobody@theinternetisdead.org" class="submit-btn">Submit</a>
-    </div>
   </header>
-</body>
 
+  <!-- FLOATING SUBMIT BUTTON -->
+  <button class="submit-btn" id="contact-trigger">Submit</button>
 
-<!-- CONTACT POPUP -->
-<div id="contact-popup" class="contact-popup">
-  <div class="contact-inner">
-    <button class="close-contact">✕</button>
-    <h2>Send a Message</h2>
-    <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-      <input type="hidden" name="form-name" value="contact">
-      <input type="hidden" name="bot-field" />
-      <label>Name:</label>
-      <input type="text" name="name" required>
-      <label>Email:</label>
-      <input type="email" name="email" required>
-      <label>Message:</label>
-      <textarea name="message" rows="4" required></textarea>
-      <button type="submit" class="send-btn">Send</button>
-    </form>
+  <!-- CONTACT POPUP -->
+  <div id="contact-popup" class="contact-popup">
+    <div class="contact-inner">
+      <button class="close-contact">✕</button>
+      <h2>Send a Message</h2>
+      <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <input type="hidden" name="form-name" value="contact">
+        <input type="hidden" name="bot-field" />
+        <label>Name:</label>
+        <input type="text" name="name" required>
+        <label>Email:</label>
+        <input type="email" name="email" required>
+        <label>Message:</label>
+        <textarea name="message" rows="4" required></textarea>
+        <button type="submit" class="send-btn">Send</button>
+      </form>
+    </div>
   </div>
-</div>
 
   <main>
     <section class="column" id="posts">
@@ -81,11 +70,12 @@
       <p>Loading videos...</p>
     </section>
   </main>
-  <div class="footer">
-Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
-</div>
 
-<!-- Global image lightbox -->
+  <div class="footer">
+    Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdead.org</a> • Copyright 2025 for Eternity by <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
+  </div>
+
+  <!-- Global image lightbox -->
   <div id="img-lightbox" aria-modal="true" role="dialog">
     <div class="inner">
       <button class="close-x" aria-label="Close">✕</button>
@@ -96,6 +86,7 @@ Thank you for browsing <a href="https://theinternetisdead.org/">theinternetisdea
       </div>
     </div>
   </div>
-<script src="/js/index.js"></script>  
+
+  <script src="/js/index.js"></script>  
 </body>
 </html>
