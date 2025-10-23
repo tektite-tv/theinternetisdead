@@ -1,4 +1,5 @@
-import { marked } from "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+// Load Marked globally (UMD build)
+import "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
 
 export async function loadPosts() {
   const postsContainer = document.getElementById("posts");
@@ -36,11 +37,13 @@ function renderPosts(posts) {
     fetch(p.file)
       .then(r => r.text())
       .then(text => {
+        // strip front-matter if present
         if (text.startsWith('---')) {
           const end = text.indexOf('---', 3);
           if (end !== -1) text = text.slice(end + 3);
         }
-        wrapper.querySelector(".content").innerHTML = marked.parse(text.trim());
+        // use global marked
+        wrapper.querySelector(".content").innerHTML = window.marked.parse(text.trim());
       })
       .catch(() => {
         wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
