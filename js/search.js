@@ -26,7 +26,7 @@ export function initSearch() {
     if (!popup.contains(e.target) && !searchInput.contains(e.target)) closePopup();
   });
 
-  // === Search logic ===
+  // === Actual search logic ===
   function renderResults(query) {
     const index = window.INDEX || [];
     const results = index.filter(entry => {
@@ -42,20 +42,35 @@ export function initSearch() {
     popup.innerHTML = `
       <div class="promptline">theinternetisdead.org</div>
       ${results
-        .map(
-          r => `
-          <div class="search-result" data-url="${r.url}" data-kind="${r.kind}">
-            <span class="kind">[${r.kind}]</span>
-            <span class="title">${r.title}</span>
-            <div class="snippet">${r.snippet}</div>
-          </div>
-        `
-        )
+        .map(r => {
+          if (r.kind === "video") {
+            const id = r.url.split("v=")[1] || r.url.split("/").pop();
+            const thumb = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+            return `
+              <div class="search-result video" data-url="${r.url}" data-kind="${r.kind}">
+                <img src="${thumb}" class="thumbnail" alt="Video thumbnail">
+                <div class="info">
+                  <span class="kind">[video]</span>
+                  <span class="title">${r.title}</span>
+                  <div class="snippet">${r.snippet}</div>
+                </div>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="search-result post" data-url="${r.url}" data-kind="${r.kind}">
+                <span class="kind">[post]</span>
+                <span class="title">${r.title}</span>
+                <div class="snippet">${r.snippet}</div>
+              </div>
+            `;
+          }
+        })
         .join("")}
     `;
   }
 
-  // Input events
+  // Event: typing and Enter
   searchInput.addEventListener("input", e => {
     const val = e.target.value.trim();
     if (!val) {
@@ -73,7 +88,7 @@ export function initSearch() {
     }
   });
 
-  // Handle clicking on results
+  // Handle click events
   popup.addEventListener("click", e => {
     const result = e.target.closest(".search-result");
     if (!result) return;
@@ -88,7 +103,7 @@ export function initSearch() {
     }
 
     if (kind === "post") {
-      // Instead of navigating, trigger a custom event for postPopup.js
+      // Fire custom event to open post in popup
       const event = new CustomEvent("openPostPopup", { detail: { url } });
       document.dispatchEvent(event);
       closePopup();
