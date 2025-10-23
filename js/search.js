@@ -1,130 +1,100 @@
-export function initSearch() {
-  const popup = document.getElementById("search-popup");
+document.addEventListener("DOMContentLoaded", () => {
   const searchInput = document.querySelector(".search-input");
-  const searchBtn = document.querySelector(".search-btn");
-  const contactPopup = document.getElementById("contact-popup");
-  const menuPopup = document.getElementById("menu-popup");
+  const popup = document.getElementById("search-popup");
+  let INDEX = window.INDEX || [];
 
-  if (!popup || !searchInput) {
-    console.warn("initSearch: missing popup or input");
-    return;
-  }
-
-  const renderPlaceholder = () => {
-    popup.innerHTML = `
-      <div class="promptline">theinternetisdead.org</div>
-      <div class="search-result">Type to search posts/videos<br><b>/help</b> for commands</div>
-    `;
-  };
-
-  const openPopup = () => {
-    if (contactPopup && contactPopup.style.display === "flex")
-      contactPopup.style.display = "none";
-    if (menuPopup) menuPopup.classList.remove("visible");
-
-    if (!popup.innerHTML.trim()) renderPlaceholder();
-    popup.style.display = "block";
-  };
-
-  const closePopup = () => {
-    popup.style.display = "none";
-  };
-
-  searchInput.addEventListener("focus", openPopup);
-  if (searchBtn) searchBtn.addEventListener("click", openPopup);
-
-  document.addEventListener("click", (e) => {
-    if (!popup.contains(e.target) && !searchInput.contains(e.target))
-      closePopup();
-  });
-
-  // === Search logic ===
   function renderResults(query) {
-    const index = window.INDEX || [];
-    if (!index.length) {
-      popup.innerHTML = `<div class="promptline">theinternetisdead.org</div>
-        <div class="no-results">Index not loaded. Try reloading the page.</div>`;
+    if (!query) {
+      popup.style.display = "none";
       return;
     }
 
-    const results = index.filter((entry) => {
-      const haystack = (entry.title + " " + entry.snippet).toLowerCase();
-      return haystack.includes(query.toLowerCase());
-    });
+    // Command handler
+    if (query.startsWith("/")) {
+      const command = query.slice(1).toLowerCase();
+      if (command === "help") {
+        popup.innerHTML = `
+          <div class="promptline">theinternetisdead.org</div>
+          <div class="search-result">Available commands:</div>
+          <div class="search-result">/posts — list all blog posts</div>
+          <div class="search-result">/videos — list all videos</div>
+          <div class="search-result">/contact — open contact form</div>
+          <div class="search-result">/menu — open site menu</div>
+          <div class="search-result">/clear — close search popup</div>
+        `;
+        popup.style.display = "block";
+        return;
+      }
 
-    if (!results.length) {
-      popup.innerHTML = `<div class="promptline">theinternetisdead.org</div>
-        <div class="no-results">No results found for "${query}".</div>`;
-      return;
+      if (command === "contact") {
+        document.getElementById("contact-popup").style.display = "flex";
+        popup.style.display = "none";
+        return;
+      }
+
+      if (command === "menu") {
+        document.getElementById("menu-popup").classList.add("visible");
+        popup.style.display = "none";
+        return;
+      }
+
+      if (command === "clear") {
+        popup.style.display = "none";
+        return;
+      }
+
+      if (command === "posts" || command === "videos") {
+        const kind = command.slice(0, -1);
+        const list = INDEX.filter(r => r.kind === kind);
+        popup.innerHTML = `
+          <div class="promptline">theinternetisdead.org</div>
+          ${list.map(r => `
+            <div class="search-result" data-url="${r.url}" data-kind="${r.kind}">
+              <span class="kind">[${r.kind}]</span>
+              <span class="title">${r.title}</span>
+            </div>`).join("")}
+        `;
+        popup.style.display = "block";
+        return;
+      }
     }
 
-    popup.innerHTML = `
-      <div class="promptline">theinternetisdead.org</div>
-      ${results
-        .map((r) => {
-          if (r.kind === "video") {
-            const id = r.url.split("v=")[1] || r.url.split("/").pop();
-            const thumb = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
-            return `
-              <div class="search-result video" data-url="${r.url}" data-kind="${r.kind}">
-                <img src="${thumb}" class="thumbnail" alt="">
-                <div class="info">
-                  <span class="kind">[video]</span>
-                  <span class="title">${r.title}</span>
-                  <div class="snippet">${r.snippet}</div>
-                </div>
-              </div>`;
-          } else {
-            return `
-              <div class="search-result post" data-url="${r.url}" data-kind="${r.kind}">
-                <span class="kind">[post]</span>
-                <span class="title">${r.title}</span>
-                <div class="snippet">${r.snippet}</div>
-              </div>`;
-          }
-        })
-        .join("")}
-    `;
+    // Normal search results
+    const results = INDEX.filter(item =>
+      item.title.toLowerCase().includes(query.toLowerCase()) ||
+      item.content.toLowerCase().includes(query.toLowerCase())
+    );
+
+    if (results.length === 0) {
+      popup.innerHTML = '<div class="no-results">No results found.</div>';
+    } else {
+      popup.innerHTML = results.map(r => `
+        <div class="search-result" data-url="${r.url}" data-kind="${r.kind}">
+          <div class="title">${r.title}</div>
+          <div class="snippet">${r.content.slice(0, 120)}...</div>
+        </div>`).join("");
+    }
+
+    popup.style.display = "block";
+    const rect = searchInput.getBoundingClientRect();
+    popup.style.top = rect.bottom + window.scrollY + "px";
+    popup.style.left = rect.left + "px";
+    popup.style.width = rect.width + "px";
   }
 
-  // Debounce typing to avoid lag
-  let timeout = null;
-  searchInput.addEventListener("input", (e) => {
-    const val = e.target.value.trim();
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      if (!val) {
-        renderPlaceholder();
-      } else {
-        renderResults(val);
-      }
-    }, 200);
-  });
-
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const val = searchInput.value.trim();
-      if (val) renderResults(val);
+  searchInput.addEventListener("input", e => renderResults(e.target.value));
+  document.addEventListener("click", e => {
+    if (!popup.contains(e.target) && e.target !== searchInput) {
+      popup.style.display = "none";
     }
   });
 
-  popup.addEventListener("click", (e) => {
-    const result = e.target.closest(".search-result");
-    if (!result) return;
-
-    const url = result.dataset.url;
-    const kind = result.dataset.kind;
-
-    if (kind === "video") {
-      window.open(url, "_blank");
-      closePopup();
-    } else if (kind === "post") {
-      const event = new CustomEvent("openPostPopup", { detail: { url } });
-      document.dispatchEvent(event);
-      closePopup();
+  popup.addEventListener("click", e => {
+    const item = e.target.closest(".search-result");
+    if (item && item.dataset.url) {
+      window.location.href = item.dataset.url;
     }
   });
 
   console.log("Search initialized.");
-}
+});
