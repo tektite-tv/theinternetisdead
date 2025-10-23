@@ -9,6 +9,7 @@ export async function loadVideos() {
     const res = await fetch(
       `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`
     );
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
@@ -36,6 +37,7 @@ function appendVideos(container, videos) {
     const id = v.guid?.split(":").pop() || "";
     const wrapper = document.createElement("div");
     wrapper.className = "video-card";
+
     wrapper.innerHTML = `
       <div class="video-frame">
         <iframe
@@ -52,6 +54,7 @@ function appendVideos(container, videos) {
         <a class="video-link" href="${v.link}" target="_blank">▶ Watch on YouTube</a>
       </div>
     `;
+
     container.appendChild(wrapper);
   });
 
