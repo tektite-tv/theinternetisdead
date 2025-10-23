@@ -1,3 +1,4 @@
+// Load Marked globally (UMD build)
 import "../js/lib/marked.min.js";
 
 export async function loadPosts() {
@@ -19,13 +20,23 @@ export async function loadPosts() {
 
 function renderPosts(posts) {
   const postsContainer = document.getElementById("posts");
-  postsContainer.innerHTML = `
-    <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-    <h2>Latest Blog Posts</h2>
-  `;
 
-  const visible = posts.slice(0, 3);
-  visible.forEach(p => {
+  // Initial render header only once
+  if (!postsContainer.dataset.rendered) {
+    postsContainer.innerHTML = `
+      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
+      <h2>Latest Blog Posts</h2>
+    `;
+    postsContainer.dataset.rendered = "true";
+    postsContainer.dataset.visible = "0";
+  }
+
+  // Determine next batch
+  let visibleCount = parseInt(postsContainer.dataset.visible || "0");
+  const nextBatch = posts.slice(visibleCount, visibleCount + 3);
+
+  // Append new posts
+  nextBatch.forEach(p => {
     const wrapper = document.createElement("div");
     wrapper.className = "post";
     wrapper.innerHTML = `
@@ -36,6 +47,7 @@ function renderPosts(posts) {
     `;
     postsContainer.appendChild(wrapper);
 
+    // Load markdown content
     fetch(p.file)
       .then(r => r.text())
       .then(text => {
@@ -50,14 +62,21 @@ function renderPosts(posts) {
       });
   });
 
-  if (posts.length > 3) {
+  visibleCount += nextBatch.length;
+  postsContainer.dataset.visible = visibleCount.toString();
+
+  // Remove any previous Read More button
+  const oldBtn = postsContainer.querySelector(".load-more");
+  if (oldBtn) oldBtn.remove();
+
+  // Add Read More if posts remain
+  if (visibleCount < posts.length) {
     const btn = document.createElement("button");
     btn.className = "load-more";
     btn.textContent = "Read More";
-    btn.onclick = () => {
-      postsContainer.querySelectorAll(".load-more").forEach(el => el.remove());
-      renderPosts(posts.slice(3));
-    };
+    btn.onclick = () => renderPosts(posts);
     postsContainer.appendChild(btn);
   }
+
+  console.log(`Rendered ${visibleCount} of ${posts.length} posts.`);
 }
