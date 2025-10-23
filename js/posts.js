@@ -1,12 +1,14 @@
-// Load Marked globally (UMD build)
-import "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+import "../js/lib/marked.min.js";
 
 export async function loadPosts() {
   const postsContainer = document.getElementById("posts");
-  let allPosts = [];
+  if (!postsContainer) return;
 
+  let allPosts = [];
   try {
+    console.log("Fetching posts...");
     const res = await fetch("/_posts/index.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     allPosts = await res.json();
     allPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
     renderPosts(allPosts);
@@ -22,14 +24,14 @@ function renderPosts(posts) {
     <h2>Latest Blog Posts</h2>
   `;
 
-  const visiblePosts = posts.slice(0, 3);
-  for (const p of visiblePosts) {
+  const visible = posts.slice(0, 3);
+  visible.forEach(p => {
     const wrapper = document.createElement("div");
     wrapper.className = "post";
     wrapper.innerHTML = `
       <h3>${p.title}</h3>
       <small>${new Date(p.date).toLocaleString()}</small>
-      ${p.image ? `<img src="${p.image}" alt="${p.title}" class="post-img" />` : ""}
+      ${p.image ? `<img src="${p.image}" alt="${p.title}" loading="lazy" class="post-img">` : ""}
       <div class="content"><em>Loading...</em></div>
     `;
     postsContainer.appendChild(wrapper);
@@ -37,16 +39,25 @@ function renderPosts(posts) {
     fetch(p.file)
       .then(r => r.text())
       .then(text => {
-        // strip front-matter if present
-        if (text.startsWith('---')) {
-          const end = text.indexOf('---', 3);
+        if (text.startsWith("---")) {
+          const end = text.indexOf("---", 3);
           if (end !== -1) text = text.slice(end + 3);
         }
-        // use global marked
         wrapper.querySelector(".content").innerHTML = window.marked.parse(text.trim());
       })
       .catch(() => {
         wrapper.querySelector(".content").innerHTML = "<em>Unable to load post content.</em>";
       });
+  });
+
+  if (posts.length > 3) {
+    const btn = document.createElement("button");
+    btn.className = "load-more";
+    btn.textContent = "Read More";
+    btn.onclick = () => {
+      postsContainer.querySelectorAll(".load-more").forEach(el => el.remove());
+      renderPosts(posts.slice(3));
+    };
+    postsContainer.appendChild(btn);
   }
 }
