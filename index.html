@@ -5,32 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>theinternetisdead.org</title>
 
-  <!-- SEO / Metadata -->
+  <!-- Page description for SEO -->
   <meta name="description" content="A modular glitch-core blog and creative hub." />
+
+  <!-- Favicon for browser tab -->
   <link rel="icon" type="image/png" href="assets/images/image.png" />
 
-  <!-- Styles -->
+  <!-- Link main stylesheet -->
   <link rel="stylesheet" href="assets/css/main.css" />
 
-  <!-- Scripts -->
+  <!-- Link JavaScript (defer = load after HTML) -->
   <script src="assets/js/main.js" defer></script>
 </head>
 
 <body>
-  <!-- ========== SITE WRAPPER ========== -->
+  <!-- Wrapper for the entire app, useful for global JS targeting -->
   <div id="app">
 
     <!-- ========== HEADER / NAVBAR ========== -->
     <header class="site-header">
       <div class="logo">
+        <!-- Logo links back to homepage -->
         <a href="index.html">
           <img src="assets/images/image.png" alt="Site Logo" />
         </a>
         <h1>theinternetisdead.org</h1>
       </div>
 
+      <!-- Navigation menu -->
       <nav class="main-nav">
         <ul>
+          <!-- Links to subpages -->
           <li><a href="index.html">Home</a></li>
           <li><a href="pages/blog.html">Blog</a></li>
           <li><a href="pages/about.html">About</a></li>
@@ -38,18 +43,20 @@
         </ul>
       </nav>
 
+      <!-- Hamburger menu for mobile -->
       <button id="menuToggle" class="menu-btn">☰</button>
     </header>
 
     <!-- ========== MAIN CONTENT ========== -->
     <main id="content">
-      <!-- A section for dynamic content injection (posts, videos, etc.) -->
+      <!-- SECTION: Blog posts (loaded dynamically by JS) -->
       <section id="posts" class="content-section">
         <h2>Latest Posts</h2>
         <div id="post-container"></div>
         <button id="loadMorePosts">Load More</button>
       </section>
 
+      <!-- SECTION: YouTube videos (fetched via Netlify Function or RSS) -->
       <section id="videos" class="content-section">
         <h2>Recent Videos</h2>
         <div id="youtube"></div>
@@ -59,14 +66,17 @@
 
     <!-- ========== FOOTER ========== -->
     <footer class="site-footer">
+      <!-- Automatically updated year -->
       <p>© <span id="year"></span> theinternetisdead.org</p>
       <p><a href="mailto:contact@theinternetisdead.org">contact@theinternetisdead.org</a></p>
     </footer>
   </div>
 
   <!-- ========== POPUPS / MODALS ========== -->
+  <!-- Hidden popups you can toggle from JS -->
   <div id="search-popup" class="popup hidden"></div>
   <div id="menu-popup" class="popup hidden"></div>
   <div id="contact-popup" class="popup hidden"></div>
 </body>
 </html>
+
