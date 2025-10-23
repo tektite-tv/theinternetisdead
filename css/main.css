@@ -403,3 +403,61 @@ header form button[type="submit"] {
 
 /* Keep the hamburger popup above the form */
 #menu-popup { z-index: 3000 !important; }
+
+/* CONTACT POPUP FIX --------------------------- */
+.contact-popup {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 10001; /* higher than header (10) and popups (9999) */
+}
+
+.contact-inner {
+  background: #0a0a0a;
+  border: 2px solid #0f0;
+  border-radius: 8px;
+  padding: 24px;
+  color: #0f0;
+  box-shadow: 0 0 24px rgba(0, 255, 0, 0.4);
+  width: 90%;
+  max-width: 480px;
+  font-family: "Courier New", monospace;
+  position: relative;
+}
+
+.contact-inner h2 {
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.close-contact {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #0f0;
+  font-size: 20px;
+  cursor: pointer;
+}
+.close-contact:hover {
+  color: #ff4444;
+}
+
+.send-btn {
+  background: #0f0;
+  color: #000;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-top: 12px;
+}
+.send-btn:hover {
+  background: #00cc00;
+}
