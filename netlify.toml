@@ -1,0 +1,14 @@
+[build]
+  publish = "."       # deploy everything in the root folder
+  command = ""        # no build step, just upload
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[redirects]]
+  from = "/index"
+  to = "/"
+  status = 301
