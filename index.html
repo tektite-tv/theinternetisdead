@@ -22,30 +22,8 @@
   <!-- Wrapper for the entire app, useful for global JS targeting -->
   <div id="app">
 
-    <!-- ========== HEADER / NAVBAR ========== -->
-    <header class="site-header">
-      <div class="logo">
-        <!-- Logo links back to homepage -->
-        <a href="index.html">
-          <img src="assets/images/image.png" alt="Site Logo" />
-        </a>
-        <h1>theinternetisdead.org</h1>
-      </div>
-
-      <!-- Navigation menu -->
-      <nav class="main-nav">
-        <ul>
-          <!-- Links to subpages -->
-          <li><a href="index.html">Home</a></li>
-          <li><a href="pages/blog.html">Blog</a></li>
-          <li><a href="pages/about.html">About</a></li>
-          <li><a href="pages/contact.html">Contact</a></li>
-        </ul>
-      </nav>
-
-      <!-- Hamburger menu for mobile -->
-      <button id="menuToggle" class="menu-btn">☰</button>
-    </header>
+    <!-- Header will be loaded here -->
+<div data-include="/assets/components/header.html"></div>
 
     <!-- ========== MAIN CONTENT ========== -->
     <main id="content">
@@ -65,11 +43,7 @@
     </main>
 
     <!-- ========== FOOTER ========== -->
-    <footer class="site-footer">
-      <!-- Automatically updated year -->
-      <p>© <span id="year"></span> theinternetisdead.org</p>
-      <p><a href="mailto:contact@theinternetisdead.org">nobody@theinternetisdead.org</a></p>
-    </footer>
+    <div data-include="/assets/components/footer.html"></div>
   </div>
 
   <!-- ========== POPUPS / MODALS ========== -->
@@ -77,6 +51,7 @@
   <div id="search-popup" class="popup hidden"></div>
   <div id="menu-popup" class="popup hidden"></div>
   <div id="contact-popup" class="popup hidden"></div>
+  <script src="/assets/js/include.js" defer></script>
 </body>
 </html>
 
