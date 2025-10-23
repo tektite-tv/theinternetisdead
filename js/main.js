@@ -6,6 +6,7 @@ import { initContact } from "./contact.js";
 import { initMenu } from "./menu.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log("Initializing site...");
   await loadPosts();
   await loadVideos();
   await buildIndex();
