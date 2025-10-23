@@ -227,7 +227,7 @@
     margin-bottom: 24px;
   }
 
-  /* === YOUTUBE VIDEO CARDS (UPGRADED) ========================== */
+  /* === YOUTUBE VIDEO CARDS ===================================== */
 .video-card {
   display: flex;
   flex-direction: column;
@@ -236,33 +236,35 @@
   border-radius: 12px;
   margin: 20px 0;
   overflow: hidden;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.05);
   transition: transform 0.25s ease-in-out, box-shadow 0.25s;
 }
 
 .video-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.2);
 }
 
 .video-frame iframe {
   width: 100%;
   aspect-ratio: 16 / 9;
   border: none;
-  border-radius: 0;
+  display: block;
 }
 
+/* === INFO + TEXT BLOCK ======================== */
 .video-info {
   padding: 14px 16px 18px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.75);
+  border-top: 1px solid #111;
 }
 
 .video-title {
   color: #00ccff;
   font-weight: bold;
-  font-size: 1.2em;
+  font-size: 1.15em;
   margin-bottom: 4px;
-  text-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
 }
 
 .video-date {
@@ -270,18 +272,22 @@
   color: #888;
   font-size: 0.85em;
   margin-bottom: 10px;
+  font-family: monospace;
 }
 
 .video-desc {
   color: #ccc;
-  font-size: 0.92em;
-  line-height: 1.5;
+  font-size: 0.93em;
+  line-height: 1.45;
   margin-bottom: 10px;
-  max-height: 4.8em;
+  max-height: 8em;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
+/* === WATCH LINK ================================= */
 .video-link {
   display: inline-block;
   color: #00ff99;
@@ -290,7 +296,7 @@
   font-size: 0.9em;
   text-decoration: none;
   border: 1px solid #00ff99;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 6px;
   transition: all 0.25s ease-in-out;
 }
@@ -298,8 +304,30 @@
 .video-link:hover {
   background: #00ff99;
   color: #000;
-  box-shadow: 0 0 16px rgba(0, 255, 153, 0.5);
+  box-shadow: 0 0 16px rgba(0, 255, 153, 0.6);
 }
+
+/* === WATCH MORE BUTTON ========================== */
+.load-more {
+  display: block;
+  margin: 20px auto 0;
+  padding: 8px 16px;
+  border: 1px solid #00ccff;
+  border-radius: 8px;
+  background: transparent;
+  color: #00ccff;
+  font-weight: bold;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+.load-more:hover {
+  background: #00ccff;
+  color: #000;
+  box-shadow: 0 0 20px rgba(0, 204, 255, 0.4);
+}
+
 
   .video a {
     color: #cc181e;
