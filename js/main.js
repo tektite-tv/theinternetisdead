@@ -2,13 +2,10 @@ import { loadPosts } from "./posts.js";
 import { loadVideos } from "./videos.js";
 import { buildIndex } from "./indexBuilder.js";
 import { initSearch } from "./search.js";
-import { initContact } from "./contact.js";
+import { initContact } from "./contact.js"; // keep only ONE import
 import { initMenu } from "./menu.js";
 import { initLightbox } from "./lightbox.js";
 import { initPostPopup } from "./postPopup.js";
-import { initContact } from '/js/contact.js';
-
-
 
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("Initializing site modules...");
@@ -30,7 +27,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     initMenu();
     initLightbox();
     initPostPopup();
-    initContact();
     console.log("All modules initialized successfully.");
   } catch (err) {
     console.error("Error during module initialization:", err);
