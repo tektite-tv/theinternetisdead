@@ -175,3 +175,108 @@ h2 { text-align:center; color:#888; font-weight:normal; margin-bottom:20px; }
 
 /* Fade animation */
 @keyframes popupFade { from { opacity:0; transform: scale(.95); } to { opacity:1; transform: scale(1); } }
+
+/* ===========================================================
+   SEARCH POPUP FIX (RESPONSIVE)
+   =========================================================== */
+#search-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid #00ff99;
+  border-radius: 8px;
+  padding: 12px;
+  color: #0f0;
+  z-index: 3500;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 14px;
+  transition: all 0.25s ease-in-out;
+}
+
+#search-popup .search-result {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px;
+  border-bottom: 1px dashed #004400;
+  cursor: pointer;
+  gap: 10px;
+}
+
+#search-popup .search-result:hover {
+  background: rgba(0, 255, 153, 0.1);
+}
+
+#search-popup .thumbnail {
+  width: 100px;
+  height: auto;
+  flex-shrink: 0;
+  border-radius: 6px;
+}
+
+#search-popup .info {
+  flex: 1;
+  overflow: hidden;
+}
+
+#search-popup .title {
+  display: block;
+  font-weight: bold;
+  color: #00ff99;
+  margin-bottom: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#search-popup .snippet {
+  font-size: 13px;
+  color: #ccc;
+  line-height: 1.3;
+}
+
+#search-popup .kind {
+  font-family: monospace;
+  color: #888;
+  margin-right: 5px;
+}
+
+/* === MOBILE ADAPTATION === */
+@media (max-width: 768px) {
+  #search-popup {
+    position: fixed;
+    top: 70px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-height: none;
+    border-radius: 10px;
+    padding: 16px;
+    overflow-y: auto;
+    font-size: 15px;
+  }
+
+  #search-popup .search-result {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  #search-popup .thumbnail {
+    width: 80%;
+    max-width: 300px;
+  }
+
+  #search-popup .title {
+    white-space: normal;
+    text-overflow: unset;
+  }
+
+  #search-popup .snippet {
+    color: #aaa;
+    font-size: 14px;
+  }
+}
