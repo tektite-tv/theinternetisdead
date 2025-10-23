@@ -1,23 +1,28 @@
-/* style.css — theinternetisdead.org */
+/* ================================
+   main.css — theinternetisdead.org
+   ================================ */
 
+/* GLOBAL RESET ------------------- */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: "Courier New", monospace;
 }
+
 html, body {
   height: 100%;
   background-color: #000;
   color: #ddd;
   overflow-y: auto;
 }
+
 a {
   color: inherit;
   text-decoration: none;
 }
 
-/* HEADER ----------------------------------- */
+/* HEADER / TASKBAR --------------- */
 header {
   display: flex;
   align-items: center;
@@ -31,30 +36,385 @@ header {
   z-index: 10;
 }
 
-/* SUBMIT BUTTON */
+.left-section,
+.right-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.menu {
+  cursor: pointer;
+  font-size: 26px;
+  font-weight: bold;
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 4px 0;
+}
+
+.logo {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
+/* SEARCH BAR --------------------- */
+.search-bar {
+  flex: 1;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  margin: 0 24px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #444;
+  border-right: none;
+  background: #000;
+  color: #fff;
+  font-size: 14px;
+}
+
+.search-bar button {
+  padding: 8px 16px;
+  border: 1px solid #444;
+  background-color: #222;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.search-bar button:hover {
+  background-color: #333;
+}
+
+/* SUBMIT BUTTON ------------------ */
 .submit-btn {
   display: inline-block;
   padding: 8px 20px;
   background: rgba(0, 0, 0, 0.85);
   border: 2px solid #0f0;
   color: #0f0;
+  font-size: 14px;
   border-radius: 6px;
   text-transform: uppercase;
-  transition: all 0.25s;
-  box-shadow: 0 0 8px rgba(0,255,0,0.3);
+  letter-spacing: 1px;
+  transition: all 0.25s ease-in-out;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
 }
+
 .submit-btn:hover {
   background: #0f0;
   color: #000;
-  box-shadow: 0 0 18px rgba(0,255,0,0.6);
+  box-shadow: 0 0 18px rgba(0, 255, 0, 0.6);
   transform: scale(1.05);
 }
 
-/* POST LIGHTBOX TITLE FIX */
+/* MAIN CONTENT ------------------- */
+main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 32px;
+  background: #000;
+  align-items: start;
+  position: relative;
+  overflow: hidden;
+}
+
+main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(0, 255, 153, 0.18) 0px,
+    rgba(0, 255, 153, 0.18) 3px,
+    rgba(0, 255, 153, 0.02) 3px,
+    rgba(0, 255, 153, 0.02) 12px
+  );
+  animation: scan-drift 60s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+  filter: brightness(1.2);
+}
+
+@keyframes scan-drift {
+  from { background-position: 0 0; }
+  to { background-position: 600px 600px; }
+}
+
+.column {
+  background: #0a0a0a;
+  padding: 20px;
+  border: 1px solid #222;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 1;
+}
+
+/* HEADINGS ----------------------- */
+h1 {
+  font-size: 1.8em;
+  font-weight: bold;
+  text-align: center;
+  text-shadow: 0 0 6px #fff2, 0 0 12px #0ff4;
+  margin-bottom: 8px;
+}
+
+h2 {
+  text-align: center;
+  color: #888;
+  font-weight: normal;
+  margin-bottom: 20px;
+}
+
+/* POSTS -------------------------- */
+.post {
+  margin-bottom: 28px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed #333;
+}
+
+.post h1 {
+  color: #00ff99;
+}
+
+.post h3 {
+  color: #00ff99;
+  font-size: 1.2em;
+  margin-bottom: 6px;
+}
+
+.post small {
+  display: block;
+  color: #888;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.post img {
+  display: block;
+  max-width: 100%;
+  border-radius: 4px;
+  margin: 12px 0;
+}
+
+/* VIDEO -------------------------- */
+.video {
+  margin-bottom: 24px;
+}
+
+.video a {
+  color: #cc181e;
+}
+
+.video a:hover {
+  text-decoration: underline;
+}
+
+iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+/* SEARCH POPUP ------------------- */
+.search-wrapper { position: relative; width: 100%; }
+.search-input { width: 100%; }
+
+#search-popup {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid #0f0;
+  box-shadow: 0 0 12px #0f07;
+  border-radius: 6px;
+  padding: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  display: none;
+  z-index: 9999;
+}
+
+#search-popup .promptline {
+  color: #0f0;
+  opacity: 0.85;
+  font-size: 12px;
+  margin: 4px 8px 8px;
+}
+
+.search-result {
+  padding: 10px 12px;
+  border: 1px solid #0f0;
+  border-radius: 4px;
+  margin: 8px 0;
+  background: rgba(0, 20, 0, 0.35);
+  cursor: pointer;
+}
+
+.search-result:hover,
+.search-result.active {
+  background: rgba(0, 40, 0, 0.6);
+  outline: 1px dashed #0f0;
+}
+
+.search-result .kind { color: #9f9; font-size: 12px; margin-right: 6px; }
+.search-result .title { color: #0f0; font-weight: bold; display: block; }
+.search-result .meta { color: #7f7; font-size: 12px; margin-top: 2px; }
+.search-result .snippet { color: #bfb; font-size: 13px; margin-top: 6px; opacity: 0.85; }
+.no-results { color: #7f7; padding: 8px 12px; }
+
+/* POST POPUP --------------------- */
+#post-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+#post-popup .popup-inner {
+  position: relative;
+  background: rgba(0, 20, 0, 0.9);
+  border: 2px solid #0f0;
+  box-shadow: 0 0 20px #0f05;
+  padding: 24px;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+  color: #0f0;
+  border-radius: 8px;
+}
+
 #post-popup .popup-inner h1.popup-title {
   color: #00ff99;
   font-size: 1.8em;
   margin-bottom: 10px;
   text-align: center;
   text-shadow: 0 0 8px #00ff99aa;
+}
+
+#post-popup img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 12px 0;
+}
+
+#post-popup .close-btn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #0f0;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+#post-popup .close-btn:hover {
+  color: #ff4444;
+}
+
+/* IMAGE LIGHTBOX ----------------- */
+#img-lightbox {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 100000;
+}
+
+#img-lightbox.visible { display: flex; }
+
+#img-lightbox .inner {
+  position: relative;
+  max-width: min(92vw, 1400px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px;
+}
+
+#img-lightbox img {
+  max-width: 100%;
+  max-height: 80vh;
+  border-radius: 8px;
+  border: 1px solid #0f0;
+  box-shadow: 0 0 24px #0f06;
+}
+
+#img-lightbox .toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #0f0;
+}
+
+#img-lightbox .download-btn,
+#img-lightbox .close-x {
+  background: rgba(0, 0, 0, 0.85);
+  color: #0f0;
+  border: 2px solid #0f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .2s ease-in-out;
+}
+
+#img-lightbox .download-btn:hover,
+#img-lightbox .close-x:hover {
+  background: #0f0;
+  color: #000;
+  box-shadow: 0 0 18px rgba(0,255,0,.6);
+}
+
+/* RESPONSIVE --------------------- */
+@media (max-width: 1100px) {
+  main { grid-template-columns: 1fr; }
+  header { flex-wrap: wrap; gap: 12px; }
+  .search-bar { order: 3; width: 100%; margin-top: 8px; }
+}
+
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 16px;
+  }
+  .logo { height: 48px; }
+  .search-bar {
+    width: 100%;
+    margin: 8px 0;
+    flex-wrap: wrap;
+  }
+  .search-bar input {
+    width: 100%;
+    border-radius: 6px;
+    border-right: 1px solid #444;
+  }
+  .search-bar button {
+    width: 100%;
+    margin-top: 6px;
+    border-radius: 6px;
+  }
+  .submit-btn { width: 100%; max-width: 320px; }
 }
