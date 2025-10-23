@@ -4,7 +4,7 @@ export async function loadVideos() {
 
   try {
     console.log("Fetching YouTube RSS feed...");
-    const RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+    const RSS_URL = "/.netlify/functions/youtube";
     const res = await fetch(RSS_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
