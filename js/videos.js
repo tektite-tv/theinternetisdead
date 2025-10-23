@@ -3,14 +3,27 @@ export async function loadVideos() {
   if (!youtubeContainer) return;
 
   try {
-    console.log("Fetching YouTube feed...");
-    const res = await fetch("/_youtube/index.json");
+    console.log("Fetching YouTube RSS feed...");
+    const RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+    const res = await fetch(RSS_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const videos = await res.json();
-    setupVideos(youtubeContainer, videos);
+    const text = await res.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, "text/xml");
+
+    // Convert RSS <entry> nodes into objects
+    const entries = Array.from(xml.querySelectorAll("entry")).map(entry => ({
+      title: entry.querySelector("title")?.textContent || "Untitled",
+      url: entry.querySelector("link")?.getAttribute("href") || "",
+      date: entry.querySelector("published")?.textContent || "",
+      description:
+        entry.querySelector("media\\:description, description")?.textContent || ""
+    }));
+
+    setupVideos(youtubeContainer, entries);
   } catch (err) {
-    youtubeContainer.innerHTML = `<p style="color:red;">Error loading videos: ${err.message}</p>`;
+    youtubeContainer.innerHTML = `<p style="color:red;">Error loading YouTube feed: ${err.message}</p>`;
   }
 }
 
@@ -31,7 +44,7 @@ function appendVideos(container, videos) {
     const wrapper = document.createElement("div");
     wrapper.className = "video";
 
-    // Extract video ID safely from URL or embed
+    // Extract YouTube video ID safely
     let id = "";
     try {
       const urlObj = new URL(v.url);
@@ -43,13 +56,13 @@ function appendVideos(container, videos) {
     wrapper.innerHTML = `
       <h3>${v.title}</h3>
       <small>${new Date(v.date).toLocaleString()}</small>
-      <iframe 
-        src="https://www.youtube.com/embed/${id}" 
-        title="${v.title}" 
-        loading="lazy" 
+      <iframe
+        src="https://www.youtube.com/embed/${id}"
+        title="${v.title}"
+        loading="lazy"
         allowfullscreen
       ></iframe>
-      <p>${v.description || ""}</p>
+      <p>${v.description}</p>
     `;
     container.appendChild(wrapper);
   });
@@ -57,11 +70,11 @@ function appendVideos(container, videos) {
   const totalVisible = alreadyVisible + nextBatch.length;
   container.dataset.visible = totalVisible.toString();
 
-  // Remove any existing "Watch More" button
+  // Remove old Watch More button if any
   const oldBtn = container.querySelector(".load-more");
   if (oldBtn) oldBtn.remove();
 
-  // Add new "Watch More" if there are more videos
+  // Add Watch More button if more videos remain
   if (totalVisible < videos.length) {
     const btn = document.createElement("button");
     btn.className = "load-more";
@@ -72,4 +85,3 @@ function appendVideos(container, videos) {
 
   console.log(`Visible videos: ${totalVisible}/${videos.length}`);
 }
-
