@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RayMaze — 2.5D Maze</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; height: 100%; background: #000; color: #ddd;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    }
+    #game-root {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+      user-select: none;
+    }
+    canvas#view {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+    #hud {
+      position: absolute;
+      top: 8px; left: 8px;
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      z-index: 10;
+      font-size: 13px;
+    }
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #00ff99;
+      color: #00ff99;
+      background: rgba(0,255,153,0.1);
+    }
+    .btn {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #0f0;
+      color: #0f0;
+      background: rgba(0,0,0,0.7);
+      cursor: pointer;
+    }
+    .btn:active { transform: translateY(1px); }
+    #help {
+      position: absolute;
+      bottom: 8px; left: 8px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid #333;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.35;
+      color: #aaa;
+      pointer-events: none;
+    }
+    #minimap {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 160px; height: 160px;
+      border: 1px solid #222;
+      background: rgba(0,0,0,0.6);
+      image-rendering: pixelated;
+    }
+    #center-msg {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #00ff99;
+      font-size: 18px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease;
+      text-shadow: 0 0 10px rgba(0,255,153,0.6);
+    }
+    #crosshair {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 18px; height: 18px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: .65;
+    }
+    #crosshair::before, #crosshair::after {
+      content: "";
+      position: absolute;
+      background: #00ff99;
+    }
+    #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
+    #crosshair::after  { top: 50%; left: 0; width: 100%; height: 2px; transform: translateY(-50%); }
+  </style>
+</head>
+<body>
+  <div id="game-root" tabindex="0">
+    <canvas id="view"></canvas>
+    <canvas id="minimap" width="160" height="160"></canvas>
+
+    <div id="hud">
+      <button id="newMaze" class="btn">New Maze</button>
+      <span id="fps" class="pill">FPS: --</span>
+      <span id="msg" class="pill">Find the exit</span>
+    </div>
+
+    <div id="help">
+      WASD or Arrow Keys: move • Q/E or Mouse: rotate • Shift: sprint • Click: capture mouse • Esc: release
+    </div>
+    <div id="center-msg">Maze Complete</div>
+    <div id="crosshair" aria-hidden="true"></div>
+  </div>
+  
+<script>
+// ------------------------
+// RayMaze: minimal 2.5D raycaster with procedural maze + Banana Easter Egg
+// ------------------------
+
+// Config
+const CONFIG = {
+  fov: Math.PI / 3,
+  renderWidth: 640,
+  renderHeight: 360,
+  moveSpeed: 3.0,
+  rotSpeed: 2.0,
+  sprintMultiplier: 1.7,
+  wallHeight: 1.0,
+  maxDepth: 40,
+  cellSize: 1.0,
+  miniScale: 6
+};
+
+// DOM
+const root = document.getElementById('game-root');
+const canvas = document.getElementById('view');
+const ctx = canvas.getContext('2d', { alpha: false });
+const fpsEl = document.getElementById('fps');
+const msgEl = document.getElementById('msg');
+const centerMsg = document.getElementById('center-msg');
+const mini = document.getElementById('minimap');
+const miniCtx = mini.getContext('2d', { alpha: true });
+
+// === Banana Easter Egg ===
+const banana = new Image();
+banana.src = "/images/bananarama.gif";
+let bananaCell = null;
+
+// Resize handling
+function resize() {
+  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+  const rect = root.getBoundingClientRect();
+  canvas.width = CONFIG.renderWidth * dpr;
+  canvas.height = CONFIG.renderHeight * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+
+// Input
+const keys = new Set();
+window.addEventListener('keydown', (e) => {
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  keys.add(e.key.toLowerCase());
+});
+window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+
+// Pointer lock to rotate with mouse
+root.addEventListener('click', () => {
+  if (document.pointerLockElement !== root) root.requestPointerLock({ unadjustedMovement: true }).catch(()=>{});
+});
+document.addEventListener('mousemove', (e) => {
+  if (document.pointerLockElement === root) {
+    player.dir += e.movementX * 0.0025; // sensitivity
+  }
+});
+
+// Map / Maze
+let map = [];
+let mapW = 0, mapH = 0;
+
+function generateMaze(cols, rows) {
+  const cell = (c, r) => r*cols + c;
+  const grid = Array.from({length: cols*rows}, () => ({ visited:false, walls:[true,true,true,true] }));
+  let stack = [];
+  let cur = 0;
+  grid[cur].visited = true;
+
+  function neighbors(i) {
+    const c = i % cols, r = (i / cols)|0;
+    const out = [];
+    if (r > 0) out.push({i: cell(c, r-1), d:0});
+    if (c < cols-1) out.push({i: cell(c+1, r), d:1});
+    if (r < rows-1) out.push({i: cell(c, r+1), d:2});
+    if (c > 0) out.push({i: cell(c-1, r), d:3});
+    return out.filter(n => !grid[n.i].visited);
+  }
+
+  while (true) {
+    const n = neighbors(cur);
+    if (n.length) {
+      const pick = n[(Math.random()*n.length)|0];
+      const d = pick.d;
+      grid[cur].walls[d] = false;
+      grid[pick.i].walls[(d+2)%4] = false;
+      stack.push(cur);
+      cur = pick.i;
+      grid[cur].visited = true;
+    } else if (stack.length) {
+      cur = stack.pop();
+    } else break;
+  }
+
+  const MW = cols*2+1, MH = rows*2+1;
+  const arr = Array.from({length: MW*MH}, () => 1);
+  for (let r=0; r<rows; r++) {
+    for (let c=0; c<cols; c++) {
+      const g = grid[cell(c,r)];
+      const mr = r*2+1, mc = c*2+1;
+      arr[mr*MW + mc] = 0;
+      if (!g.walls[1]) arr[mr*MW + (mc+1)] = 0;
+      if (!g.walls[2]) arr[(mr+1)*MW + mc] = 0;
+    }
+  }
+  return { data: arr, w: MW, h: MH };
+}
+
+// Player
+const player = { x: 1.5, y: 1.5, dir: 0 };
+let goal = { x: 0, y: 0 };
+
+function placePlayerAndGoal() {
+  player.x = 1.5;
+  player.y = 1.5;
+  player.dir = 0;
+  for (let y = mapH - 3; y > 0; y--) {
+    for (let x = mapW - 3; x > 0; x--) {
+      if (map[y * mapW + x] === 0) {
+        goal.x = x + 0.5;
+        goal.y = y + 0.5;
+        return;
+      }
+    }
+  }
+}
+
+// Collision
+function isWall(x, y) {
+  const cx = Math.floor(x), cy = Math.floor(y);
+  if (cx < 0 || cy < 0 || cx >= mapW || cy >= mapH) return true;
+  return map[cy*mapW + cx] === 1;
+}
+
+// Raycasting render
+function renderScene(dt) {
+  const { renderWidth: W, renderHeight: H, fov, maxDepth } = CONFIG;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0,0,W,H);
+
+  const sky = ctx.createLinearGradient(0,0,0,H/2);
+  sky.addColorStop(0, '#07071a');
+  sky.addColorStop(1, '#12002b');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H/2);
+
+  const floor = ctx.createLinearGradient(0,H/2,0,H);
+  floor.addColorStop(0, '#0a0a0a');
+  floor.addColorStop(1, '#000');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0,H/2,W,H/2);
+
+  // Raycast
+  for (let x=0; x<W; x++) {
+    const camX = 2 * x / W - 1;
+    const rayAngle = player.dir + Math.atan(camX * Math.tan(fov/2));
+    const stepX = Math.cos(rayAngle);
+    const stepY = Math.sin(rayAngle);
+
+    let dist = 0, hit = false, side = 0;
+    let mapX = Math.floor(player.x), mapY = Math.floor(player.y);
+    const deltaDistX = Math.abs(1 / stepX);
+    const deltaDistY = Math.abs(1 / stepY);
+    let rayStepX, rayStepY, sideDistX, sideDistY;
+
+    if (stepX < 0) { rayStepX = -1; sideDistX = (player.x - mapX) * deltaDistX; }
+    else { rayStepX = 1; sideDistX = (mapX + 1 - player.x) * deltaDistX; }
+
+    if (stepY < 0) { rayStepY = -1; sideDistY = (player.y - mapY) * deltaDistY; }
+    else { rayStepY = 1; sideDistY = (mapY + 1 - player.y) * deltaDistY; }
+
+    while (!hit && dist < maxDepth) {
+      if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += rayStepX; side = 0; }
+      else { sideDistY += deltaDistY; mapY += rayStepY; side = 1; }
+      if (mapX < 0 || mapY < 0 || mapX >= mapW || mapY >= mapH) break;
+      if (map[mapY*mapW + mapX] === 1) {
+        hit = true;
+        dist = (side === 0)
+          ? (mapX - player.x + (1 - rayStepX)/2) / stepX
+          : (mapY - player.y + (1 - rayStepY)/2) / stepY;
+      }
+    }
+
+    if (!hit) continue;
+    const lineH = Math.min(H, H / (dist * Math.cos(rayAngle - player.dir)));
+    const y0 = (H - lineH) / 2;
+    const y1 = y0 + lineH;
+    const hue = (mapX * 13 + mapY * 7) % 360;
+    const col = `hsl(${hue}, 60%, ${side ? 38 : 55}%)`;
+    ctx.strokeStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(x + 0.5, y0);
+    ctx.lineTo(x + 0.5, y1);
+    ctx.stroke();
+  }
+
+  // Draw goal
+  const dx = goal.x - player.x, dy = goal.y - player.y;
+  const distToGoal = Math.hypot(dx, dy);
+  if (distToGoal > 0.3) {
+    const angleTo = Math.atan2(dy, dx) - player.dir;
+    const screenX = (Math.tan(angleTo) / Math.tan(fov/2) * (W/2)) + W/2;
+    const size = Math.max(6, 80 / (distToGoal + 0.2));
+    ctx.fillStyle = '#00ff99';
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(screenX - size/2, H*0.55 - size, size, size);
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw banana Easter egg
+  if (bananaCell) {
+    const dx = bananaCell.x + 0.5 - player.x;
+    const dy = bananaCell.y + 0.5 - player.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < CONFIG.maxDepth) {
+      const angleTo = Math.atan2(dy, dx) - player.dir;
+      if (Math.abs(angleTo) < CONFIG.fov / 2) {
+        const screenX = (Math.tan(angleTo) / Math.tan(CONFIG.fov / 2) * (CONFIG.renderWidth / 2)) + CONFIG.renderWidth / 2;
+        const size = Math.max(12, 100 / (dist + 0.2));
+        ctx.drawImage(banana, screenX - size / 2, CONFIG.renderHeight * 0.55 - size, size, size);
+      }
+      if (dist < 0.8) {
+        showCenter("You found the BANANA!");
+        bananaCell = null;
+      }
+    }
+  }
+}
+
+// Movement
+function tryMove(nx, ny) {
+  const pad = 0.1;
+  if (!isWall(nx - pad, ny - pad) && !isWall(nx + pad, ny - pad) &&
+      !isWall(nx - pad, ny + pad) && !isWall(nx + pad, ny + pad)) {
+    player.x = nx; player.y = ny; return true;
+  }
+  return false;
+}
+
+function update(dt) {
+  let speed = CONFIG.moveSpeed * dt;
+  if (keys.has('shift')) speed *= CONFIG.sprintMultiplier;
+
+  if (keys.has('arrowleft') || keys.has('q')) player.dir -= CONFIG.rotSpeed * dt;
+  if (keys.has('arrowright') || keys.has('e')) player.dir += CONFIG.rotSpeed * dt;
+
+  const forward = (keys.has('w') || keys.has('arrowup')) ? 1 : 0;
+  const back    = (keys.has('s') || keys.has('arrowdown')) ? 1 : 0;
+  const left    = keys.has('a') ? 1 : 0;
+  const right   = keys.has('d') ? 1 : 0;
+  const dx = Math.cos(player.dir), dy = Math.sin(player.dir);
+  let nx = player.x, ny = player.y;
+
+  if (forward) { nx += dx * speed; ny += dy * speed; }
+  if (back)    { nx -= dx * speed; ny -= dy * speed; }
+  if (left)  { nx +=  dy * speed; ny -= dx * speed; }
+  if (right) { nx -=  dy * speed; ny += dx * speed; }
+
+  tryMove(nx, ny);
+
+  const reachDist = 0.6;
+  if (Math.hypot(player.x - goal.x, player.y - goal.y) < reachDist) {
+    showCenter("Maze Complete!");
+    setTimeout(() => newLevel(), 1000);
+  }
+}
+
+// Minimap
+function drawMini() {
+  const s = CONFIG.miniScale;
+  mini.width = mapW * s;
+  mini.height = mapH * s;
+  for (let y=0; y<mapH; y++) {
+    for (let x=0; x<mapW; x++) {
+      const v = map[y*mapW + x];
+      miniCtx.fillStyle = v ? '#222' : '#050505';
+      miniCtx.fillRect(x*s, y*s, s, s);
+    }
+  }
+  miniCtx.fillStyle = '#00ff99';
+  miniCtx.fillRect(goal.x*s - 2, goal.y*s - 2, 4, 4);
+  miniCtx.fillStyle = '#ffea00';
+  miniCtx.beginPath();
+  miniCtx.arc(player.x*s, player.y*s, 2.2, 0, Math.PI*2);
+  miniCtx.fill();
+  miniCtx.strokeStyle = '#ffea00';
+  miniCtx.beginPath();
+  miniCtx.moveTo(player.x*s, player.y*s);
+  miniCtx.lineTo(player.x*s + Math.cos(player.dir)*6, player.y*s + Math.sin(player.dir)*6);
+  miniCtx.stroke();
+}
+
+// UI helpers
+let centerTimeout = null;
+function showCenter(text) {
+  centerMsg.textContent = text;
+  centerMsg.style.opacity = '1';
+  clearTimeout(centerTimeout);
+  centerTimeout = setTimeout(() => centerMsg.style.opacity = '0', 900);
+}
+function setMsg(text) { msgEl.textContent = text; }
+
+// Level management
+function newLevel() {
+  const cols = 14 + (Math.random()*8|0);
+  const rows = 10 + (Math.random()*6|0);
+  const m = generateMaze(cols, rows);
+  map = m.data; mapW = m.w; mapH = m.h;
+  placePlayerAndGoal();
+
+  // Random chance to spawn banana
+  if (Math.random() < 0.35) {
+    const empties = [];
+    for (let y=1; y<mapH-1; y++) for (let x=1; x<mapW-1; x++) if (!map[y*mapW+x]) empties.push({x,y});
+    if (empties.length) bananaCell = empties[Math.floor(Math.random()*empties.length)];
+  } else bananaCell = null;
+
+  drawMini();
+  setMsg('Find the exit');
+}
+
+// FPS + Loop
+let last = performance.now(), acc = 0, frames = 0;
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  update(dt);
+  renderScene(dt);
+  drawMini();
+  acc += dt; frames++;
+  if (acc >= 0.5) {
+    fpsEl.textContent = 'FPS: ' + Math.round(frames / acc);
+    acc = 0; frames = 0;
+  }
+  requestAnimationFrame(loop);
+}
+
+// Buttons + Boot
+document.getElementById('newMaze').addEventListener('click', () => { newLevel(); showCenter('New Maze'); });
+function start() { resize(); newLevel(); last = performance.now(); requestAnimationFrame(loop); }
+start();
+</script>
+
+</body>
+</html>
