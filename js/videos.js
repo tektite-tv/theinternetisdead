@@ -4,44 +4,72 @@ export async function loadVideos() {
 
   try {
     console.log("Fetching YouTube feed...");
-    const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
-    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`);
-    const data = await res.json();
-    const videos = data.items || [];
-    renderVideos(videos);
+    const res = await fetch("/_youtube/index.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const videos = await res.json();
+    setupVideos(youtubeContainer, videos);
   } catch (err) {
     youtubeContainer.innerHTML = `<p style="color:red;">Error loading videos: ${err.message}</p>`;
   }
 }
 
-function renderVideos(videos) {
-  const youtubeContainer = document.getElementById("youtube");
-  youtubeContainer.innerHTML = `
-    <h1 style="color:#66ccff;">My Latest Broadcast</h1>
+function setupVideos(container, videos) {
+  container.innerHTML = `
+    <h1 style="color:#00ccff;">📺 My Latest Broadcast</h1>
     <h2>Honestly Thomas (Tektite) on YouTube</h2>
   `;
+  container.dataset.visible = "0";
+  appendVideos(container, videos);
+}
 
-  const visible = videos.slice(0, 3);
-  visible.forEach(v => {
-    const id = v.guid?.split(":").pop() || "";
-    youtubeContainer.innerHTML += `
-      <div class="video">
-        <iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe>
-        <a href="${v.link}" target="_blank">${v.title}</a>
-      </div>
+function appendVideos(container, videos) {
+  const alreadyVisible = parseInt(container.dataset.visible || "0");
+  const nextBatch = videos.slice(alreadyVisible, alreadyVisible + 3);
+
+  nextBatch.forEach(v => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "video";
+
+    // Extract video ID safely from URL or embed
+    let id = "";
+    try {
+      const urlObj = new URL(v.url);
+      id = urlObj.searchParams.get("v") || v.url.split("/").pop();
+    } catch {
+      id = v.url.split("/").pop();
+    }
+
+    wrapper.innerHTML = `
+      <h3>${v.title}</h3>
+      <small>${new Date(v.date).toLocaleString()}</small>
+      <iframe 
+        src="https://www.youtube.com/embed/${id}" 
+        title="${v.title}" 
+        loading="lazy" 
+        allowfullscreen
+      ></iframe>
+      <p>${v.description || ""}</p>
     `;
+    container.appendChild(wrapper);
   });
 
-  if (videos.length > 3) {
-    youtubeContainer.innerHTML += `<button id="loadMoreVideos" class="load-more">Watch More</button>`;
-    document.getElementById("loadMoreVideos").addEventListener("click", () => {
-      renderVideos(videos.slice(visible.length + 3));
-    });
+  const totalVisible = alreadyVisible + nextBatch.length;
+  container.dataset.visible = totalVisible.toString();
+
+  // Remove any existing "Watch More" button
+  const oldBtn = container.querySelector(".load-more");
+  if (oldBtn) oldBtn.remove();
+
+  // Add new "Watch More" if there are more videos
+  if (totalVisible < videos.length) {
+    const btn = document.createElement("button");
+    btn.className = "load-more";
+    btn.textContent = "Watch More";
+    btn.addEventListener("click", () => appendVideos(container, videos));
+    container.appendChild(btn);
   }
 
-  youtubeContainer.innerHTML += `
-    <a href="https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ" target="_blank" class="youtube-btn">
-      Watch on YouTube
-    </a>
-  `;
+  console.log(`Visible videos: ${totalVisible}/${videos.length}`);
 }
+
