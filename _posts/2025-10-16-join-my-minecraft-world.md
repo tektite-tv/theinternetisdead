@@ -6,4 +6,4 @@ date: 2025-10-16T06:27:11.314Z
 
 **My Peaceful Creative World from 2011 Beta Minecraft Days!**
 
-![](/images/uploads/2025-10-16_02.29.54.png)
+![](/media/images/2025-10-16_02.29.54.png)
