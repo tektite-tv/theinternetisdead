@@ -21,19 +21,17 @@ export function initPostPopup() {
   // --- Open popup ---
 const openPostPopup = (slug) => {
   try {
-    const post = window.INDEX?.find(p => p.url === slug || p.slug === slug);
+    const post = window.INDEX?.find(p => p.file === slug || p.url === slug);
     if (!post) throw new Error("Post not found");
 
     content.innerHTML = `
       <article class="popup-post">
         <h2>${post.title}</h2>
-        <small>${post.date}</small>
         <div class="post-body">${marked.parse(post.content)}</div>
       </article>
     `;
   } catch (err) {
     content.innerHTML = `<p style="color:#f66;">Error loading post: ${err.message}</p>`;
-    console.error("Post popup error:", err);
   }
   postPopup.style.display = "flex";
 };
