@@ -1,5 +1,4 @@
-// /js/search.js
-// Handles search bar commands and post/video search using local index.
+import { openPostPopup } from "./postPopup.js"; // ensure postPopup exports this
 
 export function initSearch() {
   const searchBar = document.querySelector(".search-bar");
@@ -14,7 +13,6 @@ export function initSearch() {
 
   popup.style.display = "none";
 
-  // === COMMAND LIST ===
   const COMMANDS = [
     { cmd: "/help", desc: "Show all available commands" },
     { cmd: "/revive", desc: "Revive the site’s spirit" },
@@ -24,10 +22,8 @@ export function initSearch() {
     { cmd: "/contact", desc: "Open the contact popup" },
   ];
 
-  const openPopup = (htmlContent = "") => {
-    popup.innerHTML =
-      htmlContent ||
-      "<p>Search posts/videos or type a command like /help</p>";
+  const openPopup = (html = "<p>Search posts/videos or type a command like /help</p>") => {
+    popup.innerHTML = html;
     popup.style.display = "block";
     popup.style.position = "absolute";
     popup.style.top = `${searchBar.offsetHeight + 4}px`;
@@ -41,33 +37,29 @@ export function initSearch() {
   const showCommands = () => {
     let html = "<div class='promptline'>sudo theinternetisdead.org</div>";
     COMMANDS.forEach((c) => {
-      html += `<div class="search-result">
-                 <span class="title">${c.cmd}</span>
-                 <span class="snippet">${c.desc}</span>
-               </div>`;
+      html += `<div class="search-result"><span class="title">${c.cmd}</span>
+               <span class="snippet">${c.desc}</span></div>`;
     });
     openPopup(html);
   };
 
   const performSearch = () => {
     const query = input.value.trim().toLowerCase();
-
     if (query.startsWith("/")) return showCommands();
-    if (!query)
-      return openPopup("<p>Search posts/videos or type a command like /help</p>");
-    if (!window.INDEX || !Array.isArray(window.INDEX))
-      return openPopup("<p>No index loaded yet. Try reloading the page.</p>");
+    if (!query) return openPopup();
+    if (!window.INDEX) return openPopup("<p>No index loaded yet.</p>");
 
     const results = window.INDEX.filter(
-      (item) =>
-        item.title.toLowerCase().includes(query) ||
-        item.snippet.toLowerCase().includes(query)
+      (i) =>
+        i.title.toLowerCase().includes(query) ||
+        i.snippet.toLowerCase().includes(query)
     );
 
-    if (!results.length)
-      return openPopup(`<p>No results found for "<b>${query}</b>".</p>`);
+    if (!results.length) {
+      openPopup(`<p>No results found for "<b>${query}</b>".</p>`);
+      return;
+    }
 
-    // === Build Search Results ===
     const html = results
       .map((r) => {
         if (r.kind === "video") {
@@ -75,31 +67,24 @@ export function initSearch() {
             /(?:v=|\/embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})/
           );
           const id = idMatch ? idMatch[1] : null;
-          const thumbnail = id
+          const thumb = id
             ? `https://img.youtube.com/vi/${id}/hqdefault.jpg`
             : "/images/default-thumb.png";
-          const dateStr = r.date
-            ? new Date(r.date).toLocaleDateString()
-            : "";
-
+          const dateStr = r.date ? new Date(r.date).toLocaleDateString() : "";
           return `
-          <div class="search-result video-result">
-            <a href="${r.url}" target="_blank" class="video-result-link">
-              <img src="${thumbnail}" alt="${r.title}" class="video-thumb">
-              <div class="video-meta">
-                <span class="title">${r.title}</span>
-                <div class="video-date">${dateStr}</div>
-                <p class="snippet">${r.snippet}</p>
-              </div>
-            </a>
+          <div class="search-result video-result" data-kind="video" data-url="${r.url}">
+            <img src="${thumb}" alt="${r.title}" class="video-thumb">
+            <div class="video-meta">
+              <span class="title">${r.title}</span>
+              <div class="video-date">${dateStr}</div>
+              <p class="snippet">${r.snippet}</p>
+            </div>
           </div>`;
         } else {
           return `
-          <div class="search-result post-result">
-            <a href="${r.url}" class="post-result-link">
-              <span class="title">${r.title}</span><br/>
-              <span class="snippet">${r.snippet}</span>
-            </a>
+          <div class="search-result post-result" data-kind="post" data-url="${r.url}">
+            <span class="title">${r.title}</span><br/>
+            <span class="snippet">${r.snippet}</span>
           </div>`;
         }
       })
@@ -108,31 +93,11 @@ export function initSearch() {
     openPopup(html);
   };
 
-  // === EVENT LISTENERS ===
-  input.addEventListener("focus", showCommands);
-
-  searchBar.addEventListener("mousedown", (e) => {
-    if (!popup.contains(e.target)) showCommands();
-  });
-
-  input.addEventListener("blur", () => {
-    setTimeout(() => {
-      if (!popup.matches(":hover") && document.activeElement !== input)
-        closePopup();
-    }, 150);
-  });
-
-  // live typing search (debounced)
+  // === EVENTS ===
   let searchTimeout;
   input.addEventListener("input", () => {
     clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      const query = input.value.trim();
-      if (query.startsWith("/")) showCommands();
-      else if (query === "")
-        openPopup("<p>Search posts/videos or type a command like /help</p>");
-      else performSearch();
-    }, 200);
+    searchTimeout = setTimeout(performSearch, 200);
   });
 
   btn.addEventListener("click", (e) => {
@@ -144,10 +109,39 @@ export function initSearch() {
     if (e.key === "/") showCommands();
   });
 
+  input.addEventListener("focus", showCommands);
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!popup.matches(":hover") && document.activeElement !== input)
+        closePopup();
+    }, 150);
+  });
+
   document.addEventListener("click", (e) => {
     if (!searchBar.contains(e.target) && !popup.contains(e.target))
       closePopup();
   });
 
-  popup.addEventListener("click", (e) => e.stopPropagation());
+  // === HANDLE CLICK ON RESULTS ===
+  popup.addEventListener("click", async (e) => {
+    const result = e.target.closest(".search-result");
+    if (!result) return;
+    const kind = result.dataset.kind;
+    const url = result.dataset.url;
+
+    if (kind === "video") {
+      window.open(url, "_blank");
+    } else if (kind === "post") {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Post not found");
+        const md = await res.text();
+        openPostPopup(md);
+        closePopup();
+      } catch (err) {
+        console.error("Failed to load post:", err);
+        openPopup("<p>Failed to load post content.</p>");
+      }
+    }
+  });
 }
