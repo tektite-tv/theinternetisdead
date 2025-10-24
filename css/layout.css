@@ -77,6 +77,15 @@ main::before {
   z-index: 1;
 }
 
+@keyframes scan-drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 600px 600px;
+  }
+}
+
 /* ===========================================================
    TYPOGRAPHY
    =========================================================== */
@@ -151,53 +160,63 @@ h2 {
 }
 
 /* ===========================================================
-   RESPONSIVE HEADER STACKING
+   RESPONSIVE HEADER STACKING (Improved)
    =========================================================== */
 @media (max-width: 768px) {
   header {
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     text-align: center;
-    padding: 12px;
+    padding: 16px 12px;
+    gap: 10px;
   }
 
   .left-section,
   .right-section {
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
     width: 100%;
+    gap: 10px;
   }
 
   .menu {
     order: 1;
-    font-size: 24px;
+    font-size: 28px;
+    background: none;
+    border: none;
+    color: #fff;
+    padding: 8px;
   }
 
   .logo {
     order: 2;
-    height: 32px;
-    margin-bottom: 8px;
+    height: 42px;
+    margin-top: 4px;
   }
 
   .search-bar {
     order: 3;
     flex-direction: row;
     justify-content: center;
+    align-items: center;
     width: 100%;
-    margin: 10px 0;
+    max-width: 90%;
+    margin-top: 6px;
   }
 
   .search-bar input.search-input {
     flex: 1;
-    max-width: 90%;
     font-size: 16px;
+    padding: 10px;
+    border-radius: 4px 0 0 4px;
   }
 
   .search-bar button.search-btn {
-    padding: 8px 12px;
     font-size: 16px;
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
   }
 
   .submit-btn {
@@ -205,6 +224,18 @@ h2 {
     margin-top: 10px;
     width: 100%;
     max-width: 200px;
+    padding: 10px;
+    text-align: center;
+    font-size: 15px;
+  }
+
+  header::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+    z-index: -1;
   }
 }
 
