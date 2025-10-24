@@ -79,65 +79,88 @@ export function initSearch() {
       return;
     }
 
-    let html = results
-      .map(
-        (r) => `
-        <div class="search-result" data-kind="${r.kind}">
-          <span class="title">${r.title}</span><br/>
-          <span class="snippet">${r.snippet}</span>
-        </div>`
-      )
+    // === Build Search Results ===
+    const html = results
+      .map((r) => {
+        if (r.kind === "video") {
+          const idMatch = r.url.match(
+            /(?:v=|\/embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})/
+          );
+          const id = idMatch ? idMatch[1] : null;
+          const thumbnail = id
+            ? `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+            : "/images/default-thumb.png";
+
+          return `
+            <div class="search-result video-result">
+              <a href="${r.url}" target="_blank" class="video-result-link">
+                <img src="${thumbnail}" alt="${r.title}" class="video-thumb">
+                <div class="video-meta">
+                  <span class="title">${r.title}</span><br/>
+                  <span class="snippet">${r.snippet}</span>
+                </div>
+              </a>
+            </div>`;
+        } else {
+          return `
+            <div class="search-result post-result">
+              <a href="${r.url}" class="post-result-link">
+                <span class="title">${r.title}</span><br/>
+                <span class="snippet">${r.snippet}</span>
+              </a>
+            </div>`;
+        }
+      })
       .join("");
 
     openPopup(html);
   };
 
   // === EVENT LISTENERS ===
-input.addEventListener("focus", showCommands);
+  input.addEventListener("focus", showCommands);
 
-searchBar.addEventListener("mousedown", (e) => {
-  if (!popup.contains(e.target)) showCommands();
-});
+  searchBar.addEventListener("mousedown", (e) => {
+    if (!popup.contains(e.target)) showCommands();
+  });
 
-input.addEventListener("blur", () => {
-  setTimeout(() => {
-    if (!popup.matches(":hover") && document.activeElement !== input)
-      closePopup();
-  }, 150);
-});
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!popup.matches(":hover") && document.activeElement !== input)
+        closePopup();
+    }, 150);
+  });
 
-// Handle live typing search
-let searchTimeout;
-input.addEventListener("input", () => {
-  clearTimeout(searchTimeout);
-  // debounce so it doesn’t trigger every keystroke instantly
-  searchTimeout = setTimeout(() => {
-    const query = input.value.trim();
-    if (query.startsWith("/")) {
+  // Handle live typing search with debounce
+  let searchTimeout;
+  input.addEventListener("input", () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      const query = input.value.trim();
+      if (query.startsWith("/")) {
+        showCommands();
+      } else if (query === "") {
+        openPopup("<p>Search posts/videos or type a command like /help</p>");
+      } else {
+        performSearch();
+      }
+    }, 200);
+  });
+
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    performSearch();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "/") {
       showCommands();
-    } else if (query === "") {
-      openPopup("<p>Search posts/videos or type a command like /help</p>");
-    } else {
-      performSearch();
     }
-  }, 200); // 200ms delay to avoid lag
-});
+  });
 
-btn.addEventListener("click", (e) => {
-  e.preventDefault();
-  performSearch();
-});
-
-input.addEventListener("keydown", (e) => {
-  if (e.key === "/") {
-    showCommands();
-  }
-});
-
-document.addEventListener("click", (e) => {
-  if (!searchBar.contains(e.target) && !popup.contains(e.target))
-    closePopup();
-});
+  document.addEventListener("click", (e) => {
+    if (!searchBar.contains(e.target) && !popup.contains(e.target))
+      closePopup();
+  });
 
   popup.addEventListener("click", (e) => e.stopPropagation());
-} // closes initSearch function
+} // end of initSearch()
