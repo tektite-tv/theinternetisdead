@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>theinternetisdead.org - Home</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="icon" type="image/png" href="/media/images/face.png">
-
-  <!-- Modular CSS imports handled in main.css -->
   <link rel="stylesheet" href="/css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
+
 <body>
   <!-- HEADER -->
   <header>
@@ -35,44 +34,20 @@
       </a>
     </div>
 
-    <!-- SEARCH BAR -->
     <div class="search-bar">
       <input type="text" class="search-input" placeholder="Search..." />
       <button class="search-btn" aria-label="Search">🔍</button>
     </div>
 
-    <!-- RIGHT SECTION -->
     <div class="right-section">
       <button class="submit-btn">Submit</button>
     </div>
   </header>
 
-  <!-- SEARCH POPUP -->
+  <!-- POPUPS -->
   <div id="search-popup" aria-hidden="true"></div>
 
-  <!-- MAIN CONTENT -->
-  <main>
-    <!-- POSTS SECTION -->
-    <section class="column" id="posts">
-      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-      <h2>Latest Blog Posts</h2>
-      <div class="post-list">
-        <p>Loading posts...</p>
-      </div>
-    </section>
-
-    <!-- VIDEOS SECTION -->
-    <section class="column" id="youtube">
-      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
-      <h2>Honestly Thomas (Tektite) on YouTube</h2>
-      <div class="video-list">
-        <p>Loading videos...</p>
-      </div>
-    </section>
-  </main>
-
-  <!-- CONTACT POPUP -->
-  <div id="contact-popup" aria-hidden="true" role="dialog">
+  <div id="contact-popup" class="contact-popup" aria-hidden="true" role="dialog">
     <div class="contact-inner">
       <button class="close-contact" aria-label="Close">✕</button>
       <h2>Send a Message</h2>
@@ -90,7 +65,6 @@
     </div>
   </div>
 
-  <!-- IMAGE LIGHTBOX -->
   <div id="img-lightbox" role="dialog" aria-modal="true">
     <div class="inner">
       <button class="close-x" aria-label="Close">✕</button>
@@ -102,6 +76,21 @@
     </div>
   </div>
 
+  <!-- MAIN CONTENT -->
+  <main>
+    <section class="column" id="posts">
+      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
+      <h2>Latest Blog Posts</h2>
+      <p>Loading posts...</p>
+    </section>
+
+    <section class="column" id="youtube">
+      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
+      <h2>Honestly Thomas (Tektite) on YouTube</h2>
+      <p>Loading videos...</p>
+    </section>
+  </main>
+
   <!-- FOOTER -->
   <footer>
     Thank you for browsing <a href="/">theinternetisdead.org</a> •
@@ -109,8 +98,7 @@
     <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
   </footer>
 
-  <!-- MODULE SCRIPTS -->
-  <script type="module" src="/js/lib/marked.min.js"></script>
+  <!-- JS MODULES -->
   <script type="module" src="/js/indexBuilder.js"></script>
   <script type="module" src="/js/posts.js"></script>
   <script type="module" src="/js/videos.js"></script>
@@ -120,4 +108,3 @@
   <script type="module" src="/js/main.js"></script>
 </body>
 </html>
-
