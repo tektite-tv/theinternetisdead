@@ -12,13 +12,15 @@ header {
   border-bottom: 2px solid #00ff99;
   position: relative;
   z-index: 1000;
+  flex-wrap: wrap;
 }
 
-/* === LEFT SECTION (menu + logo) === */
+/* === LEFT SECTION (menu + logo + tagline) === */
 .left-section {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 
 .menu {
@@ -34,23 +36,29 @@ header {
 .logo {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   color: #00ff99;
   text-shadow: 0 0 8px #00ff99;
 }
+
 .logo img {
-  max-height: 42px;
-  width: auto;
+  max-height: 60px;
   height: auto;
+  width: auto;
+  object-fit: contain;
   display: block;
 }
+
 .logo h1 {
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   letter-spacing: 1px;
 }
+
 .logo p {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #ccc;
-  max-width: 260px;
+  max-width: 300px;
+  line-height: 1.2;
 }
 
 /* === RIGHT SECTION (search + submit) === */
@@ -109,8 +117,23 @@ header {
 }
 
 /* ==========================================================
-   MOBILE HEADER FIXED TO SCRIPT CLASSES
+   RESPONSIVE FIXES
    ========================================================== */
+@media (max-width: 1024px) {
+  .logo img {
+    max-height: 48px;
+  }
+
+  .logo h1 {
+    font-size: 1.2rem;
+  }
+
+  .logo p {
+    font-size: 0.8rem;
+    max-width: 240px;
+  }
+}
+
 @media (max-width: 768px) {
   header {
     flex-direction: column;
@@ -120,7 +143,7 @@ header {
     gap: 0.5rem;
   }
 
-  /* Row 1: burger + logo */
+  /* Row 1: burger + logo horizontally */
   .left-section {
     order: 1;
     width: 100%;
@@ -140,10 +163,9 @@ header {
   .logo img {
     max-height: 34px;
     width: auto;
-    height: auto;
   }
 
-  /* Row 2: search & submit stacked */
+  /* Row 2: search + submit stacked */
   .right-section {
     order: 2;
     width: 100%;
@@ -165,7 +187,6 @@ header {
     padding: 10px 14px;
   }
 
-  /* Popup alignment fix */
   #menu-popup {
     position: absolute;
     top: 100%;
