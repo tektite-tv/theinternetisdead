@@ -69,12 +69,16 @@ header {
   color: #00ff99;
   text-shadow: 0 0 8px #00ff99;
 }
-
+.logo img {
+  max-height: 42px;
+  width: auto;
+  height: auto;
+  display: block;
+}
 .logo h1 {
   font-size: 1.1rem;
   letter-spacing: 1px;
 }
-
 .logo p {
   font-size: 0.8rem;
   color: #ccc;
@@ -188,6 +192,9 @@ footer p {
   }
 }
 
+/* ==========================================================
+   MOBILE HEADER FIXED TO SCRIPT CLASSES
+   ========================================================== */
 @media (max-width: 768px) {
   header {
     flex-direction: column;
@@ -197,69 +204,64 @@ footer p {
     gap: 0.5rem;
   }
 
+  /* Row 1: burger + logo (side-by-side, left aligned) */
   .left-section {
     order: 1;
+    width: 100%;
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 10px;
-    width: 100%;
+    position: relative;
   }
 
   .menu {
-    font-size: 1.8rem;
+    font-size: 28px;
+    line-height: 1;
+    padding: 6px 8px;
   }
 
-  .logo {
-    text-align: center;
+  .logo img {
+    max-height: 34px;
+    width: auto;
+    height: auto;
   }
 
+  /* Row 2/3: right-section stacks search over submit */
   .right-section {
     order: 2;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 100%;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
   }
 
   .search-bar {
-    width: 90%;
-    max-width: 400px;
+    order: 1;
+    width: 92%;
+    max-width: 420px;
   }
 
   .submit-btn {
-    width: 80%;
+    order: 2;
+    width: 82%;
     max-width: 240px;
+    padding: 10px 14px;
   }
 
+  /* Ensure dropdown anchors under burger */
   #menu-popup {
     position: absolute;
     top: 100%;
-    left: 10px;
+    left: 0;
   }
 
   footer {
     font-size: 0.85rem;
     padding: 1.2rem;
     line-height: 1.4;
-  }
-}
-
-/* ==========================================================
-   LOGO FIX — prevent Godzilla logo scaling
-   ========================================================== */
-
-.logo img {
-  max-height: 48px;
-  width: auto;
-  height: auto;
-}
-
-@media (max-width: 768px) {
-  .logo img {
-    max-height: 40px;
   }
 }
