@@ -22,8 +22,8 @@ export async function loadVideos() {
 
 function setupVideos(container, videos) {
   container.innerHTML = `
-    <h1 style="color:#00ccff;">📺 My Latest Broadcast</h1>
-    <h2 style="color:#b3003b;">Honestly Thomas (Tektite) on YouTube</h2>
+    <h1 style="color:#b3003b;">📺 My Latest Broadcast</h1>
+    <h2>The Glitchborn Prophet (Tektite) on YouTube</h2>
   `;
   container.dataset.visible = "0";
   appendVideos(container, videos);
