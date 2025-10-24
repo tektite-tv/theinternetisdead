@@ -19,18 +19,24 @@ export function initPostPopup() {
   const content = postPopup.querySelector(".post-content");
 
   // --- Open popup ---
-  const openPostPopup = async (url) => {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      content.innerHTML = text;
-    } catch (err) {
-      content.innerHTML = `<p style="color:#f66;">Error loading post: ${err.message}</p>`;
-      console.error("Post popup error:", err);
-    }
-    postPopup.style.display = "flex";
-  };
+const openPostPopup = (slug) => {
+  try {
+    const post = window.INDEX?.find(p => p.url === slug || p.slug === slug);
+    if (!post) throw new Error("Post not found");
+
+    content.innerHTML = `
+      <article class="popup-post">
+        <h2>${post.title}</h2>
+        <small>${post.date}</small>
+        <div class="post-body">${marked.parse(post.content)}</div>
+      </article>
+    `;
+  } catch (err) {
+    content.innerHTML = `<p style="color:#f66;">Error loading post: ${err.message}</p>`;
+    console.error("Post popup error:", err);
+  }
+  postPopup.style.display = "flex";
+};
 
   // --- Close popup ---
   const closePopup = () => {
