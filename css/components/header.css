@@ -1,5 +1,5 @@
 /* ==========================================================
-   header.css – Header, Menu, Search, Submit (fixed for current DOM)
+   header.css – Header, Menu, Search, Submit
    theinternetisdead.org
    ========================================================== */
 
@@ -15,14 +15,14 @@ header {
   z-index: 1000;
 }
 
-/* === LEFT SECTION (burger + logo image + tagline) === */
+/* === LEFT SECTION (burger + logo + motto side-by-side) === */
 .left-section {
   display: flex;
-  align-items: flex-start; /* was center — now aligns logo and motto more naturally */
-  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
   flex-wrap: nowrap;
   position: relative;
-  padding-top: 4px; /* gentle offset to balance logo vs. text baseline */
 }
 
 .menu {
@@ -37,8 +37,13 @@ header {
   transform: scale(1.2);
 }
 
-/* the image logo as used in index.html */
-.logo-container img,
+/* Logo and motto pairing */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .logo img {
   display: block;
   max-height: 48px;
@@ -46,17 +51,16 @@ header {
   height: auto;
 }
 
-/* === MOTTO (adjusted for better desktop breathing room) === */
 .motto {
   color: #00ff99;
   font-size: 0.9rem;
-  max-width: 420px;          /* more space for longer lines */
-  line-height: 1.6;          /* smoother text rhythm */
-  margin-right: 20px;        /* adds visual gap before logo */
-  text-shadow: 0 0 8px rgba(0,255,153,0.4);
+  line-height: 1.6;
+  max-width: 420px;
+  text-shadow: 0 0 8px rgba(0, 255, 153, 0.4);
+  white-space: normal;
 }
 
-/* menu popup */
+/* === MENU POPUP === */
 #menu-popup {
   position: absolute;
   top: 100%;
@@ -64,23 +68,23 @@ header {
   margin-top: 4px;
   display: none;
   flex-direction: column;
-  background: rgba(0,0,0,0.95);
+  background: rgba(0, 0, 0, 0.95);
   border: 1px solid #00ff99;
   border-radius: 8px;
   padding: 10px 16px;
-  box-shadow: 0 0 15px rgba(0,255,153,0.3);
+  box-shadow: 0 0 15px rgba(0, 255, 153, 0.3);
   z-index: 2000;
 }
 #menu-popup.visible {
   display: flex;
-  animation: popupFade .2s ease-out;
+  animation: popupFade 0.2s ease-out;
 }
 #menu-popup a {
   color: #00ff99;
   text-decoration: none;
   margin: 6px 0;
   font-weight: bold;
-  transition: color .2s;
+  transition: color 0.2s;
 }
 #menu-popup a:hover {
   color: #fff;
@@ -100,6 +104,7 @@ header {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #00ff99;
+  width: 320px; /* slightly wider to balance visual weight */
 }
 
 .search-input {
@@ -145,15 +150,14 @@ header {
    RESPONSIVE FIXES
    ========================================================== */
 @media (max-width: 900px) {
-  .logo-container img,
   .logo img {
     max-height: 40px;
   }
+
   .motto {
-    font-size: 0.75rem;
-    max-width: 200px;
-    margin-right: 8px; /* tighten spacing again for tablets */
-    line-height: 1.4;
+    font-size: 0.8rem;
+    max-width: 300px;
+    line-height: 1.5;
   }
 }
 
@@ -162,32 +166,32 @@ header {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 0.6rem;
+    gap: 0.8rem;
   }
 
   .left-section {
     order: 1;
     width: 100%;
-    display: flex;
-    justify-content: flex-start;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
+    gap: 6px;
   }
 
-  .menu {
-    font-size: 26px;
-    line-height: 1;
+  .logo {
+    flex-direction: column;
+    align-items: center;
   }
 
-  .logo-container img,
   .logo img {
     max-height: 34px;
   }
 
   .motto {
-    font-size: 0.75rem;
-    margin: 4px 0 0;
-    line-height: 1.4;
+    font-size: 0.8rem;
+    max-width: 90%;
+    margin-top: 4px;
+    text-align: center;
   }
 
   .right-section {
