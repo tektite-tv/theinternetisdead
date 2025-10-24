@@ -34,28 +34,36 @@ export async function buildIndex() {
       });
     }
 
-    // === Optionally include videos if available ===
+    // === Load video metadata directly from YouTube RSS feed ===
     try {
-      const vres = await fetch("/_videos/index.json");
-      if (vres.ok) {
-        const videos = await vres.json();
-        for (const v of videos) {
-          index.push({
-            kind: "video",
-            title: v.title || "Untitled Video",
-            url: v.url || "",
-            snippet: v.description || "",
-          });
-        }
-      } else {
-        console.warn("No /_videos/index.json found (optional).");
+      console.log("Fetching YouTube RSS for index...");
+      const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=UCn3WLZT7k8nO24XimlJVJVQ";
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+      const vres = await fetch(apiUrl);
+      if (!vres.ok) throw new Error(`HTTP ${vres.status}`);
+      const data = await vres.json();
+
+      const videos = data.items || [];
+      for (const v of videos) {
+        index.push({
+          kind: "video",
+          title: v.title || "Untitled Video",
+          url: v.link || "",
+          date: v.pubDate || "",
+          snippet: (v.description || "").slice(0, 200)
+        });
       }
+
+      console.log(`🎥 Added ${videos.length} videos from YouTube feed`);
     } catch (err) {
-      console.warn("Video index fetch failed (optional):", err);
+      console.warn("YouTube RSS feed indexing failed (videos.js still handles display):", err);
     }
 
+    // === Finalize ===
     window.INDEX = index;
-    console.log(`✅ INDEX built: ${index.length} entries`);
+    console.log(
+      `✅ INDEX built: ${index.length} total entries (${index.filter(i => i.kind==='post').length} posts, ${index.filter(i => i.kind==='video').length} videos)`
+    );
   } catch (err) {
     console.error("Error building index:", err);
   }
