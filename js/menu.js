@@ -1,7 +1,6 @@
 export function initMenu() {
   const menuBtn = document.querySelector(".menu");
   const menuPopup = document.getElementById("menu-popup");
-
   if (!menuBtn || !menuPopup) return;
 
   menuBtn.addEventListener("click", (e) => {
