@@ -1,4 +1,6 @@
-document.addEventListener("DOMContentLoaded", () => {
+// search.js — modular version with export
+
+export function initSearch() {
   const searchInput = document.querySelector(".search-input");
   const popup = document.getElementById("search-popup");
   let INDEX = window.INDEX || [];
@@ -97,4 +99,4 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   console.log("Search initialized.");
-});
+}
