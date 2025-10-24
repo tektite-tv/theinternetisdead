@@ -1,1 +1,174 @@
+/* ==========================================================
+   header.css – Header, Menu, Search, Submit
+   theinternetisdead.org
+   ========================================================== */
 
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  background-color: #120018;
+  border-bottom: 2px solid #00ff99;
+  position: relative;
+  z-index: 1000;
+}
+
+/* === LEFT SECTION (menu + logo) === */
+.left-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu {
+  font-size: 1.8rem;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.menu:hover {
+  transform: scale(1.2);
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  color: #00ff99;
+  text-shadow: 0 0 8px #00ff99;
+}
+.logo img {
+  max-height: 42px;
+  width: auto;
+  height: auto;
+  display: block;
+}
+.logo h1 {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+.logo p {
+  font-size: 0.8rem;
+  color: #ccc;
+  max-width: 260px;
+}
+
+/* === RIGHT SECTION (search + submit) === */
+.right-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #00ff99;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #ccc;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.search-btn {
+  background: #111;
+  border: none;
+  color: #00ff99;
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: 0.2s ease;
+}
+.search-btn:hover {
+  background: #00ff99;
+  color: #000;
+}
+
+.submit-btn {
+  border: 2px solid #00ff99;
+  color: #00ff99;
+  background: transparent;
+  padding: 0.4rem 1.2rem;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.submit-btn:hover {
+  background: #00ff99;
+  color: #000;
+}
+
+/* ==========================================================
+   MOBILE HEADER FIXED TO SCRIPT CLASSES
+   ========================================================== */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+
+  /* Row 1: burger + logo */
+  .left-section {
+    order: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .menu {
+    font-size: 28px;
+    line-height: 1;
+    padding: 6px 8px;
+  }
+
+  .logo img {
+    max-height: 34px;
+    width: auto;
+    height: auto;
+  }
+
+  /* Row 2: search & submit stacked */
+  .right-section {
+    order: 2;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .search-bar {
+    width: 92%;
+    max-width: 420px;
+  }
+
+  .submit-btn {
+    width: 82%;
+    max-width: 240px;
+    padding: 10px 14px;
+  }
+
+  /* Popup alignment fix */
+  #menu-popup {
+    position: absolute;
+    top: 100%;
+    left: 0;
+  }
+}
