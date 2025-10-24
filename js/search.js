@@ -12,7 +12,7 @@ export function initSearch() {
   popup.style.display = "none";
 
   const openPopup = (htmlContent = "") => {
-    popup.innerHTML = htmlContent || "<p>Type a command or search query...</p>";
+    popup.innerHTML = htmlContent || "<p>Search posts/videos or type a command like /help</p>";
     popup.style.display = "block";
     popup.style.position = "absolute";
     popup.style.top = `${searchBar.offsetHeight + 4}px`;
