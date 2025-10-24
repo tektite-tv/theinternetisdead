@@ -38,7 +38,7 @@ export function initSearch() {
 
     openPopup("<p>Loading...</p>");
     try {
-      const res = await fetch(`/search?q=${encodeURIComponent(query)}`);
+      openPopup(`<p>Searching for <strong>${query}</strong>...</p>`);
       if (!res.ok) throw new Error("Bad response");
       const html = await res.text();
       openPopup(html);
