@@ -3,7 +3,9 @@
 export function initSearch() {
   const searchInput = document.querySelector(".search-input");
   const popup = document.getElementById("search-popup");
-  let INDEX = window.INDEX || [];
+  function getIndex() {
+  return window.INDEX || [];
+}
 
   function renderResults(query) {
     if (!query) {
