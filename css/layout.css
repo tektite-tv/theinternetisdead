@@ -143,3 +143,68 @@ h2 { text-align:center; color:#888; font-weight:normal; margin-bottom:20px; }
     max-width: 200px;
   }
 }
+
+/* ===========================================================
+   FOOTER STYLES
+   =========================================================== */
+footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background: #0a0a0a;
+  color: #00ff99;
+  border-top: 2px solid #00ff99;
+  box-shadow: 0 -2px 15px rgba(0,255,153,0.2);
+  padding: 16px 24px;
+  font-family: monospace;
+  font-size: 14px;
+  position: relative;
+  z-index: 10;
+}
+
+footer a {
+  color: #00ff99;
+  text-decoration: none;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+footer a:hover {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0,255,153,0.5);
+}
+
+/* Optional subtle animated scan line */
+footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, #00ff99, transparent);
+  animation: footerScan 4s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes footerScan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* ===========================================================
+   RESPONSIVE FOOTER STACK
+   =========================================================== */
+@media (max-width: 768px) {
+  footer {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+    padding: 20px 10px;
+  }
+
+  footer a {
+    display: inline-block;
+    margin: 4px 0;
+  }
+}
