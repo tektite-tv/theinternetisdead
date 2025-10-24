@@ -1,50 +1,53 @@
-// postPopup.js — unified with lightbox system
+// postPopup.js — dedicated popup for blog posts
+
 export function initPostPopup() {
-  const lightbox = document.getElementById("img-lightbox");
-  if (!lightbox) return;
+  // Create the popup container once
+  let postPopup = document.getElementById("post-popup");
+  if (!postPopup) {
+    postPopup = document.createElement("div");
+    postPopup.id = "post-popup";
+    postPopup.innerHTML = `
+      <div class="post-popup-inner">
+        <button class="close-x" aria-label="Close">✕</button>
+        <div class="post-content">Loading...</div>
+      </div>
+    `;
+    document.body.appendChild(postPopup);
+  }
 
-  const lightImg = lightbox.querySelector("img");
-  const postContent = lightbox.querySelector(".post-content");
-  const closeBtn = lightbox.querySelector(".close-x");
+  const closeBtn = postPopup.querySelector(".close-x");
+  const content = postPopup.querySelector(".post-content");
 
-  // Function to open post in lightbox
+  // --- Open popup ---
   const openPostPopup = async (url) => {
     try {
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-
-      // Render HTML/Markdown inside the popup
-      postContent.innerHTML = text;
-      lightImg.style.display = "none";
-      lightbox.classList.add("post-mode");
-      lightbox.style.display = "flex";
+      content.innerHTML = text;
     } catch (err) {
-      postContent.innerHTML = "<p>Error loading post.</p>";
-      lightbox.classList.add("post-mode");
-      lightbox.style.display = "flex";
+      content.innerHTML = `<p style="color:#f66;">Error loading post: ${err.message}</p>`;
       console.error("Post popup error:", err);
     }
+    postPopup.style.display = "flex";
   };
 
-  // Cleanup + restore image mode
+  // --- Close popup ---
   const closePopup = () => {
-    lightbox.style.display = "none";
-    postContent.innerHTML = "";
-    lightbox.classList.remove("post-mode");
-    lightImg.style.display = "";
+    postPopup.style.display = "none";
+    content.innerHTML = "";
   };
 
   closeBtn.addEventListener("click", closePopup);
-  lightbox.addEventListener("click", (e) => {
-    if (e.target === lightbox) closePopup();
+  postPopup.addEventListener("click", e => {
+    if (e.target === postPopup) closePopup();
   });
-
-  document.addEventListener("keydown", (e) => {
+  document.addEventListener("keydown", e => {
     if (e.key === "Escape") closePopup();
   });
 
-  // Listen for events from search.js
-  document.addEventListener("openPostPopup", (e) => openPostPopup(e.detail.url));
+  // --- Listen for events from search.js ---
+  document.addEventListener("openPostPopup", e => openPostPopup(e.detail.url));
 
-  console.log("Post popup initialized (lightbox-integrated).");
+  console.log("Post popup initialized.");
 }
