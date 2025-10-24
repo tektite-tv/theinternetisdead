@@ -41,14 +41,16 @@ header {
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-start;
+  flex: 0 0 auto; /* prevents flex grow/stretch nonsense */
 }
 
 .logo img {
   display: block;
-  max-height: 48px;
+  height: 36px;     /* was max-height: 48px */
   width: auto;
-  height: auto;
+  object-fit: contain;
+  flex-shrink: 0;   /* stop shrinking/stretching */
 }
 
 .motto {
