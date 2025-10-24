@@ -1,3 +1,8 @@
+// ===========================================================
+// MAIN.JS – Master Site Initializer
+// ===========================================================
+
+// Import all feature modules
 import { loadPosts } from "./posts.js";
 import { loadVideos } from "./videos.js";
 import { buildIndex } from "./indexBuilder.js";
@@ -14,7 +19,7 @@ import { initPostPopup } from "./postPopup.js";
 document.addEventListener("DOMContentLoaded", async () => {
   console.groupCollapsed("🌐 Site initialization");
 
-  // === PHASE 1: Load dynamic content ===
+  // === PHASE 1: Load dynamic content (posts, videos, index)
   try {
     await Promise.all([loadPosts(), loadVideos(), buildIndex()]);
     console.log("✅ Content loading complete (posts, videos, index).");
@@ -22,16 +27,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error("❌ Error while loading content:", err);
   }
 
-  // === PHASE 2: Initialize UI components ===
+  // === PHASE 2: Initialize UI components
   try {
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+    // Always-safe modules (work everywhere)
     safeInit("Search", initSearch);
     safeInit("Contact", initContact);
-    safeInit("Menu", initMenu);
-    safeInit("Lightbox", initLightbox);
     safeInit("PostPopup", initPostPopup);
-    console.log("✅ All UI modules initialized successfully.");
+
+    // Desktop-only modules (skip if mobile)
+    if (!isMobile) {
+      safeInit("Menu", initMenu);
+      safeInit("Lightbox", initLightbox);
+    }
+
+    console.log(
+      `✅ UI modules initialized (mode: ${isMobile ? "mobile" : "desktop"})`
+    );
   } catch (err) {
     console.error("❌ Error during module initialization:", err);
+  }
+
+  // === PHASE 3: Event & Resize handling
+  try {
+    window.addEventListener("resize", handleResize);
+  } catch (err) {
+    console.error("⚠️ Resize listener failed:", err);
   }
 
   console.groupEnd();
@@ -53,7 +75,26 @@ function safeInit(name, fn) {
   }
 }
 
-// === OPTIONAL: global error catcher for uncaught rejections ===
+/**
+ * Handle responsive changes gracefully
+ */
+function handleResize() {
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+  // Prevent re-running desktop initializers on mobile resize
+  if (isMobile) {
+    document.body.classList.add("mobile-mode");
+    document.body.classList.remove("desktop-mode");
+  } else {
+    document.body.classList.add("desktop-mode");
+    document.body.classList.remove("mobile-mode");
+  }
+  console.log(`📱 Resize detected: ${isMobile ? "mobile" : "desktop"} mode`);
+}
+
+/**
+ * Global error catcher for unhandled promise rejections
+ */
 window.addEventListener("unhandledrejection", (e) => {
   console.error("🚨 Unhandled promise rejection:", e.reason);
 });
