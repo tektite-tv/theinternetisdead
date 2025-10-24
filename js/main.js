@@ -1,3 +1,4 @@
+// main.js
 import { loadPosts } from "./posts.js";
 import { loadVideos } from "./videos.js";
 import { buildIndex } from "./indexBuilder.js";
@@ -9,7 +10,7 @@ import { initPostPopup } from "./postPopup.js";
 
 /**
  * Dynamically loads header.html into #header-placeholder
- * and reinitializes header-dependent scripts.
+ * and reinitializes header-dependent scripts AFTER it's inserted.
  */
 async function loadHeader() {
   try {
@@ -24,26 +25,28 @@ async function loadHeader() {
       return;
     }
 
+    // Insert header HTML
     placeholder.innerHTML = html;
 
-    // Wait for paint before attaching listeners
-    requestAnimationFrame(() => {
-      try {
-        initMenu();
-        initContact();
-        initSearch();
-        console.log("✅ Header loaded and all header scripts initialized");
-      } catch (err) {
-        console.error("❌ Header script init failed:", err);
-      }
-    });
+    // Wait for DOM to register new elements
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    // Initialize header scripts AFTER header exists
+    try {
+      initMenu();
+      initContact();
+      initSearch(); // now it actually finds .search-bar and #search-popup
+      console.log("✅ Header loaded and header scripts initialized properly");
+    } catch (err) {
+      console.error("❌ Header script initialization failed:", err);
+    }
   } catch (err) {
     console.error("❌ Failed to load header:", err);
   }
 }
 
 /**
- * Wrap any init function safely
+ * Wrapper for safe initialization logging
  */
 const safeInit = (label, fn) => {
   try {
@@ -60,10 +63,10 @@ const safeInit = (label, fn) => {
 document.addEventListener("DOMContentLoaded", async () => {
   console.groupCollapsed("🌐 Site Initialization");
 
-  // 1️⃣ Load header before anything dependent on it
+  // 1️⃣ Load header before dependent scripts
   await loadHeader();
 
-  // 2️⃣ Load site content
+  // 2️⃣ Load main content (posts, videos)
   try {
     await Promise.all([loadPosts(), loadVideos()]);
     buildIndex();
