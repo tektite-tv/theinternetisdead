@@ -139,4 +139,5 @@ document.addEventListener("click", (e) => {
     closePopup();
 });
 
-popup.addEventListener("click", (e) => e.stopPropagation());
+  popup.addEventListener("click", (e) => e.stopPropagation());
+} // closes initSearch function
