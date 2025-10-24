@@ -37,6 +37,51 @@ main::before {
 h1 { font-size:1.8em; text-align:center; text-shadow:0 0 6px #fff2, 0 0 12px #0ff4; margin-bottom:8px; }
 h2 { text-align:center; color:#888; font-weight:normal; margin-bottom:20px; }
 
+/* ===========================================================
+   SEARCH BAR LAYOUT
+   =========================================================== */
+.search-bar {
+  flex: 1;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 20px;
+}
+
+.search-bar input.search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #444;
+  border-right: none;
+  background: #000;
+  color: #fff;
+  font-size: 14px;
+  border-radius: 4px 0 0 4px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-bar input.search-input:focus {
+  border-color: #00ff99;
+  box-shadow: 0 0 8px rgba(0,255,153,0.4);
+}
+
+.search-bar button.search-btn {
+  padding: 8px 16px;
+  border: 1px solid #444;
+  border-radius: 0 4px 4px 0;
+  background-color: #222;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.search-bar button.search-btn:hover {
+  background-color: #333;
+  box-shadow: 0 0 10px rgba(255,255,255,0.1);
+}
+
 @media (max-width:768px) {
   main { grid-template-columns:1fr; }
   #search-popup { top:60px; width:95%; max-height:80vh; }
