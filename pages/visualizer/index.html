@@ -11,29 +11,52 @@ html,body{
   height:100%;
   font-family: monospace;
 }
-#boom {
-  position:absolute;top:50%;left:50%;
+canvas{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  background:black;
+  z-index:0;
+}
+
+#boom{
+  position:fixed;
+  top:50%;
+  left:50%;
   transform:translate(-50%,-50%);
-  width:200px;height:200px;
+  width:220px;
+  height:220px;
   border-radius:50%;
-  border:4px solid #fff;
+  border:6px solid rgba(255,255,255,.8);
   cursor:pointer;
+  z-index:9999;
   background:conic-gradient(
     from 0deg,
     #ff0040,#ff8000,#ffff00,#00ff40,#00ffff,#0040ff,#8000ff,#ff00ff,#ff0040
   );
-  animation: spin 2s linear infinite;
-  box-shadow:0 0 50px #fff;
+  box-shadow:
+    0 0 20px #fff,
+    0 0 40px #ff00ff,
+    0 0 80px #00ffff;
+  animation:spin 3s linear infinite,hue 4s linear infinite;
 }
 @keyframes spin{
-  0%{filter:hue-rotate(0deg) brightness(1);}
-  100%{filter:hue-rotate(360deg) brightness(1);}
+  from{transform:translate(-50%,-50%) rotate(0deg);}
+  to{transform:translate(-50%,-50%) rotate(360deg);}
 }
-#boom:hover{transform:translate(-50%,-50%) scale(1.1);}
-canvas{
-  position:fixed;top:0;left:0;width:100%;height:100%;
-  background:black;
+@keyframes hue{
+  from{filter:hue-rotate(0deg);}
+  to{filter:hue-rotate(360deg);}
 }
+#boom:hover{
+  transform:translate(-50%,-50%) scale(1.1) rotate(0deg);
+  box-shadow:
+    0 0 30px #fff,
+    0 0 60px #ff00ff,
+    0 0 100px #00ffff;
+}
+
 .glitch{
   position:fixed;
   inset:0;
@@ -43,8 +66,9 @@ canvas{
     rgba(0,255,255,0.04) 2px 4px
   );
   mix-blend-mode:screen;
-  animation: flicker .1s infinite;
+  animation:flicker .1s infinite;
   pointer-events:none;
+  z-index:1;
 }
 @keyframes flicker{
   0%{opacity:.6;transform:translate(0,0);}
@@ -52,20 +76,21 @@ canvas{
   100%{opacity:.5;transform:translate(-1px,1px);}
 }
 .text{
-  position:fixed;bottom:10%;width:100%;
+  position:fixed;
+  bottom:10%;
+  width:100%;
   text-align:center;
-  font-size:3em;color:#fff;text-shadow:0 0 20px magenta;
+  font-size:3em;
+  color:#fff;
+  text-shadow:0 0 20px magenta;
   letter-spacing:0.05em;
-  animation: hue 5s linear infinite;
-}
-@keyframes hue{
-  from{filter:hue-rotate(0deg);}
-  to{filter:hue-rotate(360deg);}
+  animation:hue 5s linear infinite;
+  z-index:2;
 }
 </style>
 </head>
 <body>
-<button id="boom"></button>
+<button id="boom" title="INITIATE CHAOS"></button>
 <canvas id="canvas"></canvas>
 <div class="glitch"></div>
 <div class="text" id="msg"></div>
@@ -81,6 +106,7 @@ canvas.width=innerWidth;
 canvas.height=innerHeight;
 let audioCtx,src,analyser,dataArray,started=false;
 let t=0;
+
 function setup(){
   audioCtx=new (window.AudioContext||window.webkitAudioContext)();
   src=audioCtx.createMediaElementSource(audio);
@@ -90,11 +116,12 @@ function setup(){
   analyser.connect(audioCtx.destination);
   dataArray=new Uint8Array(analyser.frequencyBinCount);
 }
+
 function draw(){
   requestAnimationFrame(draw);
   analyser.getByteFrequencyData(dataArray);
   const w=canvas.width,h=canvas.height;
-  ctx.fillStyle=`rgba(0,0,0,0.1)`;
+  ctx.fillStyle='rgba(0,0,0,0.12)';
   ctx.fillRect(0,0,w,h);
   const bars=dataArray.length;
   const centerX=w/2,centerY=h/2;
@@ -111,7 +138,6 @@ function draw(){
     ctx.moveTo(centerX,centerY);
     ctx.lineTo(x,y);
     ctx.stroke();
-    // glitch fragments
     if(Math.random()<0.02){
       ctx.fillStyle=`hsl(${hue+120},100%,50%)`;
       ctx.fillRect(Math.random()*w,Math.random()*h,4+amp/20,4+amp/20);
@@ -120,10 +146,14 @@ function draw(){
   msg.textContent = ['GLITCH','VOID','ECHO','REPEAT'][Math.floor((t/30)%4)];
   t++;
 }
+
 btn.addEventListener('click',async()=>{
   if(started)return;
   started=true;
-  btn.style.display='none';
+  btn.style.transition='opacity 0.5s ease';
+  btn.style.opacity='0';
+  setTimeout(()=>btn.remove(),600);
+
   msg.textContent='BOOTING GLITCHCORE...';
   setup();
   await audioCtx.resume();
@@ -131,6 +161,7 @@ btn.addEventListener('click',async()=>{
   setTimeout(()=>{msg.textContent='GLITCHCORE REACTOR ACTIVE';},2000);
   draw();
 });
+
 window.addEventListener('resize',()=>{
   canvas.width=innerWidth;
   canvas.height=innerHeight;
