@@ -108,9 +108,16 @@ export function initSearch() {
   });
 
   popup.addEventListener("click", e => {
-    const item = e.target.closest(".search-result");
-    if (item && item.dataset.url) window.location.href = item.dataset.url;
-  });
+  const item = e.target.closest(".search-result");
+  if (item && item.dataset.url) {
+    if (item.dataset.kind === "post") {
+      const event = new CustomEvent("openPostPopup", { detail: { url: item.dataset.url } });
+      document.dispatchEvent(event);
+    } else {
+      window.location.href = item.dataset.url;
+    }
+  }
+});
 
   console.log("Search initialized (modular version).");
 }
