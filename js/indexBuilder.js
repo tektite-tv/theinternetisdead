@@ -13,7 +13,7 @@ export async function buildIndex() {
     const posts = await res.json();
 
     for (const p of posts) {
-      const filePath = `/_posts/${p.file}`;
+      const filePath = `/${p.file}`;
       const response = await fetch(filePath);
       if (!response.ok) {
         console.warn("Skipping missing post:", filePath);
