@@ -24,12 +24,28 @@ const openPostPopup = (slug) => {
     const post = window.INDEX?.find(p => p.file === slug || p.url === slug);
     if (!post) throw new Error("Post not found");
 
-    content.innerHTML = `
-      <article class="popup-post">
-        <h2>${post.title}</h2>
-        <div class="post-body">${marked.parse(post.content)}</div>
-      </article>
-    `;
+    const cleanContent = post.content
+  // remove YAML-style metadata lines
+  .replace(/^title:.*$/m, "")
+  .replace(/^date:.*$/m, "")
+  .trim();
+
+const formattedDate = new Date(post.date).toLocaleString(undefined, {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit"
+});
+
+content.innerHTML = `
+  <article class="popup-post">
+    <h2>${post.title}</h2>
+    <small class="post-date">${formattedDate}</small>
+    <div class="post-body">${marked.parse(cleanContent)}</div>
+  </article>
+`;
+    
   } catch (err) {
     content.innerHTML = `<p style="color:#f66;">Error loading post: ${err.message}</p>`;
   }
