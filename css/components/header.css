@@ -7,7 +7,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 0.8rem 1rem;
   background-color: #120018;
   border-bottom: 2px solid #00ff99;
@@ -20,9 +20,10 @@ header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 16px;
-  flex-wrap: nowrap;
+  gap: 12px;
+  flex: 1 1 auto;
   position: relative;
+  min-width: 0; /* prevent overflow */
 }
 
 .menu {
@@ -32,6 +33,7 @@ header {
   background: none;
   border: none;
   transition: transform 0.2s ease;
+  flex: 0 0 auto;
 }
 .menu:hover {
   transform: scale(1.2);
@@ -42,24 +44,26 @@ header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  flex: 0 0 auto; /* prevents flex grow/stretch nonsense */
+  flex: 0 0 auto;
+  gap: 10px;
 }
 
 .logo img {
   display: block;
-  height: 36px;     /* was max-height: 48px */
+  height: 32px;
   width: auto;
   object-fit: contain;
-  flex-shrink: 0;   /* stop shrinking/stretching */
+  flex-shrink: 0;
 }
 
 .motto {
   color: #00ff99;
   font-size: 0.9rem;
   line-height: 1.6;
-  max-width: 420px;
   text-shadow: 0 0 8px rgba(0, 255, 153, 0.4);
   white-space: normal;
+  flex: 1 1 auto;
+  max-width: 420px;
 }
 
 /* === MENU POPUP === */
@@ -106,7 +110,8 @@ header {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #00ff99;
-  width: 320px; /* slightly wider to balance visual weight */
+  width: 360px;
+  min-width: 260px;
 }
 
 .search-input {
@@ -157,8 +162,8 @@ header {
   }
 
   .motto {
-    font-size: 0.8rem;
-    max-width: 300px;
+    font-size: 0.85rem;
+    max-width: 360px;
     line-height: 1.5;
   }
 }
@@ -172,8 +177,6 @@ header {
   }
 
   .left-section {
-    order: 1;
-    width: 100%;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -197,7 +200,6 @@ header {
   }
 
   .right-section {
-    order: 2;
     width: 100%;
     flex-direction: column;
     align-items: center;
@@ -220,15 +222,4 @@ header {
 @keyframes popupFade {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
-}
-
-/* === HARD FIX: clamp logo image size globally === */
-header .logo img,
-header .logo-container img {
-  height: 36px !important;     /* hard lock */
-  max-height: 36px !important;
-  width: auto !important;
-  object-fit: contain !important;
-  flex: 0 0 auto !important;
-  align-self: center !important;
 }
