@@ -28,13 +28,13 @@ export async function buildIndex() {
         title: p.title || "Untitled",
         date: p.date || "",
         file: p.file,
-        url: filePath,               // real .md path (no fake .html)
+        url: filePath,
         snippet: plain.slice(0, 200),
-        content: txt                 // raw markdown text for popup
+        content: txt
       });
     }
 
-    // === Optionally include videos if you have a separate video index ===
+    // === Optionally include videos if available ===
     try {
       const vres = await fetch("/_videos/index.json");
       if (vres.ok) {
@@ -47,9 +47,11 @@ export async function buildIndex() {
             snippet: v.description || "",
           });
         }
+      } else {
+        console.warn("No /_videos/index.json found (optional).");
       }
     } catch (err) {
-      console.warn("No video index found (optional).");
+      console.warn("Video index fetch failed (optional):", err);
     }
 
     window.INDEX = index;
@@ -58,4 +60,3 @@ export async function buildIndex() {
     console.error("Error building index:", err);
   }
 }
-
