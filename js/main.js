@@ -8,34 +8,42 @@ import { initLightbox } from "./lightbox.js";
 import { initPostPopup } from "./postPopup.js";
 
 /**
- * Dynamically loads the header.html partial into the page
- * and re-initializes interactive header scripts.
+ * Dynamically loads header.html into #header-placeholder
+ * and reinitializes header-dependent scripts.
  */
 async function loadHeader() {
   try {
     const res = await fetch("/pages/sections/header.html");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
     const html = await res.text();
-
     const placeholder = document.getElementById("header-placeholder");
-    if (placeholder) {
-      placeholder.innerHTML = html;
 
-      // Reinitialize scripts that depend on the header being present
-      initMenu();
-      initSearch();
-      initContact();
-      console.log("✅ Header loaded and initialized");
-    } else {
-      console.warn("⚠️ No #header-placeholder found in DOM.");
+    if (!placeholder) {
+      console.warn("⚠️ #header-placeholder not found in DOM.");
+      return;
     }
+
+    placeholder.innerHTML = html;
+
+    // Reinitialize header-bound scripts after insertion
+    setTimeout(() => {
+      try {
+        initMenu();
+        initSearch();
+        initContact();
+        console.log("✅ Header loaded and all header scripts initialized");
+      } catch (err) {
+        console.error("❌ Header script init failed:", err);
+      }
+    }, 50); // tiny delay ensures DOM paint completion
   } catch (err) {
     console.error("❌ Failed to load header:", err);
   }
 }
 
 /**
- * Safely initialize a function and log its result
+ * Wrap any init function safely
  */
 const safeInit = (label, fn) => {
   try {
@@ -52,18 +60,18 @@ const safeInit = (label, fn) => {
 document.addEventListener("DOMContentLoaded", async () => {
   console.groupCollapsed("🌐 Site Initialization");
 
-  // 1️⃣ Load the header first (then scripts that depend on it)
+  // 1️⃣ Load header before anything dependent on it
   await loadHeader();
 
-  // 2️⃣ Load dynamic site content
+  // 2️⃣ Load site content
   try {
     await Promise.all([loadPosts(), loadVideos()]);
     buildIndex();
-  } catch (e) {
-    console.error("❌ Failed loading posts/videos:", e);
+  } catch (err) {
+    console.error("❌ Failed loading posts/videos:", err);
   }
 
-  // 3️⃣ Initialize site-wide features
+  // 3️⃣ Initialize independent UI components
   safeInit("Lightbox", initLightbox);
   safeInit("Post Popup", initPostPopup);
 
