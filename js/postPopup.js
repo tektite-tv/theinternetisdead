@@ -1,57 +1,50 @@
+// postPopup.js — unified with lightbox system
 export function initPostPopup() {
-  // Create popup container if it doesn't exist
-  if (document.getElementById("post-popup")) return;
+  const lightbox = document.getElementById("img-lightbox");
+  if (!lightbox) return;
 
-  const popup = document.createElement("div");
-  popup.id = "post-popup";
-  popup.innerHTML = `
-    <div class="popup-inner">
-      <button class="close-btn">×</button>
-      <div class="content"><em>Loading...</em></div>
-    </div>
-  `;
-  document.body.appendChild(popup);
+  const lightImg = lightbox.querySelector("img");
+  const postContent = lightbox.querySelector(".post-content");
+  const closeBtn = lightbox.querySelector(".close-x");
 
-  const closeBtn = popup.querySelector(".close-btn");
-  const content = popup.querySelector(".content");
+  // Function to open post in lightbox
+  const openPostPopup = async (url) => {
+    try {
+      const res = await fetch(url);
+      const text = await res.text();
 
+      // Render HTML/Markdown inside the popup
+      postContent.innerHTML = text;
+      lightImg.style.display = "none";
+      lightbox.classList.add("post-mode");
+      lightbox.style.display = "flex";
+    } catch (err) {
+      postContent.innerHTML = "<p>Error loading post.</p>";
+      lightbox.classList.add("post-mode");
+      lightbox.style.display = "flex";
+      console.error("Post popup error:", err);
+    }
+  };
+
+  // Cleanup + restore image mode
   const closePopup = () => {
-    popup.style.display = "none";
-    content.innerHTML = "<em>Loading...</em>";
+    lightbox.style.display = "none";
+    postContent.innerHTML = "";
+    lightbox.classList.remove("post-mode");
+    lightImg.style.display = "";
   };
 
   closeBtn.addEventListener("click", closePopup);
-  popup.addEventListener("click", e => {
-    if (e.target === popup) closePopup();
+  lightbox.addEventListener("click", (e) => {
+    if (e.target === lightbox) closePopup();
   });
-  document.addEventListener("keydown", e => {
+
+  document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closePopup();
   });
 
-  // Listen for custom search event
-  document.addEventListener("openPostPopup", async e => {
-    const url = e.detail.url;
-    if (!url || !url.endsWith(".md")) return;
+  // Listen for events from search.js
+  document.addEventListener("openPostPopup", (e) => openPostPopup(e.detail.url));
 
-    try {
-      const res = await fetch(url);
-      let text = await res.text();
-      if (text.startsWith("---")) {
-        const end = text.indexOf("---", 3);
-        if (end !== -1) text = text.slice(end + 3);
-      }
-
-      if (!window.marked) {
-        console.error("Marked.js not loaded");
-        content.innerHTML = "<p style='color:red;'>Markdown parser not available.</p>";
-      } else {
-        content.innerHTML = window.marked.parse(text.trim());
-      }
-
-      popup.style.display = "flex";
-    } catch (err) {
-      content.innerHTML = `<p style="color:red;">Error loading post: ${err.message}</p>`;
-      popup.style.display = "flex";
-    }
-  });
+  console.log("Post popup initialized (lightbox-integrated).");
 }
