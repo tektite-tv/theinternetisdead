@@ -11,8 +11,20 @@ export function initSearch() {
 
   popup.style.display = "none";
 
+  // === COMMAND LIST ===
+  const COMMANDS = [
+    { cmd: "/help", desc: "Show all available commands" },
+    { cmd: "/revive", desc: "Revive the site’s spirit" },
+    { cmd: "/die", desc: "Put the site into dead mode" },
+    { cmd: "/glitchtv", desc: "Open Glitch TV" },
+    { cmd: "/maze", desc: "Launch the Maze Game" },
+    { cmd: "/contact", desc: "Open the contact popup" },
+  ];
+
   const openPopup = (htmlContent = "") => {
-    popup.innerHTML = htmlContent || "<p>Search posts/videos or type a command like /help</p>";
+    popup.innerHTML =
+      htmlContent ||
+      "<p>Search posts/videos or type a command like /help</p>";
     popup.style.display = "block";
     popup.style.position = "absolute";
     popup.style.top = `${searchBar.offsetHeight + 4}px`;
@@ -25,10 +37,29 @@ export function initSearch() {
     popup.style.display = "none";
   };
 
+  const showCommands = () => {
+    let html = "<div class='promptline'>Available Commands</div>";
+    COMMANDS.forEach((c) => {
+      html += `<div class="search-result">
+                 <span class="title">${c.cmd}</span>
+                 <span class="snippet">${c.desc}</span>
+               </div>`;
+    });
+    openPopup(html);
+  };
+
   const performSearch = async () => {
     const query = input.value.trim();
+
+    // Slash prefix → show commands
+    if (query.startsWith("/")) {
+      showCommands();
+      return;
+    }
+
+    // Empty input → show hint message
     if (!query) {
-      openPopup("<p>Type a command or search query...</p>");
+      openPopup("<p>Search posts/videos or type a command like /help</p>");
       return;
     }
 
@@ -44,15 +75,17 @@ export function initSearch() {
     }
   };
 
-  // === Event Listeners ===
-  input.addEventListener("focus", () => openPopup());
+  // === EVENT LISTENERS ===
+  input.addEventListener("focus", showCommands);
+
   searchBar.addEventListener("mousedown", (e) => {
-    if (!popup.contains(e.target)) openPopup();
+    if (!popup.contains(e.target)) showCommands();
   });
 
   input.addEventListener("blur", () => {
     setTimeout(() => {
-      if (!popup.matches(":hover") && document.activeElement !== input) closePopup();
+      if (!popup.matches(":hover") && document.activeElement !== input)
+        closePopup();
     }, 150);
   });
 
@@ -65,11 +98,14 @@ export function initSearch() {
     if (e.key === "Enter") {
       e.preventDefault();
       performSearch();
+    } else if (e.key === "/") {
+      showCommands();
     }
   });
 
   document.addEventListener("click", (e) => {
-    if (!searchBar.contains(e.target) && !popup.contains(e.target)) closePopup();
+    if (!searchBar.contains(e.target) && !popup.contains(e.target))
+      closePopup();
   });
 
   popup.addEventListener("click", (e) => e.stopPropagation());
