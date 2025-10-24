@@ -37,13 +37,20 @@ html, body {
    MAIN LAYOUT
    ========================================================== */
 main {
+  position: relative;              /* allows scanline canvas inside */
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   padding: 1.5rem;
+  overflow: hidden;                /* keeps scanlines inside */
+  background: transparent;         /* let them show through */
+  z-index: 0;
 }
 
+/* Each section stays above the scanlines */
 section {
+  position: relative;
+  z-index: 1;
   background: rgba(0, 0, 0, 0.9);
   border: 1px solid #00ff99;
   border-radius: 12px;
@@ -64,6 +71,7 @@ footer {
   font-size: 0.9rem;
   line-height: 1.5;
 }
+
 footer a {
   color: #00ff99;
   text-decoration: none;
