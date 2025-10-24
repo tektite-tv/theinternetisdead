@@ -36,9 +36,7 @@ export function initSearch() {
     popup.style.zIndex = "5000";
   };
 
-  const closePopup = () => {
-    popup.style.display = "none";
-  };
+  const closePopup = () => (popup.style.display = "none");
 
   const showCommands = () => {
     let html = "<div class='promptline'>sudo theinternetisdead.org</div>";
@@ -54,30 +52,20 @@ export function initSearch() {
   const performSearch = () => {
     const query = input.value.trim().toLowerCase();
 
-    if (query.startsWith("/")) {
-      showCommands();
-      return;
-    }
+    if (query.startsWith("/")) return showCommands();
+    if (!query)
+      return openPopup("<p>Search posts/videos or type a command like /help</p>");
+    if (!window.INDEX || !Array.isArray(window.INDEX))
+      return openPopup("<p>No index loaded yet. Try reloading the page.</p>");
 
-    if (!query) {
-      openPopup("<p>Search posts/videos or type a command like /help</p>");
-      return;
-    }
-
-    if (!window.INDEX || !Array.isArray(window.INDEX)) {
-      openPopup("<p>No index loaded yet. Try reloading the page.</p>");
-      return;
-    }
-
-    const results = window.INDEX.filter((item) =>
-      item.title.toLowerCase().includes(query) ||
-      item.snippet.toLowerCase().includes(query)
+    const results = window.INDEX.filter(
+      (item) =>
+        item.title.toLowerCase().includes(query) ||
+        item.snippet.toLowerCase().includes(query)
     );
 
-    if (results.length === 0) {
-      openPopup(`<p>No results found for "<b>${query}</b>".</p>`);
-      return;
-    }
+    if (!results.length)
+      return openPopup(`<p>No results found for "<b>${query}</b>".</p>`);
 
     // === Build Search Results ===
     const html = results
@@ -90,25 +78,29 @@ export function initSearch() {
           const thumbnail = id
             ? `https://img.youtube.com/vi/${id}/hqdefault.jpg`
             : "/images/default-thumb.png";
+          const dateStr = r.date
+            ? new Date(r.date).toLocaleDateString()
+            : "";
 
           return `
-            <div class="search-result video-result">
-              <a href="${r.url}" target="_blank" class="video-result-link">
-                <img src="${thumbnail}" alt="${r.title}" class="video-thumb">
-                <div class="video-meta">
-                  <span class="title">${r.title}</span><br/>
-                  <span class="snippet">${r.snippet}</span>
-                </div>
-              </a>
-            </div>`;
+          <div class="search-result video-result">
+            <a href="${r.url}" target="_blank" class="video-result-link">
+              <img src="${thumbnail}" alt="${r.title}" class="video-thumb">
+              <div class="video-meta">
+                <span class="title">${r.title}</span>
+                <div class="video-date">${dateStr}</div>
+                <p class="snippet">${r.snippet}</p>
+              </div>
+            </a>
+          </div>`;
         } else {
           return `
-            <div class="search-result post-result">
-              <a href="${r.url}" class="post-result-link">
-                <span class="title">${r.title}</span><br/>
-                <span class="snippet">${r.snippet}</span>
-              </a>
-            </div>`;
+          <div class="search-result post-result">
+            <a href="${r.url}" class="post-result-link">
+              <span class="title">${r.title}</span><br/>
+              <span class="snippet">${r.snippet}</span>
+            </a>
+          </div>`;
         }
       })
       .join("");
@@ -130,19 +122,16 @@ export function initSearch() {
     }, 150);
   });
 
-  // Handle live typing search with debounce
+  // live typing search (debounced)
   let searchTimeout;
   input.addEventListener("input", () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       const query = input.value.trim();
-      if (query.startsWith("/")) {
-        showCommands();
-      } else if (query === "") {
+      if (query.startsWith("/")) showCommands();
+      else if (query === "")
         openPopup("<p>Search posts/videos or type a command like /help</p>");
-      } else {
-        performSearch();
-      }
+      else performSearch();
     }, 200);
   });
 
@@ -152,9 +141,7 @@ export function initSearch() {
   });
 
   input.addEventListener("keydown", (e) => {
-    if (e.key === "/") {
-      showCommands();
-    }
+    if (e.key === "/") showCommands();
   });
 
   document.addEventListener("click", (e) => {
@@ -163,4 +150,4 @@ export function initSearch() {
   });
 
   popup.addEventListener("click", (e) => e.stopPropagation());
-} // end of initSearch()
+}
