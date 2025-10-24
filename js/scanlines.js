@@ -1,14 +1,19 @@
 // /js/scanlines.js
 /**
  * scanlines.js
- * Adds a diagonal scanline overlay to the entire site background.
- * Automatically attaches a <canvas> element and animates it.
+ * Adds a diagonal scanline overlay UNDER the <main> content.
  */
 
 export function initScanlines() {
+  const main = document.querySelector("main");
+  if (!main) {
+    console.warn("⚠️ <main> not found, scanlines not initialized.");
+    return;
+  }
+
   const canvas = document.createElement("canvas");
   canvas.id = "scanlines";
-  canvas.style.position = "fixed";
+  canvas.style.position = "absolute";
   canvas.style.top = "0";
   canvas.style.left = "0";
   canvas.style.width = "100%";
@@ -16,14 +21,21 @@ export function initScanlines() {
   canvas.style.pointerEvents = "none";
   canvas.style.zIndex = "0";
   canvas.style.opacity = "0.15";
-  document.body.appendChild(canvas);
+  canvas.style.mixBlendMode = "overlay";
+
+  // Insert canvas as the first child under <main>
+  main.prepend(canvas);
+
+  // Make sure <main> can layer properly
+  main.style.position = "relative";
 
   const ctx = canvas.getContext("2d");
   let w, h;
 
   function resize() {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
+    const rect = main.getBoundingClientRect();
+    w = canvas.width = rect.width;
+    h = canvas.height = rect.height;
   }
 
   window.addEventListener("resize", resize);
@@ -38,8 +50,6 @@ export function initScanlines() {
 
     const spacing = 6;
     const angle = Math.PI / 4;
-    const dx = Math.cos(angle) * spacing;
-    const dy = Math.sin(angle) * spacing;
 
     ctx.save();
     ctx.translate(-w, 0);
