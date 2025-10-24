@@ -26,17 +26,17 @@ async function loadHeader() {
 
     placeholder.innerHTML = html;
 
-    // Reinitialize header-bound scripts after insertion
-    setTimeout(() => {
+    // Wait for paint before attaching listeners
+    requestAnimationFrame(() => {
       try {
         initMenu();
-        initSearch();
         initContact();
+        initSearch();
         console.log("✅ Header loaded and all header scripts initialized");
       } catch (err) {
         console.error("❌ Header script init failed:", err);
       }
-    }, 50); // tiny delay ensures DOM paint completion
+    });
   } catch (err) {
     console.error("❌ Failed to load header:", err);
   }
