@@ -18,10 +18,11 @@ header {
 /* === LEFT SECTION (burger + logo image + tagline) === */
 .left-section {
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* was center — now aligns logo and motto more naturally */
   gap: 12px;
   flex-wrap: nowrap;
-  position: relative; /* anchor for popup */
+  position: relative;
+  padding-top: 4px; /* gentle offset to balance logo vs. text baseline */
 }
 
 .menu {
