@@ -18,6 +18,7 @@ export function initSearch() {
   // Make sure popup is initially hidden
   popup.style.display = "none";
 
+  // === Popup controls ===
   const openPopup = (htmlContent = "") => {
     popup.innerHTML      = htmlContent;
     popup.style.display  = "block";
@@ -28,17 +29,16 @@ export function initSearch() {
     popup.style.zIndex   = "5000";
     popup.style.maxHeight   = "300px";
     popup.style.overflowY    = "auto";
-    // Other styling if needed could go here
   };
 
   const closePopup = () => {
     popup.style.display = "none";
   };
 
+  // === Search handling ===
   const performSearch = async () => {
     const query = input.value.trim();
     if (!query) {
-      // Nothing to search → optionally close popup
       closePopup();
       return;
     }
@@ -46,26 +46,37 @@ export function initSearch() {
     openPopup("<p>Loading results…</p>");
 
     try {
-      // Modify this URL/logic if you actually have a results endpoint
       const res = await fetch(`/search?q=${encodeURIComponent(query)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const html = await res.text();
-
       openPopup(html);
-
     } catch (err) {
       console.error("Search error:", err);
       openPopup("<p style='color: red;'>Error retrieving results.</p>");
     }
   };
 
-  // Button click
+  // === Events ===
+
+  // Show popup immediately when clicking or focusing in the input
+  input.addEventListener("focus", () => {
+    openPopup("<p>Type a command or search query...</p>");
+  });
+
+  // Optional: Close popup when input loses focus (but not if popup hovered)
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!popup.matches(":hover")) closePopup();
+    }, 150);
+  });
+
+  // Button click triggers search
   btn.addEventListener("click", (e) => {
     e.preventDefault();
     performSearch();
   });
 
-  // Enter key in input
+  // Enter key triggers search
   input.addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -73,14 +84,14 @@ export function initSearch() {
     }
   });
 
-  // Close popup when clicking outside searchBar + popup
+  // Clicking outside closes popup
   document.addEventListener("click", (e) => {
     if (!searchBar.contains(e.target) && !popup.contains(e.target)) {
       closePopup();
     }
   });
 
-  // Prevent propagation from popup to document click listener
+  // Stop propagation from popup so clicks inside it don't close it
   popup.addEventListener("click", (e) => {
     e.stopPropagation();
   });
