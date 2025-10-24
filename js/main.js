@@ -9,6 +9,7 @@ import { initContact } from "./contact.js";
 import { initMenu } from "./menu.js";
 import { initLightbox } from "./lightbox.js";
 import { initPostPopup } from "./postPopup.js";
+import { initScanlines } from "./scanlines.js"; // 👈 New import
 
 /**
  * Dynamically loads header.html into #header-placeholder
@@ -81,6 +82,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 3️⃣ Initialize auxiliary UI components
   safeInit("Lightbox", initLightbox);
   safeInit("Post Popup", initPostPopup);
+
+  // 4️⃣ Initialize background scanline overlay
+  safeInit("Scanlines", initScanlines);
 
   console.groupEnd();
 });
