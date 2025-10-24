@@ -1,14 +1,13 @@
 // /js/postPopup.js — Dedicated popup for displaying posts in-page
-
 import { marked } from "https://cdn.jsdelivr.net/npm/marked@12.0.1/lib/marked.esm.js";
 
 /**
- * Initializes the post popup element and event listeners
+ * Initializes the post popup element and event listeners.
  */
 export function initPostPopup() {
   let postPopup = document.getElementById("post-popup");
 
-  // Create the popup structure once if not in DOM
+  // Create structure if it doesn't exist
   if (!postPopup) {
     postPopup = document.createElement("div");
     postPopup.id = "post-popup";
@@ -24,7 +23,6 @@ export function initPostPopup() {
   const closeBtn = postPopup.querySelector(".close-x");
   const content = postPopup.querySelector(".post-content");
 
-  /** Close popup safely */
   const closePopup = () => {
     postPopup.style.display = "none";
     content.innerHTML = "";
@@ -42,11 +40,11 @@ export function initPostPopup() {
 }
 
 /**
- * Opens the post popup using Markdown text or indexed post data.
- * @param {string|object} postOrMarkdown - Either raw markdown text or a post object
+ * Opens the post popup and renders Markdown content.
+ * Accepts either a Markdown string or a post object from the index.
  */
 export function openPostPopup(postOrMarkdown) {
-  let postPopup = document.getElementById("post-popup");
+  const postPopup = document.getElementById("post-popup");
   if (!postPopup) return console.warn("Post popup not initialized yet.");
 
   const content = postPopup.querySelector(".post-content");
@@ -56,8 +54,8 @@ export function openPostPopup(postOrMarkdown) {
     let date = "";
     let markdown = "";
 
+    // Determine data source
     if (typeof postOrMarkdown === "string") {
-      // Received raw markdown text
       markdown = postOrMarkdown;
     } else if (typeof postOrMarkdown === "object") {
       title = postOrMarkdown.title || "Untitled";
@@ -65,13 +63,29 @@ export function openPostPopup(postOrMarkdown) {
       markdown = postOrMarkdown.content || "";
     }
 
-    // Strip YAML headers if any
-    const cleanContent = markdown
-      .replace(/^---[\s\S]*?---/, "")
-      .replace(/^title:.*$/m, "")
-      .replace(/^date:.*$/m, "")
-      .trim();
+    // Extract YAML or top-level metadata
+    const yamlMatch = markdown.match(/^---([\s\S]*?)---/);
+    if (yamlMatch) {
+      const yamlContent = yamlMatch[1];
+      const titleMatch = yamlContent.match(/title:\s*(.*)/);
+      const dateMatch = yamlContent.match(/date:\s*(.*)/);
+      if (titleMatch && !postOrMarkdown.title) title = titleMatch[1].trim();
+      if (dateMatch && !postOrMarkdown.date) date = dateMatch[1].trim();
+    }
 
+    // Strip YAML block and cleanup
+    markdown = markdown.replace(/^---[\s\S]*?---/, "").trim();
+
+    // Auto-detect Markdown header title if YAML title missing
+    if (title === "Untitled Post") {
+      const headerMatch = markdown.match(/^#\s+(.+)/m);
+      if (headerMatch) {
+        title = headerMatch[1].trim();
+        markdown = markdown.replace(/^#\s+.+/, "").trim();
+      }
+    }
+
+    // Format date
     const formattedDate = date
       ? new Date(date).toLocaleString(undefined, {
           year: "numeric",
@@ -82,28 +96,26 @@ export function openPostPopup(postOrMarkdown) {
         })
       : "";
 
+    // Render HTML
     const html = `
       <article class="popup-post">
         <h2>${title}</h2>
-        ${
-          formattedDate
-            ? `<small class="post-date">${formattedDate}</small>`
-            : ""
-        }
-        <div class="post-body">${marked.parse(cleanContent)}</div>
+        ${formattedDate ? `<small class="post-date">${formattedDate}</small>` : ""}
+        <div class="post-body">${marked.parse(markdown)}</div>
       </article>
     `;
 
     content.innerHTML = html;
     postPopup.style.display = "flex";
   } catch (err) {
+    console.error("❌ Error displaying post:", err);
     content.innerHTML = `<p style="color:#f66;">Error displaying post: ${err.message}</p>`;
     postPopup.style.display = "flex";
   }
 }
 
 /**
- * Allows triggering popup externally via:
+ * Enables external triggering via event:
  * document.dispatchEvent(new CustomEvent("openPostPopup", { detail: postObject }));
  */
 document.addEventListener("openPostPopup", (e) => {
