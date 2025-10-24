@@ -1,3 +1,6 @@
+// /js/main.js
+// Master site initialization: coordinates all modules in proper order.
+
 import { loadPosts } from "./posts.js";
 import { loadVideos } from "./videos.js";
 import { buildIndex } from "./indexBuilder.js";
@@ -23,24 +26,24 @@ async function loadHeader() {
       return;
     }
 
-    // Insert header HTML
+    // Inject header into page
     placeholder.innerHTML = html;
 
-    // Wait one frame for DOM paint
+    // Wait one frame for DOM paint before initializing dependent scripts
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
-    // Initialize only menu/contact here — search waits until index built
+    // Initialize header-level scripts
     initMenu();
     initContact();
 
-    console.log("✅ Header loaded and basic header scripts initialized");
+    console.log("✅ Header loaded and menu/contact initialized");
   } catch (err) {
     console.error("❌ Failed to load header:", err);
   }
 }
 
 /**
- * Wrapper for safe initialization logging
+ * Utility wrapper for safer function initialization
  */
 const safeInit = (label, fn) => {
   try {
@@ -52,25 +55,30 @@ const safeInit = (label, fn) => {
 };
 
 /**
- * Master site initialization
+ * Main site initialization — executed once DOM is ready.
  */
 document.addEventListener("DOMContentLoaded", async () => {
   console.groupCollapsed("🌐 Site Initialization");
 
-  // 1️⃣ Load header first (menu/contact need it)
+  // 1️⃣ Load the site header (needed before initializing menu/contact)
   await loadHeader();
 
-  // 2️⃣ Load posts/videos and build index
+  // 2️⃣ Build the content index for search + posts
   try {
+    // Load posts and videos in parallel
     await Promise.all([loadPosts(), loadVideos()]);
-    await buildIndex(); // Make sure index is complete before search
-    initSearch();       // Only initialize search after index exists
+
+    // Build search index and expose as window.INDEX
+    await buildIndex();
+
+    // Initialize the search AFTER index is ready
+    initSearch();
     console.log("✅ Search initialized after index build");
   } catch (err) {
     console.error("❌ Failed loading posts/videos or building index:", err);
   }
 
-  // 3️⃣ Initialize other UI components
+  // 3️⃣ Initialize auxiliary UI components
   safeInit("Lightbox", initLightbox);
   safeInit("Post Popup", initPostPopup);
 
