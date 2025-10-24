@@ -13,7 +13,7 @@ import { initPostPopup } from "./postPopup.js";
  */
 async function loadHeader() {
   try {
-    const res = await fetch("/pages/partials/header.html");
+    const res = await fetch("/pages/sections/header.html");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
 
