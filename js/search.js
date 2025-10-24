@@ -38,7 +38,7 @@ export function initSearch() {
   };
 
   const showCommands = () => {
-    let html = "<div class='promptline'>Available Commands</div>";
+    let html = "<div class='promptline'>sudo theinternetisdead.org</div>";
     COMMANDS.forEach((c) => {
       html += `<div class="search-result">
                  <span class="title">${c.cmd}</span>
