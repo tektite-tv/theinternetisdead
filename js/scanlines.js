@@ -1,9 +1,4 @@
 // /js/scanlines.js
-/**
- * scanlines.js
- * Adds a diagonal scanline overlay UNDER the <main> content.
- */
-
 export function initScanlines() {
   const main = document.querySelector("main");
   if (!main) {
@@ -20,8 +15,8 @@ export function initScanlines() {
   canvas.style.height = "100%";
   canvas.style.pointerEvents = "none";
   canvas.style.zIndex = "0";
-  canvas.style.opacity = "0.25";
-  canvas.style.mixBlendMode = "screen";
+  canvas.style.opacity = "1"; // fully visible
+  canvas.style.mixBlendMode = "normal"; // no weird blending
 
   main.prepend(canvas);
   main.style.position = "relative";
@@ -35,7 +30,6 @@ export function initScanlines() {
     h = canvas.height = rect.height;
   }
 
-  // wait a bit so posts/videos load before sizing
   setTimeout(resize, 1000);
   window.addEventListener("resize", resize);
 
@@ -43,7 +37,7 @@ export function initScanlines() {
 
   function draw() {
     ctx.clearRect(0, 0, w, h);
-    ctx.strokeStyle = "rgba(179, 0, 59, 0.5)"; // 💜 #b3003b
+    ctx.strokeStyle = "#ff0000"; // 🔥 bright red
     ctx.lineWidth = 1;
 
     const spacing = 5;
