@@ -161,18 +161,16 @@
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,.85);
+  background: rgba(0, 0, 0, 0.85);
   z-index: 9000;
   animation: popupFade 0.2s ease-out;
 }
 
 #img-lightbox .inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  text-align: center;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #img-lightbox img {
@@ -180,25 +178,47 @@
   max-height: 80vh;
   border: 2px solid #00ff99;
   border-radius: 8px;
-  box-shadow: 0 0 20px rgba(0,255,153,.4);
+  box-shadow: 0 0 20px rgba(0, 255, 153, 0.4);
+}
+
+/* === BUTTONS & TOOLBAR === */
+#img-lightbox .close-x {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #00ff99;
+  font-size: 28px;
+  cursor: pointer;
+  text-shadow: 0 0 10px rgba(0, 255, 153, 0.4);
+  transition: color 0.2s, transform 0.2s;
+}
+#img-lightbox .close-x:hover {
+  color: #fff;
+  transform: scale(1.1);
 }
 
 #img-lightbox .toolbar {
-  margin-top: 10px;
-  text-align: center;
-  color: #0f0;
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  font-family: monospace;
+  color: #00ff99;
+  font-size: 14px;
 }
 
 #img-lightbox .filename {
   color: #00ff99;
-  font-family: monospace;
-  font-size: 14px;
-  margin-top: 4px;
+  text-align: left;
 }
 
 #img-lightbox .download-btn {
-  display: inline-block;
-  margin-top: 6px;
   color: #000;
   background: #00ff99;
   border: none;
@@ -211,24 +231,7 @@
 }
 #img-lightbox .download-btn:hover {
   background: #00cc88;
-  box-shadow: 0 0 15px rgba(0,255,153,0.5);
-}
-
-#img-lightbox .close-x {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  background: none;
-  border: none;
-  color: #00ff99;
-  font-size: 28px;
-  cursor: pointer;
-  text-shadow: 0 0 10px rgba(0,255,153,0.4);
-  transition: color 0.2s, transform 0.2s;
-}
-#img-lightbox .close-x:hover {
-  color: #fff;
-  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(0, 255, 153, 0.5);
 }
 
 /* === ANIMATIONS === */
