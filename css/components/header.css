@@ -111,12 +111,13 @@ header {
   align-items: center;
   background: #000;
   border-radius: 8px;
-  overflow: hidden;
   border: 1px solid #00ff99;
+  overflow: hidden;
   flex: 1 1 auto;
   width: 100%;
   max-width: none;
   min-width: 200px;
+  height: 42px; /* lock height so button and input match */
 }
 
 .search-input {
@@ -124,24 +125,27 @@ header {
   border: none;
   background: transparent;
   color: #ccc;
-  padding: 0.6rem 1rem;
+  padding: 0 1rem;
   font-size: 1rem;
   outline: none;
+  height: 100%; /* stretch vertically to bar height */
+  line-height: 42px;
 }
 
-.submit-btn {
-  border: 2px solid #00ff99;
+.search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  aspect-ratio: 1 / 1; /* make it a square */
+  background: #111;
+  border: none;
   color: #00ff99;
-  background: transparent;
-  padding: 0.5rem 1.2rem;
-  border-radius: 8px;
-  font-weight: bold;
+  font-size: 1.2rem;
   cursor: pointer;
   transition: 0.2s ease;
-  flex-shrink: 0;
 }
-
-.submit-btn:hover {
+.search-btn:hover {
   background: #00ff99;
   color: #000;
 }
