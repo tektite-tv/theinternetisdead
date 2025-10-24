@@ -29,11 +29,11 @@ async function loadHeader() {
     // Wait one frame for DOM paint
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
-    // Initialize header scripts AFTER header exists
+    // Initialize only menu/contact here — search waits until index built
     initMenu();
     initContact();
-    initSearch();
-    console.log("✅ Header loaded and header scripts initialized");
+
+    console.log("✅ Header loaded and basic header scripts initialized");
   } catch (err) {
     console.error("❌ Failed to load header:", err);
   }
@@ -57,18 +57,20 @@ const safeInit = (label, fn) => {
 document.addEventListener("DOMContentLoaded", async () => {
   console.groupCollapsed("🌐 Site Initialization");
 
-  // 1️⃣ Load header before dependent scripts
+  // 1️⃣ Load header first (menu/contact need it)
   await loadHeader();
 
-  // 2️⃣ Load site content
+  // 2️⃣ Load posts/videos and build index
   try {
     await Promise.all([loadPosts(), loadVideos()]);
-    buildIndex();
+    await buildIndex(); // Make sure index is complete before search
+    initSearch();       // Only initialize search after index exists
+    console.log("✅ Search initialized after index build");
   } catch (err) {
-    console.error("❌ Failed loading posts/videos:", err);
+    console.error("❌ Failed loading posts/videos or building index:", err);
   }
 
-  // 3️⃣ Initialize independent UI components
+  // 3️⃣ Initialize other UI components
   safeInit("Lightbox", initLightbox);
   safeInit("Post Popup", initPostPopup);
 
