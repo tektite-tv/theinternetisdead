@@ -1,4 +1,3 @@
-// main.js
 import { loadPosts } from "./posts.js";
 import { loadVideos } from "./videos.js";
 import { buildIndex } from "./indexBuilder.js";
@@ -19,7 +18,6 @@ async function loadHeader() {
 
     const html = await res.text();
     const placeholder = document.getElementById("header-placeholder");
-
     if (!placeholder) {
       console.warn("⚠️ #header-placeholder not found in DOM.");
       return;
@@ -28,18 +26,14 @@ async function loadHeader() {
     // Insert header HTML
     placeholder.innerHTML = html;
 
-    // Wait for DOM to register new elements
+    // Wait one frame for DOM paint
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
     // Initialize header scripts AFTER header exists
-    try {
-      initMenu();
-      initContact();
-      initSearch(); // now it actually finds .search-bar and #search-popup
-      console.log("✅ Header loaded and header scripts initialized properly");
-    } catch (err) {
-      console.error("❌ Header script initialization failed:", err);
-    }
+    initMenu();
+    initContact();
+    initSearch();
+    console.log("✅ Header loaded and header scripts initialized");
   } catch (err) {
     console.error("❌ Failed to load header:", err);
   }
@@ -66,7 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 1️⃣ Load header before dependent scripts
   await loadHeader();
 
-  // 2️⃣ Load main content (posts, videos)
+  // 2️⃣ Load site content
   try {
     await Promise.all([loadPosts(), loadVideos()]);
     buildIndex();
