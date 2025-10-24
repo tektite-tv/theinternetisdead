@@ -1,3 +1,6 @@
+// /js/search.js
+// Handles search bar commands and post/video search using local index.
+
 export function initSearch() {
   const searchBar = document.querySelector(".search-bar");
   const input = document.querySelector(".search-input");
@@ -48,31 +51,45 @@ export function initSearch() {
     openPopup(html);
   };
 
-  const performSearch = async () => {
-    const query = input.value.trim();
+  const performSearch = () => {
+    const query = input.value.trim().toLowerCase();
 
-    // Slash prefix → show commands
     if (query.startsWith("/")) {
       showCommands();
       return;
     }
 
-    // Empty input → show hint message
     if (!query) {
       openPopup("<p>Search posts/videos or type a command like /help</p>");
       return;
     }
 
-    openPopup("<p>Loading results…</p>");
-    try {
-      const res = await fetch(`/search?q=${encodeURIComponent(query)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
-      openPopup(html);
-    } catch (err) {
-      console.error("Search error:", err);
-      openPopup("<p style='color:red;'>Error retrieving results.</p>");
+    if (!window.INDEX || !Array.isArray(window.INDEX)) {
+      openPopup("<p>No index loaded yet. Try reloading the page.</p>");
+      return;
     }
+
+    const results = window.INDEX.filter((item) =>
+      item.title.toLowerCase().includes(query) ||
+      item.snippet.toLowerCase().includes(query)
+    );
+
+    if (results.length === 0) {
+      openPopup(`<p>No results found for "<b>${query}</b>".</p>`);
+      return;
+    }
+
+    let html = results
+      .map(
+        (r) => `
+        <div class="search-result" data-kind="${r.kind}">
+          <span class="title">${r.title}</span><br/>
+          <span class="snippet">${r.snippet}</span>
+        </div>`
+      )
+      .join("");
+
+    openPopup(html);
   };
 
   // === EVENT LISTENERS ===
