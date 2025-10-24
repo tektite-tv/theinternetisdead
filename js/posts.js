@@ -19,7 +19,7 @@ export async function loadPosts() {
 function setupPosts(container, posts) {
   container.innerHTML = `
     <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-    <h2 style="color:#00ff99;">Latest Blog Posts</h2>
+    <h2>Latest Blog Posts</h2>
   `;
   container.dataset.visible = "0";
   appendPosts(container, posts);
