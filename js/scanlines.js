@@ -16,7 +16,7 @@ export function initScanlines() {
   canvas.style.pointerEvents = "none";
   canvas.style.zIndex = "0";
   canvas.style.opacity = "1"; // fully visible
-  canvas.style.mixBlendMode = "normal"; // no weird blending
+  canvas.style.mixBlendMode = "normal"; // solid overlay
 
   main.prepend(canvas);
   main.style.position = "relative";
@@ -40,7 +40,7 @@ export function initScanlines() {
     ctx.strokeStyle = "#ff0000"; // 🔥 bright red
     ctx.lineWidth = 1;
 
-    const spacing = 5;
+    const spacing = 12; // was 5 — more space between lines
     const angle = Math.PI / 4;
 
     ctx.save();
@@ -56,7 +56,7 @@ export function initScanlines() {
 
     ctx.restore();
 
-    offset += 0.6;
+    offset += 0.2; // slower movement (was 0.6)
     requestAnimationFrame(draw);
   }
 
