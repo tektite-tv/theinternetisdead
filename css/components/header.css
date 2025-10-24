@@ -1,5 +1,5 @@
 /* ==========================================================
-   header.css – Header, Menu, Search, Submit (fixed for current DOM)
+   header.css – Header, Menu, Search, Submit
    theinternetisdead.org
    ========================================================== */
 
@@ -15,13 +15,13 @@ header {
   z-index: 1000;
 }
 
-/* === LEFT SECTION (burger + logo image + tagline) === */
+/* === LEFT SECTION (burger + motto + logo image) === */
 .left-section {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: nowrap;
-  position: relative; /* anchor for popup */
+  position: relative;
 }
 
 .menu {
@@ -36,7 +36,22 @@ header {
   transform: scale(1.2);
 }
 
-/* the image logo as used in index.html */
+/* Motto before logo */
+.motto {
+  order: 1;
+  color: #00ff99;
+  font-size: 0.85rem;
+  max-width: 260px;
+  line-height: 1.3;
+  text-shadow: 0 0 8px rgba(0,255,153,0.4);
+}
+
+.logo-container {
+  order: 2;
+  display: flex;
+  align-items: center;
+}
+
 .logo-container img,
 .logo img {
   display: block;
@@ -45,15 +60,7 @@ header {
   height: auto;
 }
 
-.motto {
-  color: #00ff99;
-  font-size: 0.8rem;
-  max-width: 260px;
-  line-height: 1.3;
-  text-shadow: 0 0 8px rgba(0,255,153,0.4);
-}
-
-/* menu popup */
+/* === MENU POPUP === */
 #menu-popup {
   position: absolute;
   top: 100%;
@@ -88,6 +95,8 @@ header {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .search-bar {
@@ -97,6 +106,9 @@ header {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #00ff99;
+  flex: 1;
+  max-width: 600px;
+  min-width: 280px;
 }
 
 .search-input {
@@ -113,7 +125,7 @@ header {
   background: #111;
   border: none;
   color: #00ff99;
-  padding: 0.5rem 0.7rem;
+  padding: 0.5rem 0.8rem;
   cursor: pointer;
   font-size: 1rem;
   transition: 0.2s ease;
@@ -127,7 +139,7 @@ header {
   border: 2px solid #00ff99;
   color: #00ff99;
   background: transparent;
-  padding: 0.4rem 1.2rem;
+  padding: 0.5rem 1.2rem;
   border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
@@ -163,24 +175,24 @@ header {
   .left-section {
     order: 1;
     width: 100%;
-    display: flex;
     justify-content: flex-start;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .motto {
+    order: 2;
+    font-size: 0.75rem;
+    max-width: 220px;
+  }
+
+  .logo-container {
+    order: 1;
   }
 
   .menu {
     font-size: 26px;
     line-height: 1;
-  }
-
-  .logo-container img,
-  .logo img {
-    max-height: 34px;
-  }
-
-  .motto {
-    font-size: 0.75rem;
   }
 
   .right-section {
