@@ -93,37 +93,50 @@ export function initSearch() {
   };
 
   // === EVENT LISTENERS ===
-  input.addEventListener("focus", showCommands);
+input.addEventListener("focus", showCommands);
 
-  searchBar.addEventListener("mousedown", (e) => {
-    if (!popup.contains(e.target)) showCommands();
-  });
+searchBar.addEventListener("mousedown", (e) => {
+  if (!popup.contains(e.target)) showCommands();
+});
 
-  input.addEventListener("blur", () => {
-    setTimeout(() => {
-      if (!popup.matches(":hover") && document.activeElement !== input)
-        closePopup();
-    }, 150);
-  });
-
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    performSearch();
-  });
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      performSearch();
-    } else if (e.key === "/") {
-      showCommands();
-    }
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!searchBar.contains(e.target) && !popup.contains(e.target))
+input.addEventListener("blur", () => {
+  setTimeout(() => {
+    if (!popup.matches(":hover") && document.activeElement !== input)
       closePopup();
-  });
+  }, 150);
+});
 
-  popup.addEventListener("click", (e) => e.stopPropagation());
-}
+// Handle live typing search
+let searchTimeout;
+input.addEventListener("input", () => {
+  clearTimeout(searchTimeout);
+  // debounce so it doesn’t trigger every keystroke instantly
+  searchTimeout = setTimeout(() => {
+    const query = input.value.trim();
+    if (query.startsWith("/")) {
+      showCommands();
+    } else if (query === "") {
+      openPopup("<p>Search posts/videos or type a command like /help</p>");
+    } else {
+      performSearch();
+    }
+  }, 200); // 200ms delay to avoid lag
+});
+
+btn.addEventListener("click", (e) => {
+  e.preventDefault();
+  performSearch();
+});
+
+input.addEventListener("keydown", (e) => {
+  if (e.key === "/") {
+    showCommands();
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (!searchBar.contains(e.target) && !popup.contains(e.target))
+    closePopup();
+});
+
+popup.addEventListener("click", (e) => e.stopPropagation());
