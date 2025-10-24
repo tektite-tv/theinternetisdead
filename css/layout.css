@@ -1,0 +1,10 @@
+/* Layout and grid structure */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  background-color: #1a0033; color: #fff; padding: 16px 24px;
+  border-bottom: 3px solid #cc181e; position: relative; z-index: 1000;
+}
+.left-section, .right-section { display: flex; align-items: center; gap: 16px; }
+main { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 32px; background:#000; align-items: start; position: relative; }
+.column { background:#0a0a0a; padding:20px; border:1px solid #222; border-radius:6px; box-shadow:0 0 10px rgba(255,255,255,.05); position:relative; z-index:1; }
+@media (max-width:768px) { main { grid-template-columns:1fr; } }
