@@ -3,110 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>theinternetisdead.org - Home</title>
-
-  <link rel="icon" type="image/png" href="/media/images/face.png">
-  <link rel="stylesheet" href="/css/main.css">
+  <title>theinternetisdead.org – Home</title>
+  <link rel="icon" type="image/png" href="/images/face.png" />
+  <link rel="stylesheet" href="/css/main.css" />
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 
 <body>
-  <!-- HEADER -->
   <header>
     <div class="left-section">
-      <button class="menu" aria-label="Open menu">&#9776;</button>
+      <button class="menu">☰</button>
 
-      <!-- MENU POPUP -->
-      <div id="menu-popup" aria-hidden="true">
-        <a href="/">Home</a>
-        <a href="/pages/glitch-tv">Glitch TV</a>
-        <a href="/pages/glitch-camera">Glitch Camera</a>
-        <a href="/pages/maze-game">Maze Game</a>
-        <a href="/admin">Admin</a>
-      </div>
-
-      <!-- LOGO + MOTTO -->
-      <a href="/" class="logo-container">
-        <img class="logo" src="/media/images/deadlogo-green.png" alt="TheInternetIsDead.org Logo" />
-        <span class="motto">
+      <a href="/" class="logo">
+        <img src="/media/images/deadlogo-green.png" alt="TheInternetIsDead.org Logo" />
+        <p class="motto">
           The webmaster is not harvesting your soul for profit. Isn't that wonderful?
-        </span>
+        </p>
       </a>
+
+      <div id="menu-popup">
+        <a href="/">Home</a>
+        <a href="/pages/about.html">About</a>
+        <a href="/pages/contact.html">Contact</a>
+      </div>
     </div>
 
-    <div class="search-bar">
-    <input type="text" class="search-input" placeholder="Search..." />
-    <button class="search-btn" aria-label="Search">🔍</button>
-    <div id="search-popup"></div>
-</div>
-
     <div class="right-section">
+      <div class="search-bar">
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search or type a command..."
+        />
+        <button class="search-btn">Search</button>
+        <div id="search-popup"></div>
+      </div>
+
       <button class="submit-btn">Submit</button>
     </div>
   </header>
 
-  <!-- POPUPS -->
-  <div id="search-popup" aria-hidden="true"></div>
-
-  <div id="contact-popup" class="contact-popup" aria-hidden="true" role="dialog">
-    <div class="contact-inner">
-      <button class="close-contact" aria-label="Close">✕</button>
-      <h2>Send a Message</h2>
-      <form id="contact-form" name="contact" method="POST" data-netlify="true" netlify-honeypot="bot-field">
-        <input type="hidden" name="form-name" value="contact">
-        <input type="hidden" name="bot-field" />
-        <label>Name:</label>
-        <input type="text" name="name" required>
-        <label>Email:</label>
-        <input type="email" name="email" required>
-        <label>Message:</label>
-        <textarea name="message" rows="4" required></textarea>
-        <button type="submit" class="send-btn">Send</button>
-      </form>
-    </div>
-  </div>
-
-  <div id="img-lightbox" role="dialog" aria-modal="true">
-    <div class="inner">
-      <button class="close-x" aria-label="Close">✕</button>
-      <img src="" alt="">
-      <div class="post-content"></div>
-      <div class="toolbar">
-        <span class="filename"></span>
-        <a class="download-btn" href="" download>Download</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN CONTENT -->
   <main>
-    <section class="column" id="posts">
-      <h1 style="color:#00ff99;">🌀 The Daily Spiral</h1>
-      <h2>Latest Blog Posts</h2>
-      <p>Loading posts...</p>
-    </section>
-
-    <section class="column" id="youtube">
-      <h1 style="color:#66ccff;">My Latest Broadcast</h1>
-      <h2>Honestly Thomas (Tektite) on YouTube</h2>
-      <p>Loading videos...</p>
-    </section>
+    <section id="posts"></section>
+    <section id="youtube"></section>
   </main>
 
-  <!-- FOOTER -->
   <footer>
-    Thank you for browsing <a href="/">theinternetisdead.org</a> •
-    Copyright 2025
-    <a href="https://youtube.com/@Honestly_Thomas">Thomas Harrison</a>
+    <p>
+      &copy; theinternetisdead.org<br />
+      <a href="/pages/privacy.html">Privacy Policy</a>
+    </p>
   </footer>
 
-  <!-- JS MODULES -->
-  <script type="module" src="/js/indexBuilder.js"></script>
-  <script type="module" src="/js/posts.js"></script>
-  <script type="module" src="/js/videos.js"></script>
-  <script type="module" src="/js/search.js"></script>
-  <script type="module" src="/js/contact.js"></script>
-  <script type="module" src="/js/menu.js"></script>
+  <!-- Scripts -->
   <script type="module" src="/js/main.js"></script>
 </body>
 </html>
