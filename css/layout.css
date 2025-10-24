@@ -1,305 +1,249 @@
-/* ===========================================================
-   HEADER / TASKBAR
-   =========================================================== */
+/* ==========================================================
+   layout.css – Global site structure & responsive layout
+   theinternetisdead.org
+   ========================================================== */
+
+/* === GLOBAL RESET === */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: "Courier New", monospace;
+  background-color: #000;
+  color: #ddd;
+  overflow-x: hidden;
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #00ff99;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00cc77;
+}
+
+/* ==========================================================
+   HEADER
+   ========================================================== */
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #1a0033;
-  color: #fff;
-  padding: 16px 24px;
-  border-bottom: 3px solid #cc181e;
+  padding: 0.8rem 1rem;
+  background-color: #120018;
+  border-bottom: 2px solid #00ff99;
   position: relative;
   z-index: 1000;
 }
 
-.left-section,
-.right-section {
+.left-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .menu {
-  cursor: pointer;
-  font-size: 26px;
-  font-weight: bold;
-  background: none;
-  border: none;
+  font-size: 1.8rem;
   color: #fff;
+  cursor: pointer;
   transition: transform 0.2s ease;
 }
 .menu:hover {
-  transform: scale(1.1);
+  transform: scale(1.2);
 }
 
 .logo {
-  height: 36px;
-  width: auto;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  color: #00ff99;
+  text-shadow: 0 0 8px #00ff99;
 }
 
-/* ===========================================================
-   MAIN CONTENT LAYOUT
-   =========================================================== */
+.logo h1 {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
+.logo p {
+  font-size: 0.8rem;
+  color: #ccc;
+  max-width: 260px;
+}
+
+/* === SEARCH & SUBMIT === */
+.right-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #00ff99;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #ccc;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.search-btn {
+  background: #111;
+  border: none;
+  color: #00ff99;
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: 0.2s ease;
+}
+.search-btn:hover {
+  background: #00ff99;
+  color: #000;
+}
+
+.submit-btn {
+  border: 2px solid #00ff99;
+  color: #00ff99;
+  background: transparent;
+  padding: 0.4rem 1.2rem;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.submit-btn:hover {
+  background: #00ff99;
+  color: #000;
+}
+
+/* ==========================================================
+   MAIN LAYOUT
+   ========================================================== */
 main {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  padding: 32px;
-  background: #000;
-  align-items: start;
-  position: relative;
-}
-main::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    135deg,
-    rgba(0, 255, 153, 0.18) 0px,
-    rgba(0, 255, 153, 0.18) 3px,
-    rgba(0, 255, 153, 0.02) 3px,
-    rgba(0, 255, 153, 0.02) 12px
-  );
-  animation: scan-drift 60s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-  filter: brightness(1.2);
-}
-.column {
-  background: #0a0a0a;
-  padding: 20px;
-  border: 1px solid #222;
-  border-radius: 6px;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
-  position: relative;
-  z-index: 1;
+  gap: 1.5rem;
+  padding: 1.5rem;
 }
 
-@keyframes scan-drift {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 600px 600px;
-  }
+section {
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid #00ff99;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 0 12px #00ff99;
 }
 
-/* ===========================================================
-   TYPOGRAPHY
-   =========================================================== */
-h1 {
-  font-size: 1.8em;
-  text-align: center;
-  text-shadow: 0 0 6px #fff2, 0 0 12px #0ff4;
-  margin-bottom: 8px;
-}
-h2 {
-  text-align: center;
-  color: #888;
-  font-weight: normal;
-  margin-bottom: 20px;
-}
-
-/* ===========================================================
-   SEARCH BAR LAYOUT
-   =========================================================== */
-.search-bar {
-  flex: 1;
-  max-width: 600px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 20px;
-}
-
-.search-bar input.search-input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #444;
-  border-right: none;
-  background: #000;
-  color: #fff;
-  font-size: 14px;
-  border-radius: 4px 0 0 4px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.search-bar input.search-input:focus {
-  border-color: #00ff99;
-  box-shadow: 0 0 8px rgba(0, 255, 153, 0.4);
-}
-
-.search-bar button.search-btn {
-  padding: 8px 16px;
-  border: 1px solid #444;
-  border-radius: 0 4px 4px 0;
-  background-color: #222;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-.search-bar button.search-btn:hover {
-  background-color: #333;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
-}
-
-/* ===========================================================
-   RESPONSIVE GRID
-   =========================================================== */
-@media (max-width: 768px) {
-  main {
-    grid-template-columns: 1fr;
-  }
-  #search-popup {
-    top: 60px;
-    width: 95%;
-    max-height: 80vh;
-  }
-}
-
-/* ===========================================================
-   RESPONSIVE HEADER STACKING (Improved)
-   =========================================================== */
-@media (max-width: 768px) {
-  header {
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    text-align: center;
-    padding: 16px 12px;
-    gap: 10px;
-  }
-
-  .left-section,
-  .right-section {
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    gap: 10px;
-  }
-
-  .menu {
-    order: 1;
-    font-size: 28px;
-    background: none;
-    border: none;
-    color: #fff;
-    padding: 8px;
-  }
-
-  .logo {
-    order: 2;
-    height: 42px;
-    margin-top: 4px;
-  }
-
-  .search-bar {
-    order: 3;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    max-width: 90%;
-    margin-top: 6px;
-  }
-
-  .search-bar input.search-input {
-    flex: 1;
-    font-size: 16px;
-    padding: 10px;
-    border-radius: 4px 0 0 4px;
-  }
-
-  .search-bar button.search-btn {
-    font-size: 16px;
-    padding: 10px 14px;
-    border-radius: 0 4px 4px 0;
-  }
-
-  .submit-btn {
-    order: 4;
-    margin-top: 10px;
-    width: 100%;
-    max-width: 200px;
-    padding: 10px;
-    text-align: center;
-    font-size: 15px;
-  }
-
-  header::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.2);
-    pointer-events: none;
-    z-index: -1;
-  }
-}
-
-/* ===========================================================
-   FOOTER STYLES
-   =========================================================== */
+/* ==========================================================
+   FOOTER
+   ========================================================== */
 footer {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  background: #0a0a0a;
-  color: #00ff99;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #000;
   border-top: 2px solid #00ff99;
-  box-shadow: 0 -2px 15px rgba(0, 255, 153, 0.2);
-  padding: 16px 24px;
-  font-family: monospace;
-  font-size: 14px;
-  position: relative;
-  z-index: 10;
+  text-align: center;
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 footer a {
   color: #00ff99;
   text-decoration: none;
-  transition: color 0.2s, text-shadow 0.2s;
+  transition: 0.2s ease;
 }
 footer a:hover {
-  color: #fff;
-  text-shadow: 0 0 10px rgba(0, 255, 153, 0.5);
+  color: #00cc77;
+}
+footer p {
+  margin-top: 6px;
 }
 
-/* Animated scan line */
-footer::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 2px;
-  width: 100%;
-  background: linear-gradient(90deg, transparent, #00ff99, transparent);
-  animation: footerScan 4s linear infinite;
-  opacity: 0.6;
-}
-@keyframes footerScan {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(100%);
+/* ==========================================================
+   RESPONSIVE BEHAVIOR
+   ========================================================== */
+@media (max-width: 900px) {
+  main {
+    grid-template-columns: 1fr;
   }
 }
 
-/* ===========================================================
-   RESPONSIVE FOOTER STACK
-   =========================================================== */
 @media (max-width: 768px) {
-  footer {
+  header {
     flex-direction: column;
-    gap: 8px;
+    align-items: center;
     text-align: center;
-    padding: 20px 10px;
+    padding: 1rem;
+    gap: 0.5rem;
   }
-  footer a {
-    display: inline-block;
-    margin: 4px 0;
+
+  .left-section {
+    order: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .menu {
+    font-size: 1.8rem;
+  }
+
+  .logo {
+    text-align: center;
+  }
+
+  .right-section {
+    order: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .search-bar {
+    width: 90%;
+    max-width: 400px;
+  }
+
+  .submit-btn {
+    width: 80%;
+    max-width: 240px;
+  }
+
+  #menu-popup {
+    position: absolute;
+    top: 100%;
+    left: 10px;
+  }
+
+  footer {
+    font-size: 0.85rem;
+    padding: 1.2rem;
+    line-height: 1.4;
   }
 }
