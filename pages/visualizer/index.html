@@ -6,59 +6,41 @@
 <title>RAINBOW MELTDOWN</title>
 <style>
 html,body{
-  margin:0;padding:0;overflow:hidden;
-  height:100%;
-  background:black;
-  font-family: monospace;
+  margin:0;padding:0;overflow:hidden;height:100%;
+  background:black;font-family:monospace;
 }
 canvas{
-  position:fixed;
-  inset:0;
-  width:100%;
-  height:100%;
-  image-rendering:pixelated;
+  position:fixed;inset:0;width:100%;height:100%;
+  z-index:0;image-rendering:pixelated;
 }
 .warning{
   position:fixed;
-  left:50%;
-  transform:translateX(-50%);
-  color:#ff0000;
-  background:rgba(0,0,0,0.8);
-  font-weight:bold;
-  font-size:1.4em;
-  padding:10px 20px;
-  border:2px solid #ff0000;
-  border-radius:10px;
-  z-index:10000;
-  text-align:center;
-  text-shadow:0 0 10px #ff0000;
+  left:50%;transform:translateX(-50%);
+  color:#ff0000;background:rgba(0,0,0,0.8);
+  font-weight:bold;font-size:1.4em;
+  padding:10px 20px;border:2px solid #ff0000;border-radius:10px;
+  z-index:5;text-align:center;text-shadow:0 0 10px #ff0000;
 }
 #topWarning{top:10%;}
 #bottomWarning{bottom:10%;}
 #boom{
-  position:fixed;
-  top:50%;left:50%;
+  position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  width:240px;height:240px;
-  border-radius:50%;
+  width:240px;height:240px;border-radius:50%;
   border:6px solid rgba(255,255,255,0.8);
-  cursor:pointer;z-index:9999;
+  cursor:pointer;z-index:6;
   background:conic-gradient(from 0deg,
     red,orange,yellow,lime,cyan,blue,magenta,red);
-  box-shadow:
-    0 0 30px #fff,
-    0 0 60px #ff00ff,
-    0 0 120px #00ffff;
+  box-shadow:0 0 30px #fff,0 0 60px #ff00ff,0 0 120px #00ffff;
   animation:spin 3s linear infinite,hue 5s linear infinite;
 }
 @keyframes spin{from{transform:translate(-50%,-50%) rotate(0deg);}to{transform:translate(-50%,-50%) rotate(360deg);}}
 @keyframes hue{from{filter:hue-rotate(0deg);}to{filter:hue-rotate(360deg);}}
 .text{
-  position:fixed;bottom:8%;
-  width:100%;text-align:center;
+  position:fixed;bottom:8%;width:100%;text-align:center;
   font-size:3em;color:white;
   text-shadow:0 0 25px magenta,0 0 40px cyan;
-  letter-spacing:0.1em;z-index:10;
+  letter-spacing:0.1em;z-index:7;pointer-events:none;
 }
 </style>
 </head>
@@ -74,7 +56,7 @@ canvas{
 </div>
 
 <canvas id="canvas"></canvas>
-<div class="text" id="msg"></div>
+<div class="text" id="msg">INIT</div>
 <audio id="audio" src="/media/audio/do-that-there.mp3" crossorigin="anonymous"></audio>
 
 <script>
@@ -85,8 +67,7 @@ const audio=document.getElementById('audio');
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
 const msg=document.getElementById('msg');
-canvas.width=innerWidth;
-canvas.height=innerHeight;
+canvas.width=innerWidth;canvas.height=innerHeight;
 
 let audioCtx,src,analyser,dataArray,started=false;
 let t=0, zoom=1, phase=0, rainbowShift=0;
@@ -100,7 +81,6 @@ function setup(){
   analyser.connect(audioCtx.destination);
   dataArray=new Uint8Array(analyser.frequencyBinCount);
 }
-
 function rand(a,b){return Math.random()*(b-a)+a;}
 
 function draw(){
@@ -150,7 +130,6 @@ function draw(){
       ctx.fillRect(rand(0,w),rand(0,h),rand(4,12),rand(4,12));
     }
   }
-
   ctx.restore();
 
   for(let i=0;i<40;i++){
