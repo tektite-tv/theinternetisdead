@@ -2,33 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DO NOT</title>
+  <title>Layered Parallax Curse</title>
   <style>
     html, body {
       margin: 0;
-      padding: 0;
-      background: black;
       overflow: hidden;
+      background: black;
       height: 100vh;
       width: 100vw;
-      font-family: monospace;
-      color: #00ffcc;
-      cursor: default;
+      cursor: crosshair;
     }
 
-    #warning {
+    .layer {
       position: absolute;
-      top: 20px;
-      width: 100%;
-      text-align: center;
-      font-size: 2em;
-      color: #00ffcc;
-      text-shadow: 0 0 5px #00ffcc;
-      z-index: 10;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: transform 0.1s ease-out;
+      pointer-events: none;
     }
 
-    .white {
-      position: fixed;
+    .white-box {
+      position: absolute;
       top: 50%;
       left: 50%;
       width: 100px;
@@ -36,101 +31,55 @@
       background: white;
       transform: translate(-50%, -50%);
       z-index: 9999;
+      box-shadow: 0 0 10px #00ffff;
+      border: 3px solid magenta;
       cursor: pointer;
-      box-shadow: 0 0 10px #ff00ff, inset 0 0 10px #ff00ff;
-      border: 4px solid magenta;
     }
 
-    .chaos {
-      position: absolute;
-      border: 3px solid hsl(0, 100%, 50%);
-      animation: spinScale 2s infinite linear;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    @keyframes spinScale {
-      0%   { transform: rotate(0deg) scale(0.5); opacity: 1; }
-      50%  { transform: rotate(180deg) scale(1.5); opacity: 0.6; }
-      100% { transform: rotate(360deg) scale(0.5); opacity: 1; }
-    }
-
-    body.cursed * {
-      cursor: none !important;
+    body.trapped {
+      cursor: none;
     }
   </style>
 </head>
 <body>
 
-<div id="warning">Don’t click the white square or else</div>
-<div class="white" onclick="unleashTerror(event)"></div>
+<div class="white-box" onclick="trapCursor(event)"></div>
+
+<!-- Stacked cursed rainbow rectangles -->
+<div class="layer" id="layer1" style="width: 140px; height: 90px; background: red;     z-index: 10;"></div>
+<div class="layer" id="layer2" style="width: 180px; height: 110px; background: orange;  z-index: 9;"></div>
+<div class="layer" id="layer3" style="width: 240px; height: 100px; background: yellow;  z-index: 8;"></div>
+<div class="layer" id="layer4" style="width: 300px; height: 160px; background: green;   z-index: 7;"></div>
+<div class="layer" id="layer5" style="width: 360px; height: 120px; background: blue;    z-index: 6;"></div>
+<div class="layer" id="layer6" style="width: 400px; height: 180px; background: indigo;  z-index: 5;"></div>
+<div class="layer" id="layer7" style="width: 460px; height: 200px; background: violet;  z-index: 4;"></div>
 
 <script>
-  function unleashTerror(e) {
-    e.stopPropagation();
-    document.body.classList.add("cursed");
-    document.getElementById("warning").remove();
-    e.target.remove();
+  let isTrapped = false;
 
-    let i = 0;
-
-    const lockCursor = (ev) => {
-      const w = 100, h = 100;
-      const x = window.innerWidth / 2 - w / 2;
-      const y = window.innerHeight / 2 - h / 2;
-      document.body.style.cursor = 'none';
-      Object.assign(document.documentElement.style, {
-        pointerEvents: 'none',
-      });
-      Object.assign(document.body.style, {
-        pointerEvents: 'none',
-      });
-      Object.assign(ev.target.style, {
-        left: `${window.innerWidth / 2}px`,
-        top: `${window.innerHeight / 2}px`,
-      });
-    };
-
-    window.addEventListener('mousemove', (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      // move the mouse back to center (illusion)
-      // doesn't actually lock system cursor, just makes chaos follow
-    });
-
-    const spawn = () => {
-      const chaos = document.createElement("div");
-      chaos.className = "chaos";
-      const size = 20 + Math.random() * 150;
-      chaos.style.width = `${size}px`;
-      chaos.style.height = `${size}px`;
-      chaos.style.left = `${Math.random() * window.innerWidth}px`;
-      chaos.style.top = `${Math.random() * window.innerHeight}px`;
-      chaos.style.borderColor = `hsl(${i * 15 % 360}, 100%, 50%)`;
-      chaos.style.animationDuration = `${1 + Math.random() * 2}s`;
-      document.body.appendChild(chaos);
-
-      i++;
-      if (i < 800) {
-        setTimeout(spawn, 10);
-      } else {
-        const msg = document.createElement("div");
-        msg.innerText = "you clicked the square.";
-        msg.style.position = "fixed";
-        msg.style.top = "50%";
-        msg.style.left = "50%";
-        msg.style.transform = "translate(-50%, -50%)";
-        msg.style.color = "#ff00ff";
-        msg.style.fontSize = "3em";
-        msg.style.fontFamily = "monospace";
-        msg.style.textShadow = "0 0 20px #ff00ff";
-        msg.style.zIndex = "10000";
-        document.body.appendChild(msg);
-      }
-    };
-
-    spawn();
+  function trapCursor(event) {
+    isTrapped = true;
+    document.body.classList.add('trapped');
   }
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isTrapped) return;
+
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+
+    // Move each layer with increasing parallax offset
+    const layers = document.querySelectorAll('.layer');
+    layers.forEach((layer, index) => {
+      const intensity = (index + 1) * 0.07;
+      const offsetX = dx * intensity;
+      const offsetY = dy * intensity;
+      layer.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) rotate(${index * 2}deg)`;
+    });
+  });
 </script>
 
 </body>
