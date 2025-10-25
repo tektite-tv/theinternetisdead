@@ -18,6 +18,23 @@ canvas{
   height:100%;
   image-rendering:pixelated;
 }
+.warning{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  color:#ff0000;
+  background:rgba(0,0,0,0.8);
+  font-weight:bold;
+  font-size:1.4em;
+  padding:10px 20px;
+  border:2px solid #ff0000;
+  border-radius:10px;
+  z-index:10000;
+  text-align:center;
+  text-shadow:0 0 10px #ff0000;
+}
+#topWarning{top:10%;}
+#bottomWarning{bottom:10%;}
 #boom{
   position:fixed;
   top:50%;left:50%;
@@ -46,13 +63,24 @@ canvas{
 </style>
 </head>
 <body>
+<div id="topWarning" class="warning">
+⚠ WARNING: The following animations may be dangerous to people with epilepsy. ⚠
+</div>
+
 <button id="boom"></button>
+
+<div id="bottomWarning" class="warning">
+⚠ VIEWER DISCRETION ADVISED — STRONG FLASHING LIGHTS AND COLORS ⚠
+</div>
+
 <canvas id="canvas"></canvas>
 <div class="text" id="msg"></div>
 <audio id="audio" src="/media/audio/do-that-there.mp3" crossorigin="anonymous"></audio>
 
 <script>
 const btn=document.getElementById('boom');
+const topWarn=document.getElementById('topWarning');
+const bottomWarn=document.getElementById('bottomWarning');
 const audio=document.getElementById('audio');
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
@@ -86,7 +114,6 @@ function draw(){
   const highs=dataArray.slice(200).reduce((a,b)=>a+b,0)/(dataArray.length-200);
   const energy=(bass+mids+highs)/3;
 
-  // melt the whole thing
   ctx.fillStyle='rgba(0,0,0,0.07)';
   ctx.fillRect(0,0,w,h);
 
@@ -100,14 +127,12 @@ function draw(){
   ctx.rotate(Math.sin(t/200)*0.05);
   ctx.translate(-cx,-cy);
 
-  // acid rainbow feedback
   ctx.globalCompositeOperation='lighter';
   ctx.filter=`hue-rotate(${rainbowShift}deg) saturate(2) blur(1px)`;
   ctx.drawImage(canvas, Math.sin(t/30)*3, Math.cos(t/33)*3, w, h);
   ctx.filter='none';
   ctx.globalCompositeOperation='source-over';
 
-  // radial geometry
   const bars=dataArray.length;
   for(let i=0;i<bars;i++){
     const amp=dataArray[i];
@@ -128,7 +153,6 @@ function draw(){
 
   ctx.restore();
 
-  // random noise specks
   for(let i=0;i<40;i++){
     ctx.fillStyle=`hsl(${(rainbowShift+i*9)%360},100%,60%)`;
     ctx.fillRect(rand(0,w),rand(0,h),2,2);
@@ -145,7 +169,9 @@ btn.addEventListener('click',async()=>{
   started=true;
   btn.style.transition='opacity 0.6s ease';
   btn.style.opacity='0';
-  setTimeout(()=>btn.remove(),700);
+  topWarn.style.transition=bottomWarn.style.transition='opacity 0.8s ease';
+  topWarn.style.opacity=bottomWarn.style.opacity='0';
+  setTimeout(()=>{btn.remove();topWarn.remove();bottomWarn.remove();},900);
   msg.textContent='MELTING REALITY...';
   setup();
   await audioCtx.resume();
