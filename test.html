@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>DO NOT CLICK</title>
+  <title>DO NOT</title>
   <style>
     html, body {
       margin: 0;
@@ -10,42 +10,43 @@
       background: black;
       overflow: hidden;
       height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 100vw;
       font-family: monospace;
       color: #00ffcc;
+      cursor: default;
     }
 
     #warning {
       position: absolute;
       top: 20px;
+      width: 100%;
+      text-align: center;
       font-size: 2em;
+      color: #00ffcc;
       text-shadow: 0 0 5px #00ffcc;
+      z-index: 10;
     }
 
-    .layer {
-      position: absolute;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.2s;
+    .white {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 100px;
+      height: 100px;
+      background: white;
+      transform: translate(-50%, -50%);
+      z-index: 9999;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff00ff, inset 0 0 10px #ff00ff;
+      border: 4px solid magenta;
     }
-
-    .red     { background: red;     width: 90vmin; height: 60vmin; }
-    .orange  { background: orange;  width: 80vmin; height: 54vmin; }
-    .yellow  { background: yellow;  width: 70vmin; height: 48vmin; }
-    .green   { background: #66ff00; width: 60vmin; height: 42vmin; }
-    .cyan    { background: cyan;    width: 50vmin; height: 36vmin; }
-    .blue    { background: blue;    width: 40vmin; height: 30vmin; }
-    .magenta { background: magenta; width: 30vmin; height: 24vmin; }
-    .white   { background: white;   width: 20vmin; height: 18vmin; cursor: pointer; }
 
     .chaos {
       position: absolute;
       border: 3px solid hsl(0, 100%, 50%);
-      animation: spinScale 3s infinite linear;
+      animation: spinScale 2s infinite linear;
       pointer-events: none;
+      z-index: 0;
     }
 
     @keyframes spinScale {
@@ -53,38 +54,54 @@
       50%  { transform: rotate(180deg) scale(1.5); opacity: 0.6; }
       100% { transform: rotate(360deg) scale(0.5); opacity: 1; }
     }
+
+    body.cursed * {
+      cursor: none !important;
+    }
   </style>
 </head>
 <body>
 
 <div id="warning">Don’t click the white square or else</div>
-
-<div class="layer red">
-  <div class="layer orange">
-    <div class="layer yellow">
-      <div class="layer green">
-        <div class="layer cyan">
-          <div class="layer blue">
-            <div class="layer magenta">
-              <div class="layer white" onclick="unleashTerror(event)"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<div class="white" onclick="unleashTerror(event)"></div>
 
 <script>
   function unleashTerror(e) {
     e.stopPropagation();
-    document.body.innerHTML = "";
+    document.body.classList.add("cursed");
+    document.getElementById("warning").remove();
+    e.target.remove();
+
     let i = 0;
+
+    const lockCursor = (ev) => {
+      const w = 100, h = 100;
+      const x = window.innerWidth / 2 - w / 2;
+      const y = window.innerHeight / 2 - h / 2;
+      document.body.style.cursor = 'none';
+      Object.assign(document.documentElement.style, {
+        pointerEvents: 'none',
+      });
+      Object.assign(document.body.style, {
+        pointerEvents: 'none',
+      });
+      Object.assign(ev.target.style, {
+        left: `${window.innerWidth / 2}px`,
+        top: `${window.innerHeight / 2}px`,
+      });
+    };
+
+    window.addEventListener('mousemove', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      // move the mouse back to center (illusion)
+      // doesn't actually lock system cursor, just makes chaos follow
+    });
 
     const spawn = () => {
       const chaos = document.createElement("div");
       chaos.className = "chaos";
-      const size = 20 + Math.random() * 100;
+      const size = 20 + Math.random() * 150;
       chaos.style.width = `${size}px`;
       chaos.style.height = `${size}px`;
       chaos.style.left = `${Math.random() * window.innerWidth}px`;
@@ -94,13 +111,12 @@
       document.body.appendChild(chaos);
 
       i++;
-      if (i < 500) {
+      if (i < 800) {
         setTimeout(spawn, 10);
       } else {
-        document.body.style.background = "#000";
         const msg = document.createElement("div");
-        msg.innerText = "you were warned.";
-        msg.style.position = "absolute";
+        msg.innerText = "you clicked the square.";
+        msg.style.position = "fixed";
         msg.style.top = "50%";
         msg.style.left = "50%";
         msg.style.transform = "translate(-50%, -50%)";
@@ -108,6 +124,7 @@
         msg.style.fontSize = "3em";
         msg.style.fontFamily = "monospace";
         msg.style.textShadow = "0 0 20px #ff00ff";
+        msg.style.zIndex = "10000";
         document.body.appendChild(msg);
       }
     };
