@@ -1,54 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Chasing the Rainbow</title>
+  <meta charset="UTF-8">
+  <title>Nested Rainbow Cascade</title>
   <style>
-    html, body {
+    body {
       margin: 0;
-      overflow: hidden;
-      background: black;
-      cursor: crosshair;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
     }
 
-    .tracer {
-      position: absolute;
-      pointer-events: none;
-      width: 80px;
-      height: 60px;
-      background: hsl(0, 100%, 50%);
-      opacity: 0.8;
-      transform: rotate(5deg);
-      box-shadow: 0 0 20px rgba(255,255,255,0.3);
-      transition: all 0.3s ease;
-      mix-blend-mode: difference;
+    .container {
+      position: relative;
+      width: 100px;
+      height: 100px;
     }
+
+    .rectangle {
+      position: absolute;
+      border: 4px solid;
+      animation: descend 5s infinite linear;
+    }
+
+    @keyframes descend {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(20px); }
+    }
+
+    /* CSS-generated rectangles */
+    /* You can stack as many of these as your sanity allows */
+
+    .rectangle:nth-child(1) {
+      width: 100px; height: 100px;
+      border-color: red;
+      top: 0; left: 0;
+    }
+
+    .rectangle:nth-child(2) {
+      width: 120px; height: 120px;
+      border-color: orange;
+      top: 10px; left: 10px;
+    }
+
+    .rectangle:nth-child(3) {
+      width: 140px; height: 140px;
+      border-color: yellow;
+      top: 20px; left: 20px;
+    }
+
+    .rectangle:nth-child(4) {
+      width: 160px; height: 160px;
+      border-color: green;
+      top: 30px; left: 30px;
+    }
+
+    .rectangle:nth-child(5) {
+      width: 180px; height: 180px;
+      border-color: blue;
+      top: 40px; left: 40px;
+    }
+
+    .rectangle:nth-child(6) {
+      width: 200px; height: 200px;
+      border-color: indigo;
+      top: 50px; left: 50px;
+    }
+
+    .rectangle:nth-child(7) {
+      width: 220px; height: 220px;
+      border-color: violet;
+      top: 60px; left: 60px;
+    }
+
   </style>
 </head>
 <body>
-
-<script>
-  let hue = 0;
-  let scale = 1;
-
-  document.addEventListener("mousemove", (e) => {
-    const tracer = document.createElement("div");
-    tracer.classList.add("tracer");
-    tracer.style.left = `${e.clientX + (Math.random() * 20 - 10)}px`;
-    tracer.style.top = `${e.clientY + (Math.random() * 20 - 10)}px`;
-    tracer.style.background = `hsl(${hue % 360}, 100%, 50%)`;
-    tracer.style.transform = `rotate(${Math.random() * 15 - 7}deg) scale(${scale})`;
-    
-    hue += 15;
-    scale *= 0.97;
-
-    document.body.appendChild(tracer);
-
-    setTimeout(() => {
-      tracer.remove();
-    }, 3000);
-  });
-</script>
-
+  <div class="container">
+    <div class="rectangle"></div>
+    <div class="rectangle"></div>
+    <div class="rectangle"></div>
+    <div class="rectangle"></div>
+    <div class="rectangle"></div>
+    <div class="rectangle"></div>
+    <div class="rectangle"></div>
+  </div>
 </body>
 </html>
