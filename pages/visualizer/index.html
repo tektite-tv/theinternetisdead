@@ -3,59 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>THE GLITCH REACTOR</title>
+<title>Glitchcore Reactor – Breathing Mode</title>
 <style>
 html,body{
-  margin:0;
-  padding:0;
-  overflow:hidden;
-  height:100%;
-  background:black;
-  font-family: monospace;
+  margin:0;padding:0;overflow:hidden;
+  height:100%;background:black;font-family:monospace;
 }
 canvas{
-  position:fixed;
-  inset:0;
-  width:100%;
-  height:100%;
-  background:black;
-  z-index:0;
-  image-rendering:pixelated;
+  position:fixed;inset:0;width:100%;height:100%;
+  background:black;z-index:0;image-rendering:pixelated;
 }
 #boom{
-  position:fixed;
-  top:50%;
-  left:50%;
+  position:fixed;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  width:260px;
-  height:260px;
-  border-radius:50%;
-  border:8px solid rgba(255,255,255,.8);
-  cursor:pointer;
-  z-index:9999;
+  width:240px;height:240px;border-radius:50%;
+  border:6px solid rgba(255,255,255,.9);
+  cursor:pointer;z-index:9999;
   background:conic-gradient(from 0deg,
-    #ff0000,#ff8000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000);
-  box-shadow:0 0 40px #fff,0 0 80px #ff00ff,0 0 120px #00ffff;
-  animation:spin 2s linear infinite,hue 4s linear infinite;
+    #ff0040,#ff8000,#ffff00,#00ff40,#00ffff,#0040ff,#8000ff,#ff00ff,#ff0040);
+  box-shadow:0 0 30px #fff,0 0 60px #ff00ff,0 0 100px #00ffff;
+  animation:spin 3s linear infinite,hue 5s linear infinite;
 }
-@keyframes spin{
-  from{transform:translate(-50%,-50%) rotate(0deg);}
-  to{transform:translate(-50%,-50%) rotate(360deg);}
-}
-@keyframes hue{
-  from{filter:hue-rotate(0deg);}
-  to{filter:hue-rotate(360deg);}
-}
+@keyframes spin{from{transform:translate(-50%,-50%) rotate(0deg);}to{transform:translate(-50%,-50%) rotate(360deg);}}
+@keyframes hue{from{filter:hue-rotate(0deg);}to{filter:hue-rotate(360deg);}}
 .text{
-  position:fixed;
-  bottom:8%;
-  width:100%;
-  text-align:center;
-  font-size:3em;
-  color:white;
-  text-shadow:0 0 25px magenta,0 0 40px cyan;
-  letter-spacing:0.1em;
-  z-index:20;
+  position:fixed;bottom:8%;width:100%;text-align:center;
+  font-size:3em;color:white;text-shadow:0 0 25px magenta,0 0 40px cyan;
+  letter-spacing:0.1em;z-index:10;
 }
 </style>
 </head>
@@ -71,11 +45,10 @@ const audio=document.getElementById('audio');
 const canvas=document.getElementById('canvas');
 const ctx=canvas.getContext('2d');
 const msg=document.getElementById('msg');
-canvas.width=innerWidth;
-canvas.height=innerHeight;
+canvas.width=innerWidth;canvas.height=innerHeight;
 
 let audioCtx,src,analyser,dataArray,started=false;
-let t=0, glitchPool=[];
+let t=0,zoom=1;
 
 function setup(){
   audioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -87,100 +60,54 @@ function setup(){
   dataArray=new Uint8Array(analyser.frequencyBinCount);
 }
 
-// random utilities
-const rand=(a,b)=>Math.random()*(b-a)+a;
-function rgb(){return `hsl(${rand(0,360)},100%,${rand(40,70)}%)`;}
-
-// hallucinatory background noise
-function staticNoise(){
-  for(let i=0;i<50;i++){
-    ctx.fillStyle=rgb();
-    ctx.fillRect(rand(0,canvas.width),rand(0,canvas.height),rand(1,4),rand(1,4));
-  }
-}
-
 function draw(){
   requestAnimationFrame(draw);
   analyser.getByteFrequencyData(dataArray);
   const w=canvas.width,h=canvas.height;
   const cx=w/2,cy=h/2;
-  ctx.fillStyle='rgba(0,0,0,0.08)';
+  ctx.save();
+
+  // --- calculate average energy ---
+  const avg=dataArray.reduce((a,b)=>a+b,0)/dataArray.length;
+  const bass=dataArray.slice(0,60).reduce((a,b)=>a+b,0)/60;
+  const energy=(avg+bass*1.5)/255;
+
+  // --- zoom factor based on energy ---
+  zoom = 1 + energy*0.5*Math.sin(t/10);
+  ctx.translate(cx,cy);
+  ctx.scale(zoom,zoom);
+  ctx.translate(-cx,-cy);
+
+  // --- fading background ---
+  ctx.fillStyle='rgba(0,0,0,0.15)';
   ctx.fillRect(0,0,w,h);
 
-  const bass=dataArray.slice(0,40).reduce((a,b)=>a+b,0)/40;
-  const mids=dataArray.slice(40,200).reduce((a,b)=>a+b,0)/160;
-  const highs=dataArray.slice(200).reduce((a,b)=>a+b,0)/(dataArray.length-200);
-  const total=(bass+mids+highs)/3;
-  const phase=Math.sin(t/30);
-  
-  // central pulse
-  const rings=64;
-  for(let i=0;i<rings;i++){
-    const amp=dataArray[(i*4)%dataArray.length]/255;
-    const radius=200+amp*400+phase*40;
-    const hue=(t+i*6)%360;
-    ctx.strokeStyle=`hsl(${hue},100%,${40+amp*60}%)`;
-    ctx.lineWidth=amp*4+1;
-    ctx.beginPath();
-    ctx.arc(cx,cy,radius,rand(0,Math.PI*2),rand(0,Math.PI*2));
-    ctx.stroke();
-  }
-
-  // radial glitch shards
-  const shards=100;
-  for(let i=0;i<shards;i++){
-    const ang=(i/shards)*Math.PI*2+phase*0.3;
-    const len=300+Math.sin(i+t/10)*200+mids*0.8;
-    ctx.strokeStyle=`hsl(${(i*10+t*2)%360},100%,60%)`;
-    ctx.lineWidth=Math.random()*2;
+  // --- radial spectrum ---
+  const bars=dataArray.length;
+  for(let i=0;i<bars;i++){
+    const amp=dataArray[i]/255;
+    const ang=(i/bars)*Math.PI*2;
+    const radius=200+amp*500;
+    const hue=(t+i*2)%360;
+    ctx.strokeStyle=`hsl(${hue},100%,${50+amp*50}%)`;
+    ctx.lineWidth=1+amp*2;
     ctx.beginPath();
     ctx.moveTo(cx,cy);
-    ctx.lineTo(cx+Math.cos(ang)*len,cy+Math.sin(ang)*len);
+    ctx.lineTo(cx+Math.cos(ang)*radius,cy+Math.sin(ang)*radius);
     ctx.stroke();
   }
 
-  // glitch bursts
-  if(Math.random()<0.08 && bass>160){
-    glitchPool.push({
-      x:rand(0,w),
-      y:rand(0,h),
-      s:rand(20,100),
-      c:rgb(),
-      life:rand(10,50)
-    });
+  // --- minor pixel noise ---
+  for(let i=0;i<40;i++){
+    ctx.fillStyle=`hsl(${Math.random()*360},100%,60%)`;
+    ctx.fillRect(Math.random()*w,Math.random()*h,2,2);
   }
 
-  for(let g of glitchPool){
-    ctx.fillStyle=g.c;
-    ctx.fillRect(g.x+rand(-4,4),g.y+rand(-4,4),g.s,g.s);
-    g.life--;
-  }
-  glitchPool=glitchPool.filter(g=>g.life>0);
+  ctx.restore();
 
-  // fractal feedback smear
-  ctx.globalCompositeOperation='lighter';
-  ctx.drawImage(canvas,
-    rand(-2,2),
-    rand(-2,2),
-    w+rand(-4,4),
-    h+rand(-4,4));
-  ctx.globalCompositeOperation='source-over';
-
-  // random color storms
-  if(highs>180 && Math.random()<0.05){
-    for(let i=0;i<20;i++){
-      ctx.fillStyle=rgb();
-      ctx.fillRect(rand(0,w),rand(0,h),rand(10,60),rand(10,60));
-    }
-  }
-
-  // text mutation
-  const moods=['VOID','ECHO','SHARD','DRIFT','PULSE','HYPER','BLOOM','ASCEND'];
-  msg.textContent=moods[Math.floor((t/60)%moods.length)];
+  const words=['PULSE','DRIFT','VOID','SHARD','BLOOM','ECHO'];
+  msg.textContent=words[Math.floor((t/80)%words.length)];
   msg.style.textShadow=`0 0 25px hsl(${t%360},100%,50%)`;
-  msg.style.opacity=0.8+0.2*Math.sin(t/40);
-  staticNoise();
-
   t++;
 }
 
@@ -190,11 +117,11 @@ btn.addEventListener('click',async()=>{
   btn.style.transition='opacity 0.6s ease';
   btn.style.opacity='0';
   setTimeout(()=>btn.remove(),700);
-  msg.textContent='BOOTING CHAOS...';
+  msg.textContent='INITIATING BREATH...';
   setup();
   await audioCtx.resume();
   audio.play();
-  setTimeout(()=>{msg.textContent='REACTOR ONLINE';},1500);
+  setTimeout(()=>{msg.textContent='SYNCHRONIZED';},1500);
   draw();
 });
 
