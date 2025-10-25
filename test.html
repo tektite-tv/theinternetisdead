@@ -1,91 +1,120 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Nested Rainbow Cascade</title>
+  <meta charset="UTF-8" />
+  <title>DO NOT CLICK</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      background: #111;
+      padding: 0;
+      background: black;
+      overflow: hidden;
+      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      font-family: monospace;
+      color: #00ffcc;
     }
 
-    .container {
-      position: relative;
-      width: 100px;
-      height: 100px;
-    }
-
-    .rectangle {
+    #warning {
       position: absolute;
-      border: 4px solid;
-      animation: descend 5s infinite linear;
+      top: 20px;
+      font-size: 2em;
+      text-shadow: 0 0 5px #00ffcc;
     }
 
-    @keyframes descend {
-      0% { transform: translateY(0); }
-      100% { transform: translateY(20px); }
+    .layer {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
     }
 
-    /* CSS-generated rectangles */
-    /* You can stack as many of these as your sanity allows */
+    .red     { background: red;     width: 90vmin; height: 60vmin; }
+    .orange  { background: orange;  width: 80vmin; height: 54vmin; }
+    .yellow  { background: yellow;  width: 70vmin; height: 48vmin; }
+    .green   { background: #66ff00; width: 60vmin; height: 42vmin; }
+    .cyan    { background: cyan;    width: 50vmin; height: 36vmin; }
+    .blue    { background: blue;    width: 40vmin; height: 30vmin; }
+    .magenta { background: magenta; width: 30vmin; height: 24vmin; }
+    .white   { background: white;   width: 20vmin; height: 18vmin; cursor: pointer; }
 
-    .rectangle:nth-child(1) {
-      width: 100px; height: 100px;
-      border-color: red;
-      top: 0; left: 0;
+    .chaos {
+      position: absolute;
+      border: 3px solid hsl(0, 100%, 50%);
+      animation: spinScale 3s infinite linear;
+      pointer-events: none;
     }
 
-    .rectangle:nth-child(2) {
-      width: 120px; height: 120px;
-      border-color: orange;
-      top: 10px; left: 10px;
+    @keyframes spinScale {
+      0%   { transform: rotate(0deg) scale(0.5); opacity: 1; }
+      50%  { transform: rotate(180deg) scale(1.5); opacity: 0.6; }
+      100% { transform: rotate(360deg) scale(0.5); opacity: 1; }
     }
-
-    .rectangle:nth-child(3) {
-      width: 140px; height: 140px;
-      border-color: yellow;
-      top: 20px; left: 20px;
-    }
-
-    .rectangle:nth-child(4) {
-      width: 160px; height: 160px;
-      border-color: green;
-      top: 30px; left: 30px;
-    }
-
-    .rectangle:nth-child(5) {
-      width: 180px; height: 180px;
-      border-color: blue;
-      top: 40px; left: 40px;
-    }
-
-    .rectangle:nth-child(6) {
-      width: 200px; height: 200px;
-      border-color: indigo;
-      top: 50px; left: 50px;
-    }
-
-    .rectangle:nth-child(7) {
-      width: 220px; height: 220px;
-      border-color: violet;
-      top: 60px; left: 60px;
-    }
-
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="rectangle"></div>
-    <div class="rectangle"></div>
-    <div class="rectangle"></div>
-    <div class="rectangle"></div>
-    <div class="rectangle"></div>
-    <div class="rectangle"></div>
-    <div class="rectangle"></div>
+
+<div id="warning">Don’t click the white square or else</div>
+
+<div class="layer red">
+  <div class="layer orange">
+    <div class="layer yellow">
+      <div class="layer green">
+        <div class="layer cyan">
+          <div class="layer blue">
+            <div class="layer magenta">
+              <div class="layer white" onclick="unleashTerror(event)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+</div>
+
+<script>
+  function unleashTerror(e) {
+    e.stopPropagation();
+    document.body.innerHTML = "";
+    let i = 0;
+
+    const spawn = () => {
+      const chaos = document.createElement("div");
+      chaos.className = "chaos";
+      const size = 20 + Math.random() * 100;
+      chaos.style.width = `${size}px`;
+      chaos.style.height = `${size}px`;
+      chaos.style.left = `${Math.random() * window.innerWidth}px`;
+      chaos.style.top = `${Math.random() * window.innerHeight}px`;
+      chaos.style.borderColor = `hsl(${i * 15 % 360}, 100%, 50%)`;
+      chaos.style.animationDuration = `${1 + Math.random() * 2}s`;
+      document.body.appendChild(chaos);
+
+      i++;
+      if (i < 500) {
+        setTimeout(spawn, 10);
+      } else {
+        document.body.style.background = "#000";
+        const msg = document.createElement("div");
+        msg.innerText = "you were warned.";
+        msg.style.position = "absolute";
+        msg.style.top = "50%";
+        msg.style.left = "50%";
+        msg.style.transform = "translate(-50%, -50%)";
+        msg.style.color = "#ff00ff";
+        msg.style.fontSize = "3em";
+        msg.style.fontFamily = "monospace";
+        msg.style.textShadow = "0 0 20px #ff00ff";
+        document.body.appendChild(msg);
+      }
+    };
+
+    spawn();
+  }
+</script>
+
 </body>
 </html>
