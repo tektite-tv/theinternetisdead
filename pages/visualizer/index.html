@@ -34,13 +34,26 @@ canvas{
   box-shadow:0 0 30px #fff,0 0 60px #ff00ff,0 0 120px #00ffff;
   animation:spin 3s linear infinite,hue 5s linear infinite;
 }
-@keyframes spin{from{transform:translate(-50%,-50%) rotate(0deg);}to{transform:translate(-50%,-50%) rotate(360deg);}}
-@keyframes hue{from{filter:hue-rotate(0deg);}to{filter:hue-rotate(360deg);}}
+@keyframes spin{
+  from{transform:translate(-50%,-50%) rotate(0deg);}
+  to{transform:translate(-50%,-50%) rotate(360deg);}
+}
+@keyframes hue{
+  from{filter:hue-rotate(0deg);}
+  to{filter:hue-rotate(360deg);}
+}
 .text{
-  position:fixed;bottom:8%;width:100%;text-align:center;
-  font-size:3em;color:white;
-  text-shadow:0 0 25px magenta,0 0 40px cyan;
-  letter-spacing:0.1em;z-index:7;pointer-events:none;
+  position: fixed;
+  top: calc(55% + 180px); /* starts below button */
+  width: 100%;
+  text-align: center;
+  font-size: 2.5em;
+  color: white;
+  text-shadow: 0 0 25px magenta, 0 0 40px cyan;
+  letter-spacing: 0.1em;
+  z-index: 4;
+  pointer-events: none;
+  transition: top 1.5s ease, font-size 1.5s ease;
 }
 </style>
 </head>
@@ -81,6 +94,7 @@ function setup(){
   analyser.connect(audioCtx.destination);
   dataArray=new Uint8Array(analyser.frequencyBinCount);
 }
+
 function rand(a,b){return Math.random()*(b-a)+a;}
 
 function draw(){
@@ -107,6 +121,7 @@ function draw(){
   ctx.rotate(Math.sin(t/200)*0.05);
   ctx.translate(-cx,-cy);
 
+  // acid rainbow feedback
   ctx.globalCompositeOperation='lighter';
   ctx.filter=`hue-rotate(${rainbowShift}deg) saturate(2) blur(1px)`;
   ctx.drawImage(canvas, Math.sin(t/30)*3, Math.cos(t/33)*3, w, h);
@@ -130,6 +145,7 @@ function draw(){
       ctx.fillRect(rand(0,w),rand(0,h),rand(4,12),rand(4,12));
     }
   }
+
   ctx.restore();
 
   for(let i=0;i<40;i++){
@@ -155,6 +171,13 @@ btn.addEventListener('click',async()=>{
   setup();
   await audioCtx.resume();
   audio.play();
+
+  // drift the text upward after start
+  setTimeout(()=>{
+    msg.style.top='8%';
+    msg.style.fontSize='3em';
+  },2000);
+
   setTimeout(()=>{msg.textContent='RAINBOW SYNTHESIS';},1500);
   draw();
 });
