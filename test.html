@@ -2,82 +2,104 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Layered Parallax Curse</title>
+  <title>Recursive Rectangle Ritual</title>
   <style>
     html, body {
       margin: 0;
-      overflow: hidden;
-      background: black;
       height: 100vh;
-      width: 100vw;
+      background: black;
+      overflow: hidden;
       cursor: crosshair;
     }
 
-    .layer {
+    .rect {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      transition: transform 0.1s ease-out;
-      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      border: 2px solid white;
+      transition: transform 0.1s linear;
     }
 
-    .white-box {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 100px;
-      height: 100px;
+    .white-core {
       background: white;
-      transform: translate(-50%, -50%);
+      border: 2px solid magenta;
+      box-shadow: 0 0 20px magenta;
+      cursor: grab;
       z-index: 9999;
-      box-shadow: 0 0 10px #00ffff;
-      border: 3px solid magenta;
-      cursor: pointer;
     }
 
-    body.trapped {
-      cursor: none;
+    .white-core:active {
+      cursor: grabbing;
     }
   </style>
 </head>
 <body>
 
-<div class="white-box" onclick="trapCursor(event)"></div>
-
-<!-- Stacked cursed rainbow rectangles -->
-<div class="layer" id="layer1" style="width: 140px; height: 90px; background: red;     z-index: 10;"></div>
-<div class="layer" id="layer2" style="width: 180px; height: 110px; background: orange;  z-index: 9;"></div>
-<div class="layer" id="layer3" style="width: 240px; height: 100px; background: yellow;  z-index: 8;"></div>
-<div class="layer" id="layer4" style="width: 300px; height: 160px; background: green;   z-index: 7;"></div>
-<div class="layer" id="layer5" style="width: 360px; height: 120px; background: blue;    z-index: 6;"></div>
-<div class="layer" id="layer6" style="width: 400px; height: 180px; background: indigo;  z-index: 5;"></div>
-<div class="layer" id="layer7" style="width: 460px; height: 200px; background: violet;  z-index: 4;"></div>
-
 <script>
-  let isTrapped = false;
+  const NUM_LAYERS = 20;
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight / 2;
 
-  function trapCursor(event) {
-    isTrapped = true;
-    document.body.classList.add('trapped');
+  const layers = [];
+
+  let baseWidth = 100;
+  let baseHeight = 100;
+
+  // Generate nested rectangles
+  for (let i = 0; i < NUM_LAYERS; i++) {
+    const div = document.createElement("div");
+    div.className = "rect";
+    const sizeW = baseWidth + Math.random() * 200 + i * 10;
+    const sizeH = baseHeight + Math.random() * 200 + i * 10;
+    div.style.width = `${sizeW}px`;
+    div.style.height = `${sizeH}px`;
+    div.style.left = `${centerX - sizeW/2}px`;
+    div.style.top = `${centerY - sizeH/2}px`;
+    div.style.borderColor = `hsl(${i * 20}, 100%, 50%)`;
+    document.body.appendChild(div);
+    layers.unshift(div); // bottom-most is first
   }
 
-  document.addEventListener('mousemove', (e) => {
-    if (!isTrapped) return;
+  // Create white core
+  const core = document.createElement("div");
+  core.className = "rect white-core";
+  core.style.width = "100px";
+  core.style.height = "100px";
+  core.style.left = `${centerX - 50}px`;
+  core.style.top = `${centerY - 50}px`;
+  document.body.appendChild(core);
+  layers.push(core);
 
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
+  // Drag logic
+  let isDragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
 
-    const dx = e.clientX - centerX;
-    const dy = e.clientY - centerY;
+  core.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    offsetX = e.clientX - core.offsetLeft;
+    offsetY = e.clientY - core.offsetTop;
+  });
 
-    // Move each layer with increasing parallax offset
-    const layers = document.querySelectorAll('.layer');
-    layers.forEach((layer, index) => {
-      const intensity = (index + 1) * 0.07;
-      const offsetX = dx * intensity;
-      const offsetY = dy * intensity;
-      layer.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) rotate(${index * 2}deg)`;
+  document.addEventListener("mouseup", () => isDragging = false);
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+
+    let x = e.clientX - offsetX;
+    let y = e.clientY - offsetY;
+
+    // move each layer with growing lag
+    layers.forEach((layer, i) => {
+      const lag = i * 2;
+      setTimeout(() => {
+        const w = parseFloat(layer.style.width);
+        const h = parseFloat(layer.style.height);
+        layer.style.left = `${x - w/2}px`;
+        layer.style.top = `${y - h/2}px`;
+      }, lag);
     });
   });
 </script>
