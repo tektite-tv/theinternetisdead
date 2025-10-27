@@ -19,7 +19,9 @@
     color: #fff;
     font-family: monospace;
   }
+
   canvas { display: block; }
+
   #hud {
     position: absolute;
     top: 10px;
@@ -28,6 +30,7 @@
     color: #ff0;
     text-shadow: 1px 1px 3px #000;
   }
+
   #message {
     position: absolute;
     top: 40%;
@@ -39,11 +42,23 @@
     text-shadow: 4px 4px 10px black;
     display: none;
   }
+
+  #subtext {
+    position: absolute;
+    top: 60%;
+    width: 100%;
+    text-align: center;
+    font-size: 24px;
+    color: #fff;
+    text-shadow: 2px 2px 6px black;
+    display: none;
+  }
 </style>
 </head>
 <body>
 <div id="hud">Lives: 3 | Kills: 0</div>
 <div id="message">YOU DIED</div>
+<div id="subtext">Press any key to revive</div>
 <canvas id="game"></canvas>
 <script>
 const canvas = document.getElementById('game');
@@ -70,7 +85,7 @@ const player = {
   speed: 4,
   lives: 3,
   kills: 0,
-  invincible: false
+  dead: false,
 };
 
 // Input
@@ -81,7 +96,7 @@ window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 // Bullets
 let bullets = [];
 window.addEventListener('click', e => {
-  if (gameOver) return;
+  if (player.dead || gameOver) return;
   const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
   bullets.push({ x: player.x, y: player.y, dx: Math.cos(angle)*8, dy: Math.sin(angle)*8 });
 });
@@ -105,10 +120,10 @@ function addExplosion(x, y) {
   explosions.push({ x, y, t: 0 });
 }
 
-// HUD
+// HUD and state
 const hud = document.getElementById('hud');
 const msg = document.getElementById('message');
-
+const sub = document.getElementById('subtext');
 let gameOver = false;
 function updateHUD() {
   hud.textContent = `Lives: ${player.lives} | Kills: ${player.kills}`;
@@ -116,9 +131,9 @@ function updateHUD() {
 
 // Update
 function update() {
-  if (gameOver) return;
+  if (player.dead || gameOver) return;
 
-  // Move player
+  // Movement
   if (keys['w']) player.y -= player.speed;
   if (keys['s']) player.y += player.speed;
   if (keys['a']) player.x -= player.speed;
@@ -130,7 +145,7 @@ function update() {
   bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
   bullets = bullets.filter(b => b.x>0 && b.x<w && b.y>0 && b.y<h);
 
-  // Enemies chase
+  // Enemies move toward player
   enemies.forEach(e => {
     const angle = Math.atan2(player.y - e.y, player.x - e.x);
     e.x += Math.cos(angle)*1.5;
@@ -150,37 +165,28 @@ function update() {
           enemies.splice(ei,1);
           player.kills++;
           updateHUD();
-          setTimeout(spawnEnemy, 1000);
+          setTimeout(spawnEnemy, 1500);
         }
       }
     });
   });
 
-  // Player collision with enemies
-  if (!player.invincible) {
-    enemies.forEach(e => {
-      const dx = e.x - player.x;
-      const dy = e.y - player.y;
-      if (Math.hypot(dx, dy) < e.r + player.r) {
-        player.lives--;
-        updateHUD();
-        player.invincible = true;
-        msg.style.display = 'block';
-        msg.textContent = player.lives > 0 ? 'YOU DIED' : 'GAME OVER';
-        if (player.lives <= 0) {
-          gameOver = true;
-          return;
-        }
-        // Respawn delay
-        setTimeout(() => {
-          msg.style.display = 'none';
-          player.x = w/2;
-          player.y = h/2;
-          player.invincible = false;
-        }, 2000);
+  // Player collision
+  enemies.forEach(e => {
+    const dx = e.x - player.x;
+    const dy = e.y - player.y;
+    if (Math.hypot(dx, dy) < e.r + player.r) {
+      player.lives--;
+      updateHUD();
+      player.dead = true;
+      msg.style.display = 'block';
+      sub.style.display = player.lives > 0 ? 'block' : 'none';
+      if (player.lives <= 0) {
+        msg.textContent = 'GAME OVER';
+        gameOver = true;
       }
-    });
-  }
+    }
+  });
 
   // Explosions
   explosions.forEach(ex => ex.t++);
@@ -193,7 +199,7 @@ function draw() {
   ctx.fillRect(0,0,w,h);
 
   // Player
-  if (!gameOver) {
+  if (!player.dead) {
     ctx.drawImage(playerImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
   }
 
@@ -221,7 +227,17 @@ function draw() {
   });
 }
 
-// Loop
+// Death / revive
+window.addEventListener('keydown', () => {
+  if (player.dead && player.lives > 0 && !gameOver) {
+    player.dead = false;
+    msg.style.display = 'none';
+    sub.style.display = 'none';
+    player.x = w/2;
+    player.y = h/2;
+  }
+});
+
 function loop() {
   update();
   draw();
