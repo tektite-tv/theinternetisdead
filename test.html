@@ -5,15 +5,45 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bananarama vs Skeletons</title>
 <style>
+  @font-face {
+    font-family: 'Impact';
+    src: local('Impact'), local('Impact Regular'),
+         url('https://fonts.cdnfonts.com/s/14028/impact.woff') format('woff');
+  }
+
   html, body {
     margin: 0;
     overflow: hidden;
-    background: #000;
+    background: #3b2b1c url('https://upload.wikimedia.org/wikipedia/commons/f/f7/Dirt_texture.jpg');
+    background-size: cover;
+    color: #fff;
+    font-family: monospace;
   }
   canvas { display: block; }
+  #hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 18px;
+    color: #ff0;
+    text-shadow: 1px 1px 3px #000;
+  }
+  #message {
+    position: absolute;
+    top: 40%;
+    width: 100%;
+    text-align: center;
+    font-family: 'Impact', sans-serif;
+    font-size: 96px;
+    color: red;
+    text-shadow: 4px 4px 10px black;
+    display: none;
+  }
 </style>
 </head>
 <body>
+<div id="hud">Lives: 3 | Kills: 0</div>
+<div id="message">YOU DIED</div>
 <canvas id="game"></canvas>
 <script>
 const canvas = document.getElementById('game');
@@ -26,18 +56,21 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Load images
+// Images
 const playerImg = new Image();
 playerImg.src = "/media/images/gifs/bananarama.gif";
 const enemyImg = new Image();
 enemyImg.src = "/media/images/gifs/skeleton.gif";
 
-// Player setup
+// Player
 const player = {
   x: w/2,
   y: h/2,
   r: 25,
-  speed: 4
+  speed: 4,
+  lives: 3,
+  kills: 0,
+  invincible: false
 };
 
 // Input
@@ -48,6 +81,7 @@ window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 // Bullets
 let bullets = [];
 window.addEventListener('click', e => {
+  if (gameOver) return;
   const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
   bullets.push({ x: player.x, y: player.y, dx: Math.cos(angle)*8, dy: Math.sin(angle)*8 });
 });
@@ -71,9 +105,20 @@ function addExplosion(x, y) {
   explosions.push({ x, y, t: 0 });
 }
 
+// HUD
+const hud = document.getElementById('hud');
+const msg = document.getElementById('message');
+
+let gameOver = false;
+function updateHUD() {
+  hud.textContent = `Lives: ${player.lives} | Kills: ${player.kills}`;
+}
+
 // Update
 function update() {
-  // Player movement
+  if (gameOver) return;
+
+  // Move player
   if (keys['w']) player.y -= player.speed;
   if (keys['s']) player.y += player.speed;
   if (keys['a']) player.x -= player.speed;
@@ -85,14 +130,14 @@ function update() {
   bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
   bullets = bullets.filter(b => b.x>0 && b.x<w && b.y>0 && b.y<h);
 
-  // Enemy AI
+  // Enemies chase
   enemies.forEach(e => {
     const angle = Math.atan2(player.y - e.y, player.x - e.x);
     e.x += Math.cos(angle)*1.5;
     e.y += Math.sin(angle)*1.5;
   });
 
-  // Collisions
+  // Bullet collisions
   bullets.forEach((b, bi) => {
     enemies.forEach((e, ei) => {
       const dx = b.x - e.x;
@@ -103,24 +148,54 @@ function update() {
         if (e.hp <= 0) {
           addExplosion(e.x, e.y);
           enemies.splice(ei,1);
+          player.kills++;
+          updateHUD();
           setTimeout(spawnEnemy, 1000);
         }
       }
     });
   });
 
-  // Explosion timers
+  // Player collision with enemies
+  if (!player.invincible) {
+    enemies.forEach(e => {
+      const dx = e.x - player.x;
+      const dy = e.y - player.y;
+      if (Math.hypot(dx, dy) < e.r + player.r) {
+        player.lives--;
+        updateHUD();
+        player.invincible = true;
+        msg.style.display = 'block';
+        msg.textContent = player.lives > 0 ? 'YOU DIED' : 'GAME OVER';
+        if (player.lives <= 0) {
+          gameOver = true;
+          return;
+        }
+        // Respawn delay
+        setTimeout(() => {
+          msg.style.display = 'none';
+          player.x = w/2;
+          player.y = h/2;
+          player.invincible = false;
+        }, 2000);
+      }
+    });
+  }
+
+  // Explosions
   explosions.forEach(ex => ex.t++);
   explosions = explosions.filter(ex => ex.t < 25);
 }
 
 // Draw
 function draw() {
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.fillRect(0,0,w,h);
 
   // Player
-  ctx.drawImage(playerImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
+  if (!gameOver) {
+    ctx.drawImage(playerImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
+  }
 
   // Bullets
   ctx.fillStyle = '#ff0';
@@ -146,7 +221,7 @@ function draw() {
   });
 }
 
-// Game loop
+// Loop
 function loop() {
   update();
   draw();
