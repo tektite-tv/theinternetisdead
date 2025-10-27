@@ -1,108 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Recursive Rectangle Ritual</title>
-  <style>
-    html, body {
-      margin: 0;
-      height: 100vh;
-      background: black;
-      overflow: hidden;
-      cursor: crosshair;
-    }
-
-    .rect {
-      position: absolute;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      border: 2px solid white;
-      transition: transform 0.1s linear;
-    }
-
-    .white-core {
-      background: white;
-      border: 2px solid magenta;
-      box-shadow: 0 0 20px magenta;
-      cursor: grab;
-      z-index: 9999;
-    }
-
-    .white-core:active {
-      cursor: grabbing;
-    }
-  </style>
-</head>
-<body>
-
-<script>
-  const NUM_LAYERS = 20;
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
-
-  const layers = [];
-
-  let baseWidth = 100;
-  let baseHeight = 100;
-
-  // Generate nested rectangles
-  for (let i = 0; i < NUM_LAYERS; i++) {
-    const div = document.createElement("div");
-    div.className = "rect";
-    const sizeW = baseWidth + Math.random() * 200 + i * 10;
-    const sizeH = baseHeight + Math.random() * 200 + i * 10;
-    div.style.width = `${sizeW}px`;
-    div.style.height = `${sizeH}px`;
-    div.style.left = `${centerX - sizeW/2}px`;
-    div.style.top = `${centerY - sizeH/2}px`;
-    div.style.borderColor = `hsl(${i * 20}, 100%, 50%)`;
-    document.body.appendChild(div);
-    layers.unshift(div); // bottom-most is first
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Isometric RGB Cubes Background</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
   }
 
-  // Create white core
-  const core = document.createElement("div");
-  core.className = "rect white-core";
-  core.style.width = "100px";
-  core.style.height = "100px";
-  core.style.left = `${centerX - 50}px`;
-  core.style.top = `${centerY - 50}px`;
-  document.body.appendChild(core);
-  layers.push(core);
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(150deg, rgba(255,0,80,0.8) 25%, transparent 25%),
+      linear-gradient(30deg, rgba(0,255,160,0.8) 25%, transparent 25%),
+      linear-gradient(90deg, rgba(0,128,255,0.8) 25%, transparent 25%);
+    background-size: 60px 104px;
+    background-position: 0 0, 0 0, 0 0;
+    transform: skewY(30deg) scale(1.2);
+    filter: brightness(1.3) saturate(1.5);
+    animation: hueShift 12s linear infinite;
+  }
 
-  // Drag logic
-  let isDragging = false;
-  let offsetX = 0;
-  let offsetY = 0;
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(150deg, #000 25%, transparent 25%),
+      linear-gradient(30deg, #000 25%, transparent 25%),
+      linear-gradient(90deg, #000 25%, transparent 25%);
+    background-size: 60px 104px;
+    background-position: 0 0, 0 0, 0 0;
+    opacity: 0.25;
+    mix-blend-mode: multiply;
+  }
 
-  core.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    offsetX = e.clientX - core.offsetLeft;
-    offsetY = e.clientY - core.offsetTop;
-  });
-
-  document.addEventListener("mouseup", () => isDragging = false);
-
-  document.addEventListener("mousemove", (e) => {
-    if (!isDragging) return;
-
-    let x = e.clientX - offsetX;
-    let y = e.clientY - offsetY;
-
-    // move each layer with growing lag
-    layers.forEach((layer, i) => {
-      const lag = i * 2;
-      setTimeout(() => {
-        const w = parseFloat(layer.style.width);
-        const h = parseFloat(layer.style.height);
-        layer.style.left = `${x - w/2}px`;
-        layer.style.top = `${y - h/2}px`;
-      }, lag);
-    });
-  });
-</script>
-
-</body>
+  @keyframes hueShift {
+    0% { filter: hue-rotate(0deg) brightness(1.3) saturate(1.5); }
+    100% { filter: hue-rotate(360deg) brightness(1.3) saturate(1.5); }
+  }
+</style>
+</head>
+<body></body>
 </html>
