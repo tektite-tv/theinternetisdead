@@ -3,109 +3,156 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Psychedelic CRT Lava Noise (Fixed)</title>
+<title>Bananarama vs Skeletons</title>
 <style>
   html, body {
     margin: 0;
-    padding: 0;
     overflow: hidden;
-    height: 100%;
-    background: black;
+    background: #000;
   }
-  canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-    filter: contrast(140%) saturate(160%) brightness(120%) blur(0.5px);
-  }
+  canvas { display: block; }
 </style>
 </head>
 <body>
-<canvas id="lava"></canvas>
+<canvas id="game"></canvas>
 <script>
-const c = document.getElementById('lava');
-const ctx = c.getContext('2d');
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 let w, h;
 function resize() {
-  w = c.width = window.innerWidth;
-  h = c.height = window.innerHeight;
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
 }
 window.addEventListener('resize', resize);
 resize();
 
-const blobs = Array.from({length: 10}, () => ({
-  x: Math.random()*w,
-  y: Math.random()*h,
-  r: 180 + Math.random()*180,
-  dx: (Math.random()-0.5)*1.5,
-  dy: (Math.random()-0.5)*1.5,
-  phase: Math.random()*Math.PI*2
-}));
+// Load images
+const playerImg = new Image();
+playerImg.src = "/media/images/gifs/bananarama.gif";
+const enemyImg = new Image();
+enemyImg.src = "/media/images/gifs/skeleton.gif";
 
-function drawNoise() {
-  const id = ctx.createImageData(w, h);
-  for (let i=0; i<id.data.length; i+=4) {
-    const v = Math.random()*255;
-    id.data[i] = v;
-    id.data[i+1] = v;
-    id.data[i+2] = v;
-    id.data[i+3] = 10;
-  }
-  ctx.putImageData(id,0,0);
+// Player setup
+const player = {
+  x: w/2,
+  y: h/2,
+  r: 25,
+  speed: 4
+};
+
+// Input
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+// Bullets
+let bullets = [];
+window.addEventListener('click', e => {
+  const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
+  bullets.push({ x: player.x, y: player.y, dx: Math.cos(angle)*8, dy: Math.sin(angle)*8 });
+});
+
+// Enemies
+let enemies = [];
+function spawnEnemy() {
+  const edge = Math.floor(Math.random()*4);
+  let x, y;
+  if (edge === 0) { x = Math.random()*w; y = -40; }
+  else if (edge === 1) { x = w+40; y = Math.random()*h; }
+  else if (edge === 2) { x = Math.random()*w; y = h+40; }
+  else { x = -40; y = Math.random()*h; }
+  enemies.push({ x, y, r: 25, hp: 3 });
+}
+for (let i=0; i<8; i++) spawnEnemy();
+
+// Explosions
+let explosions = [];
+function addExplosion(x, y) {
+  explosions.push({ x, y, t: 0 });
 }
 
-function drawCRT() {
-  ctx.fillStyle="rgba(0,0,0,0.15)";
-  for(let y=0;y<h;y+=3) ctx.fillRect(0,y,w,1);
-}
+// Update
+function update() {
+  // Player movement
+  if (keys['w']) player.y -= player.speed;
+  if (keys['s']) player.y += player.speed;
+  if (keys['a']) player.x -= player.speed;
+  if (keys['d']) player.x += player.speed;
+  player.x = Math.max(player.r, Math.min(w-player.r, player.x));
+  player.y = Math.max(player.r, Math.min(h-player.r, player.y));
 
-function render(t) {
-  ctx.fillStyle = "black";
-  ctx.fillRect(0,0,w,h);
+  // Bullets
+  bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
+  bullets = bullets.filter(b => b.x>0 && b.x<w && b.y>0 && b.y<h);
 
-  const baseHue = (t/50)%360;
+  // Enemy AI
+  enemies.forEach(e => {
+    const angle = Math.atan2(player.y - e.y, player.x - e.x);
+    e.x += Math.cos(angle)*1.5;
+    e.y += Math.sin(angle)*1.5;
+  });
 
-  // glowing background gradient
-  const bg = ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.max(w,h)/1.2);
-  bg.addColorStop(0,`hsl(${baseHue},100%,40%)`);
-  bg.addColorStop(1,`hsl(${(baseHue+120)%360},100%,5%)`);
-  ctx.globalCompositeOperation='source-over';
-  ctx.fillStyle=bg;
-  ctx.fillRect(0,0,w,h);
-
-  // glowing blobs
-  ctx.globalCompositeOperation='screen';
-  blobs.forEach(b=>{
-    b.x+=b.dx; b.y+=b.dy;
-    if(b.x<0||b.x>w) b.dx*=-1;
-    if(b.y<0||b.y>h) b.dy*=-1;
-    b.phase+=0.02;
-    const pulse=Math.sin(b.phase)*30;
-    const hue=(baseHue+b.x/10)%360;
-
-    const off=Math.sin(t/500+b.phase)*3;
-    ['#f00','#0ff','#00f'].forEach((clr,i)=>{
-      const ox=b.x+Math.sin(i*2)*off*3;
-      const oy=b.y+Math.cos(i*2)*off*3;
-      const grad=ctx.createRadialGradient(ox,oy,0,ox,oy,b.r+pulse);
-      grad.addColorStop(0,`hsla(${hue+i*40},100%,65%,0.7)`);
-      grad.addColorStop(1,`hsla(${hue+i*40},100%,10%,0)`);
-      ctx.fillStyle=grad;
-      ctx.beginPath();
-      ctx.arc(ox,oy,b.r+pulse,0,Math.PI*2);
-      ctx.fill();
+  // Collisions
+  bullets.forEach((b, bi) => {
+    enemies.forEach((e, ei) => {
+      const dx = b.x - e.x;
+      const dy = b.y - e.y;
+      if (Math.hypot(dx, dy) < e.r) {
+        e.hp--;
+        bullets.splice(bi,1);
+        if (e.hp <= 0) {
+          addExplosion(e.x, e.y);
+          enemies.splice(ei,1);
+          setTimeout(spawnEnemy, 1000);
+        }
+      }
     });
   });
 
-  ctx.globalCompositeOperation='overlay';
-  drawCRT();
-
-  ctx.globalCompositeOperation='lighten';
-  drawNoise();
-
-  requestAnimationFrame(render);
+  // Explosion timers
+  explosions.forEach(ex => ex.t++);
+  explosions = explosions.filter(ex => ex.t < 25);
 }
-render(0);
+
+// Draw
+function draw() {
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(0,0,w,h);
+
+  // Player
+  ctx.drawImage(playerImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
+
+  // Bullets
+  ctx.fillStyle = '#ff0';
+  bullets.forEach(b => {
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 4, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  // Enemies
+  enemies.forEach(e => {
+    ctx.drawImage(enemyImg, e.x - e.r, e.y - e.r, e.r*2, e.r*2);
+  });
+
+  // Explosions
+  explosions.forEach(ex => {
+    const alpha = 1 - ex.t/25;
+    const radius = ex.t * 3;
+    ctx.strokeStyle = `rgba(255,200,50,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(ex.x, ex.y, radius, 0, Math.PI*2);
+    ctx.stroke();
+  });
+}
+
+// Game loop
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
 </script>
 </body>
 </html>
