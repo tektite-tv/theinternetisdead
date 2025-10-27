@@ -1,101 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infinite Q*bert RGB Field</title>
-<style>
-  html, body {
-    margin: 0;
-    height: 100%;
-    background: #000;
-    overflow: hidden;
-  }
-  canvas {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Psychedelic Lava CRT</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+      height: 100%;
+      width: 100%;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, #0f0f0f 0%, #000 100%);
+      display: block;
+      filter: contrast(140%) saturate(130%) blur(1px);
+    }
+  </style>
 </head>
 <body>
-<canvas id="qbert"></canvas>
-<script>
-const canvas = document.getElementById('qbert');
-const ctx = canvas.getContext('2d');
-let w, h, t = 0;
+  <canvas id="lava"></canvas>
 
-function resize() {
-  w = canvas.width = window.innerWidth;
-  h = canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
-
-function drawCube(x, y, size, hue) {
-  const h1 = hue % 360;
-  const h2 = (hue + 40) % 360;
-  const h3 = (hue + 80) % 360;
-  const top = `hsl(${h1},100%,60%)`;
-  const left = `hsl(${h2},100%,45%)`;
-  const right = `hsl(${h3},100%,50%)`;
-  const hsize = size / 2;
-  const vsize = size / 2 * Math.sin(Math.PI / 3);
-
-  // top
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + hsize, y - vsize);
-  ctx.lineTo(x + size, y);
-  ctx.lineTo(x + hsize, y + vsize);
-  ctx.closePath();
-  ctx.fillStyle = top;
-  ctx.fill();
-
-  // left
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + hsize, y + vsize);
-  ctx.lineTo(x + hsize, y + vsize + size * Math.sin(Math.PI / 3));
-  ctx.lineTo(x, y + size * Math.sin(Math.PI / 3));
-  ctx.closePath();
-  ctx.fillStyle = left;
-  ctx.fill();
-
-  // right
-  ctx.beginPath();
-  ctx.moveTo(x + size, y);
-  ctx.lineTo(x + hsize, y + vsize);
-  ctx.lineTo(x + hsize, y + vsize + size * Math.sin(Math.PI / 3));
-  ctx.lineTo(x + size, y + size * Math.sin(Math.PI / 3));
-  ctx.closePath();
-  ctx.fillStyle = right;
-  ctx.fill();
-}
-
-function animate() {
-  ctx.clearRect(0, 0, w, h);
-  const size = 60;
-  const dx = size;
-  const dy = size * Math.sin(Math.PI / 3);
-  const rows = Math.ceil(h / dy) + 4;
-  const cols = Math.ceil(w / dx) + 4;
-  t += 0.015;
-
-  for (let row = -2; row < rows; row++) {
-    for (let col = -2; col < cols; col++) {
-      const x = (col - row) * dx / 2 + w / 2;
-      const y = (col + row) * dy / 2 - dy;
-      const hue = (t * 60 + (row * 40 + col * 80)) % 360;
-      drawCube(x, y, size, hue);
+  <script>
+    const canvas = document.getElementById('lava');
+    const ctx = canvas.getContext('2d');
+    let w, h;
+    function resize() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
     }
-  }
+    window.addEventListener('resize', resize);
+    resize();
 
-  requestAnimationFrame(animate);
-}
-animate();
-</script>
+    const blobs = Array.from({length: 8}, (_, i) => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: 200 + Math.random() * 150,
+      dx: (Math.random() - 0.5) * 2,
+      dy: (Math.random() - 0.5) * 2,
+      phase: Math.random() * Math.PI * 2
+    }));
+
+    function drawCRT() {
+      const lineHeight = 2;
+      ctx.fillStyle = "rgba(0,0,0,0.15)";
+      for (let y = 0; y < h; y += lineHeight * 2) {
+        ctx.fillRect(0, y, w, lineHeight);
+      }
+    }
+
+    function render(t) {
+      ctx.clearRect(0, 0, w, h);
+      const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w, h)/1.2);
+      grad.addColorStop(0, `hsl(${(t/40)%360}, 100%, 55%)`);
+      grad.addColorStop(1, `hsl(${(t/60)%360}, 100%, 20%)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.globalCompositeOperation = 'screen';
+      for (let blob of blobs) {
+        blob.x += blob.dx;
+        blob.y += blob.dy;
+        blob.phase += 0.01;
+        const pulse = Math.sin(blob.phase) * 30;
+        if (blob.x < 0 || blob.x > w) blob.dx *= -1;
+        if (blob.y < 0 || blob.y > h) blob.dy *= -1;
+
+        const radial = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.r + pulse);
+        radial.addColorStop(0, `hsla(${(t/10 + blob.x/5)%360}, 100%, 70%, 0.5)`);
+        radial.addColorStop(1, `hsla(${(t/10 + blob.y/3)%360}, 100%, 10%, 0.0)`);
+        ctx.fillStyle = radial;
+        ctx.beginPath();
+        ctx.arc(blob.x, blob.y, blob.r + pulse, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalCompositeOperation = 'overlay';
+      drawCRT();
+      ctx.globalCompositeOperation = 'source-over';
+      requestAnimationFrame(render);
+    }
+    render(0);
+  </script>
 </body>
 </html>
