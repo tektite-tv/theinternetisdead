@@ -112,7 +112,11 @@ function spawnEnemy() {
   else { x = -40; y = Math.random()*h; }
   enemies.push({ x, y, r: 25, hp: 3 });
 }
-for (let i=0; i<8; i++) spawnEnemy();
+function spawnWave(count=8){
+  enemies = [];
+  for(let i=0;i<count;i++) spawnEnemy();
+}
+spawnWave();
 
 // Explosions
 let explosions = [];
@@ -133,7 +137,6 @@ function updateHUD() {
 function update() {
   if (player.dead || gameOver) return;
 
-  // Movement
   if (keys['w']) player.y -= player.speed;
   if (keys['s']) player.y += player.speed;
   if (keys['a']) player.x -= player.speed;
@@ -141,18 +144,16 @@ function update() {
   player.x = Math.max(player.r, Math.min(w-player.r, player.x));
   player.y = Math.max(player.r, Math.min(h-player.r, player.y));
 
-  // Bullets
   bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
   bullets = bullets.filter(b => b.x>0 && b.x<w && b.y>0 && b.y<h);
 
-  // Enemies move toward player
   enemies.forEach(e => {
     const angle = Math.atan2(player.y - e.y, player.x - e.x);
     e.x += Math.cos(angle)*1.5;
     e.y += Math.sin(angle)*1.5;
   });
 
-  // Bullet collisions
+  // Bullet hit detection
   bullets.forEach((b, bi) => {
     enemies.forEach((e, ei) => {
       const dx = b.x - e.x;
@@ -171,7 +172,7 @@ function update() {
     });
   });
 
-  // Player collision
+  // Enemy hits player
   enemies.forEach(e => {
     const dx = e.x - player.x;
     const dy = e.y - player.y;
@@ -188,7 +189,6 @@ function update() {
     }
   });
 
-  // Explosions
   explosions.forEach(ex => ex.t++);
   explosions = explosions.filter(ex => ex.t < 25);
 }
@@ -198,12 +198,10 @@ function draw() {
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.fillRect(0,0,w,h);
 
-  // Player
   if (!player.dead) {
     ctx.drawImage(playerImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
   }
 
-  // Bullets
   ctx.fillStyle = '#ff0';
   bullets.forEach(b => {
     ctx.beginPath();
@@ -211,12 +209,10 @@ function draw() {
     ctx.fill();
   });
 
-  // Enemies
   enemies.forEach(e => {
     ctx.drawImage(enemyImg, e.x - e.r, e.y - e.r, e.r*2, e.r*2);
   });
 
-  // Explosions
   explosions.forEach(ex => {
     const alpha = 1 - ex.t/25;
     const radius = ex.t * 3;
@@ -227,7 +223,7 @@ function draw() {
   });
 }
 
-// Death / revive
+// Revive
 window.addEventListener('keydown', () => {
   if (player.dead && player.lives > 0 && !gameOver) {
     player.dead = false;
@@ -235,6 +231,9 @@ window.addEventListener('keydown', () => {
     sub.style.display = 'none';
     player.x = w/2;
     player.y = h/2;
+    bullets = [];
+    explosions = [];
+    spawnWave(); // reset skeletons
   }
 });
 
