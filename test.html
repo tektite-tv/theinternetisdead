@@ -1,51 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Q-Bert Isometric RGB Cubes</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infinite Q*bert RGB Field</title>
 <style>
-html, body {
-  margin: 0;
-  height: 100%;
-  background: #000;
-  overflow: hidden;
-}
-
-/* The magic pattern */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background:
-    linear-gradient(30deg, #ff0044 12%, transparent 12.5%, transparent 87%, #ff0044 87.5%),
-    linear-gradient(150deg, #00ff99 12%, transparent 12.5%, transparent 87%, #00ff99 87.5%),
-    linear-gradient(90deg, #0066ff 12%, transparent 12.5%, transparent 87%, #0066ff 87.5%);
-  background-size: 60px 104px;
-  background-position: 0 0, 0 0, 0 0;
-  animation: hueShift 10s linear infinite;
-  transform: skewY(30deg) scale(1.5);
-  opacity: 0.9;
-}
-
-@keyframes hueShift {
-  from { filter: hue-rotate(0deg); }
-  to { filter: hue-rotate(360deg); }
-}
-
-/* Faint shadow overlay for depth */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background:
-    linear-gradient(30deg, rgba(0,0,0,0.5) 12%, transparent 12.5%, transparent 87%, rgba(0,0,0,0.5) 87.5%),
-    linear-gradient(150deg, rgba(0,0,0,0.5) 12%, transparent 12.5%, transparent 87%, rgba(0,0,0,0.5) 87.5%);
-  background-size: 60px 104px;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-}
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+  }
+  canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
 </style>
 </head>
-<body></body>
+<body>
+<canvas id="qbert"></canvas>
+<script>
+const canvas = document.getElementById('qbert');
+const ctx = canvas.getContext('2d');
+let w, h, t = 0;
+
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function drawCube(x, y, size, hue) {
+  const h1 = hue % 360;
+  const h2 = (hue + 40) % 360;
+  const h3 = (hue + 80) % 360;
+  const top = `hsl(${h1},100%,60%)`;
+  const left = `hsl(${h2},100%,45%)`;
+  const right = `hsl(${h3},100%,50%)`;
+  const hsize = size / 2;
+  const vsize = size / 2 * Math.sin(Math.PI / 3);
+
+  // top
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + hsize, y - vsize);
+  ctx.lineTo(x + size, y);
+  ctx.lineTo(x + hsize, y + vsize);
+  ctx.closePath();
+  ctx.fillStyle = top;
+  ctx.fill();
+
+  // left
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + hsize, y + vsize);
+  ctx.lineTo(x + hsize, y + vsize + size * Math.sin(Math.PI / 3));
+  ctx.lineTo(x, y + size * Math.sin(Math.PI / 3));
+  ctx.closePath();
+  ctx.fillStyle = left;
+  ctx.fill();
+
+  // right
+  ctx.beginPath();
+  ctx.moveTo(x + size, y);
+  ctx.lineTo(x + hsize, y + vsize);
+  ctx.lineTo(x + hsize, y + vsize + size * Math.sin(Math.PI / 3));
+  ctx.lineTo(x + size, y + size * Math.sin(Math.PI / 3));
+  ctx.closePath();
+  ctx.fillStyle = right;
+  ctx.fill();
+}
+
+function animate() {
+  ctx.clearRect(0, 0, w, h);
+  const size = 60;
+  const dx = size;
+  const dy = size * Math.sin(Math.PI / 3);
+  const rows = Math.ceil(h / dy) + 4;
+  const cols = Math.ceil(w / dx) + 4;
+  t += 0.015;
+
+  for (let row = -2; row < rows; row++) {
+    for (let col = -2; col < cols; col++) {
+      const x = (col - row) * dx / 2 + w / 2;
+      const y = (col + row) * dy / 2 - dy;
+      const hue = (t * 60 + (row * 40 + col * 80)) % 360;
+      drawCube(x, y, size, hue);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
 </html>
