@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Psychedelic Lava CRT</title>
+  <title>Psychedelic CRT Lava Noise</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: black;
       height: 100%;
       width: 100%;
+      background: black;
     }
     canvas {
       position: fixed;
@@ -19,9 +19,9 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: radial-gradient(circle at center, #0f0f0f 0%, #000 100%);
+      filter: contrast(140%) saturate(150%) brightness(105%) blur(0.5px);
+      background: radial-gradient(circle at center, #0a0a0a, #000);
       display: block;
-      filter: contrast(140%) saturate(130%) blur(1px);
     }
   </style>
 </head>
@@ -39,15 +39,16 @@
     window.addEventListener('resize', resize);
     resize();
 
-    const blobs = Array.from({length: 8}, (_, i) => ({
+    const blobs = Array.from({ length: 10 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
-      r: 200 + Math.random() * 150,
+      r: 150 + Math.random() * 200,
       dx: (Math.random() - 0.5) * 2,
       dy: (Math.random() - 0.5) * 2,
       phase: Math.random() * Math.PI * 2
     }));
 
+    // draws CRT scanlines
     function drawCRT() {
       const lineHeight = 2;
       ctx.fillStyle = "rgba(0,0,0,0.15)";
@@ -56,11 +57,27 @@
       }
     }
 
+    // draws noise overlay
+    function drawNoise() {
+      const imageData = ctx.createImageData(w, h);
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        const v = Math.random() * 255;
+        imageData.data[i] = v;
+        imageData.data[i + 1] = v;
+        imageData.data[i + 2] = v;
+        imageData.data[i + 3] = 8;
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
     function render(t) {
       ctx.clearRect(0, 0, w, h);
-      const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w, h)/1.2);
-      grad.addColorStop(0, `hsl(${(t/40)%360}, 100%, 55%)`);
-      grad.addColorStop(1, `hsl(${(t/60)%360}, 100%, 20%)`);
+
+      // background gradient swirl
+      const baseHue = (t / 50) % 360;
+      const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w, h)/1.5);
+      grad.addColorStop(0, `hsl(${baseHue}, 100%, 45%)`);
+      grad.addColorStop(1, `hsl(${(baseHue + 60) % 360}, 100%, 10%)`);
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
 
@@ -68,22 +85,34 @@
       for (let blob of blobs) {
         blob.x += blob.dx;
         blob.y += blob.dy;
-        blob.phase += 0.01;
-        const pulse = Math.sin(blob.phase) * 30;
+        blob.phase += 0.015;
+        const pulse = Math.sin(blob.phase) * 40;
+
         if (blob.x < 0 || blob.x > w) blob.dx *= -1;
         if (blob.y < 0 || blob.y > h) blob.dy *= -1;
 
-        const radial = ctx.createRadialGradient(blob.x, blob.y, 0, blob.x, blob.y, blob.r + pulse);
-        radial.addColorStop(0, `hsla(${(t/10 + blob.x/5)%360}, 100%, 70%, 0.5)`);
-        radial.addColorStop(1, `hsla(${(t/10 + blob.y/3)%360}, 100%, 10%, 0.0)`);
-        ctx.fillStyle = radial;
-        ctx.beginPath();
-        ctx.arc(blob.x, blob.y, blob.r + pulse, 0, Math.PI * 2);
-        ctx.fill();
+        // chromatic aberration
+        const hueShift = (baseHue + blob.x / 5) % 360;
+        const offset = Math.sin(blob.phase * 1.2) * 5;
+        ['#f00', '#0ff', '#00f'].forEach((clr, i) => {
+          const offX = blob.x + Math.sin(t/500 + i) * offset * (i - 1);
+          const offY = blob.y + Math.cos(t/500 + i) * offset * (i - 1);
+          const radial = ctx.createRadialGradient(offX, offY, 0, offX, offY, blob.r + pulse);
+          radial.addColorStop(0, `hsla(${hueShift + i*30}, 100%, 70%, 0.5)`);
+          radial.addColorStop(1, `hsla(${hueShift + i*30}, 100%, 5%, 0)`);
+          ctx.fillStyle = radial;
+          ctx.beginPath();
+          ctx.arc(offX, offY, blob.r + pulse, 0, Math.PI * 2);
+          ctx.fill();
+        });
       }
 
       ctx.globalCompositeOperation = 'overlay';
       drawCRT();
+
+      ctx.globalCompositeOperation = 'lighten';
+      drawNoise();
+
       ctx.globalCompositeOperation = 'source-over';
       requestAnimationFrame(render);
     }
