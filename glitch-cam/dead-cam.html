@@ -1,180 +1,198 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DEAD CAM</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dead Cam — Face Overlay</title>
 <style>
-  html, body {
-    margin: 0;
-    background: black;
-    overflow: hidden;
-    color: #00ff99;
-    font-family: monospace;
-  }
-  #canvas {
-    width: 100vw;
-    height: 100vh;
-    object-fit: cover;
-  }
-  #controls {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.6);
-    border: 1px solid #00ff99;
-    border-radius: 8px;
-    padding: 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    z-index: 999;
-  }
-  button, input[type=range], label {
-    background: black;
-    color: #00ff99;
-    border: 1px solid #00ff99;
-    padding: 4px;
-    font-family: monospace;
-  }
-  button:hover {
-    background: #00ff99;
-    color: black;
-  }
-  #flash {
-    position: absolute;
-    inset: 0;
-    background: white;
-    opacity: 0;
-    transition: opacity 0.1s;
-    pointer-events: none;
-  }
+  html,body{height:100%;margin:0;background:#000;color:#0f0;font-family:monospace;}
+  #canvas{display:block;width:100vw;height:100vh;object-fit:cover;}
+  #controls{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:999;background:rgba(0,0,0,0.6);border:1px solid #00ff99;padding:8px;border-radius:8px;display:flex;gap:8px;flex-wrap:wrap}
+  button,input[type=range]{background:#000;color:#00ff99;border:1px solid #00ff99;padding:6px;font-family:monospace}
 </style>
 </head>
 <body>
 <video id="video" autoplay playsinline style="display:none"></video>
 <canvas id="canvas"></canvas>
-<div id="flash"></div>
 
 <div id="controls">
-  <button id="glitchBtn">⚡ Glitch</button>
-  <button id="invertBtn">Invert</button>
-  <label>Noise <input type="range" id="noiseRange" min="0" max="1" step="0.01" value="0.1"></label>
-  <label>RGB Shift <input type="range" id="rgbShiftRange" min="0" max="10" step="1" value="3"></label>
-  <label>Pixelation <input type="range" id="pixelRange" min="1" max="10" step="1" value="1"></label>
-  <button id="fullscreenBtn">⛶ Fullscreen</button>
-  <button id="screenshotBtn">📸 Screenshot</button>
+  <button id="start">Start</button>
+  <button id="toggleOverlay">Toggle Overlay</button>
+  <label>Overlay Scale <input id="scaleAdj" type="range" min="0.5" max="2.5" step="0.01" value="1"></label>
+  <button id="screenshot">📸 Screenshot</button>
 </div>
 
-<script>
+<!-- MediaPipe FaceMesh from CDN -->
+<script type="module">
+import { FaceMesh } from "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js";
+import { Camera } from "https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.4/camera_utils.js";
+
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const flash = document.getElementById('flash');
-let invert = false;
-let glitchMode = false;
-let noiseAmount = 0.1;
-let rgbShift = 3;
-let pixelSize = 1;
 
-navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-  .then(stream => {
-    video.srcObject = stream;
-    video.onloadedmetadata = () => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      draw();
-    };
-  })
-  .catch(err => alert('Camera access failed: ' + err));
+let running = false;
+let overlayEnabled = true;
+const overlayImg = new Image();
+overlayImg.src = '/media/images/1000020223.png'; // <-- change path if necessary
 
-function draw() {
-  const w = canvas.width, h = canvas.height;
+const scaleAdj = document.getElementById('scaleAdj');
 
-  // Pixelation effect
-  if (pixelSize > 1) {
-    const scaledW = w / pixelSize, scaledH = h / pixelSize;
-    ctx.drawImage(video, 0, 0, scaledW, scaledH);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(canvas, 0, 0, scaledW, scaledH, 0, 0, w, h);
-  } else {
-    ctx.drawImage(video, 0, 0, w, h);
-  }
-
-  let frame = ctx.getImageData(0, 0, w, h);
-  let d = frame.data;
-
-  if (invert) {
-    for (let i = 0; i < d.length; i += 4) {
-      d[i] = 255 - d[i];
-      d[i+1] = 255 - d[i+1];
-      d[i+2] = 255 - d[i+2];
-    }
-  }
-
-  // RGB shift
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
-      const shift = rgbShift | 0;
-      if (x + shift < w) {
-        const j = (y * w + (x + shift)) * 4;
-        d[i] = d[j]; // Red shift
-      }
-    }
-  }
-
-  // Glitch slices
-  if (glitchMode && Math.random() > 0.8) {
-    const sliceHeight = 5 + Math.random() * 50;
-    const y = Math.random() * h;
-    ctx.drawImage(canvas, 0, y, w, sliceHeight, Math.random()*20-10, y, w, sliceHeight);
-  }
-
-  // Static noise
-  for (let i = 0; i < d.length; i += 4) {
-    if (Math.random() < noiseAmount) {
-      let val = Math.random() * 255;
-      d[i] = val; d[i+1] = val; d[i+2] = val;
-    }
-  }
-
-  ctx.putImageData(frame, 0, 0);
-
-  // Scanlines overlay
-  ctx.globalAlpha = 0.2;
-  for (let y = 0; y < h; y += 2) {
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, y, w, 1);
-  }
-  ctx.globalAlpha = 1;
-
-  requestAnimationFrame(draw);
+function resizeCanvasToVideo() {
+  // maximize canvas to viewport while matching video aspect ratio
+  const vw = window.innerWidth, vh = window.innerHeight;
+  canvas.width = vw;
+  canvas.height = vh;
 }
 
-document.getElementById('invertBtn').onclick = () => invert = !invert;
-document.getElementById('glitchBtn').onclick = () => glitchMode = !glitchMode;
-document.getElementById('noiseRange').oninput = e => noiseAmount = parseFloat(e.target.value);
-document.getElementById('rgbShiftRange').oninput = e => rgbShift = parseInt(e.target.value);
-document.getElementById('pixelRange').oninput = e => pixelSize = parseInt(e.target.value);
+// Helper: compute center, angle, and scale from landmarks
+function computeTransform(landmarks, canvasW, canvasH) {
+  // landmarks are normalized [0..1] relative to video feed width/height
+  // Use: left eye (33), right eye (263), nose tip (1) — index based on MediaPipe FaceMesh
+  const L = landmarks[33], R = landmarks[263], N = landmarks[1];
+  if (!L || !R || !N) return null;
 
-document.getElementById('screenshotBtn').onclick = () => {
-  flash.style.opacity = 1;
-  setTimeout(() => flash.style.opacity = 0, 100);
+  // convert to canvas coordinates
+  function toCanvas(pt) {
+    // note: MediaPipe uses normalized coords based on input video. We'll map them to canvas size.
+    return { x: pt.x * canvasW, y: pt.y * canvasH };
+  }
+  const l = toCanvas(L), r = toCanvas(R), n = toCanvas(N);
+
+  // center = midpoint between eyes, or better: average of eyes and nose
+  const cx = (l.x + r.x + n.x) / 3;
+  const cy = (l.y + r.y + n.y) / 3;
+
+  // angle: direction from right eye to left eye
+  const angle = Math.atan2(l.y - r.y, l.x - r.x);
+
+  // scale estimate: distance between eyes -> base size
+  const eyeDist = Math.hypot(l.x - r.x, l.y - r.y);
+
+  // Use eye distance as base overlay width multiplier
+  const baseWidth = eyeDist * 2.4; // tuned multiplier for typical face proportions
+  return { x: cx, y: cy, angle, width: baseWidth };
+}
+
+/* MediaPipe setup */
+const faceMesh = new FaceMesh({
+  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/${file}`
+});
+faceMesh.setOptions({
+  maxNumFaces: 1,
+  refineLandmarks: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+
+faceMesh.onResults(onResults);
+
+let cam;
+async function startCamera() {
+  resizeCanvasToVideo();
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+  video.srcObject = stream;
+  await video.play();
+  // Make canvas size match actual displayed size
+  canvas.width = video.videoWidth || video.videoWidth || window.innerWidth;
+  canvas.height = video.videoHeight || window.innerHeight;
+  // Use MediaPipe Camera helper to send frames into faceMesh
+  cam = new Camera(video, {
+    onFrame: async () => {
+      await faceMesh.send({ image: video });
+    },
+    width: 1280,
+    height: 720
+  });
+  cam.start();
+  running = true;
+}
+
+/* Draw pipeline: FaceMesh -> Overlay */
+function onResults(results) {
+  // draw camera frame as background
+  ctx.save();
+  // Fit video frame to canvas (cover)
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // draw video stretched to canvas (object-fit: cover behavior)
+  const videoAspect = video.videoWidth / video.videoHeight;
+  const canvasAspect = canvas.width / canvas.height;
+  let vw=0, vh=0, vx=0, vy=0;
+  if (videoAspect > canvasAspect) {
+    // video wider than canvas -> crop sides
+    vh = canvas.height;
+    vw = video.videoWidth * (canvas.height / video.videoHeight);
+    vx = (canvas.width - vw) / 2;
+    vy = 0;
+  } else {
+    vw = canvas.width;
+    vh = video.videoHeight * (canvas.width / video.videoWidth);
+    vx = 0;
+    vy = (canvas.height - vh) / 2;
+  }
+  // draw image with scaling so that it covers canvas
+  ctx.drawImage(video, 0,0,video.videoWidth,video.videoHeight, vx, vy, vw, vh);
+
+  // If we have face landmarks, compute transform and draw overlay
+  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0 && overlayEnabled) {
+    const landmarks = results.multiFaceLandmarks[0];
+
+    // MediaPipe landmarks are normalized relative to the input image.
+    // We rendered the video scaled/centered into canvas (vx,vy,vw,vh).
+    // To map normalized to canvas coords, map normalized to vw/vh and add vx,vy.
+    const mapped = landmarks.map(pt => {
+      return { x: vx + pt.x * vw, y: vy + pt.y * vh, z: pt.z };
+    });
+
+    const t = computeTransform(mapped, canvas.width, canvas.height);
+    if (t) {
+      // calculate final draw size and position with user scale adjustment
+      const userScale = parseFloat(scaleAdj.value) || 1;
+      const drawW = t.width * userScale;
+      // preserve overlay aspect ratio
+      const aspect = overlayImg.naturalHeight ? overlayImg.naturalHeight / overlayImg.naturalWidth : 1;
+      const drawH = drawW * aspect;
+
+      ctx.translate(t.x, t.y);
+      ctx.rotate(t.angle);
+      ctx.drawImage(overlayImg, -drawW/2, -drawH/2, drawW, drawH);
+      ctx.rotate(-t.angle);
+      ctx.translate(-t.x, -t.y);
+    }
+  }
+
+  // optional: debugging: draw landmark points
+  // (uncomment if you want dots)
+  /*
+  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+    const m = results.multiFaceLandmarks[0];
+    ctx.fillStyle = 'rgba(0,255,0,0.6)';
+    for (let p of m) {
+      ctx.beginPath();
+      ctx.arc(vx + p.x*vw, vy + p.y*vh, 2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  */
+
+  ctx.restore();
+}
+
+document.getElementById('start').addEventListener('click', async () => {
+  if (!running) await startCamera();
+});
+document.getElementById('toggleOverlay').addEventListener('click', () => overlayEnabled = !overlayEnabled);
+document.getElementById('screenshot').addEventListener('click', () => {
   const link = document.createElement('a');
-  link.download = 'deadcam_' + Date.now() + '.png';
+  link.download = 'deadcam_face_' + Date.now() + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
-};
+});
 
-document.getElementById('fullscreenBtn').onclick = () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-};
+// Resize handler
+window.addEventListener('resize', () => {
+  resizeCanvasToVideo();
+});
 </script>
 </body>
 </html>
