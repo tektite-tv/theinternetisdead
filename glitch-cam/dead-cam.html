@@ -31,6 +31,11 @@
     flex-wrap: wrap;
     gap: 8px;
     z-index: 999;
+    transition: opacity 0.3s ease;
+  }
+  #controls.hidden {
+    opacity: 0;
+    pointer-events: none;
   }
   button, input[type=range], label {
     background: black;
@@ -78,6 +83,7 @@ const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const flash = document.getElementById("flash");
+const controls = document.getElementById("controls");
 
 let invert = false;
 let glitchMode = false;
@@ -85,10 +91,11 @@ let noiseAmount = 0.1;
 let rgbShift = 3;
 let pixelSize = 1;
 let overlayOn = false;
+let controlsVisible = true;
 
 let overlay = new Image();
 
-// handle file upload
+// Handle overlay upload
 const overlayInput = document.getElementById("overlayInput");
 document.getElementById("overlayBtn").onclick = () => overlayInput.click();
 overlayInput.onchange = e => {
@@ -123,7 +130,7 @@ function draw() {
     return;
   }
 
-  // pixelation
+  // Pixelation
   if (pixelSize > 1) {
     const scaledW = w / pixelSize, scaledH = h / pixelSize;
     ctx.drawImage(video, 0, 0, scaledW, scaledH);
@@ -136,7 +143,7 @@ function draw() {
   let frame = ctx.getImageData(0, 0, w, h);
   let d = frame.data;
 
-  // invert
+  // Invert
   if (invert) {
     for (let i = 0; i < d.length; i += 4) {
       d[i] = 255 - d[i];
@@ -145,7 +152,7 @@ function draw() {
     }
   }
 
-  // RGB shift
+  // RGB Shift
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
@@ -167,7 +174,7 @@ function draw() {
 
   ctx.putImageData(frame, 0, 0);
 
-  // Overlay effect (if active)
+  // Overlay
   if (overlayOn && overlay.complete) {
     const t = Date.now() * 0.001;
     const jitterX = Math.sin(t * 5) * 10 * Math.random();
@@ -220,6 +227,14 @@ document.getElementById("fullscreenBtn").onclick = () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen();
   else document.exitFullscreen();
 };
+
+// Toggle controls with "H"
+document.addEventListener("keydown", e => {
+  if (e.key.toLowerCase() === "h") {
+    controlsVisible = !controlsVisible;
+    controls.classList.toggle("hidden", !controlsVisible);
+  }
+});
 </script>
 </body>
 </html>
