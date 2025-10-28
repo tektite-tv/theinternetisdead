@@ -3,95 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>theinternetisdead.org — Games</title>
+  <title>theinternetisdead.org - Dead Games</title>
   <link rel="icon" type="image/png" href="/images/face.png" />
   <link rel="stylesheet" href="/css/main.css" />
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background-color: black;
-      color: #00ff99;
-      font-family: monospace;
-    }
-
-    h1 {
-      margin: 20px 0;
-      text-shadow: 0 0 8px #ff66cc;
-    }
-
-    .games-list {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 40px;
-      width: 100%;
-      max-width: 1200px;
-      padding: 20px;
-    }
-
-    .game {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid #00ff99;
-      border-radius: 8px;
-      overflow: hidden;
-      width: 480px;
-      height: 380px;
-      box-shadow: 0 0 15px #00ff99;
-      transition: transform 0.2s ease-in-out;
-    }
-
-    .game:hover {
-      transform: scale(1.02);
-    }
-
-    .game iframe {
-      width: 100%;
-      height: 320px;
-      border: none;
-      background: black;
-    }
-
-    .game-title {
-      padding: 10px;
-      text-align: center;
-      background-color: rgba(0, 0, 0, 0.8);
-      width: 100%;
-    }
-
-    .game-title a {
-      color: #ff66cc;
-      text-decoration: none;
-    }
-
-    .game-title a:hover {
-      text-decoration: underline;
-    }
-  </style>
 </head>
 <body>
   <div id="header-placeholder"></div>
-  <h1>theinternetisdead — Games</h1>
 
-  <div class="games-list">
-    <div class="game">
-      <iframe src="/games/maze-game.html"></iframe>
-      <div class="game-title">
-        <a href="/games/maze-game.html" target="_blank">Maze Game</a>
-      </div>
-    </div>
-
-    <div class="game">
-      <iframe src="/games/shooter-game.html"></iframe>
-      <div class="game-title">
-        <a href="/games/shooter-game.html" target="_blank">Shooter Game</a>
-      </div>
-    </div>
-  </div>
+  <iframe
+    src="/games/dead-games.html"
+    title="Dead Games"
+    width="100%"
+    height="100vh"
+    frameborder="0"
+    allowfullscreen
+    style="
+      display: block;
+      border: none;
+      width: 100%;
+      height: 100vh;
+      background: black;
+      overflow: hidden;
+    "
+    loading="eager"
+    class="deadframe">
+  </iframe>
 
   <script type="module" src="/js/main.js"></script>
 </body>
