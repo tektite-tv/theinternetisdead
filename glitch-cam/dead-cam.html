@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEAD CAM</title>
+<style>
+  html, body {
+    margin: 0;
+    background: black;
+    overflow: hidden;
+    color: #00ff99;
+    font-family: monospace;
+  }
+  #canvas {
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+  }
+  #controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #00ff99;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 999;
+  }
+  button, input[type=range] {
+    background: black;
+    color: #00ff99;
+    border: 1px solid #00ff99;
+    padding: 4px;
+  }
+  #flash {
+    position: absolute;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.1s;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<video id="video" autoplay playsinline style="display:none"></video>
+<canvas id="canvas"></canvas>
+<div id="flash"></div>
+
+<div id="controls">
+  <button id="glitchBtn">⚡ Glitch</button>
+  <label>Noise <input type="range" id="noiseRange" min="0" max="1" step="0.01" value="0.1"></label>
+  <button id="invertBtn">Invert</button>
+  <button id="screenshotBtn">📸 Screenshot</button>
+</div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const flash = document.getElementById('flash');
+let invert = false;
+let glitchMode = false;
+let noiseAmount = 0.1;
+
+navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+  .then(stream => {
+    video.srcObject = stream;
+    video.onloadedmetadata = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      draw();
+    };
+  })
+  .catch(err => alert('Camera access failed: ' + err));
+
+function draw() {
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let d = frame.data;
+
+  if (invert) {
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = 255 - d[i];
+      d[i+1] = 255 - d[i+1];
+      d[i+2] = 255 - d[i+2];
+    }
+  }
+
+  if (glitchMode && Math.random() > 0.7) {
+    let offset = (Math.random() * 1000 | 0) * 4;
+    for (let i = 0; i < 50000; i += 4) {
+      d[(offset+i)%d.length] = d[(offset+i+500)%d.length];
+    }
+  }
+
+  // Add static noise
+  for (let i = 0; i < d.length; i += 4) {
+    if (Math.random() < noiseAmount) {
+      let val = Math.random() * 255;
+      d[i] = val; d[i+1] = val; d[i+2] = val;
+    }
+  }
+
+  ctx.putImageData(frame, 0, 0);
+  requestAnimationFrame(draw);
+}
+
+document.getElementById('invertBtn').onclick = () => invert = !invert;
+document.getElementById('glitchBtn').onclick = () => glitchMode = !glitchMode;
+document.getElementById('noiseRange').oninput = e => noiseAmount = parseFloat(e.target.value);
+document.getElementById('screenshotBtn').onclick = () => {
+  flash.style.opacity = 1;
+  setTimeout(() => flash.style.opacity = 0, 100);
+  const link = document.createElement('a');
+  link.download = 'deadcam_' + Date.now() + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};
+</script>
+</body>
+</html>
