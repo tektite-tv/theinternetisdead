@@ -1,15 +1,18 @@
 // /glitch-tv/dead-tv.js
-// DeadTV visual logic resurrection script
+// DeadTV Resurrection — glitchcore overlay and canvas animation controller
+// Compatible with your current dead-tv.html layout
 
+// Element references
 const root = document.documentElement;
 const layerRoot = document.getElementById('layerRoot');
 const hwrap = document.getElementById('hwrap');
 const canvas = document.getElementById('lava');
 const ctx = canvas.getContext('2d');
+
 const angleSlider = document.getElementById('angle');
 const angleVal = document.getElementById('angleVal');
 
-// buttons
+// Buttons
 const btnSpinOnce = document.getElementById('spinOnce');
 const btnSpinLoop = document.getElementById('spinLoop');
 const btnPulse = document.getElementById('pulse');
@@ -20,7 +23,7 @@ const btnStop = document.getElementById('stop');
 const btnDraw = document.getElementById('drawMode');
 const btnSave = document.getElementById('saveShot');
 
-// canvas sizing
+// --- CANVAS SETUP ---
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -28,8 +31,10 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// --- basic background noise ---
 let t = 0;
+let stopAll = false;
+
+// Basic lava noise background
 function lava() {
   const w = canvas.width, h = canvas.height;
   const imageData = ctx.createImageData(w, h);
@@ -48,25 +53,27 @@ function lava() {
   if (!stopAll) requestAnimationFrame(lava);
 }
 
-// --- control state ---
+// --- STATE FLAGS ---
 let spinLoop = false;
 let pulseActive = false;
 let strobeActive = false;
 let cycleActive = false;
 let meltdownActive = false;
-let stopAll = false;
+let drawMode = false;
 
-// --- event handlers ---
+// --- ANGLE SLIDER ---
 angleSlider.addEventListener('input', () => {
   const deg = parseFloat(angleSlider.value);
   root.style.setProperty('--angle', `${deg}deg`);
   angleVal.textContent = `${deg.toFixed(1)}°`;
 });
 
+// --- SPIN ONCE ---
 btnSpinOnce.addEventListener('click', () => {
   let current = parseFloat(getComputedStyle(root).getPropertyValue('--angle')) || 0;
   const start = current, end = current + 360, duration = 2000;
   const startTime = performance.now();
+
   function step(now) {
     const p = Math.min((now - startTime) / duration, 1);
     const deg = start + (end - start) * p;
@@ -76,6 +83,7 @@ btnSpinOnce.addEventListener('click', () => {
   requestAnimationFrame(step);
 });
 
+// --- SPIN LOOP ---
 btnSpinLoop.addEventListener('click', () => {
   spinLoop = !spinLoop;
   btnSpinLoop.setAttribute('aria-pressed', spinLoop);
@@ -89,6 +97,7 @@ function spinAnim() {
   requestAnimationFrame(spinAnim);
 }
 
+// --- PULSE LINES ---
 btnPulse.addEventListener('click', () => {
   pulseActive = !pulseActive;
   btnPulse.setAttribute('aria-pressed', pulseActive);
@@ -102,6 +111,7 @@ function pulseAnim() {
   requestAnimationFrame(pulseAnim);
 }
 
+// --- STROBE ---
 btnStrobe.addEventListener('click', () => {
   strobeActive = !strobeActive;
   btnStrobe.setAttribute('aria-pressed', strobeActive);
@@ -114,6 +124,7 @@ function strobeAnim() {
   setTimeout(strobeAnim, 60);
 }
 
+// --- COLOR CYCLE ---
 btnCycle.addEventListener('click', () => {
   cycleActive = !cycleActive;
   btnCycle.setAttribute('aria-pressed', cycleActive);
@@ -127,6 +138,7 @@ function cycleAnim() {
   requestAnimationFrame(cycleAnim);
 }
 
+// --- MELTDOWN WARP ---
 btnMeltdown.addEventListener('click', () => {
   meltdownActive = !meltdownActive;
   btnMeltdown.setAttribute('aria-pressed', meltdownActive);
@@ -143,6 +155,7 @@ function meltdownAnim() {
   requestAnimationFrame(meltdownAnim);
 }
 
+// --- STOP EVERYTHING ---
 btnStop.addEventListener('click', () => {
   stopAll = true;
   spinLoop = pulseActive = strobeActive = cycleActive = meltdownActive = false;
@@ -153,15 +166,15 @@ btnStop.addEventListener('click', () => {
   root.style.removeProperty('--sc');
   root.style.removeProperty('--line-color');
   root.style.setProperty('--period', '4px');
-  setTimeout(() => stopAll = false, 500);
+  setTimeout(() => { stopAll = false; lava(); }, 600);
 });
 
+// --- DRAW MODE ---
 btnDraw.addEventListener('click', () => {
-  btnDraw.setAttribute('aria-pressed', btnDraw.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
   drawMode = !drawMode;
+  btnDraw.setAttribute('aria-pressed', drawMode);
 });
 
-let drawMode = false;
 canvas.addEventListener('mousemove', e => {
   if (!drawMode || !e.buttons) return;
   ctx.fillStyle = `hsl(${(e.clientX + e.clientY) % 360},100%,60%)`;
@@ -170,6 +183,7 @@ canvas.addEventListener('mousemove', e => {
   ctx.fill();
 });
 
+// --- SAVE SCREENSHOT ---
 btnSave.addEventListener('click', () => {
   const link = document.createElement('a');
   link.download = 'dead-tv.png';
@@ -177,5 +191,5 @@ btnSave.addEventListener('click', () => {
   link.click();
 });
 
-// Start background
+// Start background render
 lava();
