@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DEAD CAM — GLITCH BLEND</title>
+<title>DEAD CAM — USER OVERLAY</title>
 <style>
   html, body {
     margin: 0;
@@ -51,6 +51,9 @@
     transition: opacity 0.1s;
     pointer-events: none;
   }
+  input[type="file"] {
+    display: none;
+  }
 </style>
 </head>
 <body>
@@ -64,7 +67,8 @@
   <label>Noise <input type="range" id="noiseRange" min="0" max="1" step="0.01" value="0.1"></label>
   <label>RGB Shift <input type="range" id="rgbShiftRange" min="0" max="10" step="1" value="3"></label>
   <label>Pixelation <input type="range" id="pixelRange" min="1" max="10" step="1" value="1"></label>
-  <button id="overlayBtn">👁 Overlay</button>
+  <button id="overlayBtn">👁 Upload Overlay</button>
+  <input type="file" id="overlayInput" accept="image/*">
   <button id="fullscreenBtn">⛶ Fullscreen</button>
   <button id="screenshotBtn">📸 Screenshot</button>
 </div>
@@ -82,10 +86,21 @@ let rgbShift = 3;
 let pixelSize = 1;
 let overlayOn = false;
 
-// Load overlay image
-const overlay = new Image();
-overlay.src = "/media/images/1000020223.png";
-overlay.onload = () => console.log("Overlay loaded:", overlay.src);
+let overlay = new Image();
+
+// handle file upload
+const overlayInput = document.getElementById("overlayInput");
+document.getElementById("overlayBtn").onclick = () => overlayInput.click();
+overlayInput.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = event => {
+    overlay.src = event.target.result;
+    overlayOn = true;
+  };
+  reader.readAsDataURL(file);
+};
 
 // Request camera
 navigator.mediaDevices.getUserMedia({ video: true, audio: false })
@@ -152,7 +167,7 @@ function draw() {
 
   ctx.putImageData(frame, 0, 0);
 
-  // Overlay effect
+  // Overlay effect (if active)
   if (overlayOn && overlay.complete) {
     const t = Date.now() * 0.001;
     const jitterX = Math.sin(t * 5) * 10 * Math.random();
@@ -188,7 +203,6 @@ function draw() {
 // Controls
 document.getElementById("invertBtn").onclick = () => invert = !invert;
 document.getElementById("glitchBtn").onclick = () => glitchMode = !glitchMode;
-document.getElementById("overlayBtn").onclick = () => overlayOn = !overlayOn;
 document.getElementById("noiseRange").oninput = e => noiseAmount = parseFloat(e.target.value);
 document.getElementById("rgbShiftRange").oninput = e => rgbShift = parseInt(e.target.value);
 document.getElementById("pixelRange").oninput = e => pixelSize = parseInt(e.target.value);
