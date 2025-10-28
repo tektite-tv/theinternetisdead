@@ -19,19 +19,20 @@
     background: black;
   }
   #controls {
-  position: fixed; /* so it never scrolls away */
-  bottom: 20px; /* give it breathing room */
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid #00ff99;
-  border-radius: 8px;
-  padding: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  z-index: 9999;
-}
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #00ff99;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+  }
   #controls.hidden {
     opacity: 0;
     pointer-events: none;
@@ -59,17 +60,54 @@
     display: none;
   }
 
-  @media (max-height: 800px) {
-  #controls {
-    transform: translate(-50%, 0);
-    bottom: 10px;
-    scale: 0.9;
+  /* Intro overlay */
+  #intro {
+    position: fixed;
+    inset: 0;
+    background: black;
+    color: #00ff99;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px;
+    z-index: 10000;
+    font-size: 1.1rem;
   }
-}
+  #intro button {
+    margin-top: 20px;
+    font-size: 1rem;
+    padding: 8px 16px;
+    background: #00ff99;
+    color: black;
+    border: 1px solid #00ff99;
+    cursor: pointer;
+  }
+  #intro button:hover {
+    background: black;
+    color: #00ff99;
+  }
 
+  @media (max-height: 800px) {
+    #controls {
+      transform: translate(-50%, 0);
+      bottom: 10px;
+      scale: 0.9;
+    }
+  }
 </style>
 </head>
 <body>
+<div id="intro">
+  <p>⚠️ WARNING ⚠️<br><br>
+  The webmaster cannot view your camera feed.<br>
+  This is purely for your private glitchcore entertainment.<br><br>
+  You have been warned about nothing.<br><br>
+  <strong>Enjoy!</strong></p>
+  <button id="startBtn">Enable Camera</button>
+</div>
+
 <video id="video" autoplay playsinline muted style="display:none"></video>
 <canvas id="canvas"></canvas>
 <div id="flash"></div>
@@ -92,6 +130,7 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const flash = document.getElementById("flash");
 const controls = document.getElementById("controls");
+const intro = document.getElementById("intro");
 
 let invert = false;
 let glitchMode = false;
@@ -100,10 +139,9 @@ let rgbShift = 3;
 let pixelSize = 1;
 let overlayOn = false;
 let controlsVisible = true;
-
 let overlay = new Image();
 
-// Handle overlay upload
+// Overlay upload
 const overlayInput = document.getElementById("overlayInput");
 document.getElementById("overlayBtn").onclick = () => overlayInput.click();
 overlayInput.onchange = e => {
@@ -117,18 +155,25 @@ overlayInput.onchange = e => {
   reader.readAsDataURL(file);
 };
 
-// Request camera
-navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-  .then(stream => {
-    video.srcObject = stream;
-    video.play();
-    video.addEventListener("loadeddata", () => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      draw();
-    });
-  })
-  .catch(err => alert("Camera access failed: " + err));
+// Start button triggers camera
+document.getElementById("startBtn").onclick = () => {
+  intro.style.display = "none";
+  enableCamera();
+};
+
+function enableCamera() {
+  navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    .then(stream => {
+      video.srcObject = stream;
+      video.play();
+      video.addEventListener("loadeddata", () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        draw();
+      });
+    })
+    .catch(err => alert("Camera access failed: " + err));
+}
 
 function draw() {
   const w = canvas.width;
@@ -151,7 +196,6 @@ function draw() {
   let frame = ctx.getImageData(0, 0, w, h);
   let d = frame.data;
 
-  // Invert
   if (invert) {
     for (let i = 0; i < d.length; i += 4) {
       d[i] = 255 - d[i];
@@ -160,7 +204,7 @@ function draw() {
     }
   }
 
-  // RGB Shift
+  // RGB shift
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4;
@@ -197,7 +241,6 @@ function draw() {
     ctx.globalCompositeOperation = "source-over";
   }
 
-  // Glitch slices
   if (glitchMode && Math.random() > 0.85) {
     const sliceHeight = 5 + Math.random() * 50;
     const y = Math.random() * h;
@@ -221,7 +264,6 @@ document.getElementById("glitchBtn").onclick = () => glitchMode = !glitchMode;
 document.getElementById("noiseRange").oninput = e => noiseAmount = parseFloat(e.target.value);
 document.getElementById("rgbShiftRange").oninput = e => rgbShift = parseInt(e.target.value);
 document.getElementById("pixelRange").oninput = e => pixelSize = parseInt(e.target.value);
-
 document.getElementById("screenshotBtn").onclick = () => {
   flash.style.opacity = 1;
   setTimeout(() => flash.style.opacity = 0, 100);
@@ -230,7 +272,6 @@ document.getElementById("screenshotBtn").onclick = () => {
   link.href = canvas.toDataURL("image/png");
   link.click();
 };
-
 document.getElementById("fullscreenBtn").onclick = () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen();
   else document.exitFullscreen();
