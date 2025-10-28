@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DEAD CAM</title>
+<title>DEAD CAM — GLITCH BLEND</title>
 <style>
   html, body {
     margin: 0;
@@ -16,7 +16,6 @@
     width: 100vw;
     height: 100vh;
     display: block;
-    object-fit: cover;
     background: black;
   }
   #controls {
@@ -62,9 +61,7 @@
 <div id="controls">
   <button id="glitchBtn">⚡ Glitch</button>
   <button id="invertBtn">Invert</button>
-  <label>Noise <input type="range" id="noiseRange" min="0" max="1" step="0.01" value="0.1"></label>
-  <label>RGB Shift <input type="range" id="rgbShiftRange" min="0" max="10" step="1" value="3"></label>
-  <label>Pixelation <input type="range" id="pixelRange" min="1" max="10" step="1" value="1"></label>
+  <label>Blend <input type="range" id="blendRange" min="0" max="1" step="0.01" value="0.5"></label>
   <button id="fullscreenBtn">⛶ Fullscreen</button>
   <button id="screenshotBtn">📸 Screenshot</button>
 </div>
@@ -77,9 +74,13 @@ const flash = document.getElementById("flash");
 
 let invert = false;
 let glitchMode = false;
-let noiseAmount = 0.1;
-let rgbShift = 3;
-let pixelSize = 1;
+let blendAmount = 0.5;
+let frameCount = 0;
+
+// Load overlay image
+const overlay = new Image();
+overlay.src = "/media/images/1000020223.png";
+overlay.onload = () => console.log("Overlay loaded");
 
 // Request camera
 navigator.mediaDevices.getUserMedia({ video: true, audio: false })
@@ -92,9 +93,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: false })
       draw();
     });
   })
-  .catch(err => {
-    alert("Camera access failed: " + err);
-  });
+  .catch(err => alert("Camera access failed: " + err));
 
 function draw() {
   const w = canvas.width;
@@ -104,20 +103,13 @@ function draw() {
     return;
   }
 
-  // pixelation
-  if (pixelSize > 1) {
-    const scaledW = w / pixelSize, scaledH = h / pixelSize;
-    ctx.drawImage(video, 0, 0, scaledW, scaledH);
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(canvas, 0, 0, scaledW, scaledH, 0, 0, w, h);
-  } else {
-    ctx.drawImage(video, 0, 0, w, h);
-  }
+  ctx.drawImage(video, 0, 0, w, h);
 
+  // Grab current frame
   let frame = ctx.getImageData(0, 0, w, h);
   let d = frame.data;
 
-  // invert
+  // Invert effect
   if (invert) {
     for (let i = 0; i < d.length; i += 4) {
       d[i] = 255 - d[i];
@@ -126,35 +118,34 @@ function draw() {
     }
   }
 
-  // RGB shift
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
-      const shift = rgbShift | 0;
-      if (x + shift < w) {
-        const j = (y * w + (x + shift)) * 4;
-        d[i] = d[j];
-      }
-    }
+  ctx.putImageData(frame, 0, 0);
+
+  // Blend overlay
+  if (overlay.complete) {
+    const t = Date.now() * 0.001;
+    const jitterX = Math.sin(t * 5) * 10 * Math.random();
+    const jitterY = Math.cos(t * 7) * 10 * Math.random();
+    const overlayScale = 1 + 0.05 * Math.sin(t * 2);
+    const ow = w * overlayScale;
+    const oh = h * overlayScale;
+
+    ctx.globalCompositeOperation = "screen";
+    ctx.globalAlpha = blendAmount * (0.7 + 0.3 * Math.sin(t * 3 + Math.random() * 2));
+
+    const offsetX = (w - ow) / 2 + jitterX;
+    const offsetY = (h - oh) / 2 + jitterY;
+    ctx.drawImage(overlay, offsetX, offsetY, ow, oh);
+
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
   }
 
-  // Glitch mode
-  if (glitchMode && Math.random() > 0.8) {
+  // Glitch slice effect
+  if (glitchMode && Math.random() > 0.85) {
     const sliceHeight = 5 + Math.random() * 50;
     const y = Math.random() * h;
-    ctx.putImageData(frame, 0, 0);
     ctx.drawImage(canvas, 0, y, w, sliceHeight, Math.random() * 20 - 10, y, w, sliceHeight);
   }
-
-  // Static noise
-  for (let i = 0; i < d.length; i += 4) {
-    if (Math.random() < noiseAmount) {
-      let val = Math.random() * 255;
-      d[i] = val; d[i + 1] = val; d[i + 2] = val;
-    }
-  }
-
-  ctx.putImageData(frame, 0, 0);
 
   // Scanlines
   ctx.globalAlpha = 0.15;
@@ -164,21 +155,20 @@ function draw() {
   }
   ctx.globalAlpha = 1;
 
+  frameCount++;
   requestAnimationFrame(draw);
 }
 
 // Controls
 document.getElementById("invertBtn").onclick = () => invert = !invert;
 document.getElementById("glitchBtn").onclick = () => glitchMode = !glitchMode;
-document.getElementById("noiseRange").oninput = e => noiseAmount = parseFloat(e.target.value);
-document.getElementById("rgbShiftRange").oninput = e => rgbShift = parseInt(e.target.value);
-document.getElementById("pixelRange").oninput = e => pixelSize = parseInt(e.target.value);
+document.getElementById("blendRange").oninput = e => blendAmount = parseFloat(e.target.value);
 
 document.getElementById("screenshotBtn").onclick = () => {
   flash.style.opacity = 1;
   setTimeout(() => flash.style.opacity = 0, 100);
   const link = document.createElement("a");
-  link.download = "deadcam_" + Date.now() + ".png";
+  link.download = "deadcam_blend_" + Date.now() + ".png";
   link.href = canvas.toDataURL("image/png");
   link.click();
 };
