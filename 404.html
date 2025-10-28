@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>404 — theinternetisdead.org</title>
+  <title>404 (OHNO) theinternetisdead.org</title>
   <link rel="icon" type="image/png" href="/images/face.png" />
   <link rel="stylesheet" href="/css/main.css" />
   <style>
@@ -66,11 +66,18 @@
 
   <main>
     <h1 class="glitch">404 — Page Not Found</h1>
-    <p>The internet is dead, and so is this link.</p>
+    <p id="error-text">The internet is dead, and so is this link.</p>
     <p><a href="/">Return to the homepage</a></p>
   </main>
 
   <div id="footer-placeholder"></div>
+
+  <script>
+    // Display the broken URL dynamically
+    const path = window.location.pathname;
+    const errorText = document.getElementById("error-text");
+    errorText.textContent = `I'm sorry but ${path} does not appear to be a file.`;
+  </script>
 
   <script type="module" src="/js/main.js"></script>
 </body>
