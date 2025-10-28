@@ -17,7 +17,8 @@ import { initScanlines } from "./scanlines.js"; // 👈 New import
  */
 async function loadHeader() {
   try {
-    const res = await fetch("/pages/sections/header.html");
+    // Updated path — header.html is now at the root
+    const res = await fetch("/header.html");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const html = await res.text();
