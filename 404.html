@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — theinternetisdead.org</title>
+  <link rel="icon" type="image/png" href="/images/face.png" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: black;
+      color: #00ff99;
+      font-family: monospace;
+      text-align: center;
+      justify-content: center;
+      align-items: center;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    h1 {
+      font-size: 3rem;
+      color: #ff66cc;
+      text-shadow: 0 0 10px #ff66cc;
+    }
+
+    p {
+      font-size: 1.2rem;
+      color: #00ff99;
+    }
+
+    a {
+      color: #00ff99;
+      text-decoration: underline;
+    }
+
+    a:hover {
+      color: #ff66cc;
+    }
+
+    .glitch {
+      animation: glitch 1.5s infinite;
+    }
+
+    @keyframes glitch {
+      0% { text-shadow: 2px 2px #ff66cc; }
+      25% { text-shadow: -2px -2px #00ff99; }
+      50% { text-shadow: 2px -2px #b3003b; }
+      75% { text-shadow: -2px 2px #ff66cc; }
+      100% { text-shadow: 2px 2px #00ff99; }
+    }
+  </style>
+</head>
+<body>
+  <div id="header-placeholder"></div>
+
+  <main>
+    <h1 class="glitch">404 — Page Not Found</h1>
+    <p>The internet is dead, and so is this link.</p>
+    <p><a href="/">Return to the homepage</a></p>
+  </main>
+
+  <div id="footer-placeholder"></div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
