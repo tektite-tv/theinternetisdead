@@ -82,21 +82,6 @@
   }
   .btn:hover { transform: translateY(-1px); }
 
-  .drawer-toggle {
-    position: absolute;
-    right: 16px;
-    bottom: 16px;
-    z-index: 20;
-    background: rgba(0,0,0,0.85);
-    border: 1px solid #0f0;
-    color: #0f0;
-    padding: 10px 14px;
-    border-radius: 999px;
-    font-size: 14px;
-    cursor: pointer;
-    display: none;
-  }
-
   @media (max-width: 768px) {
     #main-content { height: 100dvh; }
     #main-iframe { height: 100dvh; }
@@ -113,7 +98,6 @@
       </div>
     </div>
 
-    <!-- Controls -->
     <form class="controls" id="controlsDesktop" onsubmit="return false" aria-label="Controls">
       <label for="angle">
         Rotate:
@@ -134,7 +118,9 @@
   </div>
 
 <script>
-// --- FULLSCREEN BUTTON SETUP ---
+// --- FULLSCREEN BUTTON SETUP + 'H' TOGGLE ---
+const controlsDesktop = document.getElementById('controlsDesktop');
+
 const btnFullscreen = document.createElement('button');
 btnFullscreen.id = 'btnFullscreen';
 btnFullscreen.textContent = '⛶ Fullscreen';
@@ -172,6 +158,7 @@ Object.assign(btnExit.style, {
 });
 document.body.appendChild(btnExit);
 
+// Fullscreen logic
 btnFullscreen.addEventListener('click', () => {
   const iframe = document.querySelector('iframe') || document.documentElement;
   if (iframe.requestFullscreen) iframe.requestFullscreen();
@@ -191,7 +178,22 @@ document.addEventListener('fullscreenchange', () => {
   btnFullscreen.style.display = inFullscreen ? 'none' : 'block';
 });
 
-// --- Rest of your animation + controls logic ---
+// --- 'H' TOGGLE FOR CONTROLS ---
+let controlsHidden = false;
+
+function toggleControls() {
+  controlsHidden = !controlsHidden;
+  controlsDesktop.style.display = controlsHidden ? 'none' : '';
+  btnFullscreen.style.display = controlsHidden ? 'none' : (document.fullscreenElement ? 'none' : 'block');
+  if (document.fullscreenElement) btnExit.style.display = controlsHidden ? 'none' : 'block';
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'h') {
+    e.preventDefault();
+    toggleControls();
+  }
+});
 </script>
 </body>
 </html>
