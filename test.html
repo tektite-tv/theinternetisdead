@@ -12,15 +12,11 @@
   }
 
   html, body {
-  margin: 0;
-  overflow: hidden;
-  background:
-  linear-gradient(to bottom, rgba(40,80,40,0.6) 0%, rgba(70,50,30,0.9) 100%),
-  url('https://upload.wikimedia.org/wikipedia/commons/8/89/Grass_texture.jpg');
-background-size: cover;
-background-blend-mode: multiply;
-  font-family: monospace;
-}
+    margin: 0;
+    overflow: hidden;
+    font-family: monospace;
+    background: #3b2b1c; /* fallback dirt tone */
+  }
 
   canvas { display: block; }
 
@@ -62,6 +58,7 @@ background-blend-mode: multiply;
 <div id="message">YOU DIED</div>
 <div id="subtext">Press any key to revive</div>
 <canvas id="game"></canvas>
+
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -73,11 +70,18 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Images
+// Load images
+const bgImg = new Image();
+bgImg.src = "https://upload.wikimedia.org/wikipedia/commons/8/89/Grass_texture.jpg";
 const playerImg = new Image();
 playerImg.src = "/media/images/gifs/bananarama.gif";
 const enemyImg = new Image();
 enemyImg.src = "/media/images/gifs/skeleton.gif";
+
+let bgPattern = null;
+bgImg.onload = () => {
+  bgPattern = ctx.createPattern(bgImg, "repeat");
+};
 
 // Player
 const player = {
@@ -197,8 +201,13 @@ function update() {
 
 // Draw
 function draw() {
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(0,0,w,h);
+  if (bgPattern) {
+    ctx.fillStyle = bgPattern;
+    ctx.fillRect(0, 0, w, h);
+  } else {
+    ctx.fillStyle = '#3b2b1c';
+    ctx.fillRect(0, 0, w, h);
+  }
 
   if (!player.dead) {
     ctx.drawImage(playerImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
