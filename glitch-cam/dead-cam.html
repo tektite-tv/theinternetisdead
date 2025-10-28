@@ -19,20 +19,19 @@
     background: black;
   }
   #controls {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid #00ff99;
-    border-radius: 8px;
-    padding: 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    z-index: 999;
-    transition: opacity 0.3s ease;
-  }
+  position: fixed; /* so it never scrolls away */
+  bottom: 20px; /* give it breathing room */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #00ff99;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  z-index: 9999;
+}
   #controls.hidden {
     opacity: 0;
     pointer-events: none;
