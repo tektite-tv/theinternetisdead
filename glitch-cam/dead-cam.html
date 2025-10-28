@@ -61,7 +61,10 @@
 <div id="controls">
   <button id="glitchBtn">⚡ Glitch</button>
   <button id="invertBtn">Invert</button>
-  <label>Blend <input type="range" id="blendRange" min="0" max="1" step="0.01" value="0.5"></label>
+  <label>Noise <input type="range" id="noiseRange" min="0" max="1" step="0.01" value="0.1"></label>
+  <label>RGB Shift <input type="range" id="rgbShiftRange" min="0" max="10" step="1" value="3"></label>
+  <label>Pixelation <input type="range" id="pixelRange" min="1" max="10" step="1" value="1"></label>
+  <button id="overlayBtn">👁 Overlay</button>
   <button id="fullscreenBtn">⛶ Fullscreen</button>
   <button id="screenshotBtn">📸 Screenshot</button>
 </div>
@@ -74,13 +77,15 @@ const flash = document.getElementById("flash");
 
 let invert = false;
 let glitchMode = false;
-let blendAmount = 0.5;
-let frameCount = 0;
+let noiseAmount = 0.1;
+let rgbShift = 3;
+let pixelSize = 1;
+let overlayOn = false;
 
 // Load overlay image
 const overlay = new Image();
 overlay.src = "/media/images/1000020223.png";
-overlay.onload = () => console.log("Overlay loaded");
+overlay.onload = () => console.log("Overlay loaded:", overlay.src);
 
 // Request camera
 navigator.mediaDevices.getUserMedia({ video: true, audio: false })
@@ -103,13 +108,20 @@ function draw() {
     return;
   }
 
-  ctx.drawImage(video, 0, 0, w, h);
+  // pixelation
+  if (pixelSize > 1) {
+    const scaledW = w / pixelSize, scaledH = h / pixelSize;
+    ctx.drawImage(video, 0, 0, scaledW, scaledH);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(canvas, 0, 0, scaledW, scaledH, 0, 0, w, h);
+  } else {
+    ctx.drawImage(video, 0, 0, w, h);
+  }
 
-  // Grab current frame
   let frame = ctx.getImageData(0, 0, w, h);
   let d = frame.data;
 
-  // Invert effect
+  // invert
   if (invert) {
     for (let i = 0; i < d.length; i += 4) {
       d[i] = 255 - d[i];
@@ -118,29 +130,44 @@ function draw() {
     }
   }
 
+  // RGB shift
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const shift = rgbShift | 0;
+      if (x + shift < w) {
+        const j = (y * w + (x + shift)) * 4;
+        d[i] = d[j];
+      }
+    }
+  }
+
+  // Static noise
+  for (let i = 0; i < d.length; i += 4) {
+    if (Math.random() < noiseAmount) {
+      const val = Math.random() * 255;
+      d[i] = val; d[i + 1] = val; d[i + 2] = val;
+    }
+  }
+
   ctx.putImageData(frame, 0, 0);
 
-  // Blend overlay
-  if (overlay.complete) {
+  // Overlay effect
+  if (overlayOn && overlay.complete) {
     const t = Date.now() * 0.001;
     const jitterX = Math.sin(t * 5) * 10 * Math.random();
     const jitterY = Math.cos(t * 7) * 10 * Math.random();
     const overlayScale = 1 + 0.05 * Math.sin(t * 2);
     const ow = w * overlayScale;
     const oh = h * overlayScale;
-
     ctx.globalCompositeOperation = "screen";
-    ctx.globalAlpha = blendAmount * (0.7 + 0.3 * Math.sin(t * 3 + Math.random() * 2));
-
-    const offsetX = (w - ow) / 2 + jitterX;
-    const offsetY = (h - oh) / 2 + jitterY;
-    ctx.drawImage(overlay, offsetX, offsetY, ow, oh);
-
+    ctx.globalAlpha = 0.4 + 0.3 * Math.sin(t * 3 + Math.random() * 2);
+    ctx.drawImage(overlay, (w - ow) / 2 + jitterX, (h - oh) / 2 + jitterY, ow, oh);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
   }
 
-  // Glitch slice effect
+  // Glitch slices
   if (glitchMode && Math.random() > 0.85) {
     const sliceHeight = 5 + Math.random() * 50;
     const y = Math.random() * h;
@@ -155,30 +182,29 @@ function draw() {
   }
   ctx.globalAlpha = 1;
 
-  frameCount++;
   requestAnimationFrame(draw);
 }
 
 // Controls
 document.getElementById("invertBtn").onclick = () => invert = !invert;
 document.getElementById("glitchBtn").onclick = () => glitchMode = !glitchMode;
-document.getElementById("blendRange").oninput = e => blendAmount = parseFloat(e.target.value);
+document.getElementById("overlayBtn").onclick = () => overlayOn = !overlayOn;
+document.getElementById("noiseRange").oninput = e => noiseAmount = parseFloat(e.target.value);
+document.getElementById("rgbShiftRange").oninput = e => rgbShift = parseInt(e.target.value);
+document.getElementById("pixelRange").oninput = e => pixelSize = parseInt(e.target.value);
 
 document.getElementById("screenshotBtn").onclick = () => {
   flash.style.opacity = 1;
   setTimeout(() => flash.style.opacity = 0, 100);
   const link = document.createElement("a");
-  link.download = "deadcam_blend_" + Date.now() + ".png";
+  link.download = "deadcam_" + Date.now() + ".png";
   link.href = canvas.toDataURL("image/png");
   link.click();
 };
 
 document.getElementById("fullscreenBtn").onclick = () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
 };
 </script>
 </body>
