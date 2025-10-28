@@ -17,7 +17,6 @@ import { initScanlines } from "./scanlines.js"; // 👈 New import
  */
 async function loadHeader() {
   try {
-    // Updated path — header.html is now at the root
     const res = await fetch("/header.html");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -28,19 +27,56 @@ async function loadHeader() {
       return;
     }
 
-    // Inject header into page
     placeholder.innerHTML = html;
 
-    // Wait one frame for DOM paint before initializing dependent scripts
+    // Load header.css dynamically if it exists
+    if (!document.querySelector('link[href="/header.css"]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "/header.css";
+      document.head.appendChild(link);
+    }
+
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
-    // Initialize header-level scripts
     initMenu();
     initContact();
 
     console.log("✅ Header loaded and menu/contact initialized");
   } catch (err) {
     console.error("❌ Failed to load header:", err);
+  }
+}
+
+/**
+ * Dynamically loads footer.html into #footer-placeholder
+ * and ensures footer.css is linked.
+ */
+async function loadFooter() {
+  try {
+    const res = await fetch("/footer.html");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const html = await res.text();
+    const placeholder = document.getElementById("footer-placeholder");
+    if (!placeholder) {
+      console.warn("⚠️ #footer-placeholder not found in DOM.");
+      return;
+    }
+
+    placeholder.innerHTML = html;
+
+    // Load footer.css dynamically if it exists
+    if (!document.querySelector('link[href="/footer.css"]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "/footer.css";
+      document.head.appendChild(link);
+    }
+
+    console.log("✅ Footer loaded successfully");
+  } catch (err) {
+    console.error("❌ Failed to load footer:", err);
   }
 }
 
@@ -62,30 +98,28 @@ const safeInit = (label, fn) => {
 document.addEventListener("DOMContentLoaded", async () => {
   console.groupCollapsed("🌐 Site Initialization");
 
-  // 1️⃣ Load the site header (needed before initializing menu/contact)
+  // 1️⃣ Load the site header
   await loadHeader();
 
-  // 2️⃣ Build the content index for search + posts
+  // 2️⃣ Load content (posts + videos) and search index
   try {
-    // Load posts and videos in parallel
     await Promise.all([loadPosts(), loadVideos()]);
-
-    // Build search index and expose as window.INDEX
     await buildIndex();
-
-    // Initialize the search AFTER index is ready
     initSearch();
     console.log("✅ Search initialized after index build");
   } catch (err) {
     console.error("❌ Failed loading posts/videos or building index:", err);
   }
 
-  // 3️⃣ Initialize auxiliary UI components
+  // 3️⃣ Initialize UI components
   safeInit("Lightbox", initLightbox);
   safeInit("Post Popup", initPostPopup);
 
   // 4️⃣ Initialize background scanline overlay
   safeInit("Scanlines", initScanlines);
+
+  // 5️⃣ Load footer last
+  await loadFooter();
 
   console.groupEnd();
 });
