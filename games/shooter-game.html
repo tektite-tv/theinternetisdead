@@ -9,12 +9,43 @@
   canvas{display:block;background:#111;}
   #hud{
     position:absolute;top:10px;left:10px;color:#0f0;
-    text-shadow:1px 1px 3px #000;
+    text-shadow:1px 1px 3px #000;z-index:5;
   }
+  #menu,#options{
+    position:absolute;inset:0;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.9);z-index:10;
+  }
+  #menu h1{font-size:48px;color:#0f0;margin-bottom:40px;}
+  button{
+    font-family:inherit;font-size:20px;
+    background:#0f0;color:#000;border:none;
+    padding:10px 30px;margin:10px;cursor:pointer;
+    transition:background .2s;
+  }
+  button:hover{background:#8f8;}
+  #options{display:none;}
+  #options label{color:#0f0;margin:10px;}
+  input{padding:5px;font-size:18px;text-align:center;}
 </style>
 </head>
 <body>
 <div id="hud">Lives: 3 | Kills: 0</div>
+
+<!-- Start Menu -->
+<div id="menu">
+  <h1>Bananarama Arena</h1>
+  <button id="startBtn">Start Game</button>
+  <button id="optionsBtn">Options</button>
+</div>
+
+<!-- Options -->
+<div id="options">
+  <label for="seedInput">Arena Seed:</label>
+  <input id="seedInput" type="text" placeholder="random">
+  <button id="backBtn">Back</button>
+</div>
+
 <canvas id="game"></canvas>
 <script>
 const canvas=document.getElementById("game");
@@ -22,55 +53,79 @@ const ctx=canvas.getContext("2d");
 let w,h;function resize(){w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight;}
 window.addEventListener("resize",resize);resize();
 
-// World parameters
+// Menu handlers
+const menu=document.getElementById("menu");
+const options=document.getElementById("options");
+const seedInput=document.getElementById("seedInput");
+document.getElementById("optionsBtn").onclick=()=>{menu.style.display="none";options.style.display="flex";}
+document.getElementById("backBtn").onclick=()=>{options.style.display="none";menu.style.display="flex";}
+document.getElementById("startBtn").onclick=()=>{
+  menu.style.display="none";options.style.display="none";
+  startGame(seedInput.value.trim());
+};
+window.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    if(menu.style.display==="none"){menu.style.display="flex";}
+    else{menu.style.display="none";}
+  }
+});
+
+// ----------- GAME ------------
 const ARENA_W=4000, ARENA_H=4000;
 const OBSTACLE_COUNT=50;
-const SPAWN_INTERVAL=80; // frames
+const SPAWN_INTERVAL=80;
 const MAX_ENEMIES=80;
 
-const playerImg=new Image(); playerImg.src="/media/images/gifs/bananarama.gif";
-const enemyImg=new Image(); enemyImg.src="/media/images/gifs/skeleton.gif";
+// PRNG based on seed
+function seededRandom(seed){
+  let s=0;for(let i=0;i<seed.length;i++)s+=seed.charCodeAt(i);
+  let x=Math.sin(s)*10000;return()=>{x=Math.sin(x)*10000;return x-Math.floor(x);};
+}
 
-let player={x:ARENA_W/2,y:ARENA_H/2,r:24,speed:4,lives:3,kills:0,walking:false};
-let bullets=[], enemies=[], obstacles=[], frames=0;
-let camX=0,camY=0;
+// Global variables
+let player,bullets,enemies,obstacles,frames,camX,camY;
+const playerImg=new Image();playerImg.src="/media/images/gifs/bananarama.gif";
+const enemyImg=new Image();enemyImg.src="/media/images/gifs/skeleton.gif";
 
-// Create random obstacles
-function spawnObstacles(){
+function init(seed=""){
+  player={x:ARENA_W/2,y:ARENA_H/2,r:24,speed:4,lives:3,kills:0,walking:false};
+  bullets=[];enemies=[];obstacles=[];frames=0;camX=0;camY=0;
+  const rnd = seed?seededRandom(seed):Math.random;
   for(let i=0;i<OBSTACLE_COUNT;i++){
+    const r = seed?rnd():Math.random();
+    const rx=seed?rnd():Math.random();
     obstacles.push({
-      x:Math.random()*ARENA_W,
-      y:Math.random()*ARENA_H,
-      w:100+Math.random()*200,
-      h:60+Math.random()*100
+      x:(seed?rx:r)*ARENA_W,
+      y:(seed?r:rx)*ARENA_H,
+      w:100+(seed?rnd():Math.random())*200,
+      h:60+(seed?rnd():Math.random())*100
     });
   }
 }
-spawnObstacles();
 
-// Controls
+// Input
 const keys={};
 window.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
 window.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 canvas.addEventListener("click",shoot);
 function shoot(e){
+  if(menu.style.display!=="none")return;
   const rect=canvas.getBoundingClientRect();
   const mx=e.clientX-rect.left,my=e.clientY-rect.top;
   const angle=Math.atan2(my-h/2,mx-w/2);
   bullets.push({x:player.x,y:player.y,dx:Math.cos(angle)*10,dy:Math.sin(angle)*10});
 }
 
-// Collision
+// Collisions
 function collidesRect(x,y,r,rect){
   return x+r>rect.x && x-r<rect.x+rect.w && y+r>rect.y && y-r<rect.y+rect.h;
 }
 function collides(x,y,r){
-  for(const o of obstacles)
-    if(collidesRect(x,y,r,o))return true;
+  for(const o of obstacles)if(collidesRect(x,y,r,o))return true;
   return false;
 }
 
-// Enemy spawning
+// Enemies
 function spawnEnemy(){
   const side=Math.floor(Math.random()*4);
   let x,y;
@@ -81,10 +136,11 @@ function spawnEnemy(){
   enemies.push({x,y,r:24,hp:3});
 }
 
+function startGame(seed){init(seed);menu.style.display="none";loop();}
+
 // Update
 function update(){
   frames++;
-  // Player move
   let nx=player.x,ny=player.y;
   if(keys['w'])ny-=player.speed;
   if(keys['s'])ny+=player.speed;
@@ -93,14 +149,11 @@ function update(){
   player.walking = keys['w']||keys['a']||keys['s']||keys['d'];
   if(!collides(nx,ny,player.r)){player.x=nx;player.y=ny;}
 
-  // Bullets
   bullets.forEach(b=>{b.x+=b.dx;b.y+=b.dy;});
   bullets=bullets.filter(b=>b.x>0&&b.x<ARENA_W&&b.y>0&&b.y<ARENA_H&&!collides(b.x,b.y,4));
 
-  // Spawn enemies
-  if(frames%SPAWN_INTERVAL===0 && enemies.length<MAX_ENEMIES) spawnEnemy();
+  if(frames%SPAWN_INTERVAL===0 && enemies.length<MAX_ENEMIES)spawnEnemy();
 
-  // Enemies move
   enemies.forEach(e=>{
     const dx=player.x-e.x,dy=player.y-e.y;
     const dist=Math.hypot(dx,dy);
@@ -108,7 +161,6 @@ function update(){
     if(!collides(nx,ny,e.r)){e.x=nx;e.y=ny;}
   });
 
-  // Bullet hits
   bullets.forEach((b,bi)=>{
     enemies.forEach((e,ei)=>{
       const dx=b.x-e.x,dy=b.y-e.y;
@@ -118,17 +170,14 @@ function update(){
     });
   });
 
-  // Enemy hits player
   enemies.forEach(e=>{
     if(Math.hypot(e.x-player.x,e.y-player.y)<e.r+player.r){
       player.lives--;
-      enemies=[];
-      player.x=ARENA_W/2;player.y=ARENA_H/2;
+      enemies=[];player.x=ARENA_W/2;player.y=ARENA_H/2;
     }
   });
 
-  camX=player.x-w/2;
-  camY=player.y-h/2;
+  camX=player.x-w/2;camY=player.y-h/2;
   document.getElementById("hud").textContent=`Lives: ${player.lives} | Kills: ${player.kills}`;
 }
 
@@ -138,24 +187,20 @@ function draw(){
   ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);
   ctx.save();ctx.translate(-camX,-camY);
 
-  // Obstacles
   ctx.fillStyle="#333";
   obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));
 
-  // Bullets
   ctx.fillStyle="#ff0";
   bullets.forEach(b=>ctx.fillRect(b.x-2,b.y-2,4,4));
 
-  // Enemies
   enemies.forEach(e=>{
     ctx.drawImage(enemyImg,e.x-e.r,e.y-e.r,e.r*2,e.r*2);
   });
 
-  // Player wobble animation
   t+=0.05;
-  const speed = player.walking ? 6 : 3;
-  const pulse = 1 + Math.sin(t*speed)*0.05;
-  const tilt = Math.sin(t*2)*0.15;
+  const speed=player.walking?6:3;
+  const pulse=1+Math.sin(t*speed)*0.05;
+  const tilt=Math.sin(t*2)*0.15;
   ctx.save();
   ctx.translate(player.x,player.y);
   ctx.rotate(tilt);
@@ -167,8 +212,11 @@ function draw(){
 }
 
 // Loop
-function loop(){update();draw();requestAnimationFrame(loop);}
-loop();
+let running=false;
+function loop(){
+  if(menu.style.display!=="none")return;
+  update();draw();requestAnimationFrame(loop);
+}
 </script>
 </body>
 </html>
