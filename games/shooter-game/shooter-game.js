@@ -1,9 +1,9 @@
 /* ===========================================================
-   Bananarama Apocalypse v3 — "Boss Mode & Time Itself"
+   Bananarama Apocalypse v4 — "Background Upload & Chaos Rising"
    ===========================================================
-   ✦ Boss Mode button spawns the final boss immediately
-   ✦ Timer bottom-right counts up from 0.0 seconds
-   ✦ ESC pauses all motion and freezes damage ticks
+   ✦ Upload custom background (supports images & GIFs)
+   ✦ Boss Mode button still summons instant doom
+   ✦ ESC pauses; timer bottom-right
    =========================================================== */
 
 const canvas = document.getElementById("gameCanvas");
@@ -32,8 +32,13 @@ const optionsBtn = document.getElementById("optionsBtn");
 const optionsMenu = document.getElementById("optionsMenu");
 const backBtn = document.getElementById("backBtn");
 const bgSelect = document.getElementById("bgSelect");
+const uploadBtn = document.getElementById("uploadBgBtn");
+const bgUpload = document.getElementById("bgUpload");
 
 let backgroundColor = "#000";
+let customBg = null;
+let customBgURL = null;
+
 document.getElementById("ui").classList.add("hidden");
 
 startBtn.onclick = () => {
@@ -52,16 +57,12 @@ bossBtn.onclick = () => {
   gameRunning = true;
   spawnBoss();
 
-  // spawn player at least 400px away from boss, in a random direction
   const angle = Math.random() * Math.PI * 2;
   const safeDist = 400;
   player.x = boss.x + Math.cos(angle) * safeDist;
   player.y = boss.y + Math.sin(angle) * safeDist;
-
-  // clamp to screen edges
   player.x = Math.max(100, Math.min(canvas.width - 100, player.x));
   player.y = Math.max(100, Math.min(canvas.height - 100, player.y));
-
   startTimer();
 };
 
@@ -82,6 +83,23 @@ backBtn.onclick = () => {
 bgSelect.onchange = () => {
   const colors = { black: "#000", green: "#002b00", blue: "#001133", purple: "#150021" };
   backgroundColor = colors[bgSelect.value] || "#000";
+  customBg = null;
+};
+
+// --- BACKGROUND UPLOAD ---
+uploadBtn.onclick = () => bgUpload.click();
+
+bgUpload.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (customBgURL) URL.revokeObjectURL(customBgURL);
+  customBgURL = URL.createObjectURL(file);
+  const img = new Image();
+  img.src = customBgURL;
+  img.onload = () => {
+    customBg = img;
+    backgroundColor = null;
+  };
 };
 
 // --- GAME VARIABLES ---
@@ -210,7 +228,6 @@ function update(){
   if (!gameRunning||gameOver||bossDefeated||!imagesLoaded||paused) return;
   frameCount++;
 
-  // Player move
   let dx=0,dy=0;
   if(keys.w)dy-=player.speed;if(keys.s)dy+=player.speed;if(keys.a)dx-=player.speed;if(keys.d)dx+=player.speed;
   player.x=Math.max(0,Math.min(canvas.width,player.x+dx));player.y=Math.max(0,Math.min(canvas.height,player.y+dy));
@@ -219,18 +236,15 @@ function update(){
   if(pushCooldown){cooldownTimer--;if(cooldownTimer<=0){pushCooldown=false;pushCharges=3;}}
   aimAngle=Math.atan2(mouseY-player.y,mouseX-player.x);
 
-  // Update bullets and lightning
   bullets.forEach(b=>{b.x+=Math.cos(b.angle)*b.speed;b.y+=Math.sin(b.angle)*b.speed;b.life--;});
   bullets=bullets.filter(b=>b.life>0);
   lightnings.forEach(l=>{l.x+=Math.cos(l.angle)*l.speed;l.y+=Math.sin(l.angle)*l.speed;l.life--;});
   lightnings=lightnings.filter(l=>l.life>0);
 
-  // Waves
   if(enemies.length===0&&kills<50)spawnEnemyWave(5+wave*2);
   if(kills>=wave*10&&kills<50){wave++;spawnEnemyWave(5+wave*3);}
   if(!bossActive&&kills>=50)spawnBoss();
 
-  // Enemies
   enemies.forEach((e,i)=>{
     if(e.knock>0){e.x+=e.vx;e.y+=e.vy;e.vx*=0.88;e.vy*=0.88;e.knock--;}
     else{const a=Math.atan2(player.y-e.y,player.x-e.x);e.x+=Math.cos(a)*e.speed;e.y+=Math.sin(a)*e.speed;}
@@ -239,7 +253,6 @@ function update(){
     bullets.forEach((b,bi)=>{if(Math.hypot(b.x-e.x,b.y-e.y)<e.size/2){e.health-=20;bullets.splice(bi,1);if(e.health<=0){kills++;enemies.splice(i,1);}}});
   });
 
-  // Boss logic
   if(bossActive&&boss){
     boss.x+=Math.sin(frameCount/60)*2; boss.y+=Math.cos(frameCount/80)*1.5;
     boss.orbiters.forEach(o=>{
@@ -271,14 +284,19 @@ function update(){
     bullets.forEach((b,bi)=>{if(Math.hypot(b.x-boss.x,b.y-boss.y)<boss.size/2){boss.health-=10;bullets.splice(bi,1);if(boss.health<=0){bossDefeated=true;bossActive=false;}}});
   }
 
-  // Lightning hits player
   lightnings.forEach(l=>{if(Math.hypot(player.x-l.x,player.y-l.y)<60){health-=7;if(health<=0)endGame();}});
   ui.kills.textContent=kills;ui.deaths.textContent=deaths;ui.health.textContent=Math.max(0,Math.floor(health));
 }
 
 // --- DRAW ---
 function draw(){
-  ctx.fillStyle=backgroundColor;ctx.fillRect(0,0,canvas.width,canvas.height);
+  if (customBg) {
+    ctx.drawImage(customBg, 0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle=backgroundColor||"#000";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
   if(!imagesLoaded){ctx.fillStyle="#00ff99";ctx.font="30px monospace";ctx.fillText("Loading GIFs...",canvas.width/2-100,canvas.height/2);return;}
   if(!gameRunning)return;
 
@@ -304,7 +322,6 @@ function draw(){
     drawBossHealthBar();
   }
 
-  // Timer display
   ctx.fillStyle="#00ff99";
   ctx.font="20px monospace";
   ctx.textAlign="right";
