@@ -10,14 +10,14 @@ const ui = {
   restart: document.getElementById("restart")
 };
 
-// Correct path to your gifs
+// correct GIF directory
 const basePath = "/media/images/gifs/";
 const enemyFiles = [
   "dancing-guy.gif", "dancingzoidberg.gif", "dragon.gif", "eyes.gif",
   "fatspiderman.gif", "firework.gif", "frog.gif", "keyboard_smash.gif", "skeleton.gif"
 ];
 
-// Image loader
+// image loader
 function loadImage(src) {
   return new Promise(resolve => {
     const img = new Image();
@@ -59,13 +59,13 @@ const player = {
   x: canvas.width / 2,
   y: canvas.height / 2,
   speed: 4,
-  size: 64,
-  angle: 0
+  size: 64
 };
 let mouseX = canvas.width / 2;
 let mouseY = canvas.height / 2;
+let aimAngle = 0;
 
-// aim + shoot with mouse
+// mouse aim + shoot
 canvas.addEventListener("mousemove", e => {
   mouseX = e.clientX;
   mouseY = e.clientY;
@@ -103,6 +103,7 @@ function shootBullet(angle) {
     speed: 12,
     life: 60
   });
+  aimAngle = angle;
 }
 
 function update() {
@@ -118,8 +119,8 @@ function update() {
   player.x = Math.max(0, Math.min(canvas.width, player.x + dx));
   player.y = Math.max(0, Math.min(canvas.height, player.y + dy));
 
-  // aim rotation
-  player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+  // update aim
+  aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
   // update bullets
   bullets.forEach(b => {
@@ -161,6 +162,27 @@ function update() {
   ui.health.textContent = Math.max(0, Math.floor(health));
 }
 
+function drawArrow(x, y, angle) {
+  const arrowLength = 40;
+  const arrowWidth = 20;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+
+  ctx.beginPath();
+  ctx.moveTo(arrowLength, 0);
+  ctx.lineTo(0, arrowWidth / 2);
+  ctx.lineTo(0, -arrowWidth / 2);
+  ctx.closePath();
+
+  ctx.fillStyle = "#ff66cc";
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = "#ff66cc";
+  ctx.fill();
+  ctx.restore();
+}
+
 function draw() {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -172,12 +194,11 @@ function draw() {
     return;
   }
 
-  // player
-  ctx.save();
-  ctx.translate(player.x, player.y);
-  ctx.rotate(player.angle);
-  ctx.drawImage(playerImg, -player.size / 2, -player.size / 2, player.size, player.size);
-  ctx.restore();
+  // player (upright)
+  ctx.drawImage(playerImg, player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
+
+  // draw arrow indicating aim direction
+  drawArrow(player.x, player.y - player.size / 2 - 10, aimAngle);
 
   // bullets with glow
   bullets.forEach(b => {
