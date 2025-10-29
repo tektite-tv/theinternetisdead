@@ -27,6 +27,17 @@
     #header-placeholder {
       width: 100%;
     }
+
+    main {
+  position: relative;              /* allows scanline canvas inside */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow: hidden;                /* keeps scanlines inside */
+  background: transparent;         /* let them show through */
+  z-index: 0;
+}
   </style>
 </head>
 <body>
