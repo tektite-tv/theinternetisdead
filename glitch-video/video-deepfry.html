@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VIDEO DEEPFRY: UNHOLY EDITION</title>
+<title>VIDEO DEEPFRY — SMALL & CURSED</title>
 <style>
   html, body {
     margin: 0;
@@ -15,30 +15,22 @@
 
   body {
     display: flex;
+    flex-direction: row;
     height: 100vh;
     width: 100vw;
   }
 
-  /* Horrifying sidebar */
+  /* ugly neon sidebar */
   #controls {
-    width: 280px;
-    background: repeating-linear-gradient(45deg, #000 0 10px, #00ff99 10px 20px);
-    color: #00ff99;
-    border-right: 4px double #ff00ff;
-    padding: 8px;
-    box-shadow: inset 0 0 30px #00ff99;
+    width: 260px;
+    background: repeating-linear-gradient(90deg, #000 0 12px, #00ff99 12px 24px);
+    border-right: 3px double #ff00ff;
+    padding: 10px;
+    box-shadow: inset 0 0 25px #00ff99;
     display: flex;
     flex-direction: column;
     gap: 6px;
     overflow-y: auto;
-    scrollbar-color: #00ff99 #000;
-  }
-
-  #controls::-webkit-scrollbar {
-    width: 8px;
-  }
-  #controls::-webkit-scrollbar-thumb {
-    background: #00ff99;
   }
 
   button, input[type=range], label {
@@ -49,21 +41,20 @@
     font-family: monospace;
     font-size: 0.8rem;
   }
-
   button:hover {
     background: #00ff99;
     color: black;
   }
 
-  /* Make the video look like it’s wrong on purpose */
+  /* smaller awkward video zone */
   #canvas {
     flex: 1;
-    height: 92vh;
-    width: 74vw;
-    margin: auto;
-    transform: skew(3deg, -2deg) scaleX(1.1);
-    border: 3px solid #ff00ff;
-    image-rendering: pixelated;
+    width: 60vw;
+    height: 60vh;
+    align-self: center;
+    margin: 0 auto;
+    border: 3px dashed #ff00ff;
+    object-fit: contain;
   }
 
   #flash {
@@ -82,7 +73,7 @@
 </head>
 <body>
 <div id="controls">
-  <h3 style="color:#ff00ff;text-shadow:0 0 10px #00ff99;">💀 DEEPFRY LAB</h3>
+  <h3 style="color:#ff00ff;text-shadow:0 0 8px #00ff99;">💀 DEEPFRY LAB</h3>
   <button id="uploadBtn">🎞 Upload Video</button>
   <input type="file" id="videoInput" accept="video/*">
   <button id="glitchBtn">⚡ Glitch</button>
@@ -95,7 +86,7 @@
   <input type="file" id="overlayInput" accept="image/*">
   <button id="fullscreenBtn">⛶ Fullscreen</button>
   <button id="screenshotBtn">📸 Screenshot</button>
-  <p style="font-size:0.7rem; color:#ff00ff;">Press “H” to hide sidebar (but why would you?)</p>
+  <p style="font-size:0.7rem; color:#ff00ff;">Press “H” to hide sidebar</p>
 </div>
 
 <video id="video" style="display:none" muted></video>
