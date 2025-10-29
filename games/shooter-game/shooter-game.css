@@ -36,3 +36,34 @@ canvas {
   width: 100vw;
   height: 100vh;
 }
+
+#menu {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at center, #000 60%, #111);
+  color: #00ff99;
+  font-family: monospace;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  z-index: 20;
+}
+#menu.hidden, #optionsMenu.hidden, #ui.hidden {
+  display: none;
+}
+#menu button {
+  margin: 10px;
+  background: #00ff99;
+  color: black;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#optionsMenu {
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 8px;
+}
