@@ -11,7 +11,7 @@ const ui = {
 };
 
 // Base path for GIFs
-const basePath = "/media/gifs/";
+const basePath = "/media/images/gifs/";
 const enemyFiles = [
   "dancing-guy.gif", "dancingzoidberg.gif", "dragon.gif", "eyes.gif",
   "fatspiderman.gif", "firework.gif", "frog.gif", "keyboard_smash.gif", "skeleton.gif"
