@@ -24,9 +24,7 @@ const ui = {
 const menu = document.getElementById("menu");
 const startBtn = document.getElementById("startBtn");
 const bossBtn = document.createElement("button");
-bossBtn.textContent = "Boss Mode";
-bossBtn.className = "menu-button";
-menu.appendChild(bossBtn);
+const bossBtn = document.getElementById("bossBtn");
 
 const optionsBtn = document.getElementById("optionsBtn");
 const optionsMenu = document.getElementById("optionsMenu");
