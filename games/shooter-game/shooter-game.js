@@ -51,6 +51,17 @@ bossBtn.onclick = () => {
   resetGame();
   gameRunning = true;
   spawnBoss();
+
+  // spawn player at least 400px away from boss, in a random direction
+  const angle = Math.random() * Math.PI * 2;
+  const safeDist = 400;
+  player.x = boss.x + Math.cos(angle) * safeDist;
+  player.y = boss.y + Math.sin(angle) * safeDist;
+
+  // clamp to screen edges
+  player.x = Math.max(100, Math.min(canvas.width - 100, player.x));
+  player.y = Math.max(100, Math.min(canvas.height - 100, player.y));
+
   startTimer();
 };
 
