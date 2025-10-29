@@ -163,11 +163,16 @@ function update() {
 }
 
 function drawArrow(x, y, angle) {
-  const arrowLength = 40;
-  const arrowWidth = 20;
+  const orbitRadius = player.size * 0.8; // how far from player center
+  const arrowLength = 25;
+  const arrowWidth = 16;
+
+  // compute orbit position
+  const ax = x + Math.cos(angle) * orbitRadius;
+  const ay = y + Math.sin(angle) * orbitRadius;
 
   ctx.save();
-  ctx.translate(x, y);
+  ctx.translate(ax, ay);
   ctx.rotate(angle);
 
   ctx.beginPath();
