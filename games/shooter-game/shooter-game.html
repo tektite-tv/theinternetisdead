@@ -11,8 +11,13 @@
   <!-- Main Menu -->
   <div id="menu">
     <h1>Bananarama Apocalypse</h1>
-    <button id="startBtn">Start Game</button>
-    <button id="optionsBtn">Options</button>
+    <div class="menu-buttons">
+      <button id="startBtn">Start Game</button>
+      <button id="optionsBtn">Options</button>
+    </div>
+
+    <!-- Hover Indicator -->
+    <img id="bananaIndicator" src="/media/images/gifs/bananarama.gif" alt="Banana Indicator" class="hidden">
 
     <!-- Options Menu -->
     <div id="optionsMenu" class="hidden">
@@ -45,5 +50,21 @@
   <canvas id="gameCanvas"></canvas>
 
   <script src="/games/shooter-game/shooter-game.js"></script>
+  <script>
+    // Hover indicator logic
+    const indicator = document.getElementById('bananaIndicator');
+    const buttons = document.querySelectorAll('#menu button');
+    buttons.forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        const rect = btn.getBoundingClientRect();
+        indicator.style.left = `${rect.left - 80}px`;
+        indicator.style.top = `${rect.top - 10}px`;
+        indicator.classList.remove('hidden');
+      });
+      btn.addEventListener('mouseleave', () => {
+        indicator.classList.add('hidden');
+      });
+    });
+  </script>
 </body>
 </html>
