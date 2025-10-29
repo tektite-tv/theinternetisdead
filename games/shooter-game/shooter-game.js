@@ -3,6 +3,7 @@ const ctx = canvas.getContext("2d");
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
+// --- UI ---
 const ui = {
   kills: document.getElementById("kills"),
   deaths: document.getElementById("deaths"),
@@ -10,14 +11,62 @@ const ui = {
   restart: document.getElementById("restart")
 };
 
-// correct GIF directory
+// --- MENU SYSTEM ---
+const menu = document.getElementById("menu");
+const startBtn = document.getElementById("startBtn");
+const optionsBtn = document.getElementById("optionsBtn");
+const optionsMenu = document.getElementById("optionsMenu");
+const backBtn = document.getElementById("backBtn");
+const bgSelect = document.getElementById("bgSelect");
+
+let backgroundColor = "#000";
+
+// hide game UI initially
+document.getElementById("ui").classList.add("hidden");
+
+// menu button logic
+startBtn.onclick = () => {
+  menu.classList.add("hidden");
+  document.getElementById("ui").classList.remove("hidden");
+  gameRunning = true;
+};
+
+optionsBtn.onclick = () => {
+  optionsMenu.classList.remove("hidden");
+  startBtn.style.display = "none";
+  optionsBtn.style.display = "none";
+};
+
+backBtn.onclick = () => {
+  optionsMenu.classList.add("hidden");
+  startBtn.style.display = "inline-block";
+  optionsBtn.style.display = "inline-block";
+};
+
+// background customization
+bgSelect.onchange = () => {
+  const val = bgSelect.value;
+  const colors = {
+    black: "#000",
+    green: "#002b00",
+    blue: "#001133",
+    purple: "#150021"
+  };
+  backgroundColor = colors[val] || "#000";
+};
+
+// --- GAME VARIABLES ---
 const basePath = "/media/images/gifs/";
 const enemyFiles = [
   "dancing-guy.gif", "dancingzoidberg.gif", "dragon.gif", "eyes.gif",
   "fatspiderman.gif", "firework.gif", "frog.gif", "keyboard_smash.gif", "skeleton.gif"
 ];
 
-// image loader
+let imagesLoaded = false;
+let enemyImages = {};
+let playerImg;
+let gameRunning = false;
+
 function loadImage(src) {
   return new Promise(resolve => {
     const img = new Image();
@@ -25,10 +74,6 @@ function loadImage(src) {
     img.onload = () => resolve(img);
   });
 }
-
-let imagesLoaded = false;
-let enemyImages = {};
-let playerImg;
 
 Promise.all([
   loadImage(basePath + "bananarama.gif"),
@@ -50,8 +95,14 @@ let frameCount = 0;
 
 // controls
 const keys = { w: false, a: false, s: false, d: false };
-window.addEventListener("keydown", e => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
-window.addEventListener("keyup", e => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
+window.addEventListener("keydown", e => {
+  if (keys.hasOwnProperty(e.key.toLowerCase()))
+    keys[e.key.toLowerCase()] = true;
+});
+window.addEventListener("keyup", e => {
+  if (keys.hasOwnProperty(e.key.toLowerCase()))
+    keys[e.key.toLowerCase()] = false;
+});
 ui.restart.onclick = resetGame;
 
 // player and aim
@@ -71,7 +122,7 @@ canvas.addEventListener("mousemove", e => {
   mouseY = e.clientY;
 });
 canvas.addEventListener("mousedown", () => {
-  if (!gameOver && imagesLoaded) {
+  if (!gameOver && imagesLoaded && gameRunning) {
     const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
     shootBullet(angle);
   }
@@ -107,7 +158,7 @@ function shootBullet(angle) {
 }
 
 function update() {
-  if (gameOver || !imagesLoaded) return;
+  if (!gameRunning || gameOver || !imagesLoaded) return;
   frameCount++;
 
   // player movement
@@ -162,25 +213,23 @@ function update() {
   ui.health.textContent = Math.max(0, Math.floor(health));
 }
 
+// orbital arrow
 function drawArrow(x, y, angle) {
-  const orbitRadius = player.size * 0.8; // how far from player center
+  const orbitRadius = player.size * 0.8;
   const arrowLength = 25;
   const arrowWidth = 16;
 
-  // compute orbit position
   const ax = x + Math.cos(angle) * orbitRadius;
   const ay = y + Math.sin(angle) * orbitRadius;
 
   ctx.save();
   ctx.translate(ax, ay);
   ctx.rotate(angle);
-
   ctx.beginPath();
   ctx.moveTo(arrowLength, 0);
   ctx.lineTo(0, arrowWidth / 2);
   ctx.lineTo(0, -arrowWidth / 2);
   ctx.closePath();
-
   ctx.fillStyle = "#ff66cc";
   ctx.shadowBlur = 15;
   ctx.shadowColor = "#ff66cc";
@@ -189,7 +238,7 @@ function drawArrow(x, y, angle) {
 }
 
 function draw() {
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (!imagesLoaded) {
@@ -199,13 +248,15 @@ function draw() {
     return;
   }
 
+  if (!gameRunning) return;
+
   // player (upright)
   ctx.drawImage(playerImg, player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
 
-  // draw arrow indicating aim direction
-  drawArrow(player.x, player.y - player.size / 2 - 10, aimAngle);
+  // arrow
+  drawArrow(player.x, player.y, aimAngle);
 
-  // bullets with glow
+  // bullets
   bullets.forEach(b => {
     ctx.save();
     ctx.shadowBlur = 15;
