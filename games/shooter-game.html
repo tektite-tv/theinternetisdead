@@ -5,16 +5,60 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bananarama Maze Pursuit</title>
 <style>
-  html, body { margin:0; overflow:hidden; background:#000; color:#0f0; font-family:monospace; }
+  html,body {
+    margin:0; overflow:hidden; background:#000; color:#0f0;
+    font-family: monospace;
+  }
+  canvas { display:block; background:#111; }
   #hud {
     position:absolute; top:10px; left:10px;
-    text-shadow:1px 1px 3px #000; color:#0f0;
+    color:#0f0; text-shadow:1px 1px 3px #000;
+    z-index:5;
   }
-  canvas { display:block; }
+
+  /* Start screen overlay */
+  #menu, #options {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.9);
+    z-index:10;
+  }
+
+  #menu h1 {
+    font-size:48px; color:#0f0; margin-bottom:40px;
+  }
+  button {
+    font-family:inherit; font-size:20px;
+    background:#0f0; color:#000; border:none;
+    padding:10px 30px; margin:10px; cursor:pointer;
+    transition:background 0.2s;
+  }
+  button:hover { background:#8f8; }
+
+  #options { display:none; }
+  #options label {
+    color:#0f0; font-size:18px; margin-bottom:10px;
+  }
 </style>
 </head>
 <body>
-<div id="hud">Level: 1 | Lives: 3 | Kills: 0</div>
+<div id="hud">Lives: 3 | Monsters: 0</div>
+
+<!-- Start menu -->
+<div id="menu">
+  <h1>Bananarama Maze Pursuit</h1>
+  <button id="startBtn">Start Game</button>
+  <button id="optionsBtn">Options</button>
+</div>
+
+<!-- Options -->
+<div id="options">
+  <label for="bgUpload">Choose Maze Background:</label>
+  <input type="file" id="bgUpload" accept="image/*">
+  <button id="backBtn">Back</button>
+</div>
+
 <canvas id="game"></canvas>
 <script>
 const canvas=document.getElementById("game");
@@ -23,28 +67,57 @@ let w,h;function resize(){w=canvas.width=window.innerWidth;h=canvas.height=windo
 window.addEventListener("resize",resize);resize();
 
 const TILE=32;
-const COLS=Math.floor(w/TILE);
-const ROWS=Math.floor(h/TILE);
+let COLS=Math.floor(w/TILE);
+let ROWS=Math.floor(h/TILE);
 
-// Maze generation: recursive backtracking
+let customBg=null;
+
+// ===== MENU SYSTEM =====
+const menu=document.getElementById("menu");
+const options=document.getElementById("options");
+document.getElementById("optionsBtn").onclick=()=>{menu.style.display="none";options.style.display="flex";}
+document.getElementById("backBtn").onclick=()=>{options.style.display="none";menu.style.display="flex";}
+
+document.getElementById("bgUpload").addEventListener("change",e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{customBg=img;}
+    img.src=reader.result;
+  }
+  reader.readAsDataURL(file);
+});
+
+document.getElementById("startBtn").onclick=()=>{
+  menu.style.display="none";options.style.display="none";
+  startGame();
+};
+window.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ // toggle menu
+    if(menu.style.display==="none"){menu.style.display="flex";}
+    else{menu.style.display="none";}
+  }
+});
+
+// ===== MAZE LOGIC =====
 let maze=[];
 function initMaze(){
   maze=[];
   for(let y=0;y<ROWS;y++){
     let row=[];
-    for(let x=0;x<COLS;x++) row.push({x,y,visited:false,walls:[1,1,1,1]}); // top,right,bottom,left
+    for(let x=0;x<COLS;x++) row.push({x,y,visited:false,walls:[1,1,1,1]});
     maze.push(row);
   }
 }
 function neighbors(cell){
-  const dirs=[
-    [0,-1,0,2],[1,0,1,3],[0,1,2,0],[-1,0,3,1]
-  ];
+  const dirs=[[0,-1,0,2],[1,0,1,3],[0,1,2,0],[-1,0,3,1]];
   return dirs.map(([dx,dy,wall,opp])=>{
     const nx=cell.x+dx,ny=cell.y+dy;
-    if(nx<0||ny<0||nx>=COLS||ny>=ROWS) return null;
+    if(nx<0||ny<0||nx>=COLS||ny>=ROWS)return null;
     return {n:maze[ny][nx],w:wall,o:opp};
-  }).filter(v=>v&& !v.n.visited);
+  }).filter(v=>v&&!v.n.visited);
 }
 function generateMaze(){
   const stack=[];
@@ -63,30 +136,25 @@ function generateMaze(){
     }else stack.pop();
   }
 }
-initMaze();generateMaze();
 
-// Player and monsters
-let player={x:0,y:0,lives:3,kills:0,level:1};
+// ===== GAME OBJECTS =====
+let player={x:0,y:0,lives:3};
 let monsters=[];
-const monsterImg=new Image();
-monsterImg.src="/media/images/gifs/skeleton.gif";
-const playerImg=new Image();
-playerImg.src="/media/images/gifs/bananarama.gif";
+const monsterImg=new Image(); monsterImg.src="/media/images/gifs/skeleton.gif";
+const playerImg=new Image(); playerImg.src="/media/images/gifs/bananarama.gif";
 
 function resetPositions(){
   player.x=0;player.y=0;
   monsters=[];
-  for(let i=0;i<Math.min(5,player.level+2);i++){
+  for(let i=0;i<4;i++){
     monsters.push({
       x:Math.floor(Math.random()*COLS),
       y:Math.floor(Math.random()*ROWS),
-      hp:3+player.level,
-      path:[],
+      path:[]
     });
   }
 }
 
-// A* pathfinding
 function heuristic(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y);}
 function getNeighbors(node){
   const dirs=[[0,-1],[1,0],[0,1],[-1,0]];
@@ -108,17 +176,17 @@ function aStar(start,goal){
     open.sort((a,b)=>fScore[`${a.x},${a.y}`]-fScore[`${b.x},${b.y}`]);
     const current=open.shift();
     if(current.x===goal.x&&current.y===goal.y){
-      let p=[current];
-      while(`${current.x},${current.y}` in cameFrom){
-        current=cameFrom[`${current.x},${current.y}`];
-        p.unshift(current);
+      const path=[current]; let curr=current;
+      while(cameFrom[`${curr.x},${curr.y}`]){
+        curr=cameFrom[`${curr.x},${curr.y}`];
+        path.unshift(curr);
       }
-      return p;
+      return path;
     }
     for(const n of getNeighbors(current)){
       const g=gScore[`${current.x},${current.y}`]+1;
       const key=`${n.x},${n.y}`;
-      if(g< (gScore[key]??Infinity)){
+      if(g<(gScore[key]??Infinity)){
         cameFrom[key]=current;
         gScore[key]=g;
         fScore[key]=g+heuristic(n,goal);
@@ -129,12 +197,8 @@ function aStar(start,goal){
   return [];
 }
 
-// Input
 const keys={};
-window.addEventListener('keydown',e=>{
-  keys[e.key.toLowerCase()]=true;
-  movePlayer();
-});
+window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;movePlayer();});
 window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 
 function movePlayer(){
@@ -144,8 +208,7 @@ function movePlayer(){
       const [dx,dy,wall]=dirs[key];
       const cell=maze[player.y][player.x];
       if(!cell.walls[wall]){
-        player.x+=dx;
-        player.y+=dy;
+        player.x+=dx; player.y+=dy;
       }
       break;
     }
@@ -154,7 +217,7 @@ function movePlayer(){
 
 function updateMonsters(){
   monsters.forEach(m=>{
-    if(m.path.length===0||Math.random()<0.02){
+    if(m.path.length===0||Math.random()<0.05){
       m.path=aStar({x:m.x,y:m.y},{x:player.x,y:player.y});
     }
     if(m.path.length>1){
@@ -164,24 +227,24 @@ function updateMonsters(){
     }
     if(m.x===player.x&&m.y===player.y){
       player.lives--;
-      if(player.lives<=0) resetGame();
-      else resetPositions();
+      if(player.lives<=0)resetGame();else resetPositions();
     }
   });
 }
 
 function resetGame(){
-  player.lives=3;player.kills=0;player.level=1;
-  initMaze();generateMaze();resetPositions();
+  initMaze();generateMaze();
+  player.lives=3;
+  resetPositions();
 }
 
-resetPositions();
-
 function drawMaze(){
-  ctx.fillStyle="#000";
-  ctx.fillRect(0,0,w,h);
-  ctx.strokeStyle="#444";
-  ctx.lineWidth=2;
+  if(customBg){
+    ctx.drawImage(customBg,0,0,w,h);
+  }else{
+    ctx.fillStyle="#111"; ctx.fillRect(0,0,w,h);
+  }
+  ctx.strokeStyle="#888"; ctx.lineWidth=2;
   for(let y=0;y<ROWS;y++){
     for(let x=0;x<COLS;x++){
       const c=maze[y][x];
@@ -197,23 +260,26 @@ function drawMaze(){
 }
 
 function drawEntities(){
-  const px=player.x*TILE+TILE/4,py=player.y*TILE+TILE/4;
-  ctx.drawImage(playerImg,px,py,TILE/2,TILE/2);
+  ctx.drawImage(playerImg,player.x*TILE+TILE/4,player.y*TILE+TILE/4,TILE/2,TILE/2);
   monsters.forEach(m=>{
-    const mx=m.x*TILE+TILE/4,my=m.y*TILE+TILE/4;
-    ctx.drawImage(monsterImg,mx,my,TILE/2,TILE/2);
+    ctx.drawImage(monsterImg,m.x*TILE+TILE/4,m.y*TILE+TILE/4,TILE/2,TILE/2);
   });
 }
 
+function startGame(){
+  initMaze();generateMaze();resetPositions();
+  loop();
+}
+
 function loop(){
-  updateMonsters();
-  ctx.clearRect(0,0,w,h);
-  drawMaze();
-  drawEntities();
-  document.getElementById("hud").textContent=`Lives: ${player.lives} | Monsters: ${monsters.length}`;
+  if(menu.style.display==="none"){
+    updateMonsters();
+    drawMaze();
+    drawEntities();
+    document.getElementById("hud").textContent=`Lives: ${player.lives} | Monsters: ${monsters.length}`;
+  }
   requestAnimationFrame(loop);
 }
-loop();
 </script>
 </body>
 </html>
