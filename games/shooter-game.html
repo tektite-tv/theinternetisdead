@@ -7,53 +7,43 @@
 <style>
   html,body{margin:0;overflow:hidden;background:#000;font-family:monospace;}
   canvas{position:absolute;top:0;left:0;background:#111;z-index:1;}
-  #hud{
-    position:absolute;top:10px;left:10px;color:#0f0;
-    text-shadow:1px 1px 3px #000;z-index:2;
-  }
-  #flash{
-    position:absolute;inset:0;background:#000;opacity:0;
-    z-index:3;pointer-events:none;transition:opacity .5s;
-  }
-  #menu,#options{
+  #hud{position:absolute;top:10px;left:10px;color:#0f0;z-index:2;text-shadow:1px 1px 3px #000;}
+  #flash{position:absolute;inset:0;background:#000;opacity:0;z-index:3;pointer-events:none;transition:opacity .5s;}
+  #menu,#options,#loading{
     position:absolute;inset:0;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.9);z-index:5;
+    background:rgba(0,0,0,0.9);z-index:5;color:#0f0;
   }
-  #menu h1{font-size:48px;color:#0f0;margin-bottom:40px;}
+  #menu h1{font-size:48px;margin-bottom:40px;}
   button{
     font-family:inherit;font-size:20px;background:#0f0;color:#000;
-    border:none;padding:10px 30px;margin:10px;cursor:pointer;
-    transition:background .2s;
+    border:none;padding:10px 30px;margin:10px;cursor:pointer;transition:background .2s;
   }
   button:hover{background:#8f8;}
   #options{display:none;}
-  #options label{color:#0f0;margin:10px;}
   input{padding:5px;font-size:18px;text-align:center;}
+  #loading{display:none;font-size:24px;}
 </style>
 </head>
 <body>
 <div id="hud">Lives: 3 | Kills: 0 | Gun Lv. 1</div>
 <div id="flash"></div>
 
-<!-- Start Menu -->
 <div id="menu">
   <h1>Bananarama CHAOS</h1>
   <button id="startBtn">Start Game</button>
   <button id="optionsBtn">Options</button>
 </div>
-
-<!-- Options -->
 <div id="options">
   <label for="seedInput">Arena Seed:</label>
   <input id="seedInput" type="text" placeholder="random">
   <button id="backBtn">Back</button>
 </div>
+<div id="loading">LOADING...</div>
 
 <canvas id="game"></canvas>
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
 let w,h;function resize(){w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight;}
 window.addEventListener("resize",resize);resize();
 
@@ -61,26 +51,22 @@ const hud=document.getElementById("hud");
 const flash=document.getElementById("flash");
 const menu=document.getElementById("menu");
 const options=document.getElementById("options");
+const loading=document.getElementById("loading");
 const seedInput=document.getElementById("seedInput");
+
 document.getElementById("optionsBtn").onclick=()=>{menu.style.display="none";options.style.display="flex";}
 document.getElementById("backBtn").onclick=()=>{options.style.display="none";menu.style.display="flex";}
-document.getElementById("startBtn").onclick=()=>{
-  menu.style.display="none";options.style.display="none";
-  startGame(seedInput.value.trim());
-};
+document.getElementById("startBtn").onclick=()=>{menu.style.display="none";options.style.display="none";preloadImages(startGame);};
 
 window.addEventListener("keydown",e=>{
   if(e.key==="Escape"){
     const showing=menu.style.display==="flex";
     menu.style.display=showing?"none":"flex";
-    if(!showing) loop(); // resume game
+    if(!showing) loop();
   }
 });
 
-const playerImg=new Image();playerImg.src="/media/gifs/bananarama.gif";
-const bossImg=new Image();bossImg.src="/media/gifs/180px-NO_U_cycle.gif";
-
-const enemyList=[
+const enemyDefs=[
   {file:"/media/gifs/dancing-guy.gif",scale:1.8,speed:1,hp:8},
   {file:"/media/gifs/dancingzoidberg.gif",scale:1.2,speed:2.5,hp:4},
   {file:"/media/gifs/dragon.gif",scale:0.8,speed:3,hp:2},
@@ -89,17 +75,36 @@ const enemyList=[
   {file:"/media/gifs/firework.gif",scale:0.7,speed:3,hp:3},
   {file:"/media/gifs/frog.gif",scale:1,speed:2,hp:4},
   {file:"/media/gifs/keyboard_smash.gif",scale:1.3,speed:2,hp:5},
-  {file:"/media/gifs/skeleton.gif",scale:1,speed:1.8,hp:3},
+  {file:"/media/gifs/skeleton.gif",scale:1,speed:1.8,hp:3}
 ];
-enemyList.forEach(e=>{e.img=new Image();e.img.src=e.file;});
+const bossDef={file:"/media/gifs/180px-NO_U_cycle.gif",r:160,hp:300,speed:1.4};
+const playerImg=new Image();playerImg.src="/media/gifs/bananarama.gif";
+enemyDefs.forEach(e=>e.img=new Image());
+enemyDefs.forEach(e=>e.img.src=e.file);
+const bossImg=new Image();bossImg.src=bossDef.file;
 
-let player,bullets,enemies,obstacles,orbs,boss=null,frames,camX,camY;
+let player,bullets,enemies,obstacles,orbs,boss=null,frames=0,camX=0,camY=0;
 const ARENA_W=4000,ARENA_H=4000,OBSTACLE_COUNT=30,SPAWN_INTERVAL=40,MAX_ENEMIES=80;
 
 function seededRandom(seed){
   let s=0;for(let i=0;i<seed.length;i++)s+=seed.charCodeAt(i);
   let x=Math.sin(s)*10000;
   return ()=>{x=Math.sin(x)*10000;return x-Math.floor(x);};
+}
+
+function preloadImages(callback){
+  loading.style.display="flex";
+  const imgs=[playerImg,bossImg,...enemyDefs.map(e=>e.img)];
+  let loaded=0;
+  imgs.forEach(img=>{
+    if(img.complete) {loaded++; if(loaded===imgs.length) finish();}
+    else img.onload=()=>{loaded++; if(loaded===imgs.length) finish();}
+    img.onerror=()=>{loaded++; if(loaded===imgs.length) finish();}
+  });
+  function finish(){
+    loading.style.display="none";
+    callback(seedInput.value.trim());
+  }
 }
 
 function init(seed){
@@ -110,9 +115,10 @@ function init(seed){
     obstacles.push({x:rnd()*ARENA_W,y:rnd()*ARENA_H,w:100+rnd()*200,h:60+rnd()*100});
   }
 }
+
 function startGame(seed){
   init(seed);
-  for(let i=0;i<15;i++) spawnEnemy();
+  for(let i=0;i<15;i++)spawnEnemy();
   loop();
 }
 
@@ -138,18 +144,18 @@ function collidesRect(x,y,r,rect){return x+r>rect.x&&x-r<rect.x+rect.w&&y+r>rect
 function collides(x,y,r){for(const o of obstacles)if(collidesRect(x,y,r,o))return true;return false;}
 
 function spawnEnemy(){
-  const type=enemyList[Math.floor(Math.random()*enemyList.length)];
+  const type=enemyDefs[Math.floor(Math.random()*enemyDefs.length)];
   const side=Math.floor(Math.random()*4);
   let x,y;
   if(side===0){x=Math.random()*ARENA_W;y=-100;}
   else if(side===1){x=ARENA_W+100;y=Math.random()*ARENA_H;}
   else if(side===2){x=Math.random()*ARENA_W;y=ARENA_H+100;}
   else{x=-100;y=Math.random()*ARENA_H;}
-  enemies.push({x,y,r:24*type.scale,img:type.img,speed:type.speed,hp:type.hp,scale:type.scale});
+  enemies.push({x,y,r:24*type.scale,img:type.img,speed:type.speed,hp:type.hp});
 }
 
 function spawnBoss(){
-  boss={x:player.x-600,y:player.y-600,r:160,img:bossImg,hp:300,speed:1.4,active:true};
+  boss={x:player.x-600,y:player.y-600,...bossDef,img:bossImg,active:true};
   flash.style.opacity=0.8;setTimeout(()=>flash.style.opacity=0,1000);
 }
 
@@ -196,8 +202,7 @@ function update(){
 
   enemies.forEach(e=>{
     if(Math.hypot(e.x-player.x,e.y-player.y)<e.r+player.r){
-      player.lives--;enemies=[];player.x=ARENA_W/2;player.y=ARENA_H/2;
-      for(let i=0;i<10;i++)spawnEnemy();
+      player.lives--;enemies=[];player.x=ARENA_W/2;player.y=ARENA_H/2;for(let i=0;i<10;i++)spawnEnemy();
     }
   });
 
@@ -223,17 +228,20 @@ function draw(){
   ctx.fillStyle="#333";obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));
   ctx.fillStyle="#ff0";bullets.forEach(b=>ctx.fillRect(b.x-2,b.y-2,4,4));
   ctx.fillStyle="#0f0";orbs.forEach(o=>{ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill();});
-  enemies.forEach(e=>ctx.drawImage(e.img,e.x-e.r,e.y-e.r,e.r*2,e.r*2));
-  if(boss&&boss.active)ctx.drawImage(boss.img,boss.x-boss.r,boss.y-boss.r,boss.r*2,boss.r*2);
-  t+=0.05;
-  const pulse=1+Math.sin(t*6)*0.05;
-  ctx.save();ctx.translate(player.x,player.y);ctx.scale(pulse,pulse);
-  ctx.drawImage(playerImg,-player.r,-player.r,player.r*2,player.r*2);
-  ctx.restore();ctx.restore();
+  enemies.forEach(e=>{if(e.img.complete)ctx.drawImage(e.img,e.x-e.r,e.y-e.r,e.r*2,e.r*2);});
+  if(boss&&boss.active&&boss.img.complete)ctx.drawImage(boss.img,boss.x-boss.r,boss.y-boss.r,boss.r*2,boss.r*2);
+  if(playerImg.complete){
+    t+=0.05;
+    const pulse=1+Math.sin(t*6)*0.05;
+    ctx.save();ctx.translate(player.x,player.y);ctx.scale(pulse,pulse);
+    ctx.drawImage(playerImg,-player.r,-player.r,player.r*2,player.r*2);
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 function loop(){
-  if(menu.style.display!=="none")return; // pause when menu open
+  if(menu.style.display!=="none")return;
   update();draw();requestAnimationFrame(loop);
 }
 </script>
