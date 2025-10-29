@@ -9,7 +9,7 @@ import { initContact } from "./contact.js";
 import { initMenu } from "./menu.js";
 import { initLightbox } from "./lightbox.js";
 import { initPostPopup } from "./postPopup.js";
-import { initScanlines } from "./scanlines.js"; // 👈 New import
+import { initScanlines } from "./scanlines.js";
 
 /**
  * Dynamically loads header.html into #header-placeholder
@@ -17,7 +17,7 @@ import { initScanlines } from "./scanlines.js"; // 👈 New import
  */
 async function loadHeader() {
   try {
-    const res = await fetch("/header.html");
+    const res = await fetch(`/header.html?cacheBust=${Date.now()}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const html = await res.text();
@@ -29,20 +29,22 @@ async function loadHeader() {
 
     placeholder.innerHTML = html;
 
-    // Load header.css dynamically if it exists
-    if (!document.querySelector('link[href="/header.css"]')) {
+    // Ensure header.css loads only once
+    if (!document.querySelector('link[href="/css/header.css"]')) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = "/header.css";
+      link.href = "/css/header.css";
       document.head.appendChild(link);
     }
 
+    // Wait for layout reflow before initializing scripts
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
-    initMenu();
-    initContact();
+    // Initialize dependent modules
+    safeInit("Menu", initMenu);
+    safeInit("Contact", initContact);
 
-    console.log("✅ Header loaded and menu/contact initialized");
+    console.log("✅ Header loaded and initialized successfully");
   } catch (err) {
     console.error("❌ Failed to load header:", err);
   }
@@ -54,7 +56,7 @@ async function loadHeader() {
  */
 async function loadFooter() {
   try {
-    const res = await fetch("/footer.html");
+    const res = await fetch(`/footer.html?cacheBust=${Date.now()}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const html = await res.text();
@@ -66,11 +68,10 @@ async function loadFooter() {
 
     placeholder.innerHTML = html;
 
-    // Load footer.css dynamically if it exists
-    if (!document.querySelector('link[href="/footer.css"]')) {
+    if (!document.querySelector('link[href="/css/footer.css"]')) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = "/footer.css";
+      link.href = "/css/footer.css";
       document.head.appendChild(link);
     }
 
@@ -81,16 +82,16 @@ async function loadFooter() {
 }
 
 /**
- * Utility wrapper for safer function initialization
+ * Safe function initializer wrapper
  */
-const safeInit = (label, fn) => {
+function safeInit(label, fn) {
   try {
     fn?.();
     console.log(`✅ ${label} initialized`);
   } catch (e) {
     console.error(`❌ ${label} failed:`, e);
   }
-};
+}
 
 /**
  * Main site initialization — executed once DOM is ready.
@@ -98,10 +99,10 @@ const safeInit = (label, fn) => {
 document.addEventListener("DOMContentLoaded", async () => {
   console.groupCollapsed("🌐 Site Initialization");
 
-  // 1️⃣ Load the site header
+  // 1️⃣ Load header
   await loadHeader();
 
-  // 2️⃣ Load content (posts + videos) and search index
+  // 2️⃣ Load main content (posts, videos) and search
   try {
     await Promise.all([loadPosts(), loadVideos()]);
     await buildIndex();
@@ -114,11 +115,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 3️⃣ Initialize UI components
   safeInit("Lightbox", initLightbox);
   safeInit("Post Popup", initPostPopup);
-
-  // 4️⃣ Initialize background scanline overlay
   safeInit("Scanlines", initScanlines);
 
-  // 5️⃣ Load footer last
+  // 4️⃣ Load footer
   await loadFooter();
 
   console.groupEnd();
