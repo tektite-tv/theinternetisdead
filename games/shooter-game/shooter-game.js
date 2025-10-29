@@ -20,11 +20,8 @@ const backBtn = document.getElementById("backBtn");
 const bgSelect = document.getElementById("bgSelect");
 
 let backgroundColor = "#000";
-
-// hide game UI initially
 document.getElementById("ui").classList.add("hidden");
 
-// menu button logic
 startBtn.onclick = () => {
   menu.classList.add("hidden");
   document.getElementById("ui").classList.remove("hidden");
@@ -43,7 +40,6 @@ backBtn.onclick = () => {
   optionsBtn.style.display = "inline-block";
 };
 
-// background customization
 bgSelect.onchange = () => {
   const val = bgSelect.value;
   const colors = {
@@ -64,8 +60,10 @@ const enemyFiles = [
 
 let imagesLoaded = false;
 let enemyImages = {};
-let playerImg;
+let playerImg, bossImg;
 let gameRunning = false;
+let bossActive = false;
+let bossDefeated = false;
 
 function loadImage(src) {
   return new Promise(resolve => {
@@ -77,10 +75,12 @@ function loadImage(src) {
 
 Promise.all([
   loadImage(basePath + "bananarama.gif"),
+  loadImage(basePath + "180px-NO_U_cycle.gif"),
   ...enemyFiles.map(f => loadImage(basePath + f))
 ]).then(loaded => {
   playerImg = loaded[0];
-  enemyFiles.forEach((f, i) => (enemyImages[f] = loaded[i + 1]));
+  bossImg = loaded[1];
+  enemyFiles.forEach((f, i) => (enemyImages[f] = loaded[i + 2]));
   imagesLoaded = true;
   init();
 });
@@ -92,16 +92,15 @@ let deaths = 0;
 let health = 100;
 let gameOver = false;
 let frameCount = 0;
+let wave = 1;
 
 // controls
 const keys = { w: false, a: false, s: false, d: false };
 window.addEventListener("keydown", e => {
-  if (keys.hasOwnProperty(e.key.toLowerCase()))
-    keys[e.key.toLowerCase()] = true;
+  if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
 });
 window.addEventListener("keyup", e => {
-  if (keys.hasOwnProperty(e.key.toLowerCase()))
-    keys[e.key.toLowerCase()] = false;
+  if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
 });
 ui.restart.onclick = resetGame;
 
@@ -128,6 +127,10 @@ canvas.addEventListener("mousedown", () => {
   }
 });
 
+function spawnEnemyWave(count) {
+  for (let i = 0; i < count; i++) spawnEnemy();
+}
+
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4);
   let x, y;
@@ -137,13 +140,10 @@ function spawnEnemy() {
   if (side === 3) { x = -50; y = Math.random() * canvas.height; }
 
   const size = Math.random() * 40 + 40;
-  const hp = size * 0.5;
+  const hp = size * (0.4 + wave * 0.1);
+  const speed = 0.8 + Math.random() * 0.5 + wave * 0.1;
   const file = enemyFiles[Math.floor(Math.random() * enemyFiles.length)];
-  enemies.push({
-    x, y, size, speed: 0.8 + Math.random() * 1.2,
-    img: enemyImages[file],
-    health: hp
-  });
+  enemies.push({ x, y, size, speed, img: enemyImages[file], health: hp });
 }
 
 function shootBullet(angle) {
@@ -157,8 +157,36 @@ function shootBullet(angle) {
   aimAngle = angle;
 }
 
+function spawnBoss() {
+  bossActive = true;
+  const boss = {
+    x: canvas.width / 2,
+    y: canvas.height / 3,
+    size: 180,
+    speed: 1.2,
+    img: bossImg,
+    health: 1000,
+    isBoss: true,
+    orbiters: []
+  };
+
+  // spawn 4 mini orbiters
+  for (let i = 0; i < 4; i++) {
+    boss.orbiters.push({
+      angle: (Math.PI / 2) * i,
+      radius: 150,
+      size: 90,
+      speed: 0.1,
+      img: bossImg,
+      health: 150
+    });
+  }
+
+  enemies.push(boss);
+}
+
 function update() {
-  if (!gameRunning || gameOver || !imagesLoaded) return;
+  if (!gameRunning || gameOver || bossDefeated || !imagesLoaded) return;
   frameCount++;
 
   // player movement
@@ -170,29 +198,51 @@ function update() {
   player.x = Math.max(0, Math.min(canvas.width, player.x + dx));
   player.y = Math.max(0, Math.min(canvas.height, player.y + dy));
 
-  // update aim
+  // aim
   aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
-  // update bullets
+  // bullets
   bullets.forEach(b => {
     b.x += Math.cos(b.angle) * b.speed;
     b.y += Math.sin(b.angle) * b.speed;
     b.life--;
   });
-  bullets = bullets.filter(b => b.life > 0 && b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height);
+  bullets = bullets.filter(b => b.life > 0);
 
-  // enemies
+  // waves
+  if (!bossActive && kills >= wave * 10) {
+    wave++;
+    spawnEnemyWave(5 + wave * 2);
+  }
+
+  // spawn boss
+  if (!bossActive && kills >= 50) spawnBoss();
+
+  // enemies update
   enemies.forEach((e, i) => {
-    const angle = Math.atan2(player.y - e.y, player.x - e.x);
-    e.x += Math.cos(angle) * e.speed;
-    e.y += Math.sin(angle) * e.speed;
+    if (e.isBoss) {
+      e.x += Math.sin(frameCount / 60) * 2;
+      e.y += Math.cos(frameCount / 80) * 1.5;
 
+      e.orbiters.forEach(o => {
+        o.angle += o.speed;
+        o.x = e.x + Math.cos(o.angle) * o.radius;
+        o.y = e.y + Math.sin(o.angle) * o.radius;
+      });
+    } else {
+      const angle = Math.atan2(player.y - e.y, player.x - e.x);
+      e.x += Math.cos(angle) * e.speed;
+      e.y += Math.sin(angle) * e.speed;
+    }
+
+    // collision with player
     const dist = Math.hypot(player.x - e.x, player.y - e.y);
     if (dist < e.size / 2 + player.size / 2) {
       health -= 0.5;
       if (health <= 0) endGame();
     }
 
+    // bullet collisions
     bullets.forEach((b, bi) => {
       const hitDist = Math.hypot(b.x - e.x, b.y - e.y);
       if (hitDist < e.size / 2) {
@@ -200,25 +250,25 @@ function update() {
         bullets.splice(bi, 1);
         if (e.health <= 0) {
           kills++;
+          if (e.isBoss) {
+            bossActive = false;
+            bossDefeated = true;
+          }
           enemies.splice(i, 1);
         }
       }
     });
   });
 
-  if (frameCount % 60 === 0 && enemies.length < 15) spawnEnemy();
-
   ui.kills.textContent = kills;
   ui.deaths.textContent = deaths;
   ui.health.textContent = Math.max(0, Math.floor(health));
 }
 
-// orbital arrow
 function drawArrow(x, y, angle) {
   const orbitRadius = player.size * 0.8;
   const arrowLength = 25;
   const arrowWidth = 16;
-
   const ax = x + Math.cos(angle) * orbitRadius;
   const ay = y + Math.sin(angle) * orbitRadius;
 
@@ -250,13 +300,9 @@ function draw() {
 
   if (!gameRunning) return;
 
-  // player (upright)
   ctx.drawImage(playerImg, player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
-
-  // arrow
   drawArrow(player.x, player.y, aimAngle);
 
-  // bullets
   bullets.forEach(b => {
     ctx.save();
     ctx.shadowBlur = 15;
@@ -268,12 +314,26 @@ function draw() {
     ctx.restore();
   });
 
-  // enemies
   enemies.forEach(e => {
-    if (e.img) ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
+    if (e.isBoss) {
+      ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
+      e.orbiters.forEach(o => {
+        ctx.save();
+        ctx.translate(o.x, o.y);
+        ctx.rotate(o.angle * 10);
+        ctx.drawImage(o.img, -o.size / 2, -o.size / 2, o.size, o.size);
+        ctx.restore();
+      });
+    } else if (e.img) {
+      ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
+    }
   });
 
-  if (gameOver) {
+  if (bossDefeated) {
+    ctx.fillStyle = "#00ff99";
+    ctx.font = "80px Impact";
+    ctx.fillText("YOU WIN", canvas.width / 2 - 200, canvas.height / 2);
+  } else if (gameOver) {
     ctx.fillStyle = "red";
     ctx.font = "80px Impact";
     ctx.fillText("YOU DIED", canvas.width / 2 - 180, canvas.height / 2);
@@ -300,6 +360,9 @@ function resetGame() {
   kills = 0;
   health = 100;
   gameOver = false;
+  bossActive = false;
+  bossDefeated = false;
+  wave = 1;
 }
 
 function init() {
