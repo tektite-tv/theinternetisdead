@@ -1,9 +1,9 @@
 /* ===========================================================
-   Bananarama Apocalypse v8 — "Wrath of the Big Banana"
+   Bananarama Apocalypse v9 — "Wrath of the Magenta Banana"
    ===========================================================
    ✦ Twin bosses for INSANE mode
    ✦ Boss + orbiter health bars restored
-   ✦ Enrage phase when orbiters die
+   ✦ Enrage phase flashes magenta and adds erratic patterned motion
    ✦ Bullet collisions, GIF backgrounds, pushback, stamina
    =========================================================== */
 
@@ -14,7 +14,12 @@ fitCanvas();
 addEventListener("resize",fitCanvas);
 
 // --- UI ---
-const ui={kills:document.getElementById("kills"),deaths:document.getElementById("deaths"),health:document.getElementById("health"),restart:document.getElementById("restart")};
+const ui = {
+  kills: document.getElementById("kills"),
+  deaths: document.getElementById("deaths"),
+  health: document.getElementById("health"),
+  restart: document.getElementById("restart")
+};
 
 // --- MENU ---
 const menu=document.getElementById("menu");
@@ -181,7 +186,21 @@ function shootBullet(angle){
 
 // --- BOSSES ---
 function spawnBoss(x=canvas.width/2,y=canvas.height/3){
-  const b={x,y,size:180,speed:1.2,img:bossImg,health:1000,orbiters:[],flashTimer:0,shootTimer:150,enraged:false,colorFlash:0};
+  const b={
+    x,y,
+    originX:x,
+    originY:y,
+    size:180,
+    speed:1.2,
+    img:bossImg,
+    health:1000,
+    orbiters:[],
+    flashTimer:0,
+    shootTimer:150,
+    enraged:false,
+    colorFlash:0,
+    patternTimer:0
+  };
   for(let i=0;i<4;i++){
     b.orbiters.push({angle:(Math.PI/2)*i,radius:150,size:90,speed:0.13,img:bossImg,health:150,vx:0,vy:0,knock:0,shootTimer:Math.random()*100});
   }
@@ -235,8 +254,25 @@ function update(){
 
   // --- BOSS BEHAVIOR ---
   bosses.forEach((boss,bi)=>{
-    boss.x+=Math.sin(frameCount/60+bi)*2;
-    boss.y+=Math.cos(frameCount/80+bi)*1.5;
+    boss.patternTimer += 0.03;
+
+    if(!boss.enraged){
+      // Normal floaty movement
+      boss.x += Math.sin(frameCount/60+bi)*2;
+      boss.y += Math.cos(frameCount/80+bi)*1.5;
+    } else {
+      // Enraged patterned chaos
+      const t = boss.patternTimer;
+      const offsetX = Math.sin(t*2) * 120 + Math.sin(t*3.3) * 60;
+      const offsetY = Math.cos(t*1.5) * 90 + Math.sin(t*2.7) * 45;
+      boss.x = boss.originX + offsetX;
+      boss.y = boss.originY + offsetY;
+      if(frameCount % 120 === 0){ // occasional velocity kick for flavor
+        boss.originX += (Math.random()-0.5)*200;
+        boss.originY += (Math.random()-0.5)*150;
+      }
+    }
+
     boss.orbiters=boss.orbiters.filter(o=>o.health>0);
 
     // Enrage when orbiters die
@@ -307,13 +343,13 @@ function draw(){
 
   // --- BOSSES + HEALTH BARS ---
   bosses.forEach(boss=>{
-    if(boss.enraged&&boss.colorFlash>0){
+    if(boss.enraged){
       ctx.save();
-      ctx.globalAlpha=0.8+Math.sin(frameCount/3)*0.2;
+      ctx.globalAlpha=0.9+Math.sin(frameCount/3)*0.1;
       ctx.filter="hue-rotate(300deg) saturate(3)";
       ctx.drawImage(boss.img,boss.x-boss.size/2,boss.y-boss.size/2,boss.size*1.1,boss.size*1.1);
       ctx.restore();
-    }else{
+    } else {
       ctx.drawImage(boss.img,boss.x-boss.size/2,boss.y-boss.size/2,boss.size,boss.size);
     }
 
@@ -342,33 +378,4 @@ function draw(){
   drawBar("HEALTH",20,50,health,100,"#ff3333",true);
   drawBar("STAMINA",20,25,stamina,100,pushCooldown?"#333333":"#00ccff",true);
   ctx.fillStyle="#00ff99";ctx.font="20px monospace";ctx.textAlign="right";
-  ctx.fillText(`Wave ${wave} | Time: ${gameTimer.toFixed(1)}s`,canvas.width-20,canvas.height-20);
-  if(gameOver){ctx.fillStyle="red";ctx.font="80px Impact";ctx.textAlign="center";ctx.fillText("YOU DIED",canvas.width/2,canvas.height/2);}
-}
-
-// --- UTIL ---
-function drawBar(label,x,y,value,max,color,alignBottom=false){
-  const w=220,h=15,baseY=alignBottom?canvas.height-y-h:y;
-  ctx.fillStyle="black";ctx.fillRect(x-2,baseY-2,w+4,h+4);
-  ctx.fillStyle=color;ctx.fillRect(x,baseY,(value/max)*w,h);
-  ctx.strokeStyle="#00ff99";ctx.strokeRect(x-2,baseY-2,w+4,h+4);
-  ctx.fillStyle="#00ff99";ctx.font="12px monospace";ctx.fillText(label,x,baseY-6);
-}
-function pushBackEnemies(){
-  if(pushCooldown||pushCharges<=0||stamina<20)return;
-  pushCharges--;stamina=Math.max(0,stamina-35);pushFxTimer=18;
-  const radius=320,maxKick=18,stunFrames=16;
-  enemies.forEach(e=>{
-    const dx=e.x-player.x,dy=e.y-player.y,dist=Math.hypot(dx,dy)||0.001;
-    if(dist<radius){const f=maxKick*(1-dist/radius);e.vx+=(dx/dist)*f;e.vy+=(dy/dist)*f;e.knock=stunFrames;}
-  });
-  if(pushCharges===0){pushCooldown=true;cooldownTimer=300;}
-}
-function endGame(){if(!gameOver){gameOver=true;deaths++;ui.deaths.textContent=deaths;stopTimer();}}
-function resetGame(){
-  enemies.length=0;bullets.length=0;lightnings.length=0;bosses.length=0;
-  kills=0;health=100;stamina=100;gameOver=false;pushCharges=3;pushCooldown=false;
-  cooldownTimer=0;pushFxTimer=0;wave=1;paused=false;stopTimer();
-}
-function init(){requestAnimationFrame(loop);}
-function loop(){update();draw();requestAnimationFrame(loop);}
+  ctx.fillText(`Wave
