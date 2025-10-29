@@ -212,7 +212,6 @@ function pushBackEnemies() {
     }
   });
 
-  // visual flash
   ctx.save();
   ctx.fillStyle = "rgba(255,255,255,0.2)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -220,7 +219,7 @@ function pushBackEnemies() {
 
   if (pushCharges === 0) {
     pushCooldown = true;
-    cooldownTimer = 300; // frames (~5 seconds)
+    cooldownTimer = 300; // ~5s
   }
 }
 
@@ -229,7 +228,7 @@ function update() {
   if (!gameRunning || gameOver || bossDefeated || !imagesLoaded) return;
   frameCount++;
 
-  // player movement
+  // movement
   let dx = 0, dy = 0;
   if (keys.w) dy -= player.speed;
   if (keys.s) dy += player.speed;
@@ -238,7 +237,6 @@ function update() {
   player.x = Math.max(0, Math.min(canvas.width, player.x + dx));
   player.y = Math.max(0, Math.min(canvas.height, player.y + dy));
 
-  // pushback ability
   if (keys.space) {
     pushBackEnemies();
     keys.space = false;
@@ -256,7 +254,6 @@ function update() {
 
   aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
-  // bullets
   bullets.forEach(b => {
     b.x += Math.cos(b.angle) * b.speed;
     b.y += Math.sin(b.angle) * b.speed;
@@ -333,18 +330,20 @@ function update() {
 }
 
 // --- DRAW ---
-function drawBar(label, x, y, value, max, color) {
-  const width = 200;
+function drawBar(label, x, y, value, max, color, alignBottom = false) {
+  const width = 220;
   const height = 15;
+  const baseY = alignBottom ? canvas.height - y - height : y;
+
   ctx.fillStyle = "black";
-  ctx.fillRect(x - 2, y - 2, width + 4, height + 4);
+  ctx.fillRect(x - 2, baseY - 2, width + 4, height + 4);
   ctx.fillStyle = color;
-  ctx.fillRect(x, y, (value / max) * width, height);
+  ctx.fillRect(x, baseY, (value / max) * width, height);
   ctx.strokeStyle = "#00ff99";
-  ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
+  ctx.strokeRect(x - 2, baseY - 2, width + 4, height + 4);
   ctx.fillStyle = "#00ff99";
   ctx.font = "12px monospace";
-  ctx.fillText(label, x, y - 4);
+  ctx.fillText(label, x, baseY - 6);
 }
 
 function drawBossHealthBar() {
@@ -354,7 +353,6 @@ function drawBossHealthBar() {
   const x = (canvas.width - barWidth) / 2;
   const y = 30;
   const pct = Math.max(0, boss.health / 1000);
-
   ctx.fillStyle = "black";
   ctx.fillRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
   ctx.fillStyle = "red";
@@ -369,7 +367,6 @@ function drawArrow(x, y, angle) {
   const arrowWidth = 16;
   const ax = x + Math.cos(angle) * orbitRadius;
   const ay = y + Math.sin(angle) * orbitRadius;
-
   ctx.save();
   ctx.translate(ax, ay);
   ctx.rotate(angle);
@@ -388,21 +385,20 @@ function drawArrow(x, y, angle) {
 function draw() {
   ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   if (!imagesLoaded) {
     ctx.fillStyle = "#00ff99";
     ctx.font = "30px monospace";
     ctx.fillText("Loading GIFs...", canvas.width / 2 - 100, canvas.height / 2);
     return;
   }
-
   if (!gameRunning) return;
 
   ctx.drawImage(playerImg, player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
   drawArrow(player.x, player.y, aimAngle);
 
-  drawBar("HEALTH", 20, 20, health, 100, "#ff3333");
-  drawBar("STAMINA", 20, 45, stamina, 100, pushCooldown ? "#333333" : "#00ccff");
+  // --- bottom-left bars ---
+  drawBar("HEALTH", 20, 50, health, 100, "#ff3333", true);
+  drawBar("STAMINA", 20, 25, stamina, 100, pushCooldown ? "#333333" : "#00ccff", true);
 
   bullets.forEach(b => {
     ctx.save();
@@ -442,18 +438,10 @@ function draw() {
   }
 }
 
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
+function loop() { update(); draw(); requestAnimationFrame(loop); }
 
 function endGame() {
-  if (!gameOver) {
-    gameOver = true;
-    deaths++;
-    ui.deaths.textContent = deaths;
-  }
+  if (!gameOver) { gameOver = true; deaths++; ui.deaths.textContent = deaths; }
 }
 
 function resetGame() {
@@ -471,6 +459,4 @@ function resetGame() {
   boss = null;
 }
 
-function init() {
-  loop();
-}
+function init() { loop(); }
