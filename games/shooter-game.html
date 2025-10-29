@@ -66,9 +66,9 @@ const ctx=canvas.getContext("2d");
 let w,h;function resize(){w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight;}
 window.addEventListener("resize",resize);resize();
 
-const TILE=32;
-let COLS=Math.floor(w/TILE);
-let ROWS=Math.floor(h/TILE);
+const TILE = 64; // bigger tiles, bigger everything
+let COLS = Math.floor(w / TILE);
+let ROWS = Math.floor(h / TILE);
 
 let customBg=null;
 
@@ -260,9 +260,15 @@ function drawMaze(){
 }
 
 function drawEntities(){
-  ctx.drawImage(playerImg,player.x*TILE+TILE/4,player.y*TILE+TILE/4,TILE/2,TILE/2);
-  monsters.forEach(m=>{
-    ctx.drawImage(monsterImg,m.x*TILE+TILE/4,m.y*TILE+TILE/4,TILE/2,TILE/2);
+  const px = player.x * TILE + TILE * 0.1;
+  const py = player.y * TILE + TILE * 0.1;
+  const size = TILE * 0.8;
+  ctx.drawImage(playerImg, px, py, size, size);
+  
+  monsters.forEach(m => {
+    const mx = m.x * TILE + TILE * 0.1;
+    const my = m.y * TILE + TILE * 0.1;
+    ctx.drawImage(monsterImg, mx, my, size, size);
   });
 }
 
