@@ -139,6 +139,7 @@ let rgbShift = 3;
 let pixelSize = 1;
 let overlayOn = false;
 let controlsVisible = true;
+let saturation = 1;
 let overlay = new Image();
 
 // Overlay upload
@@ -196,6 +197,7 @@ function draw() {
   let frame = ctx.getImageData(0, 0, w, h);
   let d = frame.data;
 
+  // Inversion
   if (invert) {
     for (let i = 0; i < d.length; i += 4) {
       d[i] = 255 - d[i];
@@ -222,6 +224,14 @@ function draw() {
       const val = Math.random() * 255;
       d[i] = val; d[i + 1] = val; d[i + 2] = val;
     }
+  }
+
+  // Saturation adjustment
+  for (let i = 0; i < d.length; i += 4) {
+    const avg = (d[i] + d[i + 1] + d[i + 2]) / 3;
+    d[i] = avg + (d[i] - avg) * saturation;
+    d[i + 1] = avg + (d[i + 1] - avg) * saturation;
+    d[i + 2] = avg + (d[i + 2] - avg) * saturation;
   }
 
   ctx.putImageData(frame, 0, 0);
@@ -264,6 +274,13 @@ document.getElementById("glitchBtn").onclick = () => glitchMode = !glitchMode;
 document.getElementById("noiseRange").oninput = e => noiseAmount = parseFloat(e.target.value);
 document.getElementById("rgbShiftRange").oninput = e => rgbShift = parseInt(e.target.value);
 document.getElementById("pixelRange").oninput = e => pixelSize = parseInt(e.target.value);
+
+// Saturation control
+const satControl = document.createElement("label");
+satControl.innerHTML = 'Saturation <input type="range" id="saturationRange" min="0" max="3" step="0.1" value="1">';
+controls.appendChild(satControl);
+document.getElementById("saturationRange").oninput = e => saturation = parseFloat(e.target.value);
+
 document.getElementById("screenshotBtn").onclick = () => {
   flash.style.opacity = 1;
   setTimeout(() => flash.style.opacity = 0, 100);
