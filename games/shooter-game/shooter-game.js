@@ -26,6 +26,7 @@ startBtn.onclick = () => {
   menu.classList.add("hidden");
   document.getElementById("ui").classList.remove("hidden");
   gameRunning = true;
+  spawnEnemyWave(5); // start first wave right away
 };
 
 optionsBtn.onclick = () => {
@@ -209,10 +210,16 @@ function update() {
   });
   bullets = bullets.filter(b => b.life > 0);
 
-  // waves
-  if (!bossActive && kills >= wave * 10) {
-    wave++;
+  // --- ENEMY WAVE LOGIC ---
+  // if there are no enemies yet and boss isn’t active, spawn a wave
+  if (!bossActive && enemies.length === 0 && kills < 50) {
     spawnEnemyWave(5 + wave * 2);
+  }
+
+  // progressively harder waves
+  if (!bossActive && kills >= wave * 10 && kills < 50) {
+    wave++;
+    spawnEnemyWave(5 + wave * 3);
   }
 
   // spawn boss
