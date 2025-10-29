@@ -101,16 +101,19 @@ let boss = null;
 let pushCharges = 3;
 let pushCooldown = false;
 let cooldownTimer = 0;
+let pushFxTimer = 0; // ring effect frames
 
-// controls
+// controls (map space properly)
 const keys = { w: false, a: false, s: false, d: false, space: false };
 window.addEventListener("keydown", e => {
   const k = e.key.toLowerCase();
   if (k in keys) keys[k] = true;
+  if (e.code === "Space" || e.key === " ") { keys.space = true; e.preventDefault(); }
 });
 window.addEventListener("keyup", e => {
   const k = e.key.toLowerCase();
   if (k in keys) keys[k] = false;
+  if (e.code === "Space" || e.key === " ") { keys.space = false; e.preventDefault(); }
 });
 ui.restart.onclick = resetGame;
 
@@ -154,7 +157,10 @@ function spawnEnemy() {
   const hp = size * (0.4 + wave * 0.1);
   const speed = 0.8 + Math.random() * 0.5 + wave * 0.1;
   const file = enemyFiles[Math.floor(Math.random() * enemyFiles.length)];
-  enemies.push({ x, y, size, speed, img: enemyImages[file], health: hp });
+  enemies.push({
+    x, y, size, speed, img: enemyImages[file], health: hp,
+    vx: 0, vy: 0, knock: 0 // knockback state
+  });
 }
 
 function shootBullet(angle) {
@@ -187,35 +193,63 @@ function spawnBoss() {
       angle: (Math.PI / 2) * i,
       radius: 150,
       size: 90,
-      speed: 0.1,
+      speed: 0.13,
       img: bossImg,
-      health: 150
+      health: 150,
+      vx: 0, vy: 0, knock: 0
     });
   }
 }
 
-// --- PUSHBACK ---
+// --- PUSHBACK (not OP, but noticeable) ---
 function pushBackEnemies() {
-  if (pushCooldown || pushCharges <= 0) return;
+  if (pushCooldown || pushCharges <= 0 || stamina < 20) return;
 
   pushCharges--;
-  stamina = Math.max(0, stamina - 30);
+  stamina = Math.max(0, stamina - 35);
+  pushFxTimer = 18; // show ring for ~0.3s
 
+  const radius = 320;          // effective radius
+  const maxKick = 18;          // base impulse
+  const stunFrames = 16;       // brief stun
+
+  // affect regular enemies
   enemies.forEach(e => {
     const dx = e.x - player.x;
     const dy = e.y - player.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 400) {
-      const push = 20 - dist / 20;
-      e.x += (dx / dist) * push * 8;
-      e.y += (dy / dist) * push * 8;
+    const dist = Math.hypot(dx, dy) || 0.001;
+    if (dist < radius) {
+      const scale = 1 - dist / radius;           // near = stronger
+      const force = maxKick * scale;
+      e.vx += (dx / dist) * force;
+      e.vy += (dy / dist) * force;
+      e.knock = Math.max(e.knock, stunFrames);
     }
   });
 
-  ctx.save();
-  ctx.fillStyle = "rgba(255,255,255,0.2)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.restore();
+  // give boss a smaller nudge
+  if (bossActive && boss) {
+    const dx = boss.x - player.x;
+    const dy = boss.y - player.y;
+    const dist = Math.hypot(dx, dy) || 0.001;
+    if (dist < radius) {
+      const force = (maxKick * 0.35) * (1 - dist / radius);
+      boss.x += (dx / dist) * force; // slight displacement
+      boss.y += (dy / dist) * force;
+    }
+    // orbiters get a decent knock
+    boss.orbiters.forEach(o => {
+      const ox = o.x - player.x;
+      const oy = o.y - player.y;
+      const od = Math.hypot(ox, oy) || 0.001;
+      if (od < radius) {
+        const force = (maxKick * 0.7) * (1 - od / radius);
+        o.vx = (ox / od) * force;
+        o.vy = (oy / od) * force;
+        o.knock = Math.max(o.knock || 0, stunFrames);
+      }
+    });
+  }
 
   if (pushCharges === 0) {
     pushCooldown = true;
@@ -237,41 +271,38 @@ function update() {
   player.x = Math.max(0, Math.min(canvas.width, player.x + dx));
   player.y = Math.max(0, Math.min(canvas.height, player.y + dy));
 
-  if (keys.space) {
-    pushBackEnemies();
-    keys.space = false;
-  }
+  if (keys.space) { pushBackEnemies(); keys.space = false; }
 
   // stamina regen
-  if (!pushCooldown && stamina < 100) stamina += 0.1;
+  if (!pushCooldown && stamina < 100) stamina += 0.12;
   if (pushCooldown) {
     cooldownTimer--;
-    if (cooldownTimer <= 0) {
-      pushCooldown = false;
-      pushCharges = 3;
-    }
+    if (cooldownTimer <= 0) { pushCooldown = false; pushCharges = 3; }
   }
 
   aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
-  bullets.forEach(b => {
-    b.x += Math.cos(b.angle) * b.speed;
-    b.y += Math.sin(b.angle) * b.speed;
-    b.life--;
-  });
+  bullets.forEach(b => { b.x += Math.cos(b.angle) * b.speed; b.y += Math.sin(b.angle) * b.speed; b.life--; });
   bullets = bullets.filter(b => b.life > 0);
 
   if (enemies.length === 0 && kills < 50) spawnEnemyWave(5 + wave * 2);
-  if (kills >= wave * 10 && kills < 50) {
-    wave++;
-    spawnEnemyWave(5 + wave * 3);
-  }
+  if (kills >= wave * 10 && kills < 50) { wave++; spawnEnemyWave(5 + wave * 3); }
   if (!bossActive && kills >= 50) spawnBoss();
 
   enemies.forEach((e, i) => {
-    const angle = Math.atan2(player.y - e.y, player.x - e.x);
-    e.x += Math.cos(angle) * e.speed;
-    e.y += Math.sin(angle) * e.speed;
+    if (e.knock > 0) {
+      e.x += e.vx; e.y += e.vy;
+      e.vx *= 0.88; e.vy *= 0.88;
+      e.knock--;
+    } else {
+      const a = Math.atan2(player.y - e.y, player.x - e.x);
+      e.x += Math.cos(a) * e.speed;
+      e.y += Math.sin(a) * e.speed;
+    }
+
+    // clamp inside bounds a bit
+    e.x = Math.max(-100, Math.min(canvas.width + 100, e.x));
+    e.y = Math.max(-100, Math.min(canvas.height + 100, e.y));
 
     const dist = Math.hypot(player.x - e.x, player.y - e.y);
     if (dist < e.size / 2 + player.size / 2) {
@@ -284,31 +315,33 @@ function update() {
       if (hitDist < e.size / 2) {
         e.health -= 20;
         bullets.splice(bi, 1);
-        if (e.health <= 0) {
-          kills++;
-          enemies.splice(i, 1);
-        }
+        if (e.health <= 0) { kills++; enemies.splice(i, 1); }
       }
     });
   });
 
   if (bossActive && boss) {
+    // light drift
     boss.x += Math.sin(frameCount / 60) * 2;
     boss.y += Math.cos(frameCount / 80) * 1.5;
 
     boss.orbiters.forEach(o => {
-      o.angle += o.speed;
-      o.x = boss.x + Math.cos(o.angle) * o.radius;
-      o.y = boss.y + Math.sin(o.angle) * o.radius;
+      // knock or orbit
+      if (o.knock && o.knock > 0) {
+        o.x += o.vx; o.y += o.vy;
+        o.vx *= 0.9; o.vy *= 0.9;
+        o.knock--;
+      } else {
+        o.angle += o.speed;
+        o.x = boss.x + Math.cos(o.angle) * o.radius;
+        o.y = boss.y + Math.sin(o.angle) * o.radius;
+      }
+
       bullets.forEach((b, bi) => {
         const hit = Math.hypot(b.x - o.x, b.y - o.y);
-        if (hit < o.size / 2) {
-          o.health -= 20;
-          bullets.splice(bi, 1);
-        }
+        if (hit < o.size / 2) { o.health -= 20; bullets.splice(bi, 1); }
       });
     });
-
     boss.orbiters = boss.orbiters.filter(o => o.health > 0);
 
     bullets.forEach((b, bi) => {
@@ -316,10 +349,7 @@ function update() {
       if (hitDist < boss.size / 2) {
         boss.health -= 10;
         bullets.splice(bi, 1);
-        if (boss.health <= 0) {
-          bossDefeated = true;
-          bossActive = false;
-        }
+        if (boss.health <= 0) { bossDefeated = true; bossActive = false; }
       }
     });
   }
@@ -382,6 +412,21 @@ function drawArrow(x, y, angle) {
   ctx.restore();
 }
 
+function drawPushRing() {
+  if (pushFxTimer <= 0) return;
+  const t = pushFxTimer / 18; // 1 -> 0
+  const maxR = 360;
+  const r = (1 - t) * maxR;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255," + (0.35 * t) + ")";
+  ctx.lineWidth = 6 * t + 2;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+  pushFxTimer--;
+}
+
 function draw() {
   ctx.fillStyle = backgroundColor;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -395,8 +440,9 @@ function draw() {
 
   ctx.drawImage(playerImg, player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
   drawArrow(player.x, player.y, aimAngle);
+  drawPushRing();
 
-  // --- bottom-left bars ---
+  // bottom-left bars
   drawBar("HEALTH", 20, 50, health, 100, "#ff3333", true);
   drawBar("STAMINA", 20, 25, stamina, 100, pushCooldown ? "#333333" : "#00ccff", true);
 
@@ -457,6 +503,7 @@ function resetGame() {
   pushCooldown = false;
   wave = 1;
   boss = null;
+  pushFxTimer = 0;
 }
 
 function init() { loop(); }
