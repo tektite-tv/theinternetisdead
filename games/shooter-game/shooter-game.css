@@ -1,69 +1,78 @@
 html, body {
   margin: 0;
+  padding: 0;
   overflow: hidden;
-  background: radial-gradient(circle at center, #000 60%, #111);
+  height: 100%;
+  width: 100%;
+  background: black;
   color: #00ff99;
   font-family: monospace;
-  height: 100%;
+}
+
+canvas {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+}
+
+/* --- Menu --- */
+#menu {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at center, #000 60%, #111);
+  color: #00ff99;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  z-index: 10;
+}
+
+#menu.hidden,
+#optionsMenu.hidden,
+#ui.hidden {
+  display: none !important;
+}
+
+#menu button, #optionsMenu button {
+  margin: 8px;
+  background: #00ff99;
+  color: black;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#optionsMenu {
+  position: relative;
+  background: rgba(0,0,0,0.8);
+  padding: 20px;
+  border-radius: 8px;
 }
 
 #ui {
   position: fixed;
   top: 10px;
   left: 10px;
-  z-index: 10;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
   border-radius: 8px;
-}
-
-#stats p {
-  margin: 2px 0;
+  z-index: 5;
 }
 
 #restart {
-  margin-top: 5px;
+  margin-top: 8px;
   background: #00ff99;
   color: black;
   border: none;
-  padding: 5px 10px;
+  padding: 6px 12px;
+  border-radius: 5px;
   cursor: pointer;
-  border-radius: 4px;
-}
-
-canvas {
-  display: block;
-  width: 100vw;
-  height: 100vh;
-}
-
-#menu {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(circle at center, #000 60%, #111);
-  color: #00ff99;
-  font-family: monospace;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  z-index: 20;
-}
-#menu.hidden, #optionsMenu.hidden, #ui.hidden {
-  display: none;
-}
-#menu button {
-  margin: 10px;
-  background: #00ff99;
-  color: black;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-#optionsMenu {
-  background: rgba(0, 0, 0, 0.8);
-  padding: 20px;
-  border-radius: 8px;
 }
