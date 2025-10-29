@@ -26,7 +26,7 @@ startBtn.onclick = () => {
   menu.classList.add("hidden");
   document.getElementById("ui").classList.remove("hidden");
   gameRunning = true;
-  spawnEnemyWave(5); // start first wave right away
+  spawnEnemyWave(5);
 };
 
 optionsBtn.onclick = () => {
@@ -91,17 +91,26 @@ let bullets = [];
 let kills = 0;
 let deaths = 0;
 let health = 100;
+let stamina = 100;
 let gameOver = false;
 let frameCount = 0;
 let wave = 1;
+let boss = null;
+
+// --- PUSHBACK SYSTEM ---
+let pushCharges = 3;
+let pushCooldown = false;
+let cooldownTimer = 0;
 
 // controls
-const keys = { w: false, a: false, s: false, d: false };
+const keys = { w: false, a: false, s: false, d: false, space: false };
 window.addEventListener("keydown", e => {
-  if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
+  const k = e.key.toLowerCase();
+  if (k in keys) keys[k] = true;
 });
 window.addEventListener("keyup", e => {
-  if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
+  const k = e.key.toLowerCase();
+  if (k in keys) keys[k] = false;
 });
 ui.restart.onclick = resetGame;
 
@@ -128,6 +137,7 @@ canvas.addEventListener("mousedown", () => {
   }
 });
 
+// --- ENEMY + BULLET LOGIC ---
 function spawnEnemyWave(count) {
   for (let i = 0; i < count; i++) spawnEnemy();
 }
@@ -158,9 +168,10 @@ function shootBullet(angle) {
   aimAngle = angle;
 }
 
+// --- BOSS LOGIC ---
 function spawnBoss() {
   bossActive = true;
-  const boss = {
+  boss = {
     x: canvas.width / 2,
     y: canvas.height / 3,
     size: 180,
@@ -171,7 +182,6 @@ function spawnBoss() {
     orbiters: []
   };
 
-  // spawn 4 mini orbiters
   for (let i = 0; i < 4; i++) {
     boss.orbiters.push({
       angle: (Math.PI / 2) * i,
@@ -182,10 +192,39 @@ function spawnBoss() {
       health: 150
     });
   }
-
-  enemies.push(boss);
 }
 
+// --- PUSHBACK ---
+function pushBackEnemies() {
+  if (pushCooldown || pushCharges <= 0) return;
+
+  pushCharges--;
+  stamina = Math.max(0, stamina - 30);
+
+  enemies.forEach(e => {
+    const dx = e.x - player.x;
+    const dy = e.y - player.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 400) {
+      const push = 20 - dist / 20;
+      e.x += (dx / dist) * push * 8;
+      e.y += (dy / dist) * push * 8;
+    }
+  });
+
+  // visual flash
+  ctx.save();
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
+
+  if (pushCharges === 0) {
+    pushCooldown = true;
+    cooldownTimer = 300; // frames (~5 seconds)
+  }
+}
+
+// --- UPDATE ---
 function update() {
   if (!gameRunning || gameOver || bossDefeated || !imagesLoaded) return;
   frameCount++;
@@ -199,7 +238,22 @@ function update() {
   player.x = Math.max(0, Math.min(canvas.width, player.x + dx));
   player.y = Math.max(0, Math.min(canvas.height, player.y + dy));
 
-  // aim
+  // pushback ability
+  if (keys.space) {
+    pushBackEnemies();
+    keys.space = false;
+  }
+
+  // stamina regen
+  if (!pushCooldown && stamina < 100) stamina += 0.1;
+  if (pushCooldown) {
+    cooldownTimer--;
+    if (cooldownTimer <= 0) {
+      pushCooldown = false;
+      pushCharges = 3;
+    }
+  }
+
   aimAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
   // bullets
@@ -210,46 +264,24 @@ function update() {
   });
   bullets = bullets.filter(b => b.life > 0);
 
-  // --- ENEMY WAVE LOGIC ---
-  // if there are no enemies yet and boss isn’t active, spawn a wave
-  if (!bossActive && enemies.length === 0 && kills < 50) {
-    spawnEnemyWave(5 + wave * 2);
-  }
-
-  // progressively harder waves
-  if (!bossActive && kills >= wave * 10 && kills < 50) {
+  if (enemies.length === 0 && kills < 50) spawnEnemyWave(5 + wave * 2);
+  if (kills >= wave * 10 && kills < 50) {
     wave++;
     spawnEnemyWave(5 + wave * 3);
   }
-
-  // spawn boss
   if (!bossActive && kills >= 50) spawnBoss();
 
-  // enemies update
   enemies.forEach((e, i) => {
-    if (e.isBoss) {
-      e.x += Math.sin(frameCount / 60) * 2;
-      e.y += Math.cos(frameCount / 80) * 1.5;
+    const angle = Math.atan2(player.y - e.y, player.x - e.x);
+    e.x += Math.cos(angle) * e.speed;
+    e.y += Math.sin(angle) * e.speed;
 
-      e.orbiters.forEach(o => {
-        o.angle += o.speed;
-        o.x = e.x + Math.cos(o.angle) * o.radius;
-        o.y = e.y + Math.sin(o.angle) * o.radius;
-      });
-    } else {
-      const angle = Math.atan2(player.y - e.y, player.x - e.x);
-      e.x += Math.cos(angle) * e.speed;
-      e.y += Math.sin(angle) * e.speed;
-    }
-
-    // collision with player
     const dist = Math.hypot(player.x - e.x, player.y - e.y);
     if (dist < e.size / 2 + player.size / 2) {
       health -= 0.5;
       if (health <= 0) endGame();
     }
 
-    // bullet collisions
     bullets.forEach((b, bi) => {
       const hitDist = Math.hypot(b.x - e.x, b.y - e.y);
       if (hitDist < e.size / 2) {
@@ -257,19 +289,78 @@ function update() {
         bullets.splice(bi, 1);
         if (e.health <= 0) {
           kills++;
-          if (e.isBoss) {
-            bossActive = false;
-            bossDefeated = true;
-          }
           enemies.splice(i, 1);
         }
       }
     });
   });
 
+  if (bossActive && boss) {
+    boss.x += Math.sin(frameCount / 60) * 2;
+    boss.y += Math.cos(frameCount / 80) * 1.5;
+
+    boss.orbiters.forEach(o => {
+      o.angle += o.speed;
+      o.x = boss.x + Math.cos(o.angle) * o.radius;
+      o.y = boss.y + Math.sin(o.angle) * o.radius;
+      bullets.forEach((b, bi) => {
+        const hit = Math.hypot(b.x - o.x, b.y - o.y);
+        if (hit < o.size / 2) {
+          o.health -= 20;
+          bullets.splice(bi, 1);
+        }
+      });
+    });
+
+    boss.orbiters = boss.orbiters.filter(o => o.health > 0);
+
+    bullets.forEach((b, bi) => {
+      const hitDist = Math.hypot(b.x - boss.x, b.y - boss.y);
+      if (hitDist < boss.size / 2) {
+        boss.health -= 10;
+        bullets.splice(bi, 1);
+        if (boss.health <= 0) {
+          bossDefeated = true;
+          bossActive = false;
+        }
+      }
+    });
+  }
+
   ui.kills.textContent = kills;
   ui.deaths.textContent = deaths;
   ui.health.textContent = Math.max(0, Math.floor(health));
+}
+
+// --- DRAW ---
+function drawBar(label, x, y, value, max, color) {
+  const width = 200;
+  const height = 15;
+  ctx.fillStyle = "black";
+  ctx.fillRect(x - 2, y - 2, width + 4, height + 4);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, (value / max) * width, height);
+  ctx.strokeStyle = "#00ff99";
+  ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
+  ctx.fillStyle = "#00ff99";
+  ctx.font = "12px monospace";
+  ctx.fillText(label, x, y - 4);
+}
+
+function drawBossHealthBar() {
+  if (!bossActive || !boss) return;
+  const barWidth = canvas.width * 0.6;
+  const barHeight = 20;
+  const x = (canvas.width - barWidth) / 2;
+  const y = 30;
+  const pct = Math.max(0, boss.health / 1000);
+
+  ctx.fillStyle = "black";
+  ctx.fillRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
+  ctx.fillStyle = "red";
+  ctx.fillRect(x, y, barWidth * pct, barHeight);
+  ctx.strokeStyle = "#00ff99";
+  ctx.strokeRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
 }
 
 function drawArrow(x, y, angle) {
@@ -310,6 +401,9 @@ function draw() {
   ctx.drawImage(playerImg, player.x - player.size / 2, player.y - player.size / 2, player.size, player.size);
   drawArrow(player.x, player.y, aimAngle);
 
+  drawBar("HEALTH", 20, 20, health, 100, "#ff3333");
+  drawBar("STAMINA", 20, 45, stamina, 100, pushCooldown ? "#333333" : "#00ccff");
+
   bullets.forEach(b => {
     ctx.save();
     ctx.shadowBlur = 15;
@@ -322,19 +416,20 @@ function draw() {
   });
 
   enemies.forEach(e => {
-    if (e.isBoss) {
-      ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
-      e.orbiters.forEach(o => {
-        ctx.save();
-        ctx.translate(o.x, o.y);
-        ctx.rotate(o.angle * 10);
-        ctx.drawImage(o.img, -o.size / 2, -o.size / 2, o.size, o.size);
-        ctx.restore();
-      });
-    } else if (e.img) {
-      ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
-    }
+    if (e.img) ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
   });
+
+  if (bossActive && boss) {
+    ctx.drawImage(boss.img, boss.x - boss.size / 2, boss.y - boss.size / 2, boss.size, boss.size);
+    boss.orbiters.forEach(o => {
+      ctx.save();
+      ctx.translate(o.x, o.y);
+      ctx.rotate(o.angle * 10);
+      ctx.drawImage(o.img, -o.size / 2, -o.size / 2, o.size, o.size);
+      ctx.restore();
+    });
+    drawBossHealthBar();
+  }
 
   if (bossDefeated) {
     ctx.fillStyle = "#00ff99";
@@ -366,10 +461,14 @@ function resetGame() {
   bullets = [];
   kills = 0;
   health = 100;
+  stamina = 100;
   gameOver = false;
   bossActive = false;
   bossDefeated = false;
+  pushCharges = 3;
+  pushCooldown = false;
   wave = 1;
+  boss = null;
 }
 
 function init() {
