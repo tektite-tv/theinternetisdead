@@ -46,7 +46,7 @@
     color: black;
   }
 
-  /* awkward video placement */
+  /* video section */
   #videoArea {
     flex: 1;
     display: flex;
@@ -64,7 +64,7 @@
     display: block;
   }
 
-  /* new scrub bar and inline fullscreen button */
+  /* bottom controls under video */
   #videoControls {
     display: flex;
     align-items: center;
@@ -73,7 +73,7 @@
     background: rgba(0, 0, 0, 0.8);
     border-top: 2px solid #ff00ff;
     padding: 5px;
-    gap: 10px;
+    gap: 8px;
   }
 
   #scrubBar {
@@ -81,7 +81,7 @@
     accent-color: #ff00ff;
   }
 
-  #videoFull {
+  #playPause, #videoFull {
     background: #ff00ff;
     color: black;
     border: 1px solid #00ff99;
@@ -89,7 +89,8 @@
     font-weight: bold;
     cursor: pointer;
   }
-  #videoFull:hover {
+
+  #playPause:hover, #videoFull:hover {
     background: #00ff99;
     color: black;
   }
@@ -128,6 +129,7 @@
 <div id="videoArea">
   <canvas id="canvas"></canvas>
   <div id="videoControls">
+    <button id="playPause">▶</button>
     <input type="range" id="scrubBar" min="0" max="100" value="0">
     <button id="videoFull">⛶</button>
   </div>
@@ -141,6 +143,7 @@ const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const scrubBar = document.getElementById("scrubBar");
+const playPause = document.getElementById("playPause");
 const videoFull = document.getElementById("videoFull");
 
 let invert = false;
@@ -154,7 +157,7 @@ let saturation = 1;
 let overlay = new Image();
 let durationSet = false;
 
-// Load and play uploaded video
+// Upload & play
 const videoInput = document.getElementById("videoInput");
 document.getElementById("uploadBtn").onclick = () => videoInput.click();
 videoInput.onchange = e => {
@@ -164,6 +167,7 @@ videoInput.onchange = e => {
   video.src = url;
   video.load();
   video.play();
+  playPause.textContent = "⏸";
   video.addEventListener("loadeddata", () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -174,13 +178,24 @@ videoInput.onchange = e => {
   });
 };
 
-// Scrubbing control
+// Scrub & update
 video.addEventListener("timeupdate", () => {
   if (durationSet && !scrubBar.dragging) scrubBar.value = video.currentTime;
 });
 scrubBar.addEventListener("input", e => {
   video.currentTime = e.target.value;
 });
+
+// Play/pause toggle
+playPause.onclick = () => {
+  if (video.paused) {
+    video.play();
+    playPause.textContent = "⏸";
+  } else {
+    video.pause();
+    playPause.textContent = "▶";
+  }
+};
 
 // Overlay upload
 const overlayInput = document.getElementById("overlayInput");
@@ -196,6 +211,7 @@ overlayInput.onchange = e => {
   reader.readAsDataURL(file);
 };
 
+// Drawing
 function draw() {
   const w = canvas.width;
   const h = canvas.height;
@@ -282,7 +298,7 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
-// Controls
+// Effect controls
 document.getElementById("invertBtn").onclick = () => invert = !invert;
 document.getElementById("glitchBtn").onclick = () => glitchMode = !glitchMode;
 document.getElementById("noiseRange").oninput = e => noiseAmount = parseFloat(e.target.value);
@@ -290,13 +306,13 @@ document.getElementById("rgbShiftRange").oninput = e => rgbShift = parseInt(e.ta
 document.getElementById("pixelRange").oninput = e => pixelSize = parseInt(e.target.value);
 document.getElementById("saturationRange").oninput = e => saturation = parseFloat(e.target.value);
 
-// Fullscreen canvas only
+// Fullscreen for canvas
 videoFull.onclick = () => {
   if (!document.fullscreenElement) canvas.requestFullscreen();
   else document.exitFullscreen();
 };
 
-// Hide sidebar with H
+// Hide sidebar
 document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "h") {
     controlsVisible = !controlsVisible;
