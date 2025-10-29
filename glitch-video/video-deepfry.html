@@ -20,7 +20,7 @@
     width: 100vw;
   }
 
-  /* ugly neon sidebar */
+  /* hideous sidebar */
   #controls {
     width: 260px;
     background: repeating-linear-gradient(90deg, #000 0 12px, #00ff99 12px 24px);
@@ -46,15 +46,52 @@
     color: black;
   }
 
-  /* smaller awkward video zone */
-  #canvas {
+  /* awkward video placement */
+  #videoArea {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  #canvas {
     width: 60vw;
     height: 60vh;
-    align-self: center;
-    margin: 0 auto;
     border: 3px dashed #ff00ff;
     object-fit: contain;
+    display: block;
+  }
+
+  /* new scrub bar and inline fullscreen button */
+  #videoControls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60vw;
+    background: rgba(0, 0, 0, 0.8);
+    border-top: 2px solid #ff00ff;
+    padding: 5px;
+    gap: 10px;
+  }
+
+  #scrubBar {
+    flex: 1;
+    accent-color: #ff00ff;
+  }
+
+  #videoFull {
+    background: #ff00ff;
+    color: black;
+    border: 1px solid #00ff99;
+    padding: 4px 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #videoFull:hover {
+    background: #00ff99;
+    color: black;
   }
 
   #flash {
@@ -64,22 +101,6 @@
     opacity: 0;
     transition: opacity 0.1s;
     pointer-events: none;
-  }
-
-  /* pink fullscreen box */
-  #fullscreenBox {
-    background: #ff00ff;
-    color: black;
-    padding: 6px;
-    text-align: center;
-    border: 2px solid #00ff99;
-    font-weight: bold;
-    margin-top: 10px;
-    cursor: pointer;
-  }
-  #fullscreenBox:hover {
-    background: #00ff99;
-    color: black;
   }
 
   input[type=file] {
@@ -101,20 +122,26 @@
   <button id="overlayBtn">👁 Upload Overlay</button>
   <input type="file" id="overlayInput" accept="image/*">
   <button id="screenshotBtn">📸 Screenshot</button>
-  <div id="fullscreenBox">⛶ FULLSCREEN</div>
   <p style="font-size:0.7rem; color:#ff00ff;">Press “H” to hide sidebar</p>
 </div>
 
+<div id="videoArea">
+  <canvas id="canvas"></canvas>
+  <div id="videoControls">
+    <input type="range" id="scrubBar" min="0" max="100" value="0">
+    <button id="videoFull">⛶</button>
+  </div>
+  <div id="flash"></div>
+</div>
+
 <video id="video" style="display:none" muted></video>
-<canvas id="canvas"></canvas>
-<div id="flash"></div>
 
 <script>
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const flash = document.getElementById("flash");
-const controls = document.getElementById("controls");
+const scrubBar = document.getElementById("scrubBar");
+const videoFull = document.getElementById("videoFull");
 
 let invert = false;
 let glitchMode = false;
@@ -125,6 +152,7 @@ let overlayOn = false;
 let controlsVisible = true;
 let saturation = 1;
 let overlay = new Image();
+let durationSet = false;
 
 // Load and play uploaded video
 const videoInput = document.getElementById("videoInput");
@@ -139,9 +167,20 @@ videoInput.onchange = e => {
   video.addEventListener("loadeddata", () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    scrubBar.value = 0;
+    scrubBar.max = video.duration;
+    durationSet = true;
     draw();
   });
 };
+
+// Scrubbing control
+video.addEventListener("timeupdate", () => {
+  if (durationSet && !scrubBar.dragging) scrubBar.value = video.currentTime;
+});
+scrubBar.addEventListener("input", e => {
+  video.currentTime = e.target.value;
+});
 
 // Overlay upload
 const overlayInput = document.getElementById("overlayInput");
@@ -251,25 +290,17 @@ document.getElementById("rgbShiftRange").oninput = e => rgbShift = parseInt(e.ta
 document.getElementById("pixelRange").oninput = e => pixelSize = parseInt(e.target.value);
 document.getElementById("saturationRange").oninput = e => saturation = parseFloat(e.target.value);
 
-document.getElementById("screenshotBtn").onclick = () => {
-  flash.style.opacity = 1;
-  setTimeout(() => flash.style.opacity = 0, 100);
-  const link = document.createElement("a");
-  link.download = "deepfry_" + Date.now() + ".png";
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-};
-
-// Pink box fullscreen button for the canvas
-document.getElementById("fullscreenBox").onclick = () => {
+// Fullscreen canvas only
+videoFull.onclick = () => {
   if (!document.fullscreenElement) canvas.requestFullscreen();
   else document.exitFullscreen();
 };
 
+// Hide sidebar with H
 document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "h") {
     controlsVisible = !controlsVisible;
-    controls.style.display = controlsVisible ? "flex" : "none";
+    document.getElementById("controls").style.display = controlsVisible ? "flex" : "none";
   }
 });
 </script>
