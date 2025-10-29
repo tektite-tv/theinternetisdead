@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bananarama Maze Boss Battle</title>
+<title>Bananarama Maze Patrol (Animated)</title>
 <style>
-  html, body { margin:0; overflow:hidden; background:#000; font-family:monospace; }
+  html,body {
+    margin:0; overflow:hidden; background:#000;
+    font-family: monospace;
+  }
   canvas { display:block; background:#111; }
-  #hud { position:absolute; top:10px; left:10px; color:#0f0; text-shadow:1px 1px 3px #000; }
-  #msg {
-    position:absolute; top:40%; width:100%; text-align:center;
-    color:#f00; font-size:48px; text-shadow:2px 2px 6px #000; display:none;
+  #hud {
+    position:absolute; top:10px; left:10px;
+    color:#0f0; text-shadow:1px 1px 3px #000;
   }
 </style>
 </head>
 <body>
 <div id="hud">Lives: 3 | Kills: 0</div>
-<div id="msg">BOSS FIGHT!</div>
 <canvas id="game"></canvas>
 <script>
 const canvas=document.getElementById("game");
@@ -24,8 +25,8 @@ const ctx=canvas.getContext("2d");
 let w,h;function resize(){w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight;}
 window.addEventListener("resize",resize);resize();
 
-// Maze
-const CELL=64, COLS=60, ROWS=60;
+// Maze setup
+const CELL=96, COLS=30, ROWS=30;
 let maze=[];
 function initMaze(){
   maze=[];
@@ -57,30 +58,41 @@ function generateMaze(){
   }
 }
 initMaze();generateMaze();
+
+// Build wall colliders
 let walls=[];
 function buildWalls(){
   walls=[];
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
     const c=maze[y][x],px=x*CELL,py=y*CELL;
-    if(c.walls[0])walls.push({x:px,y:py,w:CELL,h:4});
-    if(c.walls[1])walls.push({x:px+CELL-4,y:py,w:4,h:CELL});
-    if(c.walls[2])walls.push({x:px,y:py+CELL-4,w:CELL,h:4});
-    if(c.walls[3])walls.push({x:px,y:py,w:4,h:CELL});
+    if(c.walls[0])walls.push({x:px,y:py,w:CELL,h:6});
+    if(c.walls[1])walls.push({x:px+CELL-6,y:py,w:6,h:CELL});
+    if(c.walls[2])walls.push({x:px,y:py+CELL-6,w:CELL,h:6});
+    if(c.walls[3])walls.push({x:px,y:py,w:6,h:CELL});
   }
 }
 buildWalls();
 
-// Images
+// Assets
 const playerImg=new Image(); playerImg.src="/media/images/gifs/bananarama.gif";
 const enemyImg=new Image(); enemyImg.src="/media/images/gifs/skeleton.gif";
-const bossImg=new Image(); bossImg.src="/media/images/gifs/180px-NO_U_cycle.gif";
 
 // Entities
-let player={x:CELL/2,y:CELL/2,r:20,speed:3,lives:3,kills:0};
-let bullets=[], enemies=[], boss=null, bossBullets=[];
+let player={x:CELL/2,y:CELL/2,r:24,speed:3,lives:3,kills:0,walking:false};
+let bullets=[], enemies=[], camX=0, camY=0;
 
-// Camera
-let camX=0,camY=0;
+// Enemy spawning
+function spawnEnemies(n=8){
+  enemies=[];
+  for(let i=0;i<n;i++){
+    const ex=Math.random()*COLS*CELL;
+    const ey=Math.random()*ROWS*CELL;
+    enemies.push({
+      x:ex,y:ey,r:24,hp:3,state:"idle",visionTime:0,angle:Math.random()*Math.PI*2
+    });
+  }
+}
+spawnEnemies(8);
 
 // Input
 const keys={};
@@ -89,121 +101,94 @@ window.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 canvas.addEventListener("click",shoot);
 
 function shoot(e){
-  if(boss && boss.hp<=0)return;
   const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
   const angle=Math.atan2(my-h/2,mx-w/2);
   bullets.push({x:player.x,y:player.y,dx:Math.cos(angle)*10,dy:Math.sin(angle)*10});
 }
 
-// Collision
+// Collision detection
 function collides(x,y,r){
-  for(const w of walls)
-    if(x+r>w.x && x-r<w.x+w.w && y+r>w.y && y-r<w.y+w.h) return true;
+  for(const wl of walls)
+    if(x+r>wl.x && x-r<wl.x+wl.w && y+r>wl.y && y-r<wl.y+wl.h) return true;
   return false;
 }
 
-// Spawn Enemies
-function spawnEnemies(n=10){
-  enemies=[];
-  for(let i=0;i<n;i++){
-    enemies.push({x:Math.random()*COLS*CELL,y:Math.random()*ROWS*CELL,r:20,hp:3});
+// Line of sight check
+function canSee(a,b){
+  const steps=Math.ceil(Math.hypot(a.x-b.x,a.y-b.y)/8);
+  for(let i=0;i<steps;i++){
+    const t=i/steps;
+    const x=a.x+(b.x-a.x)*t;
+    const y=a.y+(b.y-a.y)*t;
+    if(collides(x,y,4))return false;
   }
+  return true;
 }
-spawnEnemies(10);
 
 // Update
 function update(){
-  // Movement
+  // Player movement
   let nx=player.x, ny=player.y;
   if(keys['w'])ny-=player.speed;
   if(keys['s'])ny+=player.speed;
   if(keys['a'])nx-=player.speed;
   if(keys['d'])nx+=player.speed;
+  player.walking = keys['w']||keys['a']||keys['s']||keys['d'];
   if(!collides(nx,ny,player.r)){player.x=nx;player.y=ny;}
 
   // Bullets
-  bullets.forEach(b=>{b.x+=b.dx; b.y+=b.dy;});
+  bullets.forEach(b=>{b.x+=b.dx;b.y+=b.dy;});
   bullets=bullets.filter(b=>!collides(b.x,b.y,2));
 
-  // Enemies
+  // Enemy AI
   enemies.forEach(e=>{
-    const dx=player.x-e.x, dy=player.y-e.y;
-    const d=Math.hypot(dx,dy);
-    if(d>0){e.x+=dx/d*1.5; e.y+=dy/d*1.5;}
+    const dx=player.x-e.x,dy=player.y-e.y,dist=Math.hypot(dx,dy);
+
+    // Vision
+    if(canSee(e,player) && dist<600){
+      e.state="chase"; e.visionTime=100;
+    } else {
+      if(e.visionTime>0)e.visionTime--; else e.state="idle";
+    }
+
+    // Movement
+    if(e.state==="chase"){
+      const dirx=dx/dist,diry=dy/dist;
+      const nx=e.x+dirx*1.5, ny=e.y+diry*1.5;
+      if(!collides(nx,ny,e.r)){e.x=nx; e.y=ny;}
+    } else if(e.state==="idle"){
+      if(Math.random()<0.01) e.angle=Math.random()*Math.PI*2;
+      const nx=e.x+Math.cos(e.angle||0)*0.5;
+      const ny=e.y+Math.sin(e.angle||0)*0.5;
+      if(!collides(nx,ny,e.r)){e.x=nx; e.y=ny;}
+    }
   });
 
   // Bullet hits
   bullets.forEach((b,bi)=>{
     enemies.forEach((e,ei)=>{
-      const dx=b.x-e.x, dy=b.y-e.y;
-      if(Math.hypot(dx,dy)<e.r){ e.hp--; bullets.splice(bi,1);
-        if(e.hp<=0){ enemies.splice(ei,1); player.kills++; checkBossTrigger(); }
+      const dx=b.x-e.x,dy=b.y-e.y;
+      if(Math.hypot(dx,dy)<e.r){e.hp--; bullets.splice(bi,1);
+        if(e.hp<=0){enemies.splice(ei,1); player.kills++;}
       }
     });
-    if(boss && boss.hp>0){
-      const dx=b.x-boss.x,dy=b.y-boss.y;
-      if(Math.hypot(dx,dy)<boss.r){boss.hp--; bullets.splice(bi,1);}
-    }
   });
 
-  // Enemy hits
+  // Enemy touches player
   enemies.forEach(e=>{
-    const dx=e.x-player.x,dy=e.y-player.y;
-    if(Math.hypot(dx,dy)<e.r+player.r){ player.lives--; resetPlayer(); }
-  });
-
-  // Boss logic
-  if(boss && boss.hp>0){
-    const dx=player.x-boss.x,dy=player.y-boss.y;
-    const dist=Math.hypot(dx,dy);
-    if(dist>0){ boss.x+=dx/dist*0.8; boss.y+=dy/dist*0.8; }
-    if(Math.random()<0.02){ // boss shoots
-      const angle=Math.atan2(dy,dx);
-      for(let i=-1;i<=1;i++)
-        bossBullets.push({
-          x:boss.x, y:boss.y,
-          dx:Math.cos(angle+i*0.2)*5,
-          dy:Math.sin(angle+i*0.2)*5
-        });
+    if(Math.hypot(e.x-player.x,e.y-player.y)<e.r+player.r){
+      player.lives--;
+      player.x=CELL/2;player.y=CELL/2;
     }
-  }
-  bossBullets.forEach(b=>{b.x+=b.dx; b.y+=b.dy;});
-  bossBullets=bossBullets.filter(b=>!collides(b.x,b.y,2));
-
-  bossBullets.forEach(b=>{
-    if(Math.hypot(b.x-player.x,b.y-player.y)<player.r){ player.lives--; resetPlayer(); }
   });
 
-  // Camera follow
-  camX=player.x-w/2;
-  camY=player.y-h/2;
+  camX=player.x-w/2; camY=player.y-h/2;
   document.getElementById("hud").textContent=`Lives: ${player.lives} | Kills: ${player.kills}`;
 }
 
-function resetPlayer(){
-  player.x=CELL/2; player.y=CELL/2;
-  bullets=[]; bossBullets=[];
-  if(!boss) spawnEnemies(8);
-}
-
-// Trigger boss
-function checkBossTrigger(){
-  if(!boss && player.kills>=15){
-    boss={x:COLS*CELL/2,y:ROWS*CELL/2,r:128,hp:100};
-    enemies=[];
-    document.getElementById("msg").textContent="BOSS FIGHT!";
-    document.getElementById("msg").style.display="block";
-    setTimeout(()=>document.getElementById("msg").style.display="none",2000);
-  }
-  if(boss && boss.hp<=0){
-    document.getElementById("msg").textContent="NO U DEFEATED!";
-    document.getElementById("msg").style.display="block";
-    setTimeout(()=>{document.getElementById("msg").style.display="none"; boss=null; spawnEnemies(12);},3000);
-  }
-}
-
 // Draw
+let t=0;
 function draw(){
   ctx.fillStyle="#000";
   ctx.fillRect(0,0,w,h);
@@ -214,17 +199,30 @@ function draw(){
 
   ctx.fillStyle="#ff0";
   bullets.forEach(b=>ctx.fillRect(b.x-2,b.y-2,4,4));
-  ctx.fillStyle="#f00";
-  bossBullets.forEach(b=>ctx.fillRect(b.x-3,b.y-3,6,6));
 
-  enemies.forEach(e=>ctx.drawImage(enemyImg,e.x-e.r,e.y-e.r,e.r*2,e.r*2));
-  if(boss && boss.hp>0)
-    ctx.drawImage(bossImg,boss.x-boss.r,boss.y-boss.r,boss.r*2,boss.r*2);
-  ctx.drawImage(playerImg,player.x-player.r,player.y-player.r,player.r*2,player.r*2);
+  enemies.forEach(e=>{
+    ctx.globalAlpha = e.state==="chase" ? 1 : 0.6;
+    ctx.drawImage(enemyImg,e.x-e.r,e.y-e.r,e.r*2,e.r*2);
+  });
+  ctx.globalAlpha=1;
+
+  // Animate player sprite wobble
+  t += 0.05;
+  const speed = player.walking ? 6 : 3;
+  const pulse = 1 + Math.sin(t*speed)*0.05;
+  const tilt = Math.sin(t*2)*0.15;
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(tilt);
+  ctx.scale(pulse, pulse);
+  ctx.drawImage(playerImg, -player.r, -player.r, player.r*2, player.r*2);
+  ctx.restore();
+
   ctx.restore();
 }
 
-function loop(){ update(); draw(); requestAnimationFrame(loop); }
+// Loop
+function loop(){update();draw();requestAnimationFrame(loop);}
 loop();
 </script>
 </body>
