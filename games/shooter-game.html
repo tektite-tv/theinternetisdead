@@ -51,12 +51,12 @@ const ctx=canvas.getContext("2d");
 let w,h;function resize(){w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight;}
 window.addEventListener("resize",resize);resize();
 
-// Menus
+// Menu handlers
 const menu=document.getElementById("menu");
 const gameover=document.getElementById("gameover");
 const stats=document.getElementById("stats");
-document.getElementById("startBtn").onclick=()=>{menu.style.display="none";startGame();};
-document.getElementById("restartBtn").onclick=()=>{gameover.style.display="none";startGame();};
+document.getElementById("startBtn").onclick=()=>{menu.style.display="none";preloadImages(startGame);};
+document.getElementById("restartBtn").onclick=()=>{gameover.style.display="none";preloadImages(startGame);};
 
 // ----------- GAME CONFIG ------------
 const ARENA_W=4000, ARENA_H=4000;
@@ -72,18 +72,23 @@ const ENEMY_GIFS=[
 ];
 const BOSS_GIF="180px-NO_U_cycle.gif";
 
-let spawnInterval,enemySpeed,frames,running,startTime;
-let bossSpawned=false;
-
-const playerImg=new Image();playerImg.src=GIF_PATH+"bananarama.gif";
+let spawnInterval,enemySpeed,frames,running,startTime,bossSpawned=false;
 let player,bullets,enemies,camX,camY;
 
-// preload enemy gifs
+const playerImg=new Image();playerImg.src=GIF_PATH+"bananarama.gif";
+const bossImg=new Image();bossImg.src=GIF_PATH+BOSS_GIF;
 const enemyImages={};
 for(const g of ENEMY_GIFS){
   const img=new Image();img.src=GIF_PATH+g;enemyImages[g]=img;
 }
-const bossImg=new Image();bossImg.src=GIF_PATH+BOSS_GIF;
+
+// Preload before start
+function preloadImages(callback){
+  let total=ENEMY_GIFS.length+2,loaded=0;
+  function check(){if(++loaded>=total)callback();}
+  playerImg.onload=check;bossImg.onload=check;
+  for(const g of ENEMY_GIFS){enemyImages[g].onload=check;}
+}
 
 function init(){
   player={x:ARENA_W/2,y:ARENA_H/2,r:24,speed:4,kills:0,alive:true};
@@ -109,7 +114,7 @@ function shoot(e){
   bullets.push({x:player.x,y:player.y,dx:Math.cos(angle)*10,dy:Math.sin(angle)*10});
 }
 
-// Random enemy spawn
+// Spawn enemy
 function spawnEnemy(){
   const side=Math.floor(Math.random()*4);
   let x,y;
@@ -117,8 +122,6 @@ function spawnEnemy(){
   else if(side===1){x=ARENA_W+100;y=Math.random()*ARENA_H;}
   else if(side===2){x=Math.random()*ARENA_W;y=ARENA_H+100;}
   else{x=-100;y=Math.random()*ARENA_H;}
-
-  // pick random gif
   const gifName=ENEMY_GIFS[Math.floor(Math.random()*ENEMY_GIFS.length)];
   const img=enemyImages[gifName];
   const size=20+Math.random()*60;
@@ -126,7 +129,6 @@ function spawnEnemy(){
   enemies.push({x,y,r:size/2,hp:hp,img:img,speed:enemySpeed*(0.8+Math.random()*0.4)});
 }
 
-// Boss spawn
 function spawnBoss(){
   const side=Math.floor(Math.random()*4);
   let x,y;
@@ -134,7 +136,7 @@ function spawnBoss(){
   else if(side===1){x=ARENA_W+200;y=Math.random()*ARENA_H;}
   else if(side===2){x=Math.random()*ARENA_W;y=ARENA_H+200;}
   else{x=-200;y=Math.random()*ARENA_H;}
-  enemies.push({x,y,r:90,hp:40,img:bossImg,speed:1.5,isBoss:true});
+  enemies.push({x,y,r:90,hp:50,img:bossImg,speed:1.3,isBoss:true});
   bossSpawned=true;
 }
 
@@ -155,18 +157,14 @@ function update(){
   bullets.forEach(b=>{b.x+=b.dx;b.y+=b.dy;});
   bullets=bullets.filter(b=>b.x>0&&b.x<ARENA_W&&b.y>0&&b.y<ARENA_H);
 
-  // spawn normal enemies until boss trigger
   if(player.kills<BOSS_TRIGGER_KILLS && frames%Math.floor(spawnInterval)===0){
     spawnEnemy();spawnInterval*=SPAWN_ACCELERATION;
   }
-  // spawn boss once
   if(!bossSpawned && player.kills>=BOSS_TRIGGER_KILLS){spawnBoss();}
-
   enemySpeed*=1.0005;
 
   enemies.forEach(e=>{
-    const dx=player.x-e.x,dy=player.y-e.y;
-    const dist=Math.hypot(dx,dy);
+    const dx=player.x-e.x,dy=player.y-e.y,dist=Math.hypot(dx,dy)||1;
     e.x+=dx/dist*e.speed;
     e.y+=dy/dist*e.speed;
   });
@@ -176,18 +174,14 @@ function update(){
       const dx=b.x-e.x,dy=b.y-e.y;
       if(Math.hypot(dx,dy)<e.r){
         e.hp--;bullets.splice(bi,1);
-        if(e.hp<=0){
-          enemies.splice(ei,1);
-          player.kills++;
-        }
+        if(e.hp<=0){enemies.splice(ei,1);player.kills++;}
       }
     });
   });
 
   enemies.forEach(e=>{
     if(Math.hypot(e.x-player.x,e.y-player.y)<e.r+player.r){
-      player.alive=false;
-      gameOver(timeElapsed);
+      player.alive=false;gameOver(timeElapsed);
     }
   });
 
@@ -199,14 +193,15 @@ function update(){
 let t=0;
 function draw(){
   const grd=ctx.createLinearGradient(0,0,w,h);
-  grd.addColorStop(0,"#050005");
-  grd.addColorStop(1,"#200030");
+  grd.addColorStop(0,"#1a0020");
+  grd.addColorStop(1,"#400060");
   ctx.fillStyle=grd;
   ctx.fillRect(0,0,w,h);
 
   ctx.save();ctx.translate(-camX,-camY);
   enemies.forEach(e=>{
-    ctx.drawImage(e.img,e.x-e.r,e.y-e.r,e.r*2,e.r*2);
+    if(e.img.complete) ctx.drawImage(e.img,e.x-e.r,e.y-e.r,e.r*2,e.r*2);
+    else {ctx.strokeStyle="#f0f";ctx.strokeRect(e.x-e.r,e.y-e.r,e.r*2,e.r*2);}
   });
 
   ctx.fillStyle="#ff0";
@@ -217,7 +212,8 @@ function draw(){
   ctx.save();
   ctx.translate(player.x,player.y);
   ctx.scale(pulse,pulse);
-  ctx.drawImage(playerImg,-player.r,-player.r,player.r*2,player.r*2);
+  if(playerImg.complete) ctx.drawImage(playerImg,-player.r,-player.r,player.r*2,player.r*2);
+  else {ctx.fillStyle="#0f0";ctx.beginPath();ctx.arc(0,0,player.r,0,Math.PI*2);ctx.fill();}
   ctx.restore();
   ctx.restore();
 }
