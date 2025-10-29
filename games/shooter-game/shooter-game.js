@@ -10,14 +10,35 @@ const ui = {
   restart: document.getElementById("restart")
 };
 
-// Load GIFs from /media/gifs/
+// Base path for GIFs
 const basePath = "/media/gifs/";
 const enemyFiles = [
   "dancing-guy.gif", "dancingzoidberg.gif", "dragon.gif", "eyes.gif",
   "fatspiderman.gif", "firework.gif", "frog.gif", "keyboard_smash.gif", "skeleton.gif"
 ];
-const playerImg = new Image();
-playerImg.src = basePath + "bananarama.gif";
+
+// Load all images properly
+function loadImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => resolve(img);
+  });
+}
+
+let imagesLoaded = false;
+let enemyImages = {};
+let playerImg;
+
+Promise.all([
+  loadImage(basePath + "bananarama.gif"),
+  ...enemyFiles.map(f => loadImage(basePath + f))
+]).then(loaded => {
+  playerImg = loaded[0];
+  enemyFiles.forEach((f, i) => (enemyImages[f] = loaded[i + 1]));
+  imagesLoaded = true;
+  init();
+});
 
 const enemies = [];
 let bullets = [];
@@ -25,6 +46,7 @@ let kills = 0;
 let deaths = 0;
 let health = 100;
 let gameOver = false;
+let frameCount = 0;
 
 const keys = { w: false, a: false, s: false, d: false, up: false, down: false, left: false, right: false };
 
@@ -35,12 +57,6 @@ window.addEventListener("keyup", e => {
   if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
 });
 ui.restart.onclick = resetGame;
-
-function randomEnemyImage() {
-  const img = new Image();
-  img.src = basePath + enemyFiles[Math.floor(Math.random() * enemyFiles.length)];
-  return img;
-}
 
 const player = {
   x: canvas.width / 2,
@@ -60,8 +76,13 @@ function spawnEnemy() {
   if (side === 3) { x = -50; y = Math.random() * canvas.height; }
 
   const size = Math.random() * 40 + 40;
-  const health = size * 0.5;
-  enemies.push({ x, y, size, speed: 1 + Math.random() * 1.5, img: randomEnemyImage(), health });
+  const hp = size * 0.5;
+  const file = enemyFiles[Math.floor(Math.random() * enemyFiles.length)];
+  enemies.push({
+    x, y, size, speed: 0.8 + Math.random() * 1.2,
+    img: enemyImages[file],
+    health: hp
+  });
 }
 
 function shootBullet(angle) {
@@ -74,7 +95,9 @@ function shootBullet(angle) {
 }
 
 function update() {
-  if (gameOver) return;
+  if (gameOver || !imagesLoaded) return;
+
+  frameCount++;
 
   // Player movement
   let dx = 0, dy = 0;
@@ -111,14 +134,12 @@ function update() {
     e.x += Math.cos(angle) * e.speed;
     e.y += Math.sin(angle) * e.speed;
 
-    // Collision with player
     const dist = Math.hypot(player.x - e.x, player.y - e.y);
     if (dist < e.size / 2 + player.size / 2) {
       health -= 0.5;
       if (health <= 0) endGame();
     }
 
-    // Bullet hits
     bullets.forEach((b, bi) => {
       const hitDist = Math.hypot(b.x - e.x, b.y - e.y);
       if (hitDist < e.size / 2) {
@@ -133,7 +154,7 @@ function update() {
   });
 
   // Spawn new enemies
-  if (Math.random() < 0.02 && enemies.length < 15) spawnEnemy();
+  if (frameCount % 60 === 0 && enemies.length < 15) spawnEnemy();
 
   // Update UI
   ui.kills.textContent = kills;
@@ -142,7 +163,15 @@ function update() {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (!imagesLoaded) {
+    ctx.fillStyle = "#00ff99";
+    ctx.font = "30px monospace";
+    ctx.fillText("Loading GIFs...", canvas.width / 2 - 100, canvas.height / 2);
+    return;
+  }
 
   // Player
   ctx.save();
@@ -161,8 +190,14 @@ function draw() {
 
   // Enemies
   enemies.forEach(e => {
-    ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
+    if (e.img) ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
   });
+
+  if (gameOver) {
+    ctx.fillStyle = "red";
+    ctx.font = "80px Impact";
+    ctx.fillText("YOU DIED", canvas.width / 2 - 180, canvas.height / 2);
+  }
 }
 
 function loop() {
@@ -172,12 +207,11 @@ function loop() {
 }
 
 function endGame() {
-  gameOver = true;
-  deaths++;
-  ui.deaths.textContent = deaths;
-  ctx.fillStyle = "red";
-  ctx.font = "80px Impact";
-  ctx.fillText("YOU DIED", canvas.width / 2 - 180, canvas.height / 2);
+  if (!gameOver) {
+    gameOver = true;
+    deaths++;
+    ui.deaths.textContent = deaths;
+  }
 }
 
 function resetGame() {
@@ -188,4 +222,6 @@ function resetGame() {
   gameOver = false;
 }
 
-loop();
+function init() {
+  loop();
+}
