@@ -1,9 +1,9 @@
 /* ===========================================================
-   Bananarama Apocalypse v5.2 — "Bullets Strike Back"
+   Bananarama Apocalypse v6 — "Wave Function Collapse"
    ===========================================================
-   ✦ Twin bosses in INSANE mode
-   ✦ Bullets render AND deal damage again
-   ✦ Background upload still works
+   ✦ Progressive difficulty waves restored
+   ✦ Twin bosses for INSANE mode
+   ✦ Bullet collisions + GIF backgrounds + pushback
    =========================================================== */
 
 const canvas = document.getElementById("gameCanvas");
@@ -48,6 +48,7 @@ let customBg=null;
 let customBgURL=null;
 document.getElementById("ui").classList.add("hidden");
 
+// --- MENU LOGIC ---
 startBtn.onclick=()=>startGame("normal");
 bossBtn.onclick=()=>startGame("boss");
 insaneBtn.onclick=()=>startGame("insane");
@@ -85,6 +86,7 @@ backBtn.onclick=()=>{
   optionsBtn.style.display="inline-block";
 };
 
+// --- BACKGROUND ---
 bgSelect.onchange=()=>{
   const colors={black:"#000",green:"#002b00",blue:"#001133",purple:"#150021"};
   backgroundColor=colors[bgSelect.value]||"#000";
@@ -181,7 +183,7 @@ function shootBullet(angle){
   aimAngle=angle;
 }
 
-// --- BOSS ---
+// --- BOSSES ---
 function spawnBoss(x=canvas.width/2,y=canvas.height/3){
   const b={x,y,size:180,speed:1.2,img:bossImg,health:1000,orbiters:[],flashTimer:0,shootTimer:150};
   for(let i=0;i<4;i++){
@@ -195,6 +197,8 @@ function spawnInsaneBossMode(){bosses=[];spawnBoss(250,150);spawnBoss(canvas.wid
 function update(){
   if(!gameRunning||gameOver||!imagesLoaded||paused)return;
   frameCount++;
+
+  // Player movement
   let dx=0,dy=0;
   if(keys.w)dy-=player.speed;if(keys.s)dy+=player.speed;if(keys.a)dx-=player.speed;if(keys.d)dx+=player.speed;
   player.x=Math.max(0,Math.min(canvas.width,player.x+dx));
@@ -209,27 +213,35 @@ function update(){
   lightnings.forEach(l=>{l.x+=Math.cos(l.angle)*l.speed;l.y+=Math.sin(l.angle)*l.speed;l.life--;});
   lightnings=lightnings.filter(l=>l.life>0);
 
-  enemies.forEach((e,i)=>{
+  // Enemy updates
+  enemies.forEach((e)=>{
     if(e.knock>0){e.x+=e.vx;e.y+=e.vy;e.vx*=0.88;e.vy*=0.88;e.knock--;}
     else{const a=Math.atan2(player.y-e.y,player.x-e.x);e.x+=Math.cos(a)*e.speed;e.y+=Math.sin(a)*e.speed;}
     const dist=Math.hypot(player.x-e.x,player.y-e.y);
     if(dist<e.size/2+player.size/2){health-=0.5;if(health<=0)endGame();}
   });
 
-  // bullet → enemy collision
+  // bullet collisions
   bullets.forEach((b,bi)=>{
     enemies.forEach((e,ei)=>{
       if(Math.hypot(b.x-e.x,b.y-e.y)<e.size/2){
-        e.health-=25;
-        bullets.splice(bi,1);
+        e.health-=25;bullets.splice(bi,1);
         if(e.health<=0){kills++;enemies.splice(ei,1);}
       }
     });
+    bosses.forEach(boss=>{
+      if(Math.hypot(b.x-boss.x,b.y-boss.y)<boss.size/2){boss.health-=10;bullets.splice(bi,1);}
+      boss.orbiters.forEach(o=>{
+        if(Math.hypot(b.x-o.x,b.y-o.y)<o.size/2){o.health-=20;bullets.splice(bi,1);}
+      });
+    });
   });
 
+  // Boss behavior
   bosses.forEach((boss,bi)=>{
     boss.x+=Math.sin(frameCount/60+bi)*2;
     boss.y+=Math.cos(frameCount/80+bi)*1.5;
+    boss.orbiters=boss.orbiters.filter(o=>o.health>0);
     boss.orbiters.forEach(o=>{
       if(o.knock>0){o.x+=o.vx;o.y+=o.vy;o.vx*=0.9;o.vy*=0.9;o.knock--;}
       else{o.angle+=o.speed;o.x=boss.x+Math.cos(o.angle)*o.radius;o.y=boss.y+Math.sin(o.angle)*o.radius;}
@@ -239,25 +251,23 @@ function update(){
         lightnings.push({x:o.x,y:o.y,angle:ang,speed:14,life:140,width:5,length:60});
         o.shootTimer=150+Math.random()*50;
       }
-      // bullet → orbiter collision
-      bullets.forEach((b,bi)=>{
-        if(Math.hypot(b.x-o.x,b.y-o.y)<o.size/2){
-          o.health-=20;bullets.splice(bi,1);
-        }
-      });
-    });
-    // bullet → boss collision
-    bullets.forEach((b,bi)=>{
-      if(Math.hypot(b.x-boss.x,b.y-boss.y)<boss.size/2){
-        boss.health-=10;bullets.splice(bi,1);
-      }
     });
   });
-
   bosses=bosses.filter(b=>b.health>0);
+
+  // Lightnings hurt
   lightnings.forEach(l=>{if(Math.hypot(player.x-l.x,player.y-l.y)<60){health-=7;if(health<=0)endGame();}});
   ui.kills.textContent=kills;
   ui.health.textContent=Math.max(0,Math.floor(health));
+
+  // --- WAVE SYSTEM ---
+  if(enemies.length===0 && bosses.length===0 && !gameOver){
+    if(kills>=50 && !bosses.length){spawnBoss();} // optional midboss
+    else{
+      wave++;
+      spawnEnemyWave(5 + wave * 3);
+    }
+  }
 }
 
 // --- DRAW ---
@@ -290,7 +300,7 @@ function draw(){
   drawBar("HEALTH",20,50,health,100,"#ff3333",true);
   drawBar("STAMINA",20,25,stamina,100,pushCooldown?"#333333":"#00ccff",true);
   ctx.fillStyle="#00ff99";ctx.font="20px monospace";ctx.textAlign="right";
-  ctx.fillText(`Time: ${gameTimer.toFixed(1)}s`,canvas.width-20,canvas.height-20);
+  ctx.fillText(`Wave ${wave} | Time: ${gameTimer.toFixed(1)}s`,canvas.width-20,canvas.height-20);
   if(gameOver){ctx.fillStyle="red";ctx.font="80px Impact";ctx.textAlign="center";ctx.fillText("YOU DIED",canvas.width/2,canvas.height/2);}
 }
 
