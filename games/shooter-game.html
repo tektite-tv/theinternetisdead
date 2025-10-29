@@ -3,29 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bananarama vs Skeletons</title>
+<title>Bananarama Apocalypse</title>
 <style>
-  @font-face {
-    font-family: 'Impact';
-    src: local('Impact'), local('Impact Regular'),
-         url('https://fonts.cdnfonts.com/s/14028/impact.woff') format('woff');
-  }
-
   html, body {
     margin: 0;
     overflow: hidden;
     font-family: monospace;
-    background: #3b2b1c; /* fallback dirt tone */
+    background: #2b1c14;
   }
-
   canvas { display: block; }
 
   #hud {
     position: absolute;
     top: 10px;
     left: 10px;
-    font-size: 18px;
     color: #ff0;
+    font-size: 18px;
     text-shadow: 1px 1px 3px #000;
   }
 
@@ -34,7 +27,7 @@
     top: 40%;
     width: 100%;
     text-align: center;
-    font-family: 'Impact', sans-serif;
+    font-family: Impact, sans-serif;
     font-size: 96px;
     color: red;
     text-shadow: 4px 4px 10px black;
@@ -54,7 +47,7 @@
 </style>
 </head>
 <body>
-<div id="hud">Lives: 3 | Kills: 0</div>
+<div id="hud">Level: 1 | Lives: 3 | Kills: 0</div>
 <div id="message">YOU DIED</div>
 <div id="subtext">Press any key to revive</div>
 <canvas id="game"></canvas>
@@ -63,196 +56,190 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let w, h;
-function resize() {
-  w = canvas.width = window.innerWidth;
-  h = canvas.height = window.innerHeight;
-}
+function resize(){ w=canvas.width=window.innerWidth; h=canvas.height=window.innerHeight; }
 window.addEventListener('resize', resize);
 resize();
 
-// Load images
-const bgImg = new Image();
-bgImg.src = "https://upload.wikimedia.org/wikipedia/commons/8/89/Grass_texture.jpg";
-const playerImg = new Image();
-playerImg.src = "/media/images/gifs/bananarama.gif";
-const enemyImg = new Image();
-enemyImg.src = "/media/images/gifs/skeleton.gif";
+const bg = new Image();
+bg.src = "https://upload.wikimedia.org/wikipedia/commons/8/89/Grass_texture.jpg";
+let bgPattern=null; bg.onload=()=>bgPattern=ctx.createPattern(bg,"repeat");
 
-let bgPattern = null;
-bgImg.onload = () => {
-  bgPattern = ctx.createPattern(bgImg, "repeat");
-};
-
-// Player
-const player = {
-  x: w/2,
-  y: h/2,
-  r: 25,
-  speed: 4,
-  lives: 3,
-  kills: 0,
-  dead: false,
-};
-
-// Input
-const keys = {};
-window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-// Bullets
-let bullets = [];
-window.addEventListener('click', e => {
-  if (player.dead || gameOver) return;
-  const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
-  bullets.push({ x: player.x, y: player.y, dx: Math.cos(angle)*8, dy: Math.sin(angle)*8 });
+// GIF bestiary
+const monsterGIFs = [
+  "bananarama.gif","dancing-guy.gif","dancingzoidberg.gif",
+  "dragon.gif","eyes.gif","fatspiderman.gif","firework.gif",
+  "frog.gif","keyboard_smash.gif","skeleton.gif"
+].map(name => {
+  const img = new Image();
+  img.src = "/media/images/gifs/" + name;
+  return img;
 });
 
-// Enemies
-let enemies = [];
-function spawnEnemy() {
-  const edge = Math.floor(Math.random()*4);
-  let x, y;
-  if (edge === 0) { x = Math.random()*w; y = -40; }
-  else if (edge === 1) { x = w+40; y = Math.random()*h; }
-  else if (edge === 2) { x = Math.random()*w; y = h+40; }
-  else { x = -40; y = Math.random()*h; }
-  enemies.push({ x, y, r: 25, hp: 3 });
+const playerImg = new Image();
+playerImg.src = "/media/images/gifs/bananarama.gif";
+
+let player = { x:w/2, y:h/2, r:25, speed:5, lives:3, kills:0, level:1, dead:false, gunLevel:1 };
+const keys={};
+window.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
+window.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
+
+let bullets=[];
+window.addEventListener('click', e=>{
+  if(player.dead||gameOver)return;
+  const angle=Math.atan2(e.clientY-player.y,e.clientX-player.x);
+  const spread=(player.gunLevel>1)?(player.gunLevel-1)*0.1:0;
+  for(let i=-spread;i<=spread;i+=spread||1){
+    bullets.push({
+      x:player.x,y:player.y,
+      dx:Math.cos(angle+i)*10,dy:Math.sin(angle+i)*10,
+      dmg:player.gunLevel
+    });
+  }
+});
+
+let enemies=[];
+function spawnEnemy(){
+  const img=monsterGIFs[Math.floor(Math.random()*monsterGIFs.length)];
+  const size=30+Math.random()*40;
+  const hpBase=2+player.level;
+  const speed=0.6+Math.random()*0.8+player.level*0.1;
+  const edge=Math.floor(Math.random()*4);
+  let x,y;
+  if(edge===0){x=Math.random()*w;y=-size;}
+  else if(edge===1){x=w+size;y=Math.random()*h;}
+  else if(edge===2){x=Math.random()*w;y=h+size;}
+  else{x=-size;y=Math.random()*h;}
+  enemies.push({x,y,r:size/2,hp:hpBase,maxHp:hpBase,img,speed});
 }
-function spawnWave(count=8){
-  enemies = [];
+
+function spawnWave(){
+  const count=Math.ceil(5*Math.pow(1.3,player.level));
+  enemies=[];
   for(let i=0;i<count;i++) spawnEnemy();
 }
-spawnWave();
 
-// Explosions
-let explosions = [];
-function addExplosion(x, y) {
-  explosions.push({ x, y, t: 0 });
+let explosions=[];
+function addExplosion(x,y){explosions.push({x,y,t:0});}
+
+const hud=document.getElementById('hud');
+const msg=document.getElementById('message');
+const sub=document.getElementById('subtext');
+let gameOver=false;
+function updateHUD(){
+  hud.textContent=`Level: ${player.level} | Lives: ${player.lives} | Kills: ${player.kills}`;
 }
 
-// HUD and state
-const hud = document.getElementById('hud');
-const msg = document.getElementById('message');
-const sub = document.getElementById('subtext');
-let gameOver = false;
-function updateHUD() {
-  hud.textContent = `Lives: ${player.lives} | Kills: ${player.kills}`;
-}
+function update(){
+  if(player.dead||gameOver)return;
 
-// Update
-function update() {
-  if (player.dead || gameOver) return;
+  if(keys['w'])player.y-=player.speed;
+  if(keys['s'])player.y+=player.speed;
+  if(keys['a'])player.x-=player.speed;
+  if(keys['d'])player.x+=player.speed;
+  player.x=Math.max(player.r,Math.min(w-player.r,player.x));
+  player.y=Math.max(player.r,Math.min(h-player.r,player.y));
 
-  if (keys['w']) player.y -= player.speed;
-  if (keys['s']) player.y += player.speed;
-  if (keys['a']) player.x -= player.speed;
-  if (keys['d']) player.x += player.speed;
-  player.x = Math.max(player.r, Math.min(w-player.r, player.x));
-  player.y = Math.max(player.r, Math.min(h-player.r, player.y));
+  bullets.forEach(b=>{b.x+=b.dx;b.y+=b.dy;});
+  bullets=bullets.filter(b=>b.x>0&&b.x<w&&b.y>0&&b.y<h);
 
-  bullets.forEach(b => { b.x += b.dx; b.y += b.dy; });
-  bullets = bullets.filter(b => b.x>0 && b.x<w && b.y>0 && b.y<h);
-
-  enemies.forEach(e => {
-    const angle = Math.atan2(player.y - e.y, player.x - e.x);
-    e.x += Math.cos(angle)*1.5;
-    e.y += Math.sin(angle)*1.5;
+  enemies.forEach(e=>{
+    const angle=Math.atan2(player.y-e.y,player.x-e.x);
+    e.x+=Math.cos(angle)*e.speed;
+    e.y+=Math.sin(angle)*e.speed;
   });
 
-  // Bullet hit detection
-  bullets.forEach((b, bi) => {
-    enemies.forEach((e, ei) => {
-      const dx = b.x - e.x;
-      const dy = b.y - e.y;
-      if (Math.hypot(dx, dy) < e.r) {
-        e.hp--;
+  bullets.forEach((b,bi)=>{
+    enemies.forEach((e,ei)=>{
+      const dx=b.x-e.x, dy=b.y-e.y;
+      if(Math.hypot(dx,dy)<e.r){
+        e.hp-=b.dmg;
         bullets.splice(bi,1);
-        if (e.hp <= 0) {
-          addExplosion(e.x, e.y);
+        if(e.hp<=0){
+          addExplosion(e.x,e.y);
           enemies.splice(ei,1);
           player.kills++;
+          if(player.kills%10===0){
+            player.gunLevel=Math.min(5,player.gunLevel+1);
+          }
           updateHUD();
-          setTimeout(spawnEnemy, 1500);
         }
       }
     });
   });
 
-  // Enemy hits player
-  enemies.forEach(e => {
-    const dx = e.x - player.x;
-    const dy = e.y - player.y;
-    if (Math.hypot(dx, dy) < e.r + player.r) {
+  enemies.forEach(e=>{
+    const dx=e.x-player.x,dy=e.y-player.y;
+    if(Math.hypot(dx,dy)<e.r+player.r){
       player.lives--;
       updateHUD();
-      player.dead = true;
-      msg.style.display = 'block';
-      sub.style.display = player.lives > 0 ? 'block' : 'none';
-      if (player.lives <= 0) {
-        msg.textContent = 'GAME OVER';
-        gameOver = true;
-      }
+      player.dead=true;
+      msg.style.display='block';
+      sub.style.display=player.lives>0?'block':'none';
+      if(player.lives<=0){msg.textContent='GAME OVER';gameOver=true;}
     }
   });
 
-  explosions.forEach(ex => ex.t++);
-  explosions = explosions.filter(ex => ex.t < 25);
+  if(enemies.length===0){
+    player.level++;
+    spawnWave();
+  }
+
+  explosions.forEach(ex=>ex.t++);
+  explosions=explosions.filter(ex=>ex.t<25);
 }
 
-// Draw
-function draw() {
-  if (bgPattern) {
-    ctx.fillStyle = bgPattern;
-    ctx.fillRect(0, 0, w, h);
-  } else {
-    ctx.fillStyle = '#3b2b1c';
-    ctx.fillRect(0, 0, w, h);
+function draw(){
+  ctx.fillStyle=bgPattern||'#3b2b1c';
+  ctx.fillRect(0,0,w,h);
+
+  if(!player.dead){
+    ctx.drawImage(playerImg,player.x-player.r,player.y-player.r,player.r*2,player.r*2);
   }
 
-  if (!player.dead) {
-    ctx.drawImage(playerImg, player.x - player.r, player.y - player.r, player.r*2, player.r*2);
-  }
-
-  ctx.fillStyle = '#ff0';
-  bullets.forEach(b => {
+  ctx.fillStyle='#ff0';
+  bullets.forEach(b=>{
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 4, 0, Math.PI*2);
+    ctx.arc(b.x,b.y,4,0,Math.PI*2);
     ctx.fill();
   });
 
-  enemies.forEach(e => {
-    ctx.drawImage(enemyImg, e.x - e.r, e.y - e.r, e.r*2, e.r*2);
+  enemies.forEach(e=>{
+    ctx.drawImage(e.img,e.x-e.r,e.y-e.r,e.r*2,e.r*2);
+    const barW=e.r*2;
+    const hpRatio=e.hp/e.maxHp;
+    ctx.fillStyle='red';
+    ctx.fillRect(e.x-e.r,e.y-e.r-10,barW,5);
+    ctx.fillStyle='lime';
+    ctx.fillRect(e.x-e.r,e.y-e.r-10,barW*hpRatio,5);
   });
 
-  explosions.forEach(ex => {
-    const alpha = 1 - ex.t/25;
-    const radius = ex.t * 3;
-    ctx.strokeStyle = `rgba(255,200,50,${alpha})`;
+  explosions.forEach(ex=>{
+    const alpha=1-ex.t/25;
+    const radius=ex.t*3;
+    ctx.strokeStyle=`rgba(255,200,50,${alpha})`;
     ctx.beginPath();
-    ctx.arc(ex.x, ex.y, radius, 0, Math.PI*2);
+    ctx.arc(ex.x,ex.y,radius,0,Math.PI*2);
     ctx.stroke();
   });
 }
 
-// Revive
-window.addEventListener('keydown', () => {
-  if (player.dead && player.lives > 0 && !gameOver) {
-    player.dead = false;
-    msg.style.display = 'none';
-    sub.style.display = 'none';
-    player.x = w/2;
-    player.y = h/2;
-    bullets = [];
-    explosions = [];
-    spawnWave(); // reset skeletons
+window.addEventListener('keydown',()=>{
+  if(player.dead&&player.lives>0&&!gameOver){
+    player.dead=false;
+    msg.style.display='none';
+    sub.style.display='none';
+    player.x=w/2;player.y=h/2;
+    bullets=[];explosions=[];
+    spawnWave();
   }
 });
 
-function loop() {
-  update();
-  draw();
+function loop(){
+  update();draw();
   requestAnimationFrame(loop);
 }
+spawnWave();
+updateHUD();
 loop();
 </script>
 </body>
