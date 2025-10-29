@@ -133,11 +133,40 @@ let mouseX = player.x, mouseY = player.y, aimAngle = 0;
 
 canvas.addEventListener("mousemove", e => { mouseX = e.clientX; mouseY = e.clientY; });
 canvas.addEventListener("mousedown", () => {
-  if (!gameOver && imagesLoaded && gameRunning && !paused) {
-    const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
-    shootBullet(angle);
-  }
-});
+  if (gameOver) {
+  ctx.fillStyle = "red";
+  ctx.font = "80px Impact";
+  ctx.textAlign = "center";
+  ctx.fillText("YOU DIED", canvas.width / 2, canvas.height / 2);
+
+  // Restart button under YOU DIED
+  const btnW = 240, btnH = 60;
+  const btnX = canvas.width / 2 - btnW / 2;
+  const btnY = canvas.height / 2 + 50;
+
+  ctx.fillStyle = "#111";
+  ctx.fillRect(btnX, btnY, btnW, btnH);
+  ctx.strokeStyle = "#00ff99";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(btnX, btnY, btnW, btnH);
+  ctx.fillStyle = "#00ff99";
+  ctx.font = "26px monospace";
+  ctx.fillText("Restart to Main Menu", canvas.width / 2, btnY + 40);
+
+  // Click handler for restart
+  canvas.onclick = function (e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    if (mx > btnX && mx < btnX + btnW && my > btnY && my < btnY + btnH) {
+      resetGame();
+      menu.classList.remove("hidden");
+      document.getElementById("ui").classList.add("hidden");
+      gameRunning = false;
+      canvas.onclick = null; // disable after click
+    }
+  };
+}
 
 // --- LOADING ---
 function loadImage(src) {
