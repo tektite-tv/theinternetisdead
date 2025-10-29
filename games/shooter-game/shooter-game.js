@@ -378,4 +378,33 @@ function draw(){
   drawBar("HEALTH",20,50,health,100,"#ff3333",true);
   drawBar("STAMINA",20,25,stamina,100,pushCooldown?"#333333":"#00ccff",true);
   ctx.fillStyle="#00ff99";ctx.font="20px monospace";ctx.textAlign="right";
-  ctx.fillText(`Wave
+  ctx.fillText(`Wave ${wave} | Time: ${gameTimer.toFixed(1)}s`,canvas.width-20,canvas.height-20);
+  if(gameOver){ctx.fillStyle="red";ctx.font="80px Impact";ctx.textAlign="center";ctx.fillText("YOU DIED",canvas.width/2,canvas.height/2);}
+}
+
+// --- UTIL ---
+function drawBar(label,x,y,value,max,color,alignBottom=false){
+  const w=220,h=15,baseY=alignBottom?canvas.height-y-h:y;
+  ctx.fillStyle="black";ctx.fillRect(x-2,baseY-2,w+4,h+4);
+  ctx.fillStyle=color;ctx.fillRect(x,baseY,(value/max)*w,h);
+  ctx.strokeStyle="#00ff99";ctx.strokeRect(x-2,baseY-2,w+4,h+4);
+  ctx.fillStyle="#00ff99";ctx.font="12px monospace";ctx.fillText(label,x,baseY-6);
+}
+function pushBackEnemies(){
+  if(pushCooldown||pushCharges<=0||stamina<20)return;
+  pushCharges--;stamina=Math.max(0,stamina-35);pushFxTimer=18;
+  const radius=320,maxKick=18,stunFrames=16;
+  enemies.forEach(e=>{
+    const dx=e.x-player.x,dy=e.y-player.y,dist=Math.hypot(dx,dy)||0.001;
+    if(dist<radius){const f=maxKick*(1-dist/radius);e.vx+=(dx/dist)*f;e.vy+=(dy/dist)*f;e.knock=stunFrames;}
+  });
+  if(pushCharges===0){pushCooldown=true;cooldownTimer=300;}
+}
+function endGame(){if(!gameOver){gameOver=true;deaths++;ui.deaths.textContent=deaths;stopTimer();}}
+function resetGame(){
+  enemies.length=0;bullets.length=0;lightnings.length=0;bosses.length=0;
+  kills=0;health=100;stamina=100;gameOver=false;pushCharges=3;pushCooldown=false;
+  cooldownTimer=0;pushFxTimer=0;wave=1;paused=false;stopTimer();
+}
+function init(){requestAnimationFrame(loop);}
+function loop(){update();draw();requestAnimationFrame(loop);}
