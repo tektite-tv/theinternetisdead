@@ -5,14 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bananarama CHAOS</title>
 <style>
-  html,body{margin:0;overflow:hidden;background:#000;font-family:monospace;}
-  canvas{display:block;background:#111;}
+  html,body{
+    margin:0;
+    overflow:hidden;
+    background:#000;
+    font-family:monospace;
+  }
+  canvas{
+    position:absolute;
+    top:0;left:0;
+    background:#111;
+    z-index:1;
+    display:block;
+  }
   #hud{
-    position:absolute;top:10px;left:10px;color:#0f0;
-    text-shadow:1px 1px 3px #000;z-index:5;
+    position:absolute;
+    top:10px;
+    left:10px;
+    color:#0f0;
+    text-shadow:1px 1px 3px #000;
+    z-index:2;
   }
   #flash{
-    position:absolute;inset:0;background:#000;opacity:0;z-index:9;pointer-events:none;
+    position:absolute;
+    inset:0;
+    background:#000;
+    opacity:0;
+    z-index:3;
+    pointer-events:none;
     transition:opacity .5s;
   }
 </style>
@@ -21,6 +41,7 @@
 <div id="hud">Lives: 3 | Kills: 0 | Gun Lv. 1</div>
 <div id="flash"></div>
 <canvas id="game"></canvas>
+
 <script>
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
@@ -30,6 +51,7 @@ window.addEventListener("resize",resize);resize();
 const playerImg=new Image();playerImg.src="/media/gifs/bananarama.gif";
 const bossImg=new Image();bossImg.src="/media/gifs/180px-NO_U_cycle.gif";
 
+// all enemies
 const enemyList=[
   {file:"/media/gifs/dancing-guy.gif",scale:1.8,speed:1,hp:8},
   {file:"/media/gifs/dancingzoidberg.gif",scale:1.2,speed:2.5,hp:4},
@@ -56,7 +78,7 @@ function init(){
 }
 init();
 
-// Controls
+// controls
 const keys={};
 window.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
 window.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
@@ -86,7 +108,7 @@ function spawnEnemy(){
   else if(side===1){x=ARENA_W+100;y=Math.random()*ARENA_H;}
   else if(side===2){x=Math.random()*ARENA_W;y=ARENA_H+100;}
   else{x=-100;y=Math.random()*ARENA_H;}
-  enemies.push({x,y,r:24*type.scale,img:type.img,speed:type.speed,hp:type.hp,scale:type.scale,type});
+  enemies.push({x,y,r:24*type.scale,img:type.img,speed:type.speed,hp:type.hp,scale:type.scale});
 }
 
 function spawnBoss(){
@@ -110,14 +132,14 @@ function update(){
   bullets=bullets.filter(b=>b.x>0&&b.x<ARENA_W&&b.y>0&&b.y<ARENA_H&&!collides(b.x,b.y,4));
   if(frames%SPAWN_INTERVAL===0&&enemies.length<MAX_ENEMIES&&!boss)spawnEnemy();
 
-  // Enemy AI
+  // enemies
   enemies.forEach(e=>{
     const dx=player.x-e.x,dy=player.y-e.y,dist=Math.hypot(dx,dy);
     const nx=e.x+(dx/dist)*e.speed,ny=e.y+(dy/dist)*e.speed;
     if(!collides(nx,ny,e.r)){e.x=nx;e.y=ny;}
   });
 
-  // Bullets
+  // bullets hit
   bullets.forEach((b,bi)=>{
     enemies.forEach((e,ei)=>{
       const dx=b.x-e.x,dy=b.y-e.y;
@@ -131,14 +153,14 @@ function update(){
     }
   });
 
-  // Orbs
+  // orbs collect
   orbs=orbs.filter(o=>{
     const d=Math.hypot(o.x-player.x,o.y-player.y);
     if(d<player.r+o.r){player.level++;return false;}
     return true;
   });
 
-  // Collisions
+  // enemy collision
   enemies.forEach(e=>{
     if(Math.hypot(e.x-player.x,e.y-player.y)<e.r+player.r){
       player.lives--;enemies=[];player.x=ARENA_W/2;player.y=ARENA_H/2;
@@ -146,7 +168,7 @@ function update(){
     }
   });
 
-  // Boss AI
+  // boss logic
   if(player.kills>=50&&!boss)spawnBoss();
   if(boss&&boss.active){
     const dx=player.x-boss.x,dy=player.y-boss.y,dist=Math.hypot(dx,dy);
@@ -159,23 +181,25 @@ function update(){
   }
 
   camX=player.x-w/2;camY=player.y-h/2;
-  document.getElementById("hud").textContent=`Lives: ${player.lives} | Kills: ${player.kills} | Gun Lv. ${player.level}${boss&&boss.active?" | BOSS HP:"+boss.hp:""}`;
+  document.getElementById("hud").textContent=
+    `Lives: ${player.lives} | Kills: ${player.kills} | Gun Lv. ${player.level}${boss&&boss.active?" | BOSS HP:"+boss.hp:""}`;
 }
 
 let t=0;
 function draw(){
-  ctx.fillStyle="#000";ctx.fillRect(0,0,w,h);
+  ctx.fillStyle="#000";ctx.fillRect(0,0,w,h); // background FIRST
   ctx.save();ctx.translate(-camX,-camY);
+  // draw order
   ctx.fillStyle="#333";obstacles.forEach(o=>ctx.fillRect(o.x,o.y,o.w,o.h));
   ctx.fillStyle="#ff0";bullets.forEach(b=>ctx.fillRect(b.x-2,b.y-2,4,4));
   ctx.fillStyle="#0f0";orbs.forEach(o=>{ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,Math.PI*2);ctx.fill();});
   enemies.forEach(e=>ctx.drawImage(e.img,e.x-e.r,e.y-e.r,e.r*2,e.r*2));
   if(boss&&boss.active)ctx.drawImage(boss.img,boss.x-boss.r,boss.y-boss.r,boss.r*2,boss.r*2);
-  t+=0.05;const pulse=1+Math.sin(t*6)*0.05;
+  t+=0.05;
+  const pulse=1+Math.sin(t*6)*0.05;
   ctx.save();ctx.translate(player.x,player.y);ctx.scale(pulse,pulse);
   ctx.drawImage(playerImg,-player.r,-player.r,player.r*2,player.r*2);
-  ctx.restore();
-  ctx.restore();
+  ctx.restore();ctx.restore();
 }
 
 function loop(){update();draw();requestAnimationFrame(loop);}
