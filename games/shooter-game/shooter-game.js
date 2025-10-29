@@ -10,14 +10,14 @@ const ui = {
   restart: document.getElementById("restart")
 };
 
-// Base path for GIFs
+// Correct path to your gifs
 const basePath = "/media/images/gifs/";
 const enemyFiles = [
   "dancing-guy.gif", "dancingzoidberg.gif", "dragon.gif", "eyes.gif",
   "fatspiderman.gif", "firework.gif", "frog.gif", "keyboard_smash.gif", "skeleton.gif"
 ];
 
-// Load all images properly
+// Image loader
 function loadImage(src) {
   return new Promise(resolve => {
     const img = new Image();
@@ -48,24 +48,34 @@ let health = 100;
 let gameOver = false;
 let frameCount = 0;
 
-const keys = { w: false, a: false, s: false, d: false, up: false, down: false, left: false, right: false };
-
-window.addEventListener("keydown", e => {
-  if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
-});
-window.addEventListener("keyup", e => {
-  if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
-});
+// controls
+const keys = { w: false, a: false, s: false, d: false };
+window.addEventListener("keydown", e => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
+window.addEventListener("keyup", e => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
 ui.restart.onclick = resetGame;
 
+// player and aim
 const player = {
   x: canvas.width / 2,
   y: canvas.height / 2,
   speed: 4,
   size: 64,
-  angle: 0,
-  shootCooldown: 0
+  angle: 0
 };
+let mouseX = canvas.width / 2;
+let mouseY = canvas.height / 2;
+
+// aim + shoot with mouse
+canvas.addEventListener("mousemove", e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+canvas.addEventListener("mousedown", () => {
+  if (!gameOver && imagesLoaded) {
+    const angle = Math.atan2(mouseY - player.y, mouseX - player.x);
+    shootBullet(angle);
+  }
+});
 
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4);
@@ -90,45 +100,36 @@ function shootBullet(angle) {
     x: player.x,
     y: player.y,
     angle,
-    speed: 10
+    speed: 12,
+    life: 60
   });
 }
 
 function update() {
   if (gameOver || !imagesLoaded) return;
-
   frameCount++;
 
-  // Player movement
+  // player movement
   let dx = 0, dy = 0;
   if (keys.w) dy -= player.speed;
   if (keys.s) dy += player.speed;
   if (keys.a) dx -= player.speed;
   if (keys.d) dx += player.speed;
+  player.x = Math.max(0, Math.min(canvas.width, player.x + dx));
+  player.y = Math.max(0, Math.min(canvas.height, player.y + dy));
 
-  player.x += dx;
-  player.y += dy;
-  player.x = Math.max(0, Math.min(canvas.width, player.x));
-  player.y = Math.max(0, Math.min(canvas.height, player.y));
+  // aim rotation
+  player.angle = Math.atan2(mouseY - player.y, mouseX - player.x);
 
-  // Shooting
-  player.shootCooldown--;
-  const aimX = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-  const aimY = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
-  if ((aimX !== 0 || aimY !== 0) && player.shootCooldown <= 0) {
-    player.angle = Math.atan2(aimY, aimX);
-    shootBullet(player.angle);
-    player.shootCooldown = 10;
-  }
-
-  // Update bullets
+  // update bullets
   bullets.forEach(b => {
     b.x += Math.cos(b.angle) * b.speed;
     b.y += Math.sin(b.angle) * b.speed;
+    b.life--;
   });
-  bullets = bullets.filter(b => b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height);
+  bullets = bullets.filter(b => b.life > 0 && b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height);
 
-  // Update enemies
+  // enemies
   enemies.forEach((e, i) => {
     const angle = Math.atan2(player.y - e.y, player.x - e.x);
     e.x += Math.cos(angle) * e.speed;
@@ -153,10 +154,8 @@ function update() {
     });
   });
 
-  // Spawn new enemies
   if (frameCount % 60 === 0 && enemies.length < 15) spawnEnemy();
 
-  // Update UI
   ui.kills.textContent = kills;
   ui.deaths.textContent = deaths;
   ui.health.textContent = Math.max(0, Math.floor(health));
@@ -173,22 +172,26 @@ function draw() {
     return;
   }
 
-  // Player
+  // player
   ctx.save();
   ctx.translate(player.x, player.y);
   ctx.rotate(player.angle);
   ctx.drawImage(playerImg, -player.size / 2, -player.size / 2, player.size, player.size);
   ctx.restore();
 
-  // Bullets
-  ctx.fillStyle = "#ff66cc";
+  // bullets with glow
   bullets.forEach(b => {
+    ctx.save();
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#ff66cc";
+    ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, 6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   });
 
-  // Enemies
+  // enemies
   enemies.forEach(e => {
     if (e.img) ctx.drawImage(e.img, e.x - e.size / 2, e.y - e.size / 2, e.size, e.size);
   });
