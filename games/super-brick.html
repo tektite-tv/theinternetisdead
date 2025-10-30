@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Super Brick Breaker: GIF Edition</title>
+<title>Super Brick Breaker: GIF Edition (Full Screen)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -15,17 +15,16 @@
   }
   canvas {
     display: block;
-    margin: auto;
     background: radial-gradient(circle at center, #111 0%, #000 100%);
-    border: 2px solid #333;
   }
   #menu, #endScreen {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    position: fixed;
+    inset: 0;
     background: rgba(0,0,0,0.85);
-    display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     z-index: 10;
   }
   button {
@@ -49,7 +48,7 @@
   <button id="startBtn">Start Game</button>
 </div>
 
-<canvas id="gameCanvas" width="800" height="600"></canvas>
+<canvas id="gameCanvas"></canvas>
 
 <div id="endScreen" style="display:none;">
   <h1 id="endMessage"></h1>
@@ -59,7 +58,6 @@
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-
 const menu = document.getElementById("menu");
 const endScreen = document.getElementById("endScreen");
 const endMessage = document.getElementById("endMessage");
@@ -68,20 +66,28 @@ const restartBtn = document.getElementById("restartBtn");
 
 let paddleX, ballX, ballY, ballVX, ballVY, bricks, lives;
 let leftPressed = false, rightPressed = false;
-let moveSpeed = 7;
+let moveSpeed = 8;
 
-const paddleWidth = 100;
-const paddleHeight = 15;
-const ballSize = 10;
-const brickRowCount = 6;
-const brickColumnCount = 10;
-const brickWidth = 70;
-const brickHeight = 40;
-const brickPadding = 10;
-const brickOffsetTop = 60;
-const brickOffsetLeft = 35;
+let paddleWidth = 120;
+let paddleHeight = 15;
+let ballSize = 10;
+let brickRowCount = 6;
+let brickColumnCount = 10;
+let brickWidth, brickHeight, brickPadding = 10;
+let brickOffsetTop = 80;
+let brickOffsetLeft = 50;
 
-// GIF files to randomize between (you can add more)
+// update canvas size dynamically
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  brickWidth = (canvas.width - brickOffsetLeft * 2 - brickPadding * (brickColumnCount - 1)) / brickColumnCount;
+  brickHeight = 40;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+// Random GIFs list
 const gifFiles = [
   "bananarama.gif",
   "180px-NO_U_cycle.gif",
@@ -101,7 +107,7 @@ function getRandomGif() {
 function resetGame() {
   paddleX = canvas.width / 2 - paddleWidth / 2;
   ballX = canvas.width / 2;
-  ballY = canvas.height - 50;
+  ballY = canvas.height - 100;
   ballVX = 4;
   ballVY = -4;
   lives = 3;
@@ -111,8 +117,7 @@ function resetGame() {
     bricks[c] = [];
     for (let r = 0; r < brickRowCount; r++) {
       bricks[c][r] = {
-        x: 0,
-        y: 0,
+        x: 0, y: 0,
         status: 1,
         img: getRandomGif()
       };
@@ -122,7 +127,7 @@ function resetGame() {
 
 function drawPaddle() {
   ctx.fillStyle = "white";
-  ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
+  ctx.fillRect(paddleX, canvas.height - paddleHeight - 20, paddleWidth, paddleHeight);
 }
 
 function drawBall() {
@@ -142,8 +147,7 @@ function drawBricks() {
       if (b.status === 1) {
         const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
         const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
-        b.x = brickX;
-        b.y = brickY;
+        b.x = brickX; b.y = brickY;
         ctx.shadowBlur = 12;
         ctx.shadowColor = "#0ff";
         ctx.drawImage(b.img, brickX, brickY, brickWidth, brickHeight);
@@ -186,7 +190,7 @@ function update() {
 
   // paddle collision
   if (
-    ballY + ballSize > canvas.height - paddleHeight - 10 &&
+    ballY + ballSize > canvas.height - paddleHeight - 20 &&
     ballX > paddleX &&
     ballX < paddleX + paddleWidth
   ) {
@@ -200,7 +204,7 @@ function update() {
     lives--;
     if (lives <= 0) return endGame("YOU LOSE");
     ballX = canvas.width / 2;
-    ballY = canvas.height - 50;
+    ballY = canvas.height - 100;
     ballVX = 4;
     ballVY = -4;
   }
@@ -222,7 +226,7 @@ function draw() {
   drawBall();
   ctx.fillStyle = "#fff";
   ctx.font = "16px monospace";
-  ctx.fillText(`Lives: ${lives}`, 10, 20);
+  ctx.fillText(`Lives: ${lives}`, 10, 30);
 }
 
 function endGame(message) {
@@ -232,12 +236,12 @@ function endGame(message) {
 
 // WASD + arrow controls
 document.addEventListener("keydown", e => {
-  if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") leftPressed = true;
-  if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") rightPressed = true;
+  if (["a", "A", "ArrowLeft"].includes(e.key)) leftPressed = true;
+  if (["d", "D", "ArrowRight"].includes(e.key)) rightPressed = true;
 });
 document.addEventListener("keyup", e => {
-  if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") leftPressed = false;
-  if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") rightPressed = false;
+  if (["a", "A", "ArrowLeft"].includes(e.key)) leftPressed = false;
+  if (["d", "D", "ArrowRight"].includes(e.key)) rightPressed = false;
 });
 
 startBtn.onclick = () => {
