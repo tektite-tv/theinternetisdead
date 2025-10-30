@@ -13,7 +13,7 @@
 <div id="main-menu" class="fixed inset-0 flex items-center justify-center pointer-events-auto">
   <div class="bg-neutral-900/90 border border-white/10 rounded-2xl shadow-2xl p-8 w-[min(92vw,560px)] text-center">
     <h1 class="text-yellow-300 text-4xl md:text-5xl font-extrabold mb-1 drop-shadow-md">Bananaman Shooter</h1>
-    <p class="text-sm opacity-70 mb-6">v0.2.6</p>
+    <p class="text-sm opacity-70 mb-6">v0.2.7</p>
     <button id="btn-start" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Start Game</button>
     <button id="btn-options" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Options</button>
   </div>
@@ -41,9 +41,14 @@
   Kills: <span id="killcount">0</span> | Wave: <span id="wavecount">0</span>
 </div>
 
-<!-- Added Timer Display -->
-<div id="hud-timer" class="hidden fixed top-2 right-3 bg-neutral-800/70 text-sm px-3 py-2 rounded-lg border border-white/10">
-  Time: <span id="timer">0s</span>
+<!-- NEW: Damage & Timer HUD -->
+<div id="hud-topright" class="hidden fixed top-2 right-3 flex gap-3">
+  <div id="hud-damage" class="bg-neutral-800/70 text-sm px-3 py-2 rounded-lg border border-white/10">
+    Damage: <span id="damagecount">0</span>
+  </div>
+  <div id="hud-timer" class="bg-neutral-800/70 text-sm px-3 py-2 rounded-lg border border-white/10">
+    Time: <span id="timer">0s</span>
+  </div>
 </div>
 
 <div id="healthbar" class="hidden fixed top-12 left-2 w-52 h-5 border border-white relative bg-red-950 rounded">
@@ -62,7 +67,7 @@
 </div>
 
 <script>
-// v0.2.6 - Added realtime game timer (unaffected by game speed)
+// v0.2.7 - Added Damage Highscore tracker next to timer
 const canvas=document.getElementById('game-canvas');
 const ctx=canvas.getContext('2d',{alpha:false});
 const mainMenu=document.getElementById('main-menu');
@@ -84,11 +89,11 @@ const healthFill=document.getElementById('healthfill');
 const healthText=document.getElementById('healthtext');
 const deathScreen=document.getElementById('you-died');
 
-// NEW: Timer elements
-const hudTimer=document.getElementById('hud-timer');
+// NEW: Damage + Timer
+const hudTopRight=document.getElementById('hud-topright');
+const damageEl=document.getElementById('damagecount');
 const timerEl=document.getElementById('timer');
-let startTime=null; // track real-world time
-let elapsedTime=0; // current elapsed in seconds
+let startTime=null, elapsedTime=0, totalDamage=0;
 
 const enemyGifs=[
  'bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif','fatspiderman.gif',
@@ -224,6 +229,8 @@ function checkCollisions(dt){
         e.hp-=1;
         e.pulse=1;
         State.bullets.splice(j,1);
+        totalDamage+=10; // NEW: Increment damage highscore
+        damageEl.textContent=totalDamage;
         if(e.hp<=0){
           e.destroying=true;
           State.kills++;killEl.textContent=State.kills;
@@ -287,7 +294,7 @@ function loop(ts){
   updatePlayer(dt);updateBullets(dt);updateEnemies(dt);checkCollisions(dt);
   const p=State.player;if(p.hitFlash>0)p.hitFlash-=dt;
   drawBackground();drawPlayer();drawArrow();drawBullets();drawEnemies();
-  updateTimer(); // ← NEW: update timer display each frame
+  updateTimer();
   if(State.screen==='playing')State.rafId=requestAnimationFrame(loop);
 }
 
@@ -295,7 +302,7 @@ function startGame(){
   mainMenu.classList.add('hidden');
   optionsMenu.classList.add('hidden');
   hudStats.classList.remove('hidden');
-  hudTimer.classList.remove('hidden'); // NEW
+  hudTopRight.classList.remove('hidden'); // NEW
   healthBar.classList.remove('hidden');
   deathScreen.classList.add('pointer-events-none');
   deathScreen.classList.remove('opacity-100');
@@ -303,11 +310,9 @@ function startGame(){
     screen:'playing',lastFrame:0,time:0,bullets:[],enemies:[],
     wave:0,kills:0,nextKillTarget:10,clearTimer:0,player:{...State.player,hp:100,hitFlash:0}
   });
+  totalDamage=0;damageEl.textContent='0'; // RESET DAMAGE
   killEl.textContent='0';waveEl.textContent='0';updateHealthBar();spawnWave();
-  // NEW: reset timer start
-  startTime=performance.now();
-  elapsedTime=0;
-  timerEl.textContent='0s';
+  startTime=performance.now();elapsedTime=0;timerEl.textContent='0s';
   if(!State.rafId)State.rafId=requestAnimationFrame(loop);
 }
 
@@ -317,7 +322,7 @@ function returnToMenu(){
   mainMenu.classList.remove('hidden');
   optionsMenu.classList.add('hidden');
   hudStats.classList.add('hidden');
-  hudTimer.classList.add('hidden'); // NEW
+  hudTopRight.classList.add('hidden'); // NEW
   healthBar.classList.add('hidden');
   deathScreen.classList.add('pointer-events-none');
   deathScreen.classList.remove('opacity-100');
