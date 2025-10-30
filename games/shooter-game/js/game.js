@@ -1,19 +1,30 @@
 import { preloadImages, enemies, bosses, imagesLoaded, playerImg, bossImg } from "./enemies.js";
 import { player, setupPlayer, keys } from "./player.js";
 import { drawBar } from "./utils.js";
+import { state } from "./state.js";
 
 export function initGameLoop() {
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
-  const fitCanvas = () => { canvas.width = innerWidth; canvas.height = innerHeight; };
+
+  const fitCanvas = () => {
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+  };
   fitCanvas();
   window.addEventListener("resize", fitCanvas);
 
   setupPlayer(canvas);
-  preloadImages().then(() => {
-    console.log("🌀 Starting render loop...");
-    requestAnimationFrame(loop);
-  });
+
+  // --- Load images first ---
+  preloadImages()
+    .then(() => {
+      console.log("🌀 All images loaded. Starting render loop...");
+      requestAnimationFrame(loop);
+    })
+    .catch(err => {
+      console.error("❌ Error preloading images:", err);
+    });
 
   function loop() {
     update();
@@ -22,7 +33,8 @@ export function initGameLoop() {
   }
 
   function update() {
-    if (!imagesLoaded || window.paused || !window.gameRunning || window.gameOver || window.gameWon) return;
+    if (!imagesLoaded || !state.running || state.over || state.won) return;
+
     player.x += (keys.d - keys.a) * player.speed;
     player.y += (keys.s - keys.w) * player.speed;
   }
@@ -34,7 +46,7 @@ export function initGameLoop() {
     if (!imagesLoaded) {
       ctx.fillStyle = "#00ff99";
       ctx.font = "24px monospace";
-      ctx.fillText("Loading GIFs...", canvas.width / 2 - 80, canvas.height / 2);
+      ctx.fillText("Loading game assets...", canvas.width / 2 - 100, canvas.height / 2);
       return;
     }
 
@@ -43,12 +55,12 @@ export function initGameLoop() {
       ctx.drawImage(playerImg, player.x - 32, player.y - 32, 64, 64);
     } else {
       ctx.fillStyle = "#00ff99";
-      ctx.fillText("Missing playerImg", 20, 40);
+      ctx.fillText("Waiting playerImg", 20, 40);
     }
 
     drawBar(ctx, "HEALTH", 20, 50, 100, 100, "#ff3333");
 
-    if (window.gameWon) {
+    if (state.won) {
       ctx.fillStyle = "#00ff99";
       ctx.font = "90px Impact";
       ctx.textAlign = "center";
@@ -56,3 +68,4 @@ export function initGameLoop() {
     }
   }
 }
+
