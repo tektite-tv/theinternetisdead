@@ -1,10 +1,11 @@
 /* ===========================================================
-   Bananarama Apocalypse v9 — "Wrath of the Magenta Banana"
+   Bananarama Apocalypse v10 — "Wrath of the Magenta Banana"
    ===========================================================
    ✦ Twin bosses for INSANE mode
    ✦ Boss + orbiter health bars restored
    ✦ Enrage phase flashes magenta and adds erratic patterned motion
    ✦ Bullet collisions, GIF backgrounds, pushback, stamina
+   ✦ YOU WIN screen with clickable return to main menu
    =========================================================== */
 
 const canvas = document.getElementById("gameCanvas");
@@ -49,6 +50,10 @@ let customBg=null;
 let customBgURL=null;
 document.getElementById("ui").classList.add("hidden");
 
+// --- WIN SCREEN ---
+let winButton=null;
+let gameWon=false;
+
 // --- MENU LOGIC ---
 startBtn.onclick=()=>startGame("normal");
 bossBtn.onclick=()=>startGame("boss");
@@ -59,6 +64,8 @@ function startGame(mode){
   document.getElementById("ui").classList.remove("hidden");
   resetGame();
   gameRunning=true;
+  gameWon=false;
+
   if(mode==="normal")spawnEnemyWave(5);
   if(mode==="boss")spawnBoss();
   if(mode==="insane")spawnInsaneBossMode();
@@ -120,7 +127,7 @@ let gameTimer=0,timerInterval=null;
 
 function startTimer(){
   gameTimer=0;clearInterval(timerInterval);
-  timerInterval=setInterval(()=>{if(!paused&&gameRunning&&!gameOver)gameTimer+=0.016;},16);
+  timerInterval=setInterval(()=>{if(!paused&&gameRunning&&!gameOver&&!gameWon)gameTimer+=0.016;},16);
 }
 function stopTimer(){clearInterval(timerInterval);}
 
@@ -144,7 +151,7 @@ const player={x:canvas.width/2,y:canvas.height/2,speed:4,size:64};
 let mouseX=player.x,mouseY=player.y,aimAngle=0;
 canvas.addEventListener("mousemove",e=>{mouseX=e.clientX;mouseY=e.clientY;});
 canvas.addEventListener("mousedown",()=>{
-  if(!gameOver&&imagesLoaded&&gameRunning&&!paused){
+  if(!gameOver&&imagesLoaded&&gameRunning&&!paused&&!gameWon){
     const angle=Math.atan2(mouseY-player.y,mouseX-player.x);
     shootBullet(angle);
   }
@@ -210,7 +217,7 @@ function spawnInsaneBossMode(){bosses=[];spawnBoss(250,150);spawnBoss(canvas.wid
 
 // --- UPDATE ---
 function update(){
-  if(!gameRunning||gameOver||!imagesLoaded||paused)return;
+  if(!gameRunning||gameOver||!imagesLoaded||paused||gameWon)return;
   frameCount++;
 
   // Player movement
@@ -257,17 +264,15 @@ function update(){
     boss.patternTimer += 0.03;
 
     if(!boss.enraged){
-      // Normal floaty movement
       boss.x += Math.sin(frameCount/60+bi)*2;
       boss.y += Math.cos(frameCount/80+bi)*1.5;
     } else {
-      // Enraged patterned chaos
       const t = boss.patternTimer;
-      const offsetX = Math.sin(t*2) * 120 + Math.sin(t*3.3) * 60;
-      const offsetY = Math.cos(t*1.5) * 90 + Math.sin(t*2.7) * 45;
+      const offsetX = Math.sin(t*2)*120 + Math.sin(t*3.3)*60;
+      const offsetY = Math.cos(t*1.5)*90 + Math.sin(t*2.7)*45;
       boss.x = boss.originX + offsetX;
       boss.y = boss.originY + offsetY;
-      if(frameCount % 120 === 0){ // occasional velocity kick for flavor
+      if(frameCount % 120 === 0){
         boss.originX += (Math.random()-0.5)*200;
         boss.originY += (Math.random()-0.5)*150;
       }
@@ -275,7 +280,6 @@ function update(){
 
     boss.orbiters=boss.orbiters.filter(o=>o.health>0);
 
-    // Enrage when orbiters die
     if(boss.orbiters.length===0&&!boss.enraged){
       boss.enraged=true;
       boss.speed*=1.6;
@@ -296,10 +300,9 @@ function update(){
       }
     });
 
-    // enraged boss lightning
     boss.shootTimer--;
     if(boss.enraged&&boss.shootTimer<=0){
-      const ang=Math.atan2(player.y-boss.y,player.x-boss.x);
+      const ang=Math.atan2(player.y-boss.y,player.x-boss.y);
       lightnings.push({x:boss.x,y:boss.y,angle:ang,speed:16,life:180,width:7,length:80});
       boss.shootTimer=60+Math.random()*40;
     }
@@ -307,14 +310,21 @@ function update(){
   bosses=bosses.filter(b=>b.health>0);
 
   // Lightnings hurt
-  lightnings.forEach(l=>{if(Math.hypot(player.x-l.x,player.y-l.y)<60){health-=7;if(health<=0)endGame();}});
+  lightnings.forEach(l=>{
+    if(Math.hypot(player.x-l.x,player.y-l.y)<60){health-=7;if(health<=0)endGame();}
+  });
+
   ui.kills.textContent=kills;
   ui.health.textContent=Math.max(0,Math.floor(health));
 
-  // --- WAVE SYSTEM ---
-  if(enemies.length===0&&bosses.length===0&&!gameOver){
-    if(kills>=50&&!bosses.length){spawnBoss();}
-    else{wave++;spawnEnemyWave(5+wave*3);}
+  // --- WIN CONDITION ---
+  if(enemies.length===0 && bosses.length===0 && !gameOver && !gameWon){
+    if(kills>=50 || wave>10){
+      youWin();
+    } else {
+      wave++;
+      spawnEnemyWave(5+wave*3);
+    }
   }
 }
 
@@ -323,7 +333,7 @@ function draw(){
   if(customBg)ctx.drawImage(customBg,0,0,canvas.width,canvas.height);
   else{ctx.fillStyle=backgroundColor||"#000";ctx.fillRect(0,0,canvas.width,canvas.height);}
   if(!imagesLoaded){ctx.fillStyle="#00ff99";ctx.font="30px monospace";ctx.fillText("Loading...",canvas.width/2-80,canvas.height/2);return;}
-  if(!gameRunning)return;
+  if(!gameRunning&&!gameOver&&!gameWon)return;
 
   ctx.drawImage(playerImg,player.x-player.size/2,player.y-player.size/2,player.size,player.size);
 
@@ -353,7 +363,6 @@ function draw(){
       ctx.drawImage(boss.img,boss.x-boss.size/2,boss.y-boss.size/2,boss.size,boss.size);
     }
 
-    // boss health bar
     const bw=200,bh=12;
     ctx.fillStyle="black";
     ctx.fillRect(boss.x-bw/2-2,boss.y-boss.size/2-25,bw+4,bh+4);
@@ -374,12 +383,22 @@ function draw(){
     });
   });
 
-  // HUD
   drawBar("HEALTH",20,50,health,100,"#ff3333",true);
   drawBar("STAMINA",20,25,stamina,100,pushCooldown?"#333333":"#00ccff",true);
   ctx.fillStyle="#00ff99";ctx.font="20px monospace";ctx.textAlign="right";
   ctx.fillText(`Wave ${wave} | Time: ${gameTimer.toFixed(1)}s`,canvas.width-20,canvas.height-20);
-  if(gameOver){ctx.fillStyle="red";ctx.font="80px Impact";ctx.textAlign="center";ctx.fillText("YOU DIED",canvas.width/2,canvas.height/2);}
+
+  if(gameOver){
+    ctx.fillStyle="red";ctx.font="80px Impact";ctx.textAlign="center";
+    ctx.fillText("YOU DIED",canvas.width/2,canvas.height/2);
+  }
+
+  if(gameWon){
+    ctx.fillStyle="#00ff99";
+    ctx.font="90px Impact";
+    ctx.textAlign="center";
+    ctx.fillText("YOU WIN!",canvas.width/2,canvas.height/2);
+  }
 }
 
 // --- UTIL ---
@@ -400,11 +419,52 @@ function pushBackEnemies(){
   });
   if(pushCharges===0){pushCooldown=true;cooldownTimer=300;}
 }
-function endGame(){if(!gameOver){gameOver=true;deaths++;ui.deaths.textContent=deaths;stopTimer();}}
+function endGame(){
+  if(!gameOver){
+    gameOver=true;
+    deaths++;
+    ui.deaths.textContent=deaths;
+    stopTimer();
+  }
+}
+function youWin(){
+  gameWon=true;
+  gameRunning=false;
+  stopTimer();
+
+  if(!winButton){
+    winButton=document.createElement("button");
+    winButton.textContent="Return to Main Menu";
+    winButton.className="menu-button";
+    winButton.style.position="absolute";
+    winButton.style.top="60%";
+    winButton.style.left="50%";
+    winButton.style.transform="translate(-50%, -50%)";
+    winButton.style.padding="20px 40px";
+    winButton.style.fontSize="24px";
+    winButton.style.background="#00ff99";
+    winButton.style.color="black";
+    winButton.style.border="3px solid #00ff99";
+    winButton.style.borderRadius="12px";
+    winButton.style.cursor="pointer";
+    winButton.style.boxShadow="0 0 20px #00ff99";
+    document.body.appendChild(winButton);
+
+    winButton.onclick=()=>{
+      winButton.remove();
+      winButton=null;
+      document.getElementById("ui").classList.add("hidden");
+      menu.classList.remove("hidden");
+      resetGame();
+    };
+  }
+}
 function resetGame(){
   enemies.length=0;bullets.length=0;lightnings.length=0;bosses.length=0;
-  kills=0;health=100;stamina=100;gameOver=false;pushCharges=3;pushCooldown=false;
-  cooldownTimer=0;pushFxTimer=0;wave=1;paused=false;stopTimer();
+  kills=0;health=100;stamina=100;gameOver=false;gameWon=false;
+  pushCharges=3;pushCooldown=false;cooldownTimer=0;pushFxTimer=0;
+  wave=1;paused=false;stopTimer();
+  if(winButton){winButton.remove();winButton=null;}
 }
 function init(){requestAnimationFrame(loop);}
 function loop(){update();draw();requestAnimationFrame(loop);}
