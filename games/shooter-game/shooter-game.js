@@ -8,7 +8,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const playerImage = new Image();
   playerImage.src = "/media/images/gifs/bananarama.gif";
 
-  let player = { x: canvas.width / 2, y: canvas.height / 2, w: 64, h: 64, speed: 4 };
+  let player = { 
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  w: 96,   // was 64
+  h: 96,   // was 64
+  speed: 4
+};
+  
   let keys = {};
   let bullets = [];
   let mouse = { x: 0, y: 0 };
