@@ -1,83 +1,61 @@
 // shooter-game.js
-// basic twin-stick shooter foundation with player GIF
+// simple version — moves your bananarama.gif with WASD when you click Start
 
-// === Canvas Setup ===
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// === Player Setup ===
 const playerImage = new Image();
 playerImage.src = "./media/images/gifs/bananarama.gif";
 
-const player = {
+let player = {
   x: canvas.width / 2,
   y: canvas.height / 2,
-  width: 64,
-  height: 64,
-  speed: 4,
-  dx: 0,
-  dy: 0
+  w: 64,
+  h: 64,
+  speed: 4
 };
 
-// === Input Handling ===
-const keys = {};
-
-window.addEventListener("keydown", (e) => {
-  keys[e.key.toLowerCase()] = true;
-});
-
-window.addEventListener("keyup", (e) => {
-  keys[e.key.toLowerCase()] = false;
-});
-
-// === Movement Logic ===
-function movePlayer() {
-  player.dx = 0;
-  player.dy = 0;
-
-  if (keys["w"]) player.dy = -player.speed;
-  if (keys["s"]) player.dy = player.speed;
-  if (keys["a"]) player.dx = -player.speed;
-  if (keys["d"]) player.dx = player.speed;
-
-  player.x += player.dx;
-  player.y += player.dy;
-
-  // Keep player inside bounds
-  player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
-  player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
-}
-
-// === Drawing Logic ===
-function drawPlayer() {
-  ctx.drawImage(playerImage, player.x, player.y, player.width, player.height);
-}
-
-function clearCanvas() {
-  ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-// === Game Loop ===
+let keys = {};
 let gameRunning = false;
 
-function update() {
-  if (!gameRunning) return;
-  clearCanvas();
-  movePlayer();
-  drawPlayer();
-  requestAnimationFrame(update);
+// movement
+window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+function movePlayer() {
+  if (keys["w"]) player.y -= player.speed;
+  if (keys["s"]) player.y += player.speed;
+  if (keys["a"]) player.x -= player.speed;
+  if (keys["d"]) player.x += player.speed;
+
+  // keep inside screen
+  player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
+  player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
 }
 
-// === Menu Logic ===
-const menu = document.getElementById("menu");
-const startButton = document.getElementById("startButton");
+// drawing
+function draw() {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(playerImage, player.x, player.y, player.w, player.h);
+}
 
-startButton.onclick = () => {
+function gameLoop() {
+  if (!gameRunning) return;
+  movePlayer();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// start button logic
+const startButton = document.getElementById("startButton");
+const menu = document.getElementById("menu");
+
+startButton.addEventListener("click", () => {
+  console.log("Game started");
   menu.classList.add("hidden");
   gameRunning = true;
-  update();
-};
+  gameLoop();
+});
 
-// === Safety Check ===
-playerImage.onload = () => console.log("Player GIF loaded:", playerImage.src);
+playerImage.onload = () => console.log("Player image loaded.");
