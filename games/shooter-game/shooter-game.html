@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bananaman Shooter v0.3.8</title>
+<title>Bananaman Shooter v0.3.9</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
@@ -32,14 +32,13 @@
 <div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.3.8 — [WASD] move, [Click] shoot</p>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.3.9 — [WASD] move, [Click] shoot</p>
 </div>
 
 <script>
-/* === v0.3.8 ===
-   - Damage flash now alternates between normal and solid red
-   - No more transparency on hit
-   - Everything else unchanged
+/* === v0.3.9 ===
+   - Fixed damage flash to tint only the GIF sprite (not its bounding box)
+   - Uses red tint compositing inside image boundaries
 */
 
 const bg=document.getElementById('bg');
@@ -68,9 +67,6 @@ function drawGrid(){
     g.lineTo(W,y+gridOffsetY%gridSpacing);
   }
   g.stroke();
-}
-function animateGrid(){
-  if(!gridStatic){drawGrid();requestAnimationFrame(animateGrid);}else{drawGrid();}
 }
 
 // === SPRITES ===
@@ -112,26 +108,27 @@ function updatePlayer(dt){
   gridOffsetX -= dx*dt*player.speed*0.3;
   gridOffsetY -= dy*dt*player.speed*0.3;
 }
+
 function drawPlayer(){
   ctx.save();
+  const sx=player.x-player.size/2, sy=player.y-player.size/2, s=player.size;
   if(playerLoaded){
+    // Draw the banana normally first
+    ctx.drawImage(playerImg,sx,sy,s,s);
+    // If hit, tint the *visible pixels* red
     if(player.hitTimer>0 && Math.floor(player.hitTimer*20)%2===0){
-      // flashing red overlay
+      ctx.globalCompositeOperation='source-atop';
+      ctx.fillStyle='rgba(255,0,0,0.6)';
+      ctx.fillRect(sx,sy,s,s);
       ctx.globalCompositeOperation='source-over';
-      ctx.drawImage(playerImg,player.x-player.size/2,player.y-player.size/2,player.size,player.size);
-      ctx.globalAlpha=0.7;
-      ctx.fillStyle='red';
-      ctx.fillRect(player.x-player.size/2,player.y-player.size/2,player.size,player.size);
-      ctx.globalAlpha=1;
-    }else{
-      ctx.drawImage(playerImg,player.x-player.size/2,player.y-player.size/2,player.size,player.size);
     }
-  }else{
+  } else {
     ctx.fillStyle=player.hitTimer>0?'red':'yellow';
     ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();
   }
   ctx.restore();
 }
+
 function drawArrow(){
   const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx);
   const r=player.size*0.4,ax=player.x+Math.cos(a)*r,ay=player.y+Math.sin(a)*r;
@@ -159,6 +156,7 @@ function spawnWave(){
     enemies.push({x,y,img,size,speed:spd,hp,dmg,fade:1,destroying:false});
   }
 }
+
 function updateEnemies(dt){
   for(const e of enemies){
     if(e.destroying){e.fade-=dt*2;if(e.fade<=0)e.fade=0;continue;}
@@ -167,6 +165,7 @@ function updateEnemies(dt){
   }
   for(let i=enemies.length-1;i>=0;i--)if(enemies[i].fade<=0)enemies.splice(i,1);
 }
+
 function drawEnemies(){
   for(const e of enemies){
     ctx.save();ctx.globalAlpha=e.fade;
@@ -196,14 +195,23 @@ function checkCollisions(){
   }
   if(enemies.every(e=>e.destroying))spawnWave();
 }
+
 function applyDamage(dmg){
   player.hp=Math.max(0,player.hp-dmg);
-  player.hitTimer=0.3; // flash duration
+  player.hitTimer=0.3;
   player.invuln=0.3;
   updateHealth();
   if(player.hp<=0)die();
 }
-function die(){state='dead';menu.style.display='flex';gridStatic=true;drawGrid();player.hp=100;updateHealth();}
+
+function die(){
+  state='dead';
+  menu.style.display='flex';
+  gridStatic=true;
+  drawGrid();
+  player.hp=100;
+  updateHealth();
+}
 
 // === LOOP ===
 function loop(){
