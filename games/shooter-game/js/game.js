@@ -1,5 +1,5 @@
-import { preloadImages, enemies, bosses, imagesLoaded } from "./enemies.js";
-import { player, setupPlayer, keys, mouseX, mouseY } from "./player.js";
+import { preloadImages, enemies, bosses, imagesLoaded, playerImg, bossImg } from "./enemies.js";
+import { player, setupPlayer, keys } from "./player.js";
 import { drawBar } from "./utils.js";
 
 export function initGameLoop() {
@@ -10,7 +10,10 @@ export function initGameLoop() {
   window.addEventListener("resize", fitCanvas);
 
   setupPlayer(canvas);
-  preloadImages().then(() => requestAnimationFrame(loop));
+  preloadImages().then(() => {
+    console.log("🌀 Starting render loop...");
+    requestAnimationFrame(loop);
+  });
 
   function loop() {
     update();
@@ -25,14 +28,26 @@ export function initGameLoop() {
   }
 
   function draw() {
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     if (!imagesLoaded) {
       ctx.fillStyle = "#00ff99";
-      ctx.fillText("Loading...", canvas.width / 2 - 50, canvas.height / 2);
+      ctx.font = "24px monospace";
+      ctx.fillText("Loading GIFs...", canvas.width / 2 - 80, canvas.height / 2);
       return;
     }
+
+    // Draw player if loaded
+    if (playerImg) {
+      ctx.drawImage(playerImg, player.x - 32, player.y - 32, 64, 64);
+    } else {
+      ctx.fillStyle = "#00ff99";
+      ctx.fillText("Missing playerImg", 20, 40);
+    }
+
     drawBar(ctx, "HEALTH", 20, 50, 100, 100, "#ff3333");
+
     if (window.gameWon) {
       ctx.fillStyle = "#00ff99";
       ctx.font = "90px Impact";
