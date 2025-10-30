@@ -13,7 +13,7 @@
 <div id="main-menu" class="fixed inset-0 flex items-center justify-center pointer-events-auto">
   <div class="bg-neutral-900/90 border border-white/10 rounded-2xl shadow-2xl p-8 w-[min(92vw,560px)] text-center">
     <h1 class="text-yellow-300 text-4xl md:text-5xl font-extrabold mb-1 drop-shadow-md">Bananaman Shooter</h1>
-    <p class="text-sm opacity-70 mb-6">v0.2.4</p>
+    <p class="text-sm opacity-70 mb-6">v0.2.5</p>
     <button id="btn-start" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Start Game</button>
     <button id="btn-options" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Options</button>
   </div>
@@ -57,6 +57,7 @@
 </div>
 
 <script>
+// v0.2.5 - Enemies now have full opacity until death fade-out
 const canvas=document.getElementById('game-canvas');
 const ctx=canvas.getContext('2d',{alpha:false});
 const mainMenu=document.getElementById('main-menu');
@@ -168,7 +169,7 @@ function spawnWave(){
     const baseSpeed=(80+State.wave*10)*(80/size);
     const hp=2+size/40;
     const dmg=(5+Math.random()*10)*(size/80);
-    State.enemies.push({x,y,img,size,speed:baseSpeed,hitCooldown:0,pulse:0,hp,dmg});
+    State.enemies.push({x,y,img,size,speed:baseSpeed,hitCooldown:0,pulse:0,hp,dmg,fade:1,destroying:false});
   }
   State.nextKillTarget+=10+State.wave*5;
 }
@@ -176,19 +177,25 @@ function spawnWave(){
 function updateEnemies(dt){
   const p=State.player;
   for(const e of State.enemies){
+    if(e.destroying){
+      e.fade-=dt*2; // fade out speed
+      if(e.fade<=0)e.fade=0;
+      continue;
+    }
     const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy)||1;
     e.x+=dx/dist*e.speed*dt;
     e.y+=dy/dist*e.speed*dt;
     if(e.hitCooldown>0)e.hitCooldown-=dt;
     if(e.pulse>0)e.pulse-=dt*3;
   }
+  State.enemies=State.enemies.filter(e=>e.fade>0);
 }
 
 function drawEnemies(){
   for(const e of State.enemies){
     const pulseScale=1+(e.pulse||0)*0.2;
     ctx.save();
-    ctx.globalAlpha=Math.max(0.4,Math.min(1,e.hp/10));
+    ctx.globalAlpha=e.fade; // full opacity until dying fade
     if(e.img.complete)ctx.drawImage(e.img,e.x-e.size/2*pulseScale,e.y-e.size/2*pulseScale,e.size*pulseScale,e.size*pulseScale);
     ctx.restore();
   }
@@ -198,6 +205,7 @@ function checkCollisions(dt){
   const p=State.player;
   for(let i=State.enemies.length-1;i>=0;i--){
     const e=State.enemies[i];
+    if(e.destroying)continue;
     for(let j=State.bullets.length-1;j>=0;j--){
       const b=State.bullets[j];
       const dx=b.x-e.x,dy=b.y-e.y,dist=Math.hypot(dx,dy);
@@ -206,7 +214,7 @@ function checkCollisions(dt){
         e.pulse=1;
         State.bullets.splice(j,1);
         if(e.hp<=0){
-          State.enemies.splice(i,1);
+          e.destroying=true; // mark for fade-out
           State.kills++;killEl.textContent=State.kills;
           if(State.kills>=State.nextKillTarget)spawnWave();
         }
@@ -215,6 +223,7 @@ function checkCollisions(dt){
     }
   }
   for(const e of State.enemies){
+    if(e.destroying)continue;
     const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy);
     if(dist<(p.size/2+e.size/2)*0.7 && e.hitCooldown<=0){
       e.hitCooldown=1;e.pulse=1;
