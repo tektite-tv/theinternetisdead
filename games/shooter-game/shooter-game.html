@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bananaman Shooter v0.4.6</title>
+<title>Bananaman Shooter v0.4.5</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  /* === v0.4.6 CHANGES ===
-     - Added procedural infinite rock generation system.
-     - Rocks drawn behind neon grid (new rockCanvas).
-     - Solid collision with player (bump prevention).
-     - Everything else unchanged from v0.4.5.
+  /* === v0.4.5 CHANGES (at a glance) ===
+     - Added per-enemy flags: srcName, isBananarama, baseHp, resurrected, inverted
+     - On death, bananarama enemies schedule a respawn in-place after 1.5s with inverted=true and hp reset to baseHp
+     - Draw path in drawEnemies honors e.inverted via ctx.filter='invert(1)' (scoped by save/restore)
+     - NOTHING REMOVED from v0.4.4; only additions and safe hooks
   */
   html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
   canvas{display:block;position:fixed;inset:0;}
@@ -23,8 +23,6 @@
 </style>
 </head>
 <body>
-<!-- LAYER ORDER: rocks -> grid -> game -->
-<canvas id="rockCanvas"></canvas>
 <canvas id="bg"></canvas>
 <canvas id="game"></canvas>
 
@@ -40,102 +38,44 @@
 <div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.4.6 — [WASD] move, [Click] shoot</p>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.4.5 — [WASD] move, [Click] shoot</p>
 </div>
 
 <script>
-/* === v0.4.6 ROCK SYSTEM === */
+/* === v0.4.5 Notes ===
+   - This file builds on v0.4.4 and keeps all prior systems intact.
+   - NEW: Bananarama enemies respawn inverted at their death coordinates after 1.5s with original HP.
+*/
 
-const rockCanvas=document.getElementById('rockCanvas');
-const rctx=rockCanvas.getContext('2d');
-let W=innerWidth,H=innerHeight;
-rockCanvas.width=W;rockCanvas.height=H;
 const bg=document.getElementById('bg');
 const g=bg.getContext('2d');
 const game=document.getElementById('game');
 const ctx=game.getContext('2d');
+let W=innerWidth,H=innerHeight;
 bg.width=game.width=W;bg.height=game.height=H;
-addEventListener('resize',()=>{W=innerWidth;H=innerHeight;
-  bg.width=game.width=rockCanvas.width=W;
-  bg.height=game.height=rockCanvas.height=H;
-});
+addEventListener('resize',()=>{W=innerWidth;H=innerHeight;bg.width=game.width=W;bg.height=game.height=H;});
 
-/* === Rock Generation ===
-   Rocks are procedurally generated per cell around the player.
-   Each cell (512x512 world space) can hold a few rock objects.
-   Rocks have x,y,radius and are stored in rockObstacles[].
-*/
-
-const rockObstacles=new Map();
-const cellSize=512;
-function cellKey(cx,cy){return cx+','+cy;}
-function generateCell(cx,cy){
-  const key=cellKey(cx,cy);
-  if(rockObstacles.has(key))return;
-  const rocks=[];
-  const nRocks=3+Math.floor(Math.random()*5);
-  for(let i=0;i<nRocks;i++){
-    const rx=cx*cellSize+Math.random()*cellSize;
-    const ry=cy*cellSize+Math.random()*cellSize;
-    const rad=30+Math.random()*70;
-    rocks.push({x:rx,y:ry,r:rad});
+// === GRID (unchanged behavior) ===
+let gridOffsetX=0,gridOffsetY=0,gridSpacing=40,gridStatic=true;
+function drawGrid(){
+  g.clearRect(0,0,W,H);
+  g.strokeStyle='rgba(0,255,150,0.4)';
+  g.shadowColor='#00ffaa';
+  g.shadowBlur=gridStatic?4:10;
+  g.lineWidth=1.2;
+  g.beginPath();
+  for(let x=-gridSpacing;x<W+gridSpacing;x+=gridSpacing){
+    g.moveTo(x+gridOffsetX%gridSpacing,0);
+    g.lineTo(x+gridOffsetX%gridSpacing,H);
   }
-  rockObstacles.set(key,rocks);
+  for(let y=-gridSpacing;y<H+gridSpacing;y+=gridSpacing){
+    g.moveTo(0,y+gridOffsetY%gridSpacing);
+    g.lineTo(W,y+gridOffsetY%gridSpacing);
+  }
+  g.stroke();
 }
 
-function getNearbyCells(px,py){
-  const cx=Math.floor(px/cellSize),cy=Math.floor(py/cellSize);
-  const cells=[];
-  for(let x=cx-2;x<=cx+2;x++){
-    for(let y=cy-2;y<=cy+2;y++){
-      cells.push([x,y]);
-    }
-  }
-  return cells;
-}
-
-function updateRocks(px,py){
-  const cells=getNearbyCells(px,py);
-  for(const [cx,cy] of cells){
-    generateCell(cx,cy);
-  }
-}
-
-/* === Draw Rocks === */
-function drawRocks(px,py){
-  rctx.clearRect(0,0,W,H);
-  rctx.fillStyle='rgba(80,80,80,0.8)';
-  const offsetX=px*0.7-W/2, offsetY=py*0.7-H/2;
-  for(const rocks of rockObstacles.values()){
-    for(const r of rocks){
-      const sx=r.x-offsetX, sy=r.y-offsetY;
-      if(sx+ r.r <0 || sx-r.r >W || sy+r.r<0 || sy-r.r>H) continue;
-      rctx.beginPath();
-      rctx.arc(sx,sy,r.r,0,Math.PI*2);
-      rctx.fill();
-    }
-  }
-}
-
-/* === Player Collision With Rocks === */
-function collideWithRocks(px,py,nx,ny,radius){
-  let newX=nx,newY=ny;
-  for(const rocks of rockObstacles.values()){
-    for(const r of rocks){
-      const dx=newX-r.x,dy=newY-r.y,dist=Math.hypot(dx,dy);
-      if(dist<radius+r.r){
-        // push player back along collision vector
-        const overlap=radius+r.r-dist;
-        const nxv=dx/dist,nyv=dy/dist;
-        newX+=nxv*overlap;
-        newY+=nyv*overlap;
-      }
-    }
-  }
-  return {x:newX,y:newY};
-}
-
-/* === Rest of the code from v0.4.5 === */
+// === SPRITES (unchanged list) ===
 const enemyGifs=[
  'bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif',
  'fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'
@@ -143,19 +83,33 @@ const enemyGifs=[
 const playerImg=new Image();playerImg.src='/media/images/gifs/bananarama.gif';
 let playerLoaded=false;playerImg.onload=()=>playerLoaded=true;
 
+// === AUDIO (unchanged from v0.4.4/v0.4.3) ===
 const hitSound = new Audio('/media/audio/hitmarker.mp3');
 hitSound.volume = 0.4;
-function playHitSound(){const s=hitSound.cloneNode();s.volume=0.4;s.play().catch(()=>{});}
+function playHitSound(){
+  const s = hitSound.cloneNode();
+  s.volume = 0.4;
+  s.play().catch(()=>{});
+}
 const oofSound = new Audio('/media/audio/oof.mp3');
 oofSound.volume = 0.5;
-function playOof(){const s=oofSound.cloneNode();s.playbackRate=0.9+Math.random()*0.2;s.play().catch(()=>{});}
+function playOof(){
+  const s = oofSound.cloneNode();
+  const rate = 0.9 + Math.random()*0.2; // funny, not annoying
+  s.playbackRate = rate;
+  // Note: keep it simple — cloning with playbackRate avoids extra AudioContext overhead
+  s.play().catch(()=>{});
+}
 const bgMusic = new Audio('/media/audio/spaceinvaders.mp3');
-bgMusic.loop=true;bgMusic.volume=0.6;
+bgMusic.loop = true;
+bgMusic.volume = 0.6;
 
+// === STATE ===
 const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitTimer:0,invuln:0};
 const bullets=[],enemies=[];
 let kills=0,wave=1,damage=0,startTime=null,state='menu',keys={},mouse={x:W/2,y:H/2};
 
+// === HUD ===
 const killsEl=document.getElementById('kills'),waveEl=document.getElementById('wave'),
 damageEl=document.getElementById('damage'),timerEl=document.getElementById('timer'),
 healthFill=document.getElementById('healthfill'),healthText=document.getElementById('healthtext'),
@@ -164,27 +118,27 @@ menu=document.getElementById('menu');
 function updateHealth(){const pct=Math.max(0,Math.round(player.hp));healthFill.style.width=pct+'%';healthText.textContent=pct+'%';}
 function updateHUD(){killsEl.textContent=kills;waveEl.textContent=wave;damageEl.textContent=damage;timerEl.textContent=((performance.now()-startTime)/1000).toFixed(1)+'s';}
 
+// === PLAYER (unchanged) ===
 function updatePlayer(dt){
   let dx=0,dy=0;
-  if(keys['w'])dy-=1;if(keys['s'])dy+=1;if(keys['a'])dx-=1;if(keys['d'])dx+=1;
+  if(keys['w'])dy-=1;
+  if(keys['s'])dy+=1;
+  if(keys['a'])dx-=1;
+  if(keys['d'])dx+=1;
   const mag=Math.hypot(dx,dy)||1;
-  const moveX=dx/mag*player.speed*dt;
-  const moveY=dy/mag*player.speed*dt;
-  const targetX=player.x+moveX,targetY=player.y+moveY;
-  // Generate rocks around this zone
-  updateRocks(targetX,targetY);
-  // Handle collision with solid rocks
-  const result=collideWithRocks(player.x,player.y,targetX,targetY,player.size/2);
-  player.x=result.x;player.y=result.y;
-  player.x=Math.max(player.size/2,Math.min(W*10,player.x));
-  player.y=Math.max(player.size/2,Math.min(H*10,player.y));
-  if(player.invuln>0)player.invuln-=dt;if(player.hitTimer>0)player.hitTimer-=dt;
-  drawRocks(player.x,player.y);
+  player.x+=dx/mag*player.speed*dt;
+  player.y+=dy/mag*player.speed*dt;
+  player.x=Math.max(player.size/2,Math.min(W-player.size/2,player.x));
+  player.y=Math.max(player.size/2,Math.min(H-player.size/2,player.y));
+  if(player.invuln>0)player.invuln-=dt;
+  if(player.hitTimer>0)player.hitTimer-=dt;
+  gridOffsetX -= dx*dt*player.speed*0.3; // parallax
+  gridOffsetY -= dy*dt*player.speed*0.3;
 }
 
 function drawPlayer(){
   ctx.save();
-  const sx=W/2-player.size/2,sy=H/2-player.size/2,s=player.size;
+  const sx=player.x-player.size/2, sy=player.y-player.size/2, s=player.size;
   if(playerLoaded){
     ctx.drawImage(playerImg,sx,sy,s,s);
     if(player.hitTimer>0 && Math.floor(player.hitTimer*20)%2===0){
@@ -193,14 +147,207 @@ function drawPlayer(){
       ctx.fillRect(sx,sy,s,s);
       ctx.globalCompositeOperation='source-over';
     }
-  }else{ctx.fillStyle=player.hitTimer>0?'red':'yellow';ctx.beginPath();ctx.arc(W/2,H/2,player.size/2,0,Math.PI*2);ctx.fill();}
+  } else {
+    ctx.fillStyle=player.hitTimer>0?'red':'yellow';
+    ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();
+  }
   ctx.restore();
 }
 
-/* === Enemies, Combat, and Loop stay identical to v0.4.5 === 
-   (omitted here for brevity but unchanged; all previous behavior remains)
-*/
+function drawArrow(){
+  const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx);
+  const r=player.size*0.4,ax=player.x+Math.cos(a)*r,ay=player.y+Math.sin(a)*r;
+  ctx.save();ctx.translate(ax,ay);ctx.rotate(a);
+  ctx.fillStyle='#f33';ctx.shadowColor='#f00';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-4);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();ctx.restore();
+}
 
+// === SHOOT (unchanged) ===
+function shoot(){
+  const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx),spd=700;
+  bullets.push({x:player.x,y:player.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd});
+}
+
+// === ENEMIES ===
+// Helper to create an enemy object with all flags set (NEW to centralize properties)
+function makeEnemy({x,y,srcName,size,speed,hp,dmg,inverted=false,resurrected=false}){
+  const img=new Image(); img.src=`/media/images/gifs/${srcName}`;
+  return {
+    x,y,img,size,speed,hp,dmg,
+    baseHp: hp,                  // NEW: remember original HP for respawn
+    srcName,                     // NEW: store filename
+    isBananarama: srcName==='bananarama.gif', // NEW: quick check
+    inverted,                    // NEW: draw inverted if true
+    resurrected,                 // NEW: prevents infinite loops
+    fade:1,destroying:false,hitTimer:0
+  };
+}
+
+function spawnWave(){
+  const count=Math.floor(6+(wave-1)*4);
+  const hpMult=1+wave*0.1, speedMult=1+wave*0.1;
+  for(let i=0;i<count;i++){
+    const side=Math.floor(Math.random()*4);let x,y;
+    if(side===0){x=Math.random()*W;y=-60;}
+    else if(side===1){x=W+60;y=Math.random()*H;}
+    else if(side===2){x=Math.random()*W;y=H+60;}
+    else{x=-60;y=Math.random()*H;}
+    const pool = ['bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif','fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'];
+    const srcName = pool[Math.floor(Math.random()*pool.length)];
+    const size=40+Math.random()*100;
+    const spd=(80+wave*10)*(80/size)*speedMult;
+    const hp=(2+size/40)*hpMult;
+    const dmg=(5+Math.random()*10)*(size/80);
+    enemies.push(makeEnemy({x,y,srcName,size,speed:spd,hp,dmg}));
+  }
+}
+
+function updateEnemies(dt){
+  for(const e of enemies){
+    if(e.destroying){e.fade-=dt*2;if(e.fade<=0)e.fade=0;continue;}
+    if(e.hitTimer>0)e.hitTimer-=dt;
+    const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;
+    e.x+=dx/d*e.speed*dt; e.y+=dy/d*e.speed*dt;
+  }
+  for(let i=enemies.length-1;i>=0;i--) if(enemies[i].fade<=0) enemies.splice(i,1);
+}
+
+function drawEnemies(){
+  for(const e of enemies){
+    ctx.save();
+    ctx.globalAlpha=e.fade;
+    const sx=e.x-e.size/2,sy=e.y-e.size/2,s=e.size;
+    if(e.img.complete){
+      if(e.inverted){ ctx.filter='invert(1)'; } // NEW: invert only this sprite
+      ctx.drawImage(e.img,sx,sy,s,s);
+      ctx.filter='none'; // reset for safety
+      if(e.hitTimer>0 && Math.floor(e.hitTimer*20)%2===0){
+        ctx.globalCompositeOperation='source-atop';
+        ctx.fillStyle='rgba(255,0,0,0.6)';
+        ctx.fillRect(sx,sy,s,s);
+        ctx.globalCompositeOperation='source-over';
+      }
+    } else {
+      ctx.fillStyle=e.hitTimer>0?'red':'lime';
+      ctx.beginPath();ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// === BANANARAMA RESPAWN (NEW) ===
+function scheduleBananaramaRespawn(deadEnemy){
+  // Spawn a new enemy after 1.5s at the same position, inverted, with original stats
+  setTimeout(()=>{
+    enemies.push(makeEnemy({
+      x: deadEnemy.x,
+      y: deadEnemy.y,
+      srcName: deadEnemy.srcName,     // bananarama.gif
+      size: deadEnemy.size,
+      speed: deadEnemy.speed,
+      hp: deadEnemy.baseHp,           // reset HP to original
+      dmg: deadEnemy.dmg,
+      inverted: true,                 // inverted on rebirth
+      resurrected: true               // mark as already respawned
+    }));
+  },1500);
+}
+
+// === COMBAT (modified to hook respawn; nothing removed) ===
+function checkCollisions(){
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i]; if(e.destroying)continue;
+
+    // bullets vs enemies
+    for(let j=bullets.length-1;j>=0;j--){
+      const b=bullets[j];
+      const dx=b.x-e.x,dy=b.y-e.y;
+      if(dx*dx+dy*dy<(e.size/2+4)**2){
+        bullets.splice(j,1);
+        e.hp--; damage+=10; e.hitTimer=0.25;
+        playHitSound();
+        if(e.hp<=0){
+          // Mark for fade-out
+          e.destroying=true;
+          // NEW: If this was a bananarama enemy and hasn't resurrected yet, schedule respawn
+          if(e.isBananarama && !e.resurrected){
+            scheduleBananaramaRespawn(e);
+          }
+          kills++;
+        }
+        break;
+      }
+    }
+
+    // enemy vs player
+    const dx=player.x-e.x,dy=player.y-e.y;
+    if(dx*dx+dy*dy<(player.size/2+e.size/2)**2 && !e.destroying && player.invuln<=0){
+      applyDamage(e.dmg);
+    }
+  }
+
+  // If all current enemies are in destroying state, advance wave
+  if(enemies.length>0 && enemies.every(en=>en.destroying)){
+    wave++;
+    spawnWave();
+  }
+}
+
+function applyDamage(dmg){
+  player.hp=Math.max(0,player.hp-dmg);
+  player.hitTimer=0.3;
+  player.invuln=0.3;
+  playOof();
+  updateHealth();
+  if(player.hp<=0)die();
+}
+
+function die(){
+  state='dead';
+  bgMusic.pause();
+  bgMusic.currentTime=0;
+  menu.style.display='flex';
+  gridStatic=true;
+  drawGrid();
+  player.hp=100;
+  updateHealth();
+}
+
+// === LOOP (unchanged) ===
+function loop(){
+  if(state!=='playing')return;
+  const dt=0.016;
+  updatePlayer(dt);
+  drawGrid();
+  for(const b of bullets){b.x+=b.vx*dt;b.y+=b.vy*dt;}
+  updateEnemies(dt);checkCollisions();
+  ctx.clearRect(0,0,W,H);
+  drawPlayer();drawArrow();
+  ctx.fillStyle='#f33';
+  for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
+  drawEnemies();updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// === INPUT (unchanged) ===
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')shoot();});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+addEventListener('mousedown',()=>{if(state==='playing')shoot();});
+
+// === START (unchanged) ===
+document.getElementById('start').onclick=()=>{
+  menu.style.display='none';
+  gridStatic=false;
+  bgMusic.currentTime=0; bgMusic.play().catch(()=>{});
+  kills=0; wave=1; damage=0; player.hp=100; updateHealth();
+  bullets.length=0; enemies.length=0; spawnWave();
+  startTime=performance.now(); state='playing'; loop();
+};
+
+// Draw static grid under menu (unchanged)
+gridStatic=true;
+drawGrid();
 </script>
 </body>
 </html>
