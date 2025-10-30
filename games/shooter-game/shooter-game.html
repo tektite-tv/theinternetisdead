@@ -1,11 +1,4 @@
 <!doctype html>
-<!--
-  shooter-game.html v0.2.3
-  Feature: Enemy HP and damage scale with size
-  - Larger enemies have higher HP and hit harder
-  - Smaller enemies are faster, weaker, and die quickly
-  - Bullet collisions now reduce enemy HP instead of one-hit kills
--->
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -20,7 +13,7 @@
 <div id="main-menu" class="fixed inset-0 flex items-center justify-center pointer-events-auto">
   <div class="bg-neutral-900/90 border border-white/10 rounded-2xl shadow-2xl p-8 w-[min(92vw,560px)] text-center">
     <h1 class="text-yellow-300 text-4xl md:text-5xl font-extrabold mb-1 drop-shadow-md">Bananaman Shooter</h1>
-    <p class="text-sm opacity-70 mb-6">v0.2.3</p>
+    <p class="text-sm opacity-70 mb-6">v0.2.4</p>
     <button id="btn-start" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Start Game</button>
     <button id="btn-options" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Options</button>
   </div>
@@ -53,8 +46,10 @@
   <div id="healthtext" class="absolute w-full text-center text-xs text-white top-[2px]">100%</div>
 </div>
 
-<div id="you-died" class="fixed inset-0 flex items-center justify-center text-red-600 font-extrabold text-6xl drop-shadow-[0_0_40px_#ff0000] bg-black/80 opacity-0 transition-opacity duration-1000 pointer-events-none">
-  YOU DIED
+<!-- Death Screen -->
+<div id="you-died" class="fixed inset-0 flex flex-col items-center justify-center text-red-600 font-extrabold text-6xl drop-shadow-[0_0_40px_#ff0000] bg-black/80 opacity-0 transition-opacity duration-1000 pointer-events-none">
+  <p>YOU DIED</p>
+  <button id="btn-restart" class="mt-8 text-lg text-white border border-white/20 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-xl transition">Return to Main Menu</button>
 </div>
 
 <div class="fixed bottom-2 right-3 text-xs opacity-70 bg-neutral-900/70 border border-white/10 px-2 py-1 rounded">
@@ -69,6 +64,7 @@ const optionsMenu=document.getElementById('options-menu');
 const btnStart=document.getElementById('btn-start');
 const btnOptions=document.getElementById('btn-options');
 const btnBack=document.getElementById('btn-back');
+const btnRestart=document.getElementById('btn-restart');
 const diffSlider=document.getElementById('diff-slider');
 const diffLabel=document.getElementById('diff-label');
 const diffDesc=document.getElementById('diff-desc');
@@ -206,7 +202,7 @@ function checkCollisions(dt){
       const b=State.bullets[j];
       const dx=b.x-e.x,dy=b.y-e.y,dist=Math.hypot(dx,dy);
       if(dist<e.size/2+4){
-        e.hp-=1; // each bullet 1 dmg
+        e.hp-=1;
         e.pulse=1;
         State.bullets.splice(j,1);
         if(e.hp<=0){
@@ -253,6 +249,7 @@ function updateHealthBar(){
 function die(){
   State.screen='dead';
   deathScreen.classList.add('opacity-100');
+  deathScreen.classList.remove('pointer-events-none');
   cancelAnimationFrame(State.rafId);
 }
 
@@ -271,6 +268,7 @@ function startGame(){
   optionsMenu.classList.add('hidden');
   hudStats.classList.remove('hidden');
   healthBar.classList.remove('hidden');
+  deathScreen.classList.add('pointer-events-none');
   deathScreen.classList.remove('opacity-100');
   Object.assign(State,{
     screen:'playing',lastFrame:0,time:0,bullets:[],enemies:[],
@@ -287,11 +285,14 @@ function returnToMenu(){
   optionsMenu.classList.add('hidden');
   hudStats.classList.add('hidden');
   healthBar.classList.add('hidden');
+  deathScreen.classList.add('pointer-events-none');
+  deathScreen.classList.remove('opacity-100');
 }
 
 btnStart.addEventListener('click',startGame);
 btnOptions.addEventListener('click',()=>{mainMenu.classList.add('hidden');optionsMenu.classList.remove('hidden');});
 btnBack.addEventListener('click',()=>{optionsMenu.classList.add('hidden');mainMenu.classList.remove('hidden');});
+btnRestart.addEventListener('click',returnToMenu);
 
 diffSlider.addEventListener('input',()=>{
   const val=parseInt(diffSlider.value);
