@@ -1,10 +1,11 @@
 <!doctype html>
 <!--
-  shooter-game.html v0.1.1
-  Feature: Player sprite now uses /media/images/gifs/bananarama.gif
-  - Added image preloading
-  - Replaced yellow circle draw with banana image
-  - Fallback to circle if image fails to load
+  shooter-game.html v0.1.2
+  Feature: Neon grid background restored + banana sprite rendering
+  Notes:
+  - drawBackground() again renders glowing green grid
+  - Banana image drawn at player center
+  - Fallback yellow circle if image fails
 -->
 <html lang="en">
 <head>
@@ -26,18 +27,13 @@
       height: 100%;
       display: block;
     }
-    .ui-layer {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-    }
+    .ui-layer { position: fixed; inset: 0; pointer-events: none; }
     .menu {
       pointer-events: auto;
       position: absolute;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: min(92vw, 560px);
+      width: min(92vw,560px);
       background: rgba(20,20,20,0.92);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 16px;
@@ -47,12 +43,11 @@
       backdrop-filter: blur(6px);
     }
     .title {
-      font-size: clamp(28px, 4.5vw, 48px);
+      font-size: clamp(28px,4.5vw,48px);
       margin: 0 0 8px 0;
-      letter-spacing: 0.5px;
-      font-weight: 800;
       color: #ffe066;
       text-shadow: 0 2px 0 #5a4300;
+      font-weight: 800;
     }
     .btn {
       pointer-events: auto;
@@ -63,7 +58,7 @@
       font-size: 1rem;
       border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.12);
-      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      background: linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03));
       color: #eaeaea;
       cursor: pointer;
     }
@@ -76,18 +71,13 @@
       visibility: hidden;
       transition: opacity 150ms ease;
     }
-    .overlay.open {
-      pointer-events: auto;
-      opacity: 1;
-      visibility: visible;
-    }
+    .overlay.open { pointer-events: auto; opacity: 1; visibility: visible; }
     .options {
       pointer-events: auto;
       position: absolute;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: min(92vw, 560px);
+      width: min(92vw,560px);
       background: rgba(24,24,24,0.96);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 16px;
@@ -97,16 +87,13 @@
     .hidden { display: none !important; }
     .hud-tip {
       position: fixed;
-      bottom: 8px;
-      right: 12px;
-      font-size: 12px;
-      opacity: 0.7;
+      bottom: 8px; right: 12px;
+      font-size: 12px; opacity: 0.7;
       background: rgba(24,24,24,0.8);
       border: 1px solid rgba(255,255,255,0.06);
       padding: 6px 8px;
       border-radius: 8px;
-      user-select: none;
-      pointer-events: none;
+      user-select: none; pointer-events: none;
     }
   </style>
 </head>
@@ -157,11 +144,9 @@
     time: 0,
     player: { x: 0, y: 0, size: 64 },
     bananaImg: new Image(),
-    bananaLoaded: false,
-    bgStyle: 'grid'
+    bananaLoaded: false
   };
 
-  // Load the banana sprite
   State.bananaImg.src = '/media/images/gifs/bananarama.gif';
   State.bananaImg.onload = () => State.bananaLoaded = true;
   State.bananaImg.onerror = () => console.warn('Banana image failed to load; using circle fallback.');
@@ -182,9 +167,28 @@
   window.addEventListener('resize', fitCanvas);
   fitCanvas();
 
+  // Restored neon grid background
   function drawBackground() {
     ctx.fillStyle = '#0e0e10';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = '#2aff8a';
+    ctx.lineWidth = 1;
+    const spacing = 32;
+    for (let x = 0; x < window.innerWidth; x += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, window.innerHeight);
+      ctx.stroke();
+    }
+    for (let y = 0; y < window.innerHeight; y += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(window.innerWidth, y);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function drawPlayer() {
@@ -203,10 +207,8 @@
     const dt = State.lastFrame ? (ts - State.lastFrame) / 1000 : 0;
     State.lastFrame = ts;
     State.time += dt;
-
     drawBackground();
     drawPlayer();
-
     if (State.screen === 'playing') {
       State.rafId = requestAnimationFrame(loop);
     }
@@ -226,23 +228,16 @@
     mainMenu.classList.remove('hidden');
   }
 
-  function openOptions() {
-    optionsOverlay.classList.add('open');
-  }
-  function closeOptions() {
-    optionsOverlay.classList.remove('open');
-  }
-  function applyOptions() {
-    State.difficulty = optDifficulty.value;
-    closeOptions();
-  }
+  function openOptions() { optionsOverlay.classList.add('open'); }
+  function closeOptions() { optionsOverlay.classList.remove('open'); }
+  function applyOptions() { State.difficulty = optDifficulty.value; closeOptions(); }
 
   btnStart.addEventListener('click', startGame);
   btnOptions.addEventListener('click', openOptions);
   optClose.addEventListener('click', closeOptions);
   optApply.addEventListener('click', applyOptions);
 
-  window.addEventListener('keydown', (e) => {
+  window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (State.screen === 'playing') returnToMenu();
       else if (optionsOverlay.classList.contains('open')) closeOptions();
