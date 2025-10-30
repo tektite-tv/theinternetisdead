@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const playerImage = new Image();
   playerImage.src = "/media/images/gifs/bananarama.gif";
 
-  let player = { 
+  let player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     w: 96,
@@ -19,11 +19,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let keys = {};
   let bullets = [];
   let mouse = { x: 0, y: 0 };
-  window.gameRunning = false; // make global so enemies.js can see it
+  window.gameRunning = false;
 
   // === Input Handling ===
-  window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
-  window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+  window.addEventListener("keydown", e => (keys[e.key.toLowerCase()] = true));
+  window.addEventListener("keyup", e => (keys[e.key.toLowerCase()] = false));
 
   canvas.addEventListener("mousemove", e => {
     const rect = canvas.getBoundingClientRect();
@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
     player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
   }
 
-  // === Update & Draw ===
+  // === Bullets ===
   function updateBullets() {
     bullets.forEach(b => {
       b.x += b.dx;
@@ -82,17 +82,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // === Player ===
   function drawPlayer() {
     ctx.drawImage(playerImage, player.x, player.y, player.w, player.h);
   }
 
+  // === Arrow ===
   function drawArrow() {
     const centerX = player.x + player.w / 2;
     const centerY = player.y + player.h / 2;
-
     const angle = Math.atan2(mouse.y - centerY, mouse.x - centerX);
     const orbitRadius = 40;
-
     const arrowX = centerX + Math.cos(angle) * orbitRadius;
     const arrowY = centerY + Math.sin(angle) * orbitRadius;
 
@@ -109,25 +109,27 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.restore();
   }
 
+  // === Draw Everything ===
   function draw() {
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     drawPlayer();
     drawBullets();
-    drawEnemies(ctx);   // new line
+    drawEnemies(ctx);
     drawArrow();
   }
 
+  // === Game Loop ===
   function gameLoop() {
     if (!gameRunning) return;
     movePlayer();
     updateBullets();
-    updateEnemies(player, bullets, canvas);  // new line
+    updateEnemies(player, bullets, canvas);
     draw();
     requestAnimationFrame(gameLoop);
   }
 
-  // === Start Game Button ===
+  // === Start Game ===
   const startButton = document.getElementById("startButton");
   const menu = document.getElementById("menu");
 
@@ -136,8 +138,10 @@ document.addEventListener("DOMContentLoaded", () => {
     menu.classList.add("hidden");
     gameRunning = true;
     window.gameRunning = true;
+    startEnemySpawning(canvas, player, bullets); // <-- starts enemy spawns
     gameLoop();
   });
 
-  playerImage.onload = () => console.log("Banana ready:", playerImage.src);
+  playerImage.onload = () =>
+    console.log("Banana ready:", playerImage.src);
 });
