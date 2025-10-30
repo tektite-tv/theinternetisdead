@@ -7,7 +7,7 @@ const ctx = canvas.getContext("2d");
 
 // === Player Setup ===
 const playerImage = new Image();
-playerImage.src = "/media/images/gifs/bananarama.gif";
+playerImage.src = "./media/images/gifs/bananarama.gif";
 
 const player = {
   x: canvas.width / 2,
