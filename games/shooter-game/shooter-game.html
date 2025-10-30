@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bananarama Apocalypse</title>
 
-  <!-- Styles -->
   <link rel="stylesheet" href="/games/shooter-game/shooter-game.css" />
   <style>
-    /* Ensure the menu and win button layers appear above the canvas */
     canvas {
       z-index: 0;
       position: fixed;
@@ -29,8 +27,10 @@
   <div id="menu">
     <h1>Bananarama Apocalypse</h1>
     <div class="menu-buttons">
-      <button id="startBtn">Start Game</button>
-      <button id="optionsBtn">Options</button>
+      <button id="startBtn" class="menu-button">Start Game</button>
+      <button id="bossBtn" class="menu-button">Boss Mode</button>
+      <button id="insaneBtn" class="menu-button">INSANE Boss Mode</button>
+      <button id="optionsBtn" class="menu-button">Options</button>
     </div>
 
     <!-- Hover Indicator -->
@@ -71,25 +71,27 @@
   <!-- Canvas -->
   <canvas id="gameCanvas"></canvas>
 
-  <!-- Game Entry Point -->
+  <!-- Game Entry -->
   <script type="module" src="/games/shooter-game/js/main.js"></script>
 
   <!-- Hover Banana Indicator Logic -->
   <script>
     const indicator = document.getElementById("bananaIndicator");
-    const buttons = document.querySelectorAll("#menu button");
-
-    buttons.forEach((btn) => {
-      btn.addEventListener("mouseenter", () => {
-        const rect = btn.getBoundingClientRect();
-        indicator.style.left = `${rect.left - 80}px`;
-        indicator.style.top = `${rect.top - 10}px`;
-        indicator.classList.remove("hidden");
+    const attachBananaHover = () => {
+      const buttons = document.querySelectorAll("#menu button");
+      buttons.forEach((btn) => {
+        btn.addEventListener("mouseenter", () => {
+          const rect = btn.getBoundingClientRect();
+          indicator.style.left = `${rect.left - 80}px`;
+          indicator.style.top = `${rect.top - 10}px`;
+          indicator.classList.remove("hidden");
+        });
+        btn.addEventListener("mouseleave", () => {
+          indicator.classList.add("hidden");
+        });
       });
-      btn.addEventListener("mouseleave", () => {
-        indicator.classList.add("hidden");
-      });
-    });
+    };
+    attachBananaHover();
   </script>
 </body>
 </html>
