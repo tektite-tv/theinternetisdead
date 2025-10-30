@@ -1,10 +1,11 @@
 <!doctype html>
 <!--
-  shooter-game.html v0.1.4
-  Feature: Added orbiting arrow that points toward mouse direction
+  shooter-game.html v0.1.5
+  Feature: Added red dot bullets
   Notes:
-  - Arrow orbits player and follows mouse
-  - Prepares groundwork for bullet firing later
+  - Click or press Space to fire
+  - Bullets travel toward mouse aim direction
+  - Auto-cleanup when off-screen
 -->
 <html lang="en">
 <head>
@@ -85,12 +86,11 @@
     </section>
   </div>
 
-  <div class="hud-tip">Move: WASD • Aim: Mouse • ESC: Menu</div>
+  <div class="hud-tip">Move: WASD • Aim: Mouse • Shoot: Click / Space • ESC: Menu</div>
 
   <script>
   const canvas = document.getElementById('game-canvas');
   const ctx = canvas.getContext('2d', { alpha: false });
-
   const mainMenu = document.getElementById('main-menu');
   const btnStart = document.getElementById('btn-start');
 
@@ -103,12 +103,12 @@
     player: { x: 0, y: 0, size: 96, speed: 280 },
     bananaImg: new Image(),
     bananaLoaded: false,
-    keys: {}
+    keys: {},
+    bullets: [],
   };
 
   State.bananaImg.src = '/media/images/gifs/bananarama.gif';
   State.bananaImg.onload = () => State.bananaLoaded = true;
-  State.bananaImg.onerror = () => console.warn('Banana failed to load, fallback circle');
 
   function fitCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -132,19 +132,12 @@
     ctx.save();
     ctx.globalAlpha = 0.35;
     ctx.strokeStyle = '#2aff8a';
-    ctx.lineWidth = 1;
     const spacing = 32;
     for (let x = 0; x < window.innerWidth; x += spacing) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, window.innerHeight);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, window.innerHeight); ctx.stroke();
     }
     for (let y = 0; y < window.innerHeight; y += spacing) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(window.innerWidth, y);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(window.innerWidth, y); ctx.stroke();
     }
     ctx.restore();
   }
@@ -171,7 +164,6 @@
     }
   }
 
-  // Arrow follows mouse direction
   function drawArrow() {
     const p = State.player;
     const dx = State.mouse.x - p.x;
@@ -186,7 +178,7 @@
     ctx.rotate(angle);
     ctx.fillStyle = '#ff3333';
     ctx.shadowColor = '#ff0000';
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 8;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(-10, -4);
@@ -196,15 +188,50 @@
     ctx.restore();
   }
 
+  // Bullet functions
+  function shootBullet() {
+    const p = State.player;
+    const dx = State.mouse.x - p.x;
+    const dy = State.mouse.y - p.y;
+    const angle = Math.atan2(dy, dx);
+    const speed = 600;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+    State.bullets.push({ x: p.x, y: p.y, vx, vy });
+  }
+
+  function updateBullets(dt) {
+    State.bullets.forEach(b => {
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+    });
+    // remove offscreen
+    State.bullets = State.bullets.filter(b =>
+      b.x > 0 && b.x < window.innerWidth && b.y > 0 && b.y < window.innerHeight
+    );
+  }
+
+  function drawBullets() {
+    ctx.fillStyle = '#ff3333';
+    for (const b of State.bullets) {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   function loop(ts) {
     const dt = State.lastFrame ? (ts - State.lastFrame) / 1000 : 0;
     State.lastFrame = ts;
     State.time += dt;
 
     updatePlayer(dt);
+    updateBullets(dt);
+
     drawBackground();
     drawPlayer();
     drawArrow();
+    drawBullets();
 
     if (State.screen === 'playing') {
       State.rafId = requestAnimationFrame(loop);
@@ -229,15 +256,13 @@
 
   window.addEventListener('keydown', e => {
     State.keys[e.key.toLowerCase()] = true;
-    if (e.key === 'Escape') {
-      if (State.screen === 'playing') returnToMenu();
-    }
+    if (e.key === ' ') shootBullet(); // space fires
+    if (e.key === 'escape' && State.screen === 'playing') returnToMenu();
   });
-  window.addEventListener('keyup', e => {
-    State.keys[e.key.toLowerCase()] = false;
-  });
+  window.addEventListener('keyup', e => State.keys[e.key.toLowerCase()] = false);
 
-  // track mouse for aiming direction
+  canvas.addEventListener('mousedown', shootBullet);
+
   window.addEventListener('mousemove', e => {
     State.mouse.x = e.clientX;
     State.mouse.y = e.clientY;
