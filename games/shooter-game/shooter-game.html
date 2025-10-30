@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bananaman Shooter v0.5.0</title>
+<title>Bananaman Shooter v0.5.1</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
@@ -35,7 +35,7 @@ border-radius:8px;font-size:1.2rem;cursor:pointer;transition:background .3s;}
 <div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.5.0 — [WASD] move, [L-Click] shoot, [R-Click] shotgun</p>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.5.1 — [WASD] move, [L-Click] shoot, [R-Click] shotgun</p>
 </div>
 
 <div id="deathOverlay"><div>You Died</div><button id="restartBtn">Return to Menu</button></div>
@@ -66,6 +66,10 @@ function playHitSound(){const s=hitSound.cloneNode();s.volume=.4;s.play().catch(
 const oofSound=new Audio('/media/audio/oof.mp3');
 function playOof(){const s=oofSound.cloneNode();s.playbackRate=.9+Math.random()*.2;s.play().catch(()=>{});}
 const bgMusic=new Audio('/media/audio/spaceinvaders.mp3');bgMusic.loop=true;bgMusic.volume=.6;
+
+// NEW: Link yell for death
+const linkYell = new Audio('/media/audio/link-yell.mp3');
+linkYell.volume = 0.8;
 
 const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitTimer:0,invuln:0};
 const bullets=[],enemies=[];
@@ -171,7 +175,22 @@ function checkCollisions(){
 }
 
 function applyDamage(d){player.hp=Math.max(0,player.hp-d);player.hitTimer=.3;player.invuln=.3;playOof();updateHealth();if(player.hp<=0)die();}
-function die(){state='dead';bgMusic.pause();bgMusic.currentTime=0;gridStatic=true;drawGrid();deathOverlay.classList.add('visible');}
+
+//=== UPDATED DIE FUNCTION WITH LINK YELL ===
+function die(){
+  state='dead';
+  bgMusic.pause();
+  bgMusic.currentTime=0;
+  gridStatic=true;
+  drawGrid();
+
+  // Play Link yell sound on death
+  const deathSound = linkYell.cloneNode();
+  deathSound.play().catch(()=>{});
+
+  deathOverlay.classList.add('visible');
+}
+
 restartBtn.onclick=()=>{deathOverlay.classList.remove('visible');menu.style.display='flex';
   player.hp=100;updateHealth();enemies.length=0;bullets.length=0;kills=0;wave=1;damage=0;
   gridStatic=true;drawGrid();boss=null;orbiters=[];lightning=[];bossSpawned=false;bossDefeated=false;state='menu';};
