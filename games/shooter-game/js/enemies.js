@@ -9,24 +9,35 @@ const basePath = new URL("../../media/images/gifs/", import.meta.url).href;
 
 // --- File List ---
 const enemyFiles = [
-  "dancing-guy.gif", "dancingzoidberg.gif", "dragon.gif", "eyes.gif",
-  "fatspiderman.gif", "firework.gif", "frog.gif", "keyboard_smash.gif", "skeleton.gif"
+  "dancing-guy.gif",
+  "dancingzoidberg.gif",
+  "dragon.gif",
+  "eyes.gif",
+  "fatspiderman.gif",
+  "firework.gif",
+  "frog.gif",
+  "keyboard_smash.gif",
+  "skeleton.gif"
 ];
 
 // --- Image Storage ---
-export let enemyImages = {}, playerImg, bossImg, imagesLoaded = false;
+export let enemyImages = {};
+export let playerImg;
+export let bossImg;
+export let imagesLoaded = false;
 
 // --- Preload All Images ---
 export function preloadImages() {
-  const loadImage = src => new Promise(r => {
-    const i = new Image();
-    i.src = src;
-    i.onload = () => r(i);
-    i.onerror = () => {
-      console.warn("⚠️ Failed to load:", src);
-      r(null);
-    };
-  });
+  const loadImage = src =>
+    new Promise(resolve => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => resolve(img);
+      img.onerror = () => {
+        console.warn("⚠️ Failed to load:", src);
+        resolve(null);
+      };
+    });
 
   return Promise.all([
     loadImage(basePath + "bananarama.gif"),
@@ -49,10 +60,22 @@ export function spawnEnemyWave(count) {
 function spawnEnemy() {
   const side = Math.floor(Math.random() * 4);
   let x, y;
-  if (side === 0) { x = Math.random() * innerWidth; y = -50; }
-  if (side === 1) { x = innerWidth + 50; y = Math.random() * innerHeight; }
-  if (side === 2) { x = Math.random() * innerWidth; y = innerHeight + 50; }
-  if (side === 3) { x = -50; y = Math.random() * innerHeight; }
+  if (side === 0) {
+    x = Math.random() * innerWidth;
+    y = -50;
+  }
+  if (side === 1) {
+    x = innerWidth + 50;
+    y = Math.random() * innerHeight;
+  }
+  if (side === 2) {
+    x = Math.random() * innerWidth;
+    y = innerHeight + 50;
+  }
+  if (side === 3) {
+    x = -50;
+    y = Math.random() * innerHeight;
+  }
 
   const size = Math.random() * 40 + 40;
   const hp = size * 0.6;
@@ -60,15 +83,27 @@ function spawnEnemy() {
   const file = enemyFiles[Math.floor(Math.random() * enemyFiles.length)];
 
   enemies.push({
-    x, y, size, speed, img: enemyImages[file], health: hp
+    x,
+    y,
+    size,
+    speed,
+    img: enemyImages[file],
+    health: hp
   });
 }
 
 // --- Boss Spawning ---
 export function spawnBoss(x = innerWidth / 2, y = innerHeight / 3) {
   const b = {
-    x, y, size: 180, speed: 1.2, img: bossImg, health: 1000, orbiters: [],
-    enraged: false, patternTimer: 0
+    x,
+    y,
+    size: 180,
+    speed: 1.2,
+    img: bossImg,
+    health: 1000,
+    orbiters: [],
+    enraged: false,
+    patternTimer: 0
   };
 
   for (let i = 0; i < 4; i++) {
@@ -80,14 +115,13 @@ export function spawnBoss(x = innerWidth / 2, y = innerHeight / 3) {
       img: bossImg
     });
   }
+
   bosses.push(b);
 }
 
+// --- Insane Boss Mode ---
 export function spawnInsaneBossMode() {
   bosses = [];
   spawnBoss(250, 150);
   spawnBoss(innerWidth - 250, 150);
 }
-
-// ✅ Export key images for draw()
-export { playerImg, bossImg };
