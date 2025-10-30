@@ -3,28 +3,25 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bananaman Shooter v0.3.4</title>
+<title>Bananaman Shooter v0.3.5</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  html, body {margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
-  canvas {display:block;position:fixed;inset:0;}
-  .hud {position:fixed;background:rgba(20,20,20,0.7);border:1px solid rgba(255,255,255,0.2);
+  html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
+  canvas{display:block;position:fixed;inset:0;}
+  .hud{position:fixed;background:rgba(20,20,20,.7);border:1px solid rgba(255,255,255,.2);
     border-radius:8px;padding:6px 10px;font-size:14px;z-index:999;}
-  #healthbar {position:fixed;bottom:5vh;left:50%;transform:translateX(-50%);
-    width:60vw;height:20px;border:2px solid white;border-radius:10px;background:#400;z-index:1000;}
-  #healthfill {background:#ff3333;width:100%;height:100%;border-radius:10px;transition:width .2s linear;}
-  #healthtext {position:absolute;width:100%;top:0;text-align:center;font-size:12px;}
+  #healthbar{position:fixed;bottom:5vh;left:50%;transform:translateX(-50%);
+    width:60vw;height:20px;border:2px solid #fff;border-radius:10px;background:#400;z-index:1000;}
+  #healthfill{background:#f33;width:100%;height:100%;border-radius:10px;transition:width .2s linear;}
+  #healthtext{position:absolute;width:100%;top:0;text-align:center;font-size:12px;}
 </style>
 </head>
 <body>
-<!-- Background and Game canvases -->
 <canvas id="bg"></canvas>
 <canvas id="game"></canvas>
 
 <!-- HUD -->
-<div id="hud-stats" class="hud" style="top:10px;left:10px;">
-  Kills: <span id="kills">0</span> | Wave: <span id="wave">0</span>
-</div>
+<div id="hud-stats" class="hud" style="top:10px;left:10px;">Kills: <span id="kills">0</span> | Wave: <span id="wave">0</span></div>
 <div id="hud-top" class="hud" style="top:10px;right:10px;display:flex;gap:10px;">
   <div>Damage: <span id="damage">0</span></div>
   <div>Time: <span id="timer">0s</span></div>
@@ -38,70 +35,59 @@
 </div>
 
 <script>
-/* === Bananaman Shooter v0.3.4 ===
-   Combines v0.2.5 movement + images with v0.3.3 neon grid background
-   --------------------------------------------------------------- */
+/* === v0.3.5: Collision Fix Update === */
 
-const bg = document.getElementById('bg');
-const g = bg.getContext('2d');
-const game = document.getElementById('game');
-const ctx = game.getContext('2d');
+const bg=document.getElementById('bg');
+const g=bg.getContext('2d');
+const game=document.getElementById('game');
+const ctx=game.getContext('2d');
 let W=innerWidth,H=innerHeight;
-bg.width=game.width=W; bg.height=game.height=H;
+bg.width=game.width=W;bg.height=game.height=H;
 addEventListener('resize',()=>{W=innerWidth;H=innerHeight;bg.width=game.width=W;bg.height=game.height=H;});
 
+// --- Neon grid ---
 let gridOffset=0;
 function drawGrid(){
   g.clearRect(0,0,W,H);
   g.strokeStyle='rgba(0,255,150,0.5)';
-  g.shadowColor='#00ffaa'; g.shadowBlur=10;
-  g.lineWidth=1.2;
-  const spacing=40; gridOffset+=0.5;
+  g.shadowColor='#00ffaa';g.shadowBlur=10;g.lineWidth=1.2;
+  const s=40;gridOffset+=0.5;
   g.beginPath();
-  for(let x=-W;x<W*2;x+=spacing){
-    g.moveTo(x+gridOffset%spacing,0);
-    g.lineTo(x+gridOffset%spacing,H);
-  }
-  for(let y=-H;y<H*2;y+=spacing){
-    g.moveTo(0,y+gridOffset%spacing);
-    g.lineTo(W,y+gridOffset%spacing);
-  }
+  for(let x=-W;x<W*2;x+=s){g.moveTo(x+gridOffset%s,0);g.lineTo(x+gridOffset%s,H);}
+  for(let y=-H;y<H*2;y+=s){g.moveTo(0,y+gridOffset%s);g.lineTo(W,y+gridOffset%s);}
   g.stroke();
 }
 
-// === Game State ===
+// --- Sprites ---
 const enemyGifs=[
  'bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif',
  'fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'
 ].map(n=>`/media/images/gifs/${n}`);
-
-const playerImg=new Image();
-playerImg.src='/media/images/gifs/bananarama.gif';
+const playerImg=new Image();playerImg.src='/media/images/gifs/bananarama.gif';
 let playerLoaded=false;playerImg.onload=()=>playerLoaded=true;
 
-const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitFlash:0};
+// --- State ---
+const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitFlash:0,invuln:0};
 const bullets=[],enemies=[];
-let kills=0,wave=1,damage=0,startTime=null,state='menu',keys={};
+let kills=0,wave=1,damage=0,startTime=null,state='menu',keys={},mouse={x:W/2,y:H/2};
 
-const killsEl=document.getElementById('kills'),
-      waveEl=document.getElementById('wave'),
-      damageEl=document.getElementById('damage'),
-      timerEl=document.getElementById('timer'),
-      healthFill=document.getElementById('healthfill'),
-      healthText=document.getElementById('healthtext'),
-      menu=document.getElementById('menu');
+// --- HUD elements ---
+const killsEl=document.getElementById('kills'),waveEl=document.getElementById('wave'),
+damageEl=document.getElementById('damage'),timerEl=document.getElementById('timer'),
+healthFill=document.getElementById('healthfill'),healthText=document.getElementById('healthtext'),
+menu=document.getElementById('menu');
 
+// --- UI helpers ---
 function updateHealth(){
   const pct=Math.max(0,Math.round(player.hp));
-  healthFill.style.width=pct+'%';
-  healthText.textContent=pct+'%';
+  healthFill.style.width=pct+'%';healthText.textContent=pct+'%';
 }
 function updateHUD(){
   killsEl.textContent=kills;waveEl.textContent=wave;damageEl.textContent=damage;
   timerEl.textContent=((performance.now()-startTime)/1000).toFixed(1)+'s';
 }
 
-// === Player Movement ===
+// --- Player ---
 function updatePlayer(dt){
   if(keys['w'])player.y-=player.speed*dt;
   if(keys['s'])player.y+=player.speed*dt;
@@ -109,35 +95,29 @@ function updatePlayer(dt){
   if(keys['d'])player.x+=player.speed*dt;
   player.x=Math.max(player.size/2,Math.min(W-player.size/2,player.x));
   player.y=Math.max(player.size/2,Math.min(H-player.size/2,player.y));
+  if(player.invuln>0)player.invuln-=dt;
 }
-
-// === Player Drawing ===
 function drawPlayer(){
   ctx.save();
-  if(player.hitFlash>0){ctx.globalAlpha=0.5;ctx.filter='brightness(200%) saturate(200%)';}
-  if(playerLoaded){
-    ctx.drawImage(playerImg,player.x-player.size/2,player.y-player.size/2,player.size,player.size);
-  }else{
-    ctx.fillStyle='yellow';ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();
-  }
+  if(player.hitFlash>0){ctx.globalAlpha=0.6;ctx.filter='brightness(200%)';}
+  if(playerLoaded)ctx.drawImage(playerImg,player.x-player.size/2,player.y-player.size/2,player.size,player.size);
+  else{ctx.fillStyle='yellow';ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();}
   ctx.restore();
 }
-
-function drawArrow(mx,my){
-  const dx=mx-player.x,dy=my-player.y,angle=Math.atan2(dy,dx);
-  const r=player.size*0.4,ax=player.x+Math.cos(angle)*r,ay=player.y+Math.sin(angle)*r;
-  ctx.save();ctx.translate(ax,ay);ctx.rotate(angle);
-  ctx.fillStyle='#ff3333';ctx.shadowColor='#ff0000';ctx.shadowBlur=8;
+function drawArrow(){
+  const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx);
+  const r=player.size*0.4,ax=player.x+Math.cos(a)*r,ay=player.y+Math.sin(a)*r;
+  ctx.save();ctx.translate(ax,ay);ctx.rotate(a);
+  ctx.fillStyle='#f33';ctx.shadowColor='#f00';ctx.shadowBlur=8;
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-4);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();ctx.restore();
 }
 
-// === Shooting ===
-function shoot(x,y){
-  const dx=x-player.x,dy=y-player.y,a=Math.atan2(dy,dx),spd=700;
+// --- Shooting ---
+function shoot(){const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx),spd=700;
   bullets.push({x:player.x,y:player.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd});
 }
 
-// === Enemies ===
+// --- Enemies ---
 function spawnWave(){
   for(let i=0;i<wave*4+4;i++){
     const side=Math.floor(Math.random()*4);let x,y;
@@ -146,12 +126,11 @@ function spawnWave(){
     else if(side===2){x=Math.random()*W;y=H+60;}
     else{x=-60;y=Math.random()*H;}
     const img=new Image();img.src=enemyGifs[Math.floor(Math.random()*enemyGifs.length)];
-    const size=40+Math.random()*100,baseSpeed=(80+wave*10)*(80/size),
+    const size=40+Math.random()*100,spd=(80+wave*10)*(80/size),
           hp=2+size/40,dmg=(5+Math.random()*10)*(size/80);
-    enemies.push({x,y,img,size,speed:baseSpeed,hp,dmg,fade:1,destroying:false});
+    enemies.push({x,y,img,size,speed:spd,hp,dmg,fade:1,destroying:false});
   }
 }
-
 function updateEnemies(dt){
   for(const e of enemies){
     if(e.destroying){e.fade-=dt*2;if(e.fade<=0)e.fade=0;continue;}
@@ -160,7 +139,6 @@ function updateEnemies(dt){
   }
   for(let i=enemies.length-1;i>=0;i--)if(enemies[i].fade<=0)enemies.splice(i,1);
 }
-
 function drawEnemies(){
   for(const e of enemies){
     ctx.save();ctx.globalAlpha=e.fade;
@@ -170,57 +148,69 @@ function drawEnemies(){
   }
 }
 
-// === Combat ===
-function checkCollisions(dt,mouse){
+// --- Combat + Collision ---
+function checkCollisions(){
+  // bullets vs enemies
   for(let i=enemies.length-1;i>=0;i--){
     const e=enemies[i];if(e.destroying)continue;
     for(let j=bullets.length-1;j>=0;j--){
-      const b=bullets[j];
-      if(Math.hypot(b.x-e.x,b.y-e.y)<e.size/2+4){
-        e.hp-=1;bullets.splice(j,1);damage+=10;
+      const b=bullets[j];const dx=b.x-e.x,dy=b.y-e.y,dist=dx*dx+dy*dy;
+      const rad=(e.size/2+4)**2;
+      if(dist<rad){
+        bullets.splice(j,1);
+        e.hp--;damage+=10;
         if(e.hp<=0){e.destroying=true;kills++;}
         break;
       }
     }
-    if(Math.hypot(player.x-e.x,player.y-e.y)<(player.size+e.size)/2)damagePlayer(e.dmg);
+    // enemy vs player
+    const dx=player.x-e.x,dy=player.y-e.y,dist2=dx*dx+dy*dy;
+    const collideDist=(player.size/2+e.size/2)**2;
+    if(dist2<collideDist && !e.destroying && player.invuln<=0){
+      applyDamage(e.dmg);
+    }
   }
-  if(enemies.length===0){wave++;spawnWave();}
+  if(enemies.every(e=>e.destroying))spawnWave();
+}
+function applyDamage(dmg){
+  player.hp=Math.max(0,player.hp-dmg);
+  player.hitFlash=0.3;player.invuln=0.3;
+  updateHealth();
+  if(player.hp<=0)die();
+}
+function die(){
+  state='dead';menu.style.display='flex';
+  player.hp=100;updateHealth();
 }
 
-function damagePlayer(dmg){player.hp=Math.max(0,player.hp-dmg);player.hitFlash=0.3;updateHealth();if(player.hp<=0)die();}
-function die(){state='dead';menu.style.display='flex';player.hp=100;updateHealth();}
-
-// === Game Loop ===
-let mouse={x:W/2,y:H/2};
-function loop(ts){
+// --- Main loop ---
+function loop(){
   if(state!=='playing')return;
   const dt=0.016;
   drawGrid();
   updatePlayer(dt);
   for(const b of bullets){b.x+=b.vx*dt;b.y+=b.vy*dt;}
-  updateEnemies(dt);
-  checkCollisions(dt,mouse);
+  updateEnemies(dt);checkCollisions();
   ctx.clearRect(0,0,W,H);
-  drawPlayer();drawArrow(mouse.x,mouse.y);
-  ctx.fillStyle='#f33';for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
-  drawEnemies();
-  updateHUD();
+  drawPlayer();drawArrow();
+  ctx.fillStyle='#f33';
+  for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
+  drawEnemies();updateHUD();
   requestAnimationFrame(loop);
 }
 
-document.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')shoot(mouse.x,mouse.y);});
-document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-document.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
-document.addEventListener('mousedown',e=>{if(state==='playing')shoot(e.clientX,e.clientY);});
+// --- Input ---
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')shoot();});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+addEventListener('mousedown',()=>{if(state==='playing')shoot();});
 
+// --- Start ---
 document.getElementById('start').onclick=()=>{
   menu.style.display='none';
   kills=0;wave=1;damage=0;player.hp=100;updateHealth();
-  bullets.length=0;enemies.length=0;
-  spawnWave();
-  startTime=performance.now();
-  state='playing';
-  loop();
+  bullets.length=0;enemies.length=0;spawnWave();
+  startTime=performance.now();state='playing';loop();
 };
 </script>
 </body>
