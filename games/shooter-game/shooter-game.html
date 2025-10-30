@@ -81,8 +81,6 @@
 </div>
 
 <script>
-/* === v0.4.6: Additions include death overlay + restart handling === */
-
 const bg=document.getElementById('bg');
 const g=bg.getContext('2d');
 const game=document.getElementById('game');
@@ -111,7 +109,7 @@ function drawGrid(){
   g.stroke();
 }
 
-// === SPRITES & AUDIO (unchanged) ===
+// === SPRITES ===
 const enemyGifs=[
  'bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif',
  'fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'
@@ -119,6 +117,7 @@ const enemyGifs=[
 const playerImg=new Image();playerImg.src='/media/images/gifs/bananarama.gif';
 let playerLoaded=false;playerImg.onload=()=>playerLoaded=true;
 
+// === AUDIO ===
 const hitSound = new Audio('/media/audio/hitmarker.mp3');
 function playHitSound(){const s=hitSound.cloneNode();s.volume=0.4;s.play().catch(()=>{});}
 const oofSound = new Audio('/media/audio/oof.mp3');
@@ -140,39 +139,176 @@ restartBtn=document.getElementById('restartBtn');
 function updateHealth(){const pct=Math.max(0,Math.round(player.hp));healthFill.style.width=pct+'%';healthText.textContent=pct+'%';}
 function updateHUD(){killsEl.textContent=kills;waveEl.textContent=wave;damageEl.textContent=damage;timerEl.textContent=((performance.now()-startTime)/1000).toFixed(1)+'s';}
 
-// === PLAYER / ENEMIES / COMBAT unchanged from v0.4.5 ===
-// (omitted here for brevity; identical logic to previous version)
+// === PLAYER ===
+function updatePlayer(dt){
+  let dx=0,dy=0;
+  if(keys['w'])dy-=1;
+  if(keys['s'])dy+=1;
+  if(keys['a'])dx-=1;
+  if(keys['d'])dx+=1;
+  const mag=Math.hypot(dx,dy)||1;
+  player.x+=dx/mag*player.speed*dt;
+  player.y+=dy/mag*player.speed*dt;
+  player.x=Math.max(player.size/2,Math.min(W-player.size/2,player.x));
+  player.y=Math.max(player.size/2,Math.min(H-player.size/2,player.y));
+  if(player.invuln>0)player.invuln-=dt;
+  if(player.hitTimer>0)player.hitTimer-=dt;
+  gridOffsetX -= dx*dt*player.speed*0.3;
+  gridOffsetY -= dy*dt*player.speed*0.3;
+}
+function drawPlayer(){
+  ctx.save();
+  const sx=player.x-player.size/2,sy=player.y-player.size/2,s=player.size;
+  if(playerLoaded){
+    ctx.drawImage(playerImg,sx,sy,s,s);
+    if(player.hitTimer>0 && Math.floor(player.hitTimer*20)%2===0){
+      ctx.globalCompositeOperation='source-atop';
+      ctx.fillStyle='rgba(255,0,0,0.6)';
+      ctx.fillRect(sx,sy,s,s);
+      ctx.globalCompositeOperation='source-over';
+    }
+  } else {
+    ctx.fillStyle=player.hitTimer>0?'red':'yellow';
+    ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+function drawArrow(){
+  const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx);
+  const r=player.size*0.4,ax=player.x+Math.cos(a)*r,ay=player.y+Math.sin(a)*r;
+  ctx.save();ctx.translate(ax,ay);ctx.rotate(a);
+  ctx.fillStyle='#f33';ctx.shadowColor='#f00';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-4);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();ctx.restore();
+}
+function shoot(){
+  const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx),spd=700;
+  bullets.push({x:player.x,y:player.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd});
+}
 
+// === ENEMIES ===
+function makeEnemy({x,y,srcName,size,speed,hp,dmg,inverted=false,resurrected=false}){
+  const img=new Image(); img.src=`/media/images/gifs/${srcName}`;
+  return {x,y,img,size,speed,hp,dmg,baseHp:hp,srcName,isBananarama:srcName==='bananarama.gif',inverted,resurrected,fade:1,destroying:false,hitTimer:0};
+}
+function spawnWave(){
+  const count=Math.floor(6+(wave-1)*4);
+  const hpMult=1+wave*0.1,speedMult=1+wave*0.1;
+  for(let i=0;i<count;i++){
+    const side=Math.floor(Math.random()*4);let x,y;
+    if(side===0){x=Math.random()*W;y=-60;}else if(side===1){x=W+60;y=Math.random()*H;}
+    else if(side===2){x=Math.random()*W;y=H+60;}else{x=-60;y=Math.random()*H;}
+    const pool=['bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif','fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'];
+    const srcName=pool[Math.floor(Math.random()*pool.length)];
+    const size=40+Math.random()*100;
+    const spd=(80+wave*10)*(80/size)*speedMult;
+    const hp=(2+size/40)*hpMult;
+    const dmg=(5+Math.random()*10)*(size/80);
+    enemies.push(makeEnemy({x,y,srcName,size,speed:spd,hp,dmg}));
+  }
+}
+function updateEnemies(dt){
+  for(const e of enemies){
+    if(e.destroying){e.fade-=dt*2;if(e.fade<=0)e.fade=0;continue;}
+    if(e.hitTimer>0)e.hitTimer-=dt;
+    const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;
+    e.x+=dx/d*e.speed*dt; e.y+=dy/d*e.speed*dt;
+  }
+  for(let i=enemies.length-1;i>=0;i--) if(enemies[i].fade<=0) enemies.splice(i,1);
+}
+function drawEnemies(){
+  for(const e of enemies){
+    ctx.save();ctx.globalAlpha=e.fade;
+    const sx=e.x-e.size/2,sy=e.y-e.size/2,s=e.size;
+    if(e.img.complete){
+      if(e.inverted)ctx.filter='invert(1)';
+      ctx.drawImage(e.img,sx,sy,s,s);
+      ctx.filter='none';
+      if(e.hitTimer>0 && Math.floor(e.hitTimer*20)%2===0){
+        ctx.globalCompositeOperation='source-atop';
+        ctx.fillStyle='rgba(255,0,0,0.6)';
+        ctx.fillRect(sx,sy,s,s);
+        ctx.globalCompositeOperation='source-over';
+      }
+    } else {
+      ctx.fillStyle=e.hitTimer>0?'red':'lime';
+      ctx.beginPath();ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+function scheduleBananaramaRespawn(deadEnemy){
+  setTimeout(()=>{
+    enemies.push(makeEnemy({
+      x:deadEnemy.x,y:deadEnemy.y,srcName:deadEnemy.srcName,
+      size:deadEnemy.size,speed:deadEnemy.speed,hp:deadEnemy.baseHp,
+      dmg:deadEnemy.dmg,inverted:true,resurrected:true
+    }));
+  },1500);
+}
+function checkCollisions(){
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i]; if(e.destroying)continue;
+    for(let j=bullets.length-1;j>=0;j--){
+      const b=bullets[j];const dx=b.x-e.x,dy=b.y-e.y;
+      if(dx*dx+dy*dy<(e.size/2+4)**2){
+        bullets.splice(j,1);
+        e.hp--; damage+=10; e.hitTimer=0.25; playHitSound();
+        if(e.hp<=0){
+          e.destroying=true;
+          if(e.isBananarama && !e.resurrected) scheduleBananaramaRespawn(e);
+          kills++;
+        }
+        break;
+      }
+    }
+    const dx=player.x-e.x,dy=player.y-e.y;
+    if(dx*dx+dy*dy<(player.size/2+e.size/2)**2 && !e.destroying && player.invuln<=0){
+      applyDamage(e.dmg);
+    }
+  }
+  if(enemies.length>0 && enemies.every(en=>en.destroying)){wave++;spawnWave();}
+}
 function applyDamage(dmg){
   player.hp=Math.max(0,player.hp-dmg);
-  player.hitTimer=0.3;
-  player.invuln=0.3;
-  playOof();
-  updateHealth();
+  player.hitTimer=0.3;player.invuln=0.3;playOof();updateHealth();
   if(player.hp<=0)die();
 }
-
-// === v0.4.6: die() updated to show overlay ===
 function die(){
-  state='dead';
-  bgMusic.pause();
-  bgMusic.currentTime=0;
-  gridStatic=true;
-  drawGrid();
+  state='dead';bgMusic.pause();bgMusic.currentTime=0;
+  gridStatic=true;drawGrid();
   deathOverlay.classList.add('visible'); // show overlay
 }
-
-// === v0.4.6: Restart button logic ===
 restartBtn.onclick=()=>{
   deathOverlay.classList.remove('visible');
   menu.style.display='flex';
   player.hp=100;updateHealth();
   enemies.length=0;bullets.length=0;
   kills=0;wave=1;damage=0;
-  gridStatic=true;
-  drawGrid();
+  gridStatic=true;drawGrid();
   state='menu';
 };
+
+// === LOOP ===
+function loop(){
+  if(state!=='playing')return;
+  const dt=0.016;
+  updatePlayer(dt);
+  drawGrid();
+  for(const b of bullets){b.x+=b.vx*dt;b.y+=b.vy*dt;}
+  updateEnemies(dt);checkCollisions();
+  ctx.clearRect(0,0,W,H);
+  drawPlayer();drawArrow();
+  ctx.fillStyle='#f33';
+  for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
+  drawEnemies();updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// === INPUT ===
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')shoot();});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+addEventListener('mousedown',()=>{if(state==='playing')shoot();});
 
 // === START ===
 document.getElementById('start').onclick=()=>{
@@ -180,13 +316,10 @@ document.getElementById('start').onclick=()=>{
   gridStatic=false;
   bgMusic.currentTime=0; bgMusic.play().catch(()=>{});
   kills=0; wave=1; damage=0; player.hp=100; updateHealth();
-  bullets.length=0; enemies.length=0; /* spawnWave() etc. */
+  bullets.length=0; enemies.length=0; spawnWave();
   startTime=performance.now(); state='playing'; loop();
 };
-
-// Draw static grid
-gridStatic=true;
-drawGrid();
+gridStatic=true;drawGrid();
 </script>
 </body>
 </html>
