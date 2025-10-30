@@ -100,12 +100,13 @@ canvas {
   font-weight: bold;
   cursor: pointer;
   font-size: 1.2em;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
 }
 
 #menu button:hover {
   transform: scale(1.1);
   box-shadow: 0 0 20px #ff66cc, 0 0 40px #00ff99;
+  background: linear-gradient(90deg, #ff66cc, #00ff99);
 }
 
 #bananaIndicator {
@@ -118,6 +119,30 @@ canvas {
   animation: bounce 1s infinite alternate;
 }
 
+/* --- YOU WIN Button Styling --- */
+.menu-button {
+  font-family: monospace;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #00ff99, #33ffaa);
+  color: black;
+  border: none;
+  padding: 16px 36px;
+  border-radius: 10px;
+  font-size: 1.2em;
+  font-weight: bold;
+  box-shadow: 0 0 20px #00ff99, 0 0 40px #00ff99;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  z-index: 20;
+}
+
+.menu-button:hover {
+  transform: scale(1.1);
+  background: linear-gradient(90deg, #33ffaa, #00ffcc);
+  box-shadow: 0 0 30px #00ffcc, 0 0 60px #00ff99;
+}
+
+/* --- Animations --- */
 @keyframes bounce {
   0% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-10px) rotate(-10deg); }
