@@ -1,10 +1,10 @@
 <!doctype html>
 <!--
-  shooter-game.html v0.2.2
-  Feature: Migrated UI to Tailwind CSS
-  - Removed legacy CSS block
-  - All layout & styling now use Tailwind utility classes
-  - Functionality unchanged
+  shooter-game.html v0.2.3
+  Feature: Enemy HP and damage scale with size
+  - Larger enemies have higher HP and hit harder
+  - Smaller enemies are faster, weaker, and die quickly
+  - Bullet collisions now reduce enemy HP instead of one-hit kills
 -->
 <html lang="en">
 <head>
@@ -14,14 +14,13 @@
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="m-0 h-screen bg-[#0b0b0b] text-gray-200 font-sans overflow-hidden select-none">
-
 <canvas id="game-canvas" class="fixed inset-0 w-full h-full block"></canvas>
 
 <!-- Main Menu -->
 <div id="main-menu" class="fixed inset-0 flex items-center justify-center pointer-events-auto">
   <div class="bg-neutral-900/90 border border-white/10 rounded-2xl shadow-2xl p-8 w-[min(92vw,560px)] text-center">
     <h1 class="text-yellow-300 text-4xl md:text-5xl font-extrabold mb-1 drop-shadow-md">Bananaman Shooter</h1>
-    <p class="text-sm opacity-70 mb-6">v0.2.2</p>
+    <p class="text-sm opacity-70 mb-6">v0.2.3</p>
     <button id="btn-start" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Start Game</button>
     <button id="btn-options" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Options</button>
   </div>
@@ -102,9 +101,8 @@ State.bananaImg.onload=()=>State.bananaLoaded=true;
 
 function fitCanvas(){
   const dpr=Math.min(devicePixelRatio||1,2);
-  const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);
-  canvas.width=w;canvas.height=h;canvas.style.width='100%';canvas.style.height='100%';
-  ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr,dpr);
+  canvas.width=innerWidth*dpr;canvas.height=innerHeight*dpr;
+  ctx.scale(dpr,dpr);
   State.player.x=innerWidth/2;State.player.y=innerHeight/2;
 }
 addEventListener('resize',fitCanvas);fitCanvas();
@@ -170,9 +168,11 @@ function spawnWave(){
     else if(side===2){x=Math.random()*innerWidth;y=innerHeight+60;}
     else{x=-60;y=Math.random()*innerHeight;}
     const img=new Image();img.src=enemyGifs[Math.floor(Math.random()*enemyGifs.length)];
-    const size=40+Math.random()*80;
-    const baseSpeed=(50+State.wave*12);
-    State.enemies.push({x,y,img,size,speed:baseSpeed+Math.random()*25,hitCooldown:0,pulse:0});
+    const size=40+Math.random()*100;
+    const baseSpeed=(80+State.wave*10)*(80/size);
+    const hp=2+size/40;
+    const dmg=(5+Math.random()*10)*(size/80);
+    State.enemies.push({x,y,img,size,speed:baseSpeed,hitCooldown:0,pulse:0,hp,dmg});
   }
   State.nextKillTarget+=10+State.wave*5;
 }
@@ -190,8 +190,11 @@ function updateEnemies(dt){
 
 function drawEnemies(){
   for(const e of State.enemies){
-    const pulseScale=1+(e.pulse||0)*0.3;
+    const pulseScale=1+(e.pulse||0)*0.2;
+    ctx.save();
+    ctx.globalAlpha=Math.max(0.4,Math.min(1,e.hp/10));
     if(e.img.complete)ctx.drawImage(e.img,e.x-e.size/2*pulseScale,e.y-e.size/2*pulseScale,e.size*pulseScale,e.size*pulseScale);
+    ctx.restore();
   }
 }
 
@@ -203,10 +206,14 @@ function checkCollisions(dt){
       const b=State.bullets[j];
       const dx=b.x-e.x,dy=b.y-e.y,dist=Math.hypot(dx,dy);
       if(dist<e.size/2+4){
-        State.enemies.splice(i,1);
+        e.hp-=1; // each bullet 1 dmg
+        e.pulse=1;
         State.bullets.splice(j,1);
-        State.kills++;killEl.textContent=State.kills;
-        if(State.kills>=State.nextKillTarget)spawnWave();
+        if(e.hp<=0){
+          State.enemies.splice(i,1);
+          State.kills++;killEl.textContent=State.kills;
+          if(State.kills>=State.nextKillTarget)spawnWave();
+        }
         break;
       }
     }
@@ -215,8 +222,7 @@ function checkCollisions(dt){
     const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy);
     if(dist<(p.size/2+e.size/2)*0.7 && e.hitCooldown<=0){
       e.hitCooldown=1;e.pulse=1;
-      const roll=Math.floor(5+Math.random()*15)+State.wave;
-      applyDamage(roll);
+      applyDamage(e.dmg);
     }
   }
   if(State.enemies.length===0&&State.screen==='playing'){
