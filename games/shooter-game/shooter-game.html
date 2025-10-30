@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bananaman Shooter v0.4.1</title>
+<title>Bananaman Shooter v0.4.3</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
@@ -32,13 +32,13 @@
 <div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.4.1 — [WASD] move, [Click] shoot</p>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.4.3 — [WASD] move, [Click] shoot</p>
 </div>
 
 <script>
-/* === v0.4.1 ===
-   - Restored wave counting & progressive difficulty scaling
-   - Each wave: +20% enemy count, +10% speed, +10% HP
+/* === v0.4.3 ===
+   - Added looping background music (/media/audio/spaceinvaders.mp3)
+   - Music starts when you click Start Game, stops on death/menu
 */
 
 const bg=document.getElementById('bg');
@@ -76,6 +76,20 @@ const enemyGifs=[
 ].map(n=>`/media/images/gifs/${n}`);
 const playerImg=new Image();playerImg.src='/media/images/gifs/bananarama.gif';
 let playerLoaded=false;playerImg.onload=()=>playerLoaded=true;
+
+// === AUDIO ===
+const hitSound = new Audio('/media/audio/hitmarker.mp3');
+hitSound.volume = 0.4;
+function playHitSound(){
+  const s = hitSound.cloneNode();
+  s.volume = 0.4;
+  s.play().catch(()=>{});
+}
+
+// looping background music
+const bgMusic = new Audio('/media/audio/spaceinvaders.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.6;
 
 // === STATE ===
 const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitTimer:0,invuln:0};
@@ -142,7 +156,7 @@ function shoot(){const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,d
 
 // === ENEMIES ===
 function spawnWave(){
-  const count=Math.floor(6+(wave-1)*4); // more per wave
+  const count=Math.floor(6+(wave-1)*4);
   const hpMult=1+wave*0.1, speedMult=1+wave*0.1;
   for(let i=0;i<count;i++){
     const side=Math.floor(Math.random()*4);let x,y;
@@ -197,6 +211,7 @@ function checkCollisions(){
       if(dx*dx+dy*dy<(e.size/2+4)**2){
         bullets.splice(j,1);
         e.hp--;damage+=10;e.hitTimer=0.25;
+        playHitSound();
         if(e.hp<=0){e.destroying=true;kills++;}
         break;
       }
@@ -206,8 +221,6 @@ function checkCollisions(){
       applyDamage(e.dmg);
     }
   }
-
-  // check if wave cleared
   if(enemies.every(e=>e.destroying)){
     wave++;
     spawnWave();
@@ -224,6 +237,8 @@ function applyDamage(dmg){
 
 function die(){
   state='dead';
+  bgMusic.pause();
+  bgMusic.currentTime=0;
   menu.style.display='flex';
   gridStatic=true;
   drawGrid();
@@ -257,6 +272,8 @@ addEventListener('mousedown',()=>{if(state==='playing')shoot();});
 document.getElementById('start').onclick=()=>{
   menu.style.display='none';
   gridStatic=false;
+  bgMusic.currentTime=0;
+  bgMusic.play().catch(()=>{});
   kills=0;wave=1;damage=0;player.hp=100;updateHealth();
   bullets.length=0;enemies.length=0;spawnWave();
   startTime=performance.now();state='playing';loop();
