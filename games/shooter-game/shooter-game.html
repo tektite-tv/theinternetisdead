@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bananaman Shooter v0.5.2</title>
+<title>Bananaman Shooter v0.5.3</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
@@ -35,7 +35,8 @@ border-radius:8px;font-size:1.2rem;cursor:pointer;transition:background .3s;}
 <div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.5.2 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
+  <button id="bossMode" class="bg-red-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-red-300 shadow-lg">Boss Mode</button>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.5.3 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
 </div>
 
 <div id="deathOverlay"><div>You Died</div><button id="restartBtn">Return to Menu</button></div>
@@ -86,10 +87,7 @@ function updatePlayer(dt){
   let dx=0,dy=0;
   if(keys['w'])dy-=1;if(keys['s'])dy+=1;if(keys['a'])dx-=1;if(keys['d'])dx+=1;
   const m=Math.hypot(dx,dy)||1;
-
-  // NEW: Shift sprint modifier
-  const speedMult = keys['shift'] ? 1.6 : 1; // sprint boost
-
+  const speedMult = keys['shift'] ? 1.6 : 1;
   player.x+=dx/m*player.speed*dt*speedMult;
   player.y+=dy/m*player.speed*dt*speedMult;
   player.x=Math.max(player.size/2,Math.min(W-player.size/2,player.x));
@@ -139,26 +137,45 @@ function drawEnemies(){for(const e of enemies){ctx.save();ctx.globalAlpha=e.fade
       ctx.fillRect(sx,sy,s,s);ctx.globalCompositeOperation='source-over';}}
   else{ctx.fillStyle=e.hitTimer>0?'red':'lime';ctx.beginPath();ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);ctx.fill();}ctx.restore();}}
 
-//=== Boss, collisions, death, etc. ===
+//=== Boss & clones ===
 let boss=null,orbiters=[],lightning=[],bossSpawned=false,bossDefeated=false;
-function spawnBoss(){const bx=Math.random()*(W-300)+150,by=Math.random()*(H-300)+150;
+
+/* UPDATED boss functions */
+function spawnBoss(){
+  const bx=Math.random()*(W-300)+150,by=Math.random()*(H-300)+150;
   const img=new Image();img.src="/media/images/gifs/180px-NO_U_cycle.gif";
-  boss={x:bx,y:by,size:180,hp:300,img,angle:0};
-  orbiters=[];for(let i=0;i<4;i++)orbiters.push({angle:(i*Math.PI)/2,dist:200,hp:40});}
-function updateBoss(dt){if(!boss)return;boss.angle+=dt*0.8;
-  orbiters.forEach(o=>{o.angle+=dt*2;if(Math.random()<.02){
-    const lx=boss.x+Math.cos(o.angle)*o.dist,ly=boss.y+Math.sin(o.angle)*o.dist,dx=player.x-lx,dy=player.y-ly,len=Math.hypot(dx,dy);
-    lightning.push({x:lx,y:ly,vx:(dx/len)*600,vy:(dy/len)*600,life:.4});}});
-  for(let i=lightning.length-1;i>=0;i--){const l=lightning[i];l.x+=l.vx*dt;l.y+=l.vy*dt;l.life-=dt;
-    if(l.life<=0||l.x<0||l.y<0||l.x>W||l.y>H){lightning.splice(i,1);continue;}
-    const dx=l.x-player.x,dy=l.y-player.y;if(dx*dx+dy*dy<(player.size/2)**2&&player.invuln<=0){applyDamage(15);lightning.splice(i,1);}}}
-function drawBoss(){if(!boss)return;ctx.save();
+  boss={x:bx,y:by,vx:(Math.random()-0.5)*200,vy:(Math.random()-0.5)*200,size:180,hp:300,img,angle:0,changeTimer:0};
+  orbiters=[];
+  for(let i=0;i<4;i++){orbiters.push({angle:(i*Math.PI)/2,dist:150,hp:40});}
+}
+
+function updateBoss(dt){
+  if(!boss)return;
+  boss.x+=boss.vx*dt; boss.y+=boss.vy*dt;
+  boss.changeTimer-=dt;
+  if(boss.changeTimer<=0){
+    boss.vx=(Math.random()-0.5)*400;
+    boss.vy=(Math.random()-0.5)*400;
+    boss.changeTimer=1+Math.random()*2;
+  }
+  if(boss.x<boss.size/2||boss.x>W-boss.size/2)boss.vx*=-1;
+  if(boss.y<boss.size/2||boss.y>H-boss.size/2)boss.vy*=-1;
+  boss.angle+=dt*1.5;
+  orbiters.forEach(o=>o.angle+=dt*2);
+}
+
+function drawBoss(){
+  if(!boss)return;
+  ctx.save();
   ctx.drawImage(boss.img,boss.x-boss.size/2,boss.y-boss.size/2,boss.size,boss.size);
-  orbiters.forEach(o=>{const ox=boss.x+Math.cos(o.angle)*o.dist,oy=boss.y+Math.sin(o.angle)*o.dist;
-    ctx.beginPath();ctx.fillStyle="#00ffff";ctx.arc(ox,oy,30,0,Math.PI*2);ctx.fill();});
-  ctx.strokeStyle="rgba(0,255,255,0.8)";ctx.lineWidth=2;
-  lightning.forEach(l=>{ctx.beginPath();ctx.moveTo(l.x,l.y);ctx.lineTo(l.x-l.vx*.05,l.y-l.vy*.05);ctx.stroke();});
-  ctx.restore();}
+  orbiters.forEach(o=>{
+    const ox=boss.x+Math.cos(o.angle)*o.dist,oy=boss.y+Math.sin(o.angle)*o.dist;
+    const s=boss.size*0.5;
+    ctx.drawImage(boss.img,ox-s/2,oy-s/2,s,s);
+  });
+  ctx.restore();
+}
+/* end of updated section */
 
 function checkCollisions(){for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(e.destroying)continue;
     for(let j=bullets.length-1;j>=0;j--){const b=bullets[j];const dx=b.x-e.x,dy=b.y-e.y;
@@ -168,11 +185,7 @@ function checkCollisions(){for(let i=enemies.length-1;i>=0;i--){const e=enemies[
     if(dx*dx+dy*dy<(player.size/2+e.size/2)**2&&!e.destroying&&player.invuln<=0){applyDamage(e.dmg);}}
   if(wave<5&&enemies.length>0&&enemies.every(e=>e.destroying)){wave++;spawnWave();}
   if(wave===5&&enemies.length===0&&!bossSpawned){bossSpawned=true;wave++;spawnBoss();}
-  if(boss){for(let i=orbiters.length-1;i>=0;i--){const o=orbiters[i];
-    const ox=boss.x+Math.cos(o.angle)*o.dist,oy=boss.y+Math.sin(o.angle)*o.dist;
-    for(let j=bullets.length-1;j>=0;j--){const b=bullets[j],dx=b.x-ox,dy=b.y-oy;
-      if(dx*dx+dy*dy<34**2){bullets.splice(j,1);o.hp-=10;playHitSound();if(o.hp<=0)orbiters.splice(i,1);break;}}}
-    if(orbiters.length===0&&!bossDefeated){bossDefeated=true;boss=null;lightning=[];wave++;spawnWave();}}}
+  if(boss&&orbiters.length===0&&!bossDefeated){bossDefeated=true;boss=null;wave++;spawnWave();}}
 
 function applyDamage(d){player.hp=Math.max(0,player.hp-d);player.hitTimer=.3;player.invuln=.3;playOof();updateHealth();if(player.hp<=0)die();}
 function die(){state='dead';bgMusic.pause();bgMusic.currentTime=0;gridStatic=true;drawGrid();
@@ -201,6 +214,13 @@ document.getElementById('start').onclick=()=>{menu.style.display='none';gridStat
   kills=0;wave=1;damage=0;player.hp=100;updateHealth();
   bullets.length=0;enemies.length=0;bossSpawned=false;bossDefeated=false;spawnWave();
   startTime=performance.now();state='playing';loop();};
+
+// Boss Mode button spawns boss instantly
+document.getElementById('bossMode').onclick=()=>{menu.style.display='none';gridStatic=false;bgMusic.currentTime=0;bgMusic.play().catch(()=>{});
+  kills=0;wave=6;damage=0;player.hp=100;updateHealth();
+  bullets.length=0;enemies.length=0;bossSpawned=true;bossDefeated=false;spawnBoss();
+  startTime=performance.now();state='playing';loop();};
+
 gridStatic=true;drawGrid();
 </script>
 </body>
