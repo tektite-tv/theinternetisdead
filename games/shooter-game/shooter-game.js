@@ -1,5 +1,5 @@
 // shooter-game.js
-// banana moves, shoots red bullets, arrow orbits and points toward mouse
+// banana moves, shoots red bullets, arrow orbits, enemies spawn and die to bullets
 
 document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("gameCanvas");
@@ -9,17 +9,17 @@ document.addEventListener("DOMContentLoaded", () => {
   playerImage.src = "/media/images/gifs/bananarama.gif";
 
   let player = { 
-  x: canvas.width / 2,
-  y: canvas.height / 2,
-  w: 96,   // was 64
-  h: 96,   // was 64
-  speed: 4
-};
-  
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    w: 96,
+    h: 96,
+    speed: 4
+  };
+
   let keys = {};
   let bullets = [];
   let mouse = { x: 0, y: 0 };
-  let gameRunning = false;
+  window.gameRunning = false; // make global so enemies.js can see it
 
   // === Input Handling ===
   window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
@@ -31,13 +31,16 @@ document.addEventListener("DOMContentLoaded", () => {
     mouse.y = e.clientY - rect.top;
   });
 
-  canvas.addEventListener("click", e => {
+  canvas.addEventListener("click", () => {
     if (gameRunning) shoot();
   });
 
   // === Shooting ===
   function shoot() {
-    const angle = Math.atan2(mouse.y - (player.y + player.h / 2), mouse.x - (player.x + player.w / 2));
+    const angle = Math.atan2(
+      mouse.y - (player.y + player.h / 2),
+      mouse.x - (player.x + player.w / 2)
+    );
     const speed = 8;
     bullets.push({
       x: player.x + player.w / 2,
@@ -54,18 +57,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (keys["s"]) player.y += player.speed;
     if (keys["a"]) player.x -= player.speed;
     if (keys["d"]) player.x += player.speed;
+
     player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
     player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
   }
 
   // === Update & Draw ===
   function updateBullets() {
-    for (let i = 0; i < bullets.length; i++) {
-      const b = bullets[i];
+    bullets.forEach(b => {
       b.x += b.dx;
       b.y += b.dy;
-    }
-    bullets = bullets.filter(b => b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height);
+    });
+    bullets = bullets.filter(
+      b => b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height
+    );
   }
 
   function drawBullets() {
@@ -109,6 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     drawPlayer();
     drawBullets();
+    drawEnemies(ctx);   // new line
     drawArrow();
   }
 
@@ -116,6 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!gameRunning) return;
     movePlayer();
     updateBullets();
+    updateEnemies(player, bullets, canvas);  // new line
     draw();
     requestAnimationFrame(gameLoop);
   }
@@ -128,6 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("Game started");
     menu.classList.add("hidden");
     gameRunning = true;
+    window.gameRunning = true;
     gameLoop();
   });
 
