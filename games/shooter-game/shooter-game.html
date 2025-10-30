@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bananarama Apocalypse</title>
+  <link rel="stylesheet" href="shooter-game.css" />
+  <style>
+    canvas{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;background:#000}
+    .menu-button{position:relative;z-index:1000}
+  </style>
+</head>
+<body>
+  <div id="menu">
+    <h1>Bananarama Apocalypse</h1>
+    <div class="menu-buttons">
+      <button id="startBtn" class="menu-button">Start Game</button>
+      <button id="bossBtn" class="menu-button">Boss Mode</button>
+      <button id="insaneBtn" class="menu-button">INSANE Boss Mode</button>
+      <button id="optionsBtn" class="menu-button">Options</button>
+    </div>
+    <img id="bananaIndicator" src="../../media/images/gifs/bananarama.gif" alt="Banana Indicator" class="hidden" />
+    <div id="optionsMenu" class="hidden">
+      <h2>Background</h2>
+      <select id="bgSelect">
+        <option value="black">Classic Void</option>
+        <option value="green">Toxic Jungle</option>
+        <option value="blue">Deep Space</option>
+        <option value="purple">Dreamscape</option>
+      </select>
+      <br/><br/>
+      <button id="uploadBgBtn">Upload Background</button>
+      <input type="file" id="bgUpload" accept="image/*" hidden />
+      <br/><br/>
+      <button id="backBtn">Back</button>
+    </div>
+  </div>
+
+  <div id="ui" class="hidden">
+    <div id="stats">
+      <p>Kills: <span id="kills">0</span></p>
+      <p>Deaths: <span id="deaths">0</span></p>
+      <p>Health: <span id="health">100</span></p>
+    </div>
+    <button id="restart">Restart</button>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script type="module" src="js/main.js"></script>
+  <script>
+    const indicator = document.getElementById("bananaIndicator");
+    const wireBanana = () => {
+      const buttons = document.querySelectorAll("#menu button");
+      buttons.forEach(btn => {
+        btn.addEventListener("mouseenter", () => {
+          const r = btn.getBoundingClientRect();
+          indicator.style.left = (r.left - 80) + "px";
+          indicator.style.top = (r.top - 10) + "px";
+          indicator.classList.remove("hidden");
+        });
+        btn.addEventListener("mouseleave", () => indicator.classList.add("hidden"));
+      });
+    };
+    wireBanana();
+  </script>
+</body>
+</html>
