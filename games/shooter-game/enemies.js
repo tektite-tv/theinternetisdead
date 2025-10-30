@@ -1,5 +1,5 @@
 // enemies.js
-// basic enemy spawning, movement, and death by bullet
+// Fixed: spawns now properly access canvas and gameRunning
 
 const enemies = [];
 
@@ -10,11 +10,13 @@ class Enemy {
     this.radius = 20;
     this.speed = speed;
     this.color = "#00ff99";
-    this.health = 1;
   }
 
   update(player) {
-    const angle = Math.atan2(player.y + player.h / 2 - this.y, player.x + player.w / 2 - this.x);
+    const angle = Math.atan2(
+      player.y + player.h / 2 - this.y,
+      player.x + player.w / 2 - this.x
+    );
     this.x += Math.cos(angle) * this.speed;
     this.y += Math.sin(angle) * this.speed;
   }
@@ -27,21 +29,20 @@ class Enemy {
   }
 }
 
-// === Spawn Function ===
-function spawnEnemy(canvas) {
+export function spawnEnemy(canvas) {
   const edge = Math.floor(Math.random() * 4);
   let x, y;
 
-  if (edge === 0) { // top
+  if (edge === 0) {
     x = Math.random() * canvas.width;
     y = -20;
-  } else if (edge === 1) { // bottom
+  } else if (edge === 1) {
     x = Math.random() * canvas.width;
     y = canvas.height + 20;
-  } else if (edge === 2) { // left
+  } else if (edge === 2) {
     x = -20;
     y = Math.random() * canvas.height;
-  } else { // right
+  } else {
     x = canvas.width + 20;
     y = Math.random() * canvas.height;
   }
@@ -50,8 +51,7 @@ function spawnEnemy(canvas) {
   enemies.push(new Enemy(x, y, speed));
 }
 
-// === Update & Draw ===
-function updateEnemies(player, bullets, canvas) {
+export function updateEnemies(player, bullets, canvas) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     e.update(player);
@@ -70,20 +70,27 @@ function updateEnemies(player, bullets, canvas) {
       }
     }
 
-    // remove if off-screen weirdly (just in case)
-    if (e.x < -50 || e.x > canvas.width + 50 || e.y < -50 || e.y > canvas.height + 50) {
+    // offscreen safety cleanup
+    if (
+      e.x < -50 ||
+      e.x > canvas.width + 50 ||
+      e.y < -50 ||
+      e.y > canvas.height + 50
+    ) {
       enemies.splice(i, 1);
     }
   }
 }
 
-function drawEnemies(ctx) {
+export function drawEnemies(ctx) {
   enemies.forEach(e => e.draw(ctx));
 }
 
-// === Auto-Spawn Timer ===
-setInterval(() => {
-  if (typeof canvas !== "undefined" && gameRunning) {
-    spawnEnemy(canvas);
-  }
-}, 2000); // every 2 seconds
+// === Auto spawn controller ===
+let spawnInterval;
+export function startEnemySpawning(canvas, player, bullets) {
+  if (spawnInterval) clearInterval(spawnInterval);
+  spawnInterval = setInterval(() => {
+    if (window.gameRunning) spawnEnemy(canvas);
+  }, 2000);
+}
