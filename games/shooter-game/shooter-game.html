@@ -1,10 +1,9 @@
 <!doctype html>
 <!--
-  shooter-game.html v0.2.0
-  Feature: Options menu and difficulty system
-  - Re-added Options button to main menu
-  - Difficulty slider (1=Easy, 2=Normal, 3=Hard)
-  - Easy: half damage, Normal: unchanged, Hard: instant death
+  shooter-game.html v0.2.1
+  Feature: Game speed control
+  - Added speed slider (1–10 mapped to 1x–5x speed)
+  - Multiplies all in-game motion and timers
 -->
 <html lang="en">
 <head>
@@ -35,7 +34,6 @@ padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);}
 font-size:64px;font-weight:900;color:#ff2222;text-shadow:0 0 20px #ff0000,0 0 40px #ff0000;
 background:rgba(0,0,0,0.8);opacity:0;transition:opacity 1s;pointer-events:none;}
 #you-died.show{opacity:1;}
-/* Options Menu */
 #options-menu p{margin:10px 0;}
 input[type=range]{width:80%;}
 </style>
@@ -46,7 +44,7 @@ input[type=range]{width:80%;}
 <div class="ui-layer">
   <section id="main-menu" class="menu">
     <h1 class="title">Bananaman Shooter</h1>
-    <p class="version">v0.2.0</p>
+    <p class="version">v0.2.1</p>
     <button id="btn-start" class="btn">Start Game</button>
     <button id="btn-options" class="btn">Options</button>
   </section>
@@ -56,6 +54,9 @@ input[type=range]{width:80%;}
     <p>Difficulty: <span id="diff-label">Normal</span></p>
     <input id="diff-slider" type="range" min="1" max="3" step="1" value="2">
     <p id="diff-desc">Enemies deal standard damage.</p>
+    <p>Game Speed: <span id="speed-label">1.0x</span></p>
+    <input id="speed-slider" type="range" min="1" max="10" step="1" value="1">
+    <p id="speed-desc">Adjusts overall game speed (1x–5x).</p>
     <button id="btn-back" class="btn">Back</button>
   </section>
 </div>
@@ -79,6 +80,8 @@ const btnBack=document.getElementById('btn-back');
 const diffSlider=document.getElementById('diff-slider');
 const diffLabel=document.getElementById('diff-label');
 const diffDesc=document.getElementById('diff-desc');
+const speedSlider=document.getElementById('speed-slider');
+const speedLabel=document.getElementById('speed-label');
 const hudStats=document.getElementById('hud-stats');
 const killEl=document.getElementById('killcount');
 const waveEl=document.getElementById('wavecount');
@@ -99,7 +102,7 @@ const State={
   bananaImg:new Image(),bananaLoaded:false,
   keys:{},bullets:[],enemies:[],
   wave:0,kills:0,nextKillTarget:10,clearTimer:0,
-  difficulty:2
+  difficulty:2,speedMultiplier:1
 };
 State.bananaImg.src='/media/images/gifs/bananarama.gif';
 State.bananaImg.onload=()=>State.bananaLoaded=true;
@@ -135,7 +138,7 @@ function updatePlayer(dt){
 function drawPlayer(){
   const p=State.player;
   ctx.save();
-  if(p.hitFlash>0){ctx.globalAlpha=0.5;ctx.filter='hue-rotate(0deg) brightness(200%) saturate(200%)';}
+  if(p.hitFlash>0){ctx.globalAlpha=0.5;ctx.filter='brightness(200%) saturate(200%)';}
   if(State.bananaLoaded){ctx.drawImage(State.bananaImg,p.x-p.size/2,p.y-p.size/2,p.size,p.size);}
   else{ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(p.x,p.y,p.size/2,0,Math.PI*2);ctx.fill();}
   ctx.restore();
@@ -149,7 +152,6 @@ function drawArrow(){
   ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-4);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();ctx.restore();
 }
 
-// Bullets
 function shootBullet(){
   const p=State.player,dx=State.mouse.x-p.x,dy=State.mouse.y-p.y,a=Math.atan2(dy,dx),spd=700;
   State.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd});
@@ -163,7 +165,6 @@ function drawBullets(){
   for(const b of State.bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
 }
 
-// Enemies
 function spawnWave(){
   State.wave++;
   waveEl.textContent=State.wave;
@@ -177,7 +178,7 @@ function spawnWave(){
     else{x=-60;y=Math.random()*innerHeight;}
     const img=new Image();img.src=enemyGifs[Math.floor(Math.random()*enemyGifs.length)];
     const size=40+Math.random()*80;
-    const baseSpeed=50+State.wave*12;
+    const baseSpeed=(50+State.wave*12);
     State.enemies.push({x,y,img,size,speed:baseSpeed+Math.random()*25,hitCooldown:0,pulse:0});
   }
   State.nextKillTarget+=10+State.wave*5;
@@ -201,10 +202,8 @@ function drawEnemies(){
   }
 }
 
-// Collisions
 function checkCollisions(dt){
   const p=State.player;
-  // bullet vs enemy
   for(let i=State.enemies.length-1;i>=0;i--){
     const e=State.enemies[i];
     for(let j=State.bullets.length-1;j>=0;j--){
@@ -219,7 +218,6 @@ function checkCollisions(dt){
       }
     }
   }
-  // enemy vs player
   for(const e of State.enemies){
     const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy);
     if(dist<(p.size/2+e.size/2)*0.7 && e.hitCooldown<=0){
@@ -236,8 +234,8 @@ function checkCollisions(dt){
 
 function applyDamage(dmg){
   const p=State.player;
-  if(State.difficulty===1)dmg*=0.5; // easy
-  if(State.difficulty===3)dmg=9999; // hard = death
+  if(State.difficulty===1)dmg*=0.5;
+  if(State.difficulty===3)dmg=9999;
   p.hp=Math.max(0,p.hp-dmg);
   p.hitFlash=0.3;
   updateHealthBar();
@@ -259,10 +257,10 @@ function die(){
   cancelAnimationFrame(State.rafId);
 }
 
-// Loop
 function loop(ts){
-  const dt=State.lastFrame?(ts-State.lastFrame)/1000:0;
-  State.lastFrame=ts;State.time+=dt;
+  let dt=State.lastFrame?(ts-State.lastFrame)/1000:0;
+  State.lastFrame=ts;
+  dt*=State.speedMultiplier; // speed multiplier
   updatePlayer(dt);updateBullets(dt);updateEnemies(dt);checkCollisions(dt);
   const p=State.player;if(p.hitFlash>0)p.hitFlash-=dt;
   drawBackground();drawPlayer();drawArrow();drawBullets();drawEnemies();
@@ -308,6 +306,13 @@ diffSlider.addEventListener('input',()=>{
   if(val===1){diffLabel.textContent='Easy';diffDesc.textContent='Enemies deal half damage.';}
   if(val===2){diffLabel.textContent='Normal';diffDesc.textContent='Enemies deal standard damage.';}
   if(val===3){diffLabel.textContent='Hard';diffDesc.textContent='Enemies kill instantly.';}
+});
+
+speedSlider.addEventListener('input',()=>{
+  const val=parseInt(speedSlider.value);
+  const mult=1+(val-1)*0.444; // map 1–10 → 1–5x
+  State.speedMultiplier=mult;
+  speedLabel.textContent=mult.toFixed(1)+'x';
 });
 
 addEventListener('keydown',e=>{
