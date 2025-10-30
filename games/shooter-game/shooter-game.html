@@ -1,11 +1,10 @@
 <!doctype html>
 <!--
-  shooter-game.html v0.1.9
-  Feature: Health system, collision damage, visual hit feedback
-  - Player has HP and health bar
-  - Enemies damage player on contact and pulse visually
-  - Damage uses random DnD-style rolls (scaled by wave)
-  - Player flashes red on hit; death overlay when HP=0
+  shooter-game.html v0.2.0
+  Feature: Options menu and difficulty system
+  - Re-added Options button to main menu
+  - Difficulty slider (1=Easy, 2=Normal, 3=Hard)
+  - Easy: half damage, Normal: unchanged, Hard: instant death
 -->
 <html lang="en">
 <head>
@@ -36,6 +35,9 @@ padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);}
 font-size:64px;font-weight:900;color:#ff2222;text-shadow:0 0 20px #ff0000,0 0 40px #ff0000;
 background:rgba(0,0,0,0.8);opacity:0;transition:opacity 1s;pointer-events:none;}
 #you-died.show{opacity:1;}
+/* Options Menu */
+#options-menu p{margin:10px 0;}
+input[type=range]{width:80%;}
 </style>
 </head>
 <body>
@@ -44,8 +46,17 @@ background:rgba(0,0,0,0.8);opacity:0;transition:opacity 1s;pointer-events:none;}
 <div class="ui-layer">
   <section id="main-menu" class="menu">
     <h1 class="title">Bananaman Shooter</h1>
-    <p class="version">v0.1.9</p>
+    <p class="version">v0.2.0</p>
     <button id="btn-start" class="btn">Start Game</button>
+    <button id="btn-options" class="btn">Options</button>
+  </section>
+
+  <section id="options-menu" class="menu hidden">
+    <h2 class="title" style="font-size:2rem;">Options</h2>
+    <p>Difficulty: <span id="diff-label">Normal</span></p>
+    <input id="diff-slider" type="range" min="1" max="3" step="1" value="2">
+    <p id="diff-desc">Enemies deal standard damage.</p>
+    <button id="btn-back" class="btn">Back</button>
   </section>
 </div>
 
@@ -61,7 +72,13 @@ background:rgba(0,0,0,0.8);opacity:0;transition:opacity 1s;pointer-events:none;}
 const canvas=document.getElementById('game-canvas');
 const ctx=canvas.getContext('2d',{alpha:false});
 const mainMenu=document.getElementById('main-menu');
+const optionsMenu=document.getElementById('options-menu');
 const btnStart=document.getElementById('btn-start');
+const btnOptions=document.getElementById('btn-options');
+const btnBack=document.getElementById('btn-back');
+const diffSlider=document.getElementById('diff-slider');
+const diffLabel=document.getElementById('diff-label');
+const diffDesc=document.getElementById('diff-desc');
 const hudStats=document.getElementById('hud-stats');
 const killEl=document.getElementById('killcount');
 const waveEl=document.getElementById('wavecount');
@@ -81,7 +98,8 @@ const State={
   player:{x:0,y:0,size:96,speed:280,hp:100,hitFlash:0},
   bananaImg:new Image(),bananaLoaded:false,
   keys:{},bullets:[],enemies:[],
-  wave:0,kills:0,nextKillTarget:10,clearTimer:0
+  wave:0,kills:0,nextKillTarget:10,clearTimer:0,
+  difficulty:2
 };
 State.bananaImg.src='/media/images/gifs/bananarama.gif';
 State.bananaImg.onload=()=>State.bananaLoaded=true;
@@ -205,8 +223,7 @@ function checkCollisions(dt){
   for(const e of State.enemies){
     const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy);
     if(dist<(p.size/2+e.size/2)*0.7 && e.hitCooldown<=0){
-      e.hitCooldown=1; // one second before next hit
-      e.pulse=1;
+      e.hitCooldown=1;e.pulse=1;
       const roll=Math.floor(5+Math.random()*15)+State.wave;
       applyDamage(roll);
     }
@@ -219,6 +236,8 @@ function checkCollisions(dt){
 
 function applyDamage(dmg){
   const p=State.player;
+  if(State.difficulty===1)dmg*=0.5; // easy
+  if(State.difficulty===3)dmg=9999; // hard = death
   p.hp=Math.max(0,p.hp-dmg);
   p.hitFlash=0.3;
   updateHealthBar();
@@ -244,26 +263,15 @@ function die(){
 function loop(ts){
   const dt=State.lastFrame?(ts-State.lastFrame)/1000:0;
   State.lastFrame=ts;State.time+=dt;
-
-  updatePlayer(dt);
-  updateBullets(dt);
-  updateEnemies(dt);
-  checkCollisions(dt);
-
-  const p=State.player;
-  if(p.hitFlash>0)p.hitFlash-=dt;
-
-  drawBackground();
-  drawPlayer();
-  drawArrow();
-  drawBullets();
-  drawEnemies();
-
+  updatePlayer(dt);updateBullets(dt);updateEnemies(dt);checkCollisions(dt);
+  const p=State.player;if(p.hitFlash>0)p.hitFlash-=dt;
+  drawBackground();drawPlayer();drawArrow();drawBullets();drawEnemies();
   if(State.screen==='playing')State.rafId=requestAnimationFrame(loop);
 }
 
 function startGame(){
   mainMenu.classList.add('hidden');
+  optionsMenu.classList.add('hidden');
   hudStats.classList.remove('hidden');
   healthBar.classList.remove('hidden');
   deathScreen.classList.remove('show');
@@ -271,22 +279,37 @@ function startGame(){
     screen:'playing',lastFrame:0,time:0,bullets:[],enemies:[],
     wave:0,kills:0,nextKillTarget:10,clearTimer:0,player:{...State.player,hp:100,hitFlash:0}
   });
-  killEl.textContent='0';waveEl.textContent='0';
-  updateHealthBar();
-  spawnWave();
+  killEl.textContent='0';waveEl.textContent='0';updateHealthBar();spawnWave();
   if(!State.rafId)State.rafId=requestAnimationFrame(loop);
 }
 
 function returnToMenu(){
   if(State.rafId)cancelAnimationFrame(State.rafId);
-  State.rafId=null;
-  State.screen='menu';
+  State.rafId=null;State.screen='menu';
   mainMenu.classList.remove('hidden');
+  optionsMenu.classList.add('hidden');
   hudStats.classList.add('hidden');
   healthBar.classList.add('hidden');
 }
 
 btnStart.addEventListener('click',startGame);
+btnOptions.addEventListener('click',()=>{
+  mainMenu.classList.add('hidden');
+  optionsMenu.classList.remove('hidden');
+});
+btnBack.addEventListener('click',()=>{
+  optionsMenu.classList.add('hidden');
+  mainMenu.classList.remove('hidden');
+});
+
+diffSlider.addEventListener('input',()=>{
+  const val=parseInt(diffSlider.value);
+  State.difficulty=val;
+  if(val===1){diffLabel.textContent='Easy';diffDesc.textContent='Enemies deal half damage.';}
+  if(val===2){diffLabel.textContent='Normal';diffDesc.textContent='Enemies deal standard damage.';}
+  if(val===3){diffLabel.textContent='Hard';diffDesc.textContent='Enemies kill instantly.';}
+});
+
 addEventListener('keydown',e=>{
   State.keys[e.key.toLowerCase()]=true;
   if(e.key===' ')shootBullet();
