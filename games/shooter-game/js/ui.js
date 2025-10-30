@@ -2,6 +2,9 @@ import { resetGame, startTimer } from "./utils.js";
 import { spawnEnemyWave, spawnBoss, spawnInsaneBossMode } from "./enemies.js";
 import { state } from "./state.js";
 
+/* -------------------------------------------------------
+   UI SETUP — called once on DOMContentLoaded
+------------------------------------------------------- */
 export function setupUI() {
   const menu = document.getElementById("menu");
   const startBtn = document.getElementById("startBtn");
@@ -14,7 +17,7 @@ export function setupUI() {
   const uploadBtn = document.getElementById("uploadBgBtn");
   const bgUpload = document.getElementById("bgUpload");
 
-  // --- Button actions ---
+  // --- Button Clicks ---
   startBtn.onclick = () => startGame("normal");
   bossBtn.onclick = () => startGame("boss");
   insaneBtn.onclick = () => startGame("insane");
@@ -65,22 +68,31 @@ export function setupUI() {
   console.log("✅ Menu initialized");
 }
 
+/* -------------------------------------------------------
+   START GAME — shared across all modules
+------------------------------------------------------- */
 export function startGame(mode) {
   const menu = document.getElementById("menu");
   const ui = document.getElementById("ui");
 
+  // Hide menu, show UI
   menu.classList.add("hidden");
   ui.classList.remove("hidden");
-  resetGame();
 
+  // Reset game state
+  resetGame();
   state.running = true;
   state.won = false;
   state.over = false;
   state.paused = false;
 
+  // Spawn enemies or bosses
   if (mode === "normal") spawnEnemyWave(5);
   if (mode === "boss") spawnBoss();
   if (mode === "insane") spawnInsaneBossMode();
 
+  // Start timer
   startTimer();
+
+  console.log(`🚀 Game started in ${mode.toUpperCase()} mode`);
 }
