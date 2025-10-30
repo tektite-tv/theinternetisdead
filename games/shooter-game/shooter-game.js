@@ -1,5 +1,5 @@
 // shooter-game.js
-// start button fixed, red bullets working
+// banana moves, shoots red bullets, arrow orbits and points toward mouse
 
 document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("gameCanvas");
@@ -47,8 +47,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (keys["s"]) player.y += player.speed;
     if (keys["a"]) player.x -= player.speed;
     if (keys["d"]) player.x += player.speed;
-
-    // Boundaries
     player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
     player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
   }
@@ -76,11 +74,35 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.drawImage(playerImage, player.x, player.y, player.w, player.h);
   }
 
+  function drawArrow() {
+    const centerX = player.x + player.w / 2;
+    const centerY = player.y + player.h / 2;
+
+    const angle = Math.atan2(mouse.y - centerY, mouse.x - centerX);
+    const orbitRadius = 40;
+
+    const arrowX = centerX + Math.cos(angle) * orbitRadius;
+    const arrowY = centerY + Math.sin(angle) * orbitRadius;
+
+    ctx.save();
+    ctx.translate(arrowX, arrowY);
+    ctx.rotate(angle);
+    ctx.fillStyle = "#ffcc00";
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-10, -5);
+    ctx.lineTo(-10, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
   function draw() {
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     drawPlayer();
     drawBullets();
+    drawArrow();
   }
 
   function gameLoop() {
