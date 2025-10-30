@@ -1,11 +1,10 @@
 <!doctype html>
 <!--
-  shooter-game.html v0.1.3
-  Feature: Added WASD movement + 50% larger banana
+  shooter-game.html v0.1.4
+  Feature: Added orbiting arrow that points toward mouse direction
   Notes:
-  - Player size increased from 64px → 96px
-  - Basic movement using W/A/S/D
-  - Frame-rate independent movement (dt based)
+  - Arrow orbits player and follows mouse
+  - Prepares groundwork for bullet firing later
 -->
 <html lang="en">
 <head>
@@ -19,6 +18,7 @@
       background: #0b0b0b;
       color: #eaeaea;
       font-family: system-ui, sans-serif;
+      overflow: hidden;
     }
     #game-canvas {
       position: fixed;
@@ -62,28 +62,6 @@
       color: #eaeaea;
       cursor: pointer;
     }
-    .overlay {
-      pointer-events: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 150ms ease;
-    }
-    .overlay.open { pointer-events: auto; opacity: 1; visibility: visible; }
-    .options {
-      pointer-events: auto;
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: min(92vw,560px);
-      background: rgba(24,24,24,0.96);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.55);
-      padding: 20px;
-    }
     .hidden { display: none !important; }
     .hud-tip {
       position: fixed;
@@ -104,26 +82,10 @@
     <section id="main-menu" class="menu">
       <h1 class="title">Bananaman Shooter</h1>
       <button id="btn-start" class="btn">Start Game</button>
-      <button id="btn-options" class="btn">Options</button>
     </section>
-
-    <div id="options-overlay" class="overlay">
-      <div class="options">
-        <h2>Options</h2>
-        <label for="opt-difficulty">Difficulty:</label>
-        <select id="opt-difficulty">
-          <option value="normal" selected>Normal</option>
-          <option value="hard">Hard</option>
-        </select>
-        <div style="margin-top:10px;">
-          <button id="opt-close" class="btn">Close</button>
-          <button id="opt-apply" class="btn">Apply</button>
-        </div>
-      </div>
-    </div>
   </div>
 
-  <div class="hud-tip">WASD to move • ESC: Menu</div>
+  <div class="hud-tip">Move: WASD • Aim: Mouse • ESC: Menu</div>
 
   <script>
   const canvas = document.getElementById('game-canvas');
@@ -131,18 +93,14 @@
 
   const mainMenu = document.getElementById('main-menu');
   const btnStart = document.getElementById('btn-start');
-  const btnOptions = document.getElementById('btn-options');
-  const optionsOverlay = document.getElementById('options-overlay');
-  const optClose = document.getElementById('opt-close');
-  const optApply = document.getElementById('opt-apply');
-  const optDifficulty = document.getElementById('opt-difficulty');
 
   const State = {
     screen: 'menu',
     rafId: null,
     lastFrame: 0,
     time: 0,
-    player: { x: 0, y: 0, size: 96, speed: 280 }, // size 96px, speed in px/sec
+    mouse: { x: window.innerWidth/2, y: window.innerHeight/2 },
+    player: { x: 0, y: 0, size: 96, speed: 280 },
     bananaImg: new Image(),
     bananaLoaded: false,
     keys: {}
@@ -150,7 +108,7 @@
 
   State.bananaImg.src = '/media/images/gifs/bananarama.gif';
   State.bananaImg.onload = () => State.bananaLoaded = true;
-  State.bananaImg.onerror = () => console.warn('Banana image failed to load; using circle fallback.');
+  State.bananaImg.onerror = () => console.warn('Banana failed to load, fallback circle');
 
   function fitCanvas() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -197,8 +155,6 @@
     if (State.keys['s']) p.y += p.speed * dt;
     if (State.keys['a']) p.x -= p.speed * dt;
     if (State.keys['d']) p.x += p.speed * dt;
-
-    // Keep within screen bounds
     p.x = Math.max(p.size/2, Math.min(window.innerWidth - p.size/2, p.x));
     p.y = Math.max(p.size/2, Math.min(window.innerHeight - p.size/2, p.y));
   }
@@ -215,6 +171,31 @@
     }
   }
 
+  // Arrow follows mouse direction
+  function drawArrow() {
+    const p = State.player;
+    const dx = State.mouse.x - p.x;
+    const dy = State.mouse.y - p.y;
+    const angle = Math.atan2(dy, dx);
+    const orbitRadius = p.size * 0.8;
+    const arrowX = p.x + Math.cos(angle) * orbitRadius;
+    const arrowY = p.y + Math.sin(angle) * orbitRadius;
+
+    ctx.save();
+    ctx.translate(arrowX, arrowY);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#ff3333';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-10, -4);
+    ctx.lineTo(-10, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
   function loop(ts) {
     const dt = State.lastFrame ? (ts - State.lastFrame) / 1000 : 0;
     State.lastFrame = ts;
@@ -223,6 +204,7 @@
     updatePlayer(dt);
     drawBackground();
     drawPlayer();
+    drawArrow();
 
     if (State.screen === 'playing') {
       State.rafId = requestAnimationFrame(loop);
@@ -243,24 +225,22 @@
     mainMenu.classList.remove('hidden');
   }
 
-  function openOptions() { optionsOverlay.classList.add('open'); }
-  function closeOptions() { optionsOverlay.classList.remove('open'); }
-  function applyOptions() { State.difficulty = optDifficulty.value; closeOptions(); }
-
   btnStart.addEventListener('click', startGame);
-  btnOptions.addEventListener('click', openOptions);
-  optClose.addEventListener('click', closeOptions);
-  optApply.addEventListener('click', applyOptions);
 
   window.addEventListener('keydown', e => {
     State.keys[e.key.toLowerCase()] = true;
     if (e.key === 'Escape') {
       if (State.screen === 'playing') returnToMenu();
-      else if (optionsOverlay.classList.contains('open')) closeOptions();
     }
   });
   window.addEventListener('keyup', e => {
     State.keys[e.key.toLowerCase()] = false;
+  });
+
+  // track mouse for aiming direction
+  window.addEventListener('mousemove', e => {
+    State.mouse.x = e.clientX;
+    State.mouse.y = e.clientY;
   });
 
   drawBackground();
