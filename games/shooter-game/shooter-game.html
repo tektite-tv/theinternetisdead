@@ -1,1 +1,437 @@
+<!doctype html>
+<!--
+  shooter-game.html v0.1.0
+  Feature: First bootable scaffold
+  - Fullscreen canvas with resize handling
+  - Main Menu (title + Start Game + Options)
+  - Options panel (modal) with a few placeholder controls
+  - Basic game loop stub that renders a placeholder player dot
+  - ESC pauses to menu; Start button resumes game
+  Guardrails:
+  - Keep everything in one file for now
+  - Heavy inline comments so Future You knows what's going on
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bananaman Shooter</title>
+  <style>
+    /* -----------------------------
+       Layout and Reset
+    --------------------------------*/
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #0b0b0b; /* Canvas fills, this is just behind it */
+      color: #eaeaea;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+    }
+    /* Full-bleed canvas under all UI */
+    #game-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
+    /* -----------------------------
+       Menus / UI
+    --------------------------------*/
+    .ui-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none; /* Children opt-in to interactivity */
+    }
+
+    /* Centered main menu card */
+    .menu {
+      pointer-events: auto;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 560px);
+      background: rgba(20,20,20,0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.55);
+      padding: 28px;
+      text-align: center;
+      backdrop-filter: blur(6px);
+    }
+    .title {
+      font-size: clamp(28px, 4.5vw, 48px);
+      margin: 0 0 8px 0;
+      letter-spacing: 0.5px;
+      font-weight: 800;
+      color: #ffe066; /* banana-ish */
+      text-shadow: 0 2px 0 #5a4300;
+    }
+    .subtitle {
+      opacity: 0.8;
+      margin: 0 0 20px 0;
+      font-size: 0.95rem;
+    }
+    .btn {
+      pointer-events: auto;
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 14px 16px;
+      font-size: 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+      color: #eaeaea;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.25);
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    /* Options modal overlay + card */
+    .overlay {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      opacity: 0;
+      transition: opacity 150ms ease;
+      visibility: hidden;
+    }
+    .overlay.open {
+      pointer-events: auto;
+      opacity: 1;
+      visibility: visible;
+    }
+    .options {
+      pointer-events: auto;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 560px);
+      background: rgba(24,24,24,0.96);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.55);
+      padding: 20px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin: 12px 0;
+    }
+    .row label { font-size: 0.95rem; }
+    .options .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      background: #2b2b2b;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #bbb;
+    }
+
+    /* Small corner helper for controls */
+    .hud-tip {
+      position: fixed;
+      bottom: 8px;
+      right: 12px;
+      font-size: 12px;
+      opacity: 0.7;
+      background: rgba(24,24,24,0.8);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 6px 8px;
+      border-radius: 8px;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Hide utility */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <!-- The game world lives here. We keep it under all UI. -->
+  <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+  <!-- UI Layer: menus and overlays -->
+  <div class="ui-layer">
+
+    <!-- Main Menu -->
+    <section id="main-menu" class="menu" aria-label="Main Menu">
+      <h1 class="title">Bananaman Shooter</h1>
+      <p class="subtitle">A twin-stick fever dream in slow, careful pieces.</p>
+      <button id="btn-start" class="btn">Start Game</button>
+      <button id="btn-options" class="btn">Options</button>
+      <div style="margin-top:14px; font-size:12px; opacity:0.7;">
+        Press <span class="pill">ESC</span> any time to return here.
+      </div>
+    </section>
+
+    <!-- Options Modal -->
+    <div id="options-overlay" class="overlay" aria-hidden="true">
+      <div class="options" role="dialog" aria-modal="true" aria-labelledby="opt-title">
+        <h2 id="opt-title" style="margin:0 0 8px 0;">Options</h2>
+        <p style="margin:0 0 12px 0; opacity:0.8;">These knobs don’t do much yet. They will, once we have systems to control.</p>
+
+        <div class="row">
+          <label for="opt-difficulty">Difficulty</label>
+          <select id="opt-difficulty">
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+            <option value="insane">Insane</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="opt-volume">Master Volume</label>
+          <input id="opt-volume" type="range" min="0" max="100" value="80" />
+        </div>
+
+        <div class="row">
+          <label for="opt-bg">Background Style</label>
+          <select id="opt-bg">
+            <option value="grid" selected>Neon Grid</option>
+            <option value="void">Dark Void</option>
+            <option value="zen">Soft Gradient</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button id="opt-close" class="btn" style="width:auto;">Close</button>
+          <button id="opt-apply" class="btn" style="width:auto;">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tiny hint -->
+  <div class="hud-tip">ESC: Menu • Options: tweak then Apply</div>
+
+  <script>
+  /* ==========================================================================
+     GAME BOOTSTRAP (v0.1.0)
+     This is the calm before the chaos. Minimal loop + menus only.
+     As we add features, we keep these sections and extend them, not replace them.
+  ========================================================================== */
+
+  // -----------------------------
+  // DOM HOOKS
+  // -----------------------------
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d', { alpha: false }); // opaque for better perf
+
+  const mainMenu = document.getElementById('main-menu');
+  const btnStart = document.getElementById('btn-start');
+  const btnOptions = document.getElementById('btn-options');
+
+  const optionsOverlay = document.getElementById('options-overlay');
+  const optClose = document.getElementById('opt-close');
+  const optApply = document.getElementById('opt-apply');
+  const optDifficulty = document.getElementById('opt-difficulty');
+  const optVolume = document.getElementById('opt-volume');
+  const optBg = document.getElementById('opt-bg');
+
+  // -----------------------------
+  // STATE SINGLETON
+  // -----------------------------
+  const State = {
+    screen: 'menu',      // 'menu' | 'playing'
+    paused: false,       // for future pause vs menu separation
+    difficulty: 'normal',
+    volume: 0.8,         // 0..1
+    bgStyle: 'grid',
+    time: 0,             // accumulates delta
+    lastFrame: 0,        // RAF timestamp
+    rafId: null,
+    player: { x: 0, y: 0, r: 16 }, // placeholder visual to prove loop is live
+  };
+
+  // -----------------------------
+  // RESIZE: fit canvas to window
+  // -----------------------------
+  function fitCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.floor(window.innerWidth * dpr);
+    const h = Math.floor(window.innerHeight * dpr);
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(dpr, dpr);
+    // Recenter placeholder player
+    State.player.x = window.innerWidth / 2;
+    State.player.y = window.innerHeight / 2;
+  }
+  window.addEventListener('resize', fitCanvas);
+  fitCanvas();
+
+  // -----------------------------
+  // BACKGROUND RENDERERS
+  // -----------------------------
+  function drawBackground(style) {
+    if (style === 'void') {
+      ctx.fillStyle = '#0b0b0b';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    if (style === 'zen') {
+      // soft vertical gradient
+      const g = ctx.createLinearGradient(0, 0, 0, window.innerHeight);
+      g.addColorStop(0, '#101018');
+      g.addColorStop(1, '#1a1f2a');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    // default: neon grid
+    ctx.fillStyle = '#0e0e10';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = '#2aff8a';
+    ctx.lineWidth = 1;
+
+    const spacing = 32;
+    for (let x = 0; x < window.innerWidth; x += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, window.innerHeight);
+      ctx.stroke();
+    }
+    for (let y = 0; y < window.innerHeight; y += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(window.innerWidth, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // -----------------------------
+  // GAME LOOP (placeholder)
+  // -----------------------------
+  function loop(ts) {
+    const dt = State.lastFrame ? (ts - State.lastFrame) / 1000 : 0;
+    State.lastFrame = ts;
+    State.time += dt;
+
+    // Draw background
+    drawBackground(State.bgStyle);
+
+    // Placeholder "player" so you can see something move if we add motion later
+    ctx.save();
+    ctx.fillStyle = '#ffe066'; // banana-ish
+    ctx.beginPath();
+    ctx.arc(State.player.x, State.player.y, State.player.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Keep looping while in 'playing'
+    if (State.screen === 'playing') {
+      State.rafId = requestAnimationFrame(loop);
+    } else {
+      State.rafId = null;
+    }
+  }
+
+  // -----------------------------
+  // SCREEN TRANSITIONS
+  // -----------------------------
+  function showMenu() {
+    State.screen = 'menu';
+    mainMenu.classList.remove('hidden');
+  }
+  function hideMenu() {
+    mainMenu.classList.add('hidden');
+  }
+  function startGame() {
+    hideMenu();
+    State.screen = 'playing';
+    State.lastFrame = 0; // reset timing to avoid big dt spike
+    if (!State.rafId) {
+      State.rafId = requestAnimationFrame(loop);
+    }
+  }
+  function returnToMenu() {
+    // Stop loop cleanly
+    if (State.rafId) {
+      cancelAnimationFrame(State.rafId);
+      State.rafId = null;
+    }
+    showMenu();
+  }
+
+  // -----------------------------
+  // OPTIONS MODAL
+  // -----------------------------
+  function openOptions() {
+    optionsOverlay.classList.add('open');
+    optionsOverlay.setAttribute('aria-hidden', 'false');
+  }
+  function closeOptions() {
+    optionsOverlay.classList.remove('open');
+    optionsOverlay.setAttribute('aria-hidden', 'true');
+  }
+  function applyOptions() {
+    State.difficulty = optDifficulty.value;
+    State.volume = Number(optVolume.value) / 100;
+    State.bgStyle = optBg.value;
+    closeOptions();
+  }
+
+  // -----------------------------
+  // INPUTS
+  // -----------------------------
+  btnStart.addEventListener('click', startGame);
+  btnOptions.addEventListener('click', openOptions);
+  optClose.addEventListener('click', closeOptions);
+  optApply.addEventListener('click', applyOptions);
+
+  // ESC returns to menu from anywhere
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (State.screen === 'playing') {
+        returnToMenu();
+      } else if (optionsOverlay.classList.contains('open')) {
+        closeOptions();
+      }
+    }
+  });
+
+  // First render so the background appears behind the menu even before starting
+  drawBackground(State.bgStyle);
+  showMenu();
+
+  /* ==========================================================================
+     NEXT STEPS (do not implement yet; we’ll add in small, trackable chunks)
+     - Add player input (WASD movement) and render a proper sprite/arrow
+     - Add a basic enemy spawner and simple chase AI
+     - Add shooting and collision
+     - Add UI overlays (health, stamina) and a pause screen distinct from menu
+     - Hook Options to real systems (volume to SFX, difficulty to spawn rates)
+  ========================================================================== */
+  </script>
+</body>
+</html>
