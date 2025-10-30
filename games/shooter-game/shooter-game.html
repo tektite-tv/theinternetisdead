@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shooter Game</title>
-  <link rel="stylesheet" href="shooter-game.css">
+  <link rel="stylesheet" href="shooter-game.css" />
   <style>
     body {
       margin: 0;
@@ -21,8 +21,9 @@
       background: #111;
     }
 
-    /* shared menu styles */
-    #menu, #optionsMenu {
+    /* Shared menu styles */
+    #menu,
+    #optionsMenu {
       position: absolute;
       top: 0;
       left: 0;
@@ -32,12 +33,17 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.9);
       transition: opacity 0.3s ease;
     }
 
-    #menu { z-index: 10; }
-    #optionsMenu { z-index: 9; }
+    #menu {
+      z-index: 2;
+    }
+
+    #optionsMenu {
+      z-index: 1;
+    }
 
     button {
       margin: 10px;
@@ -56,7 +62,7 @@
     }
 
     .hidden {
-      display: none;
+      display: none !important;
     }
   </style>
 </head>
@@ -90,20 +96,21 @@
   <script src="shooter-game.js"></script>
 
   <script>
-    // quick sanity logic so buttons actually do something
-    const menu = document.getElementById('menu');
-    const optionsMenu = document.getElementById('optionsMenu');
-    const optionsButton = document.getElementById('optionsButton');
-    const backButton = document.getElementById('backButton');
+    // minimal inline logic so you can at least navigate menus
+    const menu = document.getElementById("menu");
+    const optionsMenu = document.getElementById("optionsMenu");
+    const optionsButton = document.getElementById("optionsButton");
+    const backButton = document.getElementById("backButton");
 
-    optionsButton.onclick = () => {
-      menu.classList.add('hidden');
-      optionsMenu.classList.remove('hidden');
-    };
-    backButton.onclick = () => {
-      optionsMenu.classList.add('hidden');
-      menu.classList.remove('hidden');
-    };
+    optionsButton.addEventListener("click", () => {
+      menu.classList.add("hidden");
+      optionsMenu.classList.remove("hidden");
+    });
+
+    backButton.addEventListener("click", () => {
+      optionsMenu.classList.add("hidden");
+      menu.classList.remove("hidden");
+    });
   </script>
 </body>
 </html>
