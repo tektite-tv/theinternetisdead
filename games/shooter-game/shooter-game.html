@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bananarama Apocalypse</title>
   <link rel="stylesheet" href="/games/shooter-game/shooter-game.css">
+  <style>
+    /* Ensure the win button and menu layers appear above the canvas */
+    canvas {
+      z-index: 0;
+    }
+    .menu-button {
+      position: relative;
+      z-index: 1000 !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -49,9 +59,11 @@
   <!-- Canvas -->
   <canvas id="gameCanvas"></canvas>
 
+  <!-- Game Script -->
   <script src="/games/shooter-game/shooter-game.js"></script>
+
+  <!-- Hover Indicator Logic -->
   <script>
-    // Hover indicator logic
     const indicator = document.getElementById('bananaIndicator');
     const buttons = document.querySelectorAll('#menu button');
     buttons.forEach(btn => {
