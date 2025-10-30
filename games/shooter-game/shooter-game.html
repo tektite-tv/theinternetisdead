@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bananaman Shooter v0.4.3</title>
+<title>Bananaman Shooter v0.4.4</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
@@ -32,13 +32,14 @@
 <div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.4.3 — [WASD] move, [Click] shoot</p>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.4.4 — [WASD] move, [Click] shoot</p>
 </div>
 
 <script>
-/* === v0.4.3 ===
-   - Added looping background music (/media/audio/spaceinvaders.mp3)
-   - Music starts when you click Start Game, stops on death/menu
+/* === v0.4.4 ===
+   - Added /media/audio/oof.mp3 when player takes damage
+   - Slight pitch randomization for comic effect
+   - Retains hitmarker, music, red flashes, and wave logic
 */
 
 const bg=document.getElementById('bg');
@@ -84,6 +85,23 @@ function playHitSound(){
   const s = hitSound.cloneNode();
   s.volume = 0.4;
   s.play().catch(()=>{});
+}
+
+// player oof sound (funny pitch randomizer)
+const oofSound = new Audio('/media/audio/oof.mp3');
+oofSound.volume = 0.5;
+function playOof(){
+  const s = oofSound.cloneNode();
+  // Randomize pitch slightly between 0.9–1.1 for variety
+  const ctxAudio = new (window.AudioContext||window.webkitAudioContext)();
+  const src = ctxAudio.createMediaElementSource(s);
+  const gain = ctxAudio.createGain();
+  const rate = 0.9 + Math.random()*0.2;
+  s.playbackRate = rate;
+  src.connect(gain);
+  gain.connect(ctxAudio.destination);
+  s.play().catch(()=>{});
+  s.onended=()=>ctxAudio.close();
 }
 
 // looping background music
@@ -231,6 +249,7 @@ function applyDamage(dmg){
   player.hp=Math.max(0,player.hp-dmg);
   player.hitTimer=0.3;
   player.invuln=0.3;
+  playOof();
   updateHealth();
   if(player.hp<=0)die();
 }
