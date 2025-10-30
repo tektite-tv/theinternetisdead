@@ -6,7 +6,6 @@
   <title>Shooter Game</title>
   <link rel="stylesheet" href="shooter-game.css">
   <style>
-    /* fallback in case the CSS catches fire */
     body {
       margin: 0;
       background: #000;
@@ -41,6 +40,31 @@
       background: white;
       color: black;
     }
+    #optionsMenu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.85);
+    }
+    #optionsMenu button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      border: 2px solid white;
+      background: transparent;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    #optionsMenu button:hover {
+      background: white;
+      color: black;
+    }
     canvas {
       display: block;
       margin: 0 auto;
@@ -53,18 +77,26 @@
 </head>
 
 <body>
-  <!-- Start Menu -->
+  <!-- Main Menu -->
   <div id="menu">
     <h1>💀 Shooter Game 💀</h1>
     <button id="startButton">Start Game</button>
     <button id="bossModeButton">Boss Mode</button>
     <button id="insaneModeButton">Insane Mode</button>
+    <button id="optionsButton">Options</button>
+  </div>
+
+  <!-- Options Menu -->
+  <div id="optionsMenu" class="hidden">
+    <h2>⚙️ Options ⚙️</h2>
+    <p>Feature sliders and nonsense go here.</p>
+    <button id="backButton">Back</button>
   </div>
 
   <!-- Game Canvas -->
   <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-  <!-- Scripts: order matters -->
+  <!-- Scripts -->
   <script src="state.js"></script>
   <script src="ui.js"></script>
   <script src="enemies.js"></script>
@@ -73,3 +105,4 @@
   <script src="shooter-game.js"></script>
 </body>
 </html>
+
