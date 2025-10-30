@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bananaman Shooter v0.4.6</title>
+<title>Bananaman Shooter v0.4.7</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  /* === v0.4.6 CHANGES ===
-     + Added death overlay with fade-in red background and reset button
-     + Overlay appears when player.hp <= 0 in die()
-     + Restart button returns to main menu and resets state safely
+  /* === v0.4.7 CHANGES ===
+     + Exponential difficulty scaling up to wave 10
+     + Integrated from v0.4.6 (death overlay and restart button)
   */
   html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
   canvas{display:block;position:fixed;inset:0;}
@@ -20,7 +19,7 @@
   #healthfill{background:#f33;width:100%;height:100%;border-radius:10px;transition:width .2s linear;}
   #healthtext{position:absolute;width:100%;top:0;text-align:center;font-size:12px;}
 
-  /* === v0.4.6 additions: death overlay === */
+  /* === death overlay === */
   #deathOverlay {
     position:fixed; inset:0;
     background:rgba(150,0,0,0);
@@ -71,10 +70,10 @@
 <div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.4.6 — [WASD] move, [Click] shoot</p>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.4.7 — [WASD] move, [Click] shoot</p>
 </div>
 
-<!-- === v0.4.6: Death Overlay === -->
+<!-- DEATH OVERLAY -->
 <div id="deathOverlay">
   <div>You Died</div>
   <button id="restartBtn">Return to Main Menu</button>
@@ -118,11 +117,11 @@ const playerImg=new Image();playerImg.src='/media/images/gifs/bananarama.gif';
 let playerLoaded=false;playerImg.onload=()=>playerLoaded=true;
 
 // === AUDIO ===
-const hitSound = new Audio('/media/audio/hitmarker.mp3');
+const hitSound=new Audio('/media/audio/hitmarker.mp3');
 function playHitSound(){const s=hitSound.cloneNode();s.volume=0.4;s.play().catch(()=>{});}
-const oofSound = new Audio('/media/audio/oof.mp3');
+const oofSound=new Audio('/media/audio/oof.mp3');
 function playOof(){const s=oofSound.cloneNode();s.playbackRate=0.9+Math.random()*0.2;s.play().catch(()=>{});}
-const bgMusic = new Audio('/media/audio/spaceinvaders.mp3');bgMusic.loop=true;bgMusic.volume=0.6;
+const bgMusic=new Audio('/media/audio/spaceinvaders.mp3');bgMusic.loop=true;bgMusic.volume=0.6;
 
 // === STATE ===
 const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitTimer:0,invuln:0};
@@ -153,8 +152,8 @@ function updatePlayer(dt){
   player.y=Math.max(player.size/2,Math.min(H-player.size/2,player.y));
   if(player.invuln>0)player.invuln-=dt;
   if(player.hitTimer>0)player.hitTimer-=dt;
-  gridOffsetX -= dx*dt*player.speed*0.3;
-  gridOffsetY -= dy*dt*player.speed*0.3;
+  gridOffsetX-=dx*dt*player.speed*0.3;
+  gridOffsetY-=dy*dt*player.speed*0.3;
 }
 function drawPlayer(){
   ctx.save();
@@ -187,25 +186,33 @@ function shoot(){
 
 // === ENEMIES ===
 function makeEnemy({x,y,srcName,size,speed,hp,dmg,inverted=false,resurrected=false}){
-  const img=new Image(); img.src=`/media/images/gifs/${srcName}`;
+  const img=new Image();img.src=`/media/images/gifs/${srcName}`;
   return {x,y,img,size,speed,hp,dmg,baseHp:hp,srcName,isBananarama:srcName==='bananarama.gif',inverted,resurrected,fade:1,destroying:false,hitTimer:0};
 }
+
+// === v0.4.7: Exponential Wave Scaling ===
 function spawnWave(){
-  const count=Math.floor(6+(wave-1)*4);
-  const hpMult=1+wave*0.1,speedMult=1+wave*0.1;
+  const difficultyFactor=Math.pow(1.25,Math.min(wave,10)-1); // exponential growth up to wave10
+  const count=Math.floor(6+(wave-1)*4*difficultyFactor*0.5);
+
   for(let i=0;i<count;i++){
     const side=Math.floor(Math.random()*4);let x,y;
-    if(side===0){x=Math.random()*W;y=-60;}else if(side===1){x=W+60;y=Math.random()*H;}
-    else if(side===2){x=Math.random()*W;y=H+60;}else{x=-60;y=Math.random()*H;}
+    if(side===0){x=Math.random()*W;y=-60;}
+    else if(side===1){x=W+60;y=Math.random()*H;}
+    else if(side===2){x=Math.random()*W;y=H+60;}
+    else{x=-60;y=Math.random()*H;}
+
     const pool=['bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif','fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'];
     const srcName=pool[Math.floor(Math.random()*pool.length)];
     const size=40+Math.random()*100;
-    const spd=(80+wave*10)*(80/size)*speedMult;
-    const hp=(2+size/40)*hpMult;
-    const dmg=(5+Math.random()*10)*(size/80);
-    enemies.push(makeEnemy({x,y,srcName,size,speed:spd,hp,dmg}));
+    const speed=(80+wave*10)*(80/size)*difficultyFactor;
+    const hp=(2+size/40)*difficultyFactor;
+    const dmg=(5+Math.random()*10)*(size/80)*difficultyFactor;
+
+    enemies.push(makeEnemy({x,y,srcName,size,speed,hp,dmg}));
   }
 }
+
 function updateEnemies(dt){
   for(const e of enemies){
     if(e.destroying){e.fade-=dt*2;if(e.fade<=0)e.fade=0;continue;}
@@ -252,21 +259,19 @@ function checkCollisions(){
       const b=bullets[j];const dx=b.x-e.x,dy=b.y-e.y;
       if(dx*dx+dy*dy<(e.size/2+4)**2){
         bullets.splice(j,1);
-        e.hp--; damage+=10; e.hitTimer=0.25; playHitSound();
+        e.hp--;damage+=10;e.hitTimer=0.25;playHitSound();
         if(e.hp<=0){
           e.destroying=true;
-          if(e.isBananarama && !e.resurrected) scheduleBananaramaRespawn(e);
+          if(e.isBananarama&&!e.resurrected)scheduleBananaramaRespawn(e);
           kills++;
         }
         break;
       }
     }
     const dx=player.x-e.x,dy=player.y-e.y;
-    if(dx*dx+dy*dy<(player.size/2+e.size/2)**2 && !e.destroying && player.invuln<=0){
-      applyDamage(e.dmg);
-    }
+    if(dx*dx+dy*dy<(player.size/2+e.size/2)**2&&!e.destroying&&player.invuln<=0){applyDamage(e.dmg);}
   }
-  if(enemies.length>0 && enemies.every(en=>en.destroying)){wave++;spawnWave();}
+  if(enemies.length>0&&enemies.every(en=>en.destroying)){wave++;spawnWave();}
 }
 function applyDamage(dmg){
   player.hp=Math.max(0,player.hp-dmg);
@@ -276,7 +281,7 @@ function applyDamage(dmg){
 function die(){
   state='dead';bgMusic.pause();bgMusic.currentTime=0;
   gridStatic=true;drawGrid();
-  deathOverlay.classList.add('visible'); // show overlay
+  deathOverlay.classList.add('visible');
 }
 restartBtn.onclick=()=>{
   deathOverlay.classList.remove('visible');
@@ -314,10 +319,10 @@ addEventListener('mousedown',()=>{if(state==='playing')shoot();});
 document.getElementById('start').onclick=()=>{
   menu.style.display='none';
   gridStatic=false;
-  bgMusic.currentTime=0; bgMusic.play().catch(()=>{});
-  kills=0; wave=1; damage=0; player.hp=100; updateHealth();
-  bullets.length=0; enemies.length=0; spawnWave();
-  startTime=performance.now(); state='playing'; loop();
+  bgMusic.currentTime=0;bgMusic.play().catch(()=>{});
+  kills=0;wave=1;damage=0;player.hp=100;updateHealth();
+  bullets.length=0;enemies.length=0;spawnWave();
+  startTime=performance.now();state='playing';loop();
 };
 gridStatic=true;drawGrid();
 </script>
