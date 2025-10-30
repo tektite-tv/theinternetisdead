@@ -7,43 +7,39 @@
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="m-0 h-screen bg-[#0b0b0b] text-gray-200 font-sans overflow-hidden select-none">
-<canvas id="game-canvas" class="fixed inset-0 w-full h-full block"></canvas>
+<canvas id="game-canvas" class="fixed inset-0 w-full h-full block z-0"></canvas>
 
 <!-- Main Menu -->
-<div id="main-menu" class="fixed inset-0 flex items-center justify-center pointer-events-auto">
+<div id="main-menu" class="fixed inset-0 flex items-center justify-center pointer-events-auto z-50">
   <div class="bg-neutral-900/90 border border-white/10 rounded-2xl shadow-2xl p-8 w-[min(92vw,560px)] text-center">
     <h1 class="text-yellow-300 text-4xl md:text-5xl font-extrabold mb-1 drop-shadow-md">Bananaman Shooter</h1>
-    <!-- v0.2.9: version bump -->
-    <p class="text-sm opacity-70 mb-6">v0.2.9</p>
+    <p class="text-sm opacity-70 mb-6">v0.3.0</p>
     <button id="btn-start" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Start Game</button>
     <button id="btn-options" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Options</button>
   </div>
 </div>
 
 <!-- Options Menu -->
-<div id="options-menu" class="hidden fixed inset-0 flex items-center justify-center pointer-events-auto">
+<div id="options-menu" class="hidden fixed inset-0 flex items-center justify-center pointer-events-auto z-50">
   <div class="bg-neutral-900/90 border border-white/10 rounded-2xl shadow-2xl p-8 w-[min(92vw,560px)] text-center">
     <h2 class="text-yellow-300 text-3xl font-bold mb-4">Options</h2>
-
     <p class="mb-2">Difficulty: <span id="diff-label" class="font-semibold">Normal</span></p>
     <input id="diff-slider" type="range" min="1" max="3" step="1" value="2" class="w-4/5 accent-yellow-400">
     <p id="diff-desc" class="text-sm opacity-75 mb-4">Enemies deal standard damage.</p>
-
     <p class="mb-2">Game Speed: <span id="speed-label" class="font-semibold">1.0x</span></p>
     <input id="speed-slider" type="range" min="1" max="10" step="1" value="1" class="w-4/5 accent-pink-400">
     <p id="speed-desc" class="text-sm opacity-75 mb-6">Adjusts overall game speed (1x–5x).</p>
-
     <button id="btn-back" class="w-full py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Back</button>
   </div>
 </div>
 
-<!-- HUD: Kills/Wave -->
-<div id="hud-stats" class="hidden fixed top-2 left-2 bg-neutral-800/70 text-sm px-3 py-2 rounded-lg border border-white/10">
+<!-- HUD: kills/wave -->
+<div id="hud-stats" class="hidden fixed top-2 left-2 bg-neutral-800/70 text-sm px-3 py-2 rounded-lg border border-white/10 z-50">
   Kills: <span id="killcount">0</span> | Wave: <span id="wavecount">0</span>
 </div>
 
-<!-- HUD: Damage (left) + Timer (right) -->
-<div id="hud-topright" class="hidden fixed top-2 right-3 flex gap-3">
+<!-- HUD: damage + timer -->
+<div id="hud-topright" class="hidden fixed top-2 right-3 flex gap-3 z-50">
   <div id="hud-damage" class="bg-neutral-800/70 text-sm px-3 py-2 rounded-lg border border-white/10">
     Damage: <span id="damagecount">0</span>
   </div>
@@ -52,474 +48,196 @@
   </div>
 </div>
 
-<!-- Health bar (moved bottom center and widened in v0.2.8) -->
-<div id="healthbar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[60vw] h-6 border border-white/50 relative bg-red-950 rounded-xl shadow-lg">
+<!-- HEALTH BAR (bottom center) -->
+<div id="healthbar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[60vw] h-6 border border-white/50 relative bg-red-950 rounded-xl shadow-lg z-50">
   <div id="healthfill" class="absolute left-0 top-0 h-full w-full bg-red-500 transition-[width] duration-200 rounded-xl"></div>
   <div id="healthtext" class="absolute w-full text-center text-sm text-white top-[2px]">100%</div>
 </div>
 
-<!-- Death Screen -->
-<div id="you-died" class="fixed inset-0 flex flex-col items-center justify-center text-red-600 font-extrabold text-6xl drop-shadow-[0_0_40px_#ff0000] bg-black/80 opacity-0 transition-opacity duration-1000 pointer-events-none">
+<!-- DEATH SCREEN -->
+<div id="you-died" class="fixed inset-0 flex flex-col items-center justify-center text-red-600 font-extrabold text-6xl drop-shadow-[0_0_40px_#ff0000] bg-black/80 opacity-0 transition-opacity duration-1000 pointer-events-none z-50">
   <p>YOU DIED</p>
   <button id="btn-restart" class="mt-8 text-lg text-white border border-white/20 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-xl transition">Return to Main Menu</button>
 </div>
 
-<!-- Controls Hint -->
-<div class="fixed bottom-2 right-3 text-xs opacity-70 bg-neutral-900/70 border border-white/10 px-2 py-1 rounded">
+<div class="fixed bottom-2 right-3 text-xs opacity-70 bg-neutral-900/70 border border-white/10 px-2 py-1 rounded z-50">
   Move: WASD • Aim: Mouse • Shoot: Click/Space • ESC: Menu
 </div>
 
 <script>
 /*
-  v0.2.9 CHANGELOG (full-file update):
-  - Keep enemies fully opaque while alive; fade out smoothly on death (from v0.2.5).
-  - Added real-time timer top-right, unaffected by speed (v0.2.6).
-  - Added Damage Dealt highscore (+10 per bullet hit) left of timer (v0.2.7).
-  - Moved/resized health bar to bottom center (v0.2.8).
-  - FIX: canvas resize now resets transform to avoid cumulative scaling.
+  v0.3.0 - Entire file update
+  - Added z-50 to HUD and menus so UI renders above canvas.
+  - Retained all previous features (enemy fade on death, timer, damage, bottom-center health bar).
 */
 
 const canvas = document.getElementById('game-canvas');
-// alpha:false for opaque canvas; good perf and avoids stack layers blending
-const ctx = canvas.getContext('2d', { alpha: false });
+const ctx = canvas.getContext('2d',{alpha:false});
+const mainMenu=document.getElementById('main-menu');
+const optionsMenu=document.getElementById('options-menu');
+const btnStart=document.getElementById('btn-start');
+const btnOptions=document.getElementById('btn-options');
+const btnBack=document.getElementById('btn-back');
+const btnRestart=document.getElementById('btn-restart');
+const diffSlider=document.getElementById('diff-slider');
+const diffLabel=document.getElementById('diff-label');
+const diffDesc=document.getElementById('diff-desc');
+const speedSlider=document.getElementById('speed-slider');
+const speedLabel=document.getElementById('speed-label');
+const hudStats=document.getElementById('hud-stats');
+const killEl=document.getElementById('killcount');
+const waveEl=document.getElementById('wavecount');
+const healthBar=document.getElementById('healthbar');
+const healthFill=document.getElementById('healthfill');
+const healthText=document.getElementById('healthtext');
+const deathScreen=document.getElementById('you-died');
+const hudTopRight=document.getElementById('hud-topright');
+const damageEl=document.getElementById('damagecount');
+const timerEl=document.getElementById('timer');
 
-/* UI refs */
-const mainMenu   = document.getElementById('main-menu');
-const optionsMenu= document.getElementById('options-menu');
-const btnStart   = document.getElementById('btn-start');
-const btnOptions = document.getElementById('btn-options');
-const btnBack    = document.getElementById('btn-back');
-const btnRestart = document.getElementById('btn-restart');
+let startTime=null,elapsedTime=0,totalDamage=0;
 
-const diffSlider = document.getElementById('diff-slider');
-const diffLabel  = document.getElementById('diff-label');
-const diffDesc   = document.getElementById('diff-desc');
-const speedSlider= document.getElementById('speed-slider');
-const speedLabel = document.getElementById('speed-label');
+const enemyGifs=[
+ 'bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif','fatspiderman.gif',
+ 'firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'
+].map(n=>`/media/images/gifs/${n}`);
 
-const hudStats   = document.getElementById('hud-stats');
-const killEl     = document.getElementById('killcount');
-const waveEl     = document.getElementById('wavecount');
-
-const healthBar  = document.getElementById('healthbar');
-const healthFill = document.getElementById('healthfill');
-const healthText = document.getElementById('healthtext');
-
-const deathScreen= document.getElementById('you-died');
-
-const hudTopRight= document.getElementById('hud-topright');
-const damageEl   = document.getElementById('damagecount');
-const timerEl    = document.getElementById('timer');
-
-/* NEW: real-time timer bookkeeping */
-let startTime = null;
-let elapsedTime = 0;
-
-/* NEW: damage highscore bookkeeping */
-let totalDamage = 0;
-
-/* Assets */
-const enemyGifs = [
-  'bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif','fatspiderman.gif',
-  'firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'
-].map(n => `/media/images/gifs/${n}`);
-
-const State = {
-  screen: 'menu',
-  rafId: null,
-  lastFrame: 0,
-  time: 0,
-  mouse: { x: innerWidth/2, y: innerHeight/2 },
-  player: { x: 0, y: 0, size: 96, speed: 280, hp: 100, hitFlash: 0 },
-  bananaImg: new Image(),
-  bananaLoaded: false,
-  keys: {},
-  bullets: [],
-  enemies: [],
-  wave: 0,
-  kills: 0,
-  nextKillTarget: 10,
-  clearTimer: 0,
-  difficulty: 2,          // 1 Easy, 2 Normal, 3 Hard
-  speedMultiplier: 1      // 1.0 .. 5.0 effective
+const State={
+ screen:'menu',rafId:null,lastFrame:0,
+ mouse:{x:innerWidth/2,y:innerHeight/2},
+ player:{x:0,y:0,size:96,speed:280,hp:100,hitFlash:0},
+ bananaImg:new Image(),bananaLoaded:false,
+ keys:{},bullets:[],enemies:[],
+ wave:0,kills:0,nextKillTarget:10,clearTimer:0,
+ difficulty:2,speedMultiplier:1
 };
+State.bananaImg.src='/media/images/gifs/bananarama.gif';
+State.bananaImg.onload=()=>State.bananaLoaded=true;
 
-State.bananaImg.src = '/media/images/gifs/bananarama.gif';
-State.bananaImg.onload = () => State.bananaLoaded = true;
-
-/* FIX v0.2.9: reset transform before scaling so repeated resizes don't compound */
 function fitCanvas(){
-  const dpr = Math.min(devicePixelRatio || 1, 2);
-  canvas.width  = Math.floor(innerWidth * dpr);
-  canvas.height = Math.floor(innerHeight * dpr);
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.scale(dpr, dpr);
-  // keep player centered on resize
-  State.player.x = innerWidth / 2;
-  State.player.y = innerHeight / 2;
+ const dpr=Math.min(devicePixelRatio||1,2);
+ canvas.width=innerWidth*dpr;canvas.height=innerHeight*dpr;
+ ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr,dpr);
+ State.player.x=innerWidth/2;State.player.y=innerHeight/2;
 }
-addEventListener('resize', fitCanvas);
-fitCanvas();
+addEventListener('resize',fitCanvas);fitCanvas();
 
 function drawBackground(){
-  ctx.fillStyle = '#0e0e10';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  ctx.save();
-  ctx.globalAlpha = 0.35;
-  ctx.strokeStyle = '#2aff8a';
-  const s = 32;
-  for(let x=0; x<innerWidth; x+=s){
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,innerHeight); ctx.stroke();
-  }
-  for(let y=0; y<innerHeight; y+=s){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(innerWidth,y); ctx.stroke();
-  }
-  ctx.restore();
+ ctx.fillStyle='#0e0e10';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.save();ctx.globalAlpha=.35;ctx.strokeStyle='#2aff8a';
+ const s=32;
+ for(let x=0;x<innerWidth;x+=s){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,innerHeight);ctx.stroke();}
+ for(let y=0;y<innerHeight;y+=s){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(innerWidth,y);ctx.stroke();}
+ ctx.restore();
 }
 
 function updatePlayer(dt){
-  const p = State.player;
-  if(State.keys['w']) p.y -= p.speed * dt;
-  if(State.keys['s']) p.y += p.speed * dt;
-  if(State.keys['a']) p.x -= p.speed * dt;
-  if(State.keys['d']) p.x += p.speed * dt;
-  p.x = Math.max(p.size/2, Math.min(innerWidth  - p.size/2, p.x));
-  p.y = Math.max(p.size/2, Math.min(innerHeight - p.size/2, p.y));
+ const p=State.player;
+ if(State.keys['w'])p.y-=p.speed*dt;
+ if(State.keys['s'])p.y+=p.speed*dt;
+ if(State.keys['a'])p.x-=p.speed*dt;
+ if(State.keys['d'])p.x+=p.speed*dt;
+ p.x=Math.max(p.size/2,Math.min(innerWidth-p.size/2,p.x));
+ p.y=Math.max(p.size/2,Math.min(innerHeight-p.size/2,p.y));
 }
 
 function drawPlayer(){
-  const p = State.player;
-  ctx.save();
-  if(p.hitFlash > 0){
-    ctx.globalAlpha = 0.5;
-    ctx.filter = 'brightness(200%) saturate(200%)';
-  }
-  if(State.bananaLoaded){
-    ctx.drawImage(State.bananaImg, p.x - p.size/2, p.y - p.size/2, p.size, p.size);
-  }else{
-    ctx.fillStyle = '#ffe066';
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size/2, 0, Math.PI*2); ctx.fill();
-  }
-  ctx.restore();
+ const p=State.player;ctx.save();
+ if(p.hitFlash>0){ctx.globalAlpha=0.5;ctx.filter='brightness(200%) saturate(200%)';}
+ if(State.bananaLoaded){ctx.drawImage(State.bananaImg,p.x-p.size/2,p.y-p.size/2,p.size,p.size);}
+ else{ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(p.x,p.y,p.size/2,0,Math.PI*2);ctx.fill();}
+ ctx.restore();
 }
 
 function drawArrow(){
-  const p = State.player;
-  const dx = State.mouse.x - p.x;
-  const dy = State.mouse.y - p.y;
-  const angle = Math.atan2(dy, dx);
-  const r = p.size * 0.4;
-  const ax = p.x + Math.cos(angle) * r;
-  const ay = p.y + Math.sin(angle) * r;
-
-  ctx.save();
-  ctx.translate(ax, ay);
-  ctx.rotate(angle);
-  ctx.fillStyle = '#ff3333';
-  ctx.shadowColor = '#ff0000';
-  ctx.shadowBlur = 8;
-  ctx.beginPath();
-  ctx.moveTo(0,0); ctx.lineTo(-10,-4); ctx.lineTo(-10,4); ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+ const p=State.player,dx=State.mouse.x-p.x,dy=State.mouse.y-p.y,angle=Math.atan2(dy,dx);
+ const r=p.size*0.4,ax=p.x+Math.cos(angle)*r,ay=p.y+Math.sin(angle)*r;
+ ctx.save();ctx.translate(ax,ay);ctx.rotate(angle);
+ ctx.fillStyle='#ff3333';ctx.shadowColor='#ff0000';ctx.shadowBlur=8;
+ ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-4);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();ctx.restore();
 }
 
 function shootBullet(){
-  const p = State.player;
-  const dx = State.mouse.x - p.x;
-  const dy = State.mouse.y - p.y;
-  const a = Math.atan2(dy, dx);
-  const spd = 700;
-  State.bullets.push({ x:p.x, y:p.y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd });
+ const p=State.player,dx=State.mouse.x-p.x,dy=State.mouse.y-p.y,a=Math.atan2(dy,dx),spd=700;
+ State.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd});
 }
-
-function updateBullets(dt){
-  for(const b of State.bullets){ b.x += b.vx*dt; b.y += b.vy*dt; }
-  State.bullets = State.bullets.filter(b => b.x>0 && b.x<innerWidth && b.y>0 && b.y<innerHeight);
-}
-
-function drawBullets(){
-  ctx.fillStyle = '#ff3333';
-  for(const b of State.bullets){
-    ctx.beginPath(); ctx.arc(b.x,b.y,4,0,Math.PI*2); ctx.fill();
-  }
-}
+function updateBullets(dt){State.bullets.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;});State.bullets=State.bullets.filter(b=>b.x>0&&b.x<innerWidth&&b.y>0&&b.y<innerHeight);}
+function drawBullets(){ctx.fillStyle='#ff3333';for(const b of State.bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}}
 
 function spawnWave(){
-  State.wave++;
-  waveEl.textContent = State.wave;
-  const count = Math.min(5 + State.wave*2, 60);
-  for(let i=0;i<count;i++){
-    const side = Math.floor(Math.random()*4);
-    let x,y;
-    if(side===0){ x=Math.random()*innerWidth; y=-60; }
-    else if(side===1){ x=innerWidth+60; y=Math.random()*innerHeight; }
-    else if(side===2){ x=Math.random()*innerWidth; y=innerHeight+60; }
-    else { x=-60; y=Math.random()*innerHeight; }
-
-    const img = new Image();
-    img.src = enemyGifs[Math.floor(Math.random()*enemyGifs.length)];
-    const size = 40 + Math.random()*100;
-    const baseSpeed = (80 + State.wave*10) * (80/size);
-    const hp  = 2 + size/40;
-    const dmg = (5 + Math.random()*10)*(size/80);
-
-    // v0.2.5: fade property added; stay 1 while alive, fades when destroying
-    State.enemies.push({ x,y, img, size, speed:baseSpeed, hitCooldown:0, pulse:0, hp, dmg, fade:1, destroying:false });
-  }
-  State.nextKillTarget += 10 + State.wave*5;
+ State.wave++;waveEl.textContent=State.wave;
+ const count=Math.min(5+State.wave*2,60);
+ for(let i=0;i<count;i++){
+  const side=Math.floor(Math.random()*4);let x,y;
+  if(side===0){x=Math.random()*innerWidth;y=-60;}
+  else if(side===1){x=innerWidth+60;y=Math.random()*innerHeight;}
+  else if(side===2){x=Math.random()*innerWidth;y=innerHeight+60;}
+  else{x=-60;y=Math.random()*innerHeight;}
+  const img=new Image();img.src=enemyGifs[Math.floor(Math.random()*enemyGifs.length)];
+  const size=40+Math.random()*100,baseSpeed=(80+State.wave*10)*(80/size),hp=2+size/40,dmg=(5+Math.random()*10)*(size/80);
+  State.enemies.push({x,y,img,size,speed:baseSpeed,hitCooldown:0,pulse:0,hp,dmg,fade:1,destroying:false});
+ }
+ State.nextKillTarget+=10+State.wave*5;
 }
 
 function updateEnemies(dt){
-  const p = State.player;
-  for(const e of State.enemies){
-    if(e.destroying){
-      // v0.2.5: death fade out
-      e.fade -= dt*2;
-      if(e.fade <= 0) e.fade = 0;
-      continue;
-    }
-    const dx = p.x - e.x, dy = p.y - e.y;
-    const dist = Math.hypot(dx,dy) || 1;
-    e.x += dx/dist * e.speed * dt;
-    e.y += dy/dist * e.speed * dt;
-    if(e.hitCooldown > 0) e.hitCooldown -= dt;
-    if(e.pulse > 0) e.pulse -= dt*3;
-  }
-  // remove fully faded enemies
-  State.enemies = State.enemies.filter(e => e.fade > 0);
+ const p=State.player;
+ for(const e of State.enemies){
+  if(e.destroying){e.fade-=dt*2;if(e.fade<=0)e.fade=0;continue;}
+  const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy)||1;
+  e.x+=dx/dist*e.speed*dt;e.y+=dy/dist*e.speed*dt;
+  if(e.hitCooldown>0)e.hitCooldown-=dt;if(e.pulse>0)e.pulse-=dt*3;
+ }
+ State.enemies=State.enemies.filter(e=>e.fade>0);
 }
-
-function drawEnemies(){
-  for(const e of State.enemies){
-    const pulseScale = 1 + (e.pulse||0)*0.2;
-    ctx.save();
-    // v0.2.5: full opacity while alive (fade==1); fades only when destroying
-    ctx.globalAlpha = e.fade;
-    if(e.img.complete){
-      ctx.drawImage(e.img,
-        e.x - (e.size/2)*pulseScale,
-        e.y - (e.size/2)*pulseScale,
-        e.size*pulseScale, e.size*pulseScale
-      );
-    }
-    ctx.restore();
-  }
-}
+function drawEnemies(){for(const e of State.enemies){const pulseScale=1+(e.pulse||0)*0.2;ctx.save();ctx.globalAlpha=e.fade;if(e.img.complete)ctx.drawImage(e.img,e.x-e.size/2*pulseScale,e.y-e.size/2*pulseScale,e.size*pulseScale,e.size*pulseScale);ctx.restore();}}
 
 function checkCollisions(dt){
-  const p = State.player;
-
-  // bullets vs enemies
-  for(let i=State.enemies.length-1;i>=0;i--){
-    const e = State.enemies[i];
-    if(e.destroying) continue;
-
-    for(let j=State.bullets.length-1;j>=0;j--){
-      const b = State.bullets[j];
-      const dx=b.x-e.x, dy=b.y-e.y, dist=Math.hypot(dx,dy);
-      if(dist < e.size/2 + 4){
-        e.hp -= 1;
-        e.pulse = 1;
-        // remove bullet
-        State.bullets.splice(j,1);
-
-        // v0.2.7: +10 damage per successful hit
-        totalDamage += 10;
-        damageEl.textContent = totalDamage;
-
-        if(e.hp <= 0){
-          // mark for fade-out
-          e.destroying = true;
-          State.kills++; killEl.textContent = State.kills;
-          if(State.kills >= State.nextKillTarget) spawnWave();
-        }
-        break; // next enemy
-      }
-    }
+ const p=State.player;
+ for(let i=State.enemies.length-1;i>=0;i--){
+  const e=State.enemies[i];if(e.destroying)continue;
+  for(let j=State.bullets.length-1;j>=0;j--){
+   const b=State.bullets[j];const dx=b.x-e.x,dy=b.y-e.y,dist=Math.hypot(dx,dy);
+   if(dist<e.size/2+4){e.hp-=1;e.pulse=1;State.bullets.splice(j,1);totalDamage+=10;damageEl.textContent=totalDamage;if(e.hp<=0){e.destroying=true;State.kills++;killEl.textContent=State.kills;if(State.kills>=State.nextKillTarget)spawnWave();}break;}
   }
-
-  // enemies vs player
-  for(const e of State.enemies){
-    if(e.destroying) continue;
-    const dx = p.x - e.x, dy = p.y - e.y, dist = Math.hypot(dx,dy);
-    if(dist < (p.size/2 + e.size/2)*0.7 && e.hitCooldown <= 0){
-      e.hitCooldown = 1; e.pulse = 1;
-      applyDamage(e.dmg);
-    }
-  }
-
-  // if cleared for a few seconds, spawn another wave
-  if(State.enemies.length===0 && State.screen==='playing'){
-    State.clearTimer += dt;
-    if(State.clearTimer > 3){ spawnWave(); State.clearTimer = 0; }
-  }else{
-    State.clearTimer = 0;
-  }
+ }
+ for(const e of State.enemies){if(e.destroying)continue;const dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy);if(dist<(p.size/2+e.size/2)*0.7&&e.hitCooldown<=0){e.hitCooldown=1;e.pulse=1;applyDamage(e.dmg);}}
+ if(State.enemies.length===0&&State.screen==='playing'){State.clearTimer+=dt;if(State.clearTimer>3){spawnWave();State.clearTimer=0;}}else State.clearTimer=0;
 }
 
-function applyDamage(dmg){
-  const p = State.player;
-  if(State.difficulty === 1) dmg *= 0.5;   // Easy halves damage
-  if(State.difficulty === 3) dmg = 9999;   // Hard = one-hit KO
-  p.hp = Math.max(0, p.hp - dmg);
-  p.hitFlash = 0.3;
-  updateHealthBar();
-  if(p.hp <= 0) die();
-}
-
-function updateHealthBar(){
-  const p = State.player;
-  const pct = Math.floor(p.hp);
-  healthFill.style.width = pct + '%';
-  healthText.textContent = pct + '%';
-  if(pct < 40) healthFill.classList.replace('bg-red-500','bg-red-700');
-  else         healthFill.classList.replace('bg-red-700','bg-red-500');
-}
-
-function die(){
-  State.screen = 'dead';
-  deathScreen.classList.add('opacity-100');
-  deathScreen.classList.remove('pointer-events-none');
-  cancelAnimationFrame(State.rafId);
-  State.rafId = null;
-}
-
-// v0.2.6: real-time timer update (ignores game speed multiplier)
-function updateTimer(){
-  if(!startTime) return;
-  const now = performance.now();
-  elapsedTime = (now - startTime) / 1000;
-  timerEl.textContent = elapsedTime.toFixed(1) + 's';
-}
+function applyDamage(dmg){const p=State.player;if(State.difficulty===1)dmg*=0.5;if(State.difficulty===3)dmg=9999;p.hp=Math.max(0,p.hp-dmg);p.hitFlash=0.3;updateHealthBar();if(p.hp<=0)die();}
+function updateHealthBar(){const p=State.player;const pct=Math.floor(p.hp);healthFill.style.width=pct+'%';healthText.textContent=pct+'%';if(pct<40)healthFill.classList.replace('bg-red-500','bg-red-700');else healthFill.classList.replace('bg-red-700','bg-red-500');}
+function die(){State.screen='dead';deathScreen.classList.add('opacity-100');deathScreen.classList.remove('pointer-events-none');cancelAnimationFrame(State.rafId);State.rafId=null;}
+function updateTimer(){if(!startTime)return;const now=performance.now();elapsedTime=(now-startTime)/1000;timerEl.textContent=elapsedTime.toFixed(1)+'s';}
 
 function loop(ts){
-  let dt = State.lastFrame ? (ts - State.lastFrame) / 1000 : 0;
-  State.lastFrame = ts;
-
-  // gameplay respects speed multiplier
-  dt *= State.speedMultiplier;
-
-  updatePlayer(dt);
-  updateBullets(dt);
-  updateEnemies(dt);
-  checkCollisions(dt);
-
-  if(State.player.hitFlash > 0) State.player.hitFlash -= dt;
-
-  drawBackground();
-  drawPlayer();
-  drawArrow();
-  drawBullets();
-  drawEnemies();
-
-  updateTimer(); // real-time, unaffected by speed
-
-  if(State.screen === 'playing'){
-    State.rafId = requestAnimationFrame(loop);
-  }
+ let dt=State.lastFrame?(ts-State.lastFrame)/1000:0;State.lastFrame=ts;dt*=State.speedMultiplier;
+ updatePlayer(dt);updateBullets(dt);updateEnemies(dt);checkCollisions(dt);
+ if(State.player.hitFlash>0)State.player.hitFlash-=dt;
+ drawBackground();drawPlayer();drawArrow();drawBullets();drawEnemies();updateTimer();
+ if(State.screen==='playing')State.rafId=requestAnimationFrame(loop);
 }
 
 function startGame(){
-  // show/hide UI
-  mainMenu.classList.add('hidden');
-  optionsMenu.classList.add('hidden');
-  hudStats.classList.remove('hidden');
-  hudTopRight.classList.remove('hidden');
-  healthBar.classList.remove('hidden');
-  deathScreen.classList.add('pointer-events-none');
-  deathScreen.classList.remove('opacity-100');
-
-  // reset state for a fresh run
-  Object.assign(State, {
-    ...State,
-    screen: 'playing',
-    lastFrame: 0,
-    time: 0,
-    bullets: [],
-    enemies: [],
-    wave: 0,
-    kills: 0,
-    nextKillTarget: 10,
-    clearTimer: 0,
-    player: { ...State.player, hp: 100, hitFlash: 0 }
-  });
-
-  // reset HUD
-  totalDamage = 0; damageEl.textContent = '0';
-  killEl.textContent = '0'; waveEl.textContent = '0';
-  updateHealthBar();
-
-  // start first wave and timer
-  spawnWave();
-  startTime = performance.now();
-  elapsedTime = 0;
-  timerEl.textContent = '0s';
-
-  if(!State.rafId) State.rafId = requestAnimationFrame(loop);
+ mainMenu.classList.add('hidden');optionsMenu.classList.add('hidden');hudStats.classList.remove('hidden');hudTopRight.classList.remove('hidden');healthBar.classList.remove('hidden');deathScreen.classList.add('pointer-events-none');deathScreen.classList.remove('opacity-100');
+ Object.assign(State,{screen:'playing',lastFrame:0,bullets:[],enemies:[],wave:0,kills:0,nextKillTarget:10,clearTimer:0,player:{...State.player,hp:100,hitFlash:0}});
+ totalDamage=0;damageEl.textContent='0';killEl.textContent='0';waveEl.textContent='0';updateHealthBar();spawnWave();
+ startTime=performance.now();elapsedTime=0;timerEl.textContent='0s';if(!State.rafId)State.rafId=requestAnimationFrame(loop);
 }
+function returnToMenu(){if(State.rafId)cancelAnimationFrame(State.rafId);State.rafId=null;State.screen='menu';mainMenu.classList.remove('hidden');optionsMenu.classList.add('hidden');hudStats.classList.add('hidden');hudTopRight.classList.add('hidden');healthBar.classList.add('hidden');deathScreen.classList.add('pointer-events-none');deathScreen.classList.remove('opacity-100');}
 
-function returnToMenu(){
-  if(State.rafId) cancelAnimationFrame(State.rafId);
-  State.rafId = null;
-  State.screen = 'menu';
+btnStart.addEventListener('click',startGame);
+btnOptions.addEventListener('click',()=>{mainMenu.classList.add('hidden');optionsMenu.classList.remove('hidden');});
+btnBack.addEventListener('click',()=>{optionsMenu.classList.add('hidden');mainMenu.classList.remove('hidden');});
+btnRestart.addEventListener('click',returnToMenu);
+diffSlider.addEventListener('input',()=>{const v=parseInt(diffSlider.value);State.difficulty=v;if(v===1){diffLabel.textContent='Easy';diffDesc.textContent='Enemies deal half damage.';}if(v===2){diffLabel.textContent='Normal';diffDesc.textContent='Enemies deal standard damage.';}if(v===3){diffLabel.textContent='Hard';diffDesc.textContent='Enemies kill instantly.';}});
+speedSlider.addEventListener('input',()=>{const v=parseInt(speedSlider.value);const m=1+(v-1)*0.444;State.speedMultiplier=m;speedLabel.textContent=m.toFixed(1)+'x';});
+addEventListener('keydown',e=>{State.keys[e.key.toLowerCase()]=true;if(e.key===' ')shootBullet();if(e.key==='Escape'&&State.screen==='playing')returnToMenu();});
+addEventListener('keyup',e=>State.keys[e.key.toLowerCase()]=false);
+canvas.addEventListener('mousedown',shootBullet);
+addEventListener('mousemove',e=>{State.mouse.x=e.clientX;State.mouse.y=e.clientY;});
 
-  // show/hide UI
-  mainMenu.classList.remove('hidden');
-  optionsMenu.classList.add('hidden');
-  hudStats.classList.add('hidden');
-  hudTopRight.classList.add('hidden');
-  healthBar.classList.add('hidden');
-  deathScreen.classList.add('pointer-events-none');
-  deathScreen.classList.remove('opacity-100');
-}
-
-/* UI events */
-btnStart.addEventListener('click', startGame);
-btnOptions.addEventListener('click', () => {
-  mainMenu.classList.add('hidden');
-  optionsMenu.classList.remove('hidden');
-});
-btnBack.addEventListener('click', () => {
-  optionsMenu.classList.add('hidden');
-  mainMenu.classList.remove('hidden');
-});
-btnRestart.addEventListener('click', returnToMenu);
-
-/* Sliders */
-diffSlider.addEventListener('input', () => {
-  const val = parseInt(diffSlider.value, 10);
-  State.difficulty = val;
-  if(val===1){ diffLabel.textContent='Easy';   diffDesc.textContent='Enemies deal half damage.'; }
-  if(val===2){ diffLabel.textContent='Normal'; diffDesc.textContent='Enemies deal standard damage.'; }
-  if(val===3){ diffLabel.textContent='Hard';   diffDesc.textContent='Enemies kill instantly.'; }
-});
-
-speedSlider.addEventListener('input', () => {
-  const val = parseInt(speedSlider.value, 10);
-  const mult = 1 + (val - 1) * 0.444; // 1..10 -> 1.0..5.0
-  State.speedMultiplier = mult;
-  speedLabel.textContent = mult.toFixed(1) + 'x';
-});
-
-/* Input */
-addEventListener('keydown', e => {
-  State.keys[e.key.toLowerCase()] = true;
-  if(e.key === ' ') shootBullet();
-  if(e.key === 'Escape' && State.screen === 'playing') returnToMenu();
-});
-addEventListener('keyup', e => {
-  State.keys[e.key.toLowerCase()] = false;
-});
-canvas.addEventListener('mousedown', shootBullet);
-addEventListener('mousemove', e => {
-  State.mouse.x = e.clientX; State.mouse.y = e.clientY;
-});
-
-/* Initial paint so the page isn't visually empty */
-drawBackground();
-mainMenu.classList.remove('hidden');
+drawBackground();mainMenu.classList.remove('hidden');
 </script>
 </body>
 </html>
