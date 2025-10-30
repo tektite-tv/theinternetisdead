@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.save();
     ctx.translate(arrowX, arrowY);
     ctx.rotate(angle);
-    ctx.fillStyle = "#ffcc00";
+    ctx.fillStyle = "red";
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(-10, -5);
