@@ -1,1 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Super Pong</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: black; color: white; font-family: monospace; overflow: hidden; }
 
+    #menu, #loseScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      text-align: center;
+      z-index: 10;
+    }
+
+    button {
+      background: white; color: black; border: none;
+      padding: 10px 20px; margin-top: 20px;
+      font-size: 1.2rem; cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: #00ffcc; }
+
+    #gameCanvas { display: block; margin: auto; background: #111; }
+    h1 { font-size: 3rem; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div id="menu">
+    <h1>SUPER PONG</h1>
+    <button id="startBtn">Start Game</button>
+  </div>
+
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <div id="loseScreen" style="display:none;">
+    <h1>YOU LOSE</h1>
+    <button id="restartBtn">Return to Menu</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const menu = document.getElementById('menu');
+    const loseScreen = document.getElementById('loseScreen');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    let playerY, aiY, ballX, ballY, ballVX, ballVY, playerScore;
+    const paddleHeight = 100, paddleWidth = 10;
+    const ballSize = 10;
+
+    function resetGame() {
+      playerY = canvas.height / 2 - paddleHeight / 2;
+      aiY = canvas.height / 2 - paddleHeight / 2;
+      ballX = canvas.width / 2;
+      ballY = canvas.height / 2;
+      ballVX = Math.random() > 0.5 ? 4 : -4;
+      ballVY = (Math.random() - 0.5) * 4;
+      playerScore = 0;
+    }
+
+    function drawRect(x, y, w, h) { ctx.fillRect(x, y, w, h); }
+
+    function update() {
+      ballX += ballVX;
+      ballY += ballVY;
+
+      // Bounce off top/bottom
+      if (ballY <= 0 || ballY + ballSize >= canvas.height) ballVY *= -1;
+
+      // Player control
+      document.onmousemove = e => {
+        const rect = canvas.getBoundingClientRect();
+        playerY = e.clientY - rect.top - paddleHeight / 2;
+      };
+
+      // AI movement (tracks ball)
+      aiY += (ballY - (aiY + paddleHeight / 2)) * 0.05;
+
+      // Collision with player
+      if (
+        ballX <= paddleWidth &&
+        ballY + ballSize >= playerY &&
+        ballY <= playerY + paddleHeight
+      ) {
+        ballVX = Math.abs(ballVX);
+        ballVY += (Math.random() - 0.5) * 2;
+      }
+
+      // Collision with AI
+      if (
+        ballX + ballSize >= canvas.width - paddleWidth &&
+        ballY + ballSize >= aiY &&
+        ballY <= aiY + paddleHeight
+      ) {
+        ballVX = -Math.abs(ballVX);
+        ballVY += (Math.random() - 0.5) * 2;
+      }
+
+      // Lose condition
+      if (ballX < 0) {
+        loseGame();
+        return;
+      }
+
+      draw();
+      requestAnimationFrame(update);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "white";
+      drawRect(0, playerY, paddleWidth, paddleHeight);
+      drawRect(canvas.width - paddleWidth, aiY, paddleWidth, paddleHeight);
+      drawRect(ballX, ballY, ballSize, ballSize);
+    }
+
+    function loseGame() {
+      loseScreen.style.display = 'flex';
+    }
+
+    startBtn.onclick = () => {
+      menu.style.display = 'none';
+      loseScreen.style.display = 'none';
+      resetGame();
+      update();
+    };
+
+    restartBtn.onclick = () => {
+      loseScreen.style.display = 'none';
+      menu.style.display = 'flex';
+    };
+  </script>
+</body>
+</html>
