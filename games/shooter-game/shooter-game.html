@@ -87,30 +87,12 @@
   <!-- Game Canvas -->
   <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-  <!-- Scripts -->
+  <!-- Script loading order matters -->
   <script src="state.js"></script>
   <script src="ui.js"></script>
   <script src="enemies.js"></script>
   <script src="boss.js"></script>
   <script src="effects.js"></script>
   <script src="shooter-game.js"></script>
-
-  <script>
-    // minimal inline logic so you can at least navigate menus
-    const menu = document.getElementById("menu");
-    const optionsMenu = document.getElementById("optionsMenu");
-    const optionsButton = document.getElementById("optionsButton");
-    const backButton = document.getElementById("backButton");
-
-    optionsButton.addEventListener("click", () => {
-      menu.classList.add("hidden");
-      optionsMenu.classList.remove("hidden");
-    });
-
-    backButton.addEventListener("click", () => {
-      optionsMenu.classList.add("hidden");
-      menu.classList.remove("hidden");
-    });
-  </script>
 </body>
 </html>
