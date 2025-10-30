@@ -1,11 +1,11 @@
 <!doctype html>
 <!--
-  shooter-game.html v0.1.5
-  Feature: Added red dot bullets
+  shooter-game.html v0.1.6
+  Feature: Enemy waves and pursuit AI
   Notes:
-  - Click or press Space to fire
-  - Bullets travel toward mouse aim direction
-  - Auto-cleanup when off-screen
+  - Random GIF enemies (excluding 180px-NO_U_cycle.gif)
+  - Waves spawn periodically; each wave harder
+  - Enemies move toward player
 -->
 <html lang="en">
 <head>
@@ -13,67 +13,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bananaman Shooter</title>
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      background: #0b0b0b;
-      color: #eaeaea;
-      font-family: system-ui, sans-serif;
-      overflow: hidden;
-    }
-    #game-canvas {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    .ui-layer { position: fixed; inset: 0; pointer-events: none; }
-    .menu {
-      pointer-events: auto;
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: min(92vw,560px);
-      background: rgba(20,20,20,0.92);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.55);
-      padding: 28px;
-      text-align: center;
-      backdrop-filter: blur(6px);
-    }
-    .title {
-      font-size: clamp(28px,4.5vw,48px);
-      margin: 0 0 8px 0;
-      color: #ffe066;
-      text-shadow: 0 2px 0 #5a4300;
-      font-weight: 800;
-    }
-    .btn {
-      pointer-events: auto;
-      display: block;
-      width: 100%;
-      margin: 10px 0;
-      padding: 14px 16px;
-      font-size: 1rem;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03));
-      color: #eaeaea;
-      cursor: pointer;
-    }
-    .hidden { display: none !important; }
-    .hud-tip {
-      position: fixed;
-      bottom: 8px; right: 12px;
-      font-size: 12px; opacity: 0.7;
-      background: rgba(24,24,24,0.8);
-      border: 1px solid rgba(255,255,255,0.06);
-      padding: 6px 8px;
-      border-radius: 8px;
-      user-select: none; pointer-events: none;
-    }
+    html, body {margin:0;height:100%;background:#0b0b0b;color:#eaeaea;font-family:system-ui,sans-serif;overflow:hidden;}
+    #game-canvas {position:fixed;inset:0;width:100%;height:100%;display:block;}
+    .ui-layer{position:fixed;inset:0;pointer-events:none;}
+    .menu{pointer-events:auto;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(92vw,560px);background:rgba(20,20,20,0.92);border:1px solid rgba(255,255,255,0.08);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.55);padding:28px;text-align:center;}
+    .title{font-size:clamp(28px,4.5vw,48px);margin:0 0 8px 0;color:#ffe066;text-shadow:0 2px 0 #5a4300;font-weight:800;}
+    .btn{pointer-events:auto;display:block;width:100%;margin:10px 0;padding:14px 16px;font-size:1rem;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03));color:#eaeaea;cursor:pointer;}
+    .hidden{display:none!important;}
+    .hud-tip{position:fixed;bottom:8px;right:12px;font-size:12px;opacity:.7;background:rgba(24,24,24,0.8);border:1px solid rgba(255,255,255,0.06);padding:6px 8px;border-radius:8px;user-select:none;pointer-events:none;}
   </style>
 </head>
 <body>
@@ -94,182 +41,164 @@
   const mainMenu = document.getElementById('main-menu');
   const btnStart = document.getElementById('btn-start');
 
+  const enemyGifs = [
+    'bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif',
+    'eyes.gif','fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'
+  ].map(n=>`/media/images/gifs/${n}`);
+
   const State = {
-    screen: 'menu',
-    rafId: null,
-    lastFrame: 0,
-    time: 0,
-    mouse: { x: window.innerWidth/2, y: window.innerHeight/2 },
-    player: { x: 0, y: 0, size: 96, speed: 280 },
-    bananaImg: new Image(),
-    bananaLoaded: false,
-    keys: {},
-    bullets: [],
+    screen:'menu',rafId:null,lastFrame:0,time:0,
+    mouse:{x:innerWidth/2,y:innerHeight/2},
+    player:{x:0,y:0,size:96,speed:280},
+    bananaImg:new Image(),bananaLoaded:false,
+    keys:{},bullets:[],enemies:[],wave:0,nextWave:0
   };
 
-  State.bananaImg.src = '/media/images/gifs/bananarama.gif';
-  State.bananaImg.onload = () => State.bananaLoaded = true;
+  State.bananaImg.src='/media/images/gifs/bananarama.gif';
+  State.bananaImg.onload=()=>State.bananaLoaded=true;
 
-  function fitCanvas() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = Math.floor(window.innerWidth * dpr);
-    const h = Math.floor(window.innerHeight * dpr);
-    canvas.width = w;
-    canvas.height = h;
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(dpr, dpr);
-    State.player.x = window.innerWidth / 2;
-    State.player.y = window.innerHeight / 2;
+  function fitCanvas(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);
+    canvas.width=w;canvas.height=h;canvas.style.width='100%';canvas.style.height='100%';
+    ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr,dpr);
+    State.player.x=innerWidth/2;State.player.y=innerHeight/2;
   }
-  window.addEventListener('resize', fitCanvas);
-  fitCanvas();
+  addEventListener('resize',fitCanvas);fitCanvas();
 
-  function drawBackground() {
-    ctx.fillStyle = '#0e0e10';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.strokeStyle = '#2aff8a';
-    const spacing = 32;
-    for (let x = 0; x < window.innerWidth; x += spacing) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, window.innerHeight); ctx.stroke();
-    }
-    for (let y = 0; y < window.innerHeight; y += spacing) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(window.innerWidth, y); ctx.stroke();
-    }
+  function drawBackground(){
+    ctx.fillStyle='#0e0e10';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.save();ctx.globalAlpha=.35;ctx.strokeStyle='#2aff8a';const s=32;
+    for(let x=0;x<innerWidth;x+=s){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,innerHeight);ctx.stroke();}
+    for(let y=0;y<innerHeight;y+=s){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(innerWidth,y);ctx.stroke();}
     ctx.restore();
   }
 
-  function updatePlayer(dt) {
-    const p = State.player;
-    if (State.keys['w']) p.y -= p.speed * dt;
-    if (State.keys['s']) p.y += p.speed * dt;
-    if (State.keys['a']) p.x -= p.speed * dt;
-    if (State.keys['d']) p.x += p.speed * dt;
-    p.x = Math.max(p.size/2, Math.min(window.innerWidth - p.size/2, p.x));
-    p.y = Math.max(p.size/2, Math.min(window.innerHeight - p.size/2, p.y));
+  function updatePlayer(dt){
+    const p=State.player;
+    if(State.keys['w'])p.y-=p.speed*dt;
+    if(State.keys['s'])p.y+=p.speed*dt;
+    if(State.keys['a'])p.x-=p.speed*dt;
+    if(State.keys['d'])p.x+=p.speed*dt;
+    p.x=Math.max(p.size/2,Math.min(innerWidth-p.size/2,p.x));
+    p.y=Math.max(p.size/2,Math.min(innerHeight-p.size/2,p.y));
   }
 
-  function drawPlayer() {
-    const p = State.player;
-    if (State.bananaLoaded) {
-      ctx.drawImage(State.bananaImg, p.x - p.size/2, p.y - p.size/2, p.size, p.size);
-    } else {
-      ctx.fillStyle = '#ffe066';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size/2, 0, Math.PI*2);
-      ctx.fill();
+  function drawPlayer(){
+    const p=State.player;
+    if(State.bananaLoaded){
+      ctx.drawImage(State.bananaImg,p.x-p.size/2,p.y-p.size/2,p.size,p.size);
+    }else{
+      ctx.fillStyle='#ffe066';ctx.beginPath();ctx.arc(p.x,p.y,p.size/2,0,Math.PI*2);ctx.fill();
     }
   }
 
-  function drawArrow() {
-    const p = State.player;
-    const dx = State.mouse.x - p.x;
-    const dy = State.mouse.y - p.y;
-    const angle = Math.atan2(dy, dx);
-    const orbitRadius = p.size * 0.5;
-    const arrowX = p.x + Math.cos(angle) * orbitRadius;
-    const arrowY = p.y + Math.sin(angle) * orbitRadius;
-
-    ctx.save();
-    ctx.translate(arrowX, arrowY);
-    ctx.rotate(angle);
-    ctx.fillStyle = '#ff3333';
-    ctx.shadowColor = '#ff0000';
-    ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-10, -4);
-    ctx.lineTo(-10, 4);
-    ctx.closePath();
-    ctx.fill();
+  function drawArrow(){
+    const p=State.player;
+    const dx=State.mouse.x-p.x,dy=State.mouse.y-p.y;
+    const angle=Math.atan2(dy,dx);
+    const r=p.size*0.5;
+    const ax=p.x+Math.cos(angle)*r,ay=p.y+Math.sin(angle)*r;
+    ctx.save();ctx.translate(ax,ay);ctx.rotate(angle);
+    ctx.fillStyle='#ff3333';ctx.shadowColor='#ff0000';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-4);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();
     ctx.restore();
   }
 
-  // Bullet functions
-  function shootBullet() {
-    const p = State.player;
-    const dx = State.mouse.x - p.x;
-    const dy = State.mouse.y - p.y;
-    const angle = Math.atan2(dy, dx);
-    const speed = 600;
-    const vx = Math.cos(angle) * speed;
-    const vy = Math.sin(angle) * speed;
-    State.bullets.push({ x: p.x, y: p.y, vx, vy });
+  // Bullets
+  function shootBullet(){
+    const p=State.player;const dx=State.mouse.x-p.x,dy=State.mouse.y-p.y;
+    const a=Math.atan2(dy,dx);const spd=600;
+    State.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd});
+  }
+  function updateBullets(dt){
+    State.bullets.forEach(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;});
+    State.bullets=State.bullets.filter(b=>b.x>0&&b.x<innerWidth&&b.y>0&&b.y<innerHeight);
+  }
+  function drawBullets(){
+    ctx.fillStyle='#ff3333';
+    for(const b of State.bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
   }
 
-  function updateBullets(dt) {
-    State.bullets.forEach(b => {
-      b.x += b.vx * dt;
-      b.y += b.vy * dt;
-    });
-    // remove offscreen
-    State.bullets = State.bullets.filter(b =>
-      b.x > 0 && b.x < window.innerWidth && b.y > 0 && b.y < window.innerHeight
-    );
+  // Enemies
+  function spawnWave(){
+    State.wave++;
+    const count=3+State.wave*2;
+    for(let i=0;i<count;i++){
+      const side=Math.floor(Math.random()*4);
+      let x,y;
+      if(side===0){x=Math.random()*innerWidth;y=-50;}
+      else if(side===1){x=innerWidth+50;y=Math.random()*innerHeight;}
+      else if(side===2){x=Math.random()*innerWidth;y=innerHeight+50;}
+      else{x=-50;y=Math.random()*innerHeight;}
+      const img=new Image();
+      img.src=enemyGifs[Math.floor(Math.random()*enemyGifs.length)];
+      const size=50+Math.random()*100;
+      const baseSpeed=40+State.wave*10;
+      State.enemies.push({x,y,img,size,speed:baseSpeed+Math.random()*30});
+    }
+    State.nextWave=State.time+8; // 8s interval
   }
 
-  function drawBullets() {
-    ctx.fillStyle = '#ff3333';
-    for (const b of State.bullets) {
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
-      ctx.fill();
+  function updateEnemies(dt){
+    const p=State.player;
+    for(const e of State.enemies){
+      const dx=p.x-e.x,dy=p.y-e.y;
+      const dist=Math.hypot(dx,dy)||1;
+      e.x+=dx/dist*e.speed*dt;
+      e.y+=dy/dist*e.speed*dt;
+    }
+    // no removal yet
+  }
+
+  function drawEnemies(){
+    for(const e of State.enemies){
+      if(e.img.complete)ctx.drawImage(e.img,e.x-e.size/2,e.y-e.size/2,e.size,e.size);
     }
   }
 
-  function loop(ts) {
-    const dt = State.lastFrame ? (ts - State.lastFrame) / 1000 : 0;
-    State.lastFrame = ts;
-    State.time += dt;
+  function loop(ts){
+    const dt=State.lastFrame?(ts-State.lastFrame)/1000:0;
+    State.lastFrame=ts;State.time+=dt;
+
+    if(State.time>State.nextWave)spawnWave();
 
     updatePlayer(dt);
     updateBullets(dt);
+    updateEnemies(dt);
 
     drawBackground();
     drawPlayer();
     drawArrow();
     drawBullets();
+    drawEnemies();
 
-    if (State.screen === 'playing') {
-      State.rafId = requestAnimationFrame(loop);
-    }
+    if(State.screen==='playing')State.rafId=requestAnimationFrame(loop);
   }
 
-  function startGame() {
+  function startGame(){
     mainMenu.classList.add('hidden');
-    State.screen = 'playing';
-    State.lastFrame = 0;
-    if (!State.rafId) State.rafId = requestAnimationFrame(loop);
+    State.screen='playing';
+    State.lastFrame=0;State.wave=0;State.enemies=[];State.time=0;State.nextWave=0;
+    if(!State.rafId)State.rafId=requestAnimationFrame(loop);
   }
 
-  function returnToMenu() {
-    if (State.rafId) cancelAnimationFrame(State.rafId);
-    State.rafId = null;
-    State.screen = 'menu';
-    mainMenu.classList.remove('hidden');
+  function returnToMenu(){
+    if(State.rafId)cancelAnimationFrame(State.rafId);
+    State.rafId=null;State.screen='menu';mainMenu.classList.remove('hidden');
   }
 
-  btnStart.addEventListener('click', startGame);
-
-  window.addEventListener('keydown', e => {
-    State.keys[e.key.toLowerCase()] = true;
-    if (e.key === ' ') shootBullet(); // space fires
-    if (e.key === 'escape' && State.screen === 'playing') returnToMenu();
+  btnStart.addEventListener('click',startGame);
+  addEventListener('keydown',e=>{
+    State.keys[e.key.toLowerCase()]=true;
+    if(e.key===' ')shootBullet();
+    if(e.key==='Escape'&&State.screen==='playing')returnToMenu();
   });
-  window.addEventListener('keyup', e => State.keys[e.key.toLowerCase()] = false);
+  addEventListener('keyup',e=>State.keys[e.key.toLowerCase()]=false);
+  canvas.addEventListener('mousedown',shootBullet);
+  addEventListener('mousemove',e=>{State.mouse.x=e.clientX;State.mouse.y=e.clientY;});
 
-  canvas.addEventListener('mousedown', shootBullet);
-
-  window.addEventListener('mousemove', e => {
-    State.mouse.x = e.clientX;
-    State.mouse.y = e.clientY;
-  });
-
-  drawBackground();
-  mainMenu.classList.remove('hidden');
+  drawBackground();mainMenu.classList.remove('hidden');
   </script>
 </body>
 </html>
