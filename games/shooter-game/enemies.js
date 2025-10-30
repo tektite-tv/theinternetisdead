@@ -1,35 +1,33 @@
 // enemies.js
-// Fixed: spawns now properly access canvas and gameRunning
+// old-school global pattern so the browser stops whining
 
 const enemies = [];
 
-class Enemy {
-  constructor(x, y, speed) {
-    this.x = x;
-    this.y = y;
-    this.radius = 20;
-    this.speed = speed;
-    this.color = "#00ff99";
-  }
+function Enemy(x, y, speed) {
+  this.x = x;
+  this.y = y;
+  this.radius = 20;
+  this.speed = speed;
+  this.color = "#00ff99";
 
-  update(player) {
+  this.update = function (player) {
     const angle = Math.atan2(
       player.y + player.h / 2 - this.y,
       player.x + player.w / 2 - this.x
     );
     this.x += Math.cos(angle) * this.speed;
     this.y += Math.sin(angle) * this.speed;
-  }
+  };
 
-  draw(ctx) {
+  this.draw = function (ctx) {
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
-  }
+  };
 }
 
-export function spawnEnemy(canvas) {
+function spawnEnemy(canvas) {
   const edge = Math.floor(Math.random() * 4);
   let x, y;
 
@@ -51,12 +49,11 @@ export function spawnEnemy(canvas) {
   enemies.push(new Enemy(x, y, speed));
 }
 
-export function updateEnemies(player, bullets, canvas) {
+function updateEnemies(player, bullets, canvas) {
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     e.update(player);
 
-    // bullet collision
     for (let j = bullets.length - 1; j >= 0; j--) {
       const b = bullets[j];
       const dx = b.x - e.x;
@@ -70,7 +67,6 @@ export function updateEnemies(player, bullets, canvas) {
       }
     }
 
-    // offscreen safety cleanup
     if (
       e.x < -50 ||
       e.x > canvas.width + 50 ||
@@ -82,15 +78,14 @@ export function updateEnemies(player, bullets, canvas) {
   }
 }
 
-export function drawEnemies(ctx) {
+function drawEnemies(ctx) {
   enemies.forEach(e => e.draw(ctx));
 }
 
-// === Auto spawn controller ===
-let spawnInterval;
-export function startEnemySpawning(canvas, player, bullets) {
-  if (spawnInterval) clearInterval(spawnInterval);
-  spawnInterval = setInterval(() => {
+function startEnemySpawning(canvas, player, bullets) {
+  setInterval(() => {
     if (window.gameRunning) spawnEnemy(canvas);
   }, 2000);
 }
+
+console.log("Enemies module ready");
