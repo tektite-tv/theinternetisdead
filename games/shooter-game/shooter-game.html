@@ -1,73 +1,66 @@
 <!doctype html>
 <!--
-  shooter-game.html v0.2.1
-  Feature: Game speed control
-  - Added speed slider (1–10 mapped to 1x–5x speed)
-  - Multiplies all in-game motion and timers
+  shooter-game.html v0.2.2
+  Feature: Migrated UI to Tailwind CSS
+  - Removed legacy CSS block
+  - All layout & styling now use Tailwind utility classes
+  - Functionality unchanged
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Bananaman Shooter</title>
-<style>
-html,body{margin:0;height:100%;background:#0b0b0b;color:#eaeaea;font-family:system-ui,sans-serif;overflow:hidden;}
-#game-canvas{position:fixed;inset:0;width:100%;height:100%;display:block;}
-.ui-layer{position:fixed;inset:0;pointer-events:none;}
-.menu{pointer-events:auto;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-width:min(92vw,560px);background:rgba(20,20,20,0.92);border:1px solid rgba(255,255,255,0.08);
-border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.55);padding:28px;text-align:center;}
-.title{font-size:clamp(28px,4.5vw,48px);margin:0;color:#ffe066;text-shadow:0 2px 0 #5a4300;font-weight:800;}
-.version{margin:4px 0 16px 0;font-size:.9rem;opacity:.7;}
-.btn{pointer-events:auto;display:block;width:100%;margin:10px 0;padding:14px 16px;font-size:1rem;border-radius:12px;
-border:1px solid rgba(255,255,255,0.12);background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03));
-color:#eaeaea;cursor:pointer;}
-.hidden{display:none!important;}
-.hud-tip{position:fixed;bottom:8px;right:12px;font-size:12px;opacity:.7;background:rgba(24,24,24,0.8);
-border:1px solid rgba(255,255,255,0.06);padding:6px 8px;border-radius:8px;user-select:none;pointer-events:none;}
-#hud-stats{position:fixed;top:10px;left:10px;font-size:14px;background:rgba(20,20,20,0.5);
-padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);}
-#healthbar{position:fixed;top:40px;left:10px;width:200px;height:20px;border:1px solid #fff;background:#330000;}
-#healthfill{height:100%;width:100%;background:#ff3333;transition:width 0.2s;}
-#healthtext{position:absolute;width:100%;text-align:center;font-size:12px;color:white;top:2px;}
-#you-died{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-font-size:64px;font-weight:900;color:#ff2222;text-shadow:0 0 20px #ff0000,0 0 40px #ff0000;
-background:rgba(0,0,0,0.8);opacity:0;transition:opacity 1s;pointer-events:none;}
-#you-died.show{opacity:1;}
-#options-menu p{margin:10px 0;}
-input[type=range]{width:80%;}
-</style>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<canvas id="game-canvas"></canvas>
+<body class="m-0 h-screen bg-[#0b0b0b] text-gray-200 font-sans overflow-hidden select-none">
 
-<div class="ui-layer">
-  <section id="main-menu" class="menu">
-    <h1 class="title">Bananaman Shooter</h1>
-    <p class="version">v0.2.1</p>
-    <button id="btn-start" class="btn">Start Game</button>
-    <button id="btn-options" class="btn">Options</button>
-  </section>
+<canvas id="game-canvas" class="fixed inset-0 w-full h-full block"></canvas>
 
-  <section id="options-menu" class="menu hidden">
-    <h2 class="title" style="font-size:2rem;">Options</h2>
-    <p>Difficulty: <span id="diff-label">Normal</span></p>
-    <input id="diff-slider" type="range" min="1" max="3" step="1" value="2">
-    <p id="diff-desc">Enemies deal standard damage.</p>
-    <p>Game Speed: <span id="speed-label">1.0x</span></p>
-    <input id="speed-slider" type="range" min="1" max="10" step="1" value="1">
-    <p id="speed-desc">Adjusts overall game speed (1x–5x).</p>
-    <button id="btn-back" class="btn">Back</button>
-  </section>
+<!-- Main Menu -->
+<div id="main-menu" class="fixed inset-0 flex items-center justify-center pointer-events-auto">
+  <div class="bg-neutral-900/90 border border-white/10 rounded-2xl shadow-2xl p-8 w-[min(92vw,560px)] text-center">
+    <h1 class="text-yellow-300 text-4xl md:text-5xl font-extrabold mb-1 drop-shadow-md">Bananaman Shooter</h1>
+    <p class="text-sm opacity-70 mb-6">v0.2.2</p>
+    <button id="btn-start" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Start Game</button>
+    <button id="btn-options" class="w-full my-2 py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Options</button>
+  </div>
 </div>
 
-<div id="hud-stats" class="hidden">Kills: <span id="killcount">0</span> | Wave: <span id="wavecount">0</span></div>
-<div id="healthbar" class="hidden">
-  <div id="healthfill"></div>
-  <div id="healthtext">100%</div>
+<!-- Options Menu -->
+<div id="options-menu" class="hidden fixed inset-0 flex items-center justify-center pointer-events-auto">
+  <div class="bg-neutral-900/90 border border-white/10 rounded-2xl shadow-2xl p-8 w-[min(92vw,560px)] text-center">
+    <h2 class="text-yellow-300 text-3xl font-bold mb-4">Options</h2>
+
+    <p class="mb-2">Difficulty: <span id="diff-label" class="font-semibold">Normal</span></p>
+    <input id="diff-slider" type="range" min="1" max="3" step="1" value="2" class="w-4/5 accent-yellow-400">
+    <p id="diff-desc" class="text-sm opacity-75 mb-4">Enemies deal standard damage.</p>
+
+    <p class="mb-2">Game Speed: <span id="speed-label" class="font-semibold">1.0x</span></p>
+    <input id="speed-slider" type="range" min="1" max="10" step="1" value="1" class="w-4/5 accent-pink-400">
+    <p id="speed-desc" class="text-sm opacity-75 mb-6">Adjusts overall game speed (1x–5x).</p>
+
+    <button id="btn-back" class="w-full py-3 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 transition">Back</button>
+  </div>
 </div>
-<div id="you-died">YOU DIED</div>
-<div class="hud-tip">Move: WASD • Aim: Mouse • Shoot: Click/Space • ESC: Menu</div>
+
+<!-- HUD -->
+<div id="hud-stats" class="hidden fixed top-2 left-2 bg-neutral-800/70 text-sm px-3 py-2 rounded-lg border border-white/10">
+  Kills: <span id="killcount">0</span> | Wave: <span id="wavecount">0</span>
+</div>
+
+<div id="healthbar" class="hidden fixed top-12 left-2 w-52 h-5 border border-white relative bg-red-950 rounded">
+  <div id="healthfill" class="absolute left-0 top-0 h-full w-full bg-red-500 transition-[width] duration-200 rounded"></div>
+  <div id="healthtext" class="absolute w-full text-center text-xs text-white top-[2px]">100%</div>
+</div>
+
+<div id="you-died" class="fixed inset-0 flex items-center justify-center text-red-600 font-extrabold text-6xl drop-shadow-[0_0_40px_#ff0000] bg-black/80 opacity-0 transition-opacity duration-1000 pointer-events-none">
+  YOU DIED
+</div>
+
+<div class="fixed bottom-2 right-3 text-xs opacity-70 bg-neutral-900/70 border border-white/10 px-2 py-1 rounded">
+  Move: WASD • Aim: Mouse • Shoot: Click/Space • ESC: Menu
+</div>
 
 <script>
 const canvas=document.getElementById('game-canvas');
@@ -247,20 +240,20 @@ function updateHealthBar(){
   const pct=Math.floor(p.hp);
   healthFill.style.width=pct+'%';
   healthText.textContent=pct+'%';
-  if(pct<40)healthFill.style.background='#ff0000';
-  else healthFill.style.background='#ff3333';
+  if(pct<40)healthFill.classList.replace('bg-red-500','bg-red-700');
+  else healthFill.classList.replace('bg-red-700','bg-red-500');
 }
 
 function die(){
   State.screen='dead';
-  deathScreen.classList.add('show');
+  deathScreen.classList.add('opacity-100');
   cancelAnimationFrame(State.rafId);
 }
 
 function loop(ts){
   let dt=State.lastFrame?(ts-State.lastFrame)/1000:0;
   State.lastFrame=ts;
-  dt*=State.speedMultiplier; // speed multiplier
+  dt*=State.speedMultiplier;
   updatePlayer(dt);updateBullets(dt);updateEnemies(dt);checkCollisions(dt);
   const p=State.player;if(p.hitFlash>0)p.hitFlash-=dt;
   drawBackground();drawPlayer();drawArrow();drawBullets();drawEnemies();
@@ -272,7 +265,7 @@ function startGame(){
   optionsMenu.classList.add('hidden');
   hudStats.classList.remove('hidden');
   healthBar.classList.remove('hidden');
-  deathScreen.classList.remove('show');
+  deathScreen.classList.remove('opacity-100');
   Object.assign(State,{
     screen:'playing',lastFrame:0,time:0,bullets:[],enemies:[],
     wave:0,kills:0,nextKillTarget:10,clearTimer:0,player:{...State.player,hp:100,hitFlash:0}
@@ -291,14 +284,8 @@ function returnToMenu(){
 }
 
 btnStart.addEventListener('click',startGame);
-btnOptions.addEventListener('click',()=>{
-  mainMenu.classList.add('hidden');
-  optionsMenu.classList.remove('hidden');
-});
-btnBack.addEventListener('click',()=>{
-  optionsMenu.classList.add('hidden');
-  mainMenu.classList.remove('hidden');
-});
+btnOptions.addEventListener('click',()=>{mainMenu.classList.add('hidden');optionsMenu.classList.remove('hidden');});
+btnBack.addEventListener('click',()=>{optionsMenu.classList.add('hidden');mainMenu.classList.remove('hidden');});
 
 diffSlider.addEventListener('input',()=>{
   const val=parseInt(diffSlider.value);
@@ -310,7 +297,7 @@ diffSlider.addEventListener('input',()=>{
 
 speedSlider.addEventListener('input',()=>{
   const val=parseInt(speedSlider.value);
-  const mult=1+(val-1)*0.444; // map 1–10 → 1–5x
+  const mult=1+(val-1)*0.444;
   State.speedMultiplier=mult;
   speedLabel.textContent=mult.toFixed(1)+'x';
 });
