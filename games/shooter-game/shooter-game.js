@@ -6,7 +6,7 @@ const ctx = canvas.getContext("2d");
 // make sure this path is correct RELATIVE to shooter-game.html
 // if your html is in /games/shooter-game/, this should be:
 const playerImage = new Image();
-playerImage.src = "./media/gifs/bananarama.gif"; // not /media/images/gifs/
+playerImage.src = "/media/images/gifs/bananarama.gif";
 
 // fallback color until gif loads
 let player = { x: canvas.width / 2, y: canvas.height / 2, w: 64, h: 64, speed: 4 };
