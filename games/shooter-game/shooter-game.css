@@ -1,3 +1,4 @@
+/* === GLOBAL RESET === */
 html, body {
   margin: 0;
   padding: 0;
@@ -9,6 +10,7 @@ html, body {
   font-family: monospace;
 }
 
+/* === CANVAS === */
 canvas {
   display: block;
   position: fixed;
@@ -16,13 +18,14 @@ canvas {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 1;
+  z-index: 0;          /* put canvas at base layer */
+  background: #000;
 }
 
-/* --- Menu --- */
+/* === MENU OVERLAY === */
 #menu {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: 0;
   background: radial-gradient(circle at center, #000 60%, #111);
   color: #00ff99;
   display: flex;
@@ -30,7 +33,7 @@ canvas {
   justify-content: center;
   align-items: center;
   text-align: center;
-  z-index: 10;
+  z-index: 10;         /* above canvas */
 }
 
 #menu.hidden,
@@ -39,32 +42,69 @@ canvas {
   display: none !important;
 }
 
-#menu button, #optionsMenu button {
-  margin: 8px;
+#menu h1 {
+  font-size: 3em;
+  text-shadow: 0 0 15px #00ff99, 0 0 30px #ff66cc;
+  animation: pulseGlow 3s infinite alternate;
+}
+
+/* === MENU BUTTONS === */
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#menu button,
+#optionsMenu button {
+  margin: 12px;
+  background: linear-gradient(90deg, #00ff99, #ff66cc);
+  color: black;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.1em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+  z-index: 11;
+}
+
+#menu button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px #ff66cc, 0 0 40px #00ff99;
+  background: linear-gradient(90deg, #ff66cc, #00ff99);
+}
+
+/* === OPTIONS MENU === */
+#optionsMenu {
+  position: relative;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 20px;
+  border-radius: 8px;
+  z-index: 12;
+}
+
+#optionsMenu select,
+#uploadBgBtn {
+  margin-top: 10px;
   background: #00ff99;
   color: black;
   border: none;
-  padding: 10px 20px;
+  padding: 6px 12px;
   border-radius: 6px;
-  font-weight: bold;
   cursor: pointer;
 }
 
-#optionsMenu {
-  position: relative;
-  background: rgba(0,0,0,0.8);
-  padding: 20px;
-  border-radius: 8px;
-}
-
+/* === GAME UI === */
 #ui {
   position: fixed;
   top: 10px;
   left: 10px;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px 12px;
   border-radius: 8px;
-  z-index: 5;
+  z-index: 5;          /* below menus, above canvas */
 }
 
 #restart {
@@ -77,49 +117,18 @@ canvas {
   cursor: pointer;
 }
 
-/* --- Fancy Menu Glow + Banana Indicator --- */
-#menu h1 {
-  font-size: 3em;
-  text-shadow: 0 0 15px #00ff99, 0 0 30px #ff66cc;
-  animation: pulseGlow 3s infinite alternate;
-}
-
-.menu-buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-#menu button {
-  margin: 12px;
-  background: linear-gradient(90deg, #00ff99, #ff66cc);
-  color: black;
-  border: none;
-  padding: 12px 28px;
-  border-radius: 10px;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 1.2em;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
-}
-
-#menu button:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 20px #ff66cc, 0 0 40px #00ff99;
-  background: linear-gradient(90deg, #ff66cc, #00ff99);
-}
-
+/* === BANANA INDICATOR === */
 #bananaIndicator {
   position: fixed;
   width: 64px;
   height: 64px;
-  z-index: 15;
+  z-index: 20;
   pointer-events: none;
   transition: top 0.2s ease, left 0.2s ease;
   animation: bounce 1s infinite alternate;
 }
 
-/* --- YOU WIN Button Styling --- */
+/* === YOU WIN BUTTON STYLING === */
 .menu-button {
   font-family: monospace;
   text-transform: uppercase;
@@ -133,7 +142,7 @@ canvas {
   box-shadow: 0 0 20px #00ff99, 0 0 40px #00ff99;
   transition: all 0.25s ease;
   cursor: pointer;
-  z-index: 20;
+  z-index: 15;
 }
 
 .menu-button:hover {
@@ -142,14 +151,14 @@ canvas {
   box-shadow: 0 0 30px #00ffcc, 0 0 60px #00ff99;
 }
 
-/* --- Animations --- */
+/* === ANIMATIONS === */
 @keyframes bounce {
-  0% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(-10deg); }
+  0%   { transform: translateY(0) rotate(0deg); }
+  50%  { transform: translateY(-10px) rotate(-10deg); }
   100% { transform: translateY(0) rotate(10deg); }
 }
 
 @keyframes pulseGlow {
-  0% { text-shadow: 0 0 10px #00ff99, 0 0 20px #ff66cc; }
+  0%   { text-shadow: 0 0 10px #00ff99, 0 0 20px #ff66cc; }
   100% { text-shadow: 0 0 20px #ff66cc, 0 0 40px #00ff99; }
 }
