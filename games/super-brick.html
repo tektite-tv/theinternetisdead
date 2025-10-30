@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Super Brick Breaker</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Super Brick Breaker: GIF Edition</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -14,9 +14,9 @@
     text-align: center;
   }
   canvas {
-    background: radial-gradient(circle at center, #111 0%, #000 100%);
     display: block;
     margin: auto;
+    background: radial-gradient(circle at center, #111 0%, #000 100%);
     border: 2px solid #333;
   }
   #menu, #endScreen {
@@ -45,7 +45,7 @@
 <body>
 
 <div id="menu">
-  <h1>SUPER BRICK BREAKER</h1>
+  <h1>SUPER BRICK BREAKER: GIF EDITION</h1>
   <button id="startBtn">Start Game</button>
 </div>
 
@@ -57,15 +57,18 @@
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const menu = document.getElementById('menu');
-const endScreen = document.getElementById('endScreen');
-const endMessage = document.getElementById('endMessage');
-const startBtn = document.getElementById('startBtn');
-const restartBtn = document.getElementById('restartBtn');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const menu = document.getElementById("menu");
+const endScreen = document.getElementById("endScreen");
+const endMessage = document.getElementById("endMessage");
+const startBtn = document.getElementById("startBtn");
+const restartBtn = document.getElementById("restartBtn");
 
 let paddleX, ballX, ballY, ballVX, ballVY, bricks, lives;
+let leftPressed = false, rightPressed = false;
+let moveSpeed = 7;
 
 const paddleWidth = 100;
 const paddleHeight = 15;
@@ -73,14 +76,26 @@ const ballSize = 10;
 const brickRowCount = 6;
 const brickColumnCount = 10;
 const brickWidth = 70;
-const brickHeight = 20;
+const brickHeight = 40;
 const brickPadding = 10;
 const brickOffsetTop = 60;
 const brickOffsetLeft = 35;
 
-function rainbowColor(i) {
-  const hue = (i * 36) % 360;
-  return `hsl(${hue}, 100%, 60%)`;
+// GIF files to randomize between (you can add more)
+const gifFiles = [
+  "bananarama.gif",
+  "180px-NO_U_cycle.gif",
+  "glitchcore.gif",
+  "portalspin.gif",
+  "neonwave.gif",
+  "psychloop.gif"
+];
+
+function getRandomGif() {
+  const pick = gifFiles[Math.floor(Math.random() * gifFiles.length)];
+  const img = new Image();
+  img.src = `/media/images/gifs/${pick}`;
+  return img;
 }
 
 function resetGame() {
@@ -91,10 +106,16 @@ function resetGame() {
   ballVY = -4;
   lives = 3;
   bricks = [];
+
   for (let c = 0; c < brickColumnCount; c++) {
     bricks[c] = [];
     for (let r = 0; r < brickRowCount; r++) {
-      bricks[c][r] = { x: 0, y: 0, status: 1 };
+      bricks[c][r] = {
+        x: 0,
+        y: 0,
+        status: 1,
+        img: getRandomGif()
+      };
     }
   }
 }
@@ -117,16 +138,15 @@ function drawBall() {
 function drawBricks() {
   for (let c = 0; c < brickColumnCount; c++) {
     for (let r = 0; r < brickRowCount; r++) {
-      if (bricks[c][r].status === 1) {
+      const b = bricks[c][r];
+      if (b.status === 1) {
         const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
         const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
-        bricks[c][r].x = brickX;
-        bricks[c][r].y = brickY;
-        const neon = rainbowColor(c * brickRowCount + r);
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = neon;
-        ctx.fillStyle = neon;
-        ctx.fillRect(brickX, brickY, brickWidth, brickHeight);
+        b.x = brickX;
+        b.y = brickY;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = "#0ff";
+        ctx.drawImage(b.img, brickX, brickY, brickWidth, brickHeight);
         ctx.shadowBlur = 0;
       }
     }
@@ -156,9 +176,15 @@ function update() {
   ballX += ballVX;
   ballY += ballVY;
 
+  // paddle movement
+  if (leftPressed && paddleX > 0) paddleX -= moveSpeed;
+  if (rightPressed && paddleX < canvas.width - paddleWidth) paddleX += moveSpeed;
+
+  // wall collisions
   if (ballX + ballSize > canvas.width || ballX - ballSize < 0) ballVX = -ballVX;
   if (ballY - ballSize < 0) ballVY = -ballVY;
 
+  // paddle collision
   if (
     ballY + ballSize > canvas.height - paddleHeight - 10 &&
     ballX > paddleX &&
@@ -169,6 +195,7 @@ function update() {
     ballVX = offset * 0.1;
   }
 
+  // lose life
   if (ballY > canvas.height) {
     lives--;
     if (lives <= 0) return endGame("YOU LOSE");
@@ -194,29 +221,35 @@ function draw() {
   drawPaddle();
   drawBall();
   ctx.fillStyle = "#fff";
+  ctx.font = "16px monospace";
   ctx.fillText(`Lives: ${lives}`, 10, 20);
 }
 
-document.onmousemove = e => {
-  const rect = canvas.getBoundingClientRect();
-  paddleX = e.clientX - rect.left - paddleWidth / 2;
-};
-
 function endGame(message) {
   endMessage.textContent = message;
-  endScreen.style.display = 'flex';
+  endScreen.style.display = "flex";
 }
 
+// WASD + arrow controls
+document.addEventListener("keydown", e => {
+  if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") leftPressed = true;
+  if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") rightPressed = true;
+});
+document.addEventListener("keyup", e => {
+  if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") leftPressed = false;
+  if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") rightPressed = false;
+});
+
 startBtn.onclick = () => {
-  menu.style.display = 'none';
-  endScreen.style.display = 'none';
+  menu.style.display = "none";
+  endScreen.style.display = "none";
   resetGame();
   update();
 };
 
 restartBtn.onclick = () => {
-  endScreen.style.display = 'none';
-  menu.style.display = 'flex';
+  endScreen.style.display = "none";
+  menu.style.display = "flex";
 };
 </script>
 </body>
