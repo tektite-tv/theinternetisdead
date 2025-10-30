@@ -1,17 +1,37 @@
-// shooter-game.js – baseline: banana + bullets + arrow only
+// shooter-game.js — fullscreen version with resizing and working controls
 
 document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
+  // make the canvas always fill the window
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    // keep the player centered when resizing
+    player.x = canvas.width / 2 - player.w / 2;
+    player.y = canvas.height / 2 - player.h / 2;
+  }
+  window.addEventListener("resize", resizeCanvas);
+
   const playerImage = new Image();
   playerImage.src = "/media/images/gifs/bananarama.gif";
 
-  const player = { x: canvas.width / 2, y: canvas.height / 2, w: 96, h: 96, speed: 4 };
+  const player = {
+    x: 0,
+    y: 0,
+    w: 96,
+    h: 96,
+    speed: 4
+  };
+
   const keys = {};
   const bullets = [];
   const mouse = { x: 0, y: 0 };
   window.gameRunning = false;
+
+  // run once after player definition
+  resizeCanvas();
 
   // --- input ---
   window.addEventListener("keydown", e => (keys[e.key.toLowerCase()] = true));
@@ -27,8 +47,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (gameRunning) shoot();
   });
 
+  // --- shooting ---
   function shoot() {
-    const a = Math.atan2(mouse.y - (player.y + player.h / 2), mouse.x - (player.x + player.w / 2));
+    const a = Math.atan2(
+      mouse.y - (player.y + player.h / 2),
+      mouse.x - (player.x + player.w / 2)
+    );
     const s = 8;
     bullets.push({
       x: player.x + player.w / 2,
@@ -39,6 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // --- movement ---
   function movePlayer() {
     if (keys["w"]) player.y -= player.speed;
     if (keys["s"]) player.y += player.speed;
@@ -48,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
   }
 
+  // --- bullets ---
   function updateBullets() {
     bullets.forEach(b => {
       b.x += b.dx;
@@ -55,7 +81,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
-      if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) bullets.splice(i, 1);
+      if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height)
+        bullets.splice(i, 1);
     }
   }
 
@@ -68,10 +95,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // --- player ---
   function drawPlayer() {
     ctx.drawImage(playerImage, player.x, player.y, player.w, player.h);
   }
 
+  // --- arrow ---
   function drawArrow() {
     const cx = player.x + player.w / 2;
     const cy = player.y + player.h / 2;
@@ -93,6 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.restore();
   }
 
+  // --- draw everything ---
   function draw() {
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -101,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
     drawArrow();
   }
 
+  // --- main loop ---
   function loop() {
     if (!gameRunning) return;
     movePlayer();
@@ -109,6 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     requestAnimationFrame(loop);
   }
 
+  // --- start button ---
   const startButton = document.getElementById("startButton");
   const menu = document.getElementById("menu");
 
