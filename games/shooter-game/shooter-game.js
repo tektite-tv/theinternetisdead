@@ -1,18 +1,8 @@
-// shooter-game.js — fullscreen version with resizing and working controls
+// shooter-game.js — guaranteed to draw the banana fullscreen
 
 document.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
-
-  // make the canvas always fill the window
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    // keep the player centered when resizing
-    player.x = canvas.width / 2 - player.w / 2;
-    player.y = canvas.height / 2 - player.h / 2;
-  }
-  window.addEventListener("resize", resizeCanvas);
 
   const playerImage = new Image();
   playerImage.src = "/media/images/gifs/bananarama.gif";
@@ -28,42 +18,51 @@ document.addEventListener("DOMContentLoaded", () => {
   const keys = {};
   const bullets = [];
   const mouse = { x: 0, y: 0 };
-  window.gameRunning = false;
+  let gameRunning = false;
 
-  // run once after player definition
+  // --- Resize canvas to window ---
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // keep banana centered
+    player.x = canvas.width / 2 - player.w / 2;
+    player.y = canvas.height / 2 - player.h / 2;
+  }
+  window.addEventListener("resize", resizeCanvas);
   resizeCanvas();
 
-  // --- input ---
+  // --- Controls ---
   window.addEventListener("keydown", e => (keys[e.key.toLowerCase()] = true));
   window.addEventListener("keyup", e => (keys[e.key.toLowerCase()] = false));
 
   canvas.addEventListener("mousemove", e => {
-    const r = canvas.getBoundingClientRect();
-    mouse.x = e.clientX - r.left;
-    mouse.y = e.clientY - r.top;
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
   });
 
   canvas.addEventListener("click", () => {
     if (gameRunning) shoot();
   });
 
-  // --- shooting ---
+  // --- Shooting ---
   function shoot() {
-    const a = Math.atan2(
+    const angle = Math.atan2(
       mouse.y - (player.y + player.h / 2),
       mouse.x - (player.x + player.w / 2)
     );
-    const s = 8;
+    const speed = 8;
     bullets.push({
       x: player.x + player.w / 2,
       y: player.y + player.h / 2,
-      dx: Math.cos(a) * s,
-      dy: Math.sin(a) * s,
+      dx: Math.cos(angle) * speed,
+      dy: Math.sin(angle) * speed,
       r: 5
     });
   }
 
-  // --- movement ---
+  // --- Movement ---
   function movePlayer() {
     if (keys["w"]) player.y -= player.speed;
     if (keys["s"]) player.y += player.speed;
@@ -73,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
     player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
   }
 
-  // --- bullets ---
+  // --- Bullets ---
   function updateBullets() {
     bullets.forEach(b => {
       b.x += b.dx;
@@ -95,12 +94,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- player ---
+  // --- Draw player ---
   function drawPlayer() {
     ctx.drawImage(playerImage, player.x, player.y, player.w, player.h);
   }
 
-  // --- arrow ---
+  // --- Arrow ---
   function drawArrow() {
     const cx = player.x + player.w / 2;
     const cy = player.y + player.h / 2;
@@ -122,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.restore();
   }
 
-  // --- draw everything ---
+  // --- Draw everything ---
   function draw() {
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -131,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
     drawArrow();
   }
 
-  // --- main loop ---
+  // --- Main loop ---
   function loop() {
     if (!gameRunning) return;
     movePlayer();
@@ -140,16 +139,19 @@ document.addEventListener("DOMContentLoaded", () => {
     requestAnimationFrame(loop);
   }
 
-  // --- start button ---
+  // --- Menu logic ---
   const startButton = document.getElementById("startButton");
   const menu = document.getElementById("menu");
 
   startButton.addEventListener("click", () => {
     menu.classList.add("hidden");
     gameRunning = true;
-    window.gameRunning = true;
     loop();
   });
 
-  playerImage.onload = () => console.log("Banana loaded");
+  playerImage.onload = () => {
+    console.log("Banana loaded:", playerImage.src);
+    // only draw after image loads to avoid black screen
+    draw();
+  };
 });
