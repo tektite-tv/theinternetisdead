@@ -3,14 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bananaman Shooter v0.3.3</title>
+<title>Bananaman Shooter v0.3.4</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   html, body {margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
-  canvas {display:block;position:fixed;inset:0;z-index:0;}
-  /* HUD Styling */
-  .hud {position:fixed;background:rgba(20,20,20,0.7);border:1px solid rgba(255,255,255,0.2);border-radius:8px;
-    padding:6px 10px;font-size:14px;z-index:999;}
+  canvas {display:block;position:fixed;inset:0;}
+  .hud {position:fixed;background:rgba(20,20,20,0.7);border:1px solid rgba(255,255,255,0.2);
+    border-radius:8px;padding:6px 10px;font-size:14px;z-index:999;}
   #healthbar {position:fixed;bottom:5vh;left:50%;transform:translateX(-50%);
     width:60vw;height:20px;border:2px solid white;border-radius:10px;background:#400;z-index:1000;}
   #healthfill {background:#ff3333;width:100%;height:100%;border-radius:10px;transition:width .2s linear;}
@@ -18,11 +17,14 @@
 </style>
 </head>
 <body>
+<!-- Background and Game canvases -->
 <canvas id="bg"></canvas>
 <canvas id="game"></canvas>
 
 <!-- HUD -->
-<div id="hud-stats" class="hud" style="top:10px;left:10px;">Kills: <span id="kills">0</span> | Wave: <span id="wave">0</span></div>
+<div id="hud-stats" class="hud" style="top:10px;left:10px;">
+  Kills: <span id="kills">0</span> | Wave: <span id="wave">0</span>
+</div>
 <div id="hud-top" class="hud" style="top:10px;right:10px;display:flex;gap:10px;">
   <div>Damage: <span id="damage">0</span></div>
   <div>Time: <span id="timer">0s</span></div>
@@ -36,7 +38,9 @@
 </div>
 
 <script>
-/* === v0.3.3 Neon Grid Edition === */
+/* === Bananaman Shooter v0.3.4 ===
+   Combines v0.2.5 movement + images with v0.3.3 neon grid background
+   --------------------------------------------------------------- */
 
 const bg = document.getElementById('bg');
 const g = bg.getContext('2d');
@@ -50,7 +54,7 @@ let gridOffset=0;
 function drawGrid(){
   g.clearRect(0,0,W,H);
   g.strokeStyle='rgba(0,255,150,0.5)';
-  g.shadowColor='#00ffaa'; g.shadowBlur=8;
+  g.shadowColor='#00ffaa'; g.shadowBlur=10;
   g.lineWidth=1.2;
   const spacing=40; gridOffset+=0.5;
   g.beginPath();
@@ -65,76 +69,159 @@ function drawGrid(){
   g.stroke();
 }
 
-const player={x:W/2,y:H/2,size:80,hp:100,speed:300};
-const bullets=[],enemies=[];
-let kills=0,wave=1,damage=0,startTime=null;
-const killsEl=document.getElementById('kills'),waveEl=document.getElementById('wave'),
-damageEl=document.getElementById('damage'),timerEl=document.getElementById('timer'),
-healthFill=document.getElementById('healthfill'),healthText=document.getElementById('healthtext');
+// === Game State ===
+const enemyGifs=[
+ 'bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif',
+ 'fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'
+].map(n=>`/media/images/gifs/${n}`);
 
-function updateHUD(){
-  killsEl.textContent=kills;waveEl.textContent=wave;damageEl.textContent=damage;
-  timerEl.textContent=((performance.now()-startTime)/1000).toFixed(1)+'s';
-}
+const playerImg=new Image();
+playerImg.src='/media/images/gifs/bananarama.gif';
+let playerLoaded=false;playerImg.onload=()=>playerLoaded=true;
+
+const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitFlash:0};
+const bullets=[],enemies=[];
+let kills=0,wave=1,damage=0,startTime=null,state='menu',keys={};
+
+const killsEl=document.getElementById('kills'),
+      waveEl=document.getElementById('wave'),
+      damageEl=document.getElementById('damage'),
+      timerEl=document.getElementById('timer'),
+      healthFill=document.getElementById('healthfill'),
+      healthText=document.getElementById('healthtext'),
+      menu=document.getElementById('menu');
+
 function updateHealth(){
   const pct=Math.max(0,Math.round(player.hp));
   healthFill.style.width=pct+'%';
   healthText.textContent=pct+'%';
 }
+function updateHUD(){
+  killsEl.textContent=kills;waveEl.textContent=wave;damageEl.textContent=damage;
+  timerEl.textContent=((performance.now()-startTime)/1000).toFixed(1)+'s';
+}
+
+// === Player Movement ===
+function updatePlayer(dt){
+  if(keys['w'])player.y-=player.speed*dt;
+  if(keys['s'])player.y+=player.speed*dt;
+  if(keys['a'])player.x-=player.speed*dt;
+  if(keys['d'])player.x+=player.speed*dt;
+  player.x=Math.max(player.size/2,Math.min(W-player.size/2,player.x));
+  player.y=Math.max(player.size/2,Math.min(H-player.size/2,player.y));
+}
+
+// === Player Drawing ===
+function drawPlayer(){
+  ctx.save();
+  if(player.hitFlash>0){ctx.globalAlpha=0.5;ctx.filter='brightness(200%) saturate(200%)';}
+  if(playerLoaded){
+    ctx.drawImage(playerImg,player.x-player.size/2,player.y-player.size/2,player.size,player.size);
+  }else{
+    ctx.fillStyle='yellow';ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawArrow(mx,my){
+  const dx=mx-player.x,dy=my-player.y,angle=Math.atan2(dy,dx);
+  const r=player.size*0.4,ax=player.x+Math.cos(angle)*r,ay=player.y+Math.sin(angle)*r;
+  ctx.save();ctx.translate(ax,ay);ctx.rotate(angle);
+  ctx.fillStyle='#ff3333';ctx.shadowColor='#ff0000';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-4);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();ctx.restore();
+}
+
+// === Shooting ===
+function shoot(x,y){
+  const dx=x-player.x,dy=y-player.y,a=Math.atan2(dy,dx),spd=700;
+  bullets.push({x:player.x,y:player.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd});
+}
+
+// === Enemies ===
 function spawnWave(){
   for(let i=0;i<wave*4+4;i++){
-    const s=40+Math.random()*60,side=Math.floor(Math.random()*4);
-    let x,y;
-    if(side===0){x=Math.random()*W;y=-50;}
-    else if(side===1){x=W+50;y=Math.random()*H;}
-    else if(side===2){x=Math.random()*W;y=H+50;}
-    else{x=-50;y=Math.random()*H;}
-    enemies.push({x,y,size:s,hp:Math.ceil(s/25)+1,speed:50+Math.random()*80,fade:1});
+    const side=Math.floor(Math.random()*4);let x,y;
+    if(side===0){x=Math.random()*W;y=-60;}
+    else if(side===1){x=W+60;y=Math.random()*H;}
+    else if(side===2){x=Math.random()*W;y=H+60;}
+    else{x=-60;y=Math.random()*H;}
+    const img=new Image();img.src=enemyGifs[Math.floor(Math.random()*enemyGifs.length)];
+    const size=40+Math.random()*100,baseSpeed=(80+wave*10)*(80/size),
+          hp=2+size/40,dmg=(5+Math.random()*10)*(size/80);
+    enemies.push({x,y,img,size,speed:baseSpeed,hp,dmg,fade:1,destroying:false});
   }
 }
-function shoot(x,y){const dx=x-player.x,dy=y-player.y,d=Math.hypot(dx,dy),vx=dx/d*600,vy=dy/d*600;bullets.push({x:player.x,y:player.y,vx,vy});}
-function damagePlayer(amt){player.hp-=amt;updateHealth();if(player.hp<=0)die();}
-function die(){state='dead';menu.style.display='flex';player.hp=100;}
-let state='menu';
-function resetGame(){player.hp=100;kills=0;wave=1;damage=0;bullets.length=0;enemies.length=0;updateHealth();updateHUD();spawnWave();startTime=performance.now();state='playing';}
 
-function draw(){
-  drawGrid();
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='yellow';ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#f33';
-  for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
-  for(const e of enemies){ctx.save();ctx.globalAlpha=e.fade;ctx.fillStyle='lime';
-    ctx.beginPath();ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);ctx.fill();ctx.restore();}
-}
-
-function loop(){
-  if(state!=='playing')return;
-  const dt=0.016;
-  for(const b of bullets){b.x+=b.vx*dt;b.y+=b.vy*dt;}
+function updateEnemies(dt){
   for(const e of enemies){
+    if(e.destroying){e.fade-=dt*2;if(e.fade<=0)e.fade=0;continue;}
     const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;
     e.x+=dx/d*e.speed*dt;e.y+=dy/d*e.speed*dt;
   }
-  // collisions
+  for(let i=enemies.length-1;i>=0;i--)if(enemies[i].fade<=0)enemies.splice(i,1);
+}
+
+function drawEnemies(){
+  for(const e of enemies){
+    ctx.save();ctx.globalAlpha=e.fade;
+    if(e.img.complete)ctx.drawImage(e.img,e.x-e.size/2,e.y-e.size/2,e.size,e.size);
+    else{ctx.fillStyle='lime';ctx.beginPath();ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);ctx.fill();}
+    ctx.restore();
+  }
+}
+
+// === Combat ===
+function checkCollisions(dt,mouse){
   for(let i=enemies.length-1;i>=0;i--){
-    const e=enemies[i];
+    const e=enemies[i];if(e.destroying)continue;
     for(let j=bullets.length-1;j>=0;j--){
       const b=bullets[j];
       if(Math.hypot(b.x-e.x,b.y-e.y)<e.size/2+4){
-        e.hp--;damage+=10;damageEl.textContent=damage;bullets.splice(j,1);
-        if(e.hp<=0){e.fade-=dt*5;if(e.fade<=0){enemies.splice(i,1);kills++;}}
+        e.hp-=1;bullets.splice(j,1);damage+=10;
+        if(e.hp<=0){e.destroying=true;kills++;}
         break;
       }
     }
-    if(Math.hypot(e.x-player.x,e.y-player.y)<(player.size+e.size)/2){damagePlayer(5);}
+    if(Math.hypot(player.x-e.x,player.y-e.y)<(player.size+e.size)/2)damagePlayer(e.dmg);
   }
   if(enemies.length===0){wave++;spawnWave();}
-  updateHUD();draw();
+}
+
+function damagePlayer(dmg){player.hp=Math.max(0,player.hp-dmg);player.hitFlash=0.3;updateHealth();if(player.hp<=0)die();}
+function die(){state='dead';menu.style.display='flex';player.hp=100;updateHealth();}
+
+// === Game Loop ===
+let mouse={x:W/2,y:H/2};
+function loop(ts){
+  if(state!=='playing')return;
+  const dt=0.016;
+  drawGrid();
+  updatePlayer(dt);
+  for(const b of bullets){b.x+=b.vx*dt;b.y+=b.vy*dt;}
+  updateEnemies(dt);
+  checkCollisions(dt,mouse);
+  ctx.clearRect(0,0,W,H);
+  drawPlayer();drawArrow(mouse.x,mouse.y);
+  ctx.fillStyle='#f33';for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
+  drawEnemies();
+  updateHUD();
   requestAnimationFrame(loop);
 }
-document.addEventListener('click',e=>{if(state==='playing')shoot(e.clientX,e.clientY);});
-document.getElementById('start').onclick=()=>{menu.style.display='none';resetGame();loop();};
+
+document.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')shoot(mouse.x,mouse.y);});
+document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+document.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+document.addEventListener('mousedown',e=>{if(state==='playing')shoot(e.clientX,e.clientY);});
+
+document.getElementById('start').onclick=()=>{
+  menu.style.display='none';
+  kills=0;wave=1;damage=0;player.hp=100;updateHealth();
+  bullets.length=0;enemies.length=0;
+  spawnWave();
+  startTime=performance.now();
+  state='playing';
+  loop();
+};
 </script>
 </body>
 </html>
