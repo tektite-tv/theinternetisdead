@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Recursive Camera Feedback Loop (Mobile Friendly)</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: #00ff99;
+    font-family: monospace;
+  }
+  button {
+    background: #111;
+    color: #00ff99;
+    border: 2px solid #00ff99;
+    padding: 10px 20px;
+    font-size: 1.2em;
+    border-radius: 8px;
+  }
+  video, canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: none;
+  }
+</style>
+</head>
+<body>
+<video id="cam" playsinline></video>
+<canvas id="loop"></canvas>
+<button id="startBtn">Start Camera Loop</button>
+
+<script>
+const startBtn = document.getElementById('startBtn');
+const video = document.getElementById('cam');
+const canvas = document.getElementById('loop');
+const ctx = canvas.getContext('2d');
+
+startBtn.addEventListener('click', async () => {
+  startBtn.style.display = 'none';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    await video.play();
+    video.style.display = 'block';
+    setTimeout(() => startLoop(), 500);
+  } catch (err) {
+    alert('Camera access denied or unavailable.');
+    console.error(err);
+  }
+});
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function startLoop() {
+  video.style.display = 'none';
+  canvas.style.display = 'block';
+  function draw() {
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(0.002);
+    ctx.scale(0.99, 0.99);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+</script>
+</body>
+</html>
