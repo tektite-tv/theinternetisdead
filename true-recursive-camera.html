@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>True Recursive Video Feedback</title>
+<style>
+  body { margin: 0; overflow: hidden; background: black; }
+  video, canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    transform: scaleX(-1);
+  }
+  #start {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    background: #111;
+    color: #00ff99;
+    padding: 15px 30px;
+    border: 2px solid #00ff99;
+    border-radius: 10px;
+    font-size: 1.2em;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+<video id="cam" autoplay playsinline muted></video>
+<canvas id="loop"></canvas>
+<button id="start">Start Loop</button>
+
+<script>
+const video = document.getElementById('cam');
+const canvas = document.getElementById('loop');
+const start = document.getElementById('start');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+start.addEventListener('click', async () => {
+  start.remove();
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  video.srcObject = stream;
+  await video.play();
+
+  // Capture the canvas as a video stream
+  const feedbackStream = canvas.captureStream(30);
+  video.srcObject = feedbackStream;
+
+  function draw() {
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(0.003);
+    ctx.scale(0.98, 0.98);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+});
+</script>
+</body>
+</html>
