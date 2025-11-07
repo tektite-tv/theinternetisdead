@@ -72,6 +72,22 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
+/* === NEW FEATURE: Fullscreen Toggle (Press F) === */
+document.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'f') {
+    if (!document.fullscreenElement) {
+      if (canvas.requestFullscreen) canvas.requestFullscreen();
+      else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen();
+      else if (canvas.msRequestFullscreen) canvas.msRequestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      else if (document.msExitFullscreen) document.msExitFullscreen();
+    }
+  }
+});
+/* === END FULLSCREEN FEATURE === */
+
 function rainbow(x, y, time) {
   const r = Math.sin(0.0008 * x + time) * 127 + 128;
   const g = Math.sin(0.0008 * y + time + 2) * 127 + 128;
