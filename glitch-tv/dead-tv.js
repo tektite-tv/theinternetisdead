@@ -72,17 +72,27 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
-/* === NEW FEATURE: Fullscreen Toggle (Press F) === */
+/* === NEW FEATURE: Fullscreen Toggle for entire iframe (Press F) === */
 document.addEventListener('keydown', e => {
   if (e.key.toLowerCase() === 'f') {
-    if (!document.fullscreenElement) {
-      if (canvas.requestFullscreen) canvas.requestFullscreen();
-      else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen();
-      else if (canvas.msRequestFullscreen) canvas.msRequestFullscreen();
-    } else {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      else if (document.msExitFullscreen) document.msExitFullscreen();
+    try {
+      const frame = window.frameElement; // reference to the iframe
+      if (!frame) return; // not inside iframe
+
+      const parentDoc = parent.document;
+      const isFull = parentDoc.fullscreenElement || document.fullscreenElement;
+
+      if (!isFull) {
+        if (frame.requestFullscreen) frame.requestFullscreen();
+        else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();
+        else if (frame.msRequestFullscreen) frame.msRequestFullscreen();
+      } else {
+        if (parentDoc.exitFullscreen) parentDoc.exitFullscreen();
+        else if (parentDoc.webkitExitFullscreen) parentDoc.webkitExitFullscreen();
+        else if (parentDoc.msExitFullscreen) parentDoc.msExitFullscreen();
+      }
+    } catch (err) {
+      console.warn('Fullscreen toggle failed:', err);
     }
   }
 });
