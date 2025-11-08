@@ -3,225 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bananaman Shooter v0.5.3</title>
+<title>Bananaman Shooter v0.5.4</title>
+<link rel="stylesheet" href="shooter.css">
 <script src="https://cdn.tailwindcss.com"></script>
-<style>
-html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
-canvas{display:block;position:fixed;inset:0;}
-.hud{position:fixed;background:rgba(20,20,20,.7);border:1px solid rgba(255,255,255,.2);
-border-radius:8px;padding:6px 10px;font-size:14px;z-index:999;}
-#healthbar{position:fixed;bottom:5vh;left:50%;transform:translateX(-50%);
-width:60vw;height:20px;border:2px solid #fff;border-radius:10px;background:#400;z-index:1000;}
-#healthfill{background:#f33;width:100%;height:100%;border-radius:10px;transition:width .2s linear;}
-#healthtext{position:absolute;width:100%;top:0;text-align:center;font-size:12px;}
-#deathOverlay{position:fixed;inset:0;background:rgba(150,0,0,0);color:#ff3333;
-font-size:5rem;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;
-opacity:0;transition:background 1s ease,opacity 1s ease;z-index:10000;pointer-events:none;}
-#deathOverlay.visible{background:rgba(150,0,0,0.6);opacity:1;pointer-events:auto;}
-#deathOverlay button{margin-top:1rem;background:#ff3333;color:#fff;border:none;padding:0.8rem 1.6rem;
-border-radius:8px;font-size:1.2rem;cursor:pointer;transition:background .3s;}
-#deathOverlay button:hover{background:#ff6666;}
-</style>
 </head>
 <body>
-<canvas id="bg"></canvas><canvas id="game"></canvas>
+  <canvas id="bg"></canvas>
+  <canvas id="game"></canvas>
 
-<div id="hud-stats" class="hud" style="top:10px;left:10px;">Kills: <span id="kills">0</span> | Wave: <span id="wave">0</span></div>
-<div id="hud-top" class="hud" style="top:10px;right:10px;display:flex;gap:10px;">
-  <div>Damage: <span id="damage">0</span></div><div>Time: <span id="timer">0s</span></div>
-</div>
-<div id="healthbar"><div id="healthfill"></div><div id="healthtext">100%</div></div>
+  <!-- HUD -->
+  <div id="hud-stats" class="hud" style="top:10px;left:10px;">Kills: <span id="kills">0</span> | Wave: <span id="wave">0</span></div>
+  <div id="hud-top" class="hud" style="top:10px;right:10px;display:flex;gap:10px;">
+    <div>Damage: <span id="damage">0</span></div><div>Time: <span id="timer">0s</span></div>
+  </div>
+  <div id="healthbar">
+    <div id="healthfill"></div>
+    <div id="healthtext">100%</div>
+  </div>
 
-<div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
-  <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
-  <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
-  <button id="bossMode" class="bg-red-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-red-300 shadow-lg">Boss Mode</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.5.3 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
-</div>
+  <!-- Menu -->
+  <div id="menu" class="menu-screen">
+    <h1 class="title">Bananaman Shooter</h1>
+    <button id="start" class="btn yellow">Start Game</button>
+    <button id="bossMode" class="btn red">Boss Mode</button>
+    <p class="subtitle">v0.5.4 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
+  </div>
 
-<div id="deathOverlay"><div>You Died</div><button id="restartBtn">Return to Menu</button></div>
+  <!-- Death Overlay -->
+  <div id="deathOverlay">
+    <div>You Died</div>
+    <button id="restartBtn">Return to Menu</button>
+  </div>
 
-<script>
-const bg=document.getElementById("bg"),g=bg.getContext("2d");
-const game=document.getElementById("game"),ctx=game.getContext("2d");
-let W=innerWidth,H=innerHeight;bg.width=game.width=W;bg.height=game.height=H;
-addEventListener("resize",()=>{W=innerWidth;H=innerHeight;bg.width=game.width=W;bg.height=game.height=H;});
-
-let gridOffsetX=0,gridOffsetY=0,gridSpacing=40,gridStatic=true;
-function drawGrid(){g.clearRect(0,0,W,H);
-  g.strokeStyle="rgba(0,255,150,0.4)";g.shadowColor="#00ffaa";
-  g.shadowBlur=gridStatic?4:10;g.lineWidth=1.2;g.beginPath();
-  for(let x=-gridSpacing;x<W+gridSpacing;x+=gridSpacing){
-    g.moveTo(x+gridOffsetX%gridSpacing,0);g.lineTo(x+gridOffsetX%gridSpacing,H);}
-  for(let y=-gridSpacing;y<H+gridSpacing;y+=gridSpacing){
-    g.moveTo(0,y+gridOffsetY%gridSpacing);g.lineTo(W,y+gridOffsetY%gridSpacing);}
-  g.stroke();}
-
-const enemyGifs=['bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif',
-'fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'].map(n=>`/media/images/gifs/${n}`);
-const playerImg=new Image();playerImg.src='/media/images/gifs/bananarama.gif';
-let playerLoaded=false;playerImg.onload=()=>playerLoaded=true;
-
-const hitSound=new Audio('/media/audio/hitmarker.mp3');
-function playHitSound(){const s=hitSound.cloneNode();s.volume=.4;s.play().catch(()=>{});}
-const oofSound=new Audio('/media/audio/oof.mp3');
-function playOof(){const s=oofSound.cloneNode();s.playbackRate=.9+Math.random()*.2;s.play().catch(()=>{});}
-const bgMusic=new Audio('/media/audio/spaceinvaders.mp3');bgMusic.loop=true;bgMusic.volume=.6;
-const linkYell = new Audio('/media/audio/link-yell.mp3');linkYell.volume = 0.8;
-
-const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitTimer:0,invuln:0};
-const bullets=[],enemies=[];
-let kills=0,wave=1,damage=0,startTime=null,state='menu',keys={},mouse={x:W/2,y:H/2};
-
-const killsEl=document.getElementById("kills"),waveEl=document.getElementById("wave"),
-damageEl=document.getElementById("damage"),timerEl=document.getElementById("timer"),
-healthFill=document.getElementById("healthfill"),healthText=document.getElementById("healthtext"),
-menu=document.getElementById("menu"),deathOverlay=document.getElementById("deathOverlay"),
-restartBtn=document.getElementById("restartBtn");
-
-function updateHealth(){const p=Math.max(0,Math.round(player.hp));healthFill.style.width=p+"%";healthText.textContent=p+"%";}
-function updateHUD(){killsEl.textContent=kills;waveEl.textContent=wave;damageEl.textContent=damage;timerEl.textContent=((performance.now()-startTime)/1000).toFixed(1)+"s";}
-
-//=== Player + shooting ===
-function updatePlayer(dt){
-  let dx=0,dy=0;
-  if(keys['w'])dy-=1;if(keys['s'])dy+=1;if(keys['a'])dx-=1;if(keys['d'])dx+=1;
-  const m=Math.hypot(dx,dy)||1;
-  const speedMult = keys['shift'] ? 1.6 : 1;
-  player.x+=dx/m*player.speed*dt*speedMult;
-  player.y+=dy/m*player.speed*dt*speedMult;
-  player.x=Math.max(player.size/2,Math.min(W-player.size/2,player.x));
-  player.y=Math.max(player.size/2,Math.min(H-player.size/2,player.y));
-  if(player.invuln>0)player.invuln-=dt;if(player.hitTimer>0)player.hitTimer-=dt;
-  gridOffsetX-=dx*dt*player.speed*.3;gridOffsetY-=dy*dt*player.speed*.3;
-}
-function drawPlayer(){ctx.save();const sx=player.x-player.size/2,sy=player.y-player.size/2,s=player.size;
-  if(playerLoaded){ctx.drawImage(playerImg,sx,sy,s,s);
-    if(player.hitTimer>0&&Math.floor(player.hitTimer*20)%2===0){ctx.globalCompositeOperation="source-atop";
-      ctx.fillStyle="rgba(255,0,0,0.6)";ctx.fillRect(sx,sy,s,s);ctx.globalCompositeOperation="source-over";}}
-  else{ctx.fillStyle=player.hitTimer>0?"red":"yellow";ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();}
-  ctx.restore();}
-function drawArrow(){const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx);
-  const r=player.size*.4,ax=player.x+Math.cos(a)*r,ay=player.y+Math.sin(a)*r;
-  ctx.save();ctx.translate(ax,ay);ctx.rotate(a);
-  ctx.fillStyle="#f33";ctx.shadowColor="#f00";ctx.shadowBlur=8;
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-10,-4);ctx.lineTo(-10,4);ctx.closePath();ctx.fill();ctx.restore();}
-function shoot(){const dx=mouse.x-player.x,dy=mouse.y-player.y,a=Math.atan2(dy,dx),spd=700;
-  bullets.push({x:player.x,y:player.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd});}
-function shotgunPulse(){const dx=mouse.x-player.x,dy=mouse.y-player.y,dist=Math.hypot(dx,dy)||1;
-  const base=Math.atan2(dy,dx),spread=Math.min(.9,.2+dist/400);
-  for(let i=0;i<9;i++){const ang=base+(Math.random()-.5)*spread,spd=900*(.8+Math.random()*.4);
-    bullets.push({x:player.x,y:player.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd});}
-  player.x-=Math.cos(base)*10;player.y-=Math.sin(base)*10;
-  gridOffsetX+=(Math.random()-.5)*40;gridOffsetY+=(Math.random()-.5)*40;}
-
-//=== Enemies & scaling ===
-function makeEnemy({x,y,srcName,size,speed,hp,dmg,inverted=false,resurrected=false}){const img=new Image();img.src=`/media/images/gifs/${srcName}`;
-  return{x,y,img,size,speed,hp,dmg,baseHp:hp,srcName,isBananarama:srcName==='bananarama.gif',inverted,resurrected,fade:1,destroying:false,hitTimer:0};}
-function spawnWave(){const scale=1+Math.pow((Math.min(wave,10)-1)/9,2.2)*4;const count=Math.floor(6+(wave-1)*4);
-  for(let i=0;i<count;i++){const s=Math.floor(Math.random()*4);let x,y;
-    if(s===0){x=Math.random()*W;y=-60;}else if(s===1){x=W+60;y=Math.random()*H;}
-    else if(s===2){x=Math.random()*W;y=H+60;}else{x=-60;y=Math.random()*H;}
-    const pool=['bananarama.gif','dancing-guy.gif','dancingzoidberg.gif','dragon.gif','eyes.gif','fatspiderman.gif','firework.gif','frog.gif','keyboard_smash.gif','skeleton.gif'];
-    const src=pool[Math.floor(Math.random()*pool.length)];const size=40+Math.random()*100;
-    const speed=(80+wave*10)*(80/size)*(scale*.6);const hp=(2+size/40)*scale;
-    const dmg=(5+Math.random()*10)*(size/80)*(1+wave*.1);
-    enemies.push(makeEnemy({x,y,srcName:src,size,speed,hp,dmg}));}}
-function updateEnemies(dt){for(const e of enemies){if(e.destroying){e.fade-=dt*2;if(e.fade<=0)e.fade=0;continue;}
-  if(e.hitTimer>0)e.hitTimer-=dt;const dx=player.x-e.x,dy=player.y-e.y,d=Math.hypot(dx,dy)||1;e.x+=dx/d*e.speed*dt;e.y+=dy/d*e.speed*dt;}
-  for(let i=enemies.length-1;i>=0;i--)if(enemies[i].fade<=0)enemies.splice(i,1);}
-function drawEnemies(){for(const e of enemies){ctx.save();ctx.globalAlpha=e.fade;
-  const sx=e.x-e.size/2,sy=e.y-e.size/2,s=e.size;
-  if(e.img.complete){if(e.inverted)ctx.filter='invert(1)';ctx.drawImage(e.img,sx,sy,s,s);ctx.filter='none';
-    if(e.hitTimer>0&&Math.floor(e.hitTimer*20)%2===0){ctx.globalCompositeOperation='source-atop';ctx.fillStyle='rgba(255,0,0,0.6)';
-      ctx.fillRect(sx,sy,s,s);ctx.globalCompositeOperation='source-over';}}
-  else{ctx.fillStyle=e.hitTimer>0?'red':'lime';ctx.beginPath();ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);ctx.fill();}ctx.restore();}}
-
-//=== Boss & clones ===
-let boss=null,orbiters=[],lightning=[],bossSpawned=false,bossDefeated=false;
-
-/* UPDATED boss functions */
-function spawnBoss(){
-  const bx=Math.random()*(W-300)+150,by=Math.random()*(H-300)+150;
-  const img=new Image();img.src="/media/images/gifs/180px-NO_U_cycle.gif";
-  boss={x:bx,y:by,vx:(Math.random()-0.5)*200,vy:(Math.random()-0.5)*200,size:180,hp:300,img,angle:0,changeTimer:0};
-  orbiters=[];
-  for(let i=0;i<4;i++){orbiters.push({angle:(i*Math.PI)/2,dist:150,hp:40});}
-}
-
-function updateBoss(dt){
-  if(!boss)return;
-  boss.x+=boss.vx*dt; boss.y+=boss.vy*dt;
-  boss.changeTimer-=dt;
-  if(boss.changeTimer<=0){
-    boss.vx=(Math.random()-0.5)*400;
-    boss.vy=(Math.random()-0.5)*400;
-    boss.changeTimer=1+Math.random()*2;
-  }
-  if(boss.x<boss.size/2||boss.x>W-boss.size/2)boss.vx*=-1;
-  if(boss.y<boss.size/2||boss.y>H-boss.size/2)boss.vy*=-1;
-  boss.angle+=dt*1.5;
-  orbiters.forEach(o=>o.angle+=dt*2);
-}
-
-function drawBoss(){
-  if(!boss)return;
-  ctx.save();
-  ctx.drawImage(boss.img,boss.x-boss.size/2,boss.y-boss.size/2,boss.size,boss.size);
-  orbiters.forEach(o=>{
-    const ox=boss.x+Math.cos(o.angle)*o.dist,oy=boss.y+Math.sin(o.angle)*o.dist;
-    const s=boss.size*0.5;
-    ctx.drawImage(boss.img,ox-s/2,oy-s/2,s,s);
-  });
-  ctx.restore();
-}
-/* end of updated section */
-
-function checkCollisions(){for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];if(e.destroying)continue;
-    for(let j=bullets.length-1;j>=0;j--){const b=bullets[j];const dx=b.x-e.x,dy=b.y-e.y;
-      if(dx*dx+dy*dy<(e.size/2+4)**2){bullets.splice(j,1);e.hp--;damage+=10;e.hitTimer=.25;playHitSound();
-        if(e.hp<=0){e.destroying=true;kills++;}break;}}
-    const dx=player.x-e.x,dy=player.y-e.y;
-    if(dx*dx+dy*dy<(player.size/2+e.size/2)**2&&!e.destroying&&player.invuln<=0){applyDamage(e.dmg);}}
-  if(wave<5&&enemies.length>0&&enemies.every(e=>e.destroying)){wave++;spawnWave();}
-  if(wave===5&&enemies.length===0&&!bossSpawned){bossSpawned=true;wave++;spawnBoss();}
-  if(boss&&orbiters.length===0&&!bossDefeated){bossDefeated=true;boss=null;wave++;spawnWave();}}
-
-function applyDamage(d){player.hp=Math.max(0,player.hp-d);player.hitTimer=.3;player.invuln=.3;playOof();updateHealth();if(player.hp<=0)die();}
-function die(){state='dead';bgMusic.pause();bgMusic.currentTime=0;gridStatic=true;drawGrid();
-  const deathSound = linkYell.cloneNode();deathSound.play().catch(()=>{});
-  deathOverlay.classList.add('visible');}
-restartBtn.onclick=()=>{deathOverlay.classList.remove('visible');menu.style.display='flex';
-  player.hp=100;updateHealth();enemies.length=0;bullets.length=0;kills=0;wave=1;damage=0;
-  gridStatic=true;drawGrid();boss=null;orbiters=[];lightning=[];bossSpawned=false;bossDefeated=false;state='menu';};
-
-//=== Game Loop ===
-function loop(){if(state!=='playing')return;const dt=.016;
-  updatePlayer(dt);drawGrid();for(const b of bullets){b.x+=b.vx*dt;b.y+=b.vy*dt;}
-  updateEnemies(dt);checkCollisions();updateBoss(dt);
-  ctx.clearRect(0,0,W,H);drawPlayer();drawArrow();
-  ctx.fillStyle='#f33';for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
-  drawEnemies();drawBoss();updateHUD();requestAnimationFrame(loop);}
-
-//=== Input ===
-addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')shoot();});
-addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
-document.addEventListener('contextmenu',e=>e.preventDefault());
-addEventListener('mousedown',e=>{if(state!=='playing')return;if(e.button===0)shoot();else if(e.button===2)shotgunPulse();});
-
-document.getElementById('start').onclick=()=>{menu.style.display='none';gridStatic=false;bgMusic.currentTime=0;bgMusic.play().catch(()=>{});
-  kills=0;wave=1;damage=0;player.hp=100;updateHealth();
-  bullets.length=0;enemies.length=0;bossSpawned=false;bossDefeated=false;spawnWave();
-  startTime=performance.now();state='playing';loop();};
-
-// Boss Mode button spawns boss instantly
-document.getElementById('bossMode').onclick=()=>{menu.style.display='none';gridStatic=false;bgMusic.currentTime=0;bgMusic.play().catch(()=>{});
-  kills=0;wave=6;damage=0;player.hp=100;updateHealth();
-  bullets.length=0;enemies.length=0;bossSpawned=true;bossDefeated=false;spawnBoss();
-  startTime=performance.now();state='playing';loop();};
-
-gridStatic=true;drawGrid();
-</script>
+  <script src="shooter.js"></script>
 </body>
 </html>
