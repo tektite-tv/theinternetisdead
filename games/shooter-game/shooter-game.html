@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bananaman Shooter v0.6.0 (Boss Victory Update)</title>
+<title>Bananaman Shooter v0.6.1 (Boss Victory Update)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
@@ -14,22 +14,25 @@ border-radius:8px;padding:6px 10px;font-size:14px;z-index:999;}
 width:60vw;height:20px;border:2px solid #fff;border-radius:10px;background:#400;z-index:1000;}
 #healthfill{background:#f33;width:100%;height:100%;border-radius:10px;transition:width .2s linear;}
 #healthtext{position:absolute;width:100%;top:0;text-align:center;font-size:12px;}
-#deathOverlay{position:fixed;inset:0;background:rgba(150,0,0,0);color:#ff3333;
-font-size:5rem;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;
-opacity:0;transition:background 1s ease,opacity 1s ease;z-index:10000;pointer-events:none;}
-#deathOverlay.visible{background:rgba(150,0,0,0.6);opacity:1;pointer-events:auto;}
-#deathOverlay button{margin-top:1rem;background:#ff3333;color:#fff;border:none;padding:0.8rem 1.6rem;
-border-radius:8px;font-size:1.2rem;cursor:pointer;transition:background .3s;}
-#deathOverlay button:hover{background:#ff6666;}
-#winOverlay{position:fixed;inset:0;background:rgba(0,255,0,0);color:#00ff66;
-font-family:'Impact',sans-serif;font-size:6rem;font-weight:bold;display:flex;flex-direction:column;
-align-items:center;justify-content:center;opacity:0;text-shadow:0 0 20px #0f0,0 0 40px #0f0,0 0 60px #0f0;
-transition:background 1s ease,opacity 1s ease;z-index:10000;pointer-events:none;}
 #bossHealthWrap{position:fixed;top:4vh;left:50%;transform:translateX(-50%);width:40vw;height:16px;
 border:2px solid rgba(255,255,255,.2);border-radius:10px;background:#222;z-index:1000;display:none;}
 #bossHealthFill{height:100%;width:100%;border-radius:8px;background:linear-gradient(90deg,#ff6a00,#ff0033);
 transition:width .12s linear;}
 #bossHealthText{position:absolute;width:100%;top:-1.2rem;text-align:center;font-size:12px;color:#fff;}
+#deathOverlay,#winOverlay{position:fixed;inset:0;font-size:5rem;font-weight:bold;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+opacity:0;transition:background 1s ease,opacity 1s ease;z-index:10000;pointer-events:none;}
+#deathOverlay{background:rgba(150,0,0,0);color:#ff3333;}
+#deathOverlay.visible{background:rgba(150,0,0,0.6);opacity:1;pointer-events:auto;}
+#deathOverlay button,#winOverlay button{margin-top:1rem;border:none;padding:0.8rem 1.6rem;
+border-radius:8px;font-size:1.2rem;cursor:pointer;transition:background .3s;}
+#deathOverlay button{background:#ff3333;color:#fff;}
+#deathOverlay button:hover{background:#ff6666;}
+#winOverlay{background:rgba(0,255,0,0);color:#00ff66;font-family:'Impact',sans-serif;
+text-shadow:0 0 20px #0f0,0 0 40px #0f0,0 0 60px #0f0;}
+#winOverlay.visible{background:rgba(0,255,0,0.25);opacity:1;pointer-events:auto;}
+#winOverlay button{background:#00ff66;color:#000;box-shadow:0 0 20px #0f0;}
+#winOverlay button:hover{background:#55ff99;}
 </style>
 </head>
 <body>
@@ -48,29 +51,46 @@ transition:width .12s linear;}
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
   <button id="bossMode" class="bg-red-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-red-300 shadow-lg">Boss Mode</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.6.0 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.6.1 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
 </div>
 
 <div id="deathOverlay"><div>You Died</div><button id="restartBtn">Return to Menu</button></div>
 <div id="winOverlay"><div>YOU WIN</div><button id="winRestartBtn">Return to Menu</button></div>
 
 <script>
-// Placeholder game loop simplified
-let bossDefeated=false,state='menu';
-const bgMusic=new Audio('/media/audio/spaceinvaders.mp3');bgMusic.loop=true;
-const winOverlay=document.getElementById('winOverlay');
-const winRestartBtn=document.getElementById('winRestartBtn');
-const menu=document.getElementById('menu');
-
-function showWin(){
-  state='won';bgMusic.pause();bgMusic.currentTime=0;
-  winOverlay.style.background='rgba(0,255,0,0.25)';
-  winOverlay.style.opacity='1';winOverlay.style.pointerEvents='auto';
-}
-winRestartBtn.onclick=()=>{
-  winOverlay.style.opacity='0';winOverlay.style.pointerEvents='none';
-  menu.style.display='flex';state='menu';
-};
+const bg=document.getElementById("bg"),g=bg.getContext("2d");
+const game=document.getElementById("game"),ctx=game.getContext("2d");
+let W=innerWidth,H=innerHeight;bg.width=game.width=W;bg.height=game.height=H;
+addEventListener("resize",()=>{W=innerWidth;H=innerHeight;bg.width=game.width=W;bg.height=game.height=H;});
+let gridOffsetX=0,gridOffsetY=0,gridSpacing=40,gridStatic=true;
+function drawGrid(){g.clearRect(0,0,W,H);g.strokeStyle="rgba(0,255,150,0.4)";g.shadowColor="#00ffaa";
+g.shadowBlur=gridStatic?4:10;g.lineWidth=1.2;g.beginPath();
+for(let x=-gridSpacing;x<W+gridSpacing;x+=gridSpacing){g.moveTo(x+gridOffsetX%gridSpacing,0);g.lineTo(x+gridOffsetX%gridSpacing,H);}
+for(let y=-gridSpacing;y<H+gridSpacing;y+=gridSpacing){g.moveTo(0,y+gridOffsetY%gridSpacing);g.lineTo(W,y+gridOffsetY%gridSpacing);}g.stroke();}
+const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitTimer:0,invuln:0};
+const bullets=[],enemies=[];let boss=null,state='menu',bossDefeated=false;
+const bgMusic=new Audio('/media/audio/spaceinvaders.mp3');bgMusic.loop=true;bgMusic.volume=.6;
+const menu=document.getElementById('menu'),winOverlay=document.getElementById('winOverlay'),
+deathOverlay=document.getElementById('deathOverlay'),winRestartBtn=document.getElementById('winRestartBtn'),
+restartBtn=document.getElementById('restartBtn');
+function startGame(bossMode=false){menu.style.display='none';state='playing';gridStatic=false;bgMusic.currentTime=0;bgMusic.play().catch(()=>{});bossDefeated=false;
+player.hp=100;bullets.length=0;enemies.length=0;if(bossMode)spawnBoss();}
+function die(){state='dead';bgMusic.pause();deathOverlay.classList.add('visible');}
+function showWin(){state='won';bgMusic.pause();bgMusic.currentTime=0;
+winOverlay.classList.add('visible');}
+function spawnBoss(){boss={x:W/2,y:H/3,hp:200,size:160,vx:120,vy:120};}
+function updateBoss(dt){if(!boss)return;boss.x+=boss.vx*dt;boss.y+=boss.vy*dt;
+if(boss.x<boss.size/2||boss.x>W-boss.size/2)boss.vx*=-1;
+if(boss.y<boss.size/2||boss.y>H-boss.size/2)boss.vy*=-1;
+if(boss.hp<=0){boss=null;bossDefeated=true;showWin();}}
+function loop(){if(state!=='playing')return;drawGrid();ctx.clearRect(0,0,W,H);
+if(boss){updateBoss(0.016);ctx.fillStyle='red';ctx.beginPath();ctx.arc(boss.x,boss.y,boss.size/2,0,Math.PI*2);ctx.fill();}
+requestAnimationFrame(loop);}
+document.getElementById('start').onclick=()=>{startGame(false);loop();};
+document.getElementById('bossMode').onclick=()=>{startGame(true);loop();};
+winRestartBtn.onclick=()=>{winOverlay.classList.remove('visible');menu.style.display='flex';state='menu';};
+restartBtn.onclick=()=>{deathOverlay.classList.remove('visible');menu.style.display='flex';state='menu';};
+gridStatic=true;drawGrid();
 </script>
 </body>
 </html>
