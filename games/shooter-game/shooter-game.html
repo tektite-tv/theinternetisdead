@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bananaman Shooter v0.6.1 (Boss Victory Update)</title>
+<title>Bananaman Shooter v0.7.0 – YOU WIN Edition</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
@@ -51,7 +51,7 @@ text-shadow:0 0 20px #0f0,0 0 40px #0f0,0 0 60px #0f0;}
   <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
   <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
   <button id="bossMode" class="bg-red-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-red-300 shadow-lg">Boss Mode</button>
-  <p class="text-sm text-gray-400 mt-2 italic">v0.6.1 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.7.0 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
 </div>
 
 <div id="deathOverlay"><div>You Died</div><button id="restartBtn">Return to Menu</button></div>
@@ -67,27 +67,42 @@ function drawGrid(){g.clearRect(0,0,W,H);g.strokeStyle="rgba(0,255,150,0.4)";g.s
 g.shadowBlur=gridStatic?4:10;g.lineWidth=1.2;g.beginPath();
 for(let x=-gridSpacing;x<W+gridSpacing;x+=gridSpacing){g.moveTo(x+gridOffsetX%gridSpacing,0);g.lineTo(x+gridOffsetX%gridSpacing,H);}
 for(let y=-gridSpacing;y<H+gridSpacing;y+=gridSpacing){g.moveTo(0,y+gridOffsetY%gridSpacing);g.lineTo(W,y+gridOffsetY%gridSpacing);}g.stroke();}
-const player={x:W/2,y:H/2,size:96,hp:100,speed:280,hitTimer:0,invuln:0};
-const bullets=[],enemies=[];let boss=null,state='menu',bossDefeated=false;
+const player={x:W/2,y:H/2,size:80,hp:100,speed:300,hitTimer:0,invuln:0};
+let keys={},mouse={x:W/2,y:H/2};const bullets=[],enemies=[];let boss=null,state='menu',bossDefeated=false,kills=0;
 const bgMusic=new Audio('/media/audio/spaceinvaders.mp3');bgMusic.loop=true;bgMusic.volume=.6;
 const menu=document.getElementById('menu'),winOverlay=document.getElementById('winOverlay'),
 deathOverlay=document.getElementById('deathOverlay'),winRestartBtn=document.getElementById('winRestartBtn'),
 restartBtn=document.getElementById('restartBtn');
 function startGame(bossMode=false){menu.style.display='none';state='playing';gridStatic=false;bgMusic.currentTime=0;bgMusic.play().catch(()=>{});bossDefeated=false;
-player.hp=100;bullets.length=0;enemies.length=0;if(bossMode)spawnBoss();}
+player.hp=100;bullets.length=0;enemies.length=0;kills=0;if(bossMode){spawnBoss();}else{spawnEnemies();}loop();}
+function spawnEnemies(){for(let i=0;i<8;i++){enemies.push({x:Math.random()*W,y:Math.random()*H,vx:Math.random()*200-100,vy:Math.random()*200-100,hp:30,size:60});}}
+function spawnBoss(){boss={x:W/2,y:H/3,hp:300,size:160,vx:150,vy:150,changeTimer:0};}
+function updatePlayer(dt){let dx=0,dy=0;if(keys['w'])dy-=1;if(keys['s'])dy+=1;if(keys['a'])dx-=1;if(keys['d'])dx+=1;
+const mag=Math.hypot(dx,dy)||1;player.x+=dx/mag*player.speed*dt;player.y+=dy/mag*player.speed*dt;
+player.x=Math.max(0,Math.min(W,player.x));player.y=Math.max(0,Math.min(H,player.y));}
+function drawPlayer(){ctx.fillStyle="yellow";ctx.beginPath();ctx.arc(player.x,player.y,player.size/2,0,Math.PI*2);ctx.fill();}
+function drawEnemies(){ctx.fillStyle="red";for(const e of enemies){ctx.beginPath();ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);ctx.fill();}}
+function drawBoss(){if(!boss)return;ctx.fillStyle="purple";ctx.beginPath();ctx.arc(boss.x,boss.y,boss.size/2,0,Math.PI*2);ctx.fill();}
+function shoot(){const dx=mouse.x-player.x,dy=mouse.y-player.y,ang=Math.atan2(dy,dx);
+bullets.push({x:player.x,y:player.y,vx:Math.cos(ang)*600,vy:Math.sin(ang)*600});}
+function updateBullets(dt){for(const b of bullets){b.x+=b.vx*dt;b.y+=b.vy*dt;}for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];if(b.x<0||b.y<0||b.x>W||b.y>H)bullets.splice(i,1);}}
+function drawBullets(){ctx.fillStyle="lime";for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}}
+function updateEnemies(dt){for(const e of enemies){e.x+=e.vx*dt;e.y+=e.vy*dt;if(e.x<0||e.x>W)e.vx*=-1;if(e.y<0||e.y>H)e.vy*=-1;
+for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];const dx=b.x-e.x,dy=b.y-e.y;if(dx*dx+dy*dy<(e.size/2+4)**2){bullets.splice(i,1);e.hp-=10;if(e.hp<=0){enemies.splice(enemies.indexOf(e),1);kills++;break;}}}}}
+function updateBoss(dt){if(!boss)return;boss.x+=boss.vx*dt;boss.y+=boss.vy*dt;boss.changeTimer-=dt;
+if(boss.changeTimer<=0){boss.vx=(Math.random()-0.5)*400;boss.vy=(Math.random()-0.5)*400;boss.changeTimer=0.8;}
+if(boss.x<boss.size/2||boss.x>W-boss.size/2)boss.vx*=-1;if(boss.y<boss.size/2||boss.y>H-boss.size/2)boss.vy*=-1;
+for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];const dx=b.x-boss.x,dy=b.y-boss.y;if(dx*dx+dy*dy<(boss.size/2+8)**2){bullets.splice(i,1);boss.hp-=10;if(boss.hp<=0){boss=null;bossDefeated=true;showWin();break;}}}}
+function showWin(){state='won';bgMusic.pause();winOverlay.classList.add('visible');}
 function die(){state='dead';bgMusic.pause();deathOverlay.classList.add('visible');}
-function showWin(){state='won';bgMusic.pause();bgMusic.currentTime=0;
-winOverlay.classList.add('visible');}
-function spawnBoss(){boss={x:W/2,y:H/3,hp:200,size:160,vx:120,vy:120};}
-function updateBoss(dt){if(!boss)return;boss.x+=boss.vx*dt;boss.y+=boss.vy*dt;
-if(boss.x<boss.size/2||boss.x>W-boss.size/2)boss.vx*=-1;
-if(boss.y<boss.size/2||boss.y>H-boss.size/2)boss.vy*=-1;
-if(boss.hp<=0){boss=null;bossDefeated=true;showWin();}}
-function loop(){if(state!=='playing')return;drawGrid();ctx.clearRect(0,0,W,H);
-if(boss){updateBoss(0.016);ctx.fillStyle='red';ctx.beginPath();ctx.arc(boss.x,boss.y,boss.size/2,0,Math.PI*2);ctx.fill();}
-requestAnimationFrame(loop);}
-document.getElementById('start').onclick=()=>{startGame(false);loop();};
-document.getElementById('bossMode').onclick=()=>{startGame(true);loop();};
+function loop(){if(state!=='playing')return;drawGrid();updatePlayer(0.016);updateBullets(0.016);updateEnemies(0.016);updateBoss(0.016);
+ctx.clearRect(0,0,W,H);drawPlayer();drawEnemies();drawBullets();drawBoss();requestAnimationFrame(loop);}
+document.addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+document.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+document.addEventListener('mousedown',e=>{if(state==='playing')shoot();});
+document.getElementById('start').onclick=()=>{startGame(false);};
+document.getElementById('bossMode').onclick=()=>{startGame(true);};
 winRestartBtn.onclick=()=>{winOverlay.classList.remove('visible');menu.style.display='flex';state='menu';};
 restartBtn.onclick=()=>{deathOverlay.classList.remove('visible');menu.style.display='flex';state='menu';};
 gridStatic=true;drawGrid();
