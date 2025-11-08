@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bananaman Shooter v0.6.0 (Boss Victory Update)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+html,body{margin:0;overflow:hidden;background:#000;color:#fff;font-family:sans-serif;height:100%;}
+canvas{display:block;position:fixed;inset:0;}
+.hud{position:fixed;background:rgba(20,20,20,.7);border:1px solid rgba(255,255,255,.2);
+border-radius:8px;padding:6px 10px;font-size:14px;z-index:999;}
+#healthbar{position:fixed;bottom:5vh;left:50%;transform:translateX(-50%);
+width:60vw;height:20px;border:2px solid #fff;border-radius:10px;background:#400;z-index:1000;}
+#healthfill{background:#f33;width:100%;height:100%;border-radius:10px;transition:width .2s linear;}
+#healthtext{position:absolute;width:100%;top:0;text-align:center;font-size:12px;}
+#deathOverlay{position:fixed;inset:0;background:rgba(150,0,0,0);color:#ff3333;
+font-size:5rem;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;
+opacity:0;transition:background 1s ease,opacity 1s ease;z-index:10000;pointer-events:none;}
+#deathOverlay.visible{background:rgba(150,0,0,0.6);opacity:1;pointer-events:auto;}
+#deathOverlay button{margin-top:1rem;background:#ff3333;color:#fff;border:none;padding:0.8rem 1.6rem;
+border-radius:8px;font-size:1.2rem;cursor:pointer;transition:background .3s;}
+#deathOverlay button:hover{background:#ff6666;}
+#winOverlay{position:fixed;inset:0;background:rgba(0,255,0,0);color:#00ff66;
+font-family:'Impact',sans-serif;font-size:6rem;font-weight:bold;display:flex;flex-direction:column;
+align-items:center;justify-content:center;opacity:0;text-shadow:0 0 20px #0f0,0 0 40px #0f0,0 0 60px #0f0;
+transition:background 1s ease,opacity 1s ease;z-index:10000;pointer-events:none;}
+#bossHealthWrap{position:fixed;top:4vh;left:50%;transform:translateX(-50%);width:40vw;height:16px;
+border:2px solid rgba(255,255,255,.2);border-radius:10px;background:#222;z-index:1000;display:none;}
+#bossHealthFill{height:100%;width:100%;border-radius:8px;background:linear-gradient(90deg,#ff6a00,#ff0033);
+transition:width .12s linear;}
+#bossHealthText{position:absolute;width:100%;top:-1.2rem;text-align:center;font-size:12px;color:#fff;}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<canvas id="game"></canvas>
+
+<div id="hud-stats" class="hud" style="top:10px;left:10px;">Kills: <span id="kills">0</span> | Wave: <span id="wave">0</span></div>
+<div id="hud-top" class="hud" style="top:10px;right:10px;display:flex;gap:10px;">
+  <div>Damage: <span id="damage">0</span></div><div>Time: <span id="timer">0s</span></div>
+</div>
+
+<div id="healthbar"><div id="healthfill"></div><div id="healthtext">100%</div></div>
+<div id="bossHealthWrap"><div id="bossHealthText"></div><div id="bossHealthFill"></div></div>
+
+<div id="menu" class="fixed inset-0 flex flex-col items-center justify-center text-center bg-black/70 z-[9999]">
+  <h1 class="text-5xl text-yellow-300 font-bold mb-4 drop-shadow-lg">Bananaman Shooter</h1>
+  <button id="start" class="bg-yellow-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-yellow-300 shadow-lg">Start Game</button>
+  <button id="bossMode" class="bg-red-400 text-black px-6 py-3 rounded-lg m-2 hover:bg-red-300 shadow-lg">Boss Mode</button>
+  <p class="text-sm text-gray-400 mt-2 italic">v0.6.0 — [WASD] move, [L-Click] shoot, [R-Click] shotgun, [Shift] sprint</p>
+</div>
+
+<div id="deathOverlay"><div>You Died</div><button id="restartBtn">Return to Menu</button></div>
+<div id="winOverlay"><div>YOU WIN</div><button id="winRestartBtn">Return to Menu</button></div>
+
+<script>
+// Placeholder game loop simplified
+let bossDefeated=false,state='menu';
+const bgMusic=new Audio('/media/audio/spaceinvaders.mp3');bgMusic.loop=true;
+const winOverlay=document.getElementById('winOverlay');
+const winRestartBtn=document.getElementById('winRestartBtn');
+const menu=document.getElementById('menu');
+
+function showWin(){
+  state='won';bgMusic.pause();bgMusic.currentTime=0;
+  winOverlay.style.background='rgba(0,255,0,0.25)';
+  winOverlay.style.opacity='1';winOverlay.style.pointerEvents='auto';
+}
+winRestartBtn.onclick=()=>{
+  winOverlay.style.opacity='0';winOverlay.style.pointerEvents='none';
+  menu.style.display='flex';state='menu';
+};
+</script>
+</body>
+</html>
