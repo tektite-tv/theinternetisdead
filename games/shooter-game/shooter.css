@@ -1,0 +1,114 @@
+html,body {
+  margin:0;
+  overflow:hidden;
+  background:#000;
+  color:#fff;
+  font-family:sans-serif;
+  height:100%;
+}
+canvas {display:block;position:fixed;inset:0;}
+
+.hud {
+  position:fixed;
+  background:rgba(20,20,20,.7);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:8px;
+  padding:6px 10px;
+  font-size:14px;
+  z-index:999;
+}
+
+#healthbar {
+  position:fixed;
+  bottom:5vh;
+  left:50%;
+  transform:translateX(-50%);
+  width:60vw;
+  height:20px;
+  border:2px solid #fff;
+  border-radius:10px;
+  background:#400;
+  z-index:1000;
+}
+#healthfill {
+  background:#f33;
+  width:100%;
+  height:100%;
+  border-radius:10px;
+  transition:width .2s linear;
+}
+#healthtext {
+  position:absolute;
+  width:100%;
+  top:0;
+  text-align:center;
+  font-size:12px;
+}
+
+.menu-screen {
+  position:fixed;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  background:rgba(0,0,0,0.7);
+  z-index:9999;
+}
+.title {
+  font-size:5rem;
+  color:#facc15;
+  font-weight:bold;
+  margin-bottom:1rem;
+  text-shadow:0 0 10px #000;
+}
+.btn {
+  border:none;
+  padding:0.8rem 1.6rem;
+  border-radius:8px;
+  font-size:1.2rem;
+  margin:0.5rem;
+  cursor:pointer;
+  box-shadow:0 0 10px #000;
+  transition:background .3s;
+}
+.btn.yellow {background:#facc15;color:#000;}
+.btn.yellow:hover {background:#fde047;}
+.btn.red {background:#f87171;color:#000;}
+.btn.red:hover {background:#fca5a5;}
+.subtitle {font-size:0.9rem;color:#ccc;margin-top:0.8rem;}
+
+#deathOverlay {
+  position:fixed;
+  inset:0;
+  background:rgba(150,0,0,0);
+  color:#ff3333;
+  font-size:5rem;
+  font-weight:bold;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  transition:background 1s ease,opacity 1s ease;
+  z-index:10000;
+  pointer-events:none;
+}
+#deathOverlay.visible {
+  background:rgba(150,0,0,0.6);
+  opacity:1;
+  pointer-events:auto;
+}
+#deathOverlay button {
+  margin-top:1rem;
+  background:#ff3333;
+  color:#fff;
+  border:none;
+  padding:0.8rem 1.6rem;
+  border-radius:8px;
+  font-size:1.2rem;
+  cursor:pointer;
+  transition:background .3s;
+}
+#deathOverlay button:hover {background:#ff6666;}
