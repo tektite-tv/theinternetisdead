@@ -1,4 +1,4 @@
-// Bananaman Shooter v0.5.9 — fully modular, with sound FX for both sides of pain.
+// Bananaman Shooter v0.6.1 — finalized audio hierarchy
 
 const bg = document.getElementById("bg");
 const g = bg.getContext("2d");
@@ -22,7 +22,6 @@ let kills = 0, wave = 1, damage = 0, startTime = null;
 const playerImg = new Image();
 playerImg.src = "/media/images/gifs/bananarama.gif";
 let playerLoaded = false; playerImg.onload = () => playerLoaded = true;
-
 const player = {x:W/2, y:H/2, size:96, hp:100, speed:280, hitTimer:0, invuln:0};
 
 // === AUDIO ===
@@ -161,7 +160,7 @@ function checkCollisions(){
   for(let i=enemies.length-1;i>=0;i--){
     const e = enemies[i];
 
-    // Bullet collisions
+    // Bullet collisions (enemy hit sound)
     for(let j=bullets.length-1;j>=0;j--){
       const b = bullets[j];
       const dx=b.x-e.x, dy=b.y-e.y;
@@ -169,25 +168,13 @@ function checkCollisions(){
         bullets.splice(j,1);
         e.hp--; damage += 10;
 
-        // Enemy hit sound
-        const s = hitSound.cloneNode();
-        s.volume = 0.4;
-        s.playbackRate = 0.9 + Math.random()*0.2;
-        s.play().catch(()=>{});
-
-        // Flash hit effect
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = "red";
-        ctx.beginPath();
-        ctx.arc(e.x,e.y,e.size/2,0,Math.PI*2);
-        ctx.fill();
-        ctx.restore();
+        // enemy hit sound = hitmarker.mp3
+        const marker = hitSound.cloneNode();
+        marker.volume = 0.5;
+        marker.playbackRate = 0.9 + Math.random()*0.2;
+        marker.play().catch(()=>{});
 
         if(e.hp <= 0){
-          const deathSound = linkYell.cloneNode();
-          deathSound.volume = 0.6;
-          deathSound.play().catch(()=>{});
           enemies.splice(i,1);
           kills++;
         }
@@ -212,7 +199,7 @@ function applyDamage(d){
   player.hitTimer = 0.3;
   player.invuln = 0.6;
 
-  // Player damage sound
+  // Player damage sound = oof.mp3
   const pain = oofSound.cloneNode();
   pain.volume = 0.9;
   pain.playbackRate = 0.9 + Math.random()*0.2;
@@ -232,8 +219,12 @@ function die(){
   state = 'dead';
   bgMusic.pause(); bgMusic.currentTime = 0;
   gridStatic = true; drawGrid();
+
+  // Player death sound = link-yell.mp3
   const deathSound = linkYell.cloneNode();
+  deathSound.volume = 0.8;
   deathSound.play().catch(()=>{});
+
   deathOverlay.classList.add('visible');
 }
 
