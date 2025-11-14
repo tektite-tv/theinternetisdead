@@ -1,212 +1,190 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Neon Dragon Visualizer</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recursive Neon Spoke Fractal</title>
 <style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        background: #000;
-        overflow: hidden;
-        font-family: system-ui, sans-serif;
+    html,body {
+        margin:0;
+        padding:0;
+        background:#000;
+        overflow:hidden;
+        font-family:sans-serif;
+        user-select:none;
     }
-    canvas {
-        position: fixed;
-        inset: 0;
-        width: 100vw;
-        height: 100vh;
-        display: block;
+    #c {
+        position:fixed;
+        inset:0;
+        width:100vw;
+        height:100vh;
+        display:block;
     }
     #ui {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(5,0,20,0.85);
-        padding: 20px 30px;
-        border-radius: 16px;
-        border: 1px solid rgba(255,255,255,0.2);
-        box-shadow: 0 0 20px #0ff, 0 0 40px #f0f;
-        z-index: 10;
+        position:fixed;
+        top:50%; left:50%;
+        transform:translate(-50%,-50%);
+        padding:24px 32px;
+        background:rgba(10,0,20,0.8);
+        border-radius:12px;
+        border:1px solid rgba(255,255,255,0.2);
+        color:#0ff;
+        text-align:center;
+        z-index:10;
+        box-shadow:0 0 30px #0ff;
     }
     #ui.hidden {
-        opacity: 0;
-        pointer-events: none;
-        transform: translate(-50%, -40%);
-        transition: opacity 0.6s, transform 0.6s;
+        opacity:0;
+        pointer-events:none;
+        transform:translate(-50%,-60%);
+        transition:0.7s;
     }
     button {
-        appearance: none;
-        border: none;
-        padding: 10px 20px;
-        background: linear-gradient(135deg,#0ff,#f0f);
-        border-radius: 999px;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        color: #000;
-        cursor: pointer;
-        box-shadow: 0 0 18px #0ff;
+        padding:10px 20px;
+        border:none;
+        border-radius:999px;
+        background:linear-gradient(135deg,#0ff,#f0f);
+        color:#000;
+        font-weight:600;
+        cursor:pointer;
+        box-shadow:0 0 12px #0ff;
     }
-    #scan {
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background:
-            repeating-linear-gradient(
-                to bottom,
-                rgba(255,255,255,0.04) 0px,
-                rgba(255,255,255,0.04) 1px,
-                transparent 2px,
-                transparent 4px
-            );
-        mix-blend-mode: soft-light;
-        z-index: 5;
-    }
+    input { display:none; }
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
 
-<div id="scan"></div>
-
 <div id="ui">
-    <h2 style="color:#0ff; text-shadow:0 0 8px #0ff;">Neon Recursive Dragon</h2>
-    <p style="color:#ccc; font-size:0.9rem; margin-bottom:14px;">
-        Upload an MP3 (or WAV/OGG) and unleash the glitchcore beast.
+    <h2 style="margin:0 0 10px;">Recursive Rainbow Bloom</h2>
+    <p style="color:#ccc;font-size:0.9rem;margin-bottom:14px;">
+        Upload an MP3 and let the recursion begin.
     </p>
-    <button id="uploadBtn">Choose Audio File</button>
-    <input type="file" id="fileInput" accept="audio/*" style="display:none;">
+    <button id="uploadBtn">Choose Audio</button>
+    <input type="file" id="fileInput" accept="audio/*">
 </div>
 
 <script>
 (() => {
     const canvas = document.getElementById("c");
     const ctx = canvas.getContext("2d");
-    let w = canvas.width = window.innerWidth;
-    let h = canvas.height = window.innerHeight;
+    let w = canvas.width = innerWidth;
+    let h = canvas.height = innerHeight;
 
-    window.addEventListener("resize", () => {
-        w = canvas.width = window.innerWidth;
-        h = canvas.height = window.innerHeight;
+    addEventListener("resize", () => {
+        w = canvas.width = innerWidth;
+        h = canvas.height = innerHeight;
     });
 
-    const panel = document.getElementById("ui");
+    const ui = document.getElementById("ui");
     const uploadBtn = document.getElementById("uploadBtn");
     const fileInput = document.getElementById("fileInput");
 
-    uploadBtn.addEventListener("click", () => fileInput.click());
+    uploadBtn.onclick = () => fileInput.click();
 
-    let audioCtx = null;
-    let analyser = null;
-    let source = null;
-    let bufferLength = 0;
-    let dataArray = null;
-    let startTime = 0;
+    let audioCtx, source, analyser, data;
+    let start = 0;
 
-    fileInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
+    fileInput.onchange = async () => {
+        const file = fileInput.files[0];
         if (!file) return;
 
-        const arrayBuffer = await file.arrayBuffer();
-
+        const array = await file.arrayBuffer();
         if (!audioCtx) audioCtx = new AudioContext();
         if (audioCtx.state === "suspended") await audioCtx.resume();
 
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
+        const decoded = await audioCtx.decodeAudioData(array);
         if (source) source.stop();
         source = audioCtx.createBufferSource();
-        source.buffer = audioBuffer;
+        source.buffer = decoded;
 
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 2048;
-
-        bufferLength = analyser.frequencyBinCount;
-        dataArray = new Uint8Array(bufferLength);
+        data = new Uint8Array(analyser.frequencyBinCount);
 
         source.connect(analyser);
         analyser.connect(audioCtx.destination);
         source.start();
 
-        startTime = performance.now();
-        panel.classList.add("hidden");
-        animate();
-    });
+        ui.classList.add("hidden");
+        start = performance.now();
+        render();
+    };
 
-    function drawDragonLayer(cx, cy, radiusBase, t, depth, maxDepth, freq) {
+    // --------------------------
+    // RECURSIVE SPOKE ENGINE
+    // --------------------------
+
+    function drawRecursiveSpokes(cx, cy, radius, bins, t, depth, maxDepth, rotOffset) {
         if (depth > maxDepth) return;
 
-        const pts = 140;
-        const twist = Math.PI * 2 * (0.3 + depth * 0.12);
-        const angleOffset = t * 0.00035 * (depth + 1);
+        const count = bins.length;
+        const spokeCount = 360; // fixed for smoother wheel
 
-        for (let i = 0; i < pts; i++) {
-            const p = i / pts;
-            const idx = Math.floor(p * freq.length);
-            const amp = freq[idx] / 255;
+        for (let i = 0; i < spokeCount; i++) {
+            const p = i / spokeCount;
 
-            const r = radiusBase * (0.35 + p * 1.8 + amp * 1.3);
-            const a = p * twist + angleOffset * (depth % 2 ? -1 : 1);
+            // pick a frequency bin based on radial position
+            const idx = Math.floor(p * count);
+            const amp = bins[idx] / 255;
 
-            const x = cx + Math.cos(a) * r;
-            const y = cy + Math.sin(a) * r;
+            const len = radius * (1 + amp * 2.2 * (1 + depth * 0.5));
 
-            const hue = (t * 0.02 + p * 360 + depth * 77) % 360;
-            const sat = 70 + amp * 30;
-            const light = 30 + amp * 50;
-            const alpha = 0.34 + amp * 0.5;
+            const angle = p * Math.PI * 2 + t * 0.0004 + rotOffset;
 
-            ctx.strokeStyle = `hsla(${hue},${sat}%,${light}%,${alpha})`;
-            ctx.lineWidth = 1.2 + amp * 3.3;
+            const x = cx + Math.cos(angle) * len;
+            const y = cy + Math.sin(angle) * len;
+
+            const hue = (p * 360 + t * 0.02 + depth * 90) % 360;
+
+            ctx.strokeStyle = `hsla(${hue},100%,60%,${0.45 - depth*0.15})`;
+            ctx.lineWidth = 1 + amp * 3;
 
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.lineTo(x, y);
             ctx.stroke();
+
+            // Tiny recursive spark nodes
+            if (depth === 0 && amp > 0.5) {
+                ctx.fillStyle = `hsla(${hue},100%,70%,0.9)`;
+                ctx.beginPath();
+                ctx.arc(x, y, 2 + amp * 6, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
-        drawDragonLayer(cx, cy, radiusBase * 0.68, t * 1.08 + depth * 999, depth + 1, maxDepth, freq);
+        // Spawn next recursion layer with:
+        // - Smaller radius
+        // - Slight rotation change
+        // - More chaos
+        const nextR = radius * (0.45 + Math.sin(t * 0.001 + depth) * 0.05);
+        const nextOffset = rotOffset * 1.3 + (depth + 1) * 0.7;
+
+        drawRecursiveSpokes(cx, cy, nextR, bins, t, depth + 1, maxDepth, nextOffset);
     }
 
-    function animate() {
-        requestAnimationFrame(animate);
-        if (!analyser) return;
+    // --------------------------
+    // MAIN LOOP
+    // --------------------------
 
-        analyser.getByteFrequencyData(dataArray);
-        const t = performance.now() - startTime;
+    function render() {
+        requestAnimationFrame(render);
 
-        ctx.fillStyle = "rgba(0,0,0,0.15)";
+        analyser.getByteFrequencyData(data);
+        const t = performance.now() - start;
+
+        // Persistent trails
+        ctx.fillStyle = "rgba(0,0,0,0.08)";
         ctx.fillRect(0, 0, w, h);
 
         const cx = w / 2;
         const cy = h / 2;
 
-        const low = dataArray.slice(0, 32).reduce((a, b) => a + b, 0) / (32 * 255);
-        const baseR = Math.min(w, h) * (0.12 + low * 0.3);
+        const low = data[1] / 255;
+        const baseR = Math.min(w, h) * (0.12 + low * 0.2);
 
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(Math.sin(t * 0.0015) * 0.1);
-        ctx.translate(-cx, -cy);
-
-        drawDragonLayer(cx, cy, baseR, t, 0, 2, dataArray);
-
-        ctx.restore();
-
-        if (Math.random() < 0.06) {
-            const y = Math.random() * h;
-            const barH = 2 + Math.random() * 6;
-            ctx.globalAlpha = 0.2;
-
-            const img = ctx.getImageData(0, y, w, barH);
-            const offset = (Math.random() - 0.5) * 50;
-            ctx.putImageData(img, offset, y);
-
-            ctx.globalAlpha = 1;
-        }
+        drawRecursiveSpokes(cx, cy, baseR, data, t, 0, 3, 0.3);
     }
 })();
 </script>
