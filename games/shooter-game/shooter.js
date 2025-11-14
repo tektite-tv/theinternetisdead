@@ -1,4 +1,4 @@
-// Bananaman Shooter v0.6.1 — finalized audio hierarchy
+// Bananaman Shooter v0.6.1 — finalized audio hierarchy + pause menu (Esc)
 
 const bg = document.getElementById("bg");
 const g = bg.getContext("2d");
@@ -40,7 +40,11 @@ healthFill = document.getElementById("healthfill"),
 healthText = document.getElementById("healthtext"),
 menu = document.getElementById("menu"),
 deathOverlay = document.getElementById("deathOverlay"),
-restartBtn = document.getElementById("restartBtn");
+restartBtn = document.getElementById("restartBtn"),
+pauseOverlay = document.getElementById("pauseOverlay"),
+pauseResumeBtn = document.getElementById("pauseResume"),
+pauseRestartBtn = document.getElementById("pauseRestart"),
+pauseMenuBtn = document.getElementById("pauseToMenu");
 
 // === GRID ===
 let gridOffsetX = 0, gridOffsetY = 0, gridSpacing = 40, gridStatic = true;
@@ -86,10 +90,13 @@ function updatePlayer(dt){
   const speedMult = keys['shift'] ? 1.6 : 1;
   player.x += dx/m * player.speed * dt * speedMult;
   player.y += dy/m * player.speed * dt * speedMult;
+
   player.x = Math.max(player.size/2, Math.min(W-player.size/2, player.x));
   player.y = Math.max(player.size/2, Math.min(H-player.size/2, player.y));
-  if(player.invuln>0) player.invuln-=dt;
-  if(player.hitTimer>0) player.hitTimer-=dt;
+
+  if(player.hitTimer>0) player.hitTimer -= dt;
+  if(player.invuln>0) player.invuln -= dt;
+
   gridOffsetX -= dx*dt*player.speed*0.3;
   gridOffsetY -= dy*dt*player.speed*0.3;
 }
@@ -120,9 +127,8 @@ function shotgunPulse(){
 // === ENEMIES ===
 const enemies = [];
 function makeEnemy(){
-  const imgs = ['bananarama.gif','dancing-guy.gif','skeleton.gif','frog.gif','dragon.gif'];
-  const src = imgs[Math.floor(Math.random()*imgs.length)];
-  const img = new Image(); img.src = "/media/images/gifs/" + src;
+  const img = new Image();
+  img.src = "/media/images/gifs/bananaclone.gif";
   const s = 40 + Math.random()*100;
   const side = Math.floor(Math.random()*4);
   let x,y;
@@ -160,7 +166,7 @@ function checkCollisions(){
   for(let i=enemies.length-1;i>=0;i--){
     const e = enemies[i];
 
-    // Bullet collisions (enemy hit sound)
+    // bullet hit
     for(let j=bullets.length-1;j>=0;j--){
       const b = bullets[j];
       const dx=b.x-e.x, dy=b.y-e.y;
@@ -201,8 +207,8 @@ function applyDamage(d){
 
   // Player damage sound = oof.mp3
   const pain = oofSound.cloneNode();
-  pain.volume = 0.9;
-  pain.playbackRate = 0.9 + Math.random()*0.2;
+  pain.volume = 0.7;
+  pain.playbackRate = 0.95 + Math.random()*0.1;
   pain.play().catch(()=>{});
 
   // Red flash overlay
@@ -238,6 +244,47 @@ restartBtn.onclick = () => {
   state='menu';
 };
 
+// === PAUSE MENU BUTTONS ===
+function resumeFromPause(){
+  pauseOverlay.classList.remove('visible');
+  state = 'playing';
+  bgMusic.play().catch(()=>{});
+}
+
+if (pauseResumeBtn) {
+  pauseResumeBtn.onclick = () => {
+    if (state === 'paused') resumeFromPause();
+  };
+}
+if (pauseRestartBtn) {
+  pauseRestartBtn.onclick = () => {
+    // Full restart directly into gameplay
+    pauseOverlay.classList.remove('visible');
+    gridStatic = false;
+    bgMusic.currentTime = 0;
+    bgMusic.play().catch(()=>{});
+    kills = 0; wave = 1; damage = 0;
+    player.hp = 100; updateHealth();
+    enemies.length = 0; bullets.length = 0;
+    spawnWave();
+    startTime = performance.now();
+    state = 'playing';
+  };
+}
+if (pauseMenuBtn) {
+  pauseMenuBtn.onclick = () => {
+    // Return to main menu from pause
+    pauseOverlay.classList.remove('visible');
+    bgMusic.pause(); bgMusic.currentTime = 0;
+    player.hp = 100; updateHealth();
+    enemies.length = 0; bullets.length = 0;
+    kills = 0; wave = 1; damage = 0;
+    gridStatic = true; drawGrid();
+    menu.style.display = 'flex';
+    state = 'menu';
+  };
+}
+
 // === LOOP ===
 function update(dt){
   if(state!=='playing') return;
@@ -256,7 +303,24 @@ function update(dt){
 function loop(){requestAnimationFrame(loop);update(0.016);}loop();
 
 // === INPUT ===
-addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+
+  if (e.key === 'Escape' || k === 'escape') {
+    // Toggle pause only during active gameplay
+    if (state === 'playing') {
+      state = 'paused';
+      pauseOverlay.classList.add('visible');
+      bgMusic.pause();
+    } else if (state === 'paused') {
+      // Resume with Escape as well
+      pauseOverlay.classList.remove('visible');
+      state = 'playing';
+      bgMusic.play().catch(()=>{});
+    }
+  }
+});
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
 document.addEventListener('contextmenu',e=>e.preventDefault());
