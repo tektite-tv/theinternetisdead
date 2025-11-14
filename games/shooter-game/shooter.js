@@ -16,7 +16,7 @@ addEventListener("resize", () => {
 
 // === STATE ===
 let state = "menu", keys = {}, mouse = {x:W/2,y:H/2};
-let kills = 0, wave = 1, damage = 0, startTime = null;
+let kills = 0, wave = 1, damage = 0, startTime = null, pauseStart = null;
 
 // === PLAYER ===
 const playerImg = new Image();
@@ -40,7 +40,10 @@ healthFill = document.getElementById("healthfill"),
 healthText = document.getElementById("healthtext"),
 menu = document.getElementById("menu"),
 deathOverlay = document.getElementById("deathOverlay"),
-restartBtn = document.getElementById("restartBtn");
+restartBtn = document.getElementById("restartBtn"),
+pauseOverlay = document.getElementById("pauseOverlay"),
+resumeBtn = document.getElementById("resumeBtn"),
+pauseMenuBtn = document.getElementById("pauseMenuBtn");
 
 // === GRID ===
 let gridOffsetX = 0, gridOffsetY = 0, gridSpacing = 40, gridStatic = true;
@@ -228,15 +231,53 @@ function die(){
   deathOverlay.classList.add('visible');
 }
 
-restartBtn.onclick = () => {
+function returnToMenu(){
   deathOverlay.classList.remove('visible');
+  pauseOverlay.classList.remove('visible');
   menu.style.display='flex';
+  bgMusic.pause(); bgMusic.currentTime = 0;
   player.hp=100; updateHealth();
   enemies.length=0; bullets.length=0;
   kills=0; wave=1; damage=0;
+  timerEl.textContent = '0s';
+  startTime=null; pauseStart=null;
   gridStatic=true; drawGrid();
+  keys={};
+  updateHUD();
   state='menu';
+}
+
+restartBtn.onclick = () => {
+  returnToMenu();
 };
+
+resumeBtn.onclick = () => {
+  resumeGame();
+};
+
+pauseMenuBtn.onclick = () => {
+  returnToMenu();
+};
+
+function pauseGame(){
+  if(state !== 'playing') return;
+  state = 'paused';
+  pauseOverlay.classList.add('visible');
+  pauseStart = performance.now();
+  bgMusic.pause();
+  keys = {};
+}
+
+function resumeGame(){
+  if(state !== 'paused') return;
+  pauseOverlay.classList.remove('visible');
+  if(startTime && pauseStart){
+    startTime += performance.now() - pauseStart;
+  }
+  pauseStart = null;
+  state = 'playing';
+  bgMusic.play().catch(()=>{});
+}
 
 // === LOOP ===
 function update(dt){
@@ -256,7 +297,15 @@ function update(dt){
 function loop(){requestAnimationFrame(loop);update(0.016);}loop();
 
 // === INPUT ===
-addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+addEventListener('keydown',e=>{
+  if(e.key === 'Escape'){
+    if(state === 'playing'){ pauseGame(); }
+    else if(state === 'paused'){ resumeGame(); }
+    e.preventDefault();
+    return;
+  }
+  keys[e.key.toLowerCase()] = true;
+});
 addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
 document.addEventListener('contextmenu',e=>e.preventDefault());
@@ -269,24 +318,30 @@ addEventListener('mousedown',e=>{
 // === MENU BUTTONS ===
 document.getElementById('start').onclick = () => {
   menu.style.display='none';
+  pauseOverlay.classList.remove('visible');
   gridStatic=false;
   bgMusic.currentTime=0;
   bgMusic.play().catch(()=>{});
   kills=0; wave=1; damage=0;
   player.hp=100; updateHealth();
   enemies.length=0; spawnWave();
+  keys={};
   startTime=performance.now();
+  pauseStart=null;
   state='playing';
 };
 document.getElementById('bossMode').onclick = () => {
   menu.style.display='none';
+  pauseOverlay.classList.remove('visible');
   gridStatic=false;
   bgMusic.currentTime=0;
   bgMusic.play().catch(()=>{});
   kills=0; wave=6; damage=0;
   player.hp=100; updateHealth();
   enemies.length=0; spawnWave();
+  keys={};
   startTime=performance.now();
+  pauseStart=null;
   state='playing';
 };
 
