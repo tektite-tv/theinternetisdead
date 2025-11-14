@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Neon Dragon Glitchcore Visualizer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    :root {
+        --bg: #020016;
+        --accent: #00f6ff;
+        --accent-2: #ff00ff;
+        --accent-3: #ffea00;
+        --scanline-opacity: 0.06;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(circle at 20% 20%, #200030 0, #020008 40%, #000000 100%);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #eee;
+    }
+
+    body {
+        position: relative;
+    }
+
+    /* Canvas fills screen */
+    #viz {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        display: block;
+        background: transparent;
+        z-index: 0;
+    }
+
+    /* Scanline + noise overlay */
+    .scanlines {
+        pointer-events: none;
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        mix-blend-mode: soft-light;
+        opacity: 0.8;
+    }
+
+    .scanlines::before,
+    .scanlines::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+    }
+
+    .scanlines::before {
+        background-image:
+            repeating-linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, var(--scanline-opacity)) 0px,
+                rgba(255, 255, 255, var(--scanline-opacity)) 1px,
+                transparent 2px,
+                transparent 4px
+            );
+    }
+
+    .scanlines::after {
+        background-image:
+            radial-gradient(circle at 10% 20%, rgba(255,0,255,0.05) 0, transparent 60%),
+            radial-gradient(circle at 80% 80%, rgba(0,255,255,0.05) 0, transparent 60%);
+        mix-blend-mode: color-dodge;
+        animation: drift 20s linear infinite alternate;
+    }
+
+    @keyframes drift {
+        0% { transform: translate(-2%, -2%) scale(1.02); }
+        100% { transform: translate(2%, 2%) scale(1.05); }
+    }
+
+    /* UI overlay */
+    .ui {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        pointer-events: none;
+    }
+
+    .panel {
+        pointer-events: auto;
+        background: rgba(5, 0, 25, 0.9);
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow:
+            0 0 20px rgba(0,0,0,0.7),
+            0 0 40px rgba(0,255,255,0.15),
+            0 0 80px rgba(255,0,255,0.2);
+        padding: 18px 22px;
+        max-width: 420px;
+        width: min(90vw, 420px);
+        backdrop-filter: blur(18px);
+        transform: translateY(0);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .panel.hidden {
+        opacity: 0;
+        transform: translateY(20px);
+        pointer-events: none;
+    }
+
+    .title {
+        font-size: 1.1rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        color: var(--accent);
+        text-shadow: 0 0 8px rgba(0,255,255,0.8);
+    }
+
+    .glitch-title {
+        position: relative;
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        color: #f9f9ff;
+        overflow: hidden;
+    }
+
+    .glitch-title span {
+        position: absolute;
+        inset: 0;
+        mix-blend-mode: screen;
+    }
+
+    .glitch-title span:nth-child(1) {
+        color: var(--accent-2);
+        transform: translateX(-1px);
+        animation: glitchX 2.1s infinite;
+    }
+
+    .glitch-title span:nth-child(2) {
+        color: var(--accent-3);
+        transform: translateX(1px);
+        animation: glitchY 1.7s infinite;
+    }
+
+    .glitch-title span:nth-child(3) {
+        position: relative;
+        color: #fff;
+    }
+
+    @keyframes glitchX {
+        0%, 100% { transform: translateX(-1px); }
+        20% { transform: translateX(-3px); }
+        40% { transform: translateX(-1px); }
+        60% { transform: translateX(-4px); }
+        80% { transform: translateX(-2px); }
+    }
+
+    @keyframes glitchY {
+        0%, 100% { transform: translateX(1px); }
+        20% { transform: translateX(3px); }
+        40% { transform: translateX(1px); }
+        60% { transform: translateX(4px); }
+        80% { transform: translateX(2px); }
+    }
+
+    .desc {
+        font-size: 0.8rem;
+        line-height: 1.4;
+        color: #bbb;
+        margin-bottom: 14px;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 6px;
+        flex-wrap: wrap;
+    }
+
+    button {
+        flex: 1;
+        min-width: 0;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.2);
+        background: radial-gradient(circle at 0 0, rgba(0,255,255,0.3), rgba(255,0,255,0.3), rgba(0,0,0,0.9));
+        color: #fff;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        cursor: pointer;
+        outline: none;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    button::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg,
+            rgba(255,255,255,0.1),
+            transparent,
+            rgba(255,255,255,0.2)
+        );
+        transform: translateX(-100%);
+        transition: transform 0.4s ease;
+        opacity: 0.8;
+    }
+
+    button:hover::after {
+        transform: translateX(0%);
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 18px rgba(0,255,255,0.5);
+        border-color: rgba(255,255,255,0.5);
+    }
+
+    button:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: 0 0 6px rgba(0,0,0,0.8);
+    }
+
+    .hint {
+        font-size: 0.7rem;
+        color: #888;
+    }
+
+    .hint strong {
+        color: var(--accent-2);
+    }
+
+    .status {
+        font-size: 0.75rem;
+        margin-top: 4px;
+        color: #aaa;
+    }
+
+    .status.error {
+        color: #ff6b8b;
+    }
+
+    .status.ok {
+        color: #8bffbf;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="viz"></canvas>
+<div class="scanlines"></div>
+
+<div class="ui">
+    <div class="panel" id="panel">
+        <div class="title">Neon Recursive Audio Dragon</div>
+        <div class="glitch-title">
+            <span>DRAGON</span>
+            <span>DRAGON</span>
+            <span>DRAGON</span>
+        </div>
+        <p class="desc">
+            Click below, share your <strong>entire screen with audio</strong>, and let the
+            glitchcore fractal dragon feast on your desktop sound.
+        </p>
+        <div class="btn-row">
+            <button id="captureBtn">Capture System Audio</button>
+            <button id="micBtn">Use Microphone</button>
+        </div>
+        <p class="hint">
+            If system audio capture fails, your browser / OS is being boring.  
+            Try Chromium-based, share full screen, enable <strong>“Share system audio”</strong>.
+        </p>
+        <p class="status" id="statusText">Idle. No dragon snacks yet.</p>
+    </div>
+</div>
+
+<script>
+(() => {
+    const canvas = document.getElementById("viz");
+    const ctx = canvas.getContext("2d");
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resize);
+
+    const captureBtn = document.getElementById("captureBtn");
+    const micBtn = document.getElementById("micBtn");
+    const panel = document.getElementById("panel");
+    const statusText = document.getElementById("statusText");
+
+    let audioCtx = null;
+    let analyser = null;
+    let dataArray = null;
+    let running = false;
+    let startTime = performance.now();
+    let streamRef = null;
+
+    function setStatus(msg, type = "") {
+        statusText.textContent = msg;
+        statusText.className = "status" + (type ? " " + type : "");
+    }
+
+    async function initAudioFromStream(stream) {
+        if (audioCtx == null) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === "suspended") {
+            await audioCtx.resume();
+        }
+
+        const source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.85;
+
+        source.connect(analyser);
+
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+
+        streamRef = stream;
+        running = true;
+        panel.classList.add("hidden");
+        setStatus("Visualizer running. Dragon is listening.", "ok");
+        startTime = performance.now();
+        draw();
+    }
+
+    async function startSystemAudio() {
+        try {
+            setStatus("Requesting desktop capture...", "");
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                audio: true,
+                video: true
+            });
+
+            // We don't need the video; stop video tracks to save resources
+            stream.getVideoTracks().forEach(track => track.stop());
+
+            await initAudioFromStream(stream);
+        } catch (err) {
+            console.error(err);
+            setStatus("Failed to capture system audio: " + err.message, "error");
+        }
+    }
+
+    async function startMicAudio() {
+        try {
+            setStatus("Requesting microphone...", "");
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: false
+            });
+            await initAudioFromStream(stream);
+        } catch (err) {
+            console.error(err);
+            setStatus("Failed to capture microphone: " + err.message, "error");
+        }
+    }
+
+    captureBtn.addEventListener("click", startSystemAudio);
+    micBtn.addEventListener("click", startMicAudio);
+
+    // Visualizer: recursive-ish neon spiral "dragon"
+    function drawDragonLayer(cx, cy, radiusBase, time, depth, maxDepth, freqSlice) {
+        if (depth > maxDepth) return;
+
+        const points = 120;
+        const angleOffset = time * (0.0003 * (depth + 1));
+        const twist = (Math.PI * 2) * (0.3 + depth * 0.12);
+
+        for (let i = 0; i < points; i++) {
+            const t = i / points;
+            const idx = Math.floor(t * freqSlice.length);
+            const amp = freqSlice[idx] / 255;
+            const spiralRadius = radiusBase * (0.4 + t * 1.5 + amp * 1.1);
+
+            const angle = t * twist + angleOffset * (depth % 2 === 0 ? 1 : -1);
+
+            const x = cx + Math.cos(angle) * spiralRadius;
+            const y = cy + Math.sin(angle) * spiralRadius;
+
+            const hue = (time * 0.02 + t * 360 + depth * 60) % 360;
+            const sat = 70 + amp * 30;
+            const light = 30 + amp * 50;
+            const alpha = 0.35 + amp * 0.5;
+
+            ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${light}%, ${alpha})`;
+            ctx.lineWidth = 1.3 + amp * 3.5;
+
+            const jitterX = (Math.random() - 0.5) * (depth + 1) * 1.3;
+            const jitterY = (Math.random() - 0.5) * (depth + 1) * 1.3;
+
+            ctx.beginPath();
+            ctx.moveTo(cx + jitterX, cy + jitterY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        // Recursive call: scale radius, tweak time
+        drawDragonLayer(
+            cx,
+            cy,
+            radiusBase * 0.68,
+            time * 1.07 + depth * 1337,
+            depth + 1,
+            maxDepth,
+            freqSlice
+        );
+    }
+
+    function draw() {
+        if (!running || !analyser) return;
+
+        requestAnimationFrame(draw);
+
+        analyser.getByteFrequencyData(dataArray);
+        const now = performance.now();
+        const t = now - startTime;
+
+        // Slight blur / persistence for trails
+        ctx.fillStyle = "rgba(0, 0, 0, 0.18)";
+        ctx.fillRect(0, 0, width, height);
+
+        const cx = width / 2;
+        const cy = height / 2;
+
+        // Soft vignette overlay
+        const gradient = ctx.createRadialGradient(
+            cx, cy, 0,
+            cx, cy, Math.max(width, height) * 0.8
+        );
+        gradient.addColorStop(0, "rgba(0,0,0,0)");
+        gradient.addColorStop(1, "rgba(0,0,0,0.6)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        // Slice frequency data to a reasonable chunk for drawing
+        const sliceSize = 256;
+        const freqSlice = dataArray.slice(0, sliceSize);
+
+        // Base pulse from low frequencies
+        let lowEnergy = 0;
+        const lowCount = 32;
+        for (let i = 0; i < lowCount; i++) lowEnergy += freqSlice[i] || 0;
+        lowEnergy /= lowCount * 255;
+
+        const radiusBase = Math.min(width, height) * (0.12 + lowEnergy * 0.25);
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        const wobble = Math.sin(t * 0.0015) * 0.1;
+        ctx.rotate(wobble);
+        ctx.translate(-cx, -cy);
+
+        drawDragonLayer(cx, cy, radiusBase, t, 0, 2, freqSlice);
+
+        ctx.restore();
+
+        // Occasional glitch bars
+        if (Math.random() < 0.07) {
+            const barY = Math.random() * height;
+            const barH = 2 + Math.random() * 8;
+            ctx.globalAlpha = 0.18 + Math.random() * 0.18;
+
+            const imgData = ctx.getImageData(0, barY, width, barH);
+            const offset = (Math.random() - 0.5) * width * 0.15;
+
+            ctx.putImageData(imgData, offset, barY);
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // Clean up when page is closed
+    window.addEventListener("beforeunload", () => {
+        if (streamRef) {
+            streamRef.getTracks().forEach(track => track.stop());
+        }
+        if (audioCtx && audioCtx.state !== "closed") {
+            audioCtx.close();
+        }
+    });
+})();
+</script>
+
+</body>
+</html>
