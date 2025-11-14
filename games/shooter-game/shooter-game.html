@@ -12,7 +12,7 @@
   <canvas id="game"></canvas>
 
   <!-- HUD -->
-  <div id="hud-stats" class="hud" style="top:10px;left:10px;">Kills: <span id="kills">0</span> | Wave: <span id="wave">0</span></div>
+  <div id="hud-stats" class="hud" style="top:10px;left:10px;">Ki...<span id="kills">0</span> | Wave: <span id="wave">0</span></div>
   <div id="hud-top" class="hud" style="top:10px;right:10px;display:flex;gap:10px;">
     <div>Damage: <span id="damage">0</span></div><div>Time: <span id="timer">0s</span></div>
   </div>
@@ -33,6 +33,16 @@
   <div id="deathOverlay">
     <div>You Died</div>
     <button id="restartBtn">Return to Menu</button>
+  </div>
+
+  <!-- Pause Overlay -->
+  <div id="pauseOverlay">
+    <div class="pause-box">
+      <h2 class="pause-title">Paused</h2>
+      <button id="pauseResume" class="btn yellow">Resume</button>
+      <button id="pauseRestart" class="btn">Restart Game</button>
+      <button id="pauseToMenu" class="btn red">Main Menu</button>
+    </div>
   </div>
 
   <script src="shooter.js"></script>
