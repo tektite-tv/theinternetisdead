@@ -2,152 +2,109 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Hyper-Möbius Infinite Tunnel</title>
+<title>Fractal Bloom Engine</title>
 <style>
     body {
         margin: 0;
         background: black;
-        color: white;
         overflow: hidden;
-        display: flex;
-        flex-direction: column;
     }
-
-    #controls {
-        width: 100%;
-        background: rgba(20,20,20,0.9);
-        padding: 15px;
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        position: fixed;
-        bottom: 0;
+    canvas {
+        position: absolute;
+        top: 0;
         left: 0;
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-        backdrop-filter: blur(6px);
     }
-
-    .slider-block {
-        width: 25%;
-        text-align: center;
-        font-family: sans-serif;
-    }
-
-    button {
-        padding: 10px 20px;
-        font-size: 16px;
-        cursor: pointer;
-        border: none;
-        border-radius: 6px;
-        background: #ff0099;
-        color: white;
-    }
-
-    input[type="range"] { width: 100%; }
-    canvas { flex: 1; }
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
 
-<div id="controls">
-    <div class="slider-block">
-        <label>Squares</label><br>
-        <input type="range" id="squareSlider" min="1" max="60" value="30">
-    </div>
-
-    <button id="hyperButton">Hyper-Möbius: OFF</button>
-
-    <div class="slider-block">
-        <label>Size</label><br>
-        <input type="range" id="sizeSlider" min="0.05" max="1.0" step="0.01" value="0.42">
-    </div>
-</div>
-
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
-const squareSlider = document.getElementById("squareSlider");
-const sizeSlider = document.getElementById("sizeSlider");
-const hyperButton = document.getElementById("hyperButton");
-
 function resize() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - 80;
+    canvas.height = window.innerHeight;
 }
 resize();
 window.onresize = resize;
 
-let spinAngle = 0;
-let hyperMode = false;
-let zoomFactor = 1;
-const zoomSpeed = 0.006;
+// ===== FRACTAL CONFIGURATION =====
+const baseColors = ["red", "green", "blue"];
+const shrinkFactor = 0.65;      // B: Medium shrink
+const twist = Math.PI / 12;     // rotation per generation
+const generations = 12;         // recursion depth
+let zoom = 1;
+const zoomSpeed = 0.004;        // outward zoom
 
-const recursionDepth = 10;
-const recursionScale = 0.72;
-const twistPerLevel = 0.18;
+// ===== DRAW A SINGLE SQUARE =====
+function drawSquare(size, angle, color) {
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(angle);
 
-const colors = ["red", "green", "blue"];
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.rect(-size/2, -size/2, size, size);
+    ctx.stroke();
 
-function drawLayer(count, sizeScale, angleOffset) {
-    const size = Math.min(canvas.width, canvas.height) * sizeScale;
-    for (let i = 0; i < count; i++) {
-        const rot = (i * Math.PI * 2) / 60 + angleOffset;
-        const color = colors[i % 3];
+    ctx.restore();
+}
+
+// ===== DRAW FRACTAL RECURSIVELY =====
+function drawFractal(size, angle, depth) {
+    if (depth === 0 || size < 1) return;
+
+    // draw square
+    drawSquare(size, angle, baseColors[depth % 3]);
+
+    // compute child size + angle
+    const newSize = size * shrinkFactor;
+
+    // vertices of the square in parent's coordinate system
+    const verts = [
+        [ size/2,  size/2],
+        [-size/2,  size/2],
+        [-size/2, -size/2],
+        [ size/2, -size/2]
+    ];
+
+    // for each vertex: spawn child fractal
+    for (let i = 0; i < 4; i++) {
 
         ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(rot);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.rect(-size/2, -size/2, size, size);
-        ctx.stroke();
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.rotate(angle);
+
+        // move to vertex
+        ctx.translate(verts[i][0], verts[i][1]);
+
+        // draw the recursive child at this vertex
+        ctx.translate(-canvas.width/2, -canvas.height/2);
+        drawFractal(newSize, angle + twist, depth - 1);
+
         ctx.restore();
     }
 }
 
-function drawHyper(count, baseScale, angleOffset) {
-    let scale = baseScale;
-    let angle = angleOffset;
-
-    for (let i = 0; i < recursionDepth; i++) {
-        drawLayer(count, scale, angle);
-
-        scale *= recursionScale;      // shrink inward
-        angle += twistPerLevel;       // twist as it recurses
-    }
-}
-
+// ===== ANIMATION LOOP =====
 function animate() {
-    spinAngle += 0.002;
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const count = parseInt(squareSlider.value);
-    let scale = parseFloat(sizeSlider.value);
+    zoom += zoomSpeed;
 
-    if (hyperMode) {
-        scale *= zoomFactor;
-        zoomFactor += zoomSpeed;
-        if (zoomFactor > 12) zoomFactor = 0.3;
+    const initialSize = 20 * zoom;
+    const initialAngle = performance.now() * 0.0002;
 
-        drawHyper(count, scale, spinAngle);
-    } else {
-        drawLayer(count, scale, spinAngle);
-    }
+    drawFractal(initialSize, initialAngle, generations);
 
     requestAnimationFrame(animate);
 }
-animate();
 
-hyperButton.addEventListener("click", () => {
-    hyperMode = !hyperMode;
-    zoomFactor = 1;
-    hyperButton.textContent = "Hyper-Möbius: " + (hyperMode ? "ON" : "OFF");
-});
+animate();
 </script>
 
 </body>
