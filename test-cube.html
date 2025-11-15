@@ -54,7 +54,7 @@ window.addEventListener('touchmove', e => {
   swipeY = (t.clientY - touchStart.y) * 0.2;
 });
 
-// optional: also allow mouse drag to warp it, because fingers are overrated
+// mouse drag warp
 let mouseDown = false;
 let mouseStart = null;
 window.addEventListener('mousedown', e => {
@@ -71,7 +71,7 @@ window.addEventListener('mouseup', () => {
   mouseStart = null;
 });
 
-// original scanline animation, unchanged
+// psychedelic scanline animation
 function drawScanlines(time) {
   const freq = 0.005;
   for (let y = 0; y < h; y += 3) {
@@ -93,65 +93,45 @@ function drawScanlines(time) {
   }
 }
 
-// compute isometric cube faces as 3 parallelograms
+// FIXED — clean, proper isometric cube geometry
 function computeCube() {
   const cx = w / 2;
   const cy = h / 2;
-  const s = Math.min(w, h) * 0.25; // cube edge length
+  const s = Math.min(w, h) * 0.25;
 
-  const angle = Math.PI / 6; // 30 degrees for classic iso
-  const right = {
-    x: Math.cos(angle) * s,
-    y: Math.sin(angle) * s
-  };
-  const left = {
-    x: -Math.cos(angle) * s,
-    y: Math.sin(angle) * s
-  };
-  const v = { x: 0, y: s }; // vertical down
+  const angle = Math.PI / 6;
+  const dx = Math.cos(angle) * s;
+  const dy = Math.sin(angle) * s;
 
-  // Start with front-left-top at (0,0), then shift to center
+  // cube anchor (top center)
+  const top = { x: cx, y: cy - s * 0.4 };
 
-  let FLT = { x: 0, y: 0 };
-  let FRT = { x: FLT.x + right.x, y: FLT.y + right.y };
-  let BLT = { x: FLT.x + left.x,  y: FLT.y + left.y };
-  let BRT = { x: BLT.x + right.x, y: BLT.y + right.y };
-  let FLB = { x: FLT.x + v.x,     y: FLT.y + v.y };
-  let BLB = { x: BLT.x + v.x,     y: BLT.y + v.y };
-  let FRB = { x: FRT.x + v.x,     y: FRT.y + v.y };
-  let BRB = { x: BRT.x + v.x,     y: BRT.y + v.y };
+  // directions
+  const up = { x: 0, y: -s };
+  const right = { x: dx, y: dy };
+  const left = { x: -dx, y: dy };
+  const down = { x: 0, y: s };
 
-  const pts = [FLT,FRT,BLT,BRT,FLB,BLB,FRB,BRB];
-  let minX = Infinity, maxX = -Infinity;
-  let minY = Infinity, maxY = -Infinity;
-  for (const p of pts) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2;
-  const dx = cx - centerX;
-  const dy = cy - centerY;
+  // top face corners
+  const A = { x: top.x + left.x, y: top.y + left.y };
+  const B = { x: top.x + right.x, y: top.y + right.y };
+  const C = { x: B.x, y: B.y + s };
+  const D = { x: A.x, y: A.y + s };
 
-  function shift(p) {
-    return { x: p.x + dx, y: p.y + dy };
-  }
-
-  FLT = shift(FLT);
-  FRT = shift(FRT);
-  BLT = shift(BLT);
-  BRT = shift(BRT);
-  FLB = shift(FLB);
-  BLB = shift(BLB);
-  FRB = shift(FRB);
-  BRB = shift(BRB);
-
-  // 3 parallelogram faces
-  topFace = [FLT, FRT, BRT, BLT];
-  leftFace = [FLT, BLT, BLB, FLB];
-  rightFace = [FRT, BRT, BRB, FRB];
+  // assign faces
+  topFace = [A, B, top, top];
+  leftFace = [
+    A,
+    D,
+    { x: D.x, y: D.y + s },
+    { x: A.x, y: A.y + s }
+  ];
+  rightFace = [
+    B,
+    C,
+    { x: C.x, y: C.y + s },
+    { x: B.x, y: B.y + s }
+  ];
 }
 
 function drawFace(face, time) {
@@ -165,7 +145,6 @@ function drawFace(face, time) {
   ctx.closePath();
   ctx.clip();
 
-  // fill with the same scanline animation as the original canvas
   drawScanlines(time);
 
   ctx.restore();
@@ -187,19 +166,17 @@ function strokeFace(face, color = 'white', width = 2) {
 }
 
 function animate(time) {
-  // fade the whole canvas slightly for trail effect
   ctx.fillStyle = "rgba(0,0,0,0.15)";
   ctx.fillRect(0, 0, w, h);
 
-  // draw cube faces back-to-front-ish
+  // correct drawing order (back → front)
   drawFace(leftFace, time);
   drawFace(rightFace, time);
   drawFace(topFace, time);
 
-  // outline cube so your poor human eyes can see it
-  strokeFace(leftFace, 'white', 2);
-  strokeFace(rightFace, 'white', 2);
-  strokeFace(topFace, 'white', 2);
+  strokeFace(leftFace);
+  strokeFace(rightFace);
+  strokeFace(topFace);
 
   requestAnimationFrame(animate);
 }
