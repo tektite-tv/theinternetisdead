@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CRT Starfield Dragon Visualizer</title>
+<title>CRT Void Dragon Visualizer</title>
 <style>
     html,body{
         margin:0;
@@ -48,42 +48,34 @@
         box-shadow:0 0 12px rgba(0,255,255,0.7);
     }
     input{display:none;}
-    #hint{
-        margin-top:8px;
-        font-size:0.8rem;
-        color:#aaa;
-    }
+
     /* CRT overlay */
     #crt{
         pointer-events:none;
         position:fixed;
         inset:0;
-        z-index:15;
+        z-index:25;
         mix-blend-mode:soft-light;
     }
-    #crt::before,
-    #crt::after{
+    #crt::before{
         content:"";
         position:absolute;
         inset:0;
-    }
-    /* scanlines */
-    #crt::before{
         background:
             repeating-linear-gradient(
                 to bottom,
-                rgba(255,255,255,0.04) 0px,
-                rgba(255,255,255,0.04) 1px,
+                rgba(255,255,255,0.03) 0px,
+                rgba(255,255,255,0.03) 1px,
                 transparent 2px,
                 transparent 3px
             );
     }
-    /* vignette */
     #crt::after{
+        content:"";
+        position:absolute;
+        inset:0;
         background:
-            radial-gradient(circle at 50% 10%, rgba(255,255,255,0.05), transparent 55%),
-            radial-gradient(circle at 50% 90%, rgba(255,255,255,0.02), transparent 60%),
-            radial-gradient(circle at 50% 50%, transparent 0%, transparent 55%, rgba(0,0,0,0.8) 100%);
+            radial-gradient(circle at 50% 50%, transparent 0%, transparent 55%, rgba(0,0,0,0.85) 100%);
         mix-blend-mode:multiply;
     }
 </style>
@@ -91,256 +83,332 @@
 <body>
 
 <canvas id="c"></canvas>
+<canvas id="r"></canvas> <!-- RORSCHACH layer -->
 <div id="crt"></div>
 
 <div id="ui">
-    <h2 style="margin:0 0 8px;">CRT Starfield Dragon</h2>
+    <h2 style="margin:0 0 8px;">CRT Void Dragon</h2>
     <p style="margin:0 0 14px;font-size:0.9rem;color:#cfd9ff;">
-        Upload an audio file and drift into the void.<br>
-        Cooler colors, less retina assault.
+        Upload audio. VHS mirror void awaits.
     </p>
     <button id="uploadBtn">Choose Audio</button>
     <input type="file" id="fileInput" accept="audio/*">
-    <div id="hint">Tip: darker tracks look extra cursed.</div>
+    <div style="margin-top:8px;font-size:0.8rem;color:#aaa;">It will look cursed. That's intended.</div>
 </div>
 
 <script>
 (() => {
     const canvas = document.getElementById("c");
     const ctx = canvas.getContext("2d");
-    let w = canvas.width = innerWidth;
-    let h = canvas.height = innerHeight;
 
-    addEventListener("resize", () => {
-        w = canvas.width = innerWidth;
-        h = canvas.height = innerHeight;
-        initStars();
-    });
+    const rCanvas = document.getElementById("r");
+    const rctx = rCanvas.getContext("2d");
+
+    function resizeAll() {
+        canvas.width = rCanvas.width = window.innerWidth;
+        canvas.height = rCanvas.height = window.innerHeight;
+    }
+    resizeAll();
+    window.addEventListener('resize', resizeAll);
 
     const ui = document.getElementById("ui");
     const uploadBtn = document.getElementById("uploadBtn");
     const fileInput = document.getElementById("fileInput");
     uploadBtn.onclick = () => fileInput.click();
 
-    let audioCtx, analyser, source, data;
+    let audioCtx, analyser, data, source;
     let start = 0;
 
     // -----------------------------
-    // STARFIELD
+    // VHS RORSCHACH VOID
     // -----------------------------
-    const STAR_COUNT_BASE = 320;
-    let stars = [];
+    let rWidth = 320; // low-res buffer for VHS effect
+    let rHeight = 180;
+    const rBuf = document.createElement('canvas');
+    rBuf.width = rWidth;
+    rBuf.height = rHeight;
+    const rBufCtx = rBuf.getContext('2d');
 
+    function drawRorschach(bins, t) {
+        const L = bins.length;
+        const mid = bins[Math.floor(L*0.35)]/255;
+        const hi  = bins[Math.floor(L*0.7)]/255;
+
+        // VHS drift
+        const drift = Math.sin(t*0.002)*3;
+
+        const img = rBufCtx.getImageData(0,0,rWidth,rHeight);
+        const d = img.data;
+        const cx = rWidth/2;
+        const cy = rHeight/2;
+
+        // grain amount
+        const grain = 0.15 + hi*0.25;
+
+        for (let y=0; y<rHeight; y++) {
+            const dy = y - cy + Math.sin((y+t*0.01)*0.05)*4*mid;
+            for (let x=0; x<rWidth/2; x++) {
+                const dx = (x - cx/2) + drift;
+
+                // VHS-like wobbly sin noise
+                const n = (
+                    Math.sin((dx)*0.04 + t*0.0008) +
+                    Math.sin((dy)*0.035 - t*0.0005) +
+                    Math.sin((dx+dy)*0.015 + t*0.0011)
+                ) * 0.5;
+
+                let v = Math.abs(n);
+                v = Math.pow(v, 1.5 - mid*0.4);
+
+                // glitch-lines
+                const glitch = (Math.random()<0.005+hi*0.01) ? (Math.random()*0.6) : 0;
+                v += glitch;
+
+                // grain
+                v += (Math.random()*grain - grain*0.5);
+
+                // color grading
+                const hue = (200 + v*180 + hi*80) % 360;
+                const sat = 20 + v*40;
+                const lit = 5 + v*35;
+
+                const rgb = hslToRgb(hue/360, sat/100, lit/100);
+
+                const idxL = (y*rWidth + x)*4;
+                const idxR = (y*rWidth + (rWidth-x-1))*4;
+
+                d[idxL]   = rgb[0];
+                d[idxL+1] = rgb[1];
+                d[idxL+2] = rgb[2];
+                d[idxL+3] = 255;
+
+                d[idxR]   = rgb[0];
+                d[idxR+1] = rgb[1];
+                d[idxR+2] = rgb[2];
+                d[idxR+3] = 255;
+            }
+        }
+        rBufCtx.putImageData(img,0,0);
+
+        // scale up to full res with smoothing
+        rctx.save();
+        rctx.globalAlpha = 0.85;
+        rctx.imageSmoothingEnabled = true;
+        rctx.clearRect(0,0,canvas.width,canvas.height);
+        rctx.drawImage(rBuf, 0,0, canvas.width,canvas.height);
+        rctx.restore();
+    }
+
+    function hslToRgb(h,s,l){
+        if (s===0) return [l*255,l*255,l*255];
+        const hue2rgb=(p,q,t)=>{
+            if(t<0)t+=1;if(t>1)t-=1;
+            if(t<1/6)return p+(q-p)*6*t;
+            if(t<1/2)return q;
+            if(t<2/3)return p+(q-p)*(2/3-t)*6;
+            return p;
+        };
+        const q=l<0.5?l*(1+s):l+s-l*s;
+        const p=2*l-q;
+        const r=hue2rgb(p,q,h+1/3);
+        const g=hue2rgb(p,q,h);
+        const b=hue2rgb(p,q,h-1/3);
+        return [r*255,g*255,b*255];
+    }
+
+    // -----------------------------
+    // STARFIELD (same but tuned for darkness)
+    // -----------------------------
+    const STAR_COUNT = 260;
+    let stars = [];
     function initStars() {
-        const count = STAR_COUNT_BASE;
         stars = [];
-        const cx = w/2;
-        const cy = h/2;
-        for (let i = 0; i < count; i++) {
+        const cx = canvas.width/2;
+        const cy = canvas.height/2;
+        for(let i=0;i<STAR_COUNT;i++){
             const angle = Math.random()*Math.PI*2;
-            const dist = Math.random()*Math.max(w,h)*0.5;
-            const x = cx + Math.cos(angle)*dist;
-            const y = cy + Math.sin(angle)*dist;
+            const dist = Math.random()*Math.max(canvas.width,canvas.height)*0.5;
             stars.push({
                 angle,
                 dist,
-                x,
-                y,
-                px:x,
-                py:y,
-                depth:Math.random(),         // 0 = close, 1 = far
-                flicker:Math.random()*Math.PI*2
+                depth:Math.random(),
+                flicker:Math.random()*Math.PI*2,
+                px:cx,py:cy,x:cx,y:cy
             });
         }
     }
     initStars();
 
-    function updateAndDrawStars(low, mid, hi, t) {
-        const cx = w/2;
-        const cy = h/2;
-        const speedBase = 0.25 + low*0.6;
-        const streakScale = 0.8 + hi*2.0;
-        const colorShift = hi*80;
+    function drawStars(low, mid, hi, t){
+        const cx = canvas.width/2;
+        const cy = canvas.height/2;
 
         ctx.save();
-        ctx.lineCap = "round";
+        ctx.lineCap="round";
 
-        for (let s of stars) {
-            s.px = s.x;
-            s.py = s.y;
+        const speed = 0.15 + low*0.5;
+        const streak = 0.5 + hi*2.0;
 
-            const layerSpeed = speedBase*(0.3 + (1-s.depth)*1.5);
-            s.dist += layerSpeed;
+        for (let s of stars){
+            s.px = s.x; s.py = s.y;
 
-            const maxDist = Math.max(w,h)*0.8;
-            if (s.dist > maxDist) {
-                // respawn near center
+            const layer = speed*(0.25 + (1-s.depth)*1.2);
+            s.dist += layer;
+
+            const maxDist = Math.max(canvas.width,canvas.height)*0.75;
+            if(s.dist>maxDist){
                 s.dist = Math.random()*40;
                 s.angle = Math.random()*Math.PI*2;
-                s.px = cx;
-                s.py = cy;
             }
 
-            const jitter = (mid*0.15) * (Math.sin(t*0.002 + s.flicker)*0.5);
-            const angle = s.angle + jitter;
+            const jitter = mid*0.1*Math.sin(t*0.003+s.flicker);
+            const ang = s.angle + jitter;
 
-            s.x = cx + Math.cos(angle)*s.dist;
-            s.y = cy + Math.sin(angle)*s.dist;
+            s.x = cx + Math.cos(ang)*s.dist;
+            s.y = cy + Math.sin(ang)*s.dist;
 
-            const brightness = 0.3 + (1-s.depth)*0.7 + hi*0.3;
-            const hue = 190 + (1-s.depth)*40 + colorShift; // teal/blue
-            const sat = 40 + hi*30;
-            const light = 35 + brightness*35;
+            const hue = (190 + (1-s.depth)*40 + hi*60) % 360;
+            const sat = 30 + hi*30;
+            const light = 35 + (1-s.depth)*40 + mid*10;
 
-            ctx.strokeStyle = `hsla(${hue%360},${sat}%,${light}%,${0.35 + hi*0.25})`;
-            ctx.lineWidth = (1-s.depth)*1.8;
+            ctx.strokeStyle=`hsla(${hue},${sat}%,${light}%,${0.3+hi*0.25})`;
+            ctx.lineWidth=(1-s.depth)*1.4;
 
             ctx.beginPath();
-            ctx.moveTo(s.px, s.py);
-            const sx = cx + Math.cos(angle)*(s.dist - streakScale*6*(1-s.depth));
-            const sy = cy + Math.sin(angle)*(s.dist - streakScale*6*(1-s.depth));
-            ctx.lineTo(sx, sy);
+            ctx.moveTo(s.px,s.py);
+            const sx = cx + Math.cos(ang)*(s.dist - streak*4*(1-s.depth));
+            const sy = cy + Math.sin(ang)*(s.dist - streak*4*(1-s.depth));
+            ctx.lineTo(sx,sy);
             ctx.stroke();
         }
+
         ctx.restore();
     }
 
     // -----------------------------
-    // FRACTAL WHEEL (cooler palette)
+    // FRACTAL REACTOR (cooler palette)
     // -----------------------------
-    function drawWheel(cx, cy, radius, bins, t, depth, maxDepth, rotOffset, phase) {
-        if (depth > maxDepth) return;
+    function drawWheel(cx,cy,r,bins,t,d,maxD,rot,phase){
+        if(d>maxD) return;
 
-        const count = bins.length;
-        const spokes = 220;
+        const spokes=200;
+        const L=bins.length;
 
-        for (let i = 0; i < spokes; i++) {
-            const p = i / spokes;
-            const idx = Math.floor(p * count);
-            const amp = bins[idx] / 255;
+        for(let i=0;i<spokes;i++){
+            const p=i/spokes;
+            const idx=Math.floor(p*L);
+            const amp=bins[idx]/255;
 
-            const len = radius * (1 + amp*1.8*(depth+1));
-            const angle = p*Math.PI*2 + rotOffset + phase + t*(0.00035 + depth*0.00004);
+            const len = r*(1 + amp*1.6*(d+1));
+            const a = p*Math.PI*2 + rot + phase + t*(0.00032+d*0.00004);
+            const x = cx + Math.cos(a)*len;
+            const y = cy + Math.sin(a)*len;
 
-            const x = cx + Math.cos(angle)*len;
-            const y = cy + Math.sin(angle)*len;
+            const hue = (190 + p*60 + d*35 + phase*90/Math.PI) % 360;
+            const sat = 35 + amp*20;
+            const light = 30 + amp*20;
 
-            // cooler CRT-ish palette
-            const baseHue = 190; // cyan/blue
-            const hue = (baseHue + p*80 + depth*40) % 360;
-            const sat = 45 + amp*25;      // lower saturation
-            const light = 40 + amp*20;    // avoid blinding white
-
-            const alpha = 0.18 + amp*0.25 - depth*0.04;
-
-            ctx.strokeStyle = `hsla(${hue},${sat}%,${light}%,${alpha})`;
-            ctx.lineWidth = 0.8 + amp*2.4;
+            ctx.strokeStyle=`hsla(${hue},${sat}%,${light}%,${0.15+amp*0.2-d*0.03})`;
+            ctx.lineWidth=0.6+amp*1.8;
 
             ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(x, y);
+            ctx.moveTo(cx,cy);
+            ctx.lineTo(x,y);
             ctx.stroke();
         }
 
-        const nextR = radius*(0.55 + Math.sin(t*0.001 + depth)*0.04);
-        const nextRot = rotOffset*1.2 + (depth+1)*0.6;
-        drawWheel(cx,cy,nextR,bins,t,depth+1,maxDepth,nextRot,phase);
+        drawWheel(cx,cy,r*(0.52+Math.sin(t*0.001+d)*0.03),bins,t,d+1,maxD,rot*1.18+(d+1)*0.5,phase);
     }
 
-    function drawFractal(bins, t) {
-        const cx = w/2;
-        const cy = h/2;
-
-        const low = bins[2]/255;
-        const baseR = Math.min(w,h)*(0.14 + low*0.18);
+    function drawFractal(bins,t){
+        const cx = canvas.width/2;
+        const cy = canvas.height/2;
+        const low=bins[2]/255;
+        const r= Math.min(canvas.width,canvas.height)*(0.12+low*0.17);
 
         ctx.save();
         ctx.translate(cx,cy);
-        ctx.rotate(Math.sin(t*0.0012)*0.12);
+        ctx.rotate(Math.sin(t*0.0011)*0.1);
         ctx.translate(-cx,-cy);
 
-        ctx.globalCompositeOperation = "screen";
+        ctx.globalCompositeOperation="screen";
 
-        drawWheel(cx,cy,baseR,bins,t,0,2,0.15,0);
-        drawWheel(cx,cy,baseR*0.85,bins,t,0,2,-0.22,Math.PI/2.8);
+        drawWheel(cx,cy,r,bins,t,0,2,0.15,0);
+        drawWheel(cx,cy,r*0.85,bins,t,0,2,-0.2,Math.PI/3);
 
         ctx.restore();
-        ctx.globalCompositeOperation = "source-over";
+        ctx.globalCompositeOperation="source-over";
     }
 
     // -----------------------------
     // MAIN LOOP
     // -----------------------------
-    function render() {
+    function render(){
         requestAnimationFrame(render);
-        if (!analyser) return;
+        if(!analyser) return;
 
         analyser.getByteFrequencyData(data);
         const t = performance.now() - start;
 
-        // simple dark background with subtle radial glow
-        const cx = w/2, cy = h/2;
-        const grad = ctx.createRadialGradient(
-            cx,cy,0,
-            cx,cy,Math.max(w,h)*0.7
-        );
-        grad.addColorStop(0,"rgba(5,10,20,0.8)");
-        grad.addColorStop(1,"rgba(0,0,0,1)");
-        ctx.fillStyle = "rgba(0,0,0,0.55)";
-        ctx.fillRect(0,0,w,h);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,w,h);
-
-        // compute band energies
-        const L = data.length;
-        let low=0, mid=0, hi=0, lc=0, mc=0, hc=0;
-        for (let i=0;i<L;i++){
-            const v = data[i];
-            if (i < L*0.15){ low+=v; lc++; }
-            else if (i < L*0.5){ mid+=v; mc++; }
-            else { hi+=v; hc++; }
+        // compute spectral bands
+        const L=data.length;
+        let low=0,mid=0,hi=0,lc=0,mc=0,hc=0;
+        for(let i=0;i<L;i++){
+            const v=data[i];
+            if(i<L*0.15){ low+=v; lc++; }
+            else if(i<L*0.5){ mid+=v; mc++; }
+            else{ hi+=v; hc++; }
         }
-        low = lc? low/(lc*255):0;
-        mid = mc? mid/(mc*255):0;
-        hi  = hc? hi /(hc *255):0;
+        low=lc?low/(lc*255):0;
+        mid=mc?mid/(mc*255):0;
+        hi =hc?hi /(hc *255):0;
 
-        // stars first
-        updateAndDrawStars(low, mid, hi, t);
+        // DRAW ORDER:
+        // 1. VHS RORSCHACH
+        drawRorschach(data,t);
 
-        // then fractal
-        drawFractal(data, t);
+        // 2. DARK SPACE BACKDROP
+        ctx.fillStyle="rgba(0,0,0,0.6)";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        // 3. STARFIELD
+        drawStars(low,mid,hi,t);
+
+        // 4. FRACTAL
+        drawFractal(data,t);
     }
 
     // -----------------------------
-    // AUDIO HANDLING
+    // AUDIO LOAD
     // -----------------------------
-    fileInput.onchange = async () => {
-        const file = fileInput.files[0];
-        if (!file) return;
+    fileInput.onchange = async ()=>{
+        const file=fileInput.files[0];
+        if(!file) return;
 
-        const buffer = await file.arrayBuffer();
-        if (!audioCtx) audioCtx = new AudioContext();
-        if (audioCtx.state === "suspended") await audioCtx.resume();
+        const buf=await file.arrayBuffer();
+        if(!audioCtx) audioCtx=new AudioContext();
+        if(audioCtx.state==="suspended") await audioCtx.resume();
 
-        const decoded = await audioCtx.decodeAudioData(buffer);
-        if (source) source.stop();
+        const decoded=await audioCtx.decodeAudioData(buf);
+        if(source) source.stop();
 
-        source = audioCtx.createBufferSource();
-        source.buffer = decoded;
+        source=audioCtx.createBufferSource();
+        source.buffer=decoded;
 
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 1024;
-        data = new Uint8Array(analyser.frequencyBinCount);
+        analyser=audioCtx.createAnalyser();
+        analyser.fftSize=1024;
+        data=new Uint8Array(analyser.frequencyBinCount);
 
         source.connect(analyser);
         analyser.connect(audioCtx.destination);
         source.start();
 
         ui.classList.add("hidden");
-        start = performance.now();
+        start=performance.now();
         render();
     };
 })();
 </script>
+
 </body>
 </html>
