@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Isometric Cube – Psychedelic Scanlines</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: black;
+    height: 100%;
+    width: 100%;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="trippy"></canvas>
+<script>
+const canvas = document.getElementById('trippy');
+const ctx = canvas.getContext('2d');
+
+let w, h;
+let swipeX = 0, swipeY = 0;
+
+// cube face polygons (arrays of {x,y})
+let topFace = [];
+let leftFace = [];
+let rightFace = [];
+
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+  computeCube();
+}
+window.addEventListener('resize', resize);
+resize();
+
+// swipe detection (touch)
+let touchStart = null;
+window.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  touchStart = { x: t.clientX, y: t.clientY };
+});
+window.addEventListener('touchmove', e => {
+  if (!touchStart) return;
+  const t = e.touches[0];
+  swipeX = (t.clientX - touchStart.x) * 0.2;
+  swipeY = (t.clientY - touchStart.y) * 0.2;
+});
+
+// optional: also allow mouse drag to warp it, because fingers are overrated
+let mouseDown = false;
+let mouseStart = null;
+window.addEventListener('mousedown', e => {
+  mouseDown = true;
+  mouseStart = { x: e.clientX, y: e.clientY };
+});
+window.addEventListener('mousemove', e => {
+  if (!mouseDown || !mouseStart) return;
+  swipeX = (e.clientX - mouseStart.x) * 0.2;
+  swipeY = (e.clientY - mouseStart.y) * 0.2;
+});
+window.addEventListener('mouseup', () => {
+  mouseDown = false;
+  mouseStart = null;
+});
+
+// original scanline animation, unchanged
+function drawScanlines(time) {
+  const freq = 0.005;
+  for (let y = 0; y < h; y += 3) {
+    const hue = (Math.sin(time * freq + y * 0.03) * 180 + 180) % 360;
+    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.beginPath();
+    const amplitude = 10 + Math.sin(time * 0.002 + y * 0.05) * 5;
+    for (let x = 0; x < w; x += 10) {
+      const yOffset = Math.sin(
+        x * 0.05 +
+        time * 0.005 +
+        y +
+        swipeX * 0.1 +
+        swipeY * 0.1
+      ) * amplitude;
+      ctx.lineTo(x, y + yOffset);
+    }
+    ctx.stroke();
+  }
+}
+
+// compute isometric cube faces as 3 parallelograms
+function computeCube() {
+  const cx = w / 2;
+  const cy = h / 2;
+  const s = Math.min(w, h) * 0.25; // cube edge length
+
+  const angle = Math.PI / 6; // 30 degrees for classic iso
+  const right = {
+    x: Math.cos(angle) * s,
+    y: Math.sin(angle) * s
+  };
+  const left = {
+    x: -Math.cos(angle) * s,
+    y: Math.sin(angle) * s
+  };
+  const v = { x: 0, y: s }; // vertical down
+
+  // Start with front-left-top at (0,0), then shift to center
+
+  let FLT = { x: 0, y: 0 };
+  let FRT = { x: FLT.x + right.x, y: FLT.y + right.y };
+  let BLT = { x: FLT.x + left.x,  y: FLT.y + left.y };
+  let BRT = { x: BLT.x + right.x, y: BLT.y + right.y };
+  let FLB = { x: FLT.x + v.x,     y: FLT.y + v.y };
+  let BLB = { x: BLT.x + v.x,     y: BLT.y + v.y };
+  let FRB = { x: FRT.x + v.x,     y: FRT.y + v.y };
+  let BRB = { x: BRT.x + v.x,     y: BRT.y + v.y };
+
+  const pts = [FLT,FRT,BLT,BRT,FLB,BLB,FRB,BRB];
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  for (const p of pts) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const dx = cx - centerX;
+  const dy = cy - centerY;
+
+  function shift(p) {
+    return { x: p.x + dx, y: p.y + dy };
+  }
+
+  FLT = shift(FLT);
+  FRT = shift(FRT);
+  BLT = shift(BLT);
+  BRT = shift(BRT);
+  FLB = shift(FLB);
+  BLB = shift(BLB);
+  FRB = shift(FRB);
+  BRB = shift(BRB);
+
+  // 3 parallelogram faces
+  topFace = [FLT, FRT, BRT, BLT];
+  leftFace = [FLT, BLT, BLB, FLB];
+  rightFace = [FRT, BRT, BRB, FRB];
+}
+
+function drawFace(face, time) {
+  if (!face || !face.length) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(face[0].x, face[0].y);
+  for (let i = 1; i < face.length; i++) {
+    ctx.lineTo(face[i].x, face[i].y);
+  }
+  ctx.closePath();
+  ctx.clip();
+
+  // fill with the same scanline animation as the original canvas
+  drawScanlines(time);
+
+  ctx.restore();
+}
+
+function strokeFace(face, color = 'white', width = 2) {
+  if (!face || !face.length) return;
+  ctx.save();
+  ctx.lineWidth = width;
+  ctx.strokeStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(face[0].x, face[0].y);
+  for (let i = 1; i < face.length; i++) {
+    ctx.lineTo(face[i].x, face[i].y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function animate(time) {
+  // fade the whole canvas slightly for trail effect
+  ctx.fillStyle = "rgba(0,0,0,0.15)";
+  ctx.fillRect(0, 0, w, h);
+
+  // draw cube faces back-to-front-ish
+  drawFace(leftFace, time);
+  drawFace(rightFace, time);
+  drawFace(topFace, time);
+
+  // outline cube so your poor human eyes can see it
+  strokeFace(leftFace, 'white', 2);
+  strokeFace(rightFace, 'white', 2);
+  strokeFace(topFace, 'white', 2);
+
+  requestAnimationFrame(animate);
+}
+
+animate(0);
+</script>
+</body>
+</html>
