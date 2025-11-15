@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>God's Eye Sacred Art</title>
+<title>Hyper-Möbius Infinite Tunnel</title>
 <style>
     body {
         margin: 0;
@@ -15,7 +15,7 @@
 
     #controls {
         width: 100%;
-        background: rgba(20, 20, 20, 0.9);
+        background: rgba(20,20,20,0.9);
         padding: 15px;
         display: flex;
         justify-content: space-around;
@@ -43,13 +43,8 @@
         color: white;
     }
 
-    input[type="range"] {
-        width: 100%;
-    }
-
-    canvas {
-        flex: 1;
-    }
+    input[type="range"] { width: 100%; }
+    canvas { flex: 1; }
 </style>
 </head>
 <body>
@@ -62,12 +57,11 @@
         <input type="range" id="squareSlider" min="1" max="60" value="30">
     </div>
 
-    <button id="tunnelButton">Tunnel Mode: OFF</button>
-    <button id="zoomButton">Infinite Zoom: OFF</button>
+    <button id="hyperButton">Hyper-Möbius: OFF</button>
 
     <div class="slider-block">
         <label>Size</label><br>
-        <input type="range" id="sizeSlider" min="0.1" max="1.0" step="0.01" value="0.42">
+        <input type="range" id="sizeSlider" min="0.05" max="1.0" step="0.01" value="0.42">
     </div>
 </div>
 
@@ -77,8 +71,7 @@ const ctx = canvas.getContext("2d");
 
 const squareSlider = document.getElementById("squareSlider");
 const sizeSlider = document.getElementById("sizeSlider");
-const tunnelButton = document.getElementById("tunnelButton");
-const zoomButton = document.getElementById("zoomButton");
+const hyperButton = document.getElementById("hyperButton");
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -87,18 +80,19 @@ function resize() {
 resize();
 window.onresize = resize;
 
-let spin = true;
 let spinAngle = 0;
-let tunnelMode = false;
-let zoomMode = false;
+let hyperMode = false;
 let zoomFactor = 1;
-const zoomSpeed = 0.004;
+const zoomSpeed = 0.006;
+
+const recursionDepth = 10;
+const recursionScale = 0.72;
+const twistPerLevel = 0.18;
 
 const colors = ["red", "green", "blue"];
 
-function drawLayer(count, sizeScale, angleOffset = 0) {
+function drawLayer(count, sizeScale, angleOffset) {
     const size = Math.min(canvas.width, canvas.height) * sizeScale;
-
     for (let i = 0; i < count; i++) {
         const rot = (i * Math.PI * 2) / 60 + angleOffset;
         const color = colors[i % 3];
@@ -115,61 +109,44 @@ function drawLayer(count, sizeScale, angleOffset = 0) {
     }
 }
 
-function drawScene() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function drawHyper(count, baseScale, angleOffset) {
+    let scale = baseScale;
+    let angle = angleOffset;
 
-    const count = parseInt(squareSlider.value);
-    let sizeScale = parseFloat(sizeSlider.value);
-
-    if (zoomMode) {
-        sizeScale *= zoomFactor;
-        zoomFactor += zoomSpeed;
-        if (zoomFactor > 10) zoomFactor = 1;
-    }
-
-    if (!tunnelMode) {
-        drawLayer(count, sizeScale, spinAngle);
-        return;
-    }
-
-    let layers = 12;
-    let scale = sizeScale;
-    let angle = spinAngle;
-
-    for (let i = 0; i < layers; i++) {
+    for (let i = 0; i < recursionDepth; i++) {
         drawLayer(count, scale, angle);
-        scale *= 0.80;
-        angle += 0.10;
+
+        scale *= recursionScale;      // shrink inward
+        angle += twistPerLevel;       // twist as it recurses
     }
 }
 
 function animate() {
-    if (spin) spinAngle += 0.002;
-    drawScene();
+    spinAngle += 0.002;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const count = parseInt(squareSlider.value);
+    let scale = parseFloat(sizeSlider.value);
+
+    if (hyperMode) {
+        scale *= zoomFactor;
+        zoomFactor += zoomSpeed;
+        if (zoomFactor > 12) zoomFactor = 0.3;
+
+        drawHyper(count, scale, spinAngle);
+    } else {
+        drawLayer(count, scale, spinAngle);
+    }
+
     requestAnimationFrame(animate);
 }
 animate();
 
-function stopSpin() { spin = false; }
-function startSpin() { spin = true; }
-
-[squareSlider, sizeSlider].forEach(sl => {
-    sl.addEventListener("input", stopSpin);
-    sl.addEventListener("mousedown", stopSpin);
-    sl.addEventListener("mouseup", startSpin);
-    sl.addEventListener("touchstart", stopSpin);
-    sl.addEventListener("touchend", startSpin);
-});
-
-tunnelButton.addEventListener("click", () => {
-    tunnelMode = !tunnelMode;
-    tunnelButton.textContent = "Tunnel Mode: " + (tunnelMode ? "ON" : "OFF");
-});
-
-zoomButton.addEventListener("click", () => {
-    zoomMode = !zoomMode;
+hyperButton.addEventListener("click", () => {
+    hyperMode = !hyperMode;
     zoomFactor = 1;
-    zoomButton.textContent = "Infinite Zoom: " + (zoomMode ? "ON" : "OFF");
+    hyperButton.textContent = "Hyper-Möbius: " + (hyperMode ? "ON" : "OFF");
 });
 </script>
 
