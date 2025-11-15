@@ -2,48 +2,57 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Recursive Fractal + Acid Rorschach</title>
+<title>Ultra Chaos Dragon Visualizer</title>
 <style>
-    html,body {
-        margin:0; padding:0;
+    html,body{
+        margin:0;
+        padding:0;
         background:#000;
         overflow:hidden;
         font-family:sans-serif;
     }
-    canvas {
+    canvas{
         position:fixed;
         inset:0;
         width:100vw;
         height:100vh;
+        display:block;
     }
-    #ui {
+    #ui{
         position:fixed;
-        top:50%; left:50%;
+        top:50%;left:50%;
         transform:translate(-50%,-50%);
         padding:24px 32px;
-        background:rgba(10,0,20,0.8);
+        background:rgba(10,0,20,0.85);
         border-radius:14px;
-        border:1px solid rgba(255,255,255,0.2);
+        border:1px solid rgba(255,255,255,0.25);
         color:#0ff;
         text-align:center;
         z-index:10;
-        box-shadow:0 0 30px #0ff;
+        box-shadow:0 0 30px #0ff,0 0 60px #0ff;
     }
-    #ui.hidden {
-        opacity:0; pointer-events:none;
+    #ui.hidden{
+        opacity:0;
+        pointer-events:none;
         transform:translate(-50%,-60%);
         transition:0.7s;
     }
-    button {
+    button{
         padding:10px 20px;
-        border:none; border-radius:999px;
+        border:none;
+        border-radius:999px;
         background:linear-gradient(135deg,#0ff,#f0f);
         color:#000;
         font-weight:600;
         cursor:pointer;
-        box-shadow:0 0 12px #0ff;
+        box-shadow:0 0 16px #0ff;
     }
-    input { display:none; }
+    input{display:none;}
+    #hint{
+        font-size:0.8rem;
+        color:#ccc;
+        margin-top:10px;
+    }
 </style>
 </head>
 <body>
@@ -51,12 +60,14 @@
 <canvas id="c"></canvas>
 
 <div id="ui">
-    <h2 style="margin:0 0 10px;">Fractal + Acid Rorschach</h2>
+    <h2 style="margin:0 0 10px;">Ultra Chaos Dragon Visualizer</h2>
     <p style="color:#ccc;font-size:0.9rem;margin-bottom:14px;">
-        Upload an MP3 to awaken the ink-demon.
+        Upload an MP3 / WAV / OGG.  
+        GPU insurance not included.
     </p>
     <button id="uploadBtn">Choose Audio</button>
     <input type="file" id="fileInput" accept="audio/*">
+    <div id="hint">If it stutters, you did this to yourself.</div>
 </div>
 
 <script>
@@ -69,88 +80,49 @@
     addEventListener("resize", () => {
         w = canvas.width = innerWidth;
         h = canvas.height = innerHeight;
+        setupBgCanvas();
     });
 
     const ui = document.getElementById("ui");
     const uploadBtn = document.getElementById("uploadBtn");
     const fileInput = document.getElementById("fileInput");
-
     uploadBtn.onclick = () => fileInput.click();
 
     let audioCtx, source, analyser, data;
     let start = 0;
 
-    // ------------------------------------
-    // Smooth Perlin-like noise generator
-    // ------------------------------------
+    // -------------------------------------------------------
+    // LOW-RES RORSCHACH BACKGROUND (for speed-ish)
+    // -------------------------------------------------------
+    let bgCanvas, bgCtx, bw, bh;
+
+    function setupBgCanvas() {
+        const scale = 0.3; // lower = faster
+        bw = Math.max(160, Math.floor(w * scale));
+        bh = Math.max(120, Math.floor(h * scale));
+        bgCanvas = document.createElement("canvas");
+        bgCanvas.width = bw;
+        bgCanvas.height = bh;
+        bgCtx = bgCanvas.getContext("2d");
+    }
+    setupBgCanvas();
+
     function noise(x, y, t) {
         return (
-            Math.sin(x*0.02 + t*0.0003) +
-            Math.sin(y*0.018 - t*0.00022) +
-            Math.sin((x+y)*0.01 + t*0.00017)
+            Math.sin(x*0.04 + t*0.0004) +
+            Math.sin(y*0.035 - t*0.00023) +
+            Math.sin((x+y)*0.02 + t*0.00019)
         ) * 0.5;
     }
 
-    // ------------------------------------
-    // Draw acid Rorschach blot
-    // ------------------------------------
-    function drawInkBlot(bins, t) {
-        const img = ctx.getImageData(0,0,w,h);
-        const d = img.data;
-
-        let low = bins[4] / 255;  
-        let mid = bins[100] / 255;  
-        let hi  = bins[300] / 255;  
-
-        let pulse = (low*0.5 + mid*0.7 + hi*1.3);
-
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w/2; x++) {
-
-                const nx = x - w/4;
-                const ny = y - h/2;
-
-                const n = noise(nx*0.9, ny*0.9, t) * 0.6 +
-                          noise(nx*0.5, ny*0.5, t*1.5) * 0.4;
-
-                let v = Math.abs(n);
-                v = Math.pow(v, 1.3 - pulse*0.6); // melt effect
-
-                const hue = (t*0.01 + v*300) % 360;
-                const sat = 40 + v*60;
-                const lit = 10 + v*50 + pulse*20;
-
-                const color = hslToRgb(hue/360, sat/100, lit/100);
-
-                const idxL = (y*w + x)*4;
-                const idxR = (y*w + (w-x-1))*4;
-
-                d[idxL]   = color[0];
-                d[idxL+1] = color[1];
-                d[idxL+2] = color[2];
-                d[idxL+3] = 255;
-
-                d[idxR]   = color[0];
-                d[idxR+1] = color[1];
-                d[idxR+2] = color[2];
-                d[idxR+3] = 255;
-            }
-        }
-
-        ctx.putImageData(img,0,0);
-    }
-
-    // ------------------------------------
-    // Helper: HSL to RGB
-    // ------------------------------------
     function hslToRgb(h, s, l){
         if (s === 0) return [l*255,l*255,l*255];
         const hue2rgb = (p, q, t) => {
             if (t<0) t+=1;
             if (t>1) t-=1;
-            if (t<1/6) return p + (q-p)*6*t;
+            if (t<1/6) return p+(q-p)*6*t;
             if (t<1/2) return q;
-            if (t<2/3) return p + (q-p)*(2/3-t)*6;
+            if (t<2/3) return p+(q-p)*(2/3-t)*6;
             return p;
         };
         const q = l < .5 ? l*(1+s) : l+l*s-l*s;
@@ -162,66 +134,155 @@
         ];
     }
 
-    // ------------------------------------
-    // Recursive spoke fractal (same as before)
-    // ------------------------------------
-    function drawRecursive(cx, cy, radius, bins, t, depth, maxDepth, rotOffset) {
+    function drawInkBlot(bins, t) {
+        const img = bgCtx.getImageData(0,0,bw,bh);
+        const d = img.data;
+
+        const low = bins[4]/255;
+        const mid = bins[80]/255;
+        const hi  = bins[200]/255;
+        const pulse = (low*0.6 + mid*0.9 + hi*1.4);
+
+        const cx = bw/2;
+        const cy = bh/2;
+
+        for (let y = 0; y < bh; y++) {
+            const dy = y - cy;
+            for (let x = 0; x < bw/2; x++) {
+                const dx = x - cx/2;
+
+                let n = 0;
+                n += noise(dx*1.0, dy*1.0, t) * 0.6;
+                n += noise(dx*0.6, dy*0.6, t*1.6) * 0.4;
+
+                let v = Math.abs(n);
+                v = Math.pow(v, 1.2 - pulse*0.5);
+
+                const hue = (t*0.012 + v*320 + hi*120) % 360;
+                const sat = 35 + v*60 + hi*20;
+                const lit = 8 + v*55 + pulse*25;
+
+                const rgb = hslToRgb(hue/360, sat/100, lit/100);
+
+                const idxL = (y*bw + x)*4;
+                const idxR = (y*bw + (bw - x - 1))*4;
+
+                d[idxL]   = rgb[0];
+                d[idxL+1] = rgb[1];
+                d[idxL+2] = rgb[2];
+                d[idxL+3] = 255;
+
+                d[idxR]   = rgb[0];
+                d[idxR+1] = rgb[1];
+                d[idxR+2] = rgb[2];
+                d[idxR+3] = 255;
+            }
+        }
+
+        bgCtx.putImageData(img,0,0);
+        // draw to main canvas scaled up
+        ctx.drawImage(bgCanvas, 0, 0, w, h);
+    }
+
+    // -------------------------------------------------------
+    // RECURSIVE WHEELS OF DOOM
+    // -------------------------------------------------------
+    function drawWheel(cx, cy, radius, bins, t, depth, maxDepth, rotOffset, phase) {
         if (depth > maxDepth) return;
 
         const count = bins.length;
-        const spokes = 360;
+        const spokes = 300; // still dense, but not totally insane
 
         for (let i = 0; i < spokes; i++) {
-            const p = i/spokes;
-            const idx = Math.floor(p*count);
-            const amp = bins[idx]/255;
+            const p = i / spokes;
+            const idx = Math.floor(p * count);
+            const amp = bins[idx] / 255;
 
-            const len = radius*(1 + amp*2.1*(depth+1));
-            const a = p*Math.PI*2 + rotOffset + t*0.0004;
+            const len = radius * (1 + amp * 2.5 * (depth + 1));
 
-            const x = cx + Math.cos(a)*len;
-            const y = cy + Math.sin(a)*len;
+            const angle = p * Math.PI * 2 + rotOffset + phase + t * (0.00045 + depth*0.00005);
 
-            const hue = (p*360 + depth*80 + t*0.02) % 360;
-            ctx.strokeStyle = `hsla(${hue},100%,60%,${0.45-depth*0.12})`;
-            ctx.lineWidth = 1 + amp*3;
+            const x = cx + Math.cos(angle) * len;
+            const y = cy + Math.sin(angle) * len;
+
+            const hue = (p*360 + depth*90 + phase*180/Math.PI + t*0.03) % 360;
+            ctx.strokeStyle = `hsla(${hue},100%,60%,${0.5 - depth*0.11})`;
+            ctx.lineWidth = 1 + amp * 3.5;
 
             ctx.beginPath();
-            ctx.moveTo(cx,cy);
-            ctx.lineTo(x,y);
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(x, y);
             ctx.stroke();
+
+            // occasional glitch spokes
+            if (depth === 0 && amp > 0.7 && Math.random() < 0.15) {
+                const gAngle = angle + (Math.random() - 0.5) * 0.5;
+                const gLen = len * (1.1 + Math.random()*0.6);
+                const gx = cx + Math.cos(gAngle) * gLen;
+                const gy = cy + Math.sin(gAngle) * gLen;
+                ctx.strokeStyle = `hsla(${(hue+120)%360},100%,70%,0.7)`;
+                ctx.lineWidth = 0.8 + Math.random()*2;
+                ctx.beginPath();
+                ctx.moveTo(cx,cy);
+                ctx.lineTo(gx,gy);
+                ctx.stroke();
+            }
         }
 
-        drawRecursive(
-            cx,cy,
-            radius*(0.45 + Math.sin(t*0.001 + depth)*0.05),
-            bins,t,
-            depth+1,maxDepth,
-            rotOffset*1.32 + (depth+1)*0.7
-        );
+        const nextR = radius * (0.5 + Math.sin(t*0.001 + depth)*0.07);
+        const nextRot = rotOffset * 1.28 + (depth + 1) * 0.75;
+
+        drawWheel(cx, cy, nextR, bins, t, depth+1, maxDepth, nextRot, phase);
     }
 
-    // ------------------------------------
-    // Main render loop
-    // ------------------------------------
+    function drawFractal(bins, t) {
+        const cx = w/2;
+        const cy = h/2;
+
+        const low = bins[1] / 255;
+        const baseR = Math.min(w, h) * (0.13 + low*0.23);
+
+        ctx.save();
+        // subtle overall wobble
+        ctx.translate(cx, cy);
+        ctx.rotate(Math.sin(t*0.0014) * 0.11);
+        ctx.translate(-cx, -cy);
+
+        // soft additive glow
+        ctx.globalCompositeOperation = "lighter";
+
+        // main wheel
+        drawWheel(cx, cy, baseR, bins, t, 0, 3, 0.2, 0);
+
+        // offset twin wheel for extra chaos
+        drawWheel(cx, cy, baseR*0.9, bins, t, 0, 3, -0.35, Math.PI/3);
+
+        ctx.restore();
+        ctx.globalCompositeOperation = "source-over";
+    }
+
+    // -------------------------------------------------------
+    // MAIN LOOP
+    // -------------------------------------------------------
     function render() {
         requestAnimationFrame(render);
         analyser.getByteFrequencyData(data);
-
         const t = performance.now() - start;
+
+        // Background first
         drawInkBlot(data, t);
 
-        const cx = w/2;
-        const cy = h/2;
-        const low = data[1]/255;
-        const baseR = Math.min(w,h)*(0.12 + low*0.2);
+        // Slight overall fade for trails
+        ctx.fillStyle = "rgba(0,0,0,0.08)";
+        ctx.fillRect(0,0,w,h);
 
-        drawRecursive(cx,cy,baseR,data,t,0,3,0.2);
+        // Fractal on top
+        drawFractal(data, t);
     }
 
-    // ------------------------------------
-    // When file chosen
-    // ------------------------------------
+    // -------------------------------------------------------
+    // AUDIO SETUP
+    // -------------------------------------------------------
     fileInput.onchange = async () => {
         const file = fileInput.files[0];
         if (!file) return;
@@ -229,14 +290,15 @@
         const array = await file.arrayBuffer();
         if (!audioCtx) audioCtx = new AudioContext();
         if (audioCtx.state === "suspended") await audioCtx.resume();
-        const decoded = await audioCtx.decodeAudioData(array);
 
+        const decoded = await audioCtx.decodeAudioData(array);
         if (source) source.stop();
+
         source = audioCtx.createBufferSource();
         source.buffer = decoded;
 
         analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 2048;
+        analyser.fftSize = 1024; // still detailed, slightly lighter
         data = new Uint8Array(analyser.frequencyBinCount);
 
         source.connect(analyser);
@@ -249,6 +311,5 @@
     };
 })();
 </script>
-
 </body>
 </html>
