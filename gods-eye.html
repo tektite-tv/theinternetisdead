@@ -1,98 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Fractal Square Bloom</title>
+<title>Breathing Fractal Bloom</title>
 <style>
     body {
         margin: 0;
-        background: black;
         overflow: hidden;
+        background: black;
     }
     canvas {
         position: absolute;
-        top: 0;
         left: 0;
+        top: 0;
     }
 </style>
 </head>
 <body>
 
-<canvas id="c"></canvas>
+<canvas id="canvas"></canvas>
 
 <script>
-const canvas = document.getElementById("c");
+const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 function resize() {
-    canvas.width  = window.innerWidth;
+    canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 }
-resize();
 window.addEventListener("resize", resize);
+resize();
 
-// CONFIG (tuned for "looks cool" + performance)
-const generations   = 18;      // how many rings
-const shrinkFactor  = 0.65;    // size falloff per generation (your choice B=medium)
-const baseRadius    = 40;      // spacing between rings (before global scale)
-const zoomSpeed     = 0.008;   // how fast the whole thing blooms out
-const spinSpeed     = 0.0025;  // global rotation
-const twistPerGen   = Math.PI / 18; // extra twist per generation
+// CONFIG
+const layers = 4;               // parallax depth layers
+const rings = 32;               // number of square-rings per layer
+const squaresPerRing = 4;       // keep symmetry
+const baseSize = 120;           // starting square size
+const shrink = 0.85;            // falloff per ring
+const twist = Math.PI / 12;     // twist between rings
+const driftSpeed = 0.00025;     // color drift
+const breatheSpeed = 0.0015;    // breathing rate
+const spinSpeed = 0.0006;       // rotational easing
+const glow = 12;                // shadow blur
+const glowStrength = 0.65;      // glow alpha
 
-let globalScale = 1;
-
-// simple HSV-like color cycling, mapped to generation index
-function colorForGen(gen) {
-    const hue = (gen * 20) % 360;
-    return `hsl(${hue}, 100%, 55%)`;
-}
-
-function drawFrame(time) {
+function draw(time) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const cx = canvas.width  / 2;
+    const cx = canvas.width / 2;
     const cy = canvas.height / 2;
 
-    // global spin & zoom-out
-    const spin = time * spinSpeed;
-    globalScale *= (1 + zoomSpeed);
-    if (globalScale > 6) globalScale = 1;  // loop the bloom
+    // breathing between 0.8 and 1.2 scale
+    const breathe = 1 + Math.sin(time * breatheSpeed) * 0.20;
 
-    for (let gen = 0; gen < generations; gen++) {
-        const t = gen / generations;
+    for (let L = 0; L < layers; L++) {
+        const layerDepth = 1 + L * 0.15;
+        const angleBase = time * spinSpeed * (1 + L * 0.1);
 
-        // size shrinks by factor each generation, then globally scaled
-        const size   = 40 * Math.pow(shrinkFactor, gen) * globalScale;
-        const radius = baseRadius * gen * globalScale;
+        for (let r = 0; r < rings; r++) {
 
-        const angleOffset = spin + gen * twistPerGen;
-        const color       = colorForGen(gen);
+            const size = baseSize * Math.pow(shrink, r) * layerDepth * breathe;
+            const radius = r * 18 * layerDepth * breathe;
 
-        // four “vertex directions” (like the square's corners)
-        for (let k = 0; k < 4; k++) {
-            const dirAngle = angleOffset + k * (Math.PI / 2);
+            // color drift
+            const hue = (r * 12 + L * 30 + time * driftSpeed * 300) % 360;
+            const color = `hsla(${hue}, 100%, 60%, ${0.55 + L * 0.1})`;
 
-            const x = cx + Math.cos(dirAngle) * radius;
-            const y = cy + Math.sin(dirAngle) * radius;
-
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(dirAngle + angleOffset); // extra spin for kaleidoscope feel
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = glow;
 
-            ctx.beginPath();
-            ctx.rect(-size / 2, -size / 2, size, size);
-            ctx.stroke();
+            const ringTwist = angleBase + r * twist;
 
-            ctx.restore();
+            for (let k = 0; k < squaresPerRing; k++) {
+
+                const angle = ringTwist + k * (Math.PI / 2);
+
+                // gentle curvature for the arms
+                const curve = Math.sin(r * 0.3 + time * 0.0009) * 10;
+
+                const x = cx + Math.cos(angle) * (radius + curve);
+                const y = cy + Math.sin(angle) * (radius + curve);
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle + ringTwist * 0.5);
+
+                ctx.beginPath();
+                ctx.rect(-size / 2, -size / 2, size, size);
+                ctx.stroke();
+
+                ctx.restore();
+            }
         }
     }
 
-    requestAnimationFrame(drawFrame);
+    requestAnimationFrame(draw);
 }
-
-requestAnimationFrame(drawFrame);
+requestAnimationFrame(draw);
 </script>
 
 </body>
