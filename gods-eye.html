@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fractal Bloom Engine</title>
+<title>Fractal Square Bloom</title>
 <style>
     body {
         margin: 0;
@@ -25,86 +25,74 @@ const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
 function resize() {
-    canvas.width = window.innerWidth;
+    canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
 }
 resize();
-window.onresize = resize;
+window.addEventListener("resize", resize);
 
-// ===== FRACTAL CONFIGURATION =====
-const baseColors = ["red", "green", "blue"];
-const shrinkFactor = 0.65;      // B: Medium shrink
-const twist = Math.PI / 12;     // rotation per generation
-const generations = 12;         // recursion depth
-let zoom = 1;
-const zoomSpeed = 0.004;        // outward zoom
+// CONFIG (tuned for "looks cool" + performance)
+const generations   = 18;      // how many rings
+const shrinkFactor  = 0.65;    // size falloff per generation (your choice B=medium)
+const baseRadius    = 40;      // spacing between rings (before global scale)
+const zoomSpeed     = 0.008;   // how fast the whole thing blooms out
+const spinSpeed     = 0.0025;  // global rotation
+const twistPerGen   = Math.PI / 18; // extra twist per generation
 
-// ===== DRAW A SINGLE SQUARE =====
-function drawSquare(size, angle, color) {
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(angle);
+let globalScale = 1;
 
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.rect(-size/2, -size/2, size, size);
-    ctx.stroke();
-
-    ctx.restore();
+// simple HSV-like color cycling, mapped to generation index
+function colorForGen(gen) {
+    const hue = (gen * 20) % 360;
+    return `hsl(${hue}, 100%, 55%)`;
 }
 
-// ===== DRAW FRACTAL RECURSIVELY =====
-function drawFractal(size, angle, depth) {
-    if (depth === 0 || size < 1) return;
-
-    // draw square
-    drawSquare(size, angle, baseColors[depth % 3]);
-
-    // compute child size + angle
-    const newSize = size * shrinkFactor;
-
-    // vertices of the square in parent's coordinate system
-    const verts = [
-        [ size/2,  size/2],
-        [-size/2,  size/2],
-        [-size/2, -size/2],
-        [ size/2, -size/2]
-    ];
-
-    // for each vertex: spawn child fractal
-    for (let i = 0; i < 4; i++) {
-
-        ctx.save();
-        ctx.translate(canvas.width/2, canvas.height/2);
-        ctx.rotate(angle);
-
-        // move to vertex
-        ctx.translate(verts[i][0], verts[i][1]);
-
-        // draw the recursive child at this vertex
-        ctx.translate(-canvas.width/2, -canvas.height/2);
-        drawFractal(newSize, angle + twist, depth - 1);
-
-        ctx.restore();
-    }
-}
-
-// ===== ANIMATION LOOP =====
-function animate() {
+function drawFrame(time) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    zoom += zoomSpeed;
+    const cx = canvas.width  / 2;
+    const cy = canvas.height / 2;
 
-    const initialSize = 20 * zoom;
-    const initialAngle = performance.now() * 0.0002;
+    // global spin & zoom-out
+    const spin = time * spinSpeed;
+    globalScale *= (1 + zoomSpeed);
+    if (globalScale > 6) globalScale = 1;  // loop the bloom
 
-    drawFractal(initialSize, initialAngle, generations);
+    for (let gen = 0; gen < generations; gen++) {
+        const t = gen / generations;
 
-    requestAnimationFrame(animate);
+        // size shrinks by factor each generation, then globally scaled
+        const size   = 40 * Math.pow(shrinkFactor, gen) * globalScale;
+        const radius = baseRadius * gen * globalScale;
+
+        const angleOffset = spin + gen * twistPerGen;
+        const color       = colorForGen(gen);
+
+        // four “vertex directions” (like the square's corners)
+        for (let k = 0; k < 4; k++) {
+            const dirAngle = angleOffset + k * (Math.PI / 2);
+
+            const x = cx + Math.cos(dirAngle) * radius;
+            const y = cy + Math.sin(dirAngle) * radius;
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(dirAngle + angleOffset); // extra spin for kaleidoscope feel
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.rect(-size / 2, -size / 2, size, size);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    }
+
+    requestAnimationFrame(drawFrame);
 }
 
-animate();
+requestAnimationFrame(drawFrame);
 </script>
 
 </body>
