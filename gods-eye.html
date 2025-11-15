@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Square Spiral Controls + Tunnel Mode</title>
+<title>God's Eye Sacred Art</title>
 <style>
     body {
         margin: 0;
@@ -28,12 +28,12 @@
     }
 
     .slider-block {
-        width: 35%;
+        width: 25%;
         text-align: center;
         font-family: sans-serif;
     }
 
-    #tunnelButton {
+    button {
         padding: 10px 20px;
         font-size: 16px;
         cursor: pointer;
@@ -63,6 +63,7 @@
     </div>
 
     <button id="tunnelButton">Tunnel Mode: OFF</button>
+    <button id="zoomButton">Infinite Zoom: OFF</button>
 
     <div class="slider-block">
         <label>Size</label><br>
@@ -77,6 +78,7 @@ const ctx = canvas.getContext("2d");
 const squareSlider = document.getElementById("squareSlider");
 const sizeSlider = document.getElementById("sizeSlider");
 const tunnelButton = document.getElementById("tunnelButton");
+const zoomButton = document.getElementById("zoomButton");
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -88,8 +90,10 @@ window.onresize = resize;
 let spin = true;
 let spinAngle = 0;
 let tunnelMode = false;
+let zoomMode = false;
+let zoomFactor = 1;
+const zoomSpeed = 0.004;
 
-// Colors
 const colors = ["red", "green", "blue"];
 
 function drawLayer(count, sizeScale, angleOffset = 0) {
@@ -115,22 +119,27 @@ function drawScene() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const count = parseInt(squareSlider.value);
-    const sizeScale = parseFloat(sizeSlider.value);
+    let sizeScale = parseFloat(sizeSlider.value);
+
+    if (zoomMode) {
+        sizeScale *= zoomFactor;
+        zoomFactor += zoomSpeed;
+        if (zoomFactor > 10) zoomFactor = 1;
+    }
 
     if (!tunnelMode) {
         drawLayer(count, sizeScale, spinAngle);
         return;
     }
 
-    // Tunnel recursion
     let layers = 12;
     let scale = sizeScale;
     let angle = spinAngle;
 
     for (let i = 0; i < layers; i++) {
         drawLayer(count, scale, angle);
-        scale *= 0.80;       // shrink tunnel layers
-        angle += 0.10;       // increase twist deeper inside
+        scale *= 0.80;
+        angle += 0.10;
     }
 }
 
@@ -141,7 +150,6 @@ function animate() {
 }
 animate();
 
-// Interaction logic
 function stopSpin() { spin = false; }
 function startSpin() { spin = true; }
 
@@ -156,6 +164,12 @@ function startSpin() { spin = true; }
 tunnelButton.addEventListener("click", () => {
     tunnelMode = !tunnelMode;
     tunnelButton.textContent = "Tunnel Mode: " + (tunnelMode ? "ON" : "OFF");
+});
+
+zoomButton.addEventListener("click", () => {
+    zoomMode = !zoomMode;
+    zoomFactor = 1;
+    zoomButton.textContent = "Infinite Zoom: " + (zoomMode ? "ON" : "OFF");
 });
 </script>
 
