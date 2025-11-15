@@ -96,28 +96,36 @@ function drawScanlines(time) {
 function computeCube() {
   const cx = w / 2;
   const cy = h / 2;
-  const s = Math.min(w, h) * 0.25; // cube size
+  const size = Math.min(w, h) * 0.25;
 
-  // isometric unit vectors
-  const isoRight = { x:  s, y:  s * 0.5 };
-  const isoLeft  = { x: -s, y:  s * 0.5 };
-  const isoDown  = { x:  0, y:  s };
+  const iso = (x, y, z) => {
+    return {
+      x: cx + (x - y) * Math.cos(Math.PI / 6),
+      y: cy + (x + y) * Math.sin(Math.PI / 6) - z
+    };
+  };
 
-  // top center point
-  const T = { x: cx, y: cy - s };
+  // cube corners in 3D
+  const p = {
+    A: iso(0, 0, size),
+    B: iso(size, 0, size),
+    C: iso(size, size, size),
+    D: iso(0, size, size),
+    E: iso(0, 0, 0),
+    F: iso(size, 0, 0),
+    G: iso(size, size, 0),
+    H: iso(0, size, 0)
+  };
 
-  // top face corners
-  const A = { x: T.x + isoLeft.x,  y: T.y + isoLeft.y  };
-  const B = { x: T.x + isoRight.x, y: T.y + isoRight.y };
-  const C = { x: B.x,              y: B.y + isoDown.y  };
-  const D = { x: A.x,              y: A.y + isoDown.y  };
+  // top face
+  topFace = [p.A, p.B, p.C, p.D];
 
-  // assign faces
-  topFace  = [A, B, T, T]; // clipped as a triangle anyway
-  leftFace = [A, D, { x: D.x, y: D.y + isoDown.y }, { x: A.x, y: A.y + isoDown.y }];
-  rightFace = [B, C, { x: C.x, y: C.y + isoDown.y }, { x: B.x, y: B.y + isoDown.y }];
+  // left face
+  leftFace = [p.A, p.D, p.H, p.E];
+
+  // right face
+  rightFace = [p.B, p.C, p.G, p.F];
 }
-
 
 function drawFace(face, time) {
   if (!face || !face.length) return;
