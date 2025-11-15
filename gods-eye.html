@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Square Spiral Controls</title>
+<title>Square Spiral Controls + Tunnel Mode</title>
 <style>
     body {
         margin: 0;
@@ -13,13 +13,11 @@
         flex-direction: column;
     }
 
-    /* Control Box */
     #controls {
         width: 100%;
         background: rgba(20, 20, 20, 0.9);
         padding: 15px;
         display: flex;
-        flex-direction: row;
         justify-content: space-around;
         align-items: center;
         position: fixed;
@@ -30,9 +28,19 @@
     }
 
     .slider-block {
-        width: 40%;
+        width: 35%;
         text-align: center;
         font-family: sans-serif;
+    }
+
+    #tunnelButton {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        background: #ff0099;
+        color: white;
     }
 
     input[type="range"] {
@@ -48,12 +56,13 @@
 
 <canvas id="c"></canvas>
 
-<!-- CONTROL PANEL -->
 <div id="controls">
     <div class="slider-block">
         <label>Squares</label><br>
         <input type="range" id="squareSlider" min="1" max="60" value="30">
     </div>
+
+    <button id="tunnelButton">Tunnel Mode: OFF</button>
 
     <div class="slider-block">
         <label>Size</label><br>
@@ -67,24 +76,23 @@ const ctx = canvas.getContext("2d");
 
 const squareSlider = document.getElementById("squareSlider");
 const sizeSlider = document.getElementById("sizeSlider");
+const tunnelButton = document.getElementById("tunnelButton");
 
 function resize() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - 80; // keep clear of control panel
+    canvas.height = window.innerHeight - 80;
 }
 resize();
 window.onresize = resize;
 
-// CONFIG
 let spin = true;
 let spinAngle = 0;
+let tunnelMode = false;
 
-// Colors in RGB cycle
+// Colors
 const colors = ["red", "green", "blue"];
 
-function drawSquares(count, sizeScale, angleOffset = 0) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+function drawLayer(count, sizeScale, angleOffset = 0) {
     const size = Math.min(canvas.width, canvas.height) * sizeScale;
 
     for (let i = 0; i < count; i++) {
@@ -95,7 +103,7 @@ function drawSquares(count, sizeScale, angleOffset = 0) {
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(rot);
         ctx.strokeStyle = color;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.rect(-size/2, -size/2, size, size);
         ctx.stroke();
@@ -103,20 +111,37 @@ function drawSquares(count, sizeScale, angleOffset = 0) {
     }
 }
 
-function animate() {
-    if (spin) {
-        spinAngle += 0.002;
+function drawScene() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const count = parseInt(squareSlider.value);
+    const sizeScale = parseFloat(sizeSlider.value);
+
+    if (!tunnelMode) {
+        drawLayer(count, sizeScale, spinAngle);
+        return;
     }
-    drawSquares(
-        parseInt(squareSlider.value),
-        parseFloat(sizeSlider.value),
-        spinAngle
-    );
+
+    // Tunnel recursion
+    let layers = 12;
+    let scale = sizeScale;
+    let angle = spinAngle;
+
+    for (let i = 0; i < layers; i++) {
+        drawLayer(count, scale, angle);
+        scale *= 0.80;       // shrink tunnel layers
+        angle += 0.10;       // increase twist deeper inside
+    }
+}
+
+function animate() {
+    if (spin) spinAngle += 0.002;
+    drawScene();
     requestAnimationFrame(animate);
 }
 animate();
 
-// Stop spin while dragging sliders
+// Interaction logic
 function stopSpin() { spin = false; }
 function startSpin() { spin = true; }
 
@@ -126,6 +151,11 @@ function startSpin() { spin = true; }
     sl.addEventListener("mouseup", startSpin);
     sl.addEventListener("touchstart", stopSpin);
     sl.addEventListener("touchend", startSpin);
+});
+
+tunnelButton.addEventListener("click", () => {
+    tunnelMode = !tunnelMode;
+    tunnelButton.textContent = "Tunnel Mode: " + (tunnelMode ? "ON" : "OFF");
 });
 </script>
 
