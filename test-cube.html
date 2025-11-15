@@ -93,46 +93,31 @@ function drawScanlines(time) {
   }
 }
 
-// FIXED — clean, proper isometric cube geometry
 function computeCube() {
   const cx = w / 2;
   const cy = h / 2;
-  const s = Math.min(w, h) * 0.25;
+  const s = Math.min(w, h) * 0.25; // cube size
 
-  const angle = Math.PI / 6;
-  const dx = Math.cos(angle) * s;
-  const dy = Math.sin(angle) * s;
+  // isometric unit vectors
+  const isoRight = { x:  s, y:  s * 0.5 };
+  const isoLeft  = { x: -s, y:  s * 0.5 };
+  const isoDown  = { x:  0, y:  s };
 
-  // cube anchor (top center)
-  const top = { x: cx, y: cy - s * 0.4 };
-
-  // directions
-  const up = { x: 0, y: -s };
-  const right = { x: dx, y: dy };
-  const left = { x: -dx, y: dy };
-  const down = { x: 0, y: s };
+  // top center point
+  const T = { x: cx, y: cy - s };
 
   // top face corners
-  const A = { x: top.x + left.x, y: top.y + left.y };
-  const B = { x: top.x + right.x, y: top.y + right.y };
-  const C = { x: B.x, y: B.y + s };
-  const D = { x: A.x, y: A.y + s };
+  const A = { x: T.x + isoLeft.x,  y: T.y + isoLeft.y  };
+  const B = { x: T.x + isoRight.x, y: T.y + isoRight.y };
+  const C = { x: B.x,              y: B.y + isoDown.y  };
+  const D = { x: A.x,              y: A.y + isoDown.y  };
 
   // assign faces
-  topFace = [A, B, top, top];
-  leftFace = [
-    A,
-    D,
-    { x: D.x, y: D.y + s },
-    { x: A.x, y: A.y + s }
-  ];
-  rightFace = [
-    B,
-    C,
-    { x: C.x, y: C.y + s },
-    { x: B.x, y: B.y + s }
-  ];
+  topFace  = [A, B, T, T]; // clipped as a triangle anyway
+  leftFace = [A, D, { x: D.x, y: D.y + isoDown.y }, { x: A.x, y: A.y + isoDown.y }];
+  rightFace = [B, C, { x: C.x, y: C.y + isoDown.y }, { x: B.x, y: B.y + isoDown.y }];
 }
+
 
 function drawFace(face, time) {
   if (!face || !face.length) return;
