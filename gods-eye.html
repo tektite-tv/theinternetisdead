@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Square Spiral Animation</title>
+<style>
+    body {
+        margin: 0;
+        background: black;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.onresize = resize;
+
+// CONFIG
+const totalSquares = 48;        // You can increase for smoother circle
+const size = Math.min(canvas.width, canvas.height) * 0.4;
+let index = 0;
+
+// Colors in RGB cycle
+const colors = ["red", "green", "blue"];
+
+// Draw one square at given rotation and size
+function drawSquare(rotation, color) {
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(rotation);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+
+    ctx.beginPath();
+    ctx.rect(-size/2, -size/2, size, size);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = 0; i < index; i++) {
+        const rot = (i * Math.PI * 2) / totalSquares;
+        const color = colors[i % 3];
+        drawSquare(rot, color);
+    }
+
+    if (index < totalSquares) {
+        index++;
+        requestAnimationFrame(animate);
+    } else {
+        // After finishing, keep rotating slowly for style
+        spin();
+    }
+}
+
+let spinAngle = 0;
+function spin() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < totalSquares; i++) {
+        const rot = (i * Math.PI * 2) / totalSquares + spinAngle;
+        const color = colors[i % 3];
+        drawSquare(rot, color);
+    }
+    spinAngle += 0.002;
+    requestAnimationFrame(spin);
+}
+
+animate();
+</script>
+
+</body>
+</html>
