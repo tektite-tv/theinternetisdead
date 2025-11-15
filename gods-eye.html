@@ -2,87 +2,101 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Square Spiral Animation</title>
+<title>God's Eye</title>
 <style>
     body {
         margin: 0;
         background: black;
+        color: white;
         overflow: hidden;
         display: flex;
-        justify-content: center;
+        flex-direction: column;
         align-items: center;
-        height: 100vh;
+    }
+
+    #slider-container {
+        width: 80%;
+        margin-top: 20px;
+        z-index: 10;
+    }
+
+    input[type="range"] {
+        width: 100%;
     }
 </style>
 </head>
 <body>
+
+<div id="slider-container">
+    <input type="range" id="slider" min="1" max="60" value="1">
+</div>
+
 <canvas id="c"></canvas>
 
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
+const slider = document.getElementById("slider");
 
 function resize() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.height = window.innerHeight * 0.9;
 }
 resize();
 window.onresize = resize;
 
 // CONFIG
-const totalSquares = 48;        // You can increase for smoother circle
-const size = Math.min(canvas.width, canvas.height) * 0.4;
-let index = 0;
+const totalSquares = parseInt(slider.max);
+const sizeFactor = 0.42;
+let spin = true;
+let spinAngle = 0;
 
 // Colors in RGB cycle
 const colors = ["red", "green", "blue"];
 
-// Draw one square at given rotation and size
-function drawSquare(rotation, color) {
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(rotation);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 4;
+function drawSquares(count, angleOffset = 0) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.beginPath();
-    ctx.rect(-size/2, -size/2, size, size);
-    ctx.stroke();
+    const size = Math.min(canvas.width, canvas.height) * sizeFactor;
 
-    ctx.restore();
+    for (let i = 0; i < count; i++) {
+        const rot = (i * Math.PI * 2) / totalSquares + angleOffset;
+        const color = colors[i % 3];
+
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(rot);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.rect(-size/2, -size/2, size, size);
+        ctx.stroke();
+        ctx.restore();
+    }
 }
 
+slider.addEventListener("input", () => {
+    spin = false;
+    drawSquares(parseInt(slider.value), 0);
+});
+
+// Gentle rotation when slider not actively dragged
 function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    for (let i = 0; i < index; i++) {
-        const rot = (i * Math.PI * 2) / totalSquares;
-        const color = colors[i % 3];
-        drawSquare(rot, color);
+    if (spin) {
+        spinAngle += 0.002;
+        drawSquares(parseInt(slider.value), spinAngle);
     }
-
-    if (index < totalSquares) {
-        index++;
-        requestAnimationFrame(animate);
-    } else {
-        // After finishing, keep rotating slowly for style
-        spin();
-    }
-}
-
-let spinAngle = 0;
-function spin() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < totalSquares; i++) {
-        const rot = (i * Math.PI * 2) / totalSquares + spinAngle;
-        const color = colors[i % 3];
-        drawSquare(rot, color);
-    }
-    spinAngle += 0.002;
-    requestAnimationFrame(spin);
+    requestAnimationFrame(animate);
 }
 
 animate();
+
+// Stop spinning while dragging
+slider.addEventListener("mousedown", () => spin = false);
+slider.addEventListener("mouseup", () => spin = true);
+slider.addEventListener("touchstart", () => spin = false);
+slider.addEventListener("touchend", () => spin = true);
+
 </script>
 
 </body>
