@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>CRT Void Dragon Visualizer</title>
+<title>CRT Hypernova Dragon Visualizer</title>
 <style>
     html,body{
         margin:0;
@@ -54,7 +54,7 @@
         pointer-events:none;
         position:fixed;
         inset:0;
-        z-index:25;
+        z-index:40;
         mix-blend-mode:soft-light;
     }
     #crt::before{
@@ -82,34 +82,35 @@
 </head>
 <body>
 
-<canvas id="c"></canvas>
-<canvas id="r"></canvas> <!-- RORSCHACH layer -->
+<canvas id="main"></canvas>
+<canvas id="rorschach"></canvas>
 <div id="crt"></div>
 
 <div id="ui">
-    <h2 style="margin:0 0 8px;">CRT Void Dragon</h2>
+    <h2 style="margin:0 0 8px;">CRT Hypernova Dragon</h2>
     <p style="margin:0 0 14px;font-size:0.9rem;color:#cfd9ff;">
-        Upload audio. VHS mirror void awaits.
+        Upload an audio file. The core grows, then detonates at the end.<br>
+        Neon spirals, CRT stars, cursed void included.
     </p>
     <button id="uploadBtn">Choose Audio</button>
     <input type="file" id="fileInput" accept="audio/*">
-    <div style="margin-top:8px;font-size:0.8rem;color:#aaa;">It will look cursed. That's intended.</div>
+    <div style="margin-top:8px;font-size:0.8rem;color:#aaa;">If everything explodes, that means it’s working.</div>
 </div>
 
 <script>
 (() => {
-    const canvas = document.getElementById("c");
-    const ctx = canvas.getContext("2d");
+    const main = document.getElementById("main");
+    const ctx = main.getContext("2d");
 
-    const rCanvas = document.getElementById("r");
+    const rCanvas = document.getElementById("rorschach");
     const rctx = rCanvas.getContext("2d");
 
     function resizeAll() {
-        canvas.width = rCanvas.width = window.innerWidth;
-        canvas.height = rCanvas.height = window.innerHeight;
+        main.width = rCanvas.width = window.innerWidth;
+        main.height = rCanvas.height = window.innerHeight;
     }
     resizeAll();
-    window.addEventListener('resize', resizeAll);
+    window.addEventListener("resize", resizeAll);
 
     const ui = document.getElementById("ui");
     const uploadBtn = document.getElementById("uploadBtn");
@@ -117,87 +118,23 @@
     uploadBtn.onclick = () => fileInput.click();
 
     let audioCtx, analyser, data, source;
-    let start = 0;
+    let audioDuration = 0;
+    let audioStartTime = 0;
+    let startTime = 0;
 
-    // -----------------------------
-    // VHS RORSCHACH VOID
-    // -----------------------------
-    let rWidth = 320; // low-res buffer for VHS effect
+    let running = false;
+    let supernovaState = "idle"; // idle | normal | exploding | afterglow | done
+    let supernovaStart = 0;
+    let afterglowStart = 0;
+    let coreRadiusAtTrigger = 0;
+
+    // ---------- VHS Rorschach (low-res buffer) ----------
+    const rBuf = document.createElement("canvas");
+    let rWidth = 320;
     let rHeight = 180;
-    const rBuf = document.createElement('canvas');
     rBuf.width = rWidth;
     rBuf.height = rHeight;
-    const rBufCtx = rBuf.getContext('2d');
-
-    function drawRorschach(bins, t) {
-        const L = bins.length;
-        const mid = bins[Math.floor(L*0.35)]/255;
-        const hi  = bins[Math.floor(L*0.7)]/255;
-
-        // VHS drift
-        const drift = Math.sin(t*0.002)*3;
-
-        const img = rBufCtx.getImageData(0,0,rWidth,rHeight);
-        const d = img.data;
-        const cx = rWidth/2;
-        const cy = rHeight/2;
-
-        // grain amount
-        const grain = 0.15 + hi*0.25;
-
-        for (let y=0; y<rHeight; y++) {
-            const dy = y - cy + Math.sin((y+t*0.01)*0.05)*4*mid;
-            for (let x=0; x<rWidth/2; x++) {
-                const dx = (x - cx/2) + drift;
-
-                // VHS-like wobbly sin noise
-                const n = (
-                    Math.sin((dx)*0.04 + t*0.0008) +
-                    Math.sin((dy)*0.035 - t*0.0005) +
-                    Math.sin((dx+dy)*0.015 + t*0.0011)
-                ) * 0.5;
-
-                let v = Math.abs(n);
-                v = Math.pow(v, 1.5 - mid*0.4);
-
-                // glitch-lines
-                const glitch = (Math.random()<0.005+hi*0.01) ? (Math.random()*0.6) : 0;
-                v += glitch;
-
-                // grain
-                v += (Math.random()*grain - grain*0.5);
-
-                // color grading
-                const hue = (200 + v*180 + hi*80) % 360;
-                const sat = 20 + v*40;
-                const lit = 5 + v*35;
-
-                const rgb = hslToRgb(hue/360, sat/100, lit/100);
-
-                const idxL = (y*rWidth + x)*4;
-                const idxR = (y*rWidth + (rWidth-x-1))*4;
-
-                d[idxL]   = rgb[0];
-                d[idxL+1] = rgb[1];
-                d[idxL+2] = rgb[2];
-                d[idxL+3] = 255;
-
-                d[idxR]   = rgb[0];
-                d[idxR+1] = rgb[1];
-                d[idxR+2] = rgb[2];
-                d[idxR+3] = 255;
-            }
-        }
-        rBufCtx.putImageData(img,0,0);
-
-        // scale up to full res with smoothing
-        rctx.save();
-        rctx.globalAlpha = 0.85;
-        rctx.imageSmoothingEnabled = true;
-        rctx.clearRect(0,0,canvas.width,canvas.height);
-        rctx.drawImage(rBuf, 0,0, canvas.width,canvas.height);
-        rctx.restore();
-    }
+    const rBufCtx = rBuf.getContext("2d");
 
     function hslToRgb(h,s,l){
         if (s===0) return [l*255,l*255,l*255];
@@ -216,18 +153,74 @@
         return [r*255,g*255,b*255];
     }
 
-    // -----------------------------
-    // STARFIELD (same but tuned for darkness)
-    // -----------------------------
+    function drawRorschach(bins, t) {
+        const L = bins.length;
+        const mid = bins[Math.floor(L*0.35)]/255;
+        const hi  = bins[Math.floor(L*0.7)]/255;
+
+        const img = rBufCtx.getImageData(0,0,rWidth,rHeight);
+        const d = img.data;
+        const cx = rWidth/2;
+        const cy = rHeight/2;
+
+        const drift = Math.sin(t*0.002)*3;
+        const grain = 0.12 + hi*0.22;
+
+        for (let y=0;y<rHeight;y++) {
+            const dy = y - cy + Math.sin((y+t*0.01)*0.05)*4*mid;
+            for (let x=0;x<rWidth/2;x++) {
+                const dx = (x - cx/2) + drift;
+
+                const n = (
+                    Math.sin(dx*0.04 + t*0.0008) +
+                    Math.sin(dy*0.035 - t*0.0005) +
+                    Math.sin((dx+dy)*0.015 + t*0.0011)
+                ) * 0.5;
+
+                let v = Math.abs(n);
+                v = Math.pow(v, 1.5 - mid*0.4);
+                v += (Math.random()*grain - grain*0.5);
+
+                const hue = (200 + v*200 + hi*90) % 360;
+                const sat = 25 + v*35;
+                const lit = 4 + v*32;
+
+                const rgb = hslToRgb(hue/360,sat/100,lit/100);
+
+                const idxL = (y*rWidth + x)*4;
+                const idxR = (y*rWidth + (rWidth-x-1))*4;
+
+                d[idxL]   = rgb[0];
+                d[idxL+1] = rgb[1];
+                d[idxL+2] = rgb[2];
+                d[idxL+3] = 255;
+
+                d[idxR]   = rgb[0];
+                d[idxR+1] = rgb[1];
+                d[idxR+2] = rgb[2];
+                d[idxR+3] = 255;
+            }
+        }
+        rBufCtx.putImageData(img,0,0);
+
+        rctx.save();
+        rctx.globalAlpha = 0.9;
+        rctx.imageSmoothingEnabled = true;
+        rctx.clearRect(0,0,rCanvas.width,rCanvas.height);
+        rctx.drawImage(rBuf,0,0,rCanvas.width,rCanvas.height);
+        rctx.restore();
+    }
+
+    // ---------- Starfield ----------
     const STAR_COUNT = 260;
     let stars = [];
     function initStars() {
         stars = [];
-        const cx = canvas.width/2;
-        const cy = canvas.height/2;
-        for(let i=0;i<STAR_COUNT;i++){
+        const cx = main.width/2;
+        const cy = main.height/2;
+        for (let i=0;i<STAR_COUNT;i++) {
             const angle = Math.random()*Math.PI*2;
-            const dist = Math.random()*Math.max(canvas.width,canvas.height)*0.5;
+            const dist  = Math.random()*Math.max(main.width,main.height)*0.5;
             stars.push({
                 angle,
                 dist,
@@ -239,24 +232,24 @@
     }
     initStars();
 
-    function drawStars(low, mid, hi, t){
-        const cx = canvas.width/2;
-        const cy = canvas.height/2;
+    function drawStars(low, mid, hi, t, blastFactor=1) {
+        const cx = main.width/2;
+        const cy = main.height/2;
 
         ctx.save();
         ctx.lineCap="round";
 
-        const speed = 0.15 + low*0.5;
-        const streak = 0.5 + hi*2.0;
+        const speed = (0.15 + low*0.5) * blastFactor;
+        const streak = (0.5 + hi*2.0) * blastFactor;
 
-        for (let s of stars){
+        for (let s of stars) {
             s.px = s.x; s.py = s.y;
 
             const layer = speed*(0.25 + (1-s.depth)*1.2);
             s.dist += layer;
 
-            const maxDist = Math.max(canvas.width,canvas.height)*0.75;
-            if(s.dist>maxDist){
+            const maxDist = Math.max(main.width,main.height)*0.75;
+            if (s.dist > maxDist) {
                 s.dist = Math.random()*40;
                 s.angle = Math.random()*Math.PI*2;
             }
@@ -271,8 +264,8 @@
             const sat = 30 + hi*30;
             const light = 35 + (1-s.depth)*40 + mid*10;
 
-            ctx.strokeStyle=`hsla(${hue},${sat}%,${light}%,${0.3+hi*0.25})`;
-            ctx.lineWidth=(1-s.depth)*1.4;
+            ctx.strokeStyle = `hsla(${hue},${sat}%,${light}%,${0.3+hi*0.25})`;
+            ctx.lineWidth = (1-s.depth)*1.4;
 
             ctx.beginPath();
             ctx.moveTo(s.px,s.py);
@@ -285,9 +278,7 @@
         ctx.restore();
     }
 
-    // -----------------------------
-    // FRACTAL REACTOR (cooler palette)
-    // -----------------------------
+    // ---------- Fractal wheel ----------
     function drawWheel(cx,cy,r,bins,t,d,maxD,rot,phase){
         if(d>maxD) return;
 
@@ -321,10 +312,10 @@
     }
 
     function drawFractal(bins,t){
-        const cx = canvas.width/2;
-        const cy = canvas.height/2;
+        const cx = main.width/2;
+        const cy = main.height/2;
         const low=bins[2]/255;
-        const r= Math.min(canvas.width,canvas.height)*(0.12+low*0.17);
+        const r= Math.min(main.width,main.height)*(0.12+low*0.17);
 
         ctx.save();
         ctx.translate(cx,cy);
@@ -340,17 +331,180 @@
         ctx.globalCompositeOperation="source-over";
     }
 
-    // -----------------------------
-    // MAIN LOOP
-    // -----------------------------
-    function render(){
+    // ---------- Neon bursts spiraling toward core ----------
+    const bursts = [];
+    function spawnBurst(mid, hi) {
+        const cx = main.width/2;
+        const cy = main.height/2;
+        const maxR = Math.max(main.width, main.height) * (1.1 + Math.random()*0.5);
+        const angle = Math.random()*Math.PI*2;
+        bursts.push({
+            radius: maxR,
+            angle,
+            spin: (Math.random()*0.04 + 0.015) * (Math.random()<0.5?-1:1),
+            shrink: 0.985 - hi*0.01,
+            hueOffset: Math.random()*360,
+            thickness: 1.3 + Math.random()*2.5,
+            life: 1,
+            cx, cy
+        });
+    }
+
+    function updateAndDrawBursts(coreRadius, bins, t, mid, hi) {
+        const L = bins.length;
+        for (let i=bursts.length-1;i>=0;i--) {
+            const b = bursts[i];
+            b.angle += b.spin;
+            b.radius *= b.shrink;
+            b.life -= 0.004 - hi*0.001;
+
+            const progress = Math.max(0,1 - b.radius/(Math.max(main.width,main.height)*1.2));
+
+            const hue = (b.hueOffset + progress*360 + t*0.03) % 360;
+            const sat = 70 + hi*20;
+            const light = 50 + mid*20;
+            const alpha = 0.2 + (1-progress)*0.3;
+
+            const x = b.cx + Math.cos(b.angle)*b.radius;
+            const y = b.cy + Math.sin(b.angle)*b.radius;
+
+            ctx.save();
+            ctx.globalCompositeOperation="screen";
+            ctx.strokeStyle = `hsla(${hue},${sat}%,${light}%,${alpha})`;
+            ctx.lineWidth = b.thickness;
+
+            ctx.beginPath();
+            const tailR = b.radius + 60;
+            const tx = b.cx + Math.cos(b.angle+0.3)*tailR;
+            const ty = b.cy + Math.sin(b.angle+0.3)*tailR;
+            ctx.moveTo(tx,ty);
+            ctx.lineTo(x,y);
+            ctx.stroke();
+            ctx.restore();
+
+            if (b.radius < coreRadius+10 || b.life <= 0) {
+                bursts.splice(i,1);
+            }
+        }
+    }
+
+    // ---------- Core ----------
+    function drawCore(progress, amp, t) {
+        const cx = main.width/2;
+        const cy = main.height/2;
+        const base = 6;
+        const maxExtra = Math.min(main.width,main.height)*0.18;
+        const pulse = 1 + amp*0.4*Math.sin(t*0.01* (1+amp*2));
+        const radius = base + maxExtra*progress*pulse;
+
+        const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,radius);
+        grad.addColorStop(0,"rgba(255,255,255,1)");
+        grad.addColorStop(0.2,"rgba(255,255,255,0.9)");
+        grad.addColorStop(0.6,"rgba(200,230,255,0.4)");
+        grad.addColorStop(1,"rgba(120,180,255,0)");
+
+        ctx.save();
+        ctx.globalCompositeOperation="screen";
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx,cy,radius,0,Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+
+        return radius;
+    }
+
+    // ---------- Supernova sequences ----------
+    function startSupernova(coreRadiusNow) {
+        if (supernovaState === "exploding" || supernovaState === "afterglow" || supernovaState === "done") return;
+        supernovaState = "exploding";
+        supernovaStart = performance.now();
+        coreRadiusAtTrigger = coreRadiusNow;
+    }
+
+    function renderSupernova(now, bins) {
+        const t = now - supernovaStart;
+        const phaseDur = 1800; // ms
+        const k = Math.min(t/phaseDur,1);
+        const cx = main.width/2;
+        const cy = main.height/2;
+
+        // background flash
+        const flashAlpha = (1-k)*0.9;
+        ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
+        ctx.fillRect(0,0,main.width,main.height);
+
+        // rainbow shockwave ring
+        const maxShock = Math.max(main.width,main.height)*0.9;
+        const r = coreRadiusAtTrigger + maxShock*k;
+        const ringWidth = 40*(1-k)+10;
+
+        const hueBase = (performance.now()*0.15) % 360;
+        ctx.save();
+        ctx.globalCompositeOperation="screen";
+        ctx.lineWidth = ringWidth;
+        ctx.beginPath();
+        ctx.arc(cx,cy,r,0,Math.PI*2);
+        ctx.strokeStyle = `hsla(${(hueBase)%360},100%,70%,${1-k})`;
+        ctx.stroke();
+        ctx.restore();
+
+        // star blast: draw stars with huge blast factor
+        // simple spectral bands to keep motion consistent
+        const L = bins.length;
+        let low=0,mid=0,hi=0,lc=0,mc=0,hc=0;
+        for(let i=0;i<L;i++){
+            const v=bins[i];
+            if(i<L*0.15){ low+=v; lc++; }
+            else if(i<L*0.5){ mid+=v; mc++; }
+            else{ hi+=v; hc++; }
+        }
+        low=lc?low/(lc*255):0;
+        mid=mc?mid/(mc*255):0;
+        hi =hc?hi /(hc *255):0;
+        drawStars(low,mid,hi,performance.now()-startTime,3.5);
+
+        if (k >= 1) {
+            supernovaState = "afterglow";
+            afterglowStart = performance.now();
+        }
+    }
+
+    function renderAfterglow(now) {
+        const t = now - afterglowStart;
+        const dur = 900;
+        const k = Math.min(t/dur,1);
+
+        // CRT static style
+        const density = 0.9 - k*0.9;
+        const img = ctx.createImageData(main.width,main.height);
+        const d = img.data;
+        for (let i=0;i<d.length;i+=4){
+            const n = (Math.random() < density*0.02) ? 255 : 0;
+            d[i]=d[i+1]=d[i+2]=n;
+            d[i+3]=255;
+        }
+        ctx.putImageData(img,0,0);
+
+        // fade to black
+        ctx.fillStyle = `rgba(0,0,0,${k})`;
+        ctx.fillRect(0,0,main.width,main.height);
+
+        if (k >= 1) {
+            supernovaState = "done";
+            running = false;
+        }
+    }
+
+    // ---------- Main render loop ----------
+    function render() {
+        if (!running) return;
         requestAnimationFrame(render);
-        if(!analyser) return;
 
         analyser.getByteFrequencyData(data);
-        const t = performance.now() - start;
+        const now = performance.now();
+        const t = now - startTime;
 
-        // compute spectral bands
         const L=data.length;
         let low=0,mid=0,hi=0,lc=0,mc=0,hc=0;
         for(let i=0;i<L;i++){
@@ -362,50 +516,102 @@
         low=lc?low/(lc*255):0;
         mid=mc?mid/(mc*255):0;
         hi =hc?hi /(hc *255):0;
+        const amp = (low+mid+hi)/3;
 
-        // DRAW ORDER:
-        // 1. VHS RORSCHACH
+        const audioTime = audioCtx ? (audioCtx.currentTime - audioStartTime) : 0;
+        const progress = audioDuration>0 ? Math.min(audioTime/audioDuration,1) : 0;
+
+        // Trigger supernova close to end, or if onended fires
+        if (supernovaState === "normal" && (progress >= 0.995)) {
+            const tempCore = drawCore(progress,amp,t); // compute approximate radius
+            startSupernova(tempCore);
+        }
+
+        if (supernovaState === "exploding") {
+            ctx.clearRect(0,0,main.width,main.height);
+            renderSupernova(now, data);
+            return;
+        } else if (supernovaState === "afterglow") {
+            renderAfterglow(now);
+            return;
+        }
+
+        // ----- Normal / charging render path -----
+        supernovaState = "normal";
+
+        // 1. Rorschach background
         drawRorschach(data,t);
+        ctx.drawImage(rCanvas,0,0);
 
-        // 2. DARK SPACE BACKDROP
+        // 2. dark overlay + subtle radial glow
+        const cx = main.width/2, cy = main.height/2;
+        const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(main.width,main.height)*0.7);
+        grad.addColorStop(0,"rgba(5,10,20,0.8)");
+        grad.addColorStop(1,"rgba(0,0,0,1)");
         ctx.fillStyle="rgba(0,0,0,0.6)";
-        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillRect(0,0,main.width,main.height);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0,0,main.width,main.height);
 
-        // 3. STARFIELD
+        // 3. Starfield
         drawStars(low,mid,hi,t);
 
-        // 4. FRACTAL
+        // 4. Fractal
         drawFractal(data,t);
+
+        // 5. Neon bursts (spawn a few based on energy, unless near the very start)
+        if (Math.random() < (0.012 + hi*0.03) && progress>0.02 && supernovaState==="normal") {
+            spawnBurst(mid,hi);
+        }
+        const corePreviewRadius = drawCore(progress,amp,t);
+        updateAndDrawBursts(corePreviewRadius,data,t,mid,hi);
     }
 
-    // -----------------------------
-    // AUDIO LOAD
-    // -----------------------------
-    fileInput.onchange = async ()=>{
-        const file=fileInput.files[0];
-        if(!file) return;
+    // ---------- Audio setup ----------
+    fileInput.onchange = async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
 
-        const buf=await file.arrayBuffer();
-        if(!audioCtx) audioCtx=new AudioContext();
-        if(audioCtx.state==="suspended") await audioCtx.resume();
+        const buffer = await file.arrayBuffer();
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
 
-        const decoded=await audioCtx.decodeAudioData(buf);
-        if(source) source.stop();
+        const decoded = await audioCtx.decodeAudioData(buffer);
+        if (source) source.stop();
 
-        source=audioCtx.createBufferSource();
-        source.buffer=decoded;
+        source = audioCtx.createBufferSource();
+        source.buffer = decoded;
+        audioDuration = decoded.duration || 0;
 
-        analyser=audioCtx.createAnalyser();
-        analyser.fftSize=1024;
-        data=new Uint8Array(analyser.frequencyBinCount);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        data = new Uint8Array(analyser.frequencyBinCount);
 
         source.connect(analyser);
         analyser.connect(audioCtx.destination);
+
+        source.onended = () => {
+            // If somehow the track ends before progress check hits, force supernova
+            if (supernovaState === "normal") {
+                const fakeNow = performance.now();
+                const tempCore = Math.min(main.width,main.height)*0.2;
+                startSupernova(tempCore);
+                startTime = fakeNow;
+                running = true;
+                requestAnimationFrame(render);
+            }
+        };
+
+        audioStartTime = audioCtx.currentTime;
         source.start();
 
         ui.classList.add("hidden");
-        start=performance.now();
-        render();
+        initStars();
+        startTime = performance.now();
+        running = true;
+        supernovaState = "normal";
+        bursts.length = 0;
+        requestAnimationFrame(render);
     };
 })();
 </script>
