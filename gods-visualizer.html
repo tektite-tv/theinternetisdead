@@ -10,23 +10,32 @@
         overflow: hidden;
         font-family: sans-serif;
     }
+
     #uploadBox {
         position: fixed;
         top: 12px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(255, 0, 128, 0.7);
+        background: rgba(255, 0, 128, 0.75);
         color: white;
-        padding: 8px 16px;
-        border-radius: 10px;
+        padding: 10px 18px;
+        border-radius: 12px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 15px;
         z-index: 99999;
         user-select: none;
+        opacity: 1;
+        transition: opacity 0.7s ease;
     }
+    #uploadBox.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
     #file-input {
         display: none;
     }
+
     canvas {
         position: absolute;
         left: 0;
@@ -38,6 +47,7 @@
 
 <div id="uploadBox">Upload MP3</div>
 <input id="file-input" type="file" accept="audio/*">
+
 <canvas id="canvas"></canvas>
 
 <script>
@@ -63,28 +73,23 @@ const breatheSpeed = 0.0015;
 const spinSpeed = 0.0006;
 const glow = 12;
 
-// === AUDIO REACTIVE SETUP ===
+// === AUDIO + ANALYSER ===
 let audioCtx = null;
 let analyser = null;
 let freqData = null;
 
-// random weights to make a "noise heatmap"
+// random weights for audio-reactive heatmap
 const heatWeights = new Array(128).fill(0).map(() => Math.random() * 2.5);
 
-// returns an intensity 0–1 based on audio spectrum
 function audioHeat() {
     if (!analyser) return 0;
-
     analyser.getByteFrequencyData(freqData);
-
     let total = 0;
-    for (let i = 0; i < 128; i++) {
-        total += (freqData[i] / 255) * heatWeights[i];
-    }
+    for (let i = 0; i < 128; i++) total += (freqData[i] / 255) * heatWeights[i];
     return Math.min(1, total / 128);
 }
 
-// === FILE UPLOAD ===
+// === FILE UPLOAD LOGIC ===
 const uploadBox = document.getElementById("uploadBox");
 const fileInput = document.getElementById("file-input");
 
@@ -97,6 +102,7 @@ fileInput.onchange = async (e) => {
     if (!audioCtx) audioCtx = new AudioContext();
     const arrayBuffer = await file.arrayBuffer();
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
     const source = audioCtx.createBufferSource();
     source.buffer = audioBuffer;
 
@@ -107,10 +113,20 @@ fileInput.onchange = async (e) => {
     source.connect(analyser);
     analyser.connect(audioCtx.destination);
 
+    // fade out upload button
+    uploadBox.classList.add("hidden");
+
     source.start(0);
+
+    // fade it BACK IN when the audio ends
+    source.onended = () => {
+        setTimeout(() => {
+            uploadBox.classList.remove("hidden");
+        }, 1500); // appears 1.5s after music stops
+    };
 };
 
-// === DRAW LOOP ===
+// === MAIN DRAW LOOP ===
 function draw(time) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -118,8 +134,8 @@ function draw(time) {
     const cy = canvas.height / 2;
 
     const breathe = 1 + Math.sin(time * breatheSpeed) * 0.20;
-    const heat = audioHeat();  // 0–1
-    const heatHueShift = heat * 180; // half-spectrum wiggle
+    const heat = audioHeat();
+    const heatHueShift = heat * 180;
 
     for (let L = 0; L < layers; L++) {
         const layerDepth = 1 + L * 0.15;
@@ -129,7 +145,6 @@ function draw(time) {
             const size = baseSize * Math.pow(shrink, r) * layerDepth * breathe;
             const radius = r * 18 * layerDepth * breathe;
 
-            // audio hue shift added
             const hue = (r * 12 + L * 30 + heatHueShift + time * driftSpeed * 300) % 360;
             const color = `hsla(${hue}, 100%, 60%, ${0.55 + L * 0.1})`;
 
@@ -163,6 +178,7 @@ function draw(time) {
 
     requestAnimationFrame(draw);
 }
+
 requestAnimationFrame(draw);
 </script>
 
