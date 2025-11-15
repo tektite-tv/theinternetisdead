@@ -2,14 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Recursive Neon Fractal + Splats</title>
+<title>Recursive Fractal + Acid Rorschach</title>
 <style>
     html,body {
         margin:0; padding:0;
         background:#000;
         overflow:hidden;
         font-family:sans-serif;
-        user-select:none;
     }
     canvas {
         position:fixed;
@@ -25,7 +24,8 @@
         background:rgba(10,0,20,0.8);
         border-radius:14px;
         border:1px solid rgba(255,255,255,0.2);
-        color:#0ff; text-align:center;
+        color:#0ff;
+        text-align:center;
         z-index:10;
         box-shadow:0 0 30px #0ff;
     }
@@ -51,9 +51,9 @@
 <canvas id="c"></canvas>
 
 <div id="ui">
-    <h2 style="margin:0 0 10px;">Recursive Fractal + Paint Splats</h2>
+    <h2 style="margin:0 0 10px;">Fractal + Acid Rorschach</h2>
     <p style="color:#ccc;font-size:0.9rem;margin-bottom:14px;">
-        Upload an MP3 and unleash the chaos.
+        Upload an MP3 to awaken the ink-demon.
     </p>
     <button id="uploadBtn">Choose Audio</button>
     <input type="file" id="fileInput" accept="audio/*">
@@ -74,97 +74,164 @@
     const ui = document.getElementById("ui");
     const uploadBtn = document.getElementById("uploadBtn");
     const fileInput = document.getElementById("fileInput");
+
     uploadBtn.onclick = () => fileInput.click();
 
     let audioCtx, source, analyser, data;
     let start = 0;
 
-    // ------------------------------
-    //  PAINT SPLAT SYSTEM
-    // ------------------------------
-    const splats = [];
-
-    function spawnSplat(x, y, hue, amp) {
-        splats.push({
-            x, y,
-            hue,
-            radius: 40 + amp * 180,
-            life: 1.0,
-            shape: Math.floor(Math.random() * 3), // random shape type
-            rotation: Math.random() * Math.PI * 2
-        });
+    // ------------------------------------
+    // Smooth Perlin-like noise generator
+    // ------------------------------------
+    function noise(x, y, t) {
+        return (
+            Math.sin(x*0.02 + t*0.0003) +
+            Math.sin(y*0.018 - t*0.00022) +
+            Math.sin((x+y)*0.01 + t*0.00017)
+        ) * 0.5;
     }
 
-    function drawSplats() {
-        for (let i = splats.length - 1; i >= 0; i--) {
-            const s = splats[i];
-            s.life -= 0.003;
-            if (s.life <= 0) {
-                splats.splice(i, 1);
-                continue;
+    // ------------------------------------
+    // Draw acid Rorschach blot
+    // ------------------------------------
+    function drawInkBlot(bins, t) {
+        const img = ctx.getImageData(0,0,w,h);
+        const d = img.data;
+
+        let low = bins[4] / 255;  
+        let mid = bins[100] / 255;  
+        let hi  = bins[300] / 255;  
+
+        let pulse = (low*0.5 + mid*0.7 + hi*1.3);
+
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w/2; x++) {
+
+                const nx = x - w/4;
+                const ny = y - h/2;
+
+                const n = noise(nx*0.9, ny*0.9, t) * 0.6 +
+                          noise(nx*0.5, ny*0.5, t*1.5) * 0.4;
+
+                let v = Math.abs(n);
+                v = Math.pow(v, 1.3 - pulse*0.6); // melt effect
+
+                const hue = (t*0.01 + v*300) % 360;
+                const sat = 40 + v*60;
+                const lit = 10 + v*50 + pulse*20;
+
+                const color = hslToRgb(hue/360, sat/100, lit/100);
+
+                const idxL = (y*w + x)*4;
+                const idxR = (y*w + (w-x-1))*4;
+
+                d[idxL]   = color[0];
+                d[idxL+1] = color[1];
+                d[idxL+2] = color[2];
+                d[idxL+3] = 255;
+
+                d[idxR]   = color[0];
+                d[idxR+1] = color[1];
+                d[idxR+2] = color[2];
+                d[idxR+3] = 255;
             }
-
-            ctx.save();
-            ctx.globalAlpha = s.life * 0.7;
-
-            ctx.translate(s.x, s.y);
-            ctx.rotate(s.rotation);
-
-            const grad = ctx.createRadialGradient(0,0,0,0,0,s.radius);
-            grad.addColorStop(0, `hsla(${s.hue},100%,65%,${s.life})`);
-            grad.addColorStop(1, `hsla(${s.hue},100%,40%,0)`);
-
-            ctx.fillStyle = grad;
-
-            if (s.shape === 0) {
-                // Blob
-                ctx.beginPath();
-                ctx.ellipse(0,0, s.radius*0.8, s.radius, 0,0,Math.PI*2);
-                ctx.fill();
-            }
-            else if (s.shape === 1) {
-                // Spiky splat
-                ctx.beginPath();
-                for (let a=0; a<Math.PI*2; a+=Math.PI/12) {
-                    const r = s.radius * (0.6 + Math.random()*0.5);
-                    ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r);
-                }
-                ctx.closePath();
-                ctx.fill();
-            }
-            else {
-                // Paint flick scatter
-                for (let p=0; p<40; p++) {
-                    const a = Math.random()*Math.PI*2;
-                    const r = Math.random()*s.radius;
-                    ctx.fillRect(
-                        Math.cos(a)*r,
-                        Math.sin(a)*r,
-                        3 + Math.random()*6,
-                        3 + Math.random()*6
-                    );
-                }
-            }
-
-            ctx.restore();
         }
+
+        ctx.putImageData(img,0,0);
     }
 
-    // ------------------------------------------------
-    // AUDIO LOADING
-    // ------------------------------------------------
+    // ------------------------------------
+    // Helper: HSL to RGB
+    // ------------------------------------
+    function hslToRgb(h, s, l){
+        if (s === 0) return [l*255,l*255,l*255];
+        const hue2rgb = (p, q, t) => {
+            if (t<0) t+=1;
+            if (t>1) t-=1;
+            if (t<1/6) return p + (q-p)*6*t;
+            if (t<1/2) return q;
+            if (t<2/3) return p + (q-p)*(2/3-t)*6;
+            return p;
+        };
+        const q = l < .5 ? l*(1+s) : l+l*s-l*s;
+        const p = 2*l-q;
+        return [
+            hue2rgb(p,q,h+1/3)*255,
+            hue2rgb(p,q,h)*255,
+            hue2rgb(p,q,h-1/3)*255
+        ];
+    }
+
+    // ------------------------------------
+    // Recursive spoke fractal (same as before)
+    // ------------------------------------
+    function drawRecursive(cx, cy, radius, bins, t, depth, maxDepth, rotOffset) {
+        if (depth > maxDepth) return;
+
+        const count = bins.length;
+        const spokes = 360;
+
+        for (let i = 0; i < spokes; i++) {
+            const p = i/spokes;
+            const idx = Math.floor(p*count);
+            const amp = bins[idx]/255;
+
+            const len = radius*(1 + amp*2.1*(depth+1));
+            const a = p*Math.PI*2 + rotOffset + t*0.0004;
+
+            const x = cx + Math.cos(a)*len;
+            const y = cy + Math.sin(a)*len;
+
+            const hue = (p*360 + depth*80 + t*0.02) % 360;
+            ctx.strokeStyle = `hsla(${hue},100%,60%,${0.45-depth*0.12})`;
+            ctx.lineWidth = 1 + amp*3;
+
+            ctx.beginPath();
+            ctx.moveTo(cx,cy);
+            ctx.lineTo(x,y);
+            ctx.stroke();
+        }
+
+        drawRecursive(
+            cx,cy,
+            radius*(0.45 + Math.sin(t*0.001 + depth)*0.05),
+            bins,t,
+            depth+1,maxDepth,
+            rotOffset*1.32 + (depth+1)*0.7
+        );
+    }
+
+    // ------------------------------------
+    // Main render loop
+    // ------------------------------------
+    function render() {
+        requestAnimationFrame(render);
+        analyser.getByteFrequencyData(data);
+
+        const t = performance.now() - start;
+        drawInkBlot(data, t);
+
+        const cx = w/2;
+        const cy = h/2;
+        const low = data[1]/255;
+        const baseR = Math.min(w,h)*(0.12 + low*0.2);
+
+        drawRecursive(cx,cy,baseR,data,t,0,3,0.2);
+    }
+
+    // ------------------------------------
+    // When file chosen
+    // ------------------------------------
     fileInput.onchange = async () => {
         const file = fileInput.files[0];
         if (!file) return;
 
-        const arrayBuffer = await file.arrayBuffer();
-
+        const array = await file.arrayBuffer();
         if (!audioCtx) audioCtx = new AudioContext();
         if (audioCtx.state === "suspended") await audioCtx.resume();
+        const decoded = await audioCtx.decodeAudioData(array);
 
-        const decoded = await audioCtx.decodeAudioData(arrayBuffer);
         if (source) source.stop();
-
         source = audioCtx.createBufferSource();
         source.buffer = decoded;
 
@@ -180,94 +247,6 @@
         start = performance.now();
         render();
     };
-
-    // ------------------------------------------------
-    // RECURSIVE SPOKE FRACTAL
-    // ------------------------------------------------
-    function drawRecursiveSpokes(cx, cy, radius, bins, t, depth, maxDepth, rotOffset) {
-        if (depth > maxDepth) return;
-
-        const count = bins.length;
-        const spokes = 360;
-
-        for (let i = 0; i < spokes; i++) {
-            const p = i / spokes;
-            const idx = Math.floor(p * count);
-            const amp = bins[idx] / 255;
-
-            const len = radius * (1 + amp * 2.1 * (depth+1));
-
-            const angle = p * Math.PI * 2 + rotOffset + t*0.0004;
-
-            const x = cx + Math.cos(angle)*len;
-            const y = cy + Math.sin(angle)*len;
-
-            const hue = (p*360 + depth*80 + t*0.02) % 360;
-
-            ctx.strokeStyle = `hsla(${hue},100%,60%,${0.45-depth*0.12})`;
-            ctx.lineWidth = 1 + amp*3;
-
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(x, y);
-            ctx.stroke();
-
-            // occasional tiny sparkle nodes
-            if (depth===0 && amp>0.6 && Math.random()<0.2) {
-                ctx.fillStyle = `hsla(${hue},100%,70%,1)`;
-                ctx.beginPath();
-                ctx.arc(x,y,2+amp*5,0,Math.PI*2);
-                ctx.fill();
-            }
-        }
-
-        // recursive call
-        drawRecursiveSpokes(
-            cx, cy,
-            radius * (0.45 + Math.sin(t*0.001+depth)*0.05),
-            bins, t,
-            depth+1, maxDepth,
-            rotOffset*1.32 + (depth+1)*0.7
-        );
-    }
-
-    // ------------------------------------------------
-    // MAIN RENDER LOOP
-    // ------------------------------------------------
-    function render() {
-        requestAnimationFrame(render);
-        analyser.getByteFrequencyData(data);
-
-        const t = performance.now() - start;
-
-        // fade background slightly
-        ctx.fillStyle = "rgba(0,0,0,0.12)";
-        ctx.fillRect(0, 0, w, h);
-
-        const cx = w/2;
-        const cy = h/2;
-
-        // detect strong bins for splats
-        for (let i = 20; i < 200; i+=4) {
-            const amp = data[i] / 255;
-            if (amp > 0.62 && Math.random() < amp*0.3) {
-                const angle = (i/data.length) * Math.PI*2;
-                const dist = 50 + Math.random()*200;
-                const x = cx + Math.cos(angle)*dist;
-                const y = cy + Math.sin(angle)*dist;
-                const hue = (i / data.length) * 360;
-                spawnSplat(x,y,hue,amp);
-            }
-        }
-
-        // paint splats FIRST (behind fractal)
-        drawSplats();
-
-        // fractal on top
-        const low = data[1] / 255;
-        const baseR = Math.min(w,h)*(0.12 + low*0.2);
-        drawRecursiveSpokes(cx,cy,baseR,data,t,0,3,0.3);
-    }
 })();
 </script>
 
