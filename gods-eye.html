@@ -236,6 +236,14 @@ function startSpin() { spin = true; }
     sl.addEventListener("touchend", startSpin);
 });
 
+// fullscreen change listener
+document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement) {
+        controls.style.display = "flex";
+        canvas.height = window.innerHeight - 80;
+    }
+});
+
 fullscreenBtn.onclick = () => {
     if (!document.fullscreenElement) {
         document.body.requestFullscreen().then(() => {
@@ -243,10 +251,7 @@ fullscreenBtn.onclick = () => {
             canvas.height = window.innerHeight;
         });
     } else {
-        document.exitFullscreen().then(() => {
-            controls.style.display = "flex";
-            canvas.height = window.innerHeight - 80;
-        });
+        document.exitFullscreen();
     }
 };
 
