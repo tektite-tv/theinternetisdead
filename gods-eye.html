@@ -13,7 +13,6 @@
         flex-direction: column;
     }
 
-    /* Control Box */
     #controls {
         width: 100%;
         background: rgba(20, 20, 20, 0.9);
@@ -27,12 +26,13 @@
         left: 0;
         box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
         backdrop-filter: blur(6px);
+        font-family: sans-serif;
+        gap: 5px;
     }
 
     .slider-block {
-        width: 40%;
+        width: 18%;
         text-align: center;
-        font-family: sans-serif;
     }
 
     input[type="range"] {
@@ -42,23 +42,64 @@
     canvas {
         flex: 1;
     }
+
+    button {
+        background: #333;
+        color: white;
+        border: 1px solid #777;
+        padding: 10px 18px;
+        cursor: pointer;
+        border-radius: 6px;
+    }
+
+    button:hover {
+        background: #555;
+    }
+
+    select {
+        background: #222;
+        color: white;
+        padding: 5px;
+        border-radius: 6px;
+        border: 1px solid #777;
+    }
 </style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
 
-<!-- CONTROL PANEL -->
 <div id="controls">
     <div class="slider-block">
         <label>Squares</label><br>
-        <input type="range" id="squareSlider" min="1" max="60" value="30">
+        <input type="range" id="squareSlider" min="1" max="100" value="30">
     </div>
 
     <div class="slider-block">
         <label>Size</label><br>
         <input type="range" id="sizeSlider" min="0.1" max="1.0" step="0.01" value="0.42">
     </div>
+
+    <div class="slider-block">
+        <label>Spin Speed</label><br>
+        <input type="range" id="speedSlider" min="0" max="0.02" step="0.0005" value="0.002">
+    </div>
+
+    <div class="slider-block">
+        <label>Line Width</label><br>
+        <input type="range" id="widthSlider" min="1" max="20" value="4">
+    </div>
+
+    <div class="slider-block">
+        <label>Colors</label><br>
+        <select id="colorMode">
+            <option value="rgb">RGB Cycle</option>
+            <option value="single">Single Color</option>
+            <option value="hue">Hue Rotation</option>
+        </select>
+    </div>
+
+    <button id="fullscreenBtn">Fullscreen</button>
 </div>
 
 <script>
@@ -67,20 +108,39 @@ const ctx = canvas.getContext("2d");
 
 const squareSlider = document.getElementById("squareSlider");
 const sizeSlider = document.getElementById("sizeSlider");
+const speedSlider = document.getElementById("speedSlider");
+const widthSlider = document.getElementById("widthSlider");
+const colorMode = document.getElementById("colorMode");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
 
 function resize() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - 80; // keep clear of control panel
+    canvas.height = window.innerHeight - 80;
 }
 resize();
 window.onresize = resize;
 
-// CONFIG
 let spin = true;
 let spinAngle = 0;
+let hueShift = 0;
 
-// Colors in RGB cycle
 const colors = ["red", "green", "blue"];
+
+function getColor(i) {
+    const mode = colorMode.value;
+
+    if (mode === "rgb") {
+        return colors[i % 3];
+    }
+
+    if (mode === "single") {
+        return "white";
+    }
+
+    if (mode === "hue") {
+        return `hsl(${(i * 10 + hueShift) % 360}, 100%, 50%)`;
+    }
+}
 
 function drawSquares(count, sizeScale, angleOffset = 0) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -89,44 +149,56 @@ function drawSquares(count, sizeScale, angleOffset = 0) {
 
     for (let i = 0; i < count; i++) {
         const rot = (i * Math.PI * 2) / 60 + angleOffset;
-        const color = colors[i % 3];
 
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(rot);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 4;
+
+        ctx.strokeStyle = getColor(i);
+        ctx.lineWidth = parseFloat(widthSlider.value);
         ctx.beginPath();
         ctx.rect(-size/2, -size/2, size, size);
         ctx.stroke();
+
         ctx.restore();
     }
 }
 
 function animate() {
     if (spin) {
-        spinAngle += 0.002;
+        spinAngle += parseFloat(speedSlider.value);
+        hueShift += 0.3;
     }
+
     drawSquares(
         parseInt(squareSlider.value),
         parseFloat(sizeSlider.value),
         spinAngle
     );
+
     requestAnimationFrame(animate);
 }
 animate();
 
-// Stop spin while dragging sliders
 function stopSpin() { spin = false; }
 function startSpin() { spin = true; }
 
-[squareSlider, sizeSlider].forEach(sl => {
+[squareSlider, sizeSlider, speedSlider, widthSlider].forEach(sl => {
     sl.addEventListener("input", stopSpin);
     sl.addEventListener("mousedown", stopSpin);
     sl.addEventListener("mouseup", startSpin);
     sl.addEventListener("touchstart", stopSpin);
     sl.addEventListener("touchend", startSpin);
 });
+
+// fullscreen
+fullscreenBtn.onclick = () => {
+    if (!document.fullscreenElement) {
+        document.body.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+};
 </script>
 
 </body>
