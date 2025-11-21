@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>God's Eye</title>
+<title>Square Spiral Controls</title>
 <style>
     body {
         margin: 0;
@@ -11,56 +11,84 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        align-items: center;
     }
 
-    #slider-container {
-        width: 80%;
-        margin-top: 20px;
-        z-index: 10;
+    /* Control Box */
+    #controls {
+        width: 100%;
+        background: rgba(20, 20, 20, 0.9);
+        padding: 15px;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        backdrop-filter: blur(6px);
+    }
+
+    .slider-block {
+        width: 40%;
+        text-align: center;
+        font-family: sans-serif;
     }
 
     input[type="range"] {
         width: 100%;
     }
+
+    canvas {
+        flex: 1;
+    }
 </style>
 </head>
 <body>
 
-<div id="slider-container">
-    <input type="range" id="slider" min="1" max="60" value="1">
-</div>
-
 <canvas id="c"></canvas>
+
+<!-- CONTROL PANEL -->
+<div id="controls">
+    <div class="slider-block">
+        <label>Squares</label><br>
+        <input type="range" id="squareSlider" min="1" max="60" value="30">
+    </div>
+
+    <div class="slider-block">
+        <label>Size</label><br>
+        <input type="range" id="sizeSlider" min="0.1" max="1.0" step="0.01" value="0.42">
+    </div>
+</div>
 
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-const slider = document.getElementById("slider");
+
+const squareSlider = document.getElementById("squareSlider");
+const sizeSlider = document.getElementById("sizeSlider");
 
 function resize() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight * 0.9;
+    canvas.height = window.innerHeight - 80; // keep clear of control panel
 }
 resize();
 window.onresize = resize;
 
 // CONFIG
-const totalSquares = parseInt(slider.max);
-const sizeFactor = 0.42;
 let spin = true;
 let spinAngle = 0;
 
 // Colors in RGB cycle
 const colors = ["red", "green", "blue"];
 
-function drawSquares(count, angleOffset = 0) {
+function drawSquares(count, sizeScale, angleOffset = 0) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const size = Math.min(canvas.width, canvas.height) * sizeFactor;
+    const size = Math.min(canvas.width, canvas.height) * sizeScale;
 
     for (let i = 0; i < count; i++) {
-        const rot = (i * Math.PI * 2) / totalSquares + angleOffset;
+        const rot = (i * Math.PI * 2) / 60 + angleOffset;
         const color = colors[i % 3];
 
         ctx.save();
@@ -75,28 +103,30 @@ function drawSquares(count, angleOffset = 0) {
     }
 }
 
-slider.addEventListener("input", () => {
-    spin = false;
-    drawSquares(parseInt(slider.value), 0);
-});
-
-// Gentle rotation when slider not actively dragged
 function animate() {
     if (spin) {
         spinAngle += 0.002;
-        drawSquares(parseInt(slider.value), spinAngle);
     }
+    drawSquares(
+        parseInt(squareSlider.value),
+        parseFloat(sizeSlider.value),
+        spinAngle
+    );
     requestAnimationFrame(animate);
 }
-
 animate();
 
-// Stop spinning while dragging
-slider.addEventListener("mousedown", () => spin = false);
-slider.addEventListener("mouseup", () => spin = true);
-slider.addEventListener("touchstart", () => spin = false);
-slider.addEventListener("touchend", () => spin = true);
+// Stop spin while dragging sliders
+function stopSpin() { spin = false; }
+function startSpin() { spin = true; }
 
+[squareSlider, sizeSlider].forEach(sl => {
+    sl.addEventListener("input", stopSpin);
+    sl.addEventListener("mousedown", stopSpin);
+    sl.addEventListener("mouseup", startSpin);
+    sl.addEventListener("touchstart", stopSpin);
+    sl.addEventListener("touchend", startSpin);
+});
 </script>
 
 </body>
