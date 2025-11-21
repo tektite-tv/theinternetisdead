@@ -1,103 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Breathing Fractal Bloom</title>
+<title>God's Eye</title>
 <style>
     body {
         margin: 0;
-        overflow: hidden;
         background: black;
+        color: white;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
-    canvas {
-        position: absolute;
-        left: 0;
-        top: 0;
+
+    #slider-container {
+        width: 80%;
+        margin-top: 20px;
+        z-index: 10;
+    }
+
+    input[type="range"] {
+        width: 100%;
     }
 </style>
 </head>
 <body>
 
-<canvas id="canvas"></canvas>
+<div id="slider-container">
+    <input type="range" id="slider" min="1" max="60" value="1">
+</div>
+
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("canvas");
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
+const slider = document.getElementById("slider");
 
 function resize() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.height = window.innerHeight * 0.9;
 }
-window.addEventListener("resize", resize);
 resize();
+window.onresize = resize;
 
 // CONFIG
-const layers = 4;               // parallax depth layers
-const rings = 32;               // number of square-rings per layer
-const squaresPerRing = 4;       // keep symmetry
-const baseSize = 120;           // starting square size
-const shrink = 0.85;            // falloff per ring
-const twist = Math.PI / 12;     // twist between rings
-const driftSpeed = 0.00025;     // color drift
-const breatheSpeed = 0.0015;    // breathing rate
-const spinSpeed = 0.0006;       // rotational easing
-const glow = 12;                // shadow blur
-const glowStrength = 0.65;      // glow alpha
+const totalSquares = parseInt(slider.max);
+const sizeFactor = 0.42;
+let spin = true;
+let spinAngle = 0;
 
-function draw(time) {
+// Colors in RGB cycle
+const colors = ["red", "green", "blue"];
+
+function drawSquares(count, angleOffset = 0) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
 
-    // breathing between 0.8 and 1.2 scale
-    const breathe = 1 + Math.sin(time * breatheSpeed) * 0.20;
+    const size = Math.min(canvas.width, canvas.height) * sizeFactor;
 
-    for (let L = 0; L < layers; L++) {
-        const layerDepth = 1 + L * 0.15;
-        const angleBase = time * spinSpeed * (1 + L * 0.1);
+    for (let i = 0; i < count; i++) {
+        const rot = (i * Math.PI * 2) / totalSquares + angleOffset;
+        const color = colors[i % 3];
 
-        for (let r = 0; r < rings; r++) {
-
-            const size = baseSize * Math.pow(shrink, r) * layerDepth * breathe;
-            const radius = r * 18 * layerDepth * breathe;
-
-            // color drift
-            const hue = (r * 12 + L * 30 + time * driftSpeed * 300) % 360;
-            const color = `hsla(${hue}, 100%, 60%, ${0.55 + L * 0.1})`;
-
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.shadowColor = color;
-            ctx.shadowBlur = glow;
-
-            const ringTwist = angleBase + r * twist;
-
-            for (let k = 0; k < squaresPerRing; k++) {
-
-                const angle = ringTwist + k * (Math.PI / 2);
-
-                // gentle curvature for the arms
-                const curve = Math.sin(r * 0.3 + time * 0.0009) * 10;
-
-                const x = cx + Math.cos(angle) * (radius + curve);
-                const y = cy + Math.sin(angle) * (radius + curve);
-
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(angle + ringTwist * 0.5);
-
-                ctx.beginPath();
-                ctx.rect(-size / 2, -size / 2, size, size);
-                ctx.stroke();
-
-                ctx.restore();
-            }
-        }
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(rot);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.rect(-size/2, -size/2, size, size);
+        ctx.stroke();
+        ctx.restore();
     }
-
-    requestAnimationFrame(draw);
 }
-requestAnimationFrame(draw);
+
+slider.addEventListener("input", () => {
+    spin = false;
+    drawSquares(parseInt(slider.value), 0);
+});
+
+// Gentle rotation when slider not actively dragged
+function animate() {
+    if (spin) {
+        spinAngle += 0.002;
+        drawSquares(parseInt(slider.value), spinAngle);
+    }
+    requestAnimationFrame(animate);
+}
+
+animate();
+
+// Stop spinning while dragging
+slider.addEventListener("mousedown", () => spin = false);
+slider.addEventListener("mouseup", () => spin = true);
+slider.addEventListener("touchstart", () => spin = false);
+slider.addEventListener("touchend", () => spin = true);
+
 </script>
 
 </body>
