@@ -116,6 +116,7 @@ const colorMode = document.getElementById("colorMode");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
 const pulseBtn = document.getElementById("pulseBtn");
 const vertexBtn = document.getElementById("vertexBtn");
+const controls = document.getElementById("controls");
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -128,7 +129,6 @@ let spin = true;
 let spinAngle = 0;
 let hueShift = 0;
 
-// animation modes
 let pulsing = false;
 let pulseDirection = 1;
 let pulseMin = 1;
@@ -238,9 +238,15 @@ function startSpin() { spin = true; }
 
 fullscreenBtn.onclick = () => {
     if (!document.fullscreenElement) {
-        document.body.requestFullscreen();
+        document.body.requestFullscreen().then(() => {
+            controls.style.display = "none";
+            canvas.height = window.innerHeight;
+        });
     } else {
-        document.exitFullscreen();
+        document.exitFullscreen().then(() => {
+            controls.style.display = "flex";
+            canvas.height = window.innerHeight - 80;
+        });
     }
 };
 
