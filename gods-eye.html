@@ -99,6 +99,7 @@
         </select>
     </div>
 
+    <button id="pulseBtn">Pulse Squares</button>
     <button id="fullscreenBtn">Fullscreen</button>
 </div>
 
@@ -112,6 +113,7 @@ const speedSlider = document.getElementById("speedSlider");
 const widthSlider = document.getElementById("widthSlider");
 const colorMode = document.getElementById("colorMode");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
+const pulseBtn = document.getElementById("pulseBtn");
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -126,20 +128,18 @@ let hueShift = 0;
 
 const colors = ["red", "green", "blue"];
 
+// pulse animation vars
+let pulsing = false;
+let pulseDirection = 1;
+let pulseMin = 1;
+let pulseMax = 100;
+
 function getColor(i) {
     const mode = colorMode.value;
 
-    if (mode === "rgb") {
-        return colors[i % 3];
-    }
-
-    if (mode === "single") {
-        return "white";
-    }
-
-    if (mode === "hue") {
-        return `hsl(${(i * 10 + hueShift) % 360}, 100%, 50%)`;
-    }
+    if (mode === "rgb") return colors[i % 3];
+    if (mode === "single") return "white";
+    if (mode === "hue") return `hsl(${(i * 10 + hueShift) % 360}, 100%, 50%)`;
 }
 
 function drawSquares(count, sizeScale, angleOffset = 0) {
@@ -170,6 +170,17 @@ function animate() {
         hueShift += 0.3;
     }
 
+    if (pulsing) {
+        let current = parseInt(squareSlider.value);
+        current += pulseDirection;
+
+        if (current >= pulseMax || current <= pulseMin) {
+            pulseDirection *= -1;
+        }
+
+        squareSlider.value = current;
+    }
+
     drawSquares(
         parseInt(squareSlider.value),
         parseFloat(sizeSlider.value),
@@ -198,6 +209,12 @@ fullscreenBtn.onclick = () => {
     } else {
         document.exitFullscreen();
     }
+};
+
+// pulse button behavior
+pulseBtn.onclick = () => {
+    pulsing = !pulsing;
+    pulseBtn.textContent = pulsing ? "Stop Pulse" : "Pulse Squares";
 };
 </script>
 
