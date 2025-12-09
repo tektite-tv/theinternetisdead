@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Shooter Game v0.04</title>
+  <title>Shooter Game v0.05</title>
 
   <style>
-    /* v0.01–v0.04 baseline styling */
+    /* v0.01–v0.05 baseline styling */
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: #050608;
+      background: #000000;
       color: #ffffff;
       font-family: system-ui;
     }
@@ -35,7 +35,7 @@
       width: 100%;
       height: 100%;
       display: block;
-      background: #111;
+      background: #000000; /* v0.05: base ground is black */
       border: 2px solid #444;
     }
 
@@ -73,7 +73,7 @@
     <canvas id="game"></canvas>
 
     <div id="ui">
-      <div>shooter-game v0.04</div>
+      <div>shooter-game v0.05</div>
       <div>WASD = move | Mouse = aim | LMB = shoot | R = restart</div>
       <div>HP: <span id="hpDisplay">100</span></div>
       <div>Score: <span id="scoreDisplay">0</span></div>
@@ -84,17 +84,20 @@
 
   <script>
     // ================================================================
-    // Shooter Game v0.04 (FULL FILE)
+    // Shooter Game v0.05 (FULL FILE)
     //
-    // New in v0.04:
-    //  - Camera system that keeps the player centered on screen.
-    //  - Parallax grid floor scrolling under the player.
-    //  - All world objects rendered relative to camera.
+    // New in v0.05:
+    //  - Removed world boundaries: infinite movement.
+    //  - Ground is black by default.
+    //  - Fog-of-war style trail: walking illuminates a big circular
+    //    radius along the path you've walked.
+    //  - Grid/parallax floor removed in favor of path illumination.
+    //  - Enemies spawn in a ring around player (no finite map edges).
     //
-    // Previous changes (v0.03 kept):
-    //  - Larger logical space (1200x800).
-    //  - Softer hit detection with contact cooldown.
-    //  - Tuned enemy spawn & speed.
+    // Kept from v0.04:
+    //  - Camera centered on player.
+    //  - 1200x800 logical "viewport" used for scaling.
+    //  - Softer contact damage & hit cooldown.
     // ================================================================
 
     const canvas = document.getElementById("game");
@@ -104,21 +107,21 @@
     const scoreDisplay = document.getElementById("scoreDisplay");
     const gameOverMessage = document.getElementById("gameOverMessage");
 
-    // v0.03: Larger logical playfield = more breathing room
+    // Logical viewport used for scaling, not actual world bounds
     const VIRTUAL_WIDTH = 1200;
     const VIRTUAL_HEIGHT = 800;
 
-    // Logical space used for all gameplay calculations
+    // These are no longer "bounds", just a reference size
     const WIDTH = VIRTUAL_WIDTH;
     const HEIGHT = VIRTUAL_HEIGHT;
 
-    // v0.04: Camera that follows the player in world space
+    // Camera follows the player; screen is always centered on camera
     const camera = {
       x: WIDTH / 2,
       y: HEIGHT / 2
     };
 
-    // Real canvas resizer (physical pixels match CSS)
+    // Resize real canvas to match its CSS box
     function resizeCanvas() {
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width;
@@ -128,10 +131,7 @@
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
-    // v0.04:
-    // Map world coordinates -> screen coordinates using camera.
-    // The camera is centered on the player, so the player appears
-    // in the middle of the screen at all times.
+    // Map world coordinates -> screen coordinates using camera-centered viewport
     function sx(worldX) {
       const viewportX = (worldX - camera.x) + VIRTUAL_WIDTH / 2;
       return (viewportX / VIRTUAL_WIDTH) * canvas.width;
@@ -148,8 +148,8 @@
     const player = {
       x: WIDTH / 2,
       y: HEIGHT / 2,
-      radius: 12,         // smaller hitbox
-      speed: 260,         // faster movement
+      radius: 12,
+      speed: 260,
       angle: 0,
       hp: 100,
       maxHp: 100
@@ -172,10 +172,22 @@
     let enemySpawnTimer = 0;
     const ENEMY_SPAWN_INTERVAL = 1.6;
 
-    // Player contact damage with cooldown
+    // Contact damage cooldown
     let playerHitTimer = 0;
     const PLAYER_CONTACT_DAMAGE = 15;
     const PLAYER_HIT_COOLDOWN = 0.7;
+
+    // v0.05: Trail / fog-of-war
+    // We store positions along the player's path and render big circular
+    // light patches at each point to reveal where they've been.
+    const trailPoints = [];
+    const TRAIL_STEP_DIST = 25;   // distance between sampled trail points
+    const TRAIL_LIGHT_RADIUS = 220; // radius (in world units) of illuminated area
+    let lastTrailX = player.x;
+    let lastTrailY = player.y;
+
+    // Initialize trail with starting position
+    trailPoints.push({ x: player.x, y: player.y });
 
     // =================================================================
     // INPUT HANDLERS
@@ -199,9 +211,9 @@
 
     canvas.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
-      // Convert from screen space -> virtual space (world coordinates)
       const nx = (e.clientX - rect.left) / canvas.width;
       const ny = (e.clientY - rect.top) / canvas.height;
+      // Screen center corresponds to camera center (player)
       mouse.x = camera.x + (nx - 0.5) * VIRTUAL_WIDTH;
       mouse.y = camera.y + (ny - 0.5) * VIRTUAL_HEIGHT;
     });
@@ -237,13 +249,14 @@
     }
 
     function spawnEnemy() {
-      const edge = Math.floor(Math.random() * 4);
-      let x, y;
+      // v0.05: Spawn in an annulus around player instead of finite map edges
+      const angle = Math.random() * Math.PI * 2;
+      const minDist = 500;
+      const maxDist = 900;
+      const dist = minDist + Math.random() * (maxDist - minDist);
 
-      if (edge === 0) { x = Math.random() * WIDTH; y = -40; }
-      else if (edge === 1) { x = WIDTH + 40; y = Math.random() * HEIGHT; }
-      else if (edge === 2) { x = Math.random() * WIDTH; y = HEIGHT + 40; }
-      else { x = -40; y = Math.random() * HEIGHT; }
+      const x = player.x + Math.cos(angle) * dist;
+      const y = player.y + Math.sin(angle) * dist;
 
       enemies.push({
         x,
@@ -260,7 +273,6 @@
     function update(dt) {
       if (isGameOver) return;
 
-      // Contact damage cooldown
       playerHitTimer = Math.max(0, playerHitTimer - dt);
 
       // Player facing
@@ -279,16 +291,29 @@
       mvx /= mag;
       mvy /= mag;
 
+      // v0.05: No boundary clamping; infinite world
       player.x += mvx * player.speed * dt;
       player.y += mvy * player.speed * dt;
 
-      // Keep player inside logical bounds
-      player.x = Math.max(player.radius, Math.min(WIDTH - player.radius, player.x));
-      player.y = Math.max(player.radius, Math.min(HEIGHT - player.radius, player.y));
-
-      // v0.04: Camera follows player 1:1 (locked center effect)
+      // Camera stays locked to player
       camera.x = player.x;
       camera.y = player.y;
+
+      // Record trail points as the player moves
+      const dxTrail = player.x - lastTrailX;
+      const dyTrail = player.y - lastTrailY;
+      const trailDist = Math.hypot(dxTrail, dyTrail);
+
+      if (trailDist >= TRAIL_STEP_DIST) {
+        trailPoints.push({ x: player.x, y: player.y });
+        lastTrailX = player.x;
+        lastTrailY = player.y;
+
+        // Optional safety: cap trail length so it doesn't blow up forever
+        if (trailPoints.length > 2000) {
+          trailPoints.shift();
+        }
+      }
 
       // Shooting cooldown
       if (mouse.isDown) {
@@ -306,16 +331,13 @@
         b.y += b.vy * dt;
         b.life -= dt;
 
-        if (
-          b.life <= 0 ||
-          b.x < -100 || b.x > WIDTH + 100 ||
-          b.y < -100 || b.y > HEIGHT + 100
-        ) {
+        // We mostly rely on life now; world is infinite.
+        if (b.life <= 0) {
           bullets.splice(i, 1);
         }
       }
 
-      // Spawn enemies
+      // Spawn enemies in ring around player
       enemySpawnTimer += dt;
       if (enemySpawnTimer >= ENEMY_SPAWN_INTERVAL) {
         enemySpawnTimer = 0;
@@ -365,6 +387,9 @@
             }
           }
         }
+
+        // Optional: if enemy drifts *very* far, you could despawn it
+        // but infinite world + ring spawn means it's not strictly required.
       }
 
       // UI updates
@@ -373,60 +398,39 @@
     }
 
     // =================================================================
-    // GRID FLOOR (PARALLAX)
+    // TRAIL / FOG-OF-WAR DRAWING
     // =================================================================
-    function drawGrid() {
-      // v0.04: Simple parallax grid that scrolls under the player.
-      const gridSize = 80;          // spacing in virtual units
-      const parallax = 0.5;         // <1 => slower than player movement
-      const scaleX = canvas.width / VIRTUAL_WIDTH;
-      const scaleY = canvas.height / VIRTUAL_HEIGHT;
+    function drawTrail() {
+      const scaleFactor = canvas.width / VIRTUAL_WIDTH;
+      const rWorld = TRAIL_LIGHT_RADIUS;
 
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
-      ctx.lineWidth = 1;
+      for (const p of trailPoints) {
+        const cx = sx(p.x);
+        const cy = sy(p.y);
+        const r = rWorld * scaleFactor;
 
-      // Compute offset based on camera, so the grid scrolls as you move.
-      const offsetX = -((camera.x * parallax) % gridSize);
-      const offsetY = -((camera.y * parallax) % gridSize);
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        grad.addColorStop(0, "rgba(120, 180, 255, 0.9)");
+        grad.addColorStop(0.4, "rgba(60, 120, 220, 0.5)");
+        grad.addColorStop(1, "rgba(0, 0, 0, 0.0)"); // fade to black
 
-      // Vertical lines
-      for (let x = offsetX; x < VIRTUAL_WIDTH; x += gridSize) {
-        const sxLine = x * scaleX + (VIRTUAL_WIDTH / 2 - camera.x * parallax) * scaleX;
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.moveTo(sxLine, 0);
-        ctx.lineTo(sxLine, canvas.height);
-        ctx.stroke();
-      }
-
-      // Horizontal lines
-      for (let y = offsetY; y < VIRTUAL_HEIGHT; y += gridSize) {
-        const syLine = y * scaleY + (VIRTUAL_HEIGHT / 2 - camera.y * parallax) * scaleY;
-        ctx.beginPath();
-        ctx.moveTo(0, syLine);
-        ctx.lineTo(canvas.width, syLine);
-        ctx.stroke();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
     // =================================================================
-    // DRAW LOOP (uses camera-relative sx(), sy())
+    // DRAW LOOP
     // =================================================================
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Background gradient
-      const g = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height / 2, 0,
-        canvas.width / 2, canvas.height / 2,
-        Math.max(canvas.width, canvas.height)
-      );
-      g.addColorStop(0, "#101010");
-      g.addColorStop(1, "#050505");
-      ctx.fillStyle = g;
+      // Base ground = black everywhere
+      ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // v0.04: Draw grid first so everything sits "on top" of it
-      drawGrid();
+      // Draw illuminated trail on top of black
+      drawTrail();
 
       const scaleFactor = canvas.width / VIRTUAL_WIDTH;
 
@@ -456,16 +460,14 @@
         ctx.stroke();
       }
 
-      // Player:
-      // Even though player.x/y move in world space,
-      // sx()/sy() with camera centered keep them visually in the middle.
+      // Player
       const pr = player.radius * scaleFactor;
       ctx.beginPath();
       ctx.arc(sx(player.x), sy(player.y), pr, 0, Math.PI * 2);
       ctx.fillStyle = "#55aaff";
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = "#fff";
+      ctx.strokeStyle = "#ffffff";
       ctx.stroke();
 
       // Player gun direction
@@ -476,7 +478,7 @@
       ctx.beginPath();
       ctx.moveTo(sx(player.x), sy(player.y));
       ctx.lineTo(sx(gx), sy(gy));
-      ctx.strokeStyle = "#fff";
+      ctx.strokeStyle = "#ffffff";
       ctx.stroke();
 
       if (isGameOver) {
