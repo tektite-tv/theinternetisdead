@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Shooter Game v0.03</title>
+  <title>Shooter Game v0.04</title>
 
   <style>
-    /* v0.01–v0.03 baseline styling */
+    /* v0.01–v0.04 baseline styling */
     html, body {
       margin: 0;
       padding: 0;
@@ -73,7 +73,7 @@
     <canvas id="game"></canvas>
 
     <div id="ui">
-      <div>shooter-game v0.03</div>
+      <div>shooter-game v0.04</div>
       <div>WASD = move | Mouse = aim | LMB = shoot | R = restart</div>
       <div>HP: <span id="hpDisplay">100</span></div>
       <div>Score: <span id="scoreDisplay">0</span></div>
@@ -84,14 +84,17 @@
 
   <script>
     // ================================================================
-    // Shooter Game v0.03 (FULL FILE)
+    // Shooter Game v0.04 (FULL FILE)
     //
-    // Changes from v0.02:
-    //  - Virtual space increased to 1200x800 to feel less cramped.
-    //  - Player/enemy sizes slightly reduced.
-    //  - Player contact damage now uses a cooldown, not continuous drain.
-    //  - Bullet-enemy collision slightly more generous.
-    //  - Enemy spawn rate and speed tuned for smoother pressure.
+    // New in v0.04:
+    //  - Camera system that keeps the player centered on screen.
+    //  - Parallax grid floor scrolling under the player.
+    //  - All world objects rendered relative to camera.
+    //
+    // Previous changes (v0.03 kept):
+    //  - Larger logical space (1200x800).
+    //  - Softer hit detection with contact cooldown.
+    //  - Tuned enemy spawn & speed.
     // ================================================================
 
     const canvas = document.getElementById("game");
@@ -109,6 +112,12 @@
     const WIDTH = VIRTUAL_WIDTH;
     const HEIGHT = VIRTUAL_HEIGHT;
 
+    // v0.04: Camera that follows the player in world space
+    const camera = {
+      x: WIDTH / 2,
+      y: HEIGHT / 2
+    };
+
     // Real canvas resizer (physical pixels match CSS)
     function resizeCanvas() {
       const rect = canvas.getBoundingClientRect();
@@ -119,9 +128,19 @@
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
-    // Map logic coordinates → screen coordinates
-    function sx(x) { return (x / VIRTUAL_WIDTH) * canvas.width; }
-    function sy(y) { return (y / VIRTUAL_HEIGHT) * canvas.height; }
+    // v0.04:
+    // Map world coordinates -> screen coordinates using camera.
+    // The camera is centered on the player, so the player appears
+    // in the middle of the screen at all times.
+    function sx(worldX) {
+      const viewportX = (worldX - camera.x) + VIRTUAL_WIDTH / 2;
+      return (viewportX / VIRTUAL_WIDTH) * canvas.width;
+    }
+
+    function sy(worldY) {
+      const viewportY = (worldY - camera.y) + VIRTUAL_HEIGHT / 2;
+      return (viewportY / VIRTUAL_HEIGHT) * canvas.height;
+    }
 
     // =================================================================
     // GAME STATE
@@ -129,8 +148,8 @@
     const player = {
       x: WIDTH / 2,
       y: HEIGHT / 2,
-      radius: 12,         // v0.03: a bit smaller = less "fat hitbox" feel
-      speed: 260,         // faster to compensate for bigger arena
+      radius: 12,         // smaller hitbox
+      speed: 260,         // faster movement
       angle: 0,
       hp: 100,
       maxHp: 100
@@ -151,12 +170,12 @@
 
     // Enemy spawning
     let enemySpawnTimer = 0;
-    const ENEMY_SPAWN_INTERVAL = 1.6; // v0.03: a bit slower to reduce chaos
+    const ENEMY_SPAWN_INTERVAL = 1.6;
 
-    // v0.03: Player contact damage with cooldown for smoother feel
+    // Player contact damage with cooldown
     let playerHitTimer = 0;
-    const PLAYER_CONTACT_DAMAGE = 15;    // damage per hit
-    const PLAYER_HIT_COOLDOWN = 0.7;     // seconds between contact hits
+    const PLAYER_CONTACT_DAMAGE = 15;
+    const PLAYER_HIT_COOLDOWN = 0.7;
 
     // =================================================================
     // INPUT HANDLERS
@@ -180,11 +199,11 @@
 
     canvas.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
-      // Convert from screen space -> virtual space
+      // Convert from screen space -> virtual space (world coordinates)
       const nx = (e.clientX - rect.left) / canvas.width;
       const ny = (e.clientY - rect.top) / canvas.height;
-      mouse.x = nx * VIRTUAL_WIDTH;
-      mouse.y = ny * VIRTUAL_HEIGHT;
+      mouse.x = camera.x + (nx - 0.5) * VIRTUAL_WIDTH;
+      mouse.y = camera.y + (ny - 0.5) * VIRTUAL_HEIGHT;
     });
 
     canvas.addEventListener("mousedown", (e) => {
@@ -205,7 +224,7 @@
       const dirX = dx / len;
       const dirY = dy / len;
 
-      const bulletSpeed = 600; // v0.03: slightly faster to match larger space
+      const bulletSpeed = 600;
 
       bullets.push({
         x: player.x,
@@ -229,8 +248,8 @@
       enemies.push({
         x,
         y,
-        radius: 14,                     // v0.03: smaller enemies
-        speed: 90 + Math.random() * 35, // tuned a bit slower
+        radius: 14,
+        speed: 90 + Math.random() * 35,
         hp: 3
       });
     }
@@ -241,7 +260,7 @@
     function update(dt) {
       if (isGameOver) return;
 
-      // v0.03: tick down the contact hit cooldown
+      // Contact damage cooldown
       playerHitTimer = Math.max(0, playerHitTimer - dt);
 
       // Player facing
@@ -266,6 +285,10 @@
       // Keep player inside logical bounds
       player.x = Math.max(player.radius, Math.min(WIDTH - player.radius, player.x));
       player.y = Math.max(player.radius, Math.min(HEIGHT - player.radius, player.y));
+
+      // v0.04: Camera follows player 1:1 (locked center effect)
+      camera.x = player.x;
+      camera.y = player.y;
 
       // Shooting cooldown
       if (mouse.isDown) {
@@ -312,8 +335,9 @@
         e.x += dirX * e.speed * dt;
         e.y += dirY * e.speed * dt;
 
-        // Player contact with cooldown-based damage
         const combinedR = player.radius + e.radius;
+
+        // Contact damage with cooldown
         if (dist < combinedR && playerHitTimer === 0 && !isGameOver) {
           player.hp -= PLAYER_CONTACT_DAMAGE;
           playerHitTimer = PLAYER_HIT_COOLDOWN;
@@ -328,8 +352,6 @@
         for (let j = bullets.length - 1; j >= 0; j--) {
           const b = bullets[j];
           const distBE = Math.hypot(e.x - b.x, e.y - b.y);
-
-          // v0.03: slightly more generous collision check
           const collisionRadius = e.radius + b.radius * 1.3;
 
           if (distBE < collisionRadius) {
@@ -351,7 +373,43 @@
     }
 
     // =================================================================
-    // DRAW LOOP (scaled using sx(), sy())
+    // GRID FLOOR (PARALLAX)
+    // =================================================================
+    function drawGrid() {
+      // v0.04: Simple parallax grid that scrolls under the player.
+      const gridSize = 80;          // spacing in virtual units
+      const parallax = 0.5;         // <1 => slower than player movement
+      const scaleX = canvas.width / VIRTUAL_WIDTH;
+      const scaleY = canvas.height / VIRTUAL_HEIGHT;
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
+      ctx.lineWidth = 1;
+
+      // Compute offset based on camera, so the grid scrolls as you move.
+      const offsetX = -((camera.x * parallax) % gridSize);
+      const offsetY = -((camera.y * parallax) % gridSize);
+
+      // Vertical lines
+      for (let x = offsetX; x < VIRTUAL_WIDTH; x += gridSize) {
+        const sxLine = x * scaleX + (VIRTUAL_WIDTH / 2 - camera.x * parallax) * scaleX;
+        ctx.beginPath();
+        ctx.moveTo(sxLine, 0);
+        ctx.lineTo(sxLine, canvas.height);
+        ctx.stroke();
+      }
+
+      // Horizontal lines
+      for (let y = offsetY; y < VIRTUAL_HEIGHT; y += gridSize) {
+        const syLine = y * scaleY + (VIRTUAL_HEIGHT / 2 - camera.y * parallax) * scaleY;
+        ctx.beginPath();
+        ctx.moveTo(0, syLine);
+        ctx.lineTo(canvas.width, syLine);
+        ctx.stroke();
+      }
+    }
+
+    // =================================================================
+    // DRAW LOOP (uses camera-relative sx(), sy())
     // =================================================================
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -362,10 +420,13 @@
         canvas.width / 2, canvas.height / 2,
         Math.max(canvas.width, canvas.height)
       );
-      g.addColorStop(0, "#151515");
+      g.addColorStop(0, "#101010");
       g.addColorStop(1, "#050505");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // v0.04: Draw grid first so everything sits "on top" of it
+      drawGrid();
 
       const scaleFactor = canvas.width / VIRTUAL_WIDTH;
 
@@ -395,7 +456,9 @@
         ctx.stroke();
       }
 
-      // Player
+      // Player:
+      // Even though player.x/y move in world space,
+      // sx()/sy() with camera centered keep them visually in the middle.
       const pr = player.radius * scaleFactor;
       ctx.beginPath();
       ctx.arc(sx(player.x), sy(player.y), pr, 0, Math.PI * 2);
