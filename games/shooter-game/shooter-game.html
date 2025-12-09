@@ -2,50 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Shooter Game v0.01</title>
+  <title>Shooter Game v0.02</title>
 
-  <!-- v0.01: Inline CSS for layout and basic visuals -->
   <style>
-    /* Fullscreen dark background and centered game canvas */
+    /* v0.01/v0.02 baseline styling */
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       background: #050608;
       color: #ffffff;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: system-ui;
     }
 
     body {
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
 
-    /* Container so we can overlay UI on top of the canvas */
+    /* v0.02: Full-window container */
     #gameContainer {
       position: relative;
-      display: inline-block;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    /* The actual game area */
+    /* v0.02: Canvas stretches visually to container */
     #game {
-      background: #111111;
-      border: 2px solid #444444;
+      width: 100%;
+      height: 100%;
       display: block;
+      background: #111;
+      border: 2px solid #444;
     }
 
-    /* HUD overlay */
     #ui {
       position: absolute;
       left: 10px;
       top: 10px;
-      font-size: 14px;
-      text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
-      pointer-events: none; /* UI shouldn't block mouse input */
+      text-shadow: 0 0 4px black;
+      pointer-events: none;
+      z-index: 10;
     }
 
-    /* Game over message centered on canvas */
     #gameOverMessage {
       position: absolute;
       inset: 0;
@@ -55,46 +57,39 @@
       font-size: 32px;
       font-weight: bold;
       color: #ff5555;
-      text-shadow: 0 0 10px rgba(0, 0, 0, 0.9);
-      pointer-events: none;
+      text-shadow: 0 0 10px black;
       opacity: 0;
       transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 20;
     }
   </style>
 </head>
-<body>
-  <!-- v0.01: Single container for canvas + overlay UI -->
-  <div id="gameContainer">
-    <canvas id="game" width="800" height="600"></canvas>
 
-    <!-- Simple HUD text, version + controls + stats -->
+<body>
+  <div id="gameContainer">
+    <canvas id="game"></canvas>
+
     <div id="ui">
-      <div>shooter-game v0.01</div>
-      <div>WASD = move, Mouse = aim, Left click = shoot</div>
+      <div>shooter-game v0.02</div>
+      <div>WASD = move | Mouse = aim | LMB = shoot</div>
       <div>HP: <span id="hpDisplay">100</span></div>
       <div>Score: <span id="scoreDisplay">0</span></div>
     </div>
 
-    <!-- Game over overlay text; visibility handled via JS -->
     <div id="gameOverMessage">GAME OVER</div>
   </div>
 
-  <!-- v0.01: Inline JS for the entire game logic -->
   <script>
-    // ============================================================
-    // shooter-game.html v0.01
-    // Minimal twin-stick style shooter skeleton:
-    // - WASD move
-    // - Mouse aim
-    // - Left click shoot
-    // - Simple enemies that chase the player
-    // This is our baseline; future versions (0.02, 0.03, etc.)
-    // should build *on top* of this without ripping it apart.
-    // ============================================================
+    // ================================================================
+    // Shooter Game v0.02 (FULL FILE)
+    // Added:
+    //  - Full-window responsive canvas
+    //  - Virtual resolution (800x600) for stable game logic
+    //  - Scaled rendering helpers sx(), sy()
+    // Everything else remains unchanged from v0.01.
+    // ================================================================
 
-    // ------------------------------
-    // Canvas & rendering context
-    // ------------------------------
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
 
@@ -102,115 +97,101 @@
     const scoreDisplay = document.getElementById("scoreDisplay");
     const gameOverMessage = document.getElementById("gameOverMessage");
 
-    const WIDTH = canvas.width;
-    const HEIGHT = canvas.height;
+    // v0.02: Virtual logic resolution stays constant
+    const VIRTUAL_WIDTH = 800;
+    const VIRTUAL_HEIGHT = 600;
 
-    // ------------------------------
-    // Core game state containers
-    // ------------------------------
-    // v0.01 keeps it simple: one player, array of bullets, array of enemies.
+    // Replace old WIDTH/HEIGHT with virtual space
+    const WIDTH = VIRTUAL_WIDTH;
+    const HEIGHT = VIRTUAL_HEIGHT;
+
+    // Real canvas resizer (keeps pixel resolution matched to CSS size)
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    // v0.02 scaling functions to map game coords → screen coords
+    function sx(x) { return (x / VIRTUAL_WIDTH) * canvas.width; }
+    function sy(y) { return (y / VIRTUAL_HEIGHT) * canvas.height; }
+
+    // =================================================================
+    // GAME STATE
+    // =================================================================
     const player = {
       x: WIDTH / 2,
       y: HEIGHT / 2,
       radius: 15,
-      speed: 220,       // movement speed in pixels per second
-      angle: 0,         // facing angle (radians) toward mouse
+      speed: 220,
+      angle: 0,
       hp: 100,
       maxHp: 100
     };
 
-    const bullets = [];  // list of active bullets
-    const enemies = [];  // list of active enemies
+    const bullets = [];
+    const enemies = [];
+    const keys = { w: false, a: false, s: false, d: false };
+
+    const mouse = { x: WIDTH / 2, y: HEIGHT / 2, isDown: false };
 
     let score = 0;
     let isGameOver = false;
 
-    // ------------------------------
-    // Input handling state
-    // ------------------------------
-    const keys = {
-      w: false,
-      a: false,
-      s: false,
-      d: false
-    };
-
-    const mouse = {
-      x: WIDTH / 2,
-      y: HEIGHT / 2,
-      isDown: false
-    };
-
-    // Shooting control: simple fire rate cooldown
     let lastShotTime = 0;
-    const SHOT_COOLDOWN = 0.15; // seconds between shots
+    const SHOT_COOLDOWN = 0.15;
 
-    // Enemy spawn control
     let enemySpawnTimer = 0;
-    const ENEMY_SPAWN_INTERVAL = 1.2; // seconds between enemy spawns
+    const ENEMY_SPAWN_INTERVAL = 1.2;
 
-    // ------------------------------
-    // Event listeners for keyboard
-    // ------------------------------
+    // =================================================================
+    // INPUT HANDLERS
+    // =================================================================
     window.addEventListener("keydown", (e) => {
-      // Lowercase the key so it works regardless of caps lock
-      const key = e.key.toLowerCase();
-
-      if (key === "w") keys.w = true;
-      if (key === "a") keys.a = true;
-      if (key === "s") keys.s = true;
-      if (key === "d") keys.d = true;
-
-      // v0.01: If game is over, pressing "r" will reload page as a quick reset.
-      if (key === "r" && isGameOver) {
-        location.reload();
-      }
+      const k = e.key.toLowerCase();
+      if (k === "w") keys.w = true;
+      if (k === "a") keys.a = true;
+      if (k === "s") keys.s = true;
+      if (k === "d") keys.d = true;
+      if (k === "r" && isGameOver) location.reload();
     });
 
     window.addEventListener("keyup", (e) => {
-      const key = e.key.toLowerCase();
-
-      if (key === "w") keys.w = false;
-      if (key === "a") keys.a = false;
-      if (key === "s") keys.s = false;
-      if (key === "d") keys.d = false;
+      const k = e.key.toLowerCase();
+      if (k === "w") keys.w = false;
+      if (k === "a") keys.a = false;
+      if (k === "s") keys.s = false;
+      if (k === "d") keys.d = false;
     });
 
-    // ------------------------------
-    // Mouse input: position + buttons
-    // ------------------------------
     canvas.addEventListener("mousemove", (e) => {
-      // Translate mouse position from window space to canvas space
       const rect = canvas.getBoundingClientRect();
-      mouse.x = e.clientX - rect.left;
-      mouse.y = e.clientY - rect.top;
+      mouse.x = ((e.clientX - rect.left) / canvas.width) * VIRTUAL_WIDTH;
+      mouse.y = ((e.clientY - rect.top) / canvas.height) * VIRTUAL_HEIGHT;
     });
 
     canvas.addEventListener("mousedown", (e) => {
-      // Only care about primary button in v0.01
-      if (e.button === 0) {
-        mouse.isDown = true;
-      }
+      if (e.button === 0) mouse.isDown = true;
     });
 
     canvas.addEventListener("mouseup", (e) => {
-      if (e.button === 0) {
-        mouse.isDown = false;
-      }
+      if (e.button === 0) mouse.isDown = false;
     });
 
-    // ------------------------------
-    // Helper: shoot a bullet
-    // ------------------------------
+    // =================================================================
+    // SHOOTING / ENEMY SPAWNING
+    // =================================================================
     function shootBullet() {
-      // Compute direction from player to mouse
       const dx = mouse.x - player.x;
       const dy = mouse.y - player.y;
-      const length = Math.hypot(dx, dy) || 1;
-      const dirX = dx / length;
-      const dirY = dy / length;
+      const len = Math.hypot(dx, dy) || 1;
+      const dirX = dx / len;
+      const dirY = dy / len;
 
-      const bulletSpeed = 520; // pixels per second
+      const bulletSpeed = 520;
 
       bullets.push({
         x: player.x,
@@ -218,249 +199,204 @@
         radius: 4,
         vx: dirX * bulletSpeed,
         vy: dirY * bulletSpeed,
-        life: 1.6 // bullet lifetime in seconds (so they don't fly forever)
+        life: 1.6
       });
     }
 
-    // ------------------------------
-    // Helper: spawn a single enemy
-    // ------------------------------
     function spawnEnemy() {
-      // Spawn somewhere just off one edge of the screen.
-      // v0.01: basic random edge spawn.
-      const edge = Math.floor(Math.random() * 4); // 0=top,1=right,2=bottom,3=left
+      const edge = Math.floor(Math.random() * 4);
       let x, y;
 
-      switch (edge) {
-        case 0: // top
-          x = Math.random() * WIDTH;
-          y = -20;
-          break;
-        case 1: // right
-          x = WIDTH + 20;
-          y = Math.random() * HEIGHT;
-          break;
-        case 2: // bottom
-          x = Math.random() * WIDTH;
-          y = HEIGHT + 20;
-          break;
-        case 3: // left
-        default:
-          x = -20;
-          y = Math.random() * HEIGHT;
-          break;
-      }
+      if (edge === 0) { x = Math.random() * WIDTH; y = -20; }
+      else if (edge === 1) { x = WIDTH + 20; y = Math.random() * HEIGHT; }
+      else if (edge === 2) { x = Math.random() * WIDTH; y = HEIGHT + 20; }
+      else { x = -20; y = Math.random() * HEIGHT; }
 
       enemies.push({
-        x,
-        y,
+        x, y,
         radius: 18,
-        speed: 80 + Math.random() * 40, // small speed variance
-        hp: 3                            // small health pool
+        speed: 80 + Math.random() * 40,
+        hp: 3
       });
     }
 
-    // ------------------------------
-    // Game update loop (logic)
-    // ------------------------------
+    // =================================================================
+    // UPDATE LOOP
+    // =================================================================
     function update(dt) {
-      if (isGameOver) return; // freeze logic when game is over
+      if (isGameOver) return;
 
-      // Update player angle to always face the mouse
-      const dxMouse = mouse.x - player.x;
-      const dyMouse = mouse.y - player.y;
-      player.angle = Math.atan2(dyMouse, dxMouse);
+      // Player facing
+      const dmx = mouse.x - player.x;
+      const dmy = mouse.y - player.y;
+      player.angle = Math.atan2(dmy, dmx);
 
-      // Movement input (WASD) -> velocity vector
-      let moveX = 0;
-      let moveY = 0;
+      // Movement
+      let mvx = 0, mvy = 0;
+      if (keys.w) mvy -= 1;
+      if (keys.s) mvy += 1;
+      if (keys.a) mvx -= 1;
+      if (keys.d) mvx += 1;
 
-      if (keys.w) moveY -= 1;
-      if (keys.s) moveY += 1;
-      if (keys.a) moveX -= 1;
-      if (keys.d) moveX += 1;
+      const m = Math.hypot(mvx, mvy) || 1;
+      mvx /= m;
+      mvy /= m;
 
-      // Normalize if moving diagonally
-      const len = Math.hypot(moveX, moveY) || 1;
-      moveX /= len;
-      moveY /= len;
+      player.x += mvx * player.speed * dt;
+      player.y += mvy * player.speed * dt;
 
-      // Apply movement
-      player.x += moveX * player.speed * dt;
-      player.y += moveY * player.speed * dt;
-
-      // Keep player inside canvas bounds
       player.x = Math.max(player.radius, Math.min(WIDTH - player.radius, player.x));
       player.y = Math.max(player.radius, Math.min(HEIGHT - player.radius, player.y));
 
-      // Handle shooting with cooldown
+      // Shooting cooldown
       if (mouse.isDown) {
-        const now = performance.now() / 1000; // seconds
-        if (now - lastShotTime >= SHOT_COOLDOWN) {
+        const t = performance.now() / 1000;
+        if (t - lastShotTime >= SHOT_COOLDOWN) {
           shootBullet();
-          lastShotTime = now;
+          lastShotTime = t;
         }
       }
 
-      // Update bullets
-      for (let i = bullets.length - 1; i >= 0; i--) {
+      // Bullets
+      for (let i = bullets.length-1; i>=0; i--) {
         const b = bullets[i];
         b.x += b.vx * dt;
         b.y += b.vy * dt;
         b.life -= dt;
-
-        // Remove bullets when life is over or offscreen
-        if (
-          b.life <= 0 ||
-          b.x < -20 || b.x > WIDTH + 20 ||
-          b.y < -20 || b.y > HEIGHT + 20
-        ) {
-          bullets.splice(i, 1);
+        if (b.life <= 0 || b.x < -50 || b.x > WIDTH+50 || b.y < -50 || b.y > HEIGHT+50) {
+          bullets.splice(i,1);
         }
       }
 
-      // Spawn new enemies over time
+      // Spawn enemies
       enemySpawnTimer += dt;
       if (enemySpawnTimer >= ENEMY_SPAWN_INTERVAL) {
         enemySpawnTimer = 0;
         spawnEnemy();
       }
 
-      // Update enemies: move toward player + handle collisions
-      for (let i = enemies.length - 1; i >= 0; i--) {
+      // Enemies update
+      for (let i = enemies.length-1; i>=0; i--) {
         const e = enemies[i];
 
-        // Direction from enemy to player
         const dx = player.x - e.x;
         const dy = player.y - e.y;
         const dist = Math.hypot(dx, dy) || 1;
         const dirX = dx / dist;
         const dirY = dy / dist;
 
-        // Move enemy
         e.x += dirX * e.speed * dt;
         e.y += dirY * e.speed * dt;
 
-        // Check collision with player
-        const combinedRadius = player.radius + e.radius;
-        if (dist < combinedRadius) {
-          // v0.01: simple touch damage
-          player.hp -= 20 * dt; // continuous damage while overlapping
-
+        // Damage player if touching
+        const combR = player.radius + e.radius;
+        if (dist < combR) {
+          player.hp -= 20 * dt;
           if (player.hp <= 0) {
             player.hp = 0;
             handleGameOver();
           }
         }
 
-        // Bullet vs enemy collisions
-        for (let j = bullets.length - 1; j >= 0; j--) {
+        // Bullet collisions
+        for (let j = bullets.length-1; j>=0; j--) {
           const b = bullets[j];
-          const dxBE = e.x - b.x;
-          const dyBE = e.y - b.y;
-          const distBE = Math.hypot(dxBE, dyBE);
-          const combinedR = e.radius + b.radius;
-
-          if (distBE < combinedR) {
-            // Bullet hits enemy: remove bullet, damage enemy
-            bullets.splice(j, 1);
-            e.hp -= 1;
-
-            // Enemy dies
+          if (Math.hypot(e.x - b.x, e.y - b.y) < e.radius + b.radius) {
+            bullets.splice(j,1);
+            e.hp--;
             if (e.hp <= 0) {
-              enemies.splice(i, 1);
+              enemies.splice(i,1);
               score += 10;
-              break; // stop checking bullets for this enemy
+              break;
             }
           }
         }
       }
 
-      // Update simple text UI
+      // UI updates
       hpDisplay.textContent = Math.max(0, player.hp).toFixed(0);
-      scoreDisplay.textContent = score.toString();
+      scoreDisplay.textContent = score;
     }
 
-    // ------------------------------
-    // Rendering
-    // ------------------------------
+    // =================================================================
+    // DRAW LOOP (scaled using sx(), sy())
+    // =================================================================
     function draw() {
-      // Clear entire canvas each frame
-      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
 
-      // Background fill (slightly noisy feel with gradient-style radial)
-      const gradient = ctx.createRadialGradient(
-        WIDTH / 2, HEIGHT / 2, 0,
-        WIDTH / 2, HEIGHT / 2, Math.max(WIDTH, HEIGHT)
+      // Background gradient
+      const g = ctx.createRadialGradient(
+        canvas.width/2, canvas.height/2, 0,
+        canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height)
       );
-      gradient.addColorStop(0, "#151515");
-      gradient.addColorStop(1, "#050505");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      g.addColorStop(0, "#151515");
+      g.addColorStop(1, "#050505");
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
 
-      // Draw bullets
+      // Bullets
       for (const b of bullets) {
         ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.arc(sx(b.x), sy(b.y), b.radius * (canvas.width/VIRTUAL_WIDTH), 0, Math.PI*2);
         ctx.fillStyle = "#ffdd55";
         ctx.fill();
       }
 
-      // Draw enemies
+      // Enemies
       for (const e of enemies) {
+        const rr = e.radius * (canvas.width/VIRTUAL_WIDTH);
         ctx.beginPath();
-        ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        ctx.arc(sx(e.x), sy(e.y), rr, 0, Math.PI*2);
         ctx.fillStyle = "#ff4444";
         ctx.fill();
-        // Simple outline to pop them visually
         ctx.lineWidth = 2;
         ctx.strokeStyle = "#880000";
         ctx.stroke();
       }
 
-      // Draw player (circle + direction line to show facing)
+      // Player
+      const pr = player.radius * (canvas.width/VIRTUAL_WIDTH);
       ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+      ctx.arc(sx(player.x), sy(player.y), pr, 0, Math.PI*2);
       ctx.fillStyle = "#55aaff";
       ctx.fill();
       ctx.lineWidth = 2;
-      ctx.strokeStyle = "#ffffff";
+      ctx.strokeStyle = "#fff";
       ctx.stroke();
 
-      // Player "gun" direction line
-      const gunLength = player.radius + 10;
-      const gunX = player.x + Math.cos(player.angle) * gunLength;
-      const gunY = player.y + Math.sin(player.angle) * gunLength;
+      // Player gun direction
+      const gunLen = player.radius + 10;
+      const gx = player.x + Math.cos(player.angle) * gunLen;
+      const gy = player.y + Math.sin(player.angle) * gunLen;
+
       ctx.beginPath();
-      ctx.moveTo(player.x, player.y);
-      ctx.lineTo(gunX, gunY);
-      ctx.strokeStyle = "#ffffff";
+      ctx.moveTo(sx(player.x), sy(player.y));
+      ctx.lineTo(sx(gx), sy(gy));
+      ctx.strokeStyle = "#fff";
       ctx.stroke();
 
-      // If game over, dim screen slightly
       if (isGameOver) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
       }
     }
 
-    // ------------------------------
-    // Game Over handling
-    // ------------------------------
+    // =================================================================
+    // GAME OVER
+    // =================================================================
     function handleGameOver() {
       isGameOver = true;
       gameOverMessage.style.opacity = 1;
-      // v0.01 reset method: press 'R' to reload page (handled in keydown)
     }
 
-    // ------------------------------
-    // Main loop via requestAnimationFrame
-    // ------------------------------
+    // =================================================================
+    // MAIN LOOP
+    // =================================================================
     let lastTime = performance.now();
 
-    function gameLoop(timestamp) {
-      const dt = (timestamp - lastTime) / 1000; // delta time in seconds
-      lastTime = timestamp;
+    function gameLoop(t) {
+      const dt = (t - lastTime) / 1000;
+      lastTime = t;
 
       update(dt);
       draw();
@@ -468,8 +404,8 @@
       requestAnimationFrame(gameLoop);
     }
 
-    // Kickoff
     requestAnimationFrame(gameLoop);
+
   </script>
 </body>
 </html>
