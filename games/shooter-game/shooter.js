@@ -1,4 +1,4 @@
-// Bananaman Shooter v0.6.1 — finalized audio hierarchy
+// Bananaman Shooter v0.6.2 — boss at wave 6 with win overlay
 
 const bg = document.getElementById("bg");
 const g = bg.getContext("2d");
@@ -40,7 +40,10 @@ healthFill = document.getElementById("healthfill"),
 healthText = document.getElementById("healthtext"),
 menu = document.getElementById("menu"),
 deathOverlay = document.getElementById("deathOverlay"),
-restartBtn = document.getElementById("restartBtn");
+restartBtn = document.getElementById("restartBtn"),
+// NEW: win overlay elements
+winOverlay = document.getElementById("winOverlay"),
+winRestartBtn = document.getElementById("winRestartBtn");
 
 // === GRID ===
 let gridOffsetX = 0, gridOffsetY = 0, gridSpacing = 40, gridStatic = true;
@@ -155,8 +158,88 @@ function drawEnemies(){
   }
 }
 
+// === BOSS LOGIC (NEW) ===
+let bossActive = false;
+let boss = null;
+
+const bossImg = new Image();
+bossImg.src = "/media/images/gifs/180px-NO_U_cycle.gif";
+let bossLoaded = false;
+bossImg.onload = () => bossLoaded = true;
+
+function spawnBoss(){
+  bossActive = true;
+  // Big central boss with 4 orbiting minis
+  const size = 220;
+  boss = {
+    x: W / 2,
+    y: H / 2,
+    size,
+    hp: 250,
+    maxHp: 250,
+    angle: 0,
+    orbitRadius: size * 0.85,
+    orbitSpeed: 1.2,
+    orbiters: []
+  };
+  for(let i=0;i<4;i++){
+    boss.orbiters.push({
+      angleOffset: (Math.PI*2/4)*i,
+      size: size * 0.45,
+      x: 0,
+      y: 0
+    });
+  }
+}
+
+function updateBoss(dt){
+  if(!bossActive || !boss) return;
+  boss.angle += boss.orbitSpeed * dt;
+}
+
+function drawBoss(){
+  if(!bossActive || !boss) return;
+  ctx.save();
+
+  // draw main boss
+  const sx = boss.x - boss.size/2;
+  const sy = boss.y - boss.size/2;
+  if(bossLoaded){
+    ctx.drawImage(bossImg, sx, sy, boss.size, boss.size);
+  } else {
+    ctx.fillStyle = "purple";
+    ctx.beginPath();
+    ctx.arc(boss.x, boss.y, boss.size/2, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // draw orbiters & store their positions for collision
+  for(const orb of boss.orbiters){
+    const ang = boss.angle + orb.angleOffset;
+    const ox = boss.x + Math.cos(ang) * boss.orbitRadius;
+    const oy = boss.y + Math.sin(ang) * boss.orbitRadius;
+    orb.x = ox;
+    orb.y = oy;
+    const os = orb.size;
+    const osx = ox - os/2;
+    const osy = oy - os/2;
+
+    if(bossLoaded){
+      ctx.drawImage(bossImg, osx, osy, os, os);
+    } else {
+      ctx.fillStyle = "lime";
+      ctx.beginPath();
+      ctx.arc(ox, oy, os/2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+
 // === COLLISIONS ===
 function checkCollisions(){
+  // Regular enemies
   for(let i=enemies.length-1;i>=0;i--){
     const e = enemies[i];
 
@@ -190,10 +273,80 @@ function checkCollisions(){
     }
   }
 
-  if(enemies.length === 0){ wave++; spawnWave(); }
+  // Wave progression: when all regular enemies are gone and no boss yet,
+  // increment wave; at wave 6, spawn boss instead of another normal wave.
+  if(enemies.length === 0 && !bossActive){
+    wave++;
+    if(wave === 6){
+      spawnBoss();
+    } else {
+      spawnWave();
+    }
+  }
+
+  // === BOSS COLLISIONS (NEW) ===
+  if(bossActive && boss){
+    // Bullets vs boss & orbiters
+    for(let j=bullets.length-1;j>=0;j--){
+      const b = bullets[j];
+      let hit = false;
+
+      // main boss
+      const dx = b.x - boss.x;
+      const dy = b.y - boss.y;
+      if(dx*dx + dy*dy < (boss.size/2 + 4)**2){
+        hit = true;
+      } else {
+        // orbiters
+        for(const orb of boss.orbiters){
+          const odx = b.x - orb.x;
+          const ody = b.y - orb.y;
+          if(odx*odx + ody*ody < (orb.size/2 + 4)**2){
+            hit = true;
+            break;
+          }
+        }
+      }
+
+      if(hit){
+        bullets.splice(j,1);
+        damage += 15;
+
+        const marker = hitSound.cloneNode();
+        marker.volume = 0.6;
+        marker.playbackRate = 0.9 + Math.random()*0.2;
+        marker.play().catch(()=>{});
+
+        boss.hp -= 10;
+        if(boss.hp <= 0){
+          bossActive = false;
+          boss = null;
+          winGame();
+          break;
+        }
+      }
+    }
+
+    // Player vs main boss
+    const pdx = player.x - boss.x;
+    const pdy = player.y - boss.y;
+    if(Math.hypot(pdx,pdy) < (player.size/2 + boss.size/2) && player.invuln <= 0){
+      applyDamage(30);
+    }
+
+    // Player vs orbiters
+    for(const orb of boss.orbiters){
+      const odx = player.x - orb.x;
+      const ody = player.y - orb.y;
+      if(Math.hypot(odx,ody) < (player.size/2 + orb.size/2) && player.invuln <= 0){
+        applyDamage(20);
+        break;
+      }
+    }
+  }
 }
 
-// === DAMAGE / DEATH ===
+// === DAMAGE / DEATH / WIN ===
 function applyDamage(d){
   player.hp = Math.max(0, player.hp - d);
   player.hitTimer = 0.3;
@@ -228,66 +381,25 @@ function die(){
   deathOverlay.classList.add('visible');
 }
 
+function winGame(){
+  state = 'won';
+  bgMusic.pause(); bgMusic.currentTime = 0;
+  gridStatic = true; drawGrid();
+  winOverlay.classList.add('visible');
+}
+
+// Restart from death overlay
 restartBtn.onclick = () => {
   deathOverlay.classList.remove('visible');
+  winOverlay.classList.remove('visible');
   menu.style.display='flex';
   player.hp=100; updateHealth();
   enemies.length=0; bullets.length=0;
+  bossActive = false; boss = null;
   kills=0; wave=1; damage=0;
   gridStatic=true; drawGrid();
   state='menu';
 };
 
-// === LOOP ===
-function update(dt){
-  if(state!=='playing') return;
-  updatePlayer(dt);
-  for(const b of bullets){b.x+=b.vx*dt; b.y+=b.vy*dt;}
-  updateEnemies(dt);
-  checkCollisions();
-  ctx.clearRect(0,0,W,H);
-  drawGrid();
-  drawPlayer();
-  ctx.fillStyle='#f33';
-  for(const b of bullets){ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();}
-  drawEnemies();
-  updateHUD();
-}
-function loop(){requestAnimationFrame(loop);update(0.016);}loop();
-
-// === INPUT ===
-addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
-addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
-document.addEventListener('contextmenu',e=>e.preventDefault());
-addEventListener('mousedown',e=>{
-  if(state!=='playing') return;
-  if(e.button===0) shoot();
-  else if(e.button===2) shotgunPulse();
-});
-
-// === MENU BUTTONS ===
-document.getElementById('start').onclick = () => {
-  menu.style.display='none';
-  gridStatic=false;
-  bgMusic.currentTime=0;
-  bgMusic.play().catch(()=>{});
-  kills=0; wave=1; damage=0;
-  player.hp=100; updateHealth();
-  enemies.length=0; spawnWave();
-  startTime=performance.now();
-  state='playing';
-};
-document.getElementById('bossMode').onclick = () => {
-  menu.style.display='none';
-  gridStatic=false;
-  bgMusic.currentTime=0;
-  bgMusic.play().catch(()=>{});
-  kills=0; wave=6; damage=0;
-  player.hp=100; updateHealth();
-  enemies.length=0; spawnWave();
-  startTime=performance.now();
-  state='playing';
-};
-
-gridStatic = true; drawGrid();
+// Restart from win overlay
+winRestartBtn.onclick =
