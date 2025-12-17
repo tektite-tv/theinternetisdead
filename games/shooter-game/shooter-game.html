@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.11</title>
+<title>Galaga-ish Clone v1.12</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -89,12 +89,6 @@
 <script>
 /* ======================================================================
   PROJECT CHANGELOG / REMOVAL LOG
-  Purpose: Permanent in-file audit trail of removed/disabled features, so
-  future changes are reversible without myth-making.
-
-  Rules:
-  - If functionality is REMOVED or DISABLED, log it here.
-  - Include: date (YYYY-MM-DD), version tag, what changed, why, where.
 ========================================================================
 
 [REMOVAL LOG]
@@ -102,47 +96,37 @@
 - 2025-12-17 | v1.10
   Removed/Not implemented: Full enemy AI pathing / per-enemy movement styles.
   Reason: Current build uses classic formation movement (left/right bounce + step down).
-  Previous location: N/A (never implemented in this version).
-  Re-add idea: Give each enemy individual velocity + patterns (sine drift, dive-bomb, orbit).
+  Previous location: N/A
+  Re-add idea: Per-enemy patterns (sine drift, dive-bomb, orbit).
 
 - 2025-12-17 | v1.10
   Removed/Not implemented: Enemy spawn waves / waypoint-based difficulty scaling.
-  Reason: Replaced with simple wave increment on clear, + faster enemy bullets / formation speed.
+  Reason: Replaced with simple wave increment on clear.
   Previous location: N/A
-  Re-add idea: Wave configs array + spawn scheduler.
+  Re-add idea: Wave configs + spawn scheduler.
 
 - 2025-12-17 | v1.10
-  Removed/Not implemented: Boss at wave 6 (NO_U_cycle.gif with orbiting minis + YOU WIN overlay).
-  Reason: Not in current file scope while stabilizing movement/collisions/sfx.
+  Removed/Not implemented: Boss at wave 6 (NO_U_cycle.gif + orbit minis + YOU WIN overlay).
+  Reason: Stabilizing movement/collisions/sfx first.
   Previous location: N/A
-  Re-add idea: On wave === 6: spawn boss entity + orbit children + win overlay on defeat.
 
 - 2025-12-17 | v1.10
   Removed: Reliance on `e.key === " "` for shooting.
-  Reason: Inconsistent across browsers; replaced with `e.code === "Space"`.
-  Previous location: keydown handler.
-  Re-add: Don’t. This was the bug.
+  Reason: Inconsistent; replaced with `e.code === "Space"`.
 
 - 2025-12-17 | v1.11
   Modified: Player firing rate and bullet speed.
-  Reason: Bullets were too frequent/fast and flattened difficulty pacing.
-  Previous behavior: Unlimited fire cadence, bullet vy ≈ -10.
-  Current behavior: Cooldown enforced (~50% slower), bullet vy reduced.
+  Reason: Bullets were too frequent/fast; flattened difficulty pacing.
   Location: shoot() + update(dt) cooldown tick.
+
+- 2025-12-17 | v1.12
+  Modified/Upgraded: Background starfield rendering.
+  Reason: Replaced static random stars with persistent multi-layer parallax starfield
+          that reacts to player movement direction for “flying through space” effect.
+  Location: Starfield init/reset/update/draw functions.
 
 ====================================================================== */
 
-
-/* =========================================================
-   v1.11 FEATURES (retained + updated)
-   - Start Menu + Options (enemy rows/cols)
-   - Enemy sprite pool loads all gifs from /media/images/gifs/index.json
-   - Enemy formation movement (left/right bounce + step down)
-   - Player bullets hit enemies (hitmarker.mp3)
-   - Enemy bullets + contact damage hit player (oof.mp3)
-   - Wave progression: clear formation -> next wave
-   - v1.11: slower player fire rate + slower bullets
-========================================================= */
 
 /* =======================
    Paths (EDIT IF NEEDED)
@@ -152,9 +136,9 @@ const AUDIO_HIT = "/media/audio/hitmarker.mp3";
 const AUDIO_OOF = "/media/audio/oof.mp3";
 
 /* =======================
-   Player Firing Tuning (v1.11)
+   Player Firing Tuning
 ======================= */
-const PLAYER_FIRE_COOLDOWN = 0.32; // seconds (~50% fewer bullets than spam)
+const PLAYER_FIRE_COOLDOWN = 0.32; // seconds
 const PLAYER_BULLET_SPEED  = -6.5; // slower bullets
 
 /* =======================
@@ -163,7 +147,12 @@ const PLAYER_BULLET_SPEED  = -6.5; // slower bullets
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const overlay = document.getElementById("overlay");
-function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  resetStarfield(); // v1.12: re-seed stars to match new dimensions
+}
 window.addEventListener("resize", resize);
 resize();
 
@@ -189,27 +178,19 @@ let audioUnlocked = false;
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
-
-  // Autoplay restrictions: browsers insist on "gesture".
   try{
     sfxHit.muted = true;
     sfxHit.play().then(() => {
-      sfxHit.pause();
-      sfxHit.currentTime = 0;
-      sfxHit.muted = false;
+      sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false;
     }).catch(()=>{ sfxHit.muted = false; });
 
     sfxOof.muted = true;
     sfxOof.play().then(() => {
-      sfxOof.pause();
-      sfxOof.currentTime = 0;
-      sfxOof.muted = false;
+      sfxOof.pause(); sfxOof.currentTime = 0; sfxOof.muted = false;
     }).catch(()=>{ sfxOof.muted = false; });
   }catch(e){}
 }
-
 function playSfx(a){
-  // Clone so rapid events don't cut off sound.
   try{
     const c = a.cloneNode();
     c.volume = a.volume;
@@ -265,14 +246,11 @@ function startGame(){
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
 
-  score = 0;
-  lives = 3;
-  wave = 1;
-
+  score = 0; lives = 3; wave = 1;
   bullets.length = 0;
   enemyBullets.length = 0;
-
   fireCooldown = 0;
+
   resetFormation();
   spawnEnemies();
   window.focus();
@@ -304,9 +282,96 @@ const player = {
 };
 
 const keys = {};
-
-// v1.11: fire cooldown timer
 let fireCooldown = 0;
+
+/* =======================
+   v1.12: Parallax Starfield
+   - 3 layers with different speeds/densities
+   - forward motion (down the screen) + sideways drift based on player movement
+======================= */
+const starLayers = [
+  { count: 180, baseSpeedY: 40,  parallaxX: 0.35, sizeMin: 1, sizeMax: 2 },
+  { count: 120, baseSpeedY: 80,  parallaxX: 0.60, sizeMin: 1, sizeMax: 3 },
+  { count: 70,  baseSpeedY: 140, parallaxX: 0.90, sizeMin: 2, sizeMax: 4 }
+];
+
+let stars = []; // array of layers, each an array of star objects
+let playerVxSmoothed = 0; // smoothed horizontal motion signal for background
+
+function rand(min, max){ return min + Math.random() * (max - min); }
+
+function resetStarfield(){
+  stars = starLayers.map(layer => {
+    const arr = [];
+    for (let i = 0; i < layer.count; i++){
+      arr.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        s: rand(layer.sizeMin, layer.sizeMax),
+        // slight per-star speed variance keeps it from looking like a conveyor belt
+        vyMul: rand(0.7, 1.3)
+      });
+    }
+    return arr;
+  });
+}
+resetStarfield();
+
+function updateStarfield(dt){
+  // Determine raw “movement intent” from keys (player input direction)
+  let vxIntent = 0;
+  if (gameState === STATE.PLAYING){
+    if (keys["a"] || keys["arrowleft"])  vxIntent -= 1;
+    if (keys["d"] || keys["arrowright"]) vxIntent += 1;
+  } else {
+    // Menu: subtle drift so it still looks alive
+    vxIntent = 0.15 * Math.sin(time * 0.6);
+  }
+
+  // Smooth it so the background glides instead of jittering
+  const targetVx = vxIntent * player.speed * 55; // scale factor for “space feel”
+  playerVxSmoothed += (targetVx - playerVxSmoothed) * Math.min(1, dt * 8);
+
+  // Update each layer
+  for (let li = 0; li < starLayers.length; li++){
+    const layer = starLayers[li];
+    const arr = stars[li];
+
+    const driftX = -playerVxSmoothed * layer.parallaxX; // move opposite player direction
+    const driftY = layer.baseSpeedY;
+
+    for (const st of arr){
+      st.x += driftX * dt;
+      st.y += driftY * st.vyMul * dt;
+
+      // Wrap around edges
+      if (st.y > canvas.height + 10) st.y = -10;
+      if (st.x < -10) st.x = canvas.width + 10;
+      if (st.x > canvas.width + 10) st.x = -10;
+    }
+  }
+}
+
+function drawStarfield(){
+  // Clear background
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Draw stars by layer: far -> near
+  for (let li = 0; li < starLayers.length; li++){
+    const layer = starLayers[li];
+    const arr = stars[li];
+
+    // Slight brightness per layer (no fancy color palette, just readable depth)
+    // Farther layer = dimmer.
+    const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+
+    for (const st of arr){
+      ctx.fillRect(st.x, st.y, st.s, st.s);
+    }
+  }
+}
 
 /* =======================
    Enemy Images from index.json
@@ -380,7 +445,6 @@ const BASE_SPACING_Y = 75;
 
 let enemies = [];
 
-// Formation movement state
 const formation = {
   xOffset: 0,
   yOffset: 0,
@@ -427,7 +491,6 @@ function spawnEnemies(){
 const bullets = [];
 const enemyBullets = [];
 
-// v1.11: enforced cooldown + slower bullets
 function shoot(){
   if (fireCooldown > 0) return;
 
@@ -441,7 +504,6 @@ function shoot(){
   fireCooldown = PLAYER_FIRE_COOLDOWN;
 }
 
-// Enemy shooting cadence
 let enemyShootTimer = 0;
 function enemyTryShoot(dt){
   enemyShootTimer -= dt;
@@ -478,18 +540,16 @@ function damagePlayer(){
   lives -= 1;
   player.invuln = 0.85;
   playSfx(sfxOof);
-
   if (lives <= 0){
     showMenu();
   }
 }
 
 /* =======================
-   Input (Space fixed)
+   Input
 ======================= */
 window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
-
   if (e.code === "Space") e.preventDefault();
 
   const k = e.key.toLowerCase();
@@ -503,7 +563,6 @@ window.addEventListener("keyup", (e) => {
   keys[e.key.toLowerCase()] = false;
 });
 
-// tap/click shoot
 canvas.addEventListener("pointerdown", () => {
   unlockAudioOnce();
   if (gameState === STATE.PLAYING) shoot();
@@ -515,12 +574,15 @@ canvas.addEventListener("pointerdown", () => {
 function update(dt){
   time += dt;
 
+  // v1.12: starfield updates in all states (menu feels alive too)
+  updateStarfield(dt);
+
   if (gameState !== STATE.PLAYING) return;
 
   // invulnerability timer
   if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
 
-  // v1.11: firing cooldown tick
+  // firing cooldown
   if (fireCooldown > 0) fireCooldown = Math.max(0, fireCooldown - dt);
 
   // player move
@@ -528,7 +590,7 @@ function update(dt){
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
-  // formation movement uses current breathing spacing to compute bounds
+  // formation movement bounds depend on breathing spacing
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
   const spacingX = BASE_SPACING_X * (1 + breath * 0.35);
 
@@ -560,7 +622,7 @@ function update(dt){
     if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
   }
 
-  // compute enemy positions (same math draw uses)
+  // compute enemy positions
   const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
   const startX = canvas.width/2 - formationWidth/2 + formation.xOffset;
   const baseY = 120 + formation.yOffset;
@@ -636,23 +698,16 @@ function update(dt){
   }
 }
 
-function drawBackgroundStars(){
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  ctx.fillStyle = "#111";
-  for (let i = 0; i < 200; i++){
-    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
-  }
-}
-
 function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  drawBackgroundStars();
+  // v1.12: draw parallax starfield first
+  drawStarfield();
 
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  if (!flicker){
+  if (gameState === STATE.PLAYING && !flicker){
+    ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+  } else if (gameState !== STATE.PLAYING) {
+    // Menu/options: still draw player as “mascot”
     ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
   }
 
@@ -676,13 +731,14 @@ function draw(){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.11<br>` +
+    `Galaga-ish Clone v1.12<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
     `Fire CD: ${fireCooldown.toFixed(2)}s<br>` +
+    `Space Drift VX: ${playerVxSmoothed.toFixed(1)}<br>` +
     `ESC: Menu`;
 }
 
