@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.15</title>
+<title>Galaga-ish Clone v1.18</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -53,7 +53,7 @@
   <div id="startMenu" class="panel">
     <div class="title">GALAGA-ISH CLONE</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ · Shoot: Space · ESC: Menu · HUD: /</div>
+    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · HUD: /</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -141,7 +141,7 @@ const AUDIO_OOF = "/media/audio/oof.mp3";
    Player Firing Tuning
 ======================= */
 const BASE_PLAYER_FIRE_COOLDOWN = 0.26; // seconds (wave scaling reduces this)
-const PLAYER_BULLET_SPEED  = -8.0; // slower bullets
+const PLAYER_BULLET_SPEED  = 8.0; // pixels per frame-ish (magnitude); direction comes from aim
 
 function getPlayerFireCooldown(){
   // v1.13: player shoots faster every wave (lower cooldown)
@@ -399,6 +399,29 @@ const keys = {};
 let fireCooldown = 0;
 
 /* =======================
+   Aim (v1.18: 360° aim)
+   - Mouse / touch sets an aim point.
+   - We smooth the aim angle so the triangle feels less twitchy.
+======================= */
+let aimX = 0;
+let aimY = 0;
+let aimAngle = -Math.PI/2;
+let aimAngleSmoothed = -Math.PI/2;
+
+function normAngle(a){
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+function setAimFromClient(clientX, clientY){
+  const r = canvas.getBoundingClientRect();
+  aimX = clientX - r.left;
+  aimY = clientY - r.top;
+  aimAngle = Math.atan2(aimY - player.y, aimX - player.x);
+}
+
+/* =======================
    Enemy Images from index.json
 ======================= */
 let enemyImages = [];
@@ -545,11 +568,24 @@ const enemyBullets = [];
 
 function shoot(){
   if (fireCooldown > 0) return;
-  bullets.push({ x: player.x, y: player.y - (player.h/2) + 6, vy: PLAYER_BULLET_SPEED, r: 4 });
+
+  // v1.18: fire in the current aim direction (defaults upward if aim is unset)
+  const dx = Math.cos(aimAngleSmoothed);
+  const dy = Math.sin(aimAngleSmoothed);
+
+  const spawnDist = (player.w * 0.42);
+  bullets.push({
+    x: player.x + dx * spawnDist,
+    y: player.y + dy * spawnDist,
+    vx: dx * PLAYER_BULLET_SPEED,
+    vy: dy * PLAYER_BULLET_SPEED,
+    r: 4
+  });
 
   // v1.13: faster firing as waves increase
   fireCooldown = getPlayerFireCooldown();
 }
+
 
 let enemyShootTimer = 0;
 function enemyTryShoot(dt){
@@ -665,8 +701,15 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
-canvas.addEventListener("pointerdown", () => {
+canvas.addEventListener("pointermove", (e) => {
+  // v1.18: aim follows pointer (mouse or touch)
+  setAimFromClient(e.clientX, e.clientY);
+});
+
+canvas.addEventListener("pointerdown", (e) => {
   unlockAudioOnce();
+  // v1.18: clicking also aims and shoots
+  setAimFromClient(e.clientX, e.clientY);
   if (gameState === STATE.PLAYING) shoot();
 });
 
@@ -690,6 +733,10 @@ function update(dt){
   if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
+
+  // v1.18: smooth the aim angle (shortest-path wrap) for nicer feel
+  const da = normAngle(aimAngle - aimAngleSmoothed);
+  aimAngleSmoothed = normAngle(aimAngleSmoothed + da * Math.min(1, dt * 18));
 
   // formation movement bounds depend on breathing spacing
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
@@ -720,8 +767,10 @@ function update(dt){
 
   // update bullets
   for (let i = bullets.length - 1; i >= 0; i--){
-    bullets[i].y += bullets[i].vy;
-    if (bullets[i].y < -50) bullets.splice(i, 1);
+    const b = bullets[i];
+    b.x += b.vx;
+    b.y += b.vy;
+    if (b.x < -80 || b.x > canvas.width + 80 || b.y < -80 || b.y > canvas.height + 80) bullets.splice(i, 1);
   }
 
   for (let i = enemyBullets.length - 1; i >= 0; i--){
@@ -908,6 +957,26 @@ function draw(){
     ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
   }
 
+// v1.18: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
+if (gameState === STATE.PLAYING){
+  const a = aimAngleSmoothed;
+  const orbitR = player.w * 0.62;
+  const tx = player.x + Math.cos(a) * orbitR;
+  const ty = player.y + Math.sin(a) * orbitR;
+
+  ctx.save();
+  ctx.translate(tx, ty);
+  ctx.rotate(a); // point outward
+  ctx.fillStyle = "rgba(255,255,0,0.95)";
+  ctx.beginPath();
+  ctx.moveTo(16, 0);     // tip
+  ctx.lineTo(-8, -7);    // base left
+  ctx.lineTo(-8, 7);     // base right
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
   // enemies
   for (const e of enemies){
     ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
@@ -916,7 +985,12 @@ function draw(){
   // bullets (player)
   ctx.fillStyle = "#0f0";
   for (const b of bullets){
-    ctx.fillRect(b.x - 2, b.y - 10, 4, 12);
+    const ang = Math.atan2(b.vy, b.vx) + Math.PI/2; // rotate the "up" bullet to match velocity
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(ang);
+    ctx.fillRect(-2, -10, 4, 12);
+    ctx.restore();
   }
 
   // bullets (enemy)
@@ -928,7 +1002,7 @@ function draw(){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.15<br>` +
+    `Galaga-ish Clone v1.18<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
@@ -953,6 +1027,12 @@ function loop(t){
 ======================= */
 player.x = canvas.width / 2;
 player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+
+// v1.18: default aim straight up until the player moves the pointer
+aimX = player.x;
+aimY = player.y - 200;
+aimAngle = -Math.PI/2;
+aimAngleSmoothed = -Math.PI/2;
 
 resetStarfield();
 resize(); // also resets starfield + anchors player
