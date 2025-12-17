@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.28</title>
+<title>Galaga-ish Clone v1.29</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -43,11 +43,101 @@
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
   .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
+
+  /* =======================
+     HUD Corner Slots (v1.29)
+  ======================= */
+  .cornerSlot{
+    position:absolute;
+    width:86px;
+    height:86px;
+    border:2px solid rgba(0,255,0,0.55);
+    border-radius:12px;
+    background: rgba(0,0,0,0.55);
+    box-shadow: 0 0 18px rgba(0,255,0,0.10);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:4px;
+    pointer-events:none;
+  }
+  .cornerSlot .subtxt{
+    font-family: "Courier New", monospace;
+    font-size:12px;
+    line-height:1;
+    opacity:0.95;
+    color:#0f0;
+    text-align:center;
+  }
+  #livesSlot img{
+    width:46px; height:46px;
+    image-rendering:pixelated;
+    filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
+  }
+  #deathOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(255,0,0,0.22);
+    pointer-events:auto;
+  }
+  #deathPanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(255,0,0,0.65);
+    border-radius:16px;
+    background: rgba(0,0,0,0.72);
+    padding: 18px 18px 16px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(255,0,0,0.14);
+  }
+  #deathTitle{
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:2px;
+    color:#ff4444;
+    text-shadow: 0 0 10px rgba(255,0,0,0.25);
+  }
+  #btnRestart{
+    margin-top:14px;
+    font-family:"Courier New", monospace;
+    font-size:20px;
+    font-weight:800;
+    color:#ffdddd;
+    background: rgba(0,0,0,0.55);
+    border:2px solid rgba(255,0,0,0.55);
+    padding:10px 18px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  #btnRestart:hover{ background: rgba(255,0,0,0.10); }
+
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="overlay"></div>
+
+<div id="livesSlot" class="cornerSlot" style="left:14px; bottom:14px;">
+  <img src="/media/images/gifs/bananarama.gif" alt="lives"/>
+  <div id="livesText" class="subtxt">x3</div>
+</div>
+
+<div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
+  <div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
+  <div id="powerupHint" class="subtxt">Press Q</div>
+</div>
+
+<div id="deathOverlay">
+  <div id="deathPanel">
+    <div id="deathTitle">YOU DIED</div>
+    <button id="btnRestart">Restart</button>
+  </div>
+</div>
+
 
 <div id="uiRoot">
   <div id="startMenu" class="panel">
@@ -164,7 +254,12 @@ function getPlayerFireCooldown(){
 ======================= */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const overlay = document.getElementById("overlay");
+const overlay = document\.getElementById\("overlay"\);
+const livesSlot = document.getElementById("livesSlot");
+const livesText = document.getElementById("livesText");
+const powerupSlot = document.getElementById("powerupSlot");
+const deathOverlay = document.getElementById("deathOverlay");
+const btnRestart = document.getElementById("btnRestart");
 
 let hudVisible = false; // v1.12.5: HUD hidden by default; toggle with / (Slash)
 
@@ -179,7 +274,9 @@ let lives = 0; // (deprecated) replaced by health bar system
 let health = 1.0; // 0..1 (4 hits -> 0)
 let isDead = false;
 let deathTimer = 0;
+let deathGameOver = false;
 const deathParticles = [];
+
 
 let wave = 1;
 
@@ -198,7 +295,223 @@ let gameState = STATE.MENU;
 /* =======================
    Utility
 ======================= */
-function rand(min, max){ return min + Math.random() * (max - min); }
+function rand\(min, max\)\{ return min \+ Math\.random\(\) \* \(max - min\); \}
+
+/* =======================
+   UFO + Bomb Powerup (v1.29)
+   - 25% chance to spawn at wave start
+   - UFO takes 3 hits: red -> green -> blue -> fade
+   - On fade, grants 💥 item (Press Q)
+   - Press Q drops a flashing + that explodes after 3 flashes (0.5s each)
+======================= */
+
+function trySpawnUFO(){
+  if (ufo) return; // only one at a time
+  if (Math.random() > 0.25) return;
+
+  // Spawn near top area, tiny and fast.
+  ufo = {
+    x: rand(30, canvas.width - 30),
+    y: rand(40, 110),
+    vx: rand(-420, 420) / 60, // px/frame-ish
+    vy: rand(260, 520) / 60,
+    r: 10,
+    hits: 0,
+    stage: 0, // 0 none, 1 red, 2 green, 3 blue
+    fade: 0,
+    strobeT: 0
+  };
+
+  // Ensure it's actually moving.
+  if (Math.abs(ufo.vx) < 2) ufo.vx = (ufo.vx < 0 ? -2.5 : 2.5);
+}
+
+function ufoColorForStage(stage){
+  if (stage === 1) return "rgba(255,60,60,1)";
+  if (stage === 2) return "rgba(60,255,120,1)";
+  if (stage === 3) return "rgba(80,140,255,1)";
+  return null;
+}
+
+function updateUFO(dt){
+  if (!ufo) return;
+
+  // If fading, just fade out and then grant powerup.
+  if (ufo.fade > 0){
+    ufo.fade += dt;
+    if (ufo.fade >= 0.55){
+      ufo = null;
+      hasBomb = true;
+      powerupSlot.style.display = "flex";
+    }
+    return;
+  }
+
+  // Move + bounce around the top half.
+  ufo.x += ufo.vx;
+  ufo.y += ufo.vy;
+
+  const left = 16, right = canvas.width - 16, top = 30, bottom = canvas.height * 0.48;
+  if (ufo.x < left){ ufo.x = left; ufo.vx *= -1; }
+  if (ufo.x > right){ ufo.x = right; ufo.vx *= -1; }
+  if (ufo.y < top){ ufo.y = top; ufo.vy *= -1; }
+  if (ufo.y > bottom){ ufo.y = bottom; ufo.vy *= -1; }
+
+  // "Avoid the player's movement toward it": if player is moving toward UFO, add a shove away.
+  const movingLeft  = (keys["a"] || keys["arrowleft"]);
+  const movingRight = (keys["d"] || keys["arrowright"]);
+  const toward =
+    (movingLeft  && player.x > ufo.x) ||
+    (movingRight && player.x < ufo.x);
+
+  if (toward){
+    const away = Math.sign(ufo.x - player.x) || (Math.random() < 0.5 ? -1 : 1);
+    ufo.vx += away * (0.65 + 0.35 * FUNK);
+    // clamp
+    ufo.vx = Math.max(-9.5, Math.min(9.5, ufo.vx));
+  }
+
+  ufo.strobeT += dt;
+}
+
+function drawUFO(){
+  if (!ufo) return;
+
+  const strobe = Math.floor(time * 22) % 2 === 0;
+  const baseFill = strobe ? "#fff" : "#000";
+  const col = ufoColorForStage(ufo.stage);
+
+  const alpha = (ufo.fade > 0) ? Math.max(0, 1 - (ufo.fade / 0.55)) : 1;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  ctx.translate(ufo.x, ufo.y);
+
+  // core strobe oval
+  ctx.fillStyle = baseFill;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // colored "shield" ring for hit streak feedback
+  if (col){
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 16, 9, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function dropBomb(){
+  if (!hasBomb) return;
+  if (bomb) return; // only one active
+
+  hasBomb = false;
+  powerupSlot.style.display = "none";
+
+  bomb = {
+    x: player.x,
+    y: player.y,
+    t: 0,
+    flashes: 0,
+    flashOn: true,
+    exploding: false,
+    rad: 0,
+    alpha: 0.0
+  };
+}
+
+function explodeBomb(){
+  if (!bomb) return;
+  bomb.exploding = true;
+  bomb.rad = 0;
+  bomb.alpha = 0.55;
+}
+
+function updateBomb(dt){
+  if (!bomb) return;
+
+  if (!bomb.exploding){
+    bomb.t += dt;
+    // 0.5 second flashes, 3 times
+    if (bomb.t >= 0.5){
+      bomb.t -= 0.5;
+      bomb.flashOn = !bomb.flashOn;
+      bomb.flashes += 1;
+      if (bomb.flashes >= 3){
+        explodeBomb();
+      }
+    }
+  } else {
+    // expand shockwave
+    bomb.rad += (520 + 180 * FUNK) * dt;
+    bomb.alpha = Math.max(0, bomb.alpha - dt * 0.55);
+
+    // Apply damage + knockback ONCE at the start of explosion
+    if (!bomb.didDamage){
+      bomb.didDamage = true;
+
+      // Radius: 1.5 enemy widths (use average current enemy size or fallback)
+      const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
+      const radius = enemySize * 1.5;
+
+      for (let i = enemies.length - 1; i >= 0; i--){
+        const e = enemies[i];
+        const dx = e.x - bomb.x;
+        const dy = e.y - bomb.y;
+        const d2 = dx*dx + dy*dy;
+
+        if (d2 <= radius*radius){
+          // kill enemy
+          enemies.splice(i, 1);
+          score += 10;
+          playSfx(sfxHit);
+        } else {
+          // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
+          const r2 = (radius * 2.2);
+          if (d2 <= r2*r2){
+            const d = Math.max(1, Math.sqrt(d2));
+            const push = (radius * 0.55) / d;
+            // shove their formation-space offsets slightly
+            e.col += (dx / d) * push * 0.02;
+            e.row += (dy / d) * push * 0.02;
+          }
+        }
+      }
+    }
+
+    if (bomb.alpha <= 0){
+      bomb = null;
+    }
+  }
+}
+
+function drawBomb(){
+  if (!bomb) return;
+
+  if (!bomb.exploding){
+    // flashing plus
+    ctx.save();
+    ctx.translate(bomb.x, bomb.y);
+    ctx.fillStyle = bomb.flashOn ? "rgba(255,255,0,0.95)" : "rgba(255,60,60,0.95)";
+    ctx.fillRect(-4, -16, 8, 32);
+    ctx.fillRect(-16, -4, 32, 8);
+    ctx.restore();
+  } else {
+    // explosion circle
+    ctx.save();
+    ctx.globalAlpha = bomb.alpha;
+    ctx.fillStyle = "rgba(255,0,0,0.20)";
+    ctx.beginPath();
+    ctx.arc(bomb.x, bomb.y, bomb.rad, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
 
 /* =======================
    Parallax Starfield (safe init order)
@@ -358,9 +671,19 @@ syncOptionsLabels();
 
 function showMenu(){
   gameState = STATE.MENU;
+  deathOverlay.style.display = "none";
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
   uiRoot.style.display = "flex";
+}
+
+function restartRun(){
+  // v1.29: Restart from GAME OVER screen (full reset to beginning)
+  deathOverlay.style.display = "none";
+  hasBomb = false;
+  bomb = null;
+  ufo = null;
+  startGame();
 }
 function showOptions(){
   gameState = STATE.OPTIONS;
@@ -372,6 +695,7 @@ function startGame(){
   unlockAudioOnce();
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
+  deathOverlay.style.display = "none";
 
   score = 0;
   // v1.28: health replaces lives (4 hits total)
@@ -386,8 +710,13 @@ function startGame(){
   enemyBullets.length = 0;
   fireCooldown = 0;
 
+  hasBomb = false;
+  bomb = null;
+  ufo = null;
   resetFormation();
   spawnEnemies();
+  window.focus();
+  trySpawnUFO();
   window.focus();
 }
 
@@ -399,7 +728,13 @@ btnApply.addEventListener("click", () => {
   ENEMY_COLS = parseInt(colsSlider.value, 10);
   resetFormation();
   spawnEnemies();
+    trySpawnUFO();
+  });
+
+btnRestart.addEventListener("click", () => {
+  restartRun();
 });
+
 
 function setAssetStatus(msg){ assetStatus.textContent = msg; }
 
@@ -758,14 +1093,16 @@ function circleRect(cx, cy, cr, rx, ry, rw, rh){
   return (dx*dx + dy*dy) <= cr*cr;
 }
 
-function spawnPlayerDeath(){
-  // v1.28: violent pixel-dust death
+function spawnPlayerDeath(isGameOver){
+  // v1.28+: violent pixel-dust death
   isDead = true;
-  deathTimer = 1.2; // seconds before returning to menu
-  const n = 140;
+  deathGameOver = !!isGameOver;
+  deathTimer = deathGameOver ? 1.2 : 0.85;
+
+  const n = 160;
   for (let i = 0; i < n; i++){
     const ang = Math.random() * Math.PI * 2;
-    const spd = 120 + Math.random() * 420;
+    const spd = 140 + Math.random() * 520;
     deathParticles.push({
       x: player.x + rand(-player.w*0.15, player.w*0.15),
       y: player.y + rand(-player.h*0.15, player.h*0.15),
@@ -780,13 +1117,15 @@ function spawnPlayerDeath(){
 function damagePlayer(){
   if (player.invuln > 0 || isDead) return;
 
-  // Each hit drains 25% health (4 hits total).
-  health = Math.max(0, health - 0.25);
+  // Each hit drains 25% health (4 hits = one life).
+  health = Math.max(0, health - HIT_DAMAGE);
   player.invuln = 1.00;
   playSfx(sfxOof);
 
   if (health <= 0){
-    spawnPlayerDeath();
+    // Lose a life and explode into pixel dust.
+    lives = Math.max(0, lives - 1);
+    spawnPlayerDeath(lives <= 0);
   }
 }
 
@@ -807,6 +1146,7 @@ window.addEventListener("keydown", (e) => {
   keys[k] = true;
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
+  if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
   if (k === "escape") showMenu();
 }, { passive:false });
 
@@ -838,20 +1178,32 @@ function update(dt){
   // v1.28: death particles update + lockout
   if (isDead){
     deathTimer -= dt;
+
     // update particles
     for (let i = deathParticles.length - 1; i >= 0; i--){
       const p = deathParticles[i];
       p.life -= dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 980 * dt; // gravity-ish
-      p.vx *= Math.pow(0.10, dt); // heavy drag for 'dust'
+      p.vy += 520 * dt; // gravity
       if (p.life <= 0) deathParticles.splice(i, 1);
     }
+
     if (deathTimer <= 0){
-      showMenu();
+      if (deathGameOver){
+        // GAME OVER overlay
+        deathOverlay.style.display = "flex";
+      } else {
+        // Respawn for next life (keep wave/enemies as-is)
+        isDead = false;
+        deathGameOver = false;
+        deathParticles.length = 0;
+        health = 1.0;
+        player.invuln = 1.25;
+      }
     }
     return; // freeze gameplay while dead
+  }ead
   }
 
   if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
@@ -867,6 +1219,9 @@ function update(dt){
   // v1.19: smooth the aim angle (shortest-path wrap) for nicer feel
   const da = normAngle(aimAngle - aimAngleSmoothed);
   aimAngleSmoothed = normAngle(aimAngleSmoothed + da * Math.min(1, dt * 18));
+
+  updateUFO(dt);
+  updateBomb(dt);
 
   // formation movement bounds depend on breathing spacing
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
@@ -1029,6 +1384,23 @@ if (baseY > maxBaseY){
   // bullet -> enemy collision
   for (let bi = bullets.length - 1; bi >= 0; bi--){
     const b = bullets[bi];
+    // v1.24+: bullet -> UFO collision (3-hit color cycle, then fade + powerup)
+    if (ufo && ufo.fade === 0){
+      const dxU = b.x - ufo.x;
+      const dyU = b.y - ufo.y;
+      const rrU = (b.r + ufo.r);
+      if (dxU*dxU + dyU*dyU <= rrU*rrU){
+        bullets.splice(bi, 1);
+        ufo.hits += 1;
+        ufo.stage = Math.min(3, ufo.hits); // 1 red, 2 green, 3 blue
+        if (ufo.hits >= 3){
+          ufo.fade = 0.001; // start fade-out
+        }
+        playSfx(sfxHit);
+        continue; // bullet consumed
+      }
+    }
+
     for (let ei = enemies.length - 1; ei >= 0; ei--){
       const e = enemies[ei];
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
@@ -1082,6 +1454,17 @@ if (baseY > maxBaseY){
 
 function draw(){
   drawStarfield();
+
+  // v1.28+: draw player death particles
+  if (deathParticles.length){
+    ctx.save();
+    ctx.fillStyle = "#ff0";
+    for (const p of deathParticles){
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
+      ctx.fillRect(p.x, p.y, p.s, p.s);
+    }
+    ctx.restore();
+  }
 
   // v1.13: Wave banner popup
   if (gameState === STATE.PLAYING && waveBanner.t > 0){
@@ -1160,6 +1543,10 @@ if (gameState === STATE.PLAYING){
   ctx.restore();
 }
 
+  // UFO + bomb
+  drawUFO();
+  drawBomb();
+
   // enemies
   for (const e of enemies){
     ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
@@ -1183,7 +1570,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.28<br>` +
+    `Galaga-ish Clone v1.29<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
@@ -1192,6 +1579,11 @@ if (gameState === STATE.PLAYING){
     `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
     `Player: ${player.w}px | Gap: ${FORMATION_PLAYER_GAP}px<br>` +
     `ESC: Menu`;
+
+  // v1.29: corner HUD updates
+  livesText.textContent = "x" + lives;
+  powerupSlot.style.display = hasBomb ? "flex" : "none";
+`ESC: Menu`;
 }
 
 let lastT = performance.now();
@@ -1218,6 +1610,7 @@ aimAngleSmoothed = -Math.PI/2;
 resetStarfield();
 resize(); // also resets starfield + anchors player
 showMenu();
+powerupSlot.style.display = "none";
 spawnEnemies();
 
 requestAnimationFrame(loop);
