@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.19</title>
+<title>Galaga-ish Clone v1.23</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -127,6 +127,11 @@
   Kept: Galaga-style 'swoop' attackers: individual enemies break formation, dive toward the player, then return.
   Kept: Main formation stays in the top zone; only swoopers can enter player space.
   Tweaked: Player fire rate increases each wave (cooldown decreases).
+
+
+- 2025-12-17 | v1.23
+  Tweaked: Player bullets are slightly larger than enemy bullets (visual clarity).
+  Added: Player bullets can collide with enemy bullets; both are deleted on contact (counter-shot mechanic).
 ====================================================================== */
 
 
@@ -628,7 +633,7 @@ function shoot(){
     y: player.y + dy * spawnDist,
     vx: dx * PLAYER_BULLET_SPEED,
     vy: dy * PLAYER_BULLET_SPEED,
-    r: 4
+    r: 5
   });
 
   // v1.13: faster firing as waves increase
@@ -842,6 +847,24 @@ function update(dt){
     b.x += (b.vx || 0);
     b.y += b.vy;
     if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
+  }
+
+
+  // v1.23: player bullet <-> enemy bullet collision (both vanish on contact)
+  // This prevents bullet spam from feeling unfair and adds a satisfying "counter-shot" mechanic.
+  for (let pi = bullets.length - 1; pi >= 0; pi--){
+    const p = bullets[pi];
+    for (let ei = enemyBullets.length - 1; ei >= 0; ei--){
+      const e = enemyBullets[ei];
+      const dx = p.x - e.x;
+      const dy = p.y - e.y;
+      const rr = (p.r + e.r);
+      if (dx*dx + dy*dy <= rr*rr){
+        bullets.splice(pi, 1);
+        enemyBullets.splice(ei, 1);
+        break; // player bullet is gone, move to next one
+      }
+    }
   }
 
   // v1.15: attempt to launch swoop attackers
