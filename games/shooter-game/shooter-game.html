@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Galaga-ish Clone v1.01</title>
+  <title>Galaga-ish Clone v1.02</title>
   <style>
     html, body {
       margin: 0;
@@ -65,15 +65,15 @@
     <canvas id="game"></canvas>
 
     <div id="ui">
-      <div><b>Galaga-ish Clone v1.01</b></div>
+      <div><b>Galaga-ish Clone v1.02</b></div>
       <div>Move: A/D or ←/→ | Shoot: Space or LMB | Restart: R</div>
       <div>Score: <span id="score">0</span> | Lives: <span id="lives">3</span> | Wave: <span id="wave">1</span></div>
       <div>Enemies: <span id="enemyCount">0</span></div>
-      <div style="opacity:0.8">Player sprite: /media/images/gifs/bananarama.gif</div>
+      <div style="opacity:0.8">Player: /media/images/gifs/bananarama.gif</div>
     </div>
 
     <div id="hint">
-      If enemies still don’t show: open DevTools Console and look for “[Galaga] Loaded enemy list: …”
+      If enemies show as red blocks: that’s the fallback while images load. v1.02 prevents the first-wave “empty index” problem.
     </div>
 
     <div id="centerMsg"></div>
@@ -81,11 +81,11 @@
 
   <script>
     // ================================================================
-    // Galaga-ish Clone v1.01 (FULL FILE)
+    // Galaga-ish Clone v1.02 (FULL FILE)
     //
-    // Fixes:
-    // - More robust index.json parsing (strings, objects, nested keys, full paths)
-    // - Player is bananarama.gif sprite
+    // FIX:
+    // - Wait for index.json to load before spawning first wave.
+    // - Pre-warm a handful of images so wave 1 doesn't start as red squares.
     // ================================================================
 
     const canvas = document.getElementById("game");
@@ -128,72 +128,10 @@
     const playerImg = getOrCreateImage(PLAYER_SPRITE_URL);
 
     // -------------------------
-    // Robust index.json parsing
+    // Index.json loading
     // -------------------------
     let enemyGifFilenames = [];
-
-    function flattenToStrings(x, out) {
-      if (!out) out = [];
-      if (x == null) return out;
-
-      if (typeof x === "string") {
-        out.push(x);
-        return out;
-      }
-
-      if (Array.isArray(x)) {
-        for (const it of x) flattenToStrings(it, out);
-        return out;
-      }
-
-      if (typeof x === "object") {
-        // common filename fields
-        for (const k of ["name", "filename", "file", "path", "src", "url"]) {
-          if (typeof x[k] === "string") out.push(x[k]);
-        }
-        // also traverse known containers
-        for (const k of ["files", "gifs", "images", "items", "data", "list"]) {
-          if (x[k] != null) flattenToStrings(x[k], out);
-        }
-        return out;
-      }
-
-      return out;
-    }
-
-    function normalizeFilenames(rawStrings) {
-      const out = [];
-      for (let s of rawStrings) {
-        if (typeof s !== "string") continue;
-        s = s.trim();
-        if (!s) continue;
-
-        // If list already includes full path, strip to filename (or keep relative path)
-        // Examples:
-        //  - "/media/images/gifs/a.gif" -> "a.gif"
-        //  - "media/images/gifs/a.gif"  -> "a.gif"
-        //  - "a.gif"                    -> "a.gif"
-        //  - "subdir/a.gif"             -> "subdir/a.gif" (allowed)
-        s = s.replace(/^https?:\/\/[^/]+/i, ""); // strip origin if any
-        s = s.replace(/^\//, "");                // strip leading slash for consistency
-
-        // If it contains "media/images/gifs/" anywhere, strip up to that
-        const marker = "media/images/gifs/";
-        const idx = s.toLowerCase().indexOf(marker);
-        if (idx >= 0) s = s.slice(idx + marker.length);
-
-        // reject traversal
-        if (s.includes("..")) continue;
-
-        // keep only image-like
-        if (!/\.(gif|png|jpg|jpeg|webp)$/i.test(s)) continue;
-
-        out.push(s);
-      }
-
-      // de-dupe
-      return Array.from(new Set(out));
-    }
+    let enemyIndexLoaded = false;
 
     async function loadEnemyGifIndex() {
       try {
@@ -201,19 +139,51 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
 
-        const raw = flattenToStrings(json, []);
-        enemyGifFilenames = normalizeFilenames(raw);
+        if (!Array.isArray(json)) {
+          console.warn("[Galaga] index.json is not an array. Expected: [\"a.gif\", ...]");
+          enemyGifFilenames = [];
+        } else {
+          enemyGifFilenames = json
+            .filter(v => typeof v === "string")
+            .map(s => s.trim())
+            .filter(Boolean)
+            .filter(s => !s.includes(".."))
+            .filter(s => /\.(gif|png|jpg|jpeg|webp)$/i.test(s));
+        }
 
         console.log("[Galaga] Loaded enemy list:", enemyGifFilenames.length);
-        if (!enemyGifFilenames.length) {
-          console.warn("[Galaga] index.json parsed but produced 0 usable filenames. Check its structure/contents.");
-        }
       } catch (err) {
         console.warn("[Galaga] Failed to load enemy index.json:", err);
         enemyGifFilenames = [];
+      } finally {
+        enemyIndexLoaded = true;
       }
     }
-    loadEnemyGifIndex();
+
+    // Pre-warm a few images so wave 1 isn't all fallback blocks
+    async function prewarmEnemyImages(maxCount = 10) {
+      if (!enemyGifFilenames.length) return;
+
+      const pick = enemyGifFilenames.slice(0, maxCount);
+      const promises = pick.map(fn => new Promise((resolve) => {
+        const img = getOrCreateImage(ENEMY_GIF_BASE_URL + fn);
+        if (img.complete && img.naturalWidth > 0) return resolve();
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      }));
+
+      // Don’t block forever. Just give it a head start.
+      await Promise.race([
+        Promise.all(promises),
+        new Promise(resolve => setTimeout(resolve, 350))
+      ]);
+    }
+
+    function pickRandomEnemySrc(rand) {
+      if (!enemyGifFilenames.length) return null;
+      const fn = enemyGifFilenames[Math.floor(rand() * enemyGifFilenames.length)];
+      return ENEMY_GIF_BASE_URL + fn;
+    }
 
     // -------------------------
     // Deterministic RNG + hash
@@ -235,13 +205,6 @@
         s ^= s << 5;  s >>>= 0;
         return (s >>> 0) / 4294967296;
       };
-    }
-
-    function pickRandomEnemySrc(rand) {
-      if (!enemyGifFilenames.length) return null;
-      const fn = enemyGifFilenames[Math.floor(rand() * enemyGifFilenames.length)];
-      // fn is normalized to be relative inside /media/images/gifs/
-      return ENEMY_GIF_BASE_URL + fn;
     }
 
     // -------------------------
@@ -391,7 +354,7 @@
 
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          const src = pickRandomEnemySrc(rand);
+          const src = pickRandomEnemySrc(rand); // now actually populated before first spawn
           const img = src ? getOrCreateImage(src) : null;
 
           const etype = enemyTypeFromSrc(src);
@@ -438,6 +401,14 @@
       bullets.length = 0;
       enemyBullets.length = 0;
       enemies.length = 0;
+
+      // If index still isn’t loaded somehow, don’t pretend it is
+      if (!enemyIndexLoaded) {
+        centerMsg.textContent = "Loading enemy sprites...";
+        centerMsg.classList.add("show");
+        return;
+      }
+
       spawnWave(wave);
       layoutPlayer();
       syncUI();
@@ -493,6 +464,7 @@
     }
 
     function update(dt) {
+      if (!enemyIndexLoaded) return; // hard gate: don’t run before sprites list loads
       if (isGameOver) return;
 
       if (performance.now() > showWaveBannerUntil) centerMsg.classList.remove("show");
@@ -701,6 +673,16 @@
 
       drawStarfield(t);
 
+      if (!enemyIndexLoaded) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.font = "22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Loading enemy sprites...", canvas.width/2, canvas.height/2);
+        ctx.restore();
+        return;
+      }
+
       // Player bullets
       ctx.fillStyle = "#ffdd55";
       for (const b of bullets) ctx.fillRect(b.x, b.y, b.w, b.h);
@@ -709,14 +691,13 @@
       ctx.fillStyle = "rgba(255, 110, 110, 0.95)";
       for (const b of enemyBullets) ctx.fillRect(b.x, b.y, b.w, b.h);
 
-      // Enemies (GIF sprites)
+      // Enemies
       for (const e of enemies) {
         ctx.save();
         if (e.flash > 0) ctx.globalAlpha = 0.65;
         drawSpriteOrFallback(e.img, e.x, e.y, e.w, e.h, "rgba(255,80,80,0.85)");
         ctx.restore();
 
-        // HP bar only if needed
         if (e.maxHp > 1) {
           const pct = clamp(e.hp / e.maxHp, 0, 1);
           ctx.save();
@@ -734,23 +715,38 @@
         const blink = Math.floor((performance.now() / 100) % 2) === 0;
         ctx.globalAlpha = blink ? 0.35 : 0.90;
       }
-
       drawSpriteOrFallback(playerImg, player.x, player.y, player.w, player.h, "#55aaff");
 
-      // tiny muzzle marker (still useful)
+      // muzzle marker
       ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.fillRect(player.x + player.w/2 - 3, player.y - 6, 6, 6);
-
       ctx.restore();
     }
 
     // -------------------------
-    // Main loop
+    // Main loop + boot
     // -------------------------
-    function boot() {
+    let started = false;
+
+    async function boot() {
+      centerMsg.textContent = "Loading enemy sprites...";
+      centerMsg.classList.add("show");
+
       layoutPlayer();
-      spawnWave(wave);
       syncUI();
+
+      await loadEnemyGifIndex();
+      await prewarmEnemyImages(10);
+
+      // Start game even if list is empty, but now it’s a real choice, not a race condition
+      spawnWave(wave);
+      started = true;
+
+      centerMsg.classList.remove("show");
+
+      console.log("[Galaga] Enemy index URL:", ENEMY_GIF_INDEX_URL);
+      console.log("[Galaga] Enemy list count:", enemyGifFilenames.length);
+      console.log("[Galaga] Player sprite:", PLAYER_SPRITE_URL);
     }
 
     boot();
@@ -760,7 +756,7 @@
       const dt = clamp((now - last) / 1000, 0, 0.05);
       last = now;
 
-      // Handle resize mid-game (keep relative position)
+      // Resize mid-game, keep relative player x
       const rect = canvas.getBoundingClientRect();
       const wantW = Math.floor(rect.width);
       const wantH = Math.floor(rect.height);
@@ -772,16 +768,12 @@
         player.y = canvas.height - 96;
       }
 
-      update(dt);
+      if (started) update(dt);
       draw();
 
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
-
-    // Immediate sanity hints in console
-    console.log("[Galaga] Player sprite:", PLAYER_SPRITE_URL);
-    console.log("[Galaga] Enemy index URL:", ENEMY_GIF_INDEX_URL);
   </script>
 </body>
 </html>
