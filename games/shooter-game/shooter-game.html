@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Shooter Game v1.19</title>
+<title>Shooter Game v1.20</title>
 <style>
 html, body {
     margin: 0;
@@ -43,8 +43,8 @@ canvas {
 
 <script>
 // ==============================
-// Shooter Game v1.19
-// Change log (v1.18 -> v1.19):
+// Shooter Game v1.20
+// Change log (v1.18 -> v1.20):
 // - Player can aim bullets in any direction within the TOP 180 degrees (above the player).
 // - Bullets spawn from the top edge of the player "sprite" (top of the circle).
 // - Shooting works with Space OR left mouse button.
@@ -54,24 +54,27 @@ canvas {
 // ---- BASIC SETUP ----
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    player.y = canvas.height * 0.85;
-}
-window.addEventListener("resize", resize);
-resize();
 
 const TOP_ZONE_RATIO = 0.45;
 
 // ---- PLAYER ----
 const player = {
-    x: canvas.width / 2,
-    y: canvas.height * 0.85,
+    x: window.innerWidth / 2,
+    y: window.innerHeight * 0.85,
     r: 15,
     lives: 5,
     invuln: 0
 };
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    // Keep player anchored to bottom area after resize
+    player.y = canvas.height * 0.85;
+    player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
+}
+window.addEventListener("resize", resize);
+resize();
 
 // ---- AIMING ----
 let mouseX = canvas.width / 2;
@@ -98,13 +101,12 @@ function getAimAngle() {
     let ang = Math.atan2(dy, dx);
 
     // Clamp to the top hemisphere: [-PI, 0]
-    if (ang > 0) ang = 0;
-    if (ang < -Math.PI) ang = -Math.PI;
+//  - If the mouse is in the bottom half (ang > 0), snap to the nearest boundary
+//    based on which side of the player you're aiming at (left = -PI, right = 0).
+if (ang > 0) ang = (dx < 0) ? -Math.PI : 0;
+if (ang < -Math.PI) ang = -Math.PI;
 
-    // If mouse is below player, force angle to be one of the nearest top directions (left/right)
-    // This keeps the "top 180°" promise even if you aim downward.
-    // (You can still aim horizontally along the top boundary.)
-    return ang;
+return ang;
 }
 
 // ---- GAME STATE ----
