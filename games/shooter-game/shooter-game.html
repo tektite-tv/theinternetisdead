@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.12</title>
+<title>Galaga-ish Clone v1.12.1</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -90,43 +90,14 @@
 /* ======================================================================
   PROJECT CHANGELOG / REMOVAL LOG
 ========================================================================
-
 [REMOVAL LOG]
 
-- 2025-12-17 | v1.10
-  Removed/Not implemented: Full enemy AI pathing / per-enemy movement styles.
-  Reason: Current build uses classic formation movement (left/right bounce + step down).
-  Previous location: N/A
-  Re-add idea: Per-enemy patterns (sine drift, dive-bomb, orbit).
-
-- 2025-12-17 | v1.10
-  Removed/Not implemented: Enemy spawn waves / waypoint-based difficulty scaling.
-  Reason: Replaced with simple wave increment on clear.
-  Previous location: N/A
-  Re-add idea: Wave configs + spawn scheduler.
-
-- 2025-12-17 | v1.10
-  Removed/Not implemented: Boss at wave 6 (NO_U_cycle.gif + orbit minis + YOU WIN overlay).
-  Reason: Stabilizing movement/collisions/sfx first.
-  Previous location: N/A
-
-- 2025-12-17 | v1.10
-  Removed: Reliance on `e.key === " "` for shooting.
-  Reason: Inconsistent; replaced with `e.code === "Space"`.
-
-- 2025-12-17 | v1.11
-  Modified: Player firing rate and bullet speed.
-  Reason: Bullets were too frequent/fast; flattened difficulty pacing.
-  Location: shoot() + update(dt) cooldown tick.
-
-- 2025-12-17 | v1.12
-  Modified/Upgraded: Background starfield rendering.
-  Reason: Replaced static random stars with persistent multi-layer parallax starfield
-          that reacts to player movement direction for “flying through space” effect.
-  Location: Starfield init/reset/update/draw functions.
+- 2025-12-17 | v1.12.1
+  Fixed: Game not starting / enemy images not loading due to runtime error.
+  Cause: resize() called resetStarfield() before starLayers const initialized (TDZ).
+  Fix: Initialize starfield definitions before resize() runs; make resize() safe.
 
 ====================================================================== */
-
 
 /* =======================
    Paths (EDIT IF NEEDED)
@@ -148,14 +119,6 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const overlay = document.getElementById("overlay");
 
-function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  resetStarfield(); // v1.12: re-seed stars to match new dimensions
-}
-window.addEventListener("resize", resize);
-resize();
-
 let time = 0;
 let score = 0;
 let lives = 3;
@@ -163,6 +126,100 @@ let wave = 1;
 
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
+
+/* =======================
+   Utility
+======================= */
+function rand(min, max){ return min + Math.random() * (max - min); }
+
+/* =======================
+   v1.12.1: Parallax Starfield (SAFE INIT ORDER)
+======================= */
+const starLayers = [
+  { count: 180, baseSpeedY: 40,  parallaxX: 0.35, sizeMin: 1, sizeMax: 2 },
+  { count: 120, baseSpeedY: 80,  parallaxX: 0.60, sizeMin: 1, sizeMax: 3 },
+  { count: 70,  baseSpeedY: 140, parallaxX: 0.90, sizeMin: 2, sizeMax: 4 }
+];
+
+let stars = [];
+let playerVxSmoothed = 0;
+let starfieldReady = false;
+
+function resetStarfield(){
+  stars = starLayers.map(layer => {
+    const arr = [];
+    for (let i = 0; i < layer.count; i++){
+      arr.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        s: rand(layer.sizeMin, layer.sizeMax),
+        vyMul: rand(0.7, 1.3)
+      });
+    }
+    return arr;
+  });
+  starfieldReady = true;
+}
+
+function updateStarfield(dt, keys, playerSpeed){
+  if (!starfieldReady) return;
+
+  let vxIntent = 0;
+  if (gameState === STATE.PLAYING){
+    if (keys["a"] || keys["arrowleft"])  vxIntent -= 1;
+    if (keys["d"] || keys["arrowright"]) vxIntent += 1;
+  } else {
+    vxIntent = 0.15 * Math.sin(time * 0.6);
+  }
+
+  const targetVx = vxIntent * playerSpeed * 55;
+  playerVxSmoothed += (targetVx - playerVxSmoothed) * Math.min(1, dt * 8);
+
+  for (let li = 0; li < starLayers.length; li++){
+    const layer = starLayers[li];
+    const arr = stars[li];
+
+    const driftX = -playerVxSmoothed * layer.parallaxX;
+    const driftY = layer.baseSpeedY;
+
+    for (const st of arr){
+      st.x += driftX * dt;
+      st.y += driftY * st.vyMul * dt;
+
+      if (st.y > canvas.height + 10) st.y = -10;
+      if (st.x < -10) st.x = canvas.width + 10;
+      if (st.x > canvas.width + 10) st.x = -10;
+    }
+  }
+}
+
+function drawStarfield(){
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  if (!starfieldReady) return;
+
+  for (let li = 0; li < starLayers.length; li++){
+    const arr = stars[li];
+    const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    for (const st of arr){
+      ctx.fillRect(st.x, st.y, st.s, st.s);
+    }
+  }
+}
+
+/* =======================
+   Resize (now safe)
+======================= */
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  // Now safe: starLayers already exists at this point
+  resetStarfield();
+}
+window.addEventListener("resize", resize);
+resize();
 
 /* =======================
    Audio (unlock + play)
@@ -180,14 +237,9 @@ function unlockAudioOnce(){
   audioUnlocked = true;
   try{
     sfxHit.muted = true;
-    sfxHit.play().then(() => {
-      sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false;
-    }).catch(()=>{ sfxHit.muted = false; });
-
+    sfxHit.play().then(() => { sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false; }).catch(()=>{ sfxHit.muted = false; });
     sfxOof.muted = true;
-    sfxOof.play().then(() => {
-      sfxOof.pause(); sfxOof.currentTime = 0; sfxOof.muted = false;
-    }).catch(()=>{ sfxOof.muted = false; });
+    sfxOof.play().then(() => { sfxOof.pause(); sfxOof.currentTime = 0; sfxOof.muted = false; }).catch(()=>{ sfxOof.muted = false; });
   }catch(e){}
 }
 function playSfx(a){
@@ -266,112 +318,17 @@ btnApply.addEventListener("click", () => {
   spawnEnemies();
 });
 
+function setAssetStatus(msg){ assetStatus.textContent = msg; }
+
 /* =======================
    Player
 ======================= */
 const playerImg = new Image();
 playerImg.src = GIF_BASE + "bananarama.gif";
 
-const player = {
-  x: canvas.width/2,
-  y: canvas.height-80,
-  w: 48,
-  h: 48,
-  speed: 6,
-  invuln: 0
-};
-
+const player = { x: canvas.width/2, y: canvas.height-80, w:48, h:48, speed:6, invuln:0 };
 const keys = {};
 let fireCooldown = 0;
-
-/* =======================
-   v1.12: Parallax Starfield
-   - 3 layers with different speeds/densities
-   - forward motion (down the screen) + sideways drift based on player movement
-======================= */
-const starLayers = [
-  { count: 180, baseSpeedY: 40,  parallaxX: 0.35, sizeMin: 1, sizeMax: 2 },
-  { count: 120, baseSpeedY: 80,  parallaxX: 0.60, sizeMin: 1, sizeMax: 3 },
-  { count: 70,  baseSpeedY: 140, parallaxX: 0.90, sizeMin: 2, sizeMax: 4 }
-];
-
-let stars = []; // array of layers, each an array of star objects
-let playerVxSmoothed = 0; // smoothed horizontal motion signal for background
-
-function rand(min, max){ return min + Math.random() * (max - min); }
-
-function resetStarfield(){
-  stars = starLayers.map(layer => {
-    const arr = [];
-    for (let i = 0; i < layer.count; i++){
-      arr.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        s: rand(layer.sizeMin, layer.sizeMax),
-        // slight per-star speed variance keeps it from looking like a conveyor belt
-        vyMul: rand(0.7, 1.3)
-      });
-    }
-    return arr;
-  });
-}
-resetStarfield();
-
-function updateStarfield(dt){
-  // Determine raw “movement intent” from keys (player input direction)
-  let vxIntent = 0;
-  if (gameState === STATE.PLAYING){
-    if (keys["a"] || keys["arrowleft"])  vxIntent -= 1;
-    if (keys["d"] || keys["arrowright"]) vxIntent += 1;
-  } else {
-    // Menu: subtle drift so it still looks alive
-    vxIntent = 0.15 * Math.sin(time * 0.6);
-  }
-
-  // Smooth it so the background glides instead of jittering
-  const targetVx = vxIntent * player.speed * 55; // scale factor for “space feel”
-  playerVxSmoothed += (targetVx - playerVxSmoothed) * Math.min(1, dt * 8);
-
-  // Update each layer
-  for (let li = 0; li < starLayers.length; li++){
-    const layer = starLayers[li];
-    const arr = stars[li];
-
-    const driftX = -playerVxSmoothed * layer.parallaxX; // move opposite player direction
-    const driftY = layer.baseSpeedY;
-
-    for (const st of arr){
-      st.x += driftX * dt;
-      st.y += driftY * st.vyMul * dt;
-
-      // Wrap around edges
-      if (st.y > canvas.height + 10) st.y = -10;
-      if (st.x < -10) st.x = canvas.width + 10;
-      if (st.x > canvas.width + 10) st.x = -10;
-    }
-  }
-}
-
-function drawStarfield(){
-  // Clear background
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // Draw stars by layer: far -> near
-  for (let li = 0; li < starLayers.length; li++){
-    const layer = starLayers[li];
-    const arr = stars[li];
-
-    // Slight brightness per layer (no fancy color palette, just readable depth)
-    // Farther layer = dimmer.
-    const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-
-    for (const st of arr){
-      ctx.fillRect(st.x, st.y, st.s, st.s);
-    }
-  }
-}
 
 /* =======================
    Enemy Images from index.json
@@ -385,8 +342,6 @@ const FALLBACK_URLS = [
   GIF_BASE + "dragon.gif",
   GIF_BASE + "firework.gif"
 ];
-
-function setAssetStatus(msg){ assetStatus.textContent = msg; }
 
 function preloadImages(urls){
   return new Promise((resolve) => {
@@ -445,14 +400,7 @@ const BASE_SPACING_Y = 75;
 
 let enemies = [];
 
-const formation = {
-  xOffset: 0,
-  yOffset: 0,
-  dir: 1,
-  speed: 1.2,
-  stepDown: 18,
-  boundsPad: 40
-};
+const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, boundsPad:40 };
 
 function resetFormation(){
   formation.xOffset = 0;
@@ -472,15 +420,7 @@ function spawnEnemies(){
 
   for (let r = 0; r < ENEMY_ROWS; r++){
     for (let c = 0; c < ENEMY_COLS; c++){
-      enemies.push({
-        row: r,
-        col: c,
-        baseY,
-        img: randEnemyImg(),
-        size: 56,
-        hp: 1,
-        x: 0, y: 0, w: 0, h: 0
-      });
+      enemies.push({ row:r, col:c, baseY, img: randEnemyImg(), size:56, hp:1, x:0,y:0,w:0,h:0 });
     }
   }
 }
@@ -493,14 +433,7 @@ const enemyBullets = [];
 
 function shoot(){
   if (fireCooldown > 0) return;
-
-  bullets.push({
-    x: player.x,
-    y: player.y - 22,
-    vy: PLAYER_BULLET_SPEED,
-    r: 4
-  });
-
+  bullets.push({ x: player.x, y: player.y - 22, vy: PLAYER_BULLET_SPEED, r: 4 });
   fireCooldown = PLAYER_FIRE_COOLDOWN;
 }
 
@@ -516,12 +449,7 @@ function enemyTryShoot(dt){
   if (!enemies.length) return;
 
   const e = enemies[Math.floor(Math.random() * enemies.length)];
-  enemyBullets.push({
-    x: e.x,
-    y: e.y + e.h/2 + 6,
-    vy: 6 + wave*0.35,
-    r: 4
-  });
+  enemyBullets.push({ x: e.x, y: e.y + e.h/2 + 6, vy: 6 + wave*0.35, r: 4 });
 }
 
 /* =======================
@@ -540,9 +468,7 @@ function damagePlayer(){
   lives -= 1;
   player.invuln = 0.85;
   playSfx(sfxOof);
-  if (lives <= 0){
-    showMenu();
-  }
+  if (lives <= 0) showMenu();
 }
 
 /* =======================
@@ -559,9 +485,7 @@ window.addEventListener("keydown", (e) => {
   if (k === "escape") showMenu();
 }, { passive:false });
 
-window.addEventListener("keyup", (e) => {
-  keys[e.key.toLowerCase()] = false;
-});
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
 canvas.addEventListener("pointerdown", () => {
   unlockAudioOnce();
@@ -574,23 +498,18 @@ canvas.addEventListener("pointerdown", () => {
 function update(dt){
   time += dt;
 
-  // v1.12: starfield updates in all states (menu feels alive too)
-  updateStarfield(dt);
+  // Starfield updates always (menu looks alive)
+  updateStarfield(dt, keys, player.speed);
 
   if (gameState !== STATE.PLAYING) return;
 
-  // invulnerability timer
   if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
-
-  // firing cooldown
   if (fireCooldown > 0) fireCooldown = Math.max(0, fireCooldown - dt);
 
-  // player move
   if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
-  // formation movement bounds depend on breathing spacing
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
   const spacingX = BASE_SPACING_X * (1 + breath * 0.35);
 
@@ -601,28 +520,21 @@ function update(dt){
   formation.xOffset += formation.dir * formation.speed;
 
   if (leftEdge < formation.boundsPad){
-    formation.dir = 1;
-    formation.xOffset += 2;
-    formation.yOffset += formation.stepDown;
+    formation.dir = 1; formation.xOffset += 2; formation.yOffset += formation.stepDown;
   } else if (rightEdge > canvas.width - formation.boundsPad){
-    formation.dir = -1;
-    formation.xOffset -= 2;
-    formation.yOffset += formation.stepDown;
+    formation.dir = -1; formation.xOffset -= 2; formation.yOffset += formation.stepDown;
   }
 
-  // update player bullets
   for (let i = bullets.length - 1; i >= 0; i--){
     bullets[i].y += bullets[i].vy;
     if (bullets[i].y < -50) bullets.splice(i, 1);
   }
 
-  // update enemy bullets
   for (let i = enemyBullets.length - 1; i >= 0; i--){
     enemyBullets[i].y += enemyBullets[i].vy;
     if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
   }
 
-  // compute enemy positions
   const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
   const startX = canvas.width/2 - formationWidth/2 + formation.xOffset;
   const baseY = 120 + formation.yOffset;
@@ -633,19 +545,14 @@ function update(dt){
     const scale = 1 + breath * 0.25;
     const size = e.size * scale;
 
-    const x = startX + e.col * spacingX;
-    const y = baseY + e.row * spacingY;
-
-    e.x = x;
-    e.y = y;
+    e.x = startX + e.col * spacingX;
+    e.y = baseY + e.row * spacingY;
     e.w = size;
     e.h = size;
   }
 
-  // bullet -> enemy collision
   for (let bi = bullets.length - 1; bi >= 0; bi--){
     const b = bullets[bi];
-
     for (let ei = enemies.length - 1; ei >= 0; ei--){
       const e = enemies[ei];
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
@@ -660,7 +567,6 @@ function update(dt){
     }
   }
 
-  // enemy bullet -> player collision
   const prx = player.x - player.w/2, pry = player.y - player.h/2;
   for (let i = enemyBullets.length - 1; i >= 0; i--){
     const b = enemyBullets[i];
@@ -670,7 +576,6 @@ function update(dt){
     }
   }
 
-  // enemy contact damage
   if (player.invuln <= 0){
     for (const e of enemies){
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
@@ -679,18 +584,12 @@ function update(dt){
         prx + player.w > rx &&
         pry < ry + e.h &&
         pry + player.h > ry;
-
-      if (overlap){
-        damagePlayer();
-        break;
-      }
+      if (overlap){ damagePlayer(); break; }
     }
   }
 
-  // enemy shooting
   enemyTryShoot(dt);
 
-  // wave clear
   if (enemies.length === 0){
     wave += 1;
     resetFormation();
@@ -699,30 +598,26 @@ function update(dt){
 }
 
 function draw(){
-  // v1.12: draw parallax starfield first
   drawStarfield();
 
-  // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  if (gameState === STATE.PLAYING && !flicker){
-    ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
-  } else if (gameState !== STATE.PLAYING) {
-    // Menu/options: still draw player as “mascot”
+  if (gameState === STATE.PLAYING){
+    if (!flicker){
+      ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+    }
+  } else {
     ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
   }
 
-  // enemies
   for (const e of enemies){
     ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
   }
 
-  // bullets (player)
   ctx.fillStyle = "#0f0";
   for (const b of bullets){
     ctx.fillRect(b.x - 2, b.y - 10, 4, 12);
   }
 
-  // bullets (enemy)
   ctx.fillStyle = "#0a6";
   for (const b of enemyBullets){
     ctx.beginPath();
@@ -731,7 +626,7 @@ function draw(){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.12<br>` +
+    `Galaga-ish Clone v1.12.1<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
