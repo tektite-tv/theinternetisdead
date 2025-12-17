@@ -6,18 +6,12 @@
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
-
-  /* HUD overlay (hidden by default, toggled with /) */
   #overlay{
-    position:absolute;
-    top:10px;
-    left:10px;
-    font-size:14px;
-    line-height:1.4;
-    pointer-events:none;
+    position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
     text-shadow:0 0 6px rgba(0,255,0,0.35);
-    display:none; /* hidden by default */
+   display:none; /* HUD hidden by default (toggle with /) */
   }
+
 
   #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   .panel{
@@ -59,7 +53,7 @@
   <div id="startMenu" class="panel">
     <div class="title">GALAGA-ISH CLONE</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ · Shoot: Space · HUD: / · ESC: Menu</div>
+    <div class="hint">Move: A/D or ⬅➡ · Shoot: Space · ESC: Menu · HUD: /</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -98,23 +92,50 @@
 /* ======================================================================
   PROJECT CHANGELOG / REMOVAL LOG
 ========================================================================
-- 2025-12-17 | v1.12.5
-  Added: HUD overlay hidden by default.
-  Added: Toggle HUD visibility with the / key.
+[REMOVAL LOG]
+
+- 2025-12-17 | v1.12.1
+  Fixed: Game not starting / enemy images not loading due to runtime error.
+  Cause: resize() called resetStarfield() before starLayers const initialized (TDZ).
+  Fix: Initialize starfield definitions before resize() runs; make resize() safe.
+
+- 2025-12-17 | v1.12.3
+  Undo: v1.12.2 "simplified demo" version (removed menus/options/combat/etc.).
+  Reason: User requested undo; restored full game build.
+  Added: Player size increase + enforced vertical padding between formation and player.
+  Location: player sizing, spawnEnemies baseY, update() formation Y clamp.
+
+- 2025-12-17 | v1.12.4
+  Added: Responsive desktop spacing so enemy formation uses screen width better.
+  Added: Hard top-of-screen clamp so enemies stay visible even after step-downs.
+  Tweaked: Reduced enemy base size + breathing scale to prevent overlap on desktop.
+  Tweaked: Formation edge detection uses predicted next position to avoid clipping.
+
+
 ====================================================================== */
 
+
+/* =======================
+   Paths (EDIT IF NEEDED)
+======================= */
 const GIF_BASE = "/media/images/gifs/";
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
 const AUDIO_OOF = "/media/audio/oof.mp3";
 
-const PLAYER_FIRE_COOLDOWN = 0.32;
-const PLAYER_BULLET_SPEED  = -6.5;
+/* =======================
+   Player Firing Tuning
+======================= */
+const PLAYER_FIRE_COOLDOWN = 0.32; // seconds
+const PLAYER_BULLET_SPEED  = -6.5; // slower bullets
 
+/* =======================
+   Canvas + Globals
+======================= */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const overlay = document.getElementById("overlay");
 
-let hudVisible = false;
+let hudVisible = false; // v1.12.5: HUD hidden by default; toggle with / (Slash)
 
 let time = 0;
 let score = 0;
@@ -124,14 +145,610 @@ let wave = 1;
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
 
+/* =======================
+   Utility
+======================= */
 function rand(min, max){ return min + Math.random() * (max - min); }
 
+/* =======================
+   Parallax Starfield (safe init order)
+======================= */
+const starLayers = [
+  { count: 180, baseSpeedY: 40,  parallaxX: 0.35, sizeMin: 1, sizeMax: 2 },
+  { count: 120, baseSpeedY: 80,  parallaxX: 0.60, sizeMin: 1, sizeMax: 3 },
+  { count: 70,  baseSpeedY: 140, parallaxX: 0.90, sizeMin: 2, sizeMax: 4 }
+];
+
+let stars = [];
+let playerVxSmoothed = 0;
+let starfieldReady = false;
+
+function resetStarfield(){
+  stars = starLayers.map(layer => {
+    const arr = [];
+    for (let i = 0; i < layer.count; i++){
+      arr.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        s: rand(layer.sizeMin, layer.sizeMax),
+        vyMul: rand(0.7, 1.3)
+      });
+    }
+    return arr;
+  });
+  starfieldReady = true;
+}
+
+function updateStarfield(dt, keys, playerSpeed){
+  if (!starfieldReady) return;
+
+  let vxIntent = 0;
+  if (gameState === STATE.PLAYING){
+    if (keys["a"] || keys["arrowleft"])  vxIntent -= 1;
+    if (keys["d"] || keys["arrowright"]) vxIntent += 1;
+  } else {
+    vxIntent = 0.15 * Math.sin(time * 0.6);
+  }
+
+  const targetVx = vxIntent * playerSpeed * 55;
+  playerVxSmoothed += (targetVx - playerVxSmoothed) * Math.min(1, dt * 8);
+
+  for (let li = 0; li < starLayers.length; li++){
+    const layer = starLayers[li];
+    const arr = stars[li];
+
+    const driftX = -playerVxSmoothed * layer.parallaxX;
+    const driftY = layer.baseSpeedY;
+
+    for (const st of arr){
+      st.x += driftX * dt;
+      st.y += driftY * st.vyMul * dt;
+
+      if (st.y > canvas.height + 10) st.y = -10;
+      if (st.x < -10) st.x = canvas.width + 10;
+      if (st.x > canvas.width + 10) st.x = -10;
+    }
+  }
+}
+
+function drawStarfield(){
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  if (!starfieldReady) return;
+
+  for (let li = 0; li < starLayers.length; li++){
+    const arr = stars[li];
+    const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    for (const st of arr){
+      ctx.fillRect(st.x, st.y, st.s, st.s);
+    }
+  }
+}
+
+/* =======================
+   Resize
+======================= */
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  // v1.12.3: keep player anchored nicely after resizes
+  player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+
+  resetStarfield();
+}
+window.addEventListener("resize", resize);
+
+/* =======================
+   Audio
+======================= */
+const sfxHit = new Audio(AUDIO_HIT);
+const sfxOof = new Audio(AUDIO_OOF);
+sfxHit.preload = "auto";
+sfxOof.preload = "auto";
+sfxHit.volume = 0.7;
+sfxOof.volume = 0.8;
+
+let audioUnlocked = false;
+function unlockAudioOnce(){
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try{
+    sfxHit.muted = true;
+    sfxHit.play().then(() => { sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false; }).catch(()=>{ sfxHit.muted = false; });
+
+    sfxOof.muted = true;
+    sfxOof.play().then(() => { sfxOof.pause(); sfxOof.currentTime = 0; sfxOof.muted = false; }).catch(()=>{ sfxOof.muted = false; });
+  }catch(e){}
+}
+function playSfx(a){
+  try{
+    const c = a.cloneNode();
+    c.volume = a.volume;
+    c.play().catch(()=>{});
+  }catch(e){}
+}
+
+/* =======================
+   UI
+======================= */
+const uiRoot = document.getElementById("uiRoot");
+const startMenu = document.getElementById("startMenu");
+const optionsMenu = document.getElementById("optionsMenu");
+const assetStatus = document.getElementById("assetStatus");
+
+const btnStart = document.getElementById("btnStart");
+const btnOptions = document.getElementById("btnOptions");
+const btnBack = document.getElementById("btnBack");
+const btnApply = document.getElementById("btnApply");
+
+const rowsSlider = document.getElementById("rowsSlider");
+const colsSlider = document.getElementById("colsSlider");
+const rowsVal = document.getElementById("rowsVal");
+const colsVal = document.getElementById("colsVal");
+const totalVal = document.getElementById("totalVal");
+
+let ENEMY_ROWS = parseInt(rowsSlider.value, 10);
+let ENEMY_COLS = parseInt(colsSlider.value, 10);
+
+function syncOptionsLabels(){
+  rowsVal.textContent = rowsSlider.value;
+  colsVal.textContent = colsSlider.value;
+  totalVal.textContent = (parseInt(rowsSlider.value,10) * parseInt(colsSlider.value,10)).toString();
+}
+rowsSlider.addEventListener("input", syncOptionsLabels);
+colsSlider.addEventListener("input", syncOptionsLabels);
+syncOptionsLabels();
+
+function showMenu(){
+  gameState = STATE.MENU;
+  startMenu.style.display = "block";
+  optionsMenu.style.display = "none";
+  uiRoot.style.display = "flex";
+}
+function showOptions(){
+  gameState = STATE.OPTIONS;
+  startMenu.style.display = "none";
+  optionsMenu.style.display = "block";
+  uiRoot.style.display = "flex";
+}
+function startGame(){
+  unlockAudioOnce();
+  gameState = STATE.PLAYING;
+  uiRoot.style.display = "none";
+
+  score = 0; lives = 3; wave = 1;
+  bullets.length = 0;
+  enemyBullets.length = 0;
+  fireCooldown = 0;
+
+  resetFormation();
+  spawnEnemies();
+  window.focus();
+}
+
+btnStart.addEventListener("click", startGame);
+btnOptions.addEventListener("click", showOptions);
+btnBack.addEventListener("click", showMenu);
+btnApply.addEventListener("click", () => {
+  ENEMY_ROWS = parseInt(rowsSlider.value, 10);
+  ENEMY_COLS = parseInt(colsSlider.value, 10);
+  resetFormation();
+  spawnEnemies();
+});
+
+function setAssetStatus(msg){ assetStatus.textContent = msg; }
+
+/* =======================
+   Player (v1.12.3 bigger)
+======================= */
+const playerImg = new Image();
+playerImg.src = GIF_BASE + "bananarama.gif";
+
+// v1.12.3 sizing + anchoring
+const PLAYER_SIZE = 72;                 // was 48
+const PLAYER_BOTTOM_MARGIN = 100;       // gives breathing room vs browser UI
+const FORMATION_PLAYER_GAP = 160;       // guaranteed space between formation bottom and player
+
+const player = {
+  x: 0,
+  y: 0,
+  w: PLAYER_SIZE,
+  h: PLAYER_SIZE,
+  speed: 6,
+  invuln: 0
+};
+
+const keys = {};
+let fireCooldown = 0;
+
+/* =======================
+   Enemy Images from index.json
+======================= */
+let enemyImages = [];
+let assetsReady = false;
+
+const FALLBACK_URLS = [
+  GIF_BASE + "frog.gif",
+  GIF_BASE + "skeleton.gif",
+  GIF_BASE + "dragon.gif",
+  GIF_BASE + "firework.gif"
+];
+
+function preloadImages(urls){
+  return new Promise((resolve) => {
+    const imgs = [];
+    let done = 0;
+    if (!urls.length) resolve(imgs);
+
+    urls.forEach((url) => {
+      const img = new Image();
+      img.onload = () => { done++; if (done === urls.length) resolve(imgs); };
+      img.onerror = () => { done++; if (done === urls.length) resolve(imgs); };
+      img.src = url;
+      imgs.push(img);
+    });
+  });
+}
+
+async function loadEnemyImagesFromIndex(){
+  try{
+    setAssetStatus("Fetching index.json...");
+    const res = await fetch(GIF_BASE + "index.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const list = await res.json();
+    if (!Array.isArray(list)) throw new Error("index.json not an array");
+
+    const urls = list
+      .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".gif"))
+      .map(name => GIF_BASE + name);
+
+    if (!urls.length) throw new Error("No gifs in index.json");
+
+    setAssetStatus(`Preloading ${urls.length} enemy images...`);
+    let imgs = await preloadImages(urls);
+    imgs = imgs.filter(img => img && img.naturalWidth > 0);
+    if (!imgs.length) throw new Error("All enemy images failed to load");
+
+    enemyImages = imgs;
+    assetsReady = true;
+    setAssetStatus(`Loaded ${enemyImages.length} enemy images ✅`);
+  }catch(err){
+    console.warn("Failed to load index.json enemy list:", err);
+    setAssetStatus("Failed to load index.json. Using fallback images.");
+    let imgs = await preloadImages(FALLBACK_URLS);
+    enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
+    assetsReady = true;
+  }
+}
+loadEnemyImagesFromIndex();
+
+/* =======================
+   Enemies + Formation Movement
+======================= */
+const BASE_SPACING_X = 95;
+const BASE_SPACING_Y = 75;
+
+
+function getSpacingX(){
+  // v1.12.4: Responsive horizontal spacing (desktop-friendly)
+  const maxFormationWidth = canvas.width * 0.82;     // use most of the screen width
+  const cols = Math.max(1, ENEMY_COLS - 1);          // gaps between columns
+  return Math.min(120, Math.max(80, maxFormationWidth / cols));
+}
+
+
+let enemies = [];
+
+const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, boundsPad:40 };
+
+function resetFormation(){
+  formation.xOffset = 0;
+  formation.yOffset = 0;
+  formation.dir = 1;
+  formation.speed = 1.2 + (wave-1) * 0.15;
+}
+
+function randEnemyImg(){
+  if (!enemyImages.length) return playerImg;
+  return enemyImages[Math.floor(Math.random() * enemyImages.length)];
+}
+
+function spawnEnemies(){
+  enemies = [];
+  const baseY = 80; // v1.12.3: start higher (was ~120)
+
+  for (let r = 0; r < ENEMY_ROWS; r++){
+    for (let c = 0; c < ENEMY_COLS; c++){
+      enemies.push({ row:r, col:c, baseY, img: randEnemyImg(), size:52, hp:1, x:0,y:0,w:0,h:0 });
+    }
+  }
+}
+
+/* =======================
+   Bullets
+======================= */
+const bullets = [];
+const enemyBullets = [];
+
+function shoot(){
+  if (fireCooldown > 0) return;
+  bullets.push({ x: player.x, y: player.y - (player.h/2) + 6, vy: PLAYER_BULLET_SPEED, r: 4 });
+  fireCooldown = PLAYER_FIRE_COOLDOWN;
+}
+
+let enemyShootTimer = 0;
+function enemyTryShoot(dt){
+  enemyShootTimer -= dt;
+  if (enemyShootTimer > 0) return;
+
+  const alive = enemies.length;
+  const base = Math.max(0.18, 0.55 - wave*0.04 - Math.min(0.22, alive*0.002));
+  enemyShootTimer = base;
+
+  if (!enemies.length) return;
+
+  const e = enemies[Math.floor(Math.random() * enemies.length)];
+  enemyBullets.push({ x: e.x, y: e.y + e.h/2 + 6, vy: 6 + wave*0.35, r: 4 });
+}
+
+/* =======================
+   Collision helpers
+======================= */
+function circleRect(cx, cy, cr, rx, ry, rw, rh){
+  const testX = Math.max(rx, Math.min(cx, rx+rw));
+  const testY = Math.max(ry, Math.min(cy, ry+rh));
+  const dx = cx - testX;
+  const dy = cy - testY;
+  return (dx*dx + dy*dy) <= cr*cr;
+}
+
+function damagePlayer(){
+  if (player.invuln > 0) return;
+  lives -= 1;
+  player.invuln = 0.85;
+  playSfx(sfxOof);
+  if (lives <= 0) showMenu();
+}
+
+/* =======================
+   Input
+======================= */
 window.addEventListener("keydown", (e) => {
-  if (e.key === "/"){
+  unlockAudioOnce();
+  if (e.code === "Space") e.preventDefault();
+
+  // v1.12.5: HUD toggle (Slash key) - hidden by default
+  if (e.code === "Slash"){
     hudVisible = !hudVisible;
     overlay.style.display = hudVisible ? "block" : "none";
   }
+
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+
+  if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
+  if (k === "escape") showMenu();
+}, { passive:false });
+
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+
+canvas.addEventListener("pointerdown", () => {
+  unlockAudioOnce();
+  if (gameState === STATE.PLAYING) shoot();
 });
+
+/* =======================
+   Update + Draw
+======================= */
+function update(dt){
+  time += dt;
+
+  // starfield updates always
+  updateStarfield(dt, keys, player.speed);
+
+  if (gameState !== STATE.PLAYING) return;
+
+  if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
+  if (fireCooldown > 0) fireCooldown = Math.max(0, fireCooldown - dt);
+
+  // player move
+  if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
+  if (keys["d"] || keys["arrowright"]) player.x += player.speed;
+  player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
+
+  // formation movement bounds depend on breathing spacing
+  const breath = Math.sin(time * 2) * 0.5 + 0.5;
+  const spacingX = getSpacingX() * (1 + breath * 0.25);
+
+  const formationWidth = (ENEMY_COLS - 1) * spacingX;
+
+  // v1.12.4: predict next X so we don't clip enemies on wider desktop layouts
+  const nextXOffset = formation.xOffset + (formation.dir * formation.speed);
+
+  const leftEdgeNext  = canvas.width/2 - formationWidth/2 + nextXOffset;
+  const rightEdgeNext = canvas.width/2 + formationWidth/2 + nextXOffset;
+
+  if (leftEdgeNext < formation.boundsPad){
+    formation.dir = 1;
+    formation.xOffset += 2;
+    formation.yOffset += formation.stepDown;
+  } else if (rightEdgeNext > canvas.width - formation.boundsPad){
+    formation.dir = -1;
+    formation.xOffset -= 2;
+    formation.yOffset += formation.stepDown;
+  } else {
+    formation.xOffset = nextXOffset;
+  }
+
+  // update bullets
+  for (let i = bullets.length - 1; i >= 0; i--){
+    bullets[i].y += bullets[i].vy;
+    if (bullets[i].y < -50) bullets.splice(i, 1);
+  }
+
+  for (let i = enemyBullets.length - 1; i >= 0; i--){
+    enemyBullets[i].y += enemyBullets[i].vy;
+    if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
+  }
+
+  // compute enemy positions
+  const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
+  const formationHeight = (ENEMY_ROWS - 1) * spacingY;
+
+  const startX = canvas.width/2 - formationWidth/2 + formation.xOffset;
+
+  // v1.12.3: base spawn Y from each enemy, plus formation yOffset
+  // then clamp so the formation bottom never gets too close to player
+  let baseY = 80 + formation.yOffset;
+
+  // v1.12.4: keep formation from drifting off the top of the screen
+  const TOP_SAFE_MARGIN = 60;
+  if (baseY < TOP_SAFE_MARGIN){
+    formation.yOffset += (TOP_SAFE_MARGIN - baseY);
+    baseY = TOP_SAFE_MARGIN;
+  }
+
+  const formationBottomY = baseY + formationHeight;
+  const allowedBottomY = player.y - FORMATION_PLAYER_GAP;
+
+  if (formationBottomY > allowedBottomY){
+    // push formation up (by adjusting yOffset) to maintain padding
+    const correction = formationBottomY - allowedBottomY;
+    formation.yOffset -= correction;
+    baseY -= correction;
+  }
+
+  for (const e of enemies){
+    if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
+
+    const scale = 1 + breath * 0.18;
+    const size = e.size * scale;
+
+    e.x = startX + e.col * spacingX;
+    e.y = baseY + e.row * spacingY;
+    e.w = size;
+    e.h = size;
+  }
+
+  // bullet -> enemy collision
+  for (let bi = bullets.length - 1; bi >= 0; bi--){
+    const b = bullets[bi];
+    for (let ei = enemies.length - 1; ei >= 0; ei--){
+      const e = enemies[ei];
+      const rx = e.x - e.w/2, ry = e.y - e.h/2;
+
+      if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
+        enemies.splice(ei, 1);
+        bullets.splice(bi, 1);
+        score += 10;
+        playSfx(sfxHit);
+        break;
+      }
+    }
+  }
+
+  // enemy bullet -> player collision
+  const prx = player.x - player.w/2, pry = player.y - player.h/2;
+  for (let i = enemyBullets.length - 1; i >= 0; i--){
+    const b = enemyBullets[i];
+    if (circleRect(b.x, b.y, b.r, prx, pry, player.w, player.h)){
+      enemyBullets.splice(i, 1);
+      damagePlayer();
+    }
+  }
+
+  // enemy contact damage
+  if (player.invuln <= 0){
+    for (const e of enemies){
+      const rx = e.x - e.w/2, ry = e.y - e.h/2;
+      const overlap =
+        prx < rx + e.w &&
+        prx + player.w > rx &&
+        pry < ry + e.h &&
+        pry + player.h > ry;
+      if (overlap){ damagePlayer(); break; }
+    }
+  }
+
+  enemyTryShoot(dt);
+
+  // wave clear
+  if (enemies.length === 0){
+    wave += 1;
+    resetFormation();
+    spawnEnemies();
+  }
+}
+
+function draw(){
+  drawStarfield();
+
+  // player flicker on invulnerability
+  const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
+  if (gameState === STATE.PLAYING){
+    if (!flicker){
+      ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+    }
+  } else {
+    ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+  }
+
+  // enemies
+  for (const e of enemies){
+    ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
+  }
+
+  // bullets (player)
+  ctx.fillStyle = "#0f0";
+  for (const b of bullets){
+    ctx.fillRect(b.x - 2, b.y - 10, 4, 12);
+  }
+
+  // bullets (enemy)
+  ctx.fillStyle = "#0a6";
+  for (const b of enemyBullets){
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  overlay.innerHTML =
+    `Galaga-ish Clone v1.12.4<br>` +
+    `State: ${gameState}<br>` +
+    `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
+    `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
+    `Enemy pool: ${enemyImages.length || 0} images<br>` +
+    `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
+    `Fire CD: ${fireCooldown.toFixed(2)}s<br>` +
+    `Player: ${player.w}px | Gap: ${FORMATION_PLAYER_GAP}px<br>` +
+    `ESC: Menu`;
+}
+
+let lastT = performance.now();
+function loop(t){
+  const dt = Math.min(0.033, (t - lastT) / 1000);
+  lastT = t;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* =======================
+   Boot
+======================= */
+player.x = canvas.width / 2;
+player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+
+resetStarfield();
+resize(); // also resets starfield + anchors player
+showMenu();
+spawnEnemies();
+
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
