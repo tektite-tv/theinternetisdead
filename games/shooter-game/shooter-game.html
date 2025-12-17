@@ -2,310 +2,116 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Shooter Game v0.09</title>
-
+  <title>Galaga-ish Clone v1.00</title>
   <style>
     html, body {
       margin: 0;
-      padding: 0;
       height: 100%;
       background: #000;
       color: #fff;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    }
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
     }
-    #gameContainer {
-      position: relative;
+    #wrap {
       width: 100vw;
       height: 100vh;
-      overflow: hidden;
+      position: relative;
     }
-    #game {
+    canvas {
       width: 100%;
       height: 100%;
       display: block;
       background: #000;
-      border: 2px solid #444;
     }
     #ui {
       position: absolute;
-      left: 10px;
       top: 10px;
-      pointer-events: none;
-      z-index: 10;
+      left: 10px;
       font-size: 14px;
       text-shadow: 0 0 6px rgba(0,0,0,0.9);
+      pointer-events: none;
       line-height: 1.35;
     }
-    #hint {
-      position: absolute;
-      left: 10px;
-      bottom: 10px;
-      pointer-events: none;
-      z-index: 10;
-      font-size: 12px;
-      opacity: 0.75;
-      text-shadow: 0 0 6px rgba(0,0,0,0.9);
-    }
-    #gameOverMessage {
+    #centerMsg {
       position: absolute;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 34px;
+      text-align: center;
+      font-size: 30px;
       font-weight: 800;
-      color: #ff5555;
       text-shadow: 0 0 14px rgba(0,0,0,0.95);
-      opacity: 0;
-      transition: opacity 0.25s ease;
       pointer-events: none;
-      z-index: 30;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    #centerMsg.show { opacity: 1; }
+    #hint {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      font-size: 12px;
+      opacity: 0.75;
+      text-shadow: 0 0 6px rgba(0,0,0,0.9);
+      pointer-events: none;
+      line-height: 1.35;
     }
   </style>
 </head>
-
 <body>
-  <div id="gameContainer">
+  <div id="wrap">
     <canvas id="game"></canvas>
 
     <div id="ui">
-      <div><b>shooter-game v0.09</b> (helicopter mode)</div>
-      <div>WASD = fly | Mouse = aim | LMB = shoot | R = restart</div>
-      <div>HP: <span id="hpDisplay">100</span> | Score: <span id="scoreDisplay">0</span></div>
-      <div>Waypoint: <span id="wpDisplay">0</span> | Enemies: <span id="enemyDisplay">0</span></div>
-      <div>Distance: <span id="distDisplay">0</span></div>
-      <div style="opacity:0.85">Progress happens because YOU move, not because the world shoves you.</div>
+      <div><b>Galaga-ish Clone v1.00</b></div>
+      <div>Move: A/D or ←/→ | Shoot: Space or LMB | Restart: R</div>
+      <div>Score: <span id="score">0</span> | Lives: <span id="lives">3</span> | Wave: <span id="wave">1</span></div>
+      <div>Enemies: <span id="enemyCount">0</span></div>
     </div>
 
     <div id="hint">
-      Tip: push right to reach waypoint gates. They spawn harder waves.
+      Classic rules: don’t get hit. Shoot the swarm. Some will dive. The rest will wiggle menacingly.
     </div>
 
-    <div id="gameOverMessage">GAME OVER</div>
+    <div id="centerMsg"></div>
   </div>
 
   <script>
     // ================================================================
-    // Shooter Game v0.09 (FULL FILE)
+    // Galaga-ish Clone v1.00 (FULL FILE)
     //
-    // BIG CHANGE (requested):
-    // - "Helicopter game" feel: NO auto-scroll. The player must move forward.
-    // - Camera follows player; tunnel is static in world space.
-    // - Waypoints are gates you fly through; crossing spawns harder waves.
+    // - Player bottom, move left/right, shoot up
+    // - Enemy formation + lateral march + step-down
+    // - Dive attackers
+    // - Enemies use random GIFs from /media/images/gifs/index.json
+    // - SFX: hitmarker (enemy hit), oof (player hit)
     //
-    // Kept:
-    // - Procedural tunnel obstacles with collision.
-    // - Enemy GIFs via /media/images/gifs/index.json
-    // - Deterministic per-image enemy style/speed (hash-based).
-    // - Swept bullet collision vs enemies; bullets collide with obstacles.
-    // - hitmarker.mp3 for enemy damage, oof.mp3 for player damage
-    // - No visible enemy hitbox circles.
+    // Notes:
+    // - Uses simple rectangular collision (fast, arcade-feeling)
+    // - Deterministic per-image "type" via hash so some GIFs tend to dive more, etc.
     // ================================================================
 
-    // ---------------------------
-    // Canvas + scaling
-    // ---------------------------
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
 
-    const hpDisplay = document.getElementById("hpDisplay");
-    const scoreDisplay = document.getElementById("scoreDisplay");
-    const wpDisplay = document.getElementById("wpDisplay");
-    const enemyDisplay = document.getElementById("enemyDisplay");
-    const distDisplay = document.getElementById("distDisplay");
-    const gameOverMessage = document.getElementById("gameOverMessage");
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+    const waveEl = document.getElementById("wave");
+    const enemyCountEl = document.getElementById("enemyCount");
+    const centerMsg = document.getElementById("centerMsg");
 
-    const VIRTUAL_WIDTH = 1200;
-    const VIRTUAL_HEIGHT = 800;
-
-    function resizeCanvas() {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+    function resize() {
+      const r = canvas.getBoundingClientRect();
+      canvas.width = Math.floor(r.width);
+      canvas.height = Math.floor(r.height);
     }
-    window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
+    window.addEventListener("resize", resize);
+    resize();
 
-    const camera = { x: 0, y: 0 };
-
-    function sx(worldX) {
-      const viewportX = (worldX - camera.x) + VIRTUAL_WIDTH / 2;
-      return (viewportX / VIRTUAL_WIDTH) * canvas.width;
-    }
-    function sy(worldY) {
-      const viewportY = (worldY - camera.y) + VIRTUAL_HEIGHT / 2;
-      return (viewportY / VIRTUAL_HEIGHT) * canvas.height;
-    }
-
-    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-    function lerp(a, b, t) { return a + (b - a) * t; }
-    function hypot(x, y) { return Math.hypot(x, y); }
-
-    // ---------------------------
-    // Deterministic RNG utilities
-    // ---------------------------
-    function hashStringFNV1a(str) {
-      let h = 0x811c9dc5;
-      for (let i = 0; i < str.length; i++) {
-        h ^= str.charCodeAt(i);
-        h = Math.imul(h, 0x01000193);
-      }
-      return h >>> 0;
-    }
-
-    function makeRng(seed) {
-      // xorshift32
-      let s = seed >>> 0;
-      return function rand() {
-        s ^= s << 13; s >>>= 0;
-        s ^= s >>> 17; s >>>= 0;
-        s ^= s << 5;  s >>>= 0;
-        return (s >>> 0) / 4294967296;
-      };
-    }
-
-    // ---------------------------
-    // World: tunnel + segments
-    // ---------------------------
-    const TUNNEL_TOP = 60;
-    const TUNNEL_BOTTOM = 740;
-
-    const SEG_LEN = 1500;
-    const SEG_BUFFER_AHEAD = 4;
-    const SEG_BUFFER_BEHIND = 2;
-
-    // Waypoints at segment boundaries
-    let waypointIndex = 0;
-    function waypointX(i) { return (i + 1) * SEG_LEN; }
-
-    // Segments store obstacles (rects)
-    // rect: {x,y,w,h}
-    const segments = new Map();
-
-    function worldSegIndex(x) {
-      return Math.floor(x / SEG_LEN);
-    }
-
-    function ensureSegmentsAroundPlayer() {
-      const pSeg = worldSegIndex(player.x);
-      const minSeg = pSeg - SEG_BUFFER_BEHIND;
-      const maxSeg = pSeg + SEG_BUFFER_AHEAD;
-
-      for (let si = minSeg; si <= maxSeg; si++) {
-        if (!segments.has(si)) segments.set(si, generateSegment(si));
-      }
-
-      // Cleanup far segments
-      for (const key of segments.keys()) {
-        if (key < minSeg - 3 || key > maxSeg + 6) segments.delete(key);
-      }
-    }
-
-    function generateSegment(segIndex) {
-      const seed = hashStringFNV1a("SEG:" + segIndex);
-      const rand = makeRng(seed);
-
-      const obstacles = [];
-      const difficulty = segIndex;
-      const density = clamp(0.9 + difficulty * 0.03, 0.9, 2.6);
-
-      const baseSets = 3;
-      const sets = Math.floor(baseSets * density);
-
-      const segX0 = segIndex * SEG_LEN;
-      const segX1 = segX0 + SEG_LEN;
-
-      for (let k = 0; k < sets; k++) {
-        const px = lerp(segX0 + 260, segX1 - 260, rand());
-        const w = lerp(90, 180, rand());
-        const gap = lerp(170, 300, rand());
-        const gapCenter = lerp(TUNNEL_TOP + 120, TUNNEL_BOTTOM - 120, rand());
-
-        const gapTop = clamp(gapCenter - gap / 2, TUNNEL_TOP + 20, TUNNEL_BOTTOM - 20 - gap);
-        const gapBottom = gapTop + gap;
-
-        // top block
-        const topH = gapTop - TUNNEL_TOP;
-        if (topH > 40) obstacles.push({ x: px - w / 2, y: TUNNEL_TOP, w, h: topH });
-
-        // bottom block
-        const bottomH = TUNNEL_BOTTOM - gapBottom;
-        if (bottomH > 40) obstacles.push({ x: px - w / 2, y: gapBottom, w, h: bottomH });
-
-        // occasional mid pillar
-        if (rand() < 0.38) {
-          const ph = lerp(60, 150, rand());
-          const py = lerp(gapTop + 10, gapBottom - 10 - ph, rand());
-          obstacles.push({
-            x: px + lerp(-260, 260, rand()) - w * 0.30,
-            y: py,
-            w: lerp(50, 95, rand()),
-            h: ph
-          });
-        }
-      }
-
-      // keep a small safe buffer near waypoint boundary
-      const safe = 90;
-      const filtered = obstacles.filter(r => r.x + r.w > segX0 + safe && r.x < segX1 - safe);
-
-      return { obstacles: filtered };
-    }
-
-    function getNearbyObstacles(x) {
-      const si = worldSegIndex(x);
-      const obs = [];
-      for (let k = si - 1; k <= si + 1; k++) {
-        const seg = segments.get(k);
-        if (seg) obs.push(...seg.obstacles);
-      }
-      return obs;
-    }
-
-    // ---------------------------
-    // Player + entities
-    // ---------------------------
-    const player = {
-      x: 180,
-      y: (TUNNEL_TOP + TUNNEL_BOTTOM) / 2,
-      radius: 14,
-      speed: 310,        // helicopter feel: responsive
-      angle: 0,
-      hp: 100,
-      maxHp: 100,
-      iFrames: 0,
-      bumpVelX: 0,
-      bumpVelY: 0
-    };
-
-    const bullets = [];
-    const enemies = [];
-
-    // Tracking progress distance (how far right you've reached)
-    let maxX = player.x;
-
-    const keys = { w: false, a: false, s: false, d: false };
-    const mouse = { x: 0, y: 0, isDown: false };
-
-    let score = 0;
-    let isGameOver = false;
-
-    // Shooting
-    let lastShotTime = 0;
-    const SHOT_COOLDOWN = 0.13;
-
-    // Optional “ambient” spawns as you move forward (not treadmill, still player-driven)
-    let nextAmbientSpawnX = 900;
-
-    // ---------------------------
-    // Enemy images: index.json
-    // ---------------------------
+    // -------------------------
+    // Assets (GIF list)
+    // -------------------------
     const ENEMY_GIF_INDEX_URL = "/media/images/gifs/index.json";
     const ENEMY_GIF_BASE_URL = "/media/images/gifs/";
     let enemyGifFilenames = [];
@@ -344,9 +150,9 @@
           .map(s => String(s).trim())
           .filter(Boolean)
           .filter(n => !n.endsWith("/") && !n.includes(".."));
-        console.log("[v0.09] Loaded enemy list:", enemyGifFilenames.length);
+        console.log("[Galaga v1.00] Loaded enemy list:", enemyGifFilenames.length);
       } catch (err) {
-        console.warn("[v0.09] Failed to load enemy index.json:", err);
+        console.warn("[Galaga v1.00] Failed to load enemy index.json:", err);
         enemyGifFilenames = [];
       }
     }
@@ -359,17 +165,36 @@
       return img;
     }
 
-    function getRandomEnemyImageSrc(rand) {
+    function hashStringFNV1a(str) {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+      }
+      return h >>> 0;
+    }
+
+    function makeRng(seed) {
+      let s = seed >>> 0;
+      return function rand() {
+        s ^= s << 13; s >>>= 0;
+        s ^= s >>> 17; s >>>= 0;
+        s ^= s << 5;  s >>>= 0;
+        return (s >>> 0) / 4294967296;
+      };
+    }
+
+    function pickRandomEnemySrc(rand) {
       if (!enemyGifFilenames.length) return null;
-      const filename = enemyGifFilenames[Math.floor(rand() * enemyGifFilenames.length)];
-      return ENEMY_GIF_BASE_URL + filename;
+      const fn = enemyGifFilenames[Math.floor(rand() * enemyGifFilenames.length)];
+      return ENEMY_GIF_BASE_URL + fn;
     }
 
     loadEnemyGifIndex();
 
-    // ---------------------------
+    // -------------------------
     // Audio
-    // ---------------------------
+    // -------------------------
     const SFX = {
       enemyHit: "/media/audio/hitmarker.mp3",
       playerHit: "/media/audio/oof.mp3"
@@ -377,7 +202,7 @@
 
     const sfxThrottle = {
       enemyHit: { last: 0, minGap: 0.04 },
-      playerHit: { last: 0, minGap: 0.16 }
+      playerHit: { last: 0, minGap: 0.18 }
     };
 
     function playSfx(key, volume = 0.8) {
@@ -391,542 +216,402 @@
       a.play().catch(() => {});
     }
 
-    // ---------------------------
+    // -------------------------
     // Input
-    // ---------------------------
+    // -------------------------
+    const keys = { left: false, right: false, shoot: false };
+    let mouseDown = false;
+
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
-      if (k === "w") keys.w = true;
-      if (k === "a") keys.a = true;
-      if (k === "s") keys.s = true;
-      if (k === "d") keys.d = true;
-      if (k === "r" && isGameOver) location.reload();
+      if (k === "a" || k === "arrowleft") keys.left = true;
+      if (k === "d" || k === "arrowright") keys.right = true;
+      if (k === " " ) keys.shoot = true;
+      if (k === "r") resetGame();
     });
 
     window.addEventListener("keyup", (e) => {
       const k = e.key.toLowerCase();
-      if (k === "w") keys.w = false;
-      if (k === "a") keys.a = false;
-      if (k === "s") keys.s = false;
-      if (k === "d") keys.d = false;
+      if (k === "a" || k === "arrowleft") keys.left = false;
+      if (k === "d" || k === "arrowright") keys.right = false;
+      if (k === " " ) keys.shoot = false;
     });
 
-    canvas.addEventListener("mousemove", (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const nx = (e.clientX - rect.left) / canvas.width;
-      const ny = (e.clientY - rect.top) / canvas.height;
-      mouse.x = camera.x + (nx - 0.5) * VIRTUAL_WIDTH;
-      mouse.y = camera.y + (ny - 0.5) * VIRTUAL_HEIGHT;
-    });
+    canvas.addEventListener("mousedown", (e) => { if (e.button === 0) mouseDown = true; });
+    window.addEventListener("mouseup", (e) => { if (e.button === 0) mouseDown = false; });
 
-    canvas.addEventListener("mousedown", (e) => { if (e.button === 0) mouse.isDown = true; });
-    canvas.addEventListener("mouseup", (e) => { if (e.button === 0) mouse.isDown = false; });
+    // -------------------------
+    // Helpers
+    // -------------------------
+    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
-    // ---------------------------
-    // Collision helpers
-    // ---------------------------
-    function closestPointOnSegment(ax, ay, bx, by, px, py) {
-      const abx = bx - ax, aby = by - ay;
-      const apx = px - ax, apy = py - ay;
-      const abLen2 = abx * abx + aby * aby;
-      if (abLen2 <= 1e-9) return { x: ax, y: ay, t: 0 };
-      let t = (apx * abx + apy * aby) / abLen2;
-      t = clamp(t, 0, 1);
-      return { x: ax + abx * t, y: ay + aby * t, t };
+    function aabbOverlap(a, b) {
+      return a.x < b.x + b.w &&
+             a.x + a.w > b.x &&
+             a.y < b.y + b.h &&
+             a.y + a.h > b.y;
     }
 
-    function segmentHitsCircle(ax, ay, bx, by, cx, cy, r) {
-      const c = closestPointOnSegment(ax, ay, bx, by, cx, cy);
-      const dx = cx - c.x, dy = cy - c.y;
-      return (dx * dx + dy * dy) <= (r * r);
+    // -------------------------
+    // Game state
+    // -------------------------
+    let score = 0;
+    let lives = 3;
+    let wave = 1;
+
+    const player = {
+      x: 0,
+      y: 0,
+      w: 48,
+      h: 18,
+      speed: 520,
+      iFrames: 0
+    };
+
+    const bullets = [];        // player bullets
+    const enemyBullets = [];   // enemy bullets (simple)
+    const enemies = [];
+
+    // Formation controller
+    const formation = {
+      x: 0,
+      y: 90,
+      dir: 1,                // +1 right, -1 left
+      speed: 55,
+      stepDown: 26,
+      boundsPad: 70,
+      sway: 0,
+      swaySpeed: 0.85
+    };
+
+    // Shooting cadence
+    let lastShot = 0;
+    const SHOT_COOLDOWN = 0.12;
+
+    // Dive cadence
+    let lastDive = 0;
+    let lastEnemyShot = 0;
+
+    let isGameOver = false;
+    let showWaveBannerUntil = 0;
+
+    function resetGame() {
+      score = 0;
+      lives = 3;
+      wave = 1;
+      isGameOver = false;
+      centerMsg.classList.remove("show");
+      centerMsg.textContent = "";
+      bullets.length = 0;
+      enemyBullets.length = 0;
+      enemies.length = 0;
+      formation.y = 90;
+      formation.dir = 1;
+      formation.speed = 55;
+      formation.stepDown = 26;
+      formation.sway = 0;
+      spawnWave(wave);
+      layoutPlayer();
+      syncUI();
     }
 
-    function circleVsAABBResolve(c, r, rect) {
-      const closestX = clamp(c.x, rect.x, rect.x + rect.w);
-      const closestY = clamp(c.y, rect.y, rect.y + rect.h);
-      const dx = c.x - closestX;
-      const dy = c.y - closestY;
-      const d2 = dx * dx + dy * dy;
-
-      if (d2 < r * r) {
-        const d = Math.sqrt(d2) || 0.0001;
-        const nx = dx / d;
-        const ny = dy / d;
-        const push = (r - d);
-        c.x += nx * push;
-        c.y += ny * push;
-        return { hit: true, nx, ny, push };
-      }
-      return { hit: false, nx: 0, ny: 0, push: 0 };
+    function layoutPlayer() {
+      player.x = (canvas.width - player.w) / 2;
+      player.y = canvas.height - 80;
     }
 
-    function clampToTunnel(entity) {
-      const r = entity.radius;
-      if (entity.y < TUNNEL_TOP + r) entity.y = TUNNEL_TOP + r;
-      if (entity.y > TUNNEL_BOTTOM - r) entity.y = TUNNEL_BOTTOM - r;
+    function showCenter(text, ms = 900) {
+      centerMsg.textContent = text;
+      centerMsg.classList.add("show");
+      showWaveBannerUntil = performance.now() + ms;
     }
 
-    // ---------------------------
-    // Enemy behavior (deterministic from image filename)
-    // ---------------------------
-    const ENEMY_STYLES = ["chaser", "zigzag", "dasher", "drifter", "skitter"];
+    function syncUI() {
+      scoreEl.textContent = String(score);
+      livesEl.textContent = String(lives);
+      waveEl.textContent = String(wave);
+      enemyCountEl.textContent = String(enemies.length);
+    }
 
-    function makeEnemyProfileFromImage(src, difficulty) {
+    // -------------------------
+    // Enemy creation
+    // -------------------------
+    function enemyTypeFromSrc(src) {
+      // Deterministic "personality" per image
       const name = src ? src.split("/").pop() : "fallback";
-      const seed = hashStringFNV1a("ENEMY:" + name);
-      const rand = makeRng(seed);
+      const h = hashStringFNV1a("ETYPE:" + name);
 
-      const style = ENEMY_STYLES[seed % ENEMY_STYLES.length];
-
-      const sizeFactor = clamp(0.70 + rand() * 1.60, 0.65, 2.25);
-      const radius = clamp(16 * sizeFactor, 12, 46);
-
-      const hpBase = Math.round(2 + (radius * radius) / 240);
-      const hp = Math.max(2, Math.round(hpBase + difficulty * 0.35));
-
-      const speedBase = 115 + rand() * 125 + difficulty * 2.4;
-
-      const wobbleAmp = 30 + rand() * 110;
-      const wobbleFreq = 0.7 + rand() * 1.6;
-      const jitter = rand() * 1.0;
-
-      const dashPeriod = 1.0 + rand() * 1.2;
-      const dashDuration = 0.25 + rand() * 0.22;
-      const dashBoost = 1.8 + rand() * 1.5;
-
-      const driftBias = (rand() * 2 - 1) * 0.9;
-
-      return {
-        name, seed, rand, style,
-        radius,
-        maxHp: hp,
-        baseSpeed: speedBase,
-        wobbleAmp, wobbleFreq, jitter,
-        dashPeriod, dashDuration, dashBoost,
-        driftBias
-      };
+      // 0..3 type band
+      // 0: grunt (rare dives)
+      // 1: diver (dives more)
+      // 2: shooter (fires more)
+      // 3: tank (more hp, slower)
+      return h % 4;
     }
 
-    function spawnWave(waypointIdx) {
-      const difficulty = waypointIdx;
+    function spawnWave(w) {
+      enemies.length = 0;
+      bullets.length = 0;
+      enemyBullets.length = 0;
 
-      const base = 4 + Math.floor(difficulty * 0.8);
-      const variance = Math.floor(difficulty * 0.35);
-      const count = clamp(base + Math.floor(Math.random() * (variance + 1)), 4, 34);
+      // Scale formation a bit with wave
+      formation.x = 0;
+      formation.y = clamp(90 + (w - 1) * 6, 90, 150);
+      formation.speed = 55 + (w - 1) * 6;
+      formation.stepDown = clamp(26 + (w - 1) * 1.2, 26, 40);
 
-      // Spawn ahead of the *next* segment, so you fly INTO the trouble
-      const waveSeg = waypointIdx + 1;
-      const segX0 = waveSeg * SEG_LEN;
-      const segX1 = segX0 + SEG_LEN;
+      const rows = clamp(3 + Math.floor((w - 1) / 2), 3, 6);
+      const cols = clamp(8 + Math.floor((w - 1) / 2), 8, 12);
 
-      const rand = makeRng(hashStringFNV1a("WAVE:" + waypointIdx));
+      const cellW = 66;
+      const cellH = 54;
 
-      for (let i = 0; i < count; i++) {
-        const src = getRandomEnemyImageSrc(rand);
-        const img = src ? getOrCreateImage(src) : null;
+      const totalW = cols * cellW;
+      formation.x = (canvas.width - totalW) / 2;
 
-        const profile = makeEnemyProfileFromImage(src || "fallback", difficulty);
+      const rand = makeRng(hashStringFNV1a("WAVE:" + w));
 
-        const x = lerp(segX0 + 260, segX1 - 240, rand());
-        const y = lerp(TUNNEL_TOP + 40, TUNNEL_BOTTOM - 40, rand());
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const src = pickRandomEnemySrc(rand);
+          const img = src ? getOrCreateImage(src) : null;
 
-        enemies.push({
-          x, y,
-          radius: profile.radius,
-          hp: profile.maxHp,
-          maxHp: profile.maxHp,
-          img, imgSrc: src,
+          const etype = enemyTypeFromSrc(src);
+          const baseSize = 42;
+          const size = clamp(baseSize + (rand() * 16 - 8), 30, 56);
 
-          style: profile.style,
-          baseSpeed: profile.baseSpeed,
-          seed: profile.seed,
+          let hp = 1;
+          if (etype === 3) hp = 3 + Math.floor(w * 0.2);
+          else if (etype === 0) hp = 1;
+          else hp = 1 + (w > 6 ? 1 : 0);
 
-          t0: performance.now() / 1000,
-          phase: rand() * Math.PI * 2,
-          hitFlash: 0,
-          knockX: 0,
-          knockY: 0,
-          dashTimer: rand() * profile.dashPeriod,
+          const diveChance = (etype === 1) ? 0.70 : (etype === 0 ? 0.20 : 0.35);
+          const shootBias = (etype === 2) ? 0.80 : 0.35;
 
-          wobbleAmp: profile.wobbleAmp,
-          wobbleFreq: profile.wobbleFreq,
-          jitter: profile.jitter,
-          dashPeriod: profile.dashPeriod,
-          dashDuration: profile.dashDuration,
-          dashBoost: profile.dashBoost,
-          driftBias: profile.driftBias
-        });
+          enemies.push({
+            // "home" position relative to formation
+            fx: c * cellW + (cellW - size) / 2,
+            fy: r * cellH,
+
+            // current world position (updated each frame)
+            x: 0, y: 0,
+            w: size, h: size,
+
+            img, src,
+            type: etype,
+            hp, maxHp: hp,
+
+            state: "formation", // formation | diving | returning
+            vx: 0, vy: 0,
+            t0: performance.now() / 1000,
+            diveChance,
+            shootBias,
+            flash: 0
+          });
+        }
       }
+
+      showCenter(`WAVE ${w}`, 900);
+      syncUI();
     }
 
-    function spawnAmbientPack() {
-      // Ambient spawns only happen because YOU advanced far enough.
-      // This keeps the tunnel from feeling empty between waypoints.
-      const difficulty = waypointIndex;
-      const rand = makeRng(hashStringFNV1a("AMBIENT:" + Math.floor(player.x / 500)));
-
-      const pack = clamp(2 + Math.floor(difficulty * 0.25), 2, 6);
-
-      const x0 = player.x + 700;
-      const x1 = player.x + 1200;
-
-      for (let i = 0; i < pack; i++) {
-        const src = getRandomEnemyImageSrc(rand);
-        const img = src ? getOrCreateImage(src) : null;
-
-        const profile = makeEnemyProfileFromImage(src || "fallback", Math.floor(difficulty * 0.8));
-
-        enemies.push({
-          x: lerp(x0, x1, rand()),
-          y: lerp(TUNNEL_TOP + 50, TUNNEL_BOTTOM - 50, rand()),
-          radius: profile.radius,
-          hp: Math.max(2, Math.round(profile.maxHp * 0.75)),
-          maxHp: Math.max(2, Math.round(profile.maxHp * 0.75)),
-          img, imgSrc: src,
-
-          style: profile.style,
-          baseSpeed: profile.baseSpeed * 0.95,
-          seed: profile.seed,
-
-          t0: performance.now() / 1000,
-          phase: rand() * Math.PI * 2,
-          hitFlash: 0,
-          knockX: 0,
-          knockY: 0,
-          dashTimer: rand() * profile.dashPeriod,
-
-          wobbleAmp: profile.wobbleAmp,
-          wobbleFreq: profile.wobbleFreq,
-          jitter: profile.jitter,
-          dashPeriod: profile.dashPeriod,
-          dashDuration: profile.dashDuration,
-          dashBoost: profile.dashBoost,
-          driftBias: profile.driftBias
-        });
-      }
-    }
-
-    // ---------------------------
+    // -------------------------
     // Shooting
-    // ---------------------------
-    function shootBullet() {
-      const dx = mouse.x - player.x;
-      const dy = mouse.y - player.y;
-      const len = hypot(dx, dy) || 1;
-      const dirX = dx / len;
-      const dirY = dy / len;
-
-      const bulletSpeed = 820;
+    // -------------------------
+    function shoot() {
+      const now = performance.now() / 1000;
+      if (now - lastShot < SHOT_COOLDOWN) return;
+      lastShot = now;
 
       bullets.push({
-        x: player.x,
-        y: player.y,
-        prevX: player.x,
-        prevY: player.y,
-        radius: 3.8,
-        vx: dirX * bulletSpeed,
-        vy: dirY * bulletSpeed,
-        life: 1.35,
-        damage: (Math.random() < 0.10) ? 2 : 1
+        x: player.x + player.w / 2 - 3,
+        y: player.y - 10,
+        w: 6,
+        h: 14,
+        vy: -920,
+        damage: 1
       });
     }
 
-    // ---------------------------
-    // Game Over
-    // ---------------------------
-    function handleGameOver() {
-      isGameOver = true;
-      gameOverMessage.style.opacity = 1;
+    function enemyShootFrom(e) {
+      // Simple downward shots, not constant
+      enemyBullets.push({
+        x: e.x + e.w / 2 - 3,
+        y: e.y + e.h - 2,
+        w: 6,
+        h: 14,
+        vy: 520 + wave * 10,
+        damage: 1
+      });
     }
 
-    // ---------------------------
-    // Update loop
-    // ---------------------------
+    // -------------------------
+    // Update
+    // -------------------------
     function update(dt) {
       if (isGameOver) return;
 
-      // Player-facing
-      const dmx = mouse.x - player.x;
-      const dmy = mouse.y - player.y;
-      player.angle = Math.atan2(dmy, dmx);
-
-      // Camera follows player (helicopter mode)
-      camera.x = player.x + 240; // offset forward so you can see ahead
-      camera.y = (TUNNEL_TOP + TUNNEL_BOTTOM) / 2;
-
-      // Ensure procedural segments exist around you
-      ensureSegmentsAroundPlayer();
-
-      // Waypoint check: YOU must cross it
-      const nextWpX = waypointX(waypointIndex);
-      if (player.x >= nextWpX) {
-        waypointIndex++;
-        wpDisplay.textContent = waypointIndex.toString();
-
-        // Spawn next wave
-        spawnWave(waypointIndex);
-
-        // Tiny reward for progress
-        player.hp = clamp(player.hp + 4, 0, player.maxHp);
-
-        // Push next ambient spawn farther ahead
-        nextAmbientSpawnX = Math.max(nextAmbientSpawnX, player.x + 900);
+      if (performance.now() > showWaveBannerUntil) {
+        centerMsg.classList.remove("show");
       }
 
-      // Ambient spawns are tied to progress, not time
-      if (player.x >= nextAmbientSpawnX) {
-        spawnAmbientPack();
-        nextAmbientSpawnX += 700 + waypointIndex * 30;
-      }
-
-      // Player i-frames
+      // Player iFrames
       player.iFrames = Math.max(0, player.iFrames - dt);
 
-      // Movement input
-      let mvx = 0, mvy = 0;
-      if (keys.w) mvy -= 1;
-      if (keys.s) mvy += 1;
-      if (keys.a) mvx -= 1;
-      if (keys.d) mvx += 1;
+      // Player move
+      let dir = 0;
+      if (keys.left) dir -= 1;
+      if (keys.right) dir += 1;
+      player.x += dir * player.speed * dt;
+      player.x = clamp(player.x, 10, canvas.width - player.w - 10);
 
-      const mag = hypot(mvx, mvy) || 1;
-      mvx /= mag;
-      mvy /= mag;
+      // Player shoot
+      if (keys.shoot || mouseDown) shoot();
 
-      // Bump decay
-      const bumpDecay = Math.pow(0.0007, dt);
-      player.bumpVelX *= bumpDecay;
-      player.bumpVelY *= bumpDecay;
+      // Formation movement (classic Galaga-ish march)
+      formation.sway += dt * formation.swaySpeed;
+      const swayOffset = Math.sin(formation.sway) * 10;
 
-      // Integrate player
-      player.x += (mvx * player.speed + player.bumpVelX) * dt;
-      player.y += (mvy * player.speed + player.bumpVelY) * dt;
+      formation.x += formation.dir * formation.speed * dt;
 
-      // Clamp to tunnel
-      clampToTunnel(player);
-
-      // Player vs obstacles
-      const nearbyObs = getNearbyObstacles(player.x);
-      for (const r of nearbyObs) {
-        const res = circleVsAABBResolve(player, player.radius, r);
-        if (res.hit) {
-          // Little slide-feel: dampen bump into wall
-          player.bumpVelX *= 0.6;
-          player.bumpVelY *= 0.6;
-        }
-        clampToTunnel(player);
-      }
-
-      // Shooting
-      if (mouse.isDown) {
-        const t = performance.now() / 1000;
-        if (t - lastShotTime >= SHOT_COOLDOWN) {
-          shootBullet();
-          lastShotTime = t;
+      // Compute formation bounds from living enemies in formation
+      let minX = Infinity, maxX = -Infinity;
+      for (const e of enemies) {
+        if (e.state === "formation") {
+          const ex = formation.x + e.fx;
+          minX = Math.min(minX, ex);
+          maxX = Math.max(maxX, ex + e.w);
         }
       }
 
-      // Bullets update + obstacle collision
-      for (let i = bullets.length - 1; i >= 0; i--) {
-        const b = bullets[i];
-        b.prevX = b.x; b.prevY = b.y;
-
-        b.x += b.vx * dt;
-        b.y += b.vy * dt;
-        b.life -= dt;
-
-        if (b.y < TUNNEL_TOP - 120 || b.y > TUNNEL_BOTTOM + 120) {
-          bullets.splice(i, 1);
-          continue;
-        }
-
-        // Bullet hits obstacles
-        const obs = getNearbyObstacles(b.x);
-        let hitObs = false;
-        for (const r of obs) {
-          const ex = r.x - b.radius, ey = r.y - b.radius, ew = r.w + b.radius * 2, eh = r.h + b.radius * 2;
-          const insideNow = (b.x >= ex && b.x <= ex + ew && b.y >= ey && b.y <= ey + eh);
-          const insidePrev = (b.prevX >= ex && b.prevX <= ex + ew && b.prevY >= ey && b.prevY <= ey + eh);
-          if (insideNow || insidePrev) { hitObs = true; break; }
-        }
-        if (hitObs) {
-          bullets.splice(i, 1);
-          continue;
-        }
-
-        if (b.life <= 0) bullets.splice(i, 1);
+      // If no formation enemies remain, still bounce based on screen edges
+      if (minX === Infinity) {
+        minX = formation.x;
+        maxX = formation.x + 400;
       }
 
-      // Track distance/progress
-      maxX = Math.max(maxX, player.x);
-      distDisplay.textContent = Math.floor(maxX).toString();
+      if (minX < formation.boundsPad) {
+        formation.x += (formation.boundsPad - minX);
+        formation.dir = 1;
+        formation.y += formation.stepDown;
+      } else if (maxX > canvas.width - formation.boundsPad) {
+        formation.x -= (maxX - (canvas.width - formation.boundsPad));
+        formation.dir = -1;
+        formation.y += formation.stepDown;
+      }
 
-      // Enemy update
+      // Dive selection (peel attackers)
       const now = performance.now() / 1000;
 
-      // Cleanup enemies far behind you (keeps list sane)
-      for (let i = enemies.length - 1; i >= 0; i--) {
-        if (enemies[i].x < player.x - 1600) enemies.splice(i, 1);
-      }
+      const alive = enemies.length;
+      const diveInterval = clamp(1.7 - wave * 0.06, 0.55, 1.7);
+      if (now - lastDive > diveInterval && alive > 0) {
+        lastDive = now;
 
-      for (let i = 0; i < enemies.length; i++) {
-        const e = enemies[i];
-        e.hitFlash = Math.max(0, e.hitFlash - dt);
-
-        // Knock decay
-        const kd = Math.pow(0.0008, dt);
-        e.knockX *= kd;
-        e.knockY *= kd;
-
-        // Target player
-        const dx = player.x - e.x;
-        const dy = player.y - e.y;
-        const dist = hypot(dx, dy) || 1;
-        const tx = dx / dist;
-        const ty = dy / dist;
-
-        let vx = 0, vy = 0;
-
-        if (e.style === "chaser") {
-          vx = tx * e.baseSpeed;
-          vy = ty * e.baseSpeed;
-
-        } else if (e.style === "zigzag") {
-          const phase = e.phase + (now - e.t0) * e.wobbleFreq;
-          const osc = Math.sin(phase) * e.wobbleAmp;
-          // helicopter mode: less forced right drift, more “harass”
-          vx = tx * (0.85 * e.baseSpeed);
-          vy = ty * (0.35 * e.baseSpeed) + osc;
-
-        } else if (e.style === "dasher") {
-          e.dashTimer += dt;
-          const t = e.dashTimer % e.dashPeriod;
-          const dashing = (t < e.dashDuration);
-          const boost = dashing ? e.dashBoost : 0.75;
-          vx = tx * e.baseSpeed * boost;
-          vy = ty * e.baseSpeed * (dashing ? 0.60 : 0.35);
-
-        } else if (e.style === "drifter") {
-          // tries to sit a bit ahead of player to block lanes
-          const desiredX = player.x + 220;
-          const ddx = desiredX - e.x;
-          const dd = Math.abs(ddx) + 1;
-          const dirX = ddx / dd;
-
-          vx = dirX * (0.95 * e.baseSpeed);
-          vy = (ty * 0.40 * e.baseSpeed) + e.driftBias * 30;
-
-        } else if (e.style === "skitter") {
-          const seedRand = makeRng((e.seed ^ (Math.floor(now * 8) >>> 0)) >>> 0);
-          const j = (seedRand() * 2 - 1) * (60 + e.jitter * 140);
-          vx = tx * (0.95 * e.baseSpeed);
-          vy = ty * (0.25 * e.baseSpeed) + j;
-        }
-
-        vx += e.knockX;
-        vy += e.knockY;
-
-        e.x += vx * dt;
-        e.y += vy * dt;
-
-        clampToTunnel(e);
-
-        // Enemy vs obstacles
-        const obs = getNearbyObstacles(e.x);
-        for (const r of obs) {
-          const res = circleVsAABBResolve(e, e.radius, r);
-          if (res.hit) {
-            e.knockY += res.ny * 120;
-            e.knockX += res.nx * 90;
-          }
-          clampToTunnel(e);
-        }
-      }
-
-      // Enemy repulsion (stops dogpiles)
-      for (let i = 0; i < enemies.length; i++) {
-        for (let j = i + 1; j < enemies.length; j++) {
-          const a = enemies[i], b = enemies[j];
-          const dx = b.x - a.x, dy = b.y - a.y;
-          const d = hypot(dx, dy) || 1;
-          const minD = a.radius + b.radius;
-          const overlap = minD - d;
-          if (overlap > 0) {
-            const nx = dx / d, ny = dy / d;
-            const push = overlap * 0.35;
-            a.x -= nx * push * 0.5; a.y -= ny * push * 0.5;
-            b.x += nx * push * 0.5; b.y += ny * push * 0.5;
+        // Pick a random formation enemy to dive
+        const candidates = enemies.filter(e => e.state === "formation");
+        if (candidates.length) {
+          const pick = candidates[Math.floor(Math.random() * candidates.length)];
+          // Chance depends on type
+          if (Math.random() < pick.diveChance) {
+            pick.state = "diving";
+            // Dive toward player with a bit of curve
+            const dx = (player.x + player.w/2) - (formation.x + pick.fx + pick.w/2);
+            pick.vx = clamp(dx * 0.9, -420, 420);
+            pick.vy = 260 + wave * 10;
           }
         }
       }
 
-      // Player/enemy contact damage
-      for (let i = 0; i < enemies.length; i++) {
-        const e = enemies[i];
-        const dx = e.x - player.x;
-        const dy = e.y - player.y;
-        const d = hypot(dx, dy) || 1;
-        const combined = e.radius + player.radius;
+      // Enemy shooting cadence
+      const enemyShotInterval = clamp(1.2 - wave * 0.05, 0.35, 1.2);
+      if (now - lastEnemyShot > enemyShotInterval && enemies.length) {
+        lastEnemyShot = now;
 
-        if (d < combined) {
-          // separate
-          const nx = dx / d, ny = dy / d;
-          const push = (combined - d) * 0.9;
-          player.x -= nx * push;
-          player.y -= ny * push;
-          clampToTunnel(player);
+        // Prefer shooter types and those closer to player x
+        const shooters = enemies
+          .filter(e => (e.state !== "returning")) // allow formation+diving
+          .sort((a, b) => {
+            const ax = Math.abs((a.x + a.w/2) - (player.x + player.w/2));
+            const bx = Math.abs((b.x + b.w/2) - (player.x + player.w/2));
+            // type bias
+            const ab = (a.shootBias || 0.35);
+            const bb = (b.shootBias || 0.35);
+            return (ax - bx) + (bb - ab) * 80;
+          });
 
-          if (player.iFrames <= 0) {
-            const sizeFactor = clamp(e.radius / 22, 0.7, 2.4);
-            const dmg = Math.round(10 * sizeFactor + waypointIndex * 0.18);
+        if (shooters.length) {
+          const e = shooters[Math.floor(Math.random() * Math.min(6, shooters.length))];
+          if (Math.random() < (e.shootBias || 0.35)) enemyShootFrom(e);
+        }
+      }
 
-            player.hp -= dmg;
-            player.iFrames = 0.55;
+      // Update enemies positions
+      for (const e of enemies) {
+        e.flash = Math.max(0, e.flash - dt);
 
-            player.bumpVelX -= nx * (520 / sizeFactor);
-            player.bumpVelY -= ny * (520 / sizeFactor);
+        if (e.state === "formation") {
+          e.x = formation.x + e.fx + swayOffset;
+          e.y = formation.y + e.fy;
+        } else if (e.state === "diving") {
+          // Curved-ish dive
+          e.vx *= Math.pow(0.15, dt); // slowly reduce x velocity (curve effect)
+          e.x += e.vx * dt;
+          e.y += e.vy * dt;
 
-            e.knockX += nx * (240 * sizeFactor);
-            e.knockY += ny * (240 * sizeFactor);
+          // If passed bottom, return upward to formation
+          if (e.y > canvas.height + 40) {
+            e.state = "returning";
+            e.vx = 0;
+            e.vy = -420 - wave * 8;
+          }
+        } else if (e.state === "returning") {
+          // Move upward toward formation band; once near, snap back into formation
+          e.y += e.vy * dt;
 
-            playSfx("playerHit", 0.85);
+          // Find its target formation position
+          const tx = formation.x + e.fx + swayOffset;
+          const ty = formation.y + e.fy;
 
-            if (player.hp <= 0) {
-              player.hp = 0;
-              handleGameOver();
-              break;
-            }
+          // Lerp x toward target while returning
+          e.x = e.x + (tx - e.x) * clamp(dt * 3.5, 0, 1);
+
+          if (e.y <= ty) {
+            e.state = "formation";
           }
         }
       }
 
-      // Bullets vs enemies (swept)
+      // Bullets update
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.y += b.vy * dt;
+        if (b.y + b.h < -50) bullets.splice(i, 1);
+      }
+
+      for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        const b = enemyBullets[i];
+        b.y += b.vy * dt;
+        if (b.y > canvas.height + 60) enemyBullets.splice(i, 1);
+      }
+
+      // Player bullets vs enemies
       for (let i = enemies.length - 1; i >= 0; i--) {
         const e = enemies[i];
+        const eb = { x: e.x, y: e.y, w: e.w, h: e.h };
 
         for (let j = bullets.length - 1; j >= 0; j--) {
           const b = bullets[j];
-          const hitR = e.radius + b.radius * 1.35;
-
-          if (segmentHitsCircle(b.prevX, b.prevY, b.x, b.y, e.x, e.y, hitR)) {
-            e.hp -= b.damage;
-            e.hitFlash = 0.08;
+          if (aabbOverlap(eb, b)) {
+            bullets.splice(j, 1);
+            e.hp -= 1;
+            e.flash = 0.10;
             playSfx("enemyHit", 0.65);
 
-            const vx = b.x - b.prevX;
-            const vy = b.y - b.prevY;
-            const vlen = hypot(vx, vy) || 1;
-            const nx = vx / vlen;
-            const ny = vy / vlen;
-
-            const resist = clamp(e.radius / 26, 0.8, 2.6);
-            e.knockX += nx * (560 / resist);
-            e.knockY += ny * (560 / resist);
-
-            bullets.splice(j, 1);
-
             if (e.hp <= 0) {
-              score += 10 + Math.round(e.maxHp * 0.7) + waypointIndex;
+              // score based on type
+              const bonus = (e.type === 3) ? 40 : (e.type === 2 ? 30 : (e.type === 1 ? 25 : 20));
+              score += bonus + Math.floor(wave * 2);
               enemies.splice(i, 1);
             }
             break;
@@ -934,249 +619,173 @@
         }
       }
 
-      // UI
-      hpDisplay.textContent = Math.max(0, player.hp).toFixed(0);
-      scoreDisplay.textContent = score.toString();
-      enemyDisplay.textContent = enemies.length.toString();
-      wpDisplay.textContent = waypointIndex.toString();
-    }
-
-    // ---------------------------
-    // Drawing
-    // ---------------------------
-    function drawGridTunnel() {
-      const left = camera.x - VIRTUAL_WIDTH / 2;
-      const right = camera.x + VIRTUAL_WIDTH / 2;
-
-      // Tunnel panel background
-      ctx.fillStyle = "rgba(0,0,0,1)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Dark outside tunnel
-      const tunnelTopS = sy(TUNNEL_TOP);
-      const tunnelBottomS = sy(TUNNEL_BOTTOM);
-      ctx.fillStyle = "rgba(0,0,0,0.92)";
-      ctx.fillRect(0, 0, canvas.width, tunnelTopS);
-      ctx.fillRect(0, tunnelBottomS, canvas.width, canvas.height - tunnelBottomS);
-
-      ctx.fillStyle = "rgba(6, 10, 18, 1)";
-      ctx.fillRect(0, tunnelTopS, canvas.width, tunnelBottomS - tunnelTopS);
-
-      // Grid
-      const minor = 60;
-      const major = 240;
-
-      function drawLines(spacing, alpha, width) {
-        ctx.lineWidth = width;
-        ctx.strokeStyle = `rgba(160, 190, 255, ${alpha})`;
-
-        let x = Math.floor(left / spacing) * spacing;
-        for (; x <= right; x += spacing) {
-          const px = sx(x);
-          ctx.beginPath();
-          ctx.moveTo(px, tunnelTopS);
-          ctx.lineTo(px, tunnelBottomS);
-          ctx.stroke();
-        }
-
-        let y = Math.floor(TUNNEL_TOP / spacing) * spacing;
-        for (; y <= TUNNEL_BOTTOM; y += spacing) {
-          const py = sy(y);
-          ctx.beginPath();
-          ctx.moveTo(0, py);
-          ctx.lineTo(canvas.width, py);
-          ctx.stroke();
-        }
-      }
-
-      drawLines(minor, 0.08, 1);
-      drawLines(major, 0.14, 2);
-
-      // Tunnel walls
-      ctx.strokeStyle = "rgba(255,255,255,0.25)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(0, tunnelTopS);
-      ctx.lineTo(canvas.width, tunnelTopS);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, tunnelBottomS);
-      ctx.lineTo(canvas.width, tunnelBottomS);
-      ctx.stroke();
-    }
-
-    function drawObstacles() {
-      const leftX = camera.x - VIRTUAL_WIDTH / 2 - 100;
-      const rightX = camera.x + VIRTUAL_WIDTH / 2 + 100;
-
-      const si0 = worldSegIndex(leftX);
-      const si1 = worldSegIndex(rightX);
-
-      for (let si = si0; si <= si1; si++) {
-        const seg = segments.get(si);
-        if (!seg) continue;
-
-        for (const r of seg.obstacles) {
-          if (r.x + r.w < leftX || r.x > rightX) continue;
-
-          const x = sx(r.x);
-          const y = sy(r.y);
-          const w = (r.w / VIRTUAL_WIDTH) * canvas.width;
-          const h = (r.h / VIRTUAL_HEIGHT) * canvas.height;
-
-          ctx.fillStyle = "rgba(25, 35, 55, 0.95)";
-          ctx.fillRect(x, y, w, h);
-
-          ctx.strokeStyle = "rgba(140, 180, 255, 0.25)";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x, y, w, h);
-
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.10)";
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
-        }
-      }
-    }
-
-    function drawWaypointGate() {
-      const nextX = waypointX(waypointIndex);
-      const px = sx(nextX);
-      if (px < -60 || px > canvas.width + 60) return;
-
-      const top = sy(TUNNEL_TOP);
-      const bottom = sy(TUNNEL_BOTTOM);
-
-      const grad = ctx.createLinearGradient(px, 0, px, canvas.height);
-      grad.addColorStop(0, "rgba(0,0,0,0)");
-      grad.addColorStop(0.25, "rgba(120, 220, 255, 0.15)");
-      grad.addColorStop(0.50, "rgba(120, 220, 255, 0.22)");
-      grad.addColorStop(0.75, "rgba(120, 220, 255, 0.15)");
-      grad.addColorStop(1, "rgba(0,0,0,0)");
-
-      ctx.fillStyle = grad;
-      ctx.fillRect(px - 18, top, 36, bottom - top);
-
-      ctx.strokeStyle = "rgba(120, 220, 255, 0.45)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(px, top);
-      ctx.lineTo(px, bottom);
-      ctx.stroke();
-    }
-
-    function drawEnemyHealthBar(e, scaleFactor) {
-      const barW = (e.radius * 2) * scaleFactor;
-      const barH = 6;
-      const pad = 2;
-
-      const x = sx(e.x) - barW / 2;
-      const y = sy(e.y) - (e.radius * scaleFactor) - 14;
-
-      ctx.fillStyle = "rgba(0,0,0,0.65)";
-      ctx.fillRect(x - pad, y - pad, barW + pad * 2, barH + pad * 2);
-
-      const pct = e.maxHp > 0 ? (e.hp / e.maxHp) : 0;
-      ctx.fillStyle = "rgba(90,255,120,0.9)";
-      ctx.fillRect(x, y, barW * clamp(pct, 0, 1), barH);
-
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x - pad, y - pad, barW + pad * 2, barH + pad * 2);
-    }
-
-    function drawEntities() {
-      const scaleFactor = canvas.width / VIRTUAL_WIDTH;
-
-      // Bullets
-      for (const b of bullets) {
-        ctx.beginPath();
-        ctx.arc(sx(b.x), sy(b.y), b.radius * scaleFactor, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffdd55";
-        ctx.fill();
-      }
-
-      // Enemies
-      for (const e of enemies) {
-        const rr = e.radius * scaleFactor;
-        const ex = sx(e.x);
-        const ey = sy(e.y);
-
-        if (e.img && e.img.complete && e.img.naturalWidth > 0) {
-          ctx.save();
-          ctx.imageSmoothingEnabled = true;
-
-          if (e.hitFlash > 0) {
-            const t = clamp(e.hitFlash / 0.08, 0, 1);
-            ctx.globalAlpha = lerp(1.0, 0.62, t);
+      // Enemy bullets vs player
+      if (player.iFrames <= 0) {
+        const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
+        for (let i = enemyBullets.length - 1; i >= 0; i--) {
+          if (aabbOverlap(pb, enemyBullets[i])) {
+            enemyBullets.splice(i, 1);
+            takeHit();
+            break;
           }
-
-          ctx.drawImage(e.img, ex - rr, ey - rr, rr * 2, rr * 2);
-          ctx.restore();
-        } else {
-          ctx.fillStyle = "rgba(255, 80, 80, 0.85)";
-          ctx.fillRect(ex - rr, ey - rr, rr * 2, rr * 2);
         }
-
-        drawEnemyHealthBar(e, scaleFactor);
       }
 
-      // Player
-      const pr = player.radius * scaleFactor;
-      ctx.beginPath();
-      ctx.arc(sx(player.x), sy(player.y), pr, 0, Math.PI * 2);
-      ctx.fillStyle = (player.iFrames > 0) ? "rgba(85,170,255,0.75)" : "#55aaff";
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "#ffffff";
-      ctx.stroke();
+      // Enemy body vs player (classic “you touched it, you lose a life”)
+      if (player.iFrames <= 0) {
+        const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
+        for (const e of enemies) {
+          const eb = { x: e.x, y: e.y, w: e.w, h: e.h };
+          if (aabbOverlap(pb, eb)) {
+            takeHit();
+            break;
+          }
+        }
+      }
 
-      // Gun line
-      const gunLen = player.radius + 12;
-      const gx = player.x + Math.cos(player.angle) * gunLen;
-      const gy = player.y + Math.sin(player.angle) * gunLen;
+      // Lose condition: formation marched too far down
+      if (formation.y > canvas.height - 220) {
+        // It’s Galaga. They reached you. Bad day.
+        lives = 0;
+        gameOver();
+      }
 
-      ctx.beginPath();
-      ctx.moveTo(sx(player.x), sy(player.y));
-      ctx.lineTo(sx(gx), sy(gy));
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      // Win wave: no enemies left
+      if (enemies.length === 0) {
+        wave++;
+        spawnWave(wave);
+      }
+
+      syncUI();
+    }
+
+    function takeHit() {
+      lives--;
+      player.iFrames = 1.0;
+      playSfx("playerHit", 0.85);
+
+      // Clear bullets for fairness (classic arcade “reset moment”)
+      enemyBullets.length = 0;
+      bullets.length = 0;
+
+      if (lives <= 0) gameOver();
+    }
+
+    function gameOver() {
+      isGameOver = true;
+      centerMsg.textContent = "GAME OVER\nPress R to restart";
+      centerMsg.classList.add("show");
+    }
+
+    // -------------------------
+    // Draw
+    // -------------------------
+    function drawStarfield(t) {
+      // cheap starfield: deterministic pseudo-stars based on time
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+
+      const n = 120;
+      for (let i = 0; i < n; i++) {
+        const x = (i * 997) % canvas.width;
+        const y = ((i * 571) + Math.floor(t * 50)) % canvas.height;
+        const a = 0.25 + ((i * 37) % 100) / 160;
+        ctx.fillStyle = `rgba(180, 210, 255, ${a})`;
+        ctx.fillRect(x, y, 2, 2);
+      }
+      ctx.restore();
     }
 
     function draw() {
-      drawGridTunnel();
-      drawObstacles();
-      drawWaypointGate();
-      drawEntities();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (isGameOver) {
-        ctx.fillStyle = "rgba(0,0,0,0.45)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const t = performance.now() / 1000;
+      drawStarfield(t);
+
+      // Bullets
+      ctx.fillStyle = "#ffdd55";
+      for (const b of bullets) {
+        ctx.fillRect(b.x, b.y, b.w, b.h);
       }
+
+      // Enemy bullets
+      ctx.fillStyle = "rgba(255, 110, 110, 0.95)";
+      for (const b of enemyBullets) {
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+      }
+
+      // Enemies (GIFs)
+      for (const e of enemies) {
+        if (e.img && e.img.complete && e.img.naturalWidth > 0) {
+          ctx.save();
+          if (e.flash > 0) ctx.globalAlpha = 0.65;
+          ctx.drawImage(e.img, e.x, e.y, e.w, e.h);
+          ctx.restore();
+        } else {
+          // fallback block if gif hasn't loaded yet
+          ctx.save();
+          ctx.fillStyle = "rgba(255, 80, 80, 0.85)";
+          ctx.fillRect(e.x, e.y, e.w, e.h);
+          ctx.restore();
+        }
+
+        // tiny hp pip for tanks (optional readability)
+        if (e.maxHp > 1) {
+          const pct = clamp(e.hp / e.maxHp, 0, 1);
+          ctx.save();
+          ctx.fillStyle = "rgba(0,0,0,0.55)";
+          ctx.fillRect(e.x, e.y - 8, e.w, 5);
+          ctx.fillStyle = "rgba(90,255,120,0.9)";
+          ctx.fillRect(e.x, e.y - 8, e.w * pct, 5);
+          ctx.restore();
+        }
+      }
+
+      // Player
+      ctx.save();
+      if (player.iFrames > 0) {
+        const blink = Math.floor((performance.now() / 100) % 2) === 0;
+        ctx.globalAlpha = blink ? 0.35 : 0.85;
+      }
+      ctx.fillStyle = "#55aaff";
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+
+      // little "ship" nose
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(player.x + player.w/2 - 4, player.y - 6, 8, 6);
+
+      ctx.restore();
     }
 
-    // ---------------------------
-    // Boot + main loop
-    // ---------------------------
-    camera.x = player.x + 240;
-    camera.y = (TUNNEL_TOP + TUNNEL_BOTTOM) / 2;
+    // -------------------------
+    // Main loop
+    // -------------------------
+    layoutPlayer();
+    spawnWave(wave);
 
-    ensureSegmentsAroundPlayer();
-    spawnWave(0);
+    let last = performance.now();
+    function loop(now) {
+      const dt = clamp((now - last) / 1000, 0, 0.05);
+      last = now;
 
-    let lastTime = performance.now();
-
-    function gameLoop(t) {
-      const dt = clamp((t - lastTime) / 1000, 0, 0.05);
-      lastTime = t;
+      // Keep player positioned relative to resize
+      // (This is intentionally gentle; you can still be mid-dodge.)
+      if (canvas.width !== Math.floor(canvas.getBoundingClientRect().width) ||
+          canvas.height !== Math.floor(canvas.getBoundingClientRect().height)) {
+        const oldW = canvas.width;
+        resize();
+        // preserve relative x position
+        const ratio = oldW > 0 ? (player.x / oldW) : 0.5;
+        player.x = ratio * canvas.width;
+        player.y = canvas.height - 80;
+      }
 
       update(dt);
       draw();
 
-      requestAnimationFrame(gameLoop);
+      requestAnimationFrame(loop);
     }
-
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
