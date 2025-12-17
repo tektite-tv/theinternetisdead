@@ -120,8 +120,9 @@
   Tweaked: Difficulty scaling per wave (enemy horizontal speed, descent speed, step-down).
 
 
-- 2025-12-17 | v1.16
+- 2025-12-17 | v1.17
   Added: Wave spawn scaling: Wave 1 = 1 enemy, then doubles each wave (capped).
+  Tweaked: FUN MODE: more lives, slower enemy pressure, slower swoops, faster bullets, gentler scaling.
   Added: Dynamic formation packing: auto-cols/rows + auto enemy sizing to fit top-zone area.
   Kept: Galaga-style 'swoop' attackers: individual enemies break formation, dive toward the player, then return.
   Kept: Main formation stays in the top zone; only swoopers can enter player space.
@@ -139,12 +140,12 @@ const AUDIO_OOF = "/media/audio/oof.mp3";
 /* =======================
    Player Firing Tuning
 ======================= */
-const BASE_PLAYER_FIRE_COOLDOWN = 0.32; // seconds (wave scaling reduces this)
-const PLAYER_BULLET_SPEED  = -6.5; // slower bullets
+const BASE_PLAYER_FIRE_COOLDOWN = 0.26; // seconds (wave scaling reduces this)
+const PLAYER_BULLET_SPEED  = -8.0; // slower bullets
 
 function getPlayerFireCooldown(){
   // v1.13: player shoots faster every wave (lower cooldown)
-  return Math.max(0.12, BASE_PLAYER_FIRE_COOLDOWN * Math.pow(0.92, (wave-1)));
+  return Math.max(0.14, BASE_PLAYER_FIRE_COOLDOWN * Math.pow(0.94, (wave-1)));
 }
 
 /* =======================
@@ -158,10 +159,10 @@ let hudVisible = false; // v1.12.5: HUD hidden by default; toggle with / (Slash)
 
 let time = 0;
 let score = 0;
-let lives = 3;
+let lives = 5;
 let wave = 1;
 
-// v1.16: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
+// v1.17: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
 let formationCols = 1;
 let formationRows = 1;
 
@@ -325,7 +326,7 @@ function syncOptionsLabels(){
   rowsVal.textContent = rowsSlider.value;
   colsVal.textContent = colsSlider.value;
 
-  // v1.16: sliders still display a grid size, but waves now control actual spawn count (1, 2, 4, 8...)
+  // v1.17: sliders still display a grid size, but waves now control actual spawn count (1, 2, 4, 8...)
   const sliderTotal = (parseInt(rowsSlider.value,10) * parseInt(colsSlider.value,10));
   const waveTotal = Math.min(256, Math.pow(2, (wave - 1)));
   totalVal.textContent = sliderTotal.toString() + " | wave spawn: " + waveTotal.toString();
@@ -472,7 +473,7 @@ function getSpacingX(){
 }
 
 function getSpacingY(){
-  // v1.16: Responsive vertical spacing based on current wave formation size
+  // v1.17: Responsive vertical spacing based on current wave formation size
   const maxFormationHeight = canvas.height * 0.38; // keep formation mostly in top zone
   const rows = Math.max(1, formationRows - 1);
   return Math.min(110, Math.max(45, maxFormationHeight / rows));
@@ -489,9 +490,9 @@ function resetFormation(){
   formation.dir = 1;
 
   // v1.13: difficulty scaling per wave
-  formation.speed = 1.25 + (wave-1) * 0.22;      // horizontal sweep speed
-  formation.stepDown = 18 + (wave-1) * 1.8;      // extra drop when bouncing off edges
-  formation.descentSpeed = 10 + (wave-1) * 7.0;  // constant downward pressure (Galaga-ish)
+  formation.speed = 1.05 + (wave-1) * 0.12;      // horizontal sweep speed
+  formation.stepDown = 12 + (wave-1) * 1.0;      // extra drop when bouncing off edges
+  formation.descentSpeed = 4 + (wave-1) * 2.0;  // constant downward pressure (Galaga-ish)
 }
 
 function randEnemyImg(){
@@ -503,13 +504,13 @@ function spawnEnemies(){
   enemies = [];
   const baseY = 80; // start higher (top zone)
 
-  // v1.16: Wave sizing
+  // v1.17: Wave sizing
   // Wave 1 spawns 1 enemy, then doubles each wave (2x previous).
   // We cap it to keep browsers from melting into a puddle.
-  const MAX_WAVE_ENEMIES = 256;
+  const MAX_WAVE_ENEMIES = 128;
   const count = Math.min(MAX_WAVE_ENEMIES, Math.pow(2, (wave - 1)));
 
-  // v1.16: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
+  // v1.17: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
   // Keep the "formation area" mostly in the top half.
   const zoneW = canvas.width * 0.82;
   const zoneH = canvas.height * 0.38;
@@ -531,7 +532,7 @@ function spawnEnemies(){
     enemies.push({ row:r, col:c, baseY, img: randEnemyImg(), size:baseSize, hp:1, x:0,y:0,w:0,h:0,
       fx:0, fy:0, // formation-space position (computed each frame)
       swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
-      swoopCooldown: rand(0.2, 1.6) // seconds until eligible to swoop
+      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
     });
   }
 }
@@ -610,10 +611,10 @@ function tryStartSwoop(dt){
   const c1y = sy + rand(140, 260);
 
   // Duration scales with wave (faster dives later).
-  const dur = Math.max(0.9, 1.45 - wave * 0.05);
+  const dur = Math.max(1.1, 1.75 - wave * 0.03);
 
   e.swoop = { t:0, dur, phase:"down", sx, sy, c1x, c1y, ex:endX, ey:endY };
-  e.swoopCooldown = Math.max(0.5, 2.2 - wave * 0.08); // wait before it can swoop again
+  e.swoopCooldown = Math.max(1.2, 3.0 - wave * 0.10); // wait before it can swoop again
 }
 
 function quadBezier(t, a, b, c){
@@ -637,7 +638,7 @@ function circleRect(cx, cy, cr, rx, ry, rw, rh){
 function damagePlayer(){
   if (player.invuln > 0) return;
   lives -= 1;
-  player.invuln = 0.85;
+  player.invuln = 1.20;
   playSfx(sfxOof);
   if (lives <= 0) showMenu();
 }
