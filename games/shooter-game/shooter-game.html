@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.31</title>
+<title>Galaga-ish Clone v1.32</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -116,7 +116,7 @@
   #btnRestart:hover{ background: rgba(255,0,0,0.10); }
 
 
-  /* v1.31: keep HUD off the menu and keep menu clickable */
+  /* v1.32: keep HUD off the menu and keep menu clickable */
   #uiRoot{ z-index: 50; }
   #deathOverlay{ z-index: 100; }
   #livesSlot{ display:none; }
@@ -305,7 +305,7 @@ function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; 
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
 
-// Powerup state (v1.31)
+// Powerup state (v1.32)
 let ufo = null;
 let bomb = null;
 let hasBomb = false;
@@ -691,7 +691,7 @@ syncOptionsLabels();
 function showMenu(){
   gameState = STATE.MENU;
   deathOverlay.style.display = "none";
-  // v1.31: HUD should not appear on the menu
+  // v1.32: HUD should not appear on the menu
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
 
@@ -701,7 +701,7 @@ function showMenu(){
 }
 
 function restartRun(){
-  // v1.31: Hard reset from GAME OVER screen (full reset to beginning)
+  // v1.32: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
   hasBomb = false;
   bomb = null;
@@ -711,7 +711,7 @@ function restartRun(){
 }
 function showOptions(){
   gameState = STATE.OPTIONS;
-  // v1.31: hide HUD in menus
+  // v1.32: hide HUD in menus
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
 
@@ -725,13 +725,13 @@ function startGame(){
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
 
-  // v1.31: show HUD only in-game
+  // v1.32: show HUD only in-game
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
 
   score = 0;
 
-  // v1.31: 3 lives, each life has 4-hit (25%) health
+  // v1.32: 3 lives, each life has 4-hit (25%) health
   lives = 3;
   livesText.textContent = "x" + lives;
 
@@ -1011,6 +1011,12 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 const bullets = [];
 const enemyBullets = [];
 
+// v1.32 PERF GUARDRAILS:
+// When bullet counts explode, the nested bullet-vs-bullet collision check can get expensive.
+// Cap counts to keep the game smooth instead of freezing when chaos spikes.
+const MAX_PLAYER_BULLETS = 90;
+const MAX_ENEMY_BULLETS  = 140;
+
 function shoot(){
   if (fireCooldown > 0) return;
 
@@ -1019,7 +1025,12 @@ function shoot(){
   const dy = Math.sin(aimAngleSmoothed);
 
   const spawnDist = (player.w * 0.42);
+  // v1.32: cap bullets to prevent performance spikes
+  if (bullets.length >= MAX_PLAYER_BULLETS){
+    bullets.splice(0, bullets.length - MAX_PLAYER_BULLETS + 1);
+  }
   bullets.push({
+
     x: player.x + dx * spawnDist,
     y: player.y + dy * spawnDist,
     vx: dx * PLAYER_BULLET_SPEED,
@@ -1059,6 +1070,10 @@ function enemyTryShoot(dt){
   const vx = Math.max(-3.2, Math.min(3.2, dx * 0.012)); // gentle lead
   const vy = (5.6 + wave*0.45) * FUNK;
 
+  // v1.32: cap enemy bullets to prevent the counter-shot collision loop from going nuclear
+  if (enemyBullets.length >= MAX_ENEMY_BULLETS){
+    enemyBullets.splice(0, enemyBullets.length - MAX_ENEMY_BULLETS + 1);
+  }
   enemyBullets.push({ x: e.x, y: e.y + e.h/2 + 6, vx, vy, r: 4 });
 }
 
@@ -1312,6 +1327,9 @@ function update(dt){
       const dx = p.x - e.x;
       const dy = p.y - e.y;
       const rr = (p.r + e.r);
+      // v1.32: cheap early-outs to avoid expensive nested collision work when bullets are far apart
+      if (dy > rr + 6 || dy < -rr - 6) continue;
+      if (dx > rr + 6 || dx < -rr - 6) continue;
       if (dx*dx + dy*dy <= rr*rr){
         bullets.splice(pi, 1);
         enemyBullets.splice(ei, 1);
@@ -1607,7 +1625,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.31<br>` +
+    `Galaga-ish Clone v1.32<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
