@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.26</title>
+<title>Galaga-ish Clone v1.27</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -632,8 +632,27 @@ let ufo = null; // {x,y,r,vx,vy,phase,hits,stage,fade}
 let ufoCooldownWave = -1; // prevent double-spawn in the same wave start call path
 
 const powerup = {
-  hasBomb: false // indicator only (💥 in a box). Hooking "Press Q" behavior is separate.
+  hasBomb: false // 💥 in a box (bottom-right). Press Q to deploy the bomb.
 };
+
+// v1.27: Q-bomb (drops a flashing +, then explodes and knocks enemies back)
+let groundBomb = null; // {x,y,t,flashTimer,flashOn}
+let explosion = null;  // {x,y,r,maxR,t,dur,applied}
+
+function deployBomb(){
+  if (!powerup.hasBomb) return;
+  if (groundBomb || explosion) return; // one at a time
+
+  powerup.hasBomb = false;
+  groundBomb = {
+    x: player.x,
+    y: player.y,
+    t: 0,
+    flashTimer: 0,
+    flashOn: true
+  };
+}
+
 
 function grantUfoPowerup(){
   powerup.hasBomb = true;
@@ -805,6 +824,7 @@ window.addEventListener("keydown", (e) => {
   keys[k] = true;
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
+  if (e.code === "KeyQ" && gameState === STATE.PLAYING) deployBomb();
   if (k === "escape") showMenu();
 }, { passive:false });
 
@@ -881,6 +901,64 @@ if (ufo){
       grantUfoPowerup();
     }
   }
+
+// v1.27: Update ground bomb + explosion
+if (groundBomb){
+  groundBomb.t += dt;
+  groundBomb.flashTimer += dt;
+  if (groundBomb.flashTimer >= 0.5){
+    groundBomb.flashTimer -= 0.5;
+    groundBomb.flashOn = !groundBomb.flashOn;
+  }
+
+  // After 3 × 0.5s flashes (1.5s), explode.
+  if (groundBomb.t >= 1.5){
+    const refW = (enemies[0] && enemies[0].w) ? enemies[0].w : 48;
+    const maxR = refW * 1.5; // “radius of 1.5 enemies wide”
+    explosion = { x: groundBomb.x, y: groundBomb.y, r: 0, maxR, t: 0, dur: 0.35, applied: false };
+    groundBomb = null;
+  }
+}
+
+if (explosion){
+  explosion.t += dt;
+  const p = Math.min(1, explosion.t / explosion.dur);
+  explosion.r = explosion.maxR * p;
+
+  // Apply damage + knockback once when the blast starts.
+  if (!explosion.applied){
+    explosion.applied = true;
+
+    for (let ei = enemies.length - 1; ei >= 0; ei--){
+      const e = enemies[ei];
+      const dx = e.x - explosion.x;
+      const dy = e.y - explosion.y;
+      const d = Math.hypot(dx, dy);
+      if (d <= explosion.maxR){
+        // Damage (hp-aware). Most enemies are hp=1, so this usually deletes.
+        e.hp = (e.hp ?? 1) - 1;
+
+        // Knockback impulse away from center
+        const nx = d > 0.0001 ? dx / d : rand(-1,1);
+        const ny = d > 0.0001 ? dy / d : -1;
+        const strength = (1 - (d / explosion.maxR)) * 22;
+        e.kx = (e.kx || 0) + nx * strength;
+        e.ky = (e.ky || 0) + ny * strength;
+
+        if (e.hp <= 0){
+          enemies.splice(ei, 1);
+          score += 10;
+          playSfx(sfxHit);
+        }
+      }
+    }
+  }
+
+  if (p >= 1){
+    explosion = null;
+  }
+}
+
 }
 
   // formation movement bounds depend on breathing spacing
@@ -1035,6 +1113,18 @@ if (baseY > maxBaseY){
           e.y = e.fy;
         }
       }
+    }
+
+
+    // v1.27: apply knockback offsets (from bomb explosion), then decay
+    if (e.kx || e.ky){
+      e.x += (e.kx || 0);
+      e.y += (e.ky || 0);
+      const damp = Math.pow(0.86, dt * 60);
+      e.kx *= damp;
+      e.ky *= damp;
+      if (Math.abs(e.kx) < 0.05) e.kx = 0;
+      if (Math.abs(e.ky) < 0.05) e.ky = 0;
     }
 
     e.w = size;
@@ -1221,8 +1311,47 @@ if (powerup.hasBomb && gameState === STATE.PLAYING){
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#fff";
   ctx.fillText("💥", x + size/2, y + size/2 + 2);
+
+  ctx.font = "12px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "rgba(0,255,102,0.95)";
+  ctx.fillText("Press Q", x + size/2, y + size + 6);
+
   ctx.restore();
 }
+
+// v1.27: draw ground bomb (+) and explosion ring
+if (gameState === STATE.PLAYING && groundBomb){
+  ctx.save();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = groundBomb.flashOn ? "yellow" : "red";
+  ctx.globalAlpha = 0.95;
+  const s = 14;
+  ctx.beginPath();
+  ctx.moveTo(groundBomb.x - s, groundBomb.y);
+  ctx.lineTo(groundBomb.x + s, groundBomb.y);
+  ctx.moveTo(groundBomb.x, groundBomb.y - s);
+  ctx.lineTo(groundBomb.x, groundBomb.y + s);
+  ctx.stroke();
+  ctx.restore();
+}
+
+if (gameState === STATE.PLAYING && explosion){
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = "rgba(255,0,0,0.55)";
+  ctx.fillStyle = "rgba(255,0,0,0.18)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(explosion.x, explosion.y, explosion.r, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(explosion.x, explosion.y, explosion.r, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
 // enemies
   for (const e of enemies){
     ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
@@ -1246,7 +1375,7 @@ if (powerup.hasBomb && gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.26<br>` +
+    `Galaga-ish Clone v1.27<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
