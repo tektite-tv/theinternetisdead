@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.13</title>
+<title>Galaga-ish Clone v1.14</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -112,8 +112,10 @@
   Tweaked: Formation edge detection uses predicted next position to avoid clipping.
 
 
-- 2025-12-17 | v1.13
+- 2025-12-17 | v1.14
   Added: Galaga-like enemy descent (continuous downward pressure) + predictable wobble.
+  Tweaked: Enemy formation clamped to ~top half of screen (prevents encroaching into player zone).
+  Tweaked: Increased base enemy spacing (X/Y) for clearer separation.
   Added: Wave banner ("WAVE 1", "WAVE 2", etc.) shown on start and after wave clears.
   Tweaked: Difficulty scaling per wave (enemy horizontal speed, descent speed, step-down).
   Tweaked: Player fire rate increases each wave (cooldown decreases).
@@ -444,8 +446,8 @@ loadEnemyImagesFromIndex();
 /* =======================
    Enemies + Formation Movement
 ======================= */
-const BASE_SPACING_X = 95;
-const BASE_SPACING_Y = 75;
+const BASE_SPACING_X = 105;
+const BASE_SPACING_Y = 85;
 
 
 function getSpacingX(){
@@ -631,12 +633,27 @@ function update(dt){
   // then clamp so the formation bottom never gets too close to player
   let baseY = 80 + formation.yOffset;
 
-  // v1.12.4: keep formation from drifting off the top of the screen
-  const TOP_SAFE_MARGIN = 60;
-  if (baseY < TOP_SAFE_MARGIN){
-    formation.yOffset += (TOP_SAFE_MARGIN - baseY);
-    baseY = TOP_SAFE_MARGIN;
-  }
+// Keep enemies in the TOP half-ish of the screen.
+// We still drift downward (Galaga pressure), but we *cap* the formation so it doesn't
+// invade the player's space like it's paying rent down there.
+const TOP_SAFE_MARGIN = 60;
+const ENEMY_ZONE_MAX_Y = canvas.height * 0.48; // ~top half with a little buffer
+
+// Clamp TOP
+if (baseY < TOP_SAFE_MARGIN){
+  formation.yOffset += (TOP_SAFE_MARGIN - baseY);
+  baseY = TOP_SAFE_MARGIN;
+}
+
+// Clamp BOTTOM (based on full formation height)
+const maxBaseY = ENEMY_ZONE_MAX_Y - formationHeight;
+if (baseY > maxBaseY){
+  // pull the whole formation back up
+  formation.yOffset -= (baseY - maxBaseY);
+  baseY = maxBaseY;
+  // if the formation is too tall to fit, at least respect the top margin
+  if (baseY < TOP_SAFE_MARGIN) baseY = TOP_SAFE_MARGIN;
+}
 
 
   for (const e of enemies){
@@ -758,7 +775,7 @@ function draw(){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.13<br>` +
+    `Galaga-ish Clone v1.14<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
