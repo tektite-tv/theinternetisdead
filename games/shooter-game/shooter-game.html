@@ -1021,14 +1021,12 @@ if (gameState === STATE.PLAYING){
   }
 
   // bullets (player)
-  ctx.fillStyle = "#0f0";
+  // v1.21: draw as simple circles (no text/letter-like shapes)
+  ctx.fillStyle = "#ff0";
   for (const b of bullets){
-    const ang = Math.atan2(b.vy, b.vx) + Math.PI/2; // rotate the "up" bullet to match velocity
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.rotate(ang);
-    ctx.fillRect(-2, -10, 4, 12);
-    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // bullets (enemy)
