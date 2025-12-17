@@ -35,7 +35,7 @@
       width: 100%;
       height: 100%;
       display: block;
-      background: #000000; /* v0.05: base ground is black */
+      background: #000000; /* base ground is black */
       border: 2px solid #444;
     }
 
@@ -77,7 +77,7 @@
       <div>WASD = move | Mouse = aim | LMB = shoot | R = restart</div>
       <div>HP: <span id="hpDisplay">100</span></div>
       <div>Score: <span id="scoreDisplay">0</span></div>
-      <div style="opacity:0.85">Enemy art: /media/images/gifs/ via index.json</div>
+      <div style="opacity:0.85">Enemies: random /media/images/gifs/ from index.json</div>
     </div>
 
     <div id="gameOverMessage">GAME OVER</div>
@@ -87,16 +87,17 @@
     // ================================================================
     // Shooter Game v0.06 (FULL FILE)
     //
-    // New in v0.06:
-    //  - Enemies use random GIF images from /media/images/gifs/index.json
-    //  - Enemy size is randomized; size drives difficulty (HP + health bar)
-    //  - Audio SFX:
-    //      * hitmarker.mp3 for enemy damage
-    //      * oof.mp3 for player damage
-    //
-    // Kept from v0.05:
-    //  - Infinite movement, camera centered on player
-    //  - Fog/trail illumination system
+    // v0.06 changes (requested):
+    //  - Enemies spawn as random images from /media/images/gifs/ using index.json
+    //  - Enemy random size + HP + health bar = variable difficulty
+    //  - SFX:
+    //      * /media/audio/hitmarker.mp3 for enemy damage
+    //      * /media/audio/oof.mp3 for player damage
+    //  - REWRITTEN collision to feel better:
+    //      * Swept bullet collision (segment vs circle) prevents "phasing"
+    //      * Overlap resolution for player/enemy contact reduces "ratrace grind"
+    //      * Mild enemy repulsion prevents unfair clumps
+    //  - Removed visible circles/outline around enemy gifs (no ring stroke)
     // ================================================================
 
     const canvas = document.getElementById("game");
@@ -110,7 +111,7 @@
     const VIRTUAL_WIDTH = 1200;
     const VIRTUAL_HEIGHT = 800;
 
-    // These are no longer "bounds", just a reference size
+    // Reference size only
     const WIDTH = VIRTUAL_WIDTH;
     const HEIGHT = VIRTUAL_HEIGHT;
 
@@ -136,6 +137,9 @@
       return (viewportY / VIRTUAL_HEIGHT) * canvas.height;
     }
 
+    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
     // =================================================================
     // GAME STATE
     // =================================================================
@@ -146,7 +150,12 @@
       speed: 260,
       angle: 0,
       hp: 100,
-      maxHp: 100
+      maxHp: 100,
+
+      // v0.06: feel tweaks
+      iFrames: 0,            // invulnerability timer after being hit
+      bumpVelX: 0,           // tiny knockback velocity
+      bumpVelY: 0
     };
 
     const bullets = [];
@@ -159,16 +168,11 @@
 
     // Shooting control
     let lastShotTime = 0;
-    const SHOT_COOLDOWN = 0.15;
+    const SHOT_COOLDOWN = 0.14;
 
     // Enemy spawning
     let enemySpawnTimer = 0;
-    const ENEMY_SPAWN_INTERVAL = 1.6;
-
-    // Contact damage cooldown
-    let playerHitTimer = 0;
-    const PLAYER_CONTACT_DAMAGE = 15;
-    const PLAYER_HIT_COOLDOWN = 0.7;
+    const ENEMY_SPAWN_INTERVAL = 1.55;
 
     // v0.05: Trail / fog-of-war
     const trailPoints = [];
@@ -179,32 +183,22 @@
     trailPoints.push({ x: player.x, y: player.y });
 
     // =================================================================
-    // v0.06: ENEMY GIF LIST + IMAGE CACHE
+    // ENEMY GIF LIST + IMAGE CACHE
     // =================================================================
     const ENEMY_GIF_INDEX_URL = "/media/images/gifs/index.json";
     const ENEMY_GIF_BASE_URL = "/media/images/gifs/";
-
-    let enemyGifFilenames = []; // array of filenames (strings)
+    let enemyGifFilenames = [];
     const imageCache = new Map(); // src -> HTMLImageElement
 
     function normalizeIndexJsonToFilenames(json) {
-      // We try to be flexible because humans love inventing "index.json" formats.
-      // Supported:
-      //  - ["a.gif","b.gif"]
-      //  - {"files":["a.gif","b.gif"]}
-      //  - {"gifs":["a.gif","b.gif"]}
-      //  - {"items":[{"name":"a.gif"}, ...]}
-      //  - {"something":{"a.gif":true,"b.gif":true}} (keys-as-files)
-      if (Array.isArray(json)) {
-        return json.filter(v => typeof v === "string");
-      }
+      // Flexible index.json formats because consistency is a myth.
+      if (Array.isArray(json)) return json.filter(v => typeof v === "string");
+
       if (json && typeof json === "object") {
         for (const key of ["files", "gifs", "images", "items"]) {
           if (Array.isArray(json[key])) {
-            const arr = json[key];
-            // items could be strings or objects with name/filename
             const out = [];
-            for (const it of arr) {
+            for (const it of json[key]) {
               if (typeof it === "string") out.push(it);
               else if (it && typeof it === "object") {
                 if (typeof it.name === "string") out.push(it.name);
@@ -215,7 +209,6 @@
             if (out.length) return out;
           }
         }
-        // fallback: if object keys look like filenames, use them
         const keys = Object.keys(json);
         const looksLikeFiles = keys.filter(k => /\.(gif|png|jpg|jpeg|webp)$/i.test(k));
         if (looksLikeFiles.length) return looksLikeFiles;
@@ -230,13 +223,13 @@
         const json = await res.json();
         const names = normalizeIndexJsonToFilenames(json)
           .map(s => String(s).trim())
-          .filter(Boolean);
+          .filter(Boolean)
+          .filter(n => !n.endsWith("/") && !n.includes(".."));
 
-        // Optional: only gifs (but keep other formats too if present)
-        enemyGifFilenames = names.filter(n => !n.endsWith("/") && !n.includes(".."));
-        console.log("[v0.06] Loaded enemy GIF list:", enemyGifFilenames.length);
+        enemyGifFilenames = names;
+        console.log("[v0.06] Loaded enemy image list:", enemyGifFilenames.length);
       } catch (err) {
-        console.warn("[v0.06] Failed to load /media/images/gifs/index.json:", err);
+        console.warn("[v0.06] Failed to load enemy index.json:", err);
         enemyGifFilenames = [];
       }
     }
@@ -244,7 +237,6 @@
     function getOrCreateImage(src) {
       if (imageCache.has(src)) return imageCache.get(src);
       const img = new Image();
-      // Same-origin path, so no CORS drama needed.
       img.src = src;
       imageCache.set(src, img);
       return img;
@@ -256,22 +248,31 @@
       return ENEMY_GIF_BASE_URL + filename;
     }
 
-    // Kick off index loading ASAP (non-blocking).
     loadEnemyGifIndex();
 
     // =================================================================
-    // v0.06: AUDIO (simple, overlap-friendly)
+    // AUDIO (simple overlap-friendly)
     // =================================================================
     const SFX = {
       enemyHit: "/media/audio/hitmarker.mp3",
       playerHit: "/media/audio/oof.mp3"
     };
 
-    function playSfx(url, volume = 0.8) {
-      // Clone-per-play so rapid hits can overlap (yes, this is how games do it).
+    // v0.06: throttle SFX slightly so rapid hits don’t turn into audio spam soup
+    const sfxThrottle = {
+      enemyHit: { last: 0, minGap: 0.045 },
+      playerHit: { last: 0, minGap: 0.18 }
+    };
+
+    function playSfx(key, volume = 0.8) {
+      const now = performance.now() / 1000;
+      const t = sfxThrottle[key];
+      if (t && now - t.last < t.minGap) return;
+      if (t) t.last = now;
+
+      const url = SFX[key];
       const a = new Audio(url);
       a.volume = volume;
-      // ignore play rejections (autoplay policies, etc.)
       a.play().catch(() => {});
     }
 
@@ -312,6 +313,55 @@
     });
 
     // =================================================================
+    // FUN COLLISION HELPERS (v0.06 rewrite)
+    // =================================================================
+
+    // Closest point on segment AB to point P
+    function closestPointOnSegment(ax, ay, bx, by, px, py) {
+      const abx = bx - ax, aby = by - ay;
+      const apx = px - ax, apy = py - ay;
+      const abLen2 = abx * abx + aby * aby;
+      if (abLen2 <= 1e-9) return { x: ax, y: ay, t: 0 };
+      let t = (apx * abx + apy * aby) / abLen2;
+      t = clamp(t, 0, 1);
+      return { x: ax + abx * t, y: ay + aby * t, t };
+    }
+
+    // Swept collision: did segment (ax,ay)->(bx,by) come within radius r of circle center (cx,cy)?
+    function segmentHitsCircle(ax, ay, bx, by, cx, cy, r) {
+      const c = closestPointOnSegment(ax, ay, bx, by, cx, cy);
+      const dx = cx - c.x, dy = cy - c.y;
+      return (dx * dx + dy * dy) <= (r * r);
+    }
+
+    // Push two circles apart (softly) so stacking is reduced
+    function resolveOverlap(a, b, strength = 1.0) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const minDist = a.radius + b.radius;
+      const overlap = minDist - dist;
+
+      if (overlap > 0) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // Split correction based on "mass" (bigger = heavier)
+        const massA = a.radius * a.radius;
+        const massB = b.radius * b.radius;
+        const total = massA + massB;
+
+        const pushA = (massB / total) * overlap * strength;
+        const pushB = (massA / total) * overlap * strength;
+
+        a.x -= nx * pushA;
+        a.y -= ny * pushA;
+        b.x += nx * pushB;
+        b.y += ny * pushB;
+      }
+    }
+
+    // =================================================================
     // SHOOTING / ENEMY SPAWNING
     // =================================================================
     function shootBullet() {
@@ -321,61 +371,60 @@
       const dirX = dx / len;
       const dirY = dy / len;
 
-      const bulletSpeed = 600;
+      const bulletSpeed = 720;
 
       bullets.push({
         x: player.x,
         y: player.y,
-        radius: 4,
+        prevX: player.x,   // v0.06: for swept collision
+        prevY: player.y,
+        radius: 3.8,
         vx: dirX * bulletSpeed,
         vy: dirY * bulletSpeed,
-        life: 1.8
+        life: 1.45,
+
+        // v0.06: mild damage variability makes it feel less flat
+        damage: (Math.random() < 0.12) ? 2 : 1
       });
     }
 
-    function clamp(n, a, b) {
-      return Math.max(a, Math.min(b, n));
-    }
-
     function spawnEnemy() {
-      // v0.05: Spawn in an annulus around player
+      // Spawn in an annulus around player
       const angle = Math.random() * Math.PI * 2;
-      const minDist = 500;
-      const maxDist = 900;
+      const minDist = 520;
+      const maxDist = 920;
       const dist = minDist + Math.random() * (maxDist - minDist);
 
       const x = player.x + Math.cos(angle) * dist;
       const y = player.y + Math.sin(angle) * dist;
 
-      // v0.06: Random size drives difficulty
-      // Size factor: small 0.65 .. big 2.2
+      // Random size drives difficulty
       const sizeFactor = 0.65 + Math.random() * 1.55;
-
-      // Radius range roughly: 12..40
       const baseRadius = 18;
-      const radius = clamp(baseRadius * sizeFactor, 12, 42);
+      const radius = clamp(baseRadius * sizeFactor, 12, 44);
 
-      // HP scales with size (roughly with area)
-      // baseline keeps small guys from being 1-tap jokes
+      // HP scales with size (area-ish), plus a small baseline
       const maxHp = Math.max(2, Math.round(2 + (radius * radius) / 220));
       const hp = maxHp;
 
-      // Speed slightly inversely related to size (big = slower, small = faster)
-      const speed = clamp(140 - radius * 1.2 + Math.random() * 25, 55, 150);
+      // Speed inversely related to size, plus wiggle
+      const speed = clamp(150 - radius * 1.25 + Math.random() * 28, 55, 155);
 
-      // Random image (if index isn't loaded yet, this may be null; we fallback to circle)
       const src = getRandomEnemyImageSrc();
       const img = src ? getOrCreateImage(src) : null;
 
       enemies.push({
-        x,
-        y,
+        x, y,
         radius,
         speed,
-        hp,
-        maxHp,
-        img,
-        imgSrc: src
+        hp, maxHp,
+
+        img, imgSrc: src,
+
+        // v0.06: feel polish
+        hitFlash: 0,      // tiny flash timer for readability
+        knockX: 0,        // knockback velocity
+        knockY: 0
       });
     }
 
@@ -385,14 +434,15 @@
     function update(dt) {
       if (isGameOver) return;
 
-      playerHitTimer = Math.max(0, playerHitTimer - dt);
+      // Player i-frames tick down
+      player.iFrames = Math.max(0, player.iFrames - dt);
 
       // Player facing
       const dmx = mouse.x - player.x;
       const dmy = mouse.y - player.y;
       player.angle = Math.atan2(dmy, dmx);
 
-      // Movement
+      // Movement vector
       let mvx = 0, mvy = 0;
       if (keys.w) mvy -= 1;
       if (keys.s) mvy += 1;
@@ -403,8 +453,13 @@
       mvx /= mag;
       mvy /= mag;
 
-      player.x += mvx * player.speed * dt;
-      player.y += mvy * player.speed * dt;
+      // v0.06: small "bump velocity" decays quickly (makes hits feel physical)
+      const bumpDecay = Math.pow(0.0006, dt);
+      player.bumpVelX *= bumpDecay;
+      player.bumpVelY *= bumpDecay;
+
+      player.x += (mvx * player.speed + player.bumpVelX) * dt;
+      player.y += (mvy * player.speed + player.bumpVelY) * dt;
 
       // Camera stays locked to player
       camera.x = player.x;
@@ -414,12 +469,10 @@
       const dxTrail = player.x - lastTrailX;
       const dyTrail = player.y - lastTrailY;
       const trailDist = Math.hypot(dxTrail, dyTrail);
-
       if (trailDist >= TRAIL_STEP_DIST) {
         trailPoints.push({ x: player.x, y: player.y });
         lastTrailX = player.x;
         lastTrailY = player.y;
-
         if (trailPoints.length > 2000) trailPoints.shift();
       }
 
@@ -432,70 +485,145 @@
         }
       }
 
-      // Bullets
+      // Bullets update + swept collision prep
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
+        b.prevX = b.x;
+        b.prevY = b.y;
+
         b.x += b.vx * dt;
         b.y += b.vy * dt;
         b.life -= dt;
+
         if (b.life <= 0) bullets.splice(i, 1);
       }
 
-      // Spawn enemies in ring around player
+      // Spawn enemies
       enemySpawnTimer += dt;
       if (enemySpawnTimer >= ENEMY_SPAWN_INTERVAL) {
         enemySpawnTimer = 0;
         spawnEnemy();
       }
 
-      // Enemies update
-      for (let i = enemies.length - 1; i >= 0; i--) {
+      // Enemies update (movement + knockback)
+      for (let i = 0; i < enemies.length; i++) {
         const e = enemies[i];
 
+        // Hit flash decay
+        e.hitFlash = Math.max(0, e.hitFlash - dt);
+
+        // Knockback decay
+        const kd = Math.pow(0.0008, dt);
+        e.knockX *= kd;
+        e.knockY *= kd;
+
+        // Seek player
         const dx = player.x - e.x;
         const dy = player.y - e.y;
         const dist = Math.hypot(dx, dy) || 1;
         const dirX = dx / dist;
         const dirY = dy / dist;
 
-        e.x += dirX * e.speed * dt;
-        e.y += dirY * e.speed * dt;
+        e.x += (dirX * e.speed + e.knockX) * dt;
+        e.y += (dirY * e.speed + e.knockY) * dt;
+      }
 
-        const combinedR = player.radius + e.radius;
+      // v0.06: enemy repulsion to avoid dogpiles
+      // (O(n^2) but fine for small counts; feels WAY better)
+      for (let i = 0; i < enemies.length; i++) {
+        for (let j = i + 1; j < enemies.length; j++) {
+          resolveOverlap(enemies[i], enemies[j], 0.55);
+        }
+      }
 
-        // Contact damage with cooldown
-        if (dist < combinedR && playerHitTimer === 0 && !isGameOver) {
-          player.hp -= PLAYER_CONTACT_DAMAGE;
-          playerHitTimer = PLAYER_HIT_COOLDOWN;
+      // v0.06: player vs enemies contact feels less "grinder"
+      // - resolve overlap (pushes enemy away, reduces sticky damage)
+      // - apply damage only if player has no iFrames
+      for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i];
 
-          // v0.06: player damage sound
-          playSfx(SFX.playerHit, 0.85);
+        // Resolve overlap first (this alone makes contact feel saner)
+        resolveOverlap(player, e, 0.9);
+
+        // Damage if still close and iFrames are down
+        const dx = e.x - player.x;
+        const dy = e.y - player.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const combined = player.radius + e.radius;
+
+        if (dist < combined * 1.02 && player.iFrames <= 0 && !isGameOver) {
+          // Damage scales a little with enemy size, but not stupidly
+          const sizeFactor = clamp(e.radius / 22, 0.7, 2.0);
+          const dmg = Math.round(12 * sizeFactor);
+
+          player.hp -= dmg;
+          player.iFrames = 0.55; // invuln window
+
+          // Knock the player away a bit (feels like impact, not glue)
+          const nx = (player.x - e.x) / dist;
+          const ny = (player.y - e.y) / dist;
+          player.bumpVelX += nx * (420 / sizeFactor);
+          player.bumpVelY += ny * (420 / sizeFactor);
+
+          // Knock enemy back a bit too
+          e.knockX -= nx * (220 * sizeFactor);
+          e.knockY -= ny * (220 * sizeFactor);
+
+          playSfx("playerHit", 0.85);
 
           if (player.hp <= 0) {
             player.hp = 0;
             handleGameOver();
           }
         }
+      }
 
-        // Bullet collisions
+      // v0.06: bullets vs enemies (swept collision)
+      // This fixes "I clearly hit it" moments with fast bullets.
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+
+        // Simple broad-phase: only consider bullets reasonably close
+        // (still cheap because bullets are few)
         for (let j = bullets.length - 1; j >= 0; j--) {
           const b = bullets[j];
-          const distBE = Math.hypot(e.x - b.x, e.y - b.y);
-          const collisionRadius = e.radius + b.radius * 1.3;
 
-          if (distBE < collisionRadius) {
+          // Slightly generous hit radius for "fun" (readability > suffering)
+          const hitR = e.radius + b.radius * 1.35;
+
+          // Swept test: segment from prev to current bullet position
+          const hit = segmentHitsCircle(b.prevX, b.prevY, b.x, b.y, e.x, e.y, hitR);
+
+          if (hit) {
+            // Apply damage
+            e.hp -= b.damage;
+            e.hitFlash = 0.08;
+
+            // Impact knocks enemy a bit away from bullet direction
+            const vx = b.x - b.prevX;
+            const vy = b.y - b.prevY;
+            const vlen = Math.hypot(vx, vy) || 1;
+            const nx = vx / vlen;
+            const ny = vy / vlen;
+
+            // Bigger enemies resist knockback
+            const resist = clamp(e.radius / 26, 0.8, 2.4);
+            e.knockX += nx * (520 / resist);
+            e.knockY += ny * (520 / resist);
+
+            // Enemy hit SFX
+            playSfx("enemyHit", 0.65);
+
+            // Bullet consumed on hit (keeps gameplay readable)
             bullets.splice(j, 1);
 
-            e.hp -= 1;
-
-            // v0.06: enemy hit sound
-            playSfx(SFX.enemyHit, 0.65);
-
             if (e.hp <= 0) {
+              // Score rewards bigger threats a bit
+              score += 10 + Math.round(e.maxHp);
               enemies.splice(i, 1);
-              score += 10 + Math.round(e.maxHp); // tiny bonus for bigger threats
-              break;
             }
+
+            break; // enemy got hit, stop checking other bullets against it this frame
           }
         }
       }
@@ -533,7 +661,6 @@
     // DRAW LOOP
     // =================================================================
     function drawEnemyHealthBar(e, scaleFactor) {
-      // Health bar above enemy
       const barW = (e.radius * 2) * scaleFactor;
       const barH = 6;
       const pad = 2;
@@ -541,27 +668,22 @@
       const x = sx(e.x) - barW / 2;
       const y = sy(e.y) - (e.radius * scaleFactor) - 14;
 
-      // background
       ctx.fillStyle = "rgba(0,0,0,0.65)";
       ctx.fillRect(x - pad, y - pad, barW + pad * 2, barH + pad * 2);
 
-      // fill
       const pct = e.maxHp > 0 ? (e.hp / e.maxHp) : 0;
       ctx.fillStyle = "rgba(90,255,120,0.9)";
       ctx.fillRect(x, y, barW * clamp(pct, 0, 1), barH);
 
-      // border
       ctx.strokeStyle = "rgba(255,255,255,0.35)";
       ctx.lineWidth = 1;
       ctx.strokeRect(x - pad, y - pad, barW + pad * 2, barH + pad * 2);
     }
 
     function draw() {
-      // Base ground = black everywhere
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw illuminated trail on top of black
       drawTrail();
 
       const scaleFactor = canvas.width / VIRTUAL_WIDTH;
@@ -574,37 +696,31 @@
         ctx.fill();
       }
 
-      // Enemies
+      // Enemies (NO visible circles/outline around gifs)
       for (const e of enemies) {
         const rr = e.radius * scaleFactor;
         const ex = sx(e.x);
         const ey = sy(e.y);
 
-        // v0.06: draw enemy image if available and loaded; else fallback circle
         if (e.img && e.img.complete && e.img.naturalWidth > 0) {
           ctx.save();
-          // draw centered
           ctx.imageSmoothingEnabled = true;
+
+          // Tiny flash on hit (readability) without drawing a ring
+          if (e.hitFlash > 0) {
+            const t = clamp(e.hitFlash / 0.08, 0, 1);
+            ctx.globalAlpha = lerp(1.0, 0.65, t);
+          }
+
           ctx.drawImage(e.img, ex - rr, ey - rr, rr * 2, rr * 2);
           ctx.restore();
-
-          // subtle outline so gifs don't vanish into the void
-          ctx.beginPath();
-          ctx.arc(ex, ey, rr, 0, Math.PI * 2);
-          ctx.strokeStyle = "rgba(255,80,80,0.55)";
-          ctx.lineWidth = 2;
-          ctx.stroke();
         } else {
-          ctx.beginPath();
-          ctx.arc(ex, ey, rr, 0, Math.PI * 2);
-          ctx.fillStyle = "#ff4444";
-          ctx.fill();
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = "#880000";
-          ctx.stroke();
+          // Fallback if image hasn't loaded yet: draw a subtle square, not a circle.
+          // (Still not a big visible "hitbox ring" though.)
+          ctx.fillStyle = "rgba(255, 80, 80, 0.85)";
+          ctx.fillRect(ex - rr, ey - rr, rr * 2, rr * 2);
         }
 
-        // health bar
         drawEnemyHealthBar(e, scaleFactor);
       }
 
@@ -612,13 +728,13 @@
       const pr = player.radius * scaleFactor;
       ctx.beginPath();
       ctx.arc(sx(player.x), sy(player.y), pr, 0, Math.PI * 2);
-      ctx.fillStyle = "#55aaff";
+      ctx.fillStyle = (player.iFrames > 0) ? "rgba(85,170,255,0.75)" : "#55aaff";
       ctx.fill();
       ctx.lineWidth = 2;
       ctx.strokeStyle = "#ffffff";
       ctx.stroke();
 
-      // Player gun direction
+      // Gun direction
       const gunLen = player.radius + 10;
       const gx = player.x + Math.cos(player.angle) * gunLen;
       const gy = player.y + Math.sin(player.angle) * gunLen;
