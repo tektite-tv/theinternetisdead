@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.25</title>
+<title>Galaga-ish Clone v1.26</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -132,11 +132,10 @@
 - 2025-12-17 | v1.23
   Tweaked: Player bullets are slightly larger than enemy bullets (visual clarity).
   Added: Player bullets can collide with enemy bullets; both are deleted on contact (counter-shot mechanic).
-
-- 2025-12-17 | v1.25
-  Added: Tiny strobing UFO bonus target has 25% chance to spawn at wave start.
-  Added: UFO requires 3 consecutive hits (same UFO): turns red -> green -> blue, then fades away.
-  Added: On UFO fade-out completion, grants a bomb power-up icon (💥) in a bottom-right item slot.
+- 2025-12-17 | v1.24–v1.26
+  Added: 25% chance at the start of any wave to spawn a tiny, fast, bouncing UFO (top zone).
+  Added: UFO takes 3 hits: turns RED → GREEN → BLUE, then fades away and grants a power-up indicator (💥) bottom-right.
+  Kept: All v1.23 mechanics (360° aim, orbiting triangle, straight bullets, bullet-vs-bullet cancel, no grid compaction).
 ====================================================================== */
 
 
@@ -193,41 +192,6 @@ let gameState = STATE.MENU;
    Utility
 ======================= */
 function rand(min, max){ return min + Math.random() * (max - min); }
-
-// v1.24: Tiny fast UFO (25% chance on wave start).
-// - Spawns near top, bounces quickly, strobes black/white.
-// - No powerups in this build: shooting it grants score and removes it.
-function trySpawnUFO(){
-  // 25% chance at wave start
-  if (Math.random() > 0.25) { ufo = null;
-  hasBomb = false; return; }
-
-  ufo = {
-    x: rand(40, canvas.width - 40),
-    y: 70,
-    r: 10,
-    vx: rand(-7.0, 7.0),
-    vy: rand(5.0, 8.0),
-    phase: 0,
-
-    // v1.25: 3-hit "color ladder" (red -> green -> blue), then fade away and grant bomb power-up
-    hits: 0,
-    stage: 0,        // 0=strobe, 1=red, 2=green, 3=blue
-    fading: false,
-    alpha: 1,
-    grantBombOnVanish: false
-  };
-}
-  ufo = {
-    x: rand(40, canvas.width - 40),
-    y: 70,
-    r: 10,
-    vx: rand(-7.0, 7.0),
-    vy: rand(5.0, 8.0),
-    phase: 0
-  };
-}
-
 
 /* =======================
    Parallax Starfield (safe init order)
@@ -407,12 +371,12 @@ function startGame(){
   bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
-  ufo = null;
 
   resetFormation();
   spawnEnemies();
+    trySpawnUFO();
   trySpawnUFO();
-window.focus();
+  window.focus();
 }
 
 btnStart.addEventListener("click", startGame);
@@ -660,11 +624,41 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 /* =======================
    Bullets
 ======================= */
-let ufo = null; // v1.25: optional bonus target (25% chance each wave)
-let hasBomb = false; // v1.25: earned by destroying the UFO (3 hits), shows 💥 in bottom-right slot
-
 const bullets = [];
 const enemyBullets = [];
+
+// v1.24–v1.26: Bonus UFO (25% chance per wave start) + power-up indicator
+let ufo = null; // {x,y,r,vx,vy,phase,hits,stage,fade}
+let ufoCooldownWave = -1; // prevent double-spawn in the same wave start call path
+
+const powerup = {
+  hasBomb: false // indicator only (💥 in a box). Hooking "Press Q" behavior is separate.
+};
+
+function grantUfoPowerup(){
+  powerup.hasBomb = true;
+}
+
+function trySpawnUFO(){
+  // Ensure this function is only evaluated once per wave start even if called twice.
+  if (ufoCooldownWave === wave) return;
+  ufoCooldownWave = wave;
+
+  if (Math.random() > 0.25) return;
+
+  ufo = {
+    x: rand(30, canvas.width - 30),
+    y: rand(40, 90),
+    r: 9,                       // very tiny
+    vx: rand(-8.5, 8.5),        // very fast
+    vy: rand(6.5, 9.0),         // very fast
+    phase: 0,
+    hits: 0,
+    stage: "strobe",            // strobe | red | green | blue | fading
+    fade: 1.0
+  };
+}
+
 
 function shoot(){
   if (fireCooldown > 0) return;
@@ -849,53 +843,45 @@ function update(dt){
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
-// v1.24: Update UFO (tiny fast bonus target)
-if (ufo){
-  ufo.phase += dt * 14;
-
-  // Move
-  ufo.x += ufo.vx;
-  ufo.y += ufo.vy;
-
-  // Bounce in a top-zone box
-  const minX = 18, maxX = canvas.width - 18;
-  const minY = 40, maxY = canvas.height * 0.42;
-
-  if (ufo.x < minX){ ufo.x = minX; ufo.vx *= -1; }
-  if (ufo.x > maxX){ ufo.x = maxX; ufo.vx *= -1; }
-  if (ufo.y < minY){ ufo.y = minY; ufo.vy *= -1; }
-  if (ufo.y > maxY){ ufo.y = maxY; ufo.vy *= -1; }
-
-  // Mild avoidance: if the player is moving toward it, nudge away horizontally
-  const playerMoveDir = (keys["a"] || keys["arrowleft"]) ? -1 : ((keys["d"] || keys["arrowright"]) ? 1 : 0);
-  if (playerMoveDir !== 0){
-    const toward = (playerMoveDir < 0 && ufo.x < player.x) || (playerMoveDir > 0 && ufo.x > player.x);
-    if (toward){
-      ufo.vx += Math.sign(ufo.x - player.x) * 0.25;
-      ufo.vx = Math.max(-9, Math.min(9, ufo.vx));
-    }
-  }
-
-  // v1.25: fade away after the 3rd hit and grant power-up when fully vanished
-  if (ufo.fading){
-    ufo.alpha = Math.max(0, ufo.alpha - dt * 1.9);
-    // keep it lively while fading
-    ufo.vx *= 0.997;
-    ufo.vy *= 0.997;
-
-    if (ufo.alpha <= 0){
-      const grant = ufo.grantBombOnVanish;
-      ufo = null;
-      if (grant) hasBomb = true;
-    }
-  } else {
-    ufo.alpha = 1;
-  }
-}
-
   // v1.19: smooth the aim angle (shortest-path wrap) for nicer feel
   const da = normAngle(aimAngle - aimAngleSmoothed);
   aimAngleSmoothed = normAngle(aimAngleSmoothed + da * Math.min(1, dt * 18));
+
+// v1.24–v1.26: UFO update (tiny, fast, bouncing in top zone; avoids player approach a bit)
+if (ufo){
+  ufo.phase += dt * 18;
+
+  // Player "approach" vector: if the player moves toward the UFO, it nudges away.
+  const playerDir = (keys["d"] || keys["arrowright"]) ? 1 : ((keys["a"] || keys["arrowleft"]) ? -1 : 0);
+  const toward = Math.sign(ufo.x - player.x) * -1; // +1 means player is left moving right toward, etc.
+  if (playerDir !== 0 && playerDir === toward){
+    // dodge a bit more when approached
+    ufo.vx += Math.sign(ufo.x - player.x) * 0.35;
+    ufo.vy += (ufo.y < 80 ? 0.15 : -0.10);
+  }
+
+  // baseline chaotic movement
+  ufo.x += ufo.vx;
+  ufo.y += ufo.vy;
+
+  // bounce bounds (top zone only)
+  const left = 16, right = canvas.width - 16;
+  const top = 28, bottom = canvas.height * 0.42;
+
+  if (ufo.x < left){ ufo.x = left; ufo.vx *= -1; }
+  if (ufo.x > right){ ufo.x = right; ufo.vx *= -1; }
+  if (ufo.y < top){ ufo.y = top; ufo.vy *= -1; }
+  if (ufo.y > bottom){ ufo.y = bottom; ufo.vy *= -1; }
+
+  // If it's fading, fade out then grant power-up.
+  if (ufo.stage === "fading"){
+    ufo.fade = Math.max(0, ufo.fade - dt * 1.8);
+    if (ufo.fade <= 0){
+      ufo = null;
+      grantUfoPowerup();
+    }
+  }
+}
 
   // formation movement bounds depend on breathing spacing
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
@@ -1056,33 +1042,36 @@ if (baseY > maxBaseY){
   }
 
   // bullet -> enemy collision
-  for (let bi = bullets.length - 1; bi >= 0; bi--){
-    const b = bullets[bi];
+for (let bi = bullets.length - 1; bi >= 0; bi--){
+  const b = bullets[bi];
 
-    // v1.25: Player bullets can hit the UFO. It takes 3 hits:
-    // hit 1 -> red, hit 2 -> green, hit 3 -> blue then it fades away and grants 💥.
-    if (ufo && !ufo.fading){
-      const dxu = b.x - ufo.x;
-      const dyu = b.y - ufo.y;
-      const rr = (b.r + ufo.r);
-      if (dxu*dxu + dyu*dyu <= rr*rr){
-        bullets.splice(bi, 1);
+  // v1.24–v1.26: Bullet -> UFO collision (3 hits: red -> green -> blue -> fade away + power-up)
+  if (ufo){
+    const dxu = b.x - ufo.x;
+    const dyu = b.y - ufo.y;
+    const rr = (b.r + ufo.r);
+    if (dxu*dxu + dyu*dyu <= rr*rr){
+      bullets.splice(bi, 1);
 
+      if (ufo.stage !== "fading"){
         ufo.hits += 1;
-        ufo.stage = Math.min(3, ufo.hits);
-
-        if (ufo.hits >= 3){
-          ufo.fading = true;
-          ufo.grantBombOnVanish = true;
+        if (ufo.hits === 1) ufo.stage = "red";
+        else if (ufo.hits === 2) ufo.stage = "green";
+        else {
+          ufo.stage = "blue";
+          // After the 3rd hit, start fading away.
+          ufo.stage = "fading";
         }
-
-        playSfx(sfxHit);
-        score += 15; // small reward per hit; main reward is the power-up
-        continue; // this bullet is gone
       }
-    }
 
-    for (let ei = enemies.length - 1; ei >= 0; ei--){
+      // tiny score bump for tagging the UFO
+      score += 15;
+      playSfx(sfxHit);
+      continue; // bullet is gone, move on
+    }
+  }
+
+  for (let ei = enemies.length - 1; ei >= 0; ei--){
       const e = enemies[ei];
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
@@ -1183,44 +1172,58 @@ if (gameState === STATE.PLAYING){
   ctx.restore();
 }
 
+  
+// v1.24–v1.26: UFO draw (strobing oval, then color stages, then fade)
+if (ufo){
+  ctx.save();
+  ctx.globalAlpha = (ufo.stage === "fading" ? ufo.fade : 1.0);
 
-  // v1.25: Draw UFO (tiny fast bonus target)
-  if (ufo){
-    ctx.save();
-    ctx.translate(ufo.x, ufo.y);
-
-    // Fade
-    ctx.globalAlpha = (ufo.alpha != null ? ufo.alpha : 1);
-
-    // Color ladder: strobe -> red -> green -> blue
-    let fill = "#fff";
-    let stroke = "#000";
-    if (ufo.stage === 0){
-      const strobe = (Math.floor(time * 22) % 2) === 0;
-      fill = strobe ? "#fff" : "#000";
-      stroke = strobe ? "#000" : "#fff";
-    } else if (ufo.stage === 1){
-      fill = "#f00"; stroke = "#fff";
-    } else if (ufo.stage === 2){
-      fill = "#0f0"; stroke = "#000";
-    } else {
-      fill = "#00f"; stroke = "#fff";
-    }
-
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // tiny outline so it doesn't vanish on stars
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.restore();
+  let fill = "#fff";
+  if (ufo.stage === "red") fill = "#f00";
+  else if (ufo.stage === "green") fill = "#0f0";
+  else if (ufo.stage === "blue") fill = "#00f";
+  else {
+    // strobe
+    fill = (Math.floor(time * 30) % 2 === 0) ? "#fff" : "#000";
   }
 
-  // enemies
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.ellipse(ufo.x, ufo.y, 14, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // tiny rim so it stays visible on black/white strobe
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(ufo.x, ufo.y, 14, 7, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+// v1.24–v1.26: Power-up indicator slot (bottom-right)
+if (powerup.hasBomb && gameState === STATE.PLAYING){
+  const size = 52;
+  const pad = 14;
+  const x = canvas.width - pad - size;
+  const y = canvas.height - pad - size;
+
+  ctx.save();
+  ctx.globalAlpha = 0.95;
+  ctx.strokeStyle = "rgba(0,255,102,0.55)";
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.lineWidth = 2;
+  ctx.fillRect(x, y, size, size);
+  ctx.strokeRect(x, y, size, size);
+
+  ctx.font = "30px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("💥", x + size/2, y + size/2 + 2);
+  ctx.restore();
+}
+// enemies
   for (const e of enemies){
     ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
   }
@@ -1242,33 +1245,8 @@ if (gameState === STATE.PLAYING){
     ctx.fill();
   }
 
-  // v1.25: Bomb power-up slot (earned by destroying the UFO: 3 hits then fade)
-  if (gameState === STATE.PLAYING && hasBomb){
-    const pad = 18;
-    const box = 48;
-    const x = canvas.width - pad - box;
-    const y = canvas.height - pad - box;
-
-    ctx.save();
-    ctx.globalAlpha = 0.9;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(x, y, box, box);
-    ctx.strokeStyle = "rgba(0,255,0,0.45)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, box, box);
-
-    ctx.globalAlpha = 1;
-    ctx.font = "28px monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fff";
-    ctx.fillText("💥", x + box/2, y + box/2 + 1);
-    ctx.restore();
-  }
-
-
   overlay.innerHTML =
-    `Galaga-ish Clone v1.25<br>` +
+    `Galaga-ish Clone v1.26<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
