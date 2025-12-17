@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Shooter Game v0.06</title>
+  <title>Shooter Game v0.07</title>
 
   <style>
-    /* v0.01–v0.06 baseline styling */
     html, body {
       margin: 0;
       padding: 0;
@@ -22,7 +21,6 @@
       overflow: hidden;
     }
 
-    /* Full-window container for game */
     #gameContainer {
       position: relative;
       width: 100vw;
@@ -30,16 +28,14 @@
       overflow: hidden;
     }
 
-    /* Canvas stretches to container, logical size handled in JS */
     #game {
       width: 100%;
       height: 100%;
       display: block;
-      background: #000000; /* base ground is black */
+      background: #000000;
       border: 2px solid #444;
     }
 
-    /* Overlay UI */
     #ui {
       position: absolute;
       left: 10px;
@@ -73,11 +69,11 @@
     <canvas id="game"></canvas>
 
     <div id="ui">
-      <div>shooter-game v0.06</div>
+      <div>shooter-game v0.07</div>
       <div>WASD = move | Mouse = aim | LMB = shoot | R = restart</div>
       <div>HP: <span id="hpDisplay">100</span></div>
       <div>Score: <span id="scoreDisplay">0</span></div>
-      <div style="opacity:0.85">Enemies: random /media/images/gifs/ from index.json</div>
+      <div style="opacity:0.85">Floor: hidden grid revealed by walking</div>
     </div>
 
     <div id="gameOverMessage">GAME OVER</div>
@@ -85,19 +81,18 @@
 
   <script>
     // ================================================================
-    // Shooter Game v0.06 (FULL FILE)
+    // Shooter Game v0.07 (FULL FILE)
     //
-    // v0.06 changes (requested):
-    //  - Enemies spawn as random images from /media/images/gifs/ using index.json
-    //  - Enemy random size + HP + health bar = variable difficulty
-    //  - SFX:
-    //      * /media/audio/hitmarker.mp3 for enemy damage
-    //      * /media/audio/oof.mp3 for player damage
-    //  - REWRITTEN collision to feel better:
-    //      * Swept bullet collision (segment vs circle) prevents "phasing"
-    //      * Overlap resolution for player/enemy contact reduces "ratrace grind"
-    //      * Mild enemy repulsion prevents unfair clumps
-    //  - Removed visible circles/outline around enemy gifs (no ring stroke)
+    // New in v0.07:
+    //  - Floor is now a hidden grid revealed by the player's movement.
+    //    (Grid is drawn only where you've walked, persistently.)
+    //
+    // Kept:
+    //  - Random enemy GIFs from /media/images/gifs/index.json
+    //  - Random enemy size + HP + health bar
+    //  - SFX hitmarker/oof
+    //  - "Fun" collision rewrite (swept bullets, overlap resolution, repulsion)
+    //  - No visible enemy circle outlines
     // ================================================================
 
     const canvas = document.getElementById("game");
@@ -107,27 +102,27 @@
     const scoreDisplay = document.getElementById("scoreDisplay");
     const gameOverMessage = document.getElementById("gameOverMessage");
 
-    // Logical viewport used for scaling, not actual world bounds
     const VIRTUAL_WIDTH = 1200;
     const VIRTUAL_HEIGHT = 800;
 
-    // Reference size only
     const WIDTH = VIRTUAL_WIDTH;
     const HEIGHT = VIRTUAL_HEIGHT;
 
-    // Camera follows the player; screen is always centered on camera
     const camera = { x: WIDTH / 2, y: HEIGHT / 2 };
+
+    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
 
     // Resize real canvas to match its CSS box
     function resizeCanvas() {
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width;
       canvas.height = rect.height;
+      rebuildOffscreenCanvases();
     }
     window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
 
-    // Map world coordinates -> screen coordinates using camera-centered viewport
+    // World -> screen mapping
     function sx(worldX) {
       const viewportX = (worldX - camera.x) + VIRTUAL_WIDTH / 2;
       return (viewportX / VIRTUAL_WIDTH) * canvas.width;
@@ -136,9 +131,6 @@
       const viewportY = (worldY - camera.y) + VIRTUAL_HEIGHT / 2;
       return (viewportY / VIRTUAL_HEIGHT) * canvas.height;
     }
-
-    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-    function lerp(a, b, t) { return a + (b - a) * t; }
 
     // =================================================================
     // GAME STATE
@@ -152,9 +144,8 @@
       hp: 100,
       maxHp: 100,
 
-      // v0.06: feel tweaks
-      iFrames: 0,            // invulnerability timer after being hit
-      bumpVelX: 0,           // tiny knockback velocity
+      iFrames: 0,
+      bumpVelX: 0,
       bumpVelY: 0
     };
 
@@ -166,21 +157,46 @@
     let score = 0;
     let isGameOver = false;
 
-    // Shooting control
     let lastShotTime = 0;
     const SHOT_COOLDOWN = 0.14;
 
-    // Enemy spawning
     let enemySpawnTimer = 0;
     const ENEMY_SPAWN_INTERVAL = 1.55;
 
-    // v0.05: Trail / fog-of-war
+    // =================================================================
+    // TRAIL POINTS (now used to REVEAL grid, not paint a glow blob)
+    // =================================================================
     const trailPoints = [];
-    const TRAIL_STEP_DIST = 25;
-    const TRAIL_LIGHT_RADIUS = 220;
+
+    const TRAIL_STEP_DIST = 22;      // slightly tighter = smoother reveal
+    const REVEAL_RADIUS = 180;       // world units
+    const REVEAL_HARD_CORE = 0.22;   // how "solid" the middle looks
+    const MAX_TRAIL_POINTS = 4500;   // keep it from eating your RAM like a snack
+
     let lastTrailX = player.x;
     let lastTrailY = player.y;
     trailPoints.push({ x: player.x, y: player.y });
+
+    // =================================================================
+    // OFFSCREEN CANVASES FOR GRID + MASK (v0.07 core feature)
+    // =================================================================
+    let gridCanvas, gridCtx, maskCanvas, maskCtx;
+
+    function rebuildOffscreenCanvases() {
+      gridCanvas = document.createElement("canvas");
+      maskCanvas = document.createElement("canvas");
+
+      gridCanvas.width = canvas.width;
+      gridCanvas.height = canvas.height;
+      maskCanvas.width = canvas.width;
+      maskCanvas.height = canvas.height;
+
+      gridCtx = gridCanvas.getContext("2d");
+      maskCtx = maskCanvas.getContext("2d");
+    }
+
+    // Initial setup
+    resizeCanvas();
 
     // =================================================================
     // ENEMY GIF LIST + IMAGE CACHE
@@ -188,10 +204,9 @@
     const ENEMY_GIF_INDEX_URL = "/media/images/gifs/index.json";
     const ENEMY_GIF_BASE_URL = "/media/images/gifs/";
     let enemyGifFilenames = [];
-    const imageCache = new Map(); // src -> HTMLImageElement
+    const imageCache = new Map();
 
     function normalizeIndexJsonToFilenames(json) {
-      // Flexible index.json formats because consistency is a myth.
       if (Array.isArray(json)) return json.filter(v => typeof v === "string");
 
       if (json && typeof json === "object") {
@@ -221,15 +236,14 @@
         const res = await fetch(ENEMY_GIF_INDEX_URL, { cache: "no-store" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
-        const names = normalizeIndexJsonToFilenames(json)
+        enemyGifFilenames = normalizeIndexJsonToFilenames(json)
           .map(s => String(s).trim())
           .filter(Boolean)
           .filter(n => !n.endsWith("/") && !n.includes(".."));
 
-        enemyGifFilenames = names;
-        console.log("[v0.06] Loaded enemy image list:", enemyGifFilenames.length);
+        console.log("[v0.07] Loaded enemy image list:", enemyGifFilenames.length);
       } catch (err) {
-        console.warn("[v0.06] Failed to load enemy index.json:", err);
+        console.warn("[v0.07] Failed to load enemy index.json:", err);
         enemyGifFilenames = [];
       }
     }
@@ -251,14 +265,13 @@
     loadEnemyGifIndex();
 
     // =================================================================
-    // AUDIO (simple overlap-friendly)
+    // AUDIO
     // =================================================================
     const SFX = {
       enemyHit: "/media/audio/hitmarker.mp3",
       playerHit: "/media/audio/oof.mp3"
     };
 
-    // v0.06: throttle SFX slightly so rapid hits don’t turn into audio spam soup
     const sfxThrottle = {
       enemyHit: { last: 0, minGap: 0.045 },
       playerHit: { last: 0, minGap: 0.18 }
@@ -270,14 +283,13 @@
       if (t && now - t.last < t.minGap) return;
       if (t) t.last = now;
 
-      const url = SFX[key];
-      const a = new Audio(url);
+      const a = new Audio(SFX[key]);
       a.volume = volume;
       a.play().catch(() => {});
     }
 
     // =================================================================
-    // INPUT HANDLERS
+    // INPUT
     // =================================================================
     window.addEventListener("keydown", (e) => {
       const k = e.key.toLowerCase();
@@ -304,19 +316,12 @@
       mouse.y = camera.y + (ny - 0.5) * VIRTUAL_HEIGHT;
     });
 
-    canvas.addEventListener("mousedown", (e) => {
-      if (e.button === 0) mouse.isDown = true;
-    });
-
-    canvas.addEventListener("mouseup", (e) => {
-      if (e.button === 0) mouse.isDown = false;
-    });
+    canvas.addEventListener("mousedown", (e) => { if (e.button === 0) mouse.isDown = true; });
+    canvas.addEventListener("mouseup", (e) => { if (e.button === 0) mouse.isDown = false; });
 
     // =================================================================
-    // FUN COLLISION HELPERS (v0.06 rewrite)
+    // FUN COLLISION HELPERS
     // =================================================================
-
-    // Closest point on segment AB to point P
     function closestPointOnSegment(ax, ay, bx, by, px, py) {
       const abx = bx - ax, aby = by - ay;
       const apx = px - ax, apy = py - ay;
@@ -327,14 +332,12 @@
       return { x: ax + abx * t, y: ay + aby * t, t };
     }
 
-    // Swept collision: did segment (ax,ay)->(bx,by) come within radius r of circle center (cx,cy)?
     function segmentHitsCircle(ax, ay, bx, by, cx, cy, r) {
       const c = closestPointOnSegment(ax, ay, bx, by, cx, cy);
       const dx = cx - c.x, dy = cy - c.y;
       return (dx * dx + dy * dy) <= (r * r);
     }
 
-    // Push two circles apart (softly) so stacking is reduced
     function resolveOverlap(a, b, strength = 1.0) {
       const dx = b.x - a.x;
       const dy = b.y - a.y;
@@ -346,7 +349,6 @@
         const nx = dx / dist;
         const ny = dy / dist;
 
-        // Split correction based on "mass" (bigger = heavier)
         const massA = a.radius * a.radius;
         const massB = b.radius * b.radius;
         const total = massA + massB;
@@ -362,7 +364,7 @@
     }
 
     // =================================================================
-    // SHOOTING / ENEMY SPAWNING
+    // GAME MECHANICS
     // =================================================================
     function shootBullet() {
       const dx = mouse.x - player.x;
@@ -376,20 +378,17 @@
       bullets.push({
         x: player.x,
         y: player.y,
-        prevX: player.x,   // v0.06: for swept collision
+        prevX: player.x,
         prevY: player.y,
         radius: 3.8,
         vx: dirX * bulletSpeed,
         vy: dirY * bulletSpeed,
         life: 1.45,
-
-        // v0.06: mild damage variability makes it feel less flat
         damage: (Math.random() < 0.12) ? 2 : 1
       });
     }
 
     function spawnEnemy() {
-      // Spawn in an annulus around player
       const angle = Math.random() * Math.PI * 2;
       const minDist = 520;
       const maxDist = 920;
@@ -398,16 +397,13 @@
       const x = player.x + Math.cos(angle) * dist;
       const y = player.y + Math.sin(angle) * dist;
 
-      // Random size drives difficulty
       const sizeFactor = 0.65 + Math.random() * 1.55;
       const baseRadius = 18;
       const radius = clamp(baseRadius * sizeFactor, 12, 44);
 
-      // HP scales with size (area-ish), plus a small baseline
       const maxHp = Math.max(2, Math.round(2 + (radius * radius) / 220));
       const hp = maxHp;
 
-      // Speed inversely related to size, plus wiggle
       const speed = clamp(150 - radius * 1.25 + Math.random() * 28, 55, 155);
 
       const src = getRandomEnemyImageSrc();
@@ -418,14 +414,112 @@
         radius,
         speed,
         hp, maxHp,
-
         img, imgSrc: src,
 
-        // v0.06: feel polish
-        hitFlash: 0,      // tiny flash timer for readability
-        knockX: 0,        // knockback velocity
+        hitFlash: 0,
+        knockX: 0,
         knockY: 0
       });
+    }
+
+    // =================================================================
+    // v0.07: GRID REVEAL RENDERING
+    // =================================================================
+    function drawRevealedGrid() {
+      // Build two offscreen layers per frame:
+      //  1) gridCanvas = crisp scrolling grid aligned to WORLD coords
+      //  2) maskCanvas = accumulated reveal mask from trailPoints (screen-space)
+      //
+      // Then apply: gridCanvas * maskCanvas, and draw to main canvas.
+
+      if (!gridCtx || !maskCtx) return;
+
+      // --- 1) Draw grid into gridCanvas ---
+      gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+
+      // View bounds in WORLD coordinates
+      const left = camera.x - VIRTUAL_WIDTH / 2;
+      const top = camera.y - VIRTUAL_HEIGHT / 2;
+      const right = camera.x + VIRTUAL_WIDTH / 2;
+      const bottom = camera.y + VIRTUAL_HEIGHT / 2;
+
+      // Grid settings (world units)
+      const major = 240;  // thicker line spacing
+      const minor = 60;   // thin line spacing
+
+      // Visual settings
+      gridCtx.lineWidth = 1;
+
+      function drawGridLines(spacing, alpha, isMajor) {
+        gridCtx.strokeStyle = `rgba(180, 200, 255, ${alpha})`;
+
+        // Vertical lines
+        let x = Math.floor(left / spacing) * spacing;
+        for (; x <= right; x += spacing) {
+          const px = sx(x);
+          gridCtx.beginPath();
+          gridCtx.moveTo(px, 0);
+          gridCtx.lineTo(px, gridCanvas.height);
+          gridCtx.stroke();
+        }
+
+        // Horizontal lines
+        let y = Math.floor(top / spacing) * spacing;
+        for (; y <= bottom; y += spacing) {
+          const py = sy(y);
+          gridCtx.beginPath();
+          gridCtx.moveTo(0, py);
+          gridCtx.lineTo(gridCanvas.width, py);
+          gridCtx.stroke();
+        }
+      }
+
+      // Minor grid faint, major grid a bit stronger
+      drawGridLines(minor, 0.10, false);
+      gridCtx.lineWidth = 2;
+      drawGridLines(major, 0.16, true);
+      gridCtx.lineWidth = 1;
+
+      // --- 2) Build reveal mask into maskCanvas ---
+      // Mask is persistent in concept, but we rebuild it each frame from trailPoints,
+      // which *effectively* persists since trailPoints persists.
+      maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+      // Scale reveal radius into screen pixels
+      const scaleFactor = canvas.width / VIRTUAL_WIDTH;
+      const revealPx = REVEAL_RADIUS * scaleFactor;
+
+      // Draw all reveal spots (yes, it’s a loop; no, it’s not that bad unless you make 200k points)
+      for (const p of trailPoints) {
+        const cx = sx(p.x);
+        const cy = sy(p.y);
+
+        const grad = maskCtx.createRadialGradient(cx, cy, 0, cx, cy, revealPx);
+        // solid-ish middle, soft edges
+        grad.addColorStop(0.0, `rgba(255,255,255, ${REVEAL_HARD_CORE})`);
+        grad.addColorStop(0.35, "rgba(255,255,255, 0.22)");
+        grad.addColorStop(1.0, "rgba(255,255,255, 0.0)");
+
+        maskCtx.fillStyle = grad;
+        maskCtx.beginPath();
+        maskCtx.arc(cx, cy, revealPx, 0, Math.PI * 2);
+        maskCtx.fill();
+      }
+
+      // --- 3) Apply mask to gridCanvas ---
+      // grid = grid * mask
+      gridCtx.save();
+      gridCtx.globalCompositeOperation = "destination-in";
+      gridCtx.drawImage(maskCanvas, 0, 0);
+      gridCtx.restore();
+
+      // --- 4) Draw revealed grid onto the main canvas ---
+      ctx.save();
+      // Screen blend makes it feel like “lines emerging” rather than flat paint
+      ctx.globalCompositeOperation = "screen";
+      ctx.globalAlpha = 1.0;
+      ctx.drawImage(gridCanvas, 0, 0);
+      ctx.restore();
     }
 
     // =================================================================
@@ -434,15 +528,12 @@
     function update(dt) {
       if (isGameOver) return;
 
-      // Player i-frames tick down
       player.iFrames = Math.max(0, player.iFrames - dt);
 
-      // Player facing
       const dmx = mouse.x - player.x;
       const dmy = mouse.y - player.y;
       player.angle = Math.atan2(dmy, dmx);
 
-      // Movement vector
       let mvx = 0, mvy = 0;
       if (keys.w) mvy -= 1;
       if (keys.s) mvy += 1;
@@ -453,7 +544,6 @@
       mvx /= mag;
       mvy /= mag;
 
-      // v0.06: small "bump velocity" decays quickly (makes hits feel physical)
       const bumpDecay = Math.pow(0.0006, dt);
       player.bumpVelX *= bumpDecay;
       player.bumpVelY *= bumpDecay;
@@ -461,22 +551,23 @@
       player.x += (mvx * player.speed + player.bumpVelX) * dt;
       player.y += (mvy * player.speed + player.bumpVelY) * dt;
 
-      // Camera stays locked to player
       camera.x = player.x;
       camera.y = player.y;
 
-      // Record trail points
+      // Record trail points (used for grid reveal)
       const dxTrail = player.x - lastTrailX;
       const dyTrail = player.y - lastTrailY;
       const trailDist = Math.hypot(dxTrail, dyTrail);
+
       if (trailDist >= TRAIL_STEP_DIST) {
         trailPoints.push({ x: player.x, y: player.y });
         lastTrailX = player.x;
         lastTrailY = player.y;
-        if (trailPoints.length > 2000) trailPoints.shift();
+
+        if (trailPoints.length > MAX_TRAIL_POINTS) trailPoints.shift();
       }
 
-      // Shooting cooldown
+      // Shooting
       if (mouse.isDown) {
         const t = performance.now() / 1000;
         if (t - lastShotTime >= SHOT_COOLDOWN) {
@@ -485,16 +576,13 @@
         }
       }
 
-      // Bullets update + swept collision prep
+      // Bullets
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i];
-        b.prevX = b.x;
-        b.prevY = b.y;
-
+        b.prevX = b.x; b.prevY = b.y;
         b.x += b.vx * dt;
         b.y += b.vy * dt;
         b.life -= dt;
-
         if (b.life <= 0) bullets.splice(i, 1);
       }
 
@@ -505,19 +593,15 @@
         spawnEnemy();
       }
 
-      // Enemies update (movement + knockback)
+      // Enemy movement
       for (let i = 0; i < enemies.length; i++) {
         const e = enemies[i];
-
-        // Hit flash decay
         e.hitFlash = Math.max(0, e.hitFlash - dt);
 
-        // Knockback decay
         const kd = Math.pow(0.0008, dt);
         e.knockX *= kd;
         e.knockY *= kd;
 
-        // Seek player
         const dx = player.x - e.x;
         const dy = player.y - e.y;
         const dist = Math.hypot(dx, dy) || 1;
@@ -528,44 +612,36 @@
         e.y += (dirY * e.speed + e.knockY) * dt;
       }
 
-      // v0.06: enemy repulsion to avoid dogpiles
-      // (O(n^2) but fine for small counts; feels WAY better)
+      // Enemy repulsion
       for (let i = 0; i < enemies.length; i++) {
         for (let j = i + 1; j < enemies.length; j++) {
           resolveOverlap(enemies[i], enemies[j], 0.55);
         }
       }
 
-      // v0.06: player vs enemies contact feels less "grinder"
-      // - resolve overlap (pushes enemy away, reduces sticky damage)
-      // - apply damage only if player has no iFrames
+      // Player/enemy contact
       for (let i = 0; i < enemies.length; i++) {
         const e = enemies[i];
-
-        // Resolve overlap first (this alone makes contact feel saner)
         resolveOverlap(player, e, 0.9);
 
-        // Damage if still close and iFrames are down
         const dx = e.x - player.x;
         const dy = e.y - player.y;
         const dist = Math.hypot(dx, dy) || 1;
         const combined = player.radius + e.radius;
 
         if (dist < combined * 1.02 && player.iFrames <= 0 && !isGameOver) {
-          // Damage scales a little with enemy size, but not stupidly
           const sizeFactor = clamp(e.radius / 22, 0.7, 2.0);
           const dmg = Math.round(12 * sizeFactor);
 
           player.hp -= dmg;
-          player.iFrames = 0.55; // invuln window
+          player.iFrames = 0.55;
 
-          // Knock the player away a bit (feels like impact, not glue)
           const nx = (player.x - e.x) / dist;
           const ny = (player.y - e.y) / dist;
+
           player.bumpVelX += nx * (420 / sizeFactor);
           player.bumpVelY += ny * (420 / sizeFactor);
 
-          // Knock enemy back a bit too
           e.knockX -= nx * (220 * sizeFactor);
           e.knockY -= ny * (220 * sizeFactor);
 
@@ -578,83 +654,42 @@
         }
       }
 
-      // v0.06: bullets vs enemies (swept collision)
-      // This fixes "I clearly hit it" moments with fast bullets.
+      // Bullets vs enemies (swept)
       for (let i = enemies.length - 1; i >= 0; i--) {
         const e = enemies[i];
 
-        // Simple broad-phase: only consider bullets reasonably close
-        // (still cheap because bullets are few)
         for (let j = bullets.length - 1; j >= 0; j--) {
           const b = bullets[j];
-
-          // Slightly generous hit radius for "fun" (readability > suffering)
           const hitR = e.radius + b.radius * 1.35;
 
-          // Swept test: segment from prev to current bullet position
-          const hit = segmentHitsCircle(b.prevX, b.prevY, b.x, b.y, e.x, e.y, hitR);
-
-          if (hit) {
-            // Apply damage
+          if (segmentHitsCircle(b.prevX, b.prevY, b.x, b.y, e.x, e.y, hitR)) {
             e.hp -= b.damage;
             e.hitFlash = 0.08;
 
-            // Impact knocks enemy a bit away from bullet direction
             const vx = b.x - b.prevX;
             const vy = b.y - b.prevY;
             const vlen = Math.hypot(vx, vy) || 1;
             const nx = vx / vlen;
             const ny = vy / vlen;
 
-            // Bigger enemies resist knockback
             const resist = clamp(e.radius / 26, 0.8, 2.4);
             e.knockX += nx * (520 / resist);
             e.knockY += ny * (520 / resist);
 
-            // Enemy hit SFX
             playSfx("enemyHit", 0.65);
-
-            // Bullet consumed on hit (keeps gameplay readable)
             bullets.splice(j, 1);
 
             if (e.hp <= 0) {
-              // Score rewards bigger threats a bit
               score += 10 + Math.round(e.maxHp);
               enemies.splice(i, 1);
             }
-
-            break; // enemy got hit, stop checking other bullets against it this frame
+            break;
           }
         }
       }
 
-      // UI updates
       hpDisplay.textContent = Math.max(0, player.hp).toFixed(0);
       scoreDisplay.textContent = score;
-    }
-
-    // =================================================================
-    // TRAIL / FOG-OF-WAR DRAWING
-    // =================================================================
-    function drawTrail() {
-      const scaleFactor = canvas.width / VIRTUAL_WIDTH;
-      const rWorld = TRAIL_LIGHT_RADIUS;
-
-      for (const p of trailPoints) {
-        const cx = sx(p.x);
-        const cy = sy(p.y);
-        const r = rWorld * scaleFactor;
-
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-        grad.addColorStop(0, "rgba(120, 180, 255, 0.9)");
-        grad.addColorStop(0.4, "rgba(60, 120, 220, 0.5)");
-        grad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
     }
 
     // =================================================================
@@ -681,10 +716,12 @@
     }
 
     function draw() {
+      // Base void stays black, but now the grid will appear where you've walked.
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      drawTrail();
+      // v0.07: draw revealed grid floor
+      drawRevealedGrid();
 
       const scaleFactor = canvas.width / VIRTUAL_WIDTH;
 
@@ -696,7 +733,7 @@
         ctx.fill();
       }
 
-      // Enemies (NO visible circles/outline around gifs)
+      // Enemies (no visible hitbox rings)
       for (const e of enemies) {
         const rr = e.radius * scaleFactor;
         const ex = sx(e.x);
@@ -706,7 +743,6 @@
           ctx.save();
           ctx.imageSmoothingEnabled = true;
 
-          // Tiny flash on hit (readability) without drawing a ring
           if (e.hitFlash > 0) {
             const t = clamp(e.hitFlash / 0.08, 0, 1);
             ctx.globalAlpha = lerp(1.0, 0.65, t);
@@ -715,8 +751,6 @@
           ctx.drawImage(e.img, ex - rr, ey - rr, rr * 2, rr * 2);
           ctx.restore();
         } else {
-          // Fallback if image hasn't loaded yet: draw a subtle square, not a circle.
-          // (Still not a big visible "hitbox ring" though.)
           ctx.fillStyle = "rgba(255, 80, 80, 0.85)";
           ctx.fillRect(ex - rr, ey - rr, rr * 2, rr * 2);
         }
@@ -751,9 +785,6 @@
       }
     }
 
-    // =================================================================
-    // GAME OVER
-    // =================================================================
     function handleGameOver() {
       isGameOver = true;
       gameOverMessage.style.opacity = 1;
