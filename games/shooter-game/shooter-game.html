@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.33</title>
+<title>Galaga-ish Clone v1.34</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -114,6 +114,13 @@
     cursor:pointer;
   }
   #btnRestart:hover{ background: rgba(255,0,0,0.10); }
+
+
+  /* v1.34: Menu sanity fixes */
+  #uiRoot{ z-index: 50; }
+  #deathOverlay{ z-index: 100; }
+  /* Hide HUD slots until game starts (prevents overlaying menu visually) */
+  #livesSlot, #powerupSlot{ display:none; }
 
 </style>
 </head>
