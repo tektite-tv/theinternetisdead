@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.32</title>
+<title>Galaga-ish Clone v1.33</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -116,7 +116,7 @@
   #btnRestart:hover{ background: rgba(255,0,0,0.10); }
 
 
-  /* v1.32: keep HUD off the menu and keep menu clickable */
+  /* v1.33: keep HUD off the menu and keep menu clickable */
   #uiRoot{ z-index: 50; }
   #deathOverlay{ z-index: 100; }
   #livesSlot{ display:none; }
@@ -285,6 +285,7 @@ const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
 let lives = 0; // (deprecated) replaced by health bar system
 let health = 1.0; // 0..1 (4 hits -> 0)
+const HIT_DAMAGE = 0.25; // 25% per hit (4 hits = one life)
 let isDead = false;
 let deathTimer = 0;
 let deathGameOver = false;
@@ -305,7 +306,7 @@ function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; 
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
 
-// Powerup state (v1.32)
+// Powerup state (v1.33)
 let ufo = null;
 let bomb = null;
 let hasBomb = false;
@@ -691,7 +692,7 @@ syncOptionsLabels();
 function showMenu(){
   gameState = STATE.MENU;
   deathOverlay.style.display = "none";
-  // v1.32: HUD should not appear on the menu
+  // v1.33: HUD should not appear on the menu
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
 
@@ -701,7 +702,7 @@ function showMenu(){
 }
 
 function restartRun(){
-  // v1.32: Hard reset from GAME OVER screen (full reset to beginning)
+  // v1.33: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
   hasBomb = false;
   bomb = null;
@@ -711,7 +712,7 @@ function restartRun(){
 }
 function showOptions(){
   gameState = STATE.OPTIONS;
-  // v1.32: hide HUD in menus
+  // v1.33: hide HUD in menus
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
 
@@ -725,13 +726,13 @@ function startGame(){
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
 
-  // v1.32: show HUD only in-game
+  // v1.33: show HUD only in-game
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
 
   score = 0;
 
-  // v1.32: 3 lives, each life has 4-hit (25%) health
+  // v1.33: 3 lives, each life has 4-hit (25%) health
   lives = 3;
   livesText.textContent = "x" + lives;
 
@@ -1011,7 +1012,7 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 const bullets = [];
 const enemyBullets = [];
 
-// v1.32 PERF GUARDRAILS:
+// v1.33 PERF GUARDRAILS:
 // When bullet counts explode, the nested bullet-vs-bullet collision check can get expensive.
 // Cap counts to keep the game smooth instead of freezing when chaos spikes.
 const MAX_PLAYER_BULLETS = 90;
@@ -1025,7 +1026,7 @@ function shoot(){
   const dy = Math.sin(aimAngleSmoothed);
 
   const spawnDist = (player.w * 0.42);
-  // v1.32: cap bullets to prevent performance spikes
+  // v1.33: cap bullets to prevent performance spikes
   if (bullets.length >= MAX_PLAYER_BULLETS){
     bullets.splice(0, bullets.length - MAX_PLAYER_BULLETS + 1);
   }
@@ -1070,7 +1071,7 @@ function enemyTryShoot(dt){
   const vx = Math.max(-3.2, Math.min(3.2, dx * 0.012)); // gentle lead
   const vy = (5.6 + wave*0.45) * FUNK;
 
-  // v1.32: cap enemy bullets to prevent the counter-shot collision loop from going nuclear
+  // v1.33: cap enemy bullets to prevent the counter-shot collision loop from going nuclear
   if (enemyBullets.length >= MAX_ENEMY_BULLETS){
     enemyBullets.splice(0, enemyBullets.length - MAX_ENEMY_BULLETS + 1);
   }
@@ -1327,7 +1328,7 @@ function update(dt){
       const dx = p.x - e.x;
       const dy = p.y - e.y;
       const rr = (p.r + e.r);
-      // v1.32: cheap early-outs to avoid expensive nested collision work when bullets are far apart
+      // v1.33: cheap early-outs to avoid expensive nested collision work when bullets are far apart
       if (dy > rr + 6 || dy < -rr - 6) continue;
       if (dx > rr + 6 || dx < -rr - 6) continue;
       if (dx*dx + dy*dy <= rr*rr){
@@ -1625,7 +1626,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.32<br>` +
+    `Galaga-ish Clone v1.33<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
@@ -1638,7 +1639,6 @@ if (gameState === STATE.PLAYING){
   // v1.29: corner HUD updates
   livesText.textContent = "x" + lives;
   powerupSlot.style.display = hasBomb ? "flex" : "none";
-`ESC: Menu`;
 }
 
 let lastT = performance.now();
