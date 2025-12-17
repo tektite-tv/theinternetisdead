@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.18</title>
+<title>Galaga-ish Clone v1.19</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -399,7 +399,7 @@ const keys = {};
 let fireCooldown = 0;
 
 /* =======================
-   Aim (v1.18: 360° aim)
+   Aim (v1.19: 360° aim)
    - Mouse / touch sets an aim point.
    - We smooth the aim angle so the triangle feels less twitchy.
 ======================= */
@@ -518,6 +518,32 @@ function resetFormation(){
   formation.descentSpeed = 4 + (wave-1) * 2.0;  // constant downward pressure (Galaga-ish)
 }
 
+// v1.19: When an enemy dies, re-pack the remaining enemies into a tidy rectangle
+// (no "missing tooth" gaps in the grid).
+function compactEnemyGrid(){
+  const count = enemies.length;
+  if (!count){
+    formationCols = 1;
+    formationRows = 1;
+    return;
+  }
+
+  // Mirror the spawn-time packing logic, but WITHOUT nuking the wave.
+  const zoneW = canvas.width * 0.82;
+  const zoneH = canvas.height * 0.38;
+
+  const idealCols = Math.ceil(Math.sqrt(count * (zoneW / Math.max(1, zoneH))));
+  formationCols = Math.max(1, Math.min(count, idealCols));
+  formationRows = Math.max(1, Math.ceil(count / formationCols));
+
+  // Re-assign slots in order so the formation closes ranks.
+  for (let i = 0; i < enemies.length; i++){
+    enemies[i].row = Math.floor(i / formationCols);
+    enemies[i].col = i % formationCols;
+  }
+}
+
+
 function randEnemyImg(){
   if (!enemyImages.length) return playerImg;
   return enemyImages[Math.floor(Math.random() * enemyImages.length)];
@@ -531,7 +557,18 @@ function spawnEnemies(){
   // Wave 1 spawns 1 enemy, then doubles each wave (2x previous).
   // We cap it to keep browsers from melting into a puddle.
   const MAX_WAVE_ENEMIES = 128;
-  const count = Math.min(MAX_WAVE_ENEMIES, Math.pow(2, (wave - 1)));
+// v1.19: Balanced wave sizing (requested):
+// Wave 1: 1 enemy
+// Wave 2: 2 enemies
+// Wave 3: 4 enemies
+// Wave 4+: add +2 each wave (6, 8, 10, ...)
+function getEnemyCountForWave(w){
+  if (w === 1) return 1;
+  if (w === 2) return 2;
+  if (w === 3) return 4;
+  return 4 + (w - 3) * 2;
+}
+const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 
   // v1.17: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
   // Keep the "formation area" mostly in the top half.
@@ -569,7 +606,7 @@ const enemyBullets = [];
 function shoot(){
   if (fireCooldown > 0) return;
 
-  // v1.18: fire in the current aim direction (defaults upward if aim is unset)
+  // v1.19: fire in the current aim direction (defaults upward if aim is unset)
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
 
@@ -702,13 +739,13 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
 canvas.addEventListener("pointermove", (e) => {
-  // v1.18: aim follows pointer (mouse or touch)
+  // v1.19: aim follows pointer (mouse or touch)
   setAimFromClient(e.clientX, e.clientY);
 });
 
 canvas.addEventListener("pointerdown", (e) => {
   unlockAudioOnce();
-  // v1.18: clicking also aims and shoots
+  // v1.19: clicking also aims and shoots
   setAimFromClient(e.clientX, e.clientY);
   if (gameState === STATE.PLAYING) shoot();
 });
@@ -734,7 +771,7 @@ function update(dt){
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
-  // v1.18: smooth the aim angle (shortest-path wrap) for nicer feel
+  // v1.19: smooth the aim angle (shortest-path wrap) for nicer feel
   const da = normAngle(aimAngle - aimAngleSmoothed);
   aimAngleSmoothed = normAngle(aimAngleSmoothed + da * Math.min(1, dt * 18));
 
@@ -885,6 +922,7 @@ if (baseY > maxBaseY){
 
       if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         enemies.splice(ei, 1);
+        compactEnemyGrid();
         bullets.splice(bi, 1);
         score += 10;
         playSfx(sfxHit);
@@ -957,7 +995,7 @@ function draw(){
     ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
   }
 
-// v1.18: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
+// v1.19: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
 if (gameState === STATE.PLAYING){
   const a = aimAngleSmoothed;
   const orbitR = player.w * 0.62;
@@ -1002,7 +1040,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.18<br>` +
+    `Galaga-ish Clone v1.19<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
@@ -1028,7 +1066,7 @@ function loop(t){
 player.x = canvas.width / 2;
 player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
 
-// v1.18: default aim straight up until the player moves the pointer
+// v1.19: default aim straight up until the player moves the pointer
 aimX = player.x;
 aimY = player.y - 200;
 aimAngle = -Math.PI/2;
