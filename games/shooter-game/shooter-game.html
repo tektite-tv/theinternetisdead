@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.14</title>
+<title>Galaga-ish Clone v1.15</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -118,6 +118,11 @@
   Tweaked: Increased base enemy spacing (X/Y) for clearer separation.
   Added: Wave banner ("WAVE 1", "WAVE 2", etc.) shown on start and after wave clears.
   Tweaked: Difficulty scaling per wave (enemy horizontal speed, descent speed, step-down).
+
+
+- 2025-12-17 | v1.15
+  Added: Galaga-style 'swoop' attackers: individual enemies break formation, dive toward the player, then return.
+  Kept: Main formation stays in the top zone; only swoopers can enter player space.
   Tweaked: Player fire rate increases each wave (cooldown decreases).
 ====================================================================== */
 
@@ -484,7 +489,11 @@ function spawnEnemies(){
 
   for (let r = 0; r < ENEMY_ROWS; r++){
     for (let c = 0; c < ENEMY_COLS; c++){
-      enemies.push({ row:r, col:c, baseY, img: randEnemyImg(), size:52, hp:1, x:0,y:0,w:0,h:0 });
+      enemies.push({ row:r, col:c, baseY, img: randEnemyImg(), size:52, hp:1, x:0,y:0,w:0,h:0,
+        fx:0, fy:0, // formation-space position (computed each frame)
+        swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
+        swoopCooldown: rand(0.2, 1.6) // seconds until eligible to swoop
+      });
     }
   }
 }
@@ -517,6 +526,64 @@ function enemyTryShoot(dt){
   const e = enemies[Math.floor(Math.random() * enemies.length)];
   enemyBullets.push({ x: e.x, y: e.y + e.h/2 + 6, vy: 6 + wave*0.35, r: 4 });
 }
+
+
+let swoopTimer = 0;
+
+/*
+  v1.15: Galaga-like swoop attackers.
+  The *formation* is clamped to the top zone.
+  Individual enemies can temporarily dive into the player zone ("swoop") and then return.
+*/
+function tryStartSwoop(dt){
+  // tick per-enemy cooldowns
+  for (const e of enemies){
+    if (e.swoopCooldown > 0) e.swoopCooldown = Math.max(0, e.swoopCooldown - dt);
+  }
+
+  swoopTimer -= dt;
+  if (swoopTimer > 0) return;
+
+  // How often a swoop starts (faster on higher waves)
+  const interval = Math.max(0.7, 2.0 - wave * 0.12);
+  swoopTimer = interval;
+
+  // Limit simultaneous swoopers so it stays readable.
+  const maxSwoopers = Math.min(3, 1 + Math.floor((wave-1) / 3));
+  const currentlySwooping = enemies.reduce((n, e) => n + (e.swoop ? 1 : 0), 0);
+  if (currentlySwooping >= maxSwoopers) return;
+
+  // Pick an eligible enemy.
+  const candidates = enemies.filter(e => !e.swoop && e.swoopCooldown <= 0);
+  if (!candidates.length) return;
+
+  const e = candidates[Math.floor(Math.random() * candidates.length)];
+
+  // Start at current formation position (fx/fy computed in update loop).
+  const sx = e.fx || e.x;
+  const sy = e.fy || e.y;
+
+  // End near player area, but not *below* the player.
+  const endY = Math.min(canvas.height * 0.90, player.y - 40);
+  const endX = Math.max(40, Math.min(canvas.width - 40, player.x + rand(-140, 140)));
+
+  // Control point makes an arcing dive (sideways + down).
+  const c1x = sx + rand(-220, 220);
+  const c1y = sy + rand(140, 260);
+
+  // Duration scales with wave (faster dives later).
+  const dur = Math.max(0.9, 1.45 - wave * 0.05);
+
+  e.swoop = { t:0, dur, phase:"down", sx, sy, c1x, c1y, ex:endX, ey:endY };
+  e.swoopCooldown = Math.max(0.5, 2.2 - wave * 0.08); // wait before it can swoop again
+}
+
+function quadBezier(t, a, b, c){
+  // (1-t)^2 a + 2(1-t)t b + t^2 c
+  const mt = 1 - t;
+  return (mt*mt)*a + (2*mt*t)*b + (t*t)*c;
+}
+
 
 /* =======================
    Collision helpers
@@ -623,6 +690,9 @@ function update(dt){
     if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
   }
 
+  // v1.15: attempt to launch swoop attackers
+  tryStartSwoop(dt);
+
   // compute enemy positions
   const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
   const formationHeight = (ENEMY_ROWS - 1) * spacingY;
@@ -668,8 +738,52 @@ if (baseY > maxBaseY){
     const wobbleX = Math.sin(time * (0.9 + wave*0.03) + e.row * 0.7) * wobbleAmpX;
     const wobbleY = Math.cos(time * (1.1 + wave*0.02) + e.col * 0.6) * wobbleAmpY;
 
-    e.x = startX + e.col * spacingX + wobbleX;
-    e.y = baseY + e.row * spacingY + wobbleY;
+    e.fx = startX + e.col * spacingX + wobbleX;
+    e.fy = baseY + e.row * spacingY + wobbleY;
+
+    if (!e.swoop){
+      // Normal formation tracking.
+      e.x = e.fx;
+      e.y = e.fy;
+    } else {
+      // Swoop motion: dive down along a bezier arc, then return back to formation.
+      e.swoop.t += dt;
+      const u = Math.min(1, e.swoop.t / e.swoop.dur);
+
+      if (e.swoop.phase === "down"){
+        e.x = quadBezier(u, e.swoop.sx, e.swoop.c1x, e.swoop.ex);
+        e.y = quadBezier(u, e.swoop.sy, e.swoop.c1y, e.swoop.ey);
+
+        if (u >= 1){
+          // Switch to return phase.
+          e.swoop.phase = "up";
+          e.swoop.t = 0;
+          e.swoop.dur = Math.max(0.75, e.swoop.dur * 0.85);
+
+          // Return target is the *current* formation slot (fx/fy),
+          // so the enemy rejoins smoothly even if the formation moved.
+          e.swoop.sx = e.x;
+          e.swoop.sy = e.y;
+          e.swoop.ex = e.fx;
+          e.swoop.ey = e.fy;
+          // new control point arcs upward.
+          e.swoop.c1x = e.x + rand(-200, 200);
+          e.swoop.c1y = Math.max(60, e.y - rand(160, 260));
+        }
+      } else {
+        // Return-to-formation arc
+        e.x = quadBezier(u, e.swoop.sx, e.swoop.c1x, e.swoop.ex);
+        e.y = quadBezier(u, e.swoop.sy, e.swoop.c1y, e.swoop.ey);
+
+        if (u >= 1){
+          // Back in formation.
+          e.swoop = null;
+          e.x = e.fx;
+          e.y = e.fy;
+        }
+      }
+    }
+
     e.w = size;
     e.h = size;
   }
@@ -775,7 +889,7 @@ function draw(){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.14<br>` +
+    `Galaga-ish Clone v1.15<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
