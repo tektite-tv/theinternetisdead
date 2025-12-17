@@ -159,6 +159,11 @@ let hudVisible = false; // v1.12.5: HUD hidden by default; toggle with / (Slash)
 
 let time = 0;
 let score = 0;
+// v1.22: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
+// 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
+const SPECTRAL_FUNK = 1000;
+const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
+
 let lives = 5;
 let wave = 1;
 
@@ -512,13 +517,20 @@ function resetFormation(){
   formation.yOffset = 0;
   formation.dir = 1;
 
-  // v1.13: difficulty scaling per wave
-  formation.speed = 1.05 + (wave-1) * 0.12;      // horizontal sweep speed
-  formation.stepDown = 12 + (wave-1) * 1.0;      // extra drop when bouncing off edges
-  formation.descentSpeed = 4 + (wave-1) * 2.0;  // constant downward pressure (Galaga-ish)
+  // v1.22: challenge/fun rebalance.
+  // Horizontal sweep ramps, but capped so it stays readable.
+  formation.speed = (0.95 + (wave-1) * 0.09) * FUNK;
+  formation.speed = Math.min(2.2, formation.speed);
+
+  // Step-down stays modest (most threat comes from swoops + bullets, not a doom-wall).
+  formation.stepDown = 10 + Math.min(10, (wave-1) * 0.75);
+
+  // Gentle downward pressure, capped hard to keep enemies mostly in the top zone.
+  formation.descentSpeed = 3.5 + Math.min(10, (wave-1) * 1.25);
 }
 
 // v1.19: When an enemy dies, re-pack the remaining enemies into a tidy rectangle
+// v1.22: Disabled by default because it turns the game into 'hold fire in one lane to win' mode.
 // (no "missing tooth" gaps in the grid).
 function compactEnemyGrid(){
   const count = enemies.length;
@@ -630,13 +642,28 @@ function enemyTryShoot(dt){
   if (enemyShootTimer > 0) return;
 
   const alive = enemies.length;
-  const base = Math.max(0.18, 0.55 - wave*0.04 - Math.min(0.22, alive*0.002));
-  enemyShootTimer = base;
+
+  // v1.22: shot pacing is less spammy early, more spicy later.
+  // FUNK scales the aggression (1000 = baseline).
+  const base = Math.max(
+    0.16,
+    (0.72 - wave*0.05 - Math.min(0.28, alive*0.0016)) / FUNK
+  );
+
+  // Add a tiny bit of variance so it doesn't feel like a metronome.
+  enemyShootTimer = base * (0.85 + Math.random()*0.35);
 
   if (!enemies.length) return;
 
+  // Shoot from a random alive enemy (classic arcade chaos).
   const e = enemies[Math.floor(Math.random() * enemies.length)];
-  enemyBullets.push({ x: e.x, y: e.y + e.h/2 + 6, vy: 6 + wave*0.35, r: 4 });
+
+  // Straight-line shots, but slightly aimed (vx is constant, so still a straight path).
+  const dx = (player.x - e.x);
+  const vx = Math.max(-3.2, Math.min(3.2, dx * 0.012)); // gentle lead
+  const vy = (5.6 + wave*0.45) * FUNK;
+
+  enemyBullets.push({ x: e.x, y: e.y + e.h/2 + 6, vx, vy, r: 4 });
 }
 
 
@@ -661,7 +688,7 @@ function tryStartSwoop(dt){
   swoopTimer = interval;
 
   // Limit simultaneous swoopers so it stays readable.
-  const maxSwoopers = Math.min(3, 1 + Math.floor((wave-1) / 3));
+  const maxSwoopers = Math.min(4, Math.max(1, Math.floor((1 + (wave-1) / 3) * (0.9 + 0.25*(FUNK-1)))));
   const currentlySwooping = enemies.reduce((n, e) => n + (e.swoop ? 1 : 0), 0);
   if (currentlySwooping >= maxSwoopers) return;
 
@@ -811,7 +838,9 @@ function update(dt){
   }
 
   for (let i = enemyBullets.length - 1; i >= 0; i--){
-    enemyBullets[i].y += enemyBullets[i].vy;
+    const b = enemyBullets[i];
+    b.x += (b.vx || 0);
+    b.y += b.vy;
     if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
   }
 
@@ -922,7 +951,8 @@ if (baseY > maxBaseY){
 
       if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         enemies.splice(ei, 1);
-        compactEnemyGrid();
+        // v1.22: compactEnemyGrid() disabled (it made the game too easy by collapsing targets into one firing lane).
+        // compactEnemyGrid();
         bullets.splice(bi, 1);
         score += 10;
         playSfx(sfxHit);
