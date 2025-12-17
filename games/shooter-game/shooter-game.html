@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.23</title>
+<title>Galaga-ish Clone v1.24</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -134,11 +134,6 @@
   Added: Player bullets can collide with enemy bullets; both are deleted on contact (counter-shot mechanic).
 ====================================================================== */
 
-- 2025-12-17 | v1.24
-  Added: 25% wave-start chance to spawn a tiny strobing UFO (fast bouncing + dodges player approach).
-  Added: Shooting UFO grants one-time bomb power-up (UI slot bottom-right with 💥 + "Press Q").
-  Added: Press Q drops a flashing yellow/red bomb that explodes after a short fuse, deleting enemies + enemy bullets in a radius.
-
 
 /* =======================
    Paths (EDIT IF NEEDED)
@@ -177,16 +172,6 @@ const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 let lives = 5;
 let wave = 1;
 
-// =====================
-// UFO + Bomb Power-up (v1.24)
-// 25% chance each wave to spawn a tiny fast "UFO" that dodges you.
-// Shooting it grants a one-time bomb (press Q) that explodes enemies in a radius.
-// =====================
-const UFO_SPAWN_CHANCE = 0.25;
-let ufo = null; // {x,y,vx,vy,w,h,t,alive}
-let hasBomb = false;
-let bomb = null; // {x,y,t,armed,exploded}
-
 // v1.17: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
 let formationCols = 1;
 let formationRows = 1;
@@ -203,6 +188,24 @@ let gameState = STATE.MENU;
    Utility
 ======================= */
 function rand(min, max){ return min + Math.random() * (max - min); }
+
+// v1.24: Tiny fast UFO (25% chance on wave start).
+// - Spawns near top, bounces quickly, strobes black/white.
+// - No powerups in this build: shooting it grants score and removes it.
+function trySpawnUFO(){
+  // 25% chance at wave start
+  if (Math.random() > 0.25) { ufo = null; return; }
+
+  ufo = {
+    x: rand(40, canvas.width - 40),
+    y: 70,
+    r: 10,
+    vx: rand(-7.0, 7.0),
+    vy: rand(5.0, 8.0),
+    phase: 0
+  };
+}
+
 
 /* =======================
    Parallax Starfield (safe init order)
@@ -382,10 +385,12 @@ function startGame(){
   bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
+  ufo = null;
 
   resetFormation();
   spawnEnemies();
-  maybeSpawnUFO();
+    trySpawnUFO();
+  trySpawnUFO();
   window.focus();
 }
 
@@ -397,6 +402,7 @@ btnApply.addEventListener("click", () => {
   ENEMY_COLS = parseInt(colsSlider.value, 10);
   resetFormation();
   spawnEnemies();
+    trySpawnUFO();
 });
 
 function setAssetStatus(msg){ assetStatus.textContent = msg; }
@@ -582,189 +588,6 @@ function randEnemyImg(){
   return enemyImages[Math.floor(Math.random() * enemyImages.length)];
 }
 
-
-function maybeSpawnUFO(){
-  // Called at the start of each wave. 25% chance.
-  // Do not spawn if one already exists or if player already has a bomb (avoid stacking chaos).
-  if (ufo || hasBomb || bomb) return;
-  if (Math.random() > UFO_SPAWN_CHANCE) return;
-
-  const w = 26; // tiny
-  const h = 12;
-  ufo = {
-    x: canvas.width * (0.15 + Math.random()*0.70),
-    y: 40,
-    vx: (Math.random() < 0.5 ? -1 : 1) * (420 + Math.random()*220),
-    vy: (Math.random() < 0.5 ? -1 : 1) * (320 + Math.random()*200),
-    w, h,
-    t: 0,
-    alive: true
-  };
-}
-
-function updateUFO(dt){
-  if (!ufo || !ufo.alive) return;
-
-  ufo.t += dt;
-
-  // Steer away from the player's movement toward it (and also away from the player position).
-  const px = player.x, py = player.y;
-  const ux = ufo.x, uy = ufo.y;
-
-  const toUfoX = ux - px;
-  const toUfoY = uy - py;
-  const dist = Math.max(1, Math.hypot(toUfoX, toUfoY));
-  const awayX = toUfoX / dist;
-  const awayY = toUfoY / dist;
-
-  // Player velocity estimate (based on input, not physics-perfect, but good enough for dodging).
-  const pvx = (keys["ArrowRight"] || keys["d"] ? 1 : 0) - (keys["ArrowLeft"] || keys["a"] ? 1 : 0);
-  const pvy = (keys["ArrowDown"]  || keys["s"] ? 1 : 0) - (keys["ArrowUp"]   || keys["w"] ? 1 : 0);
-
-  // If player is moving toward the UFO, boost dodge.
-  const approach = (awayX * pvx + awayY * pvy); // >0 means player motion generally toward UFO
-  const dodgeBoost = Math.max(0, approach) * 260;
-
-  // Apply avoidance acceleration.
-  ufo.vx += awayX * (180 + dodgeBoost) * dt;
-  ufo.vy += awayY * (180 + dodgeBoost) * dt;
-
-  // Clamp speed to keep it "very fast" but not teleporty.
-  const sp = Math.hypot(ufo.vx, ufo.vy);
-  const maxSp = 820;
-  const minSp = 520;
-  if (sp > maxSp){ ufo.vx = (ufo.vx / sp) * maxSp; ufo.vy = (ufo.vy / sp) * maxSp; }
-  if (sp < minSp){ ufo.vx = (ufo.vx / sp) * minSp; ufo.vy = (ufo.vy / sp) * minSp; }
-
-  // Move + bounce
-  ufo.x += ufo.vx * dt;
-  ufo.y += ufo.vy * dt;
-
-  const pad = 8;
-  if (ufo.x < pad){ ufo.x = pad; ufo.vx *= -1; }
-  if (ufo.x > canvas.width - pad){ ufo.x = canvas.width - pad; ufo.vx *= -1; }
-  if (ufo.y < pad){ ufo.y = pad; ufo.vy *= -1; }
-  if (ufo.y > canvas.height * 0.60){ // keep it mostly top-ish
-    ufo.y = canvas.height * 0.60;
-    ufo.vy *= -1;
-  }
-
-  // Player bullet collision: shoot the UFO to earn a bomb.
-  for (let i = bullets.length - 1; i >= 0; i--){
-    const b = bullets[i];
-    // approximate UFO as an ellipse, use simple circle distance to its center (good enough).
-    const dx = b.x - ufo.x;
-    const dy = b.y - ufo.y;
-    const hitR = Math.max(ufo.w, ufo.h) * 0.65;
-    if (dx*dx + dy*dy <= (hitR + b.r) * (hitR + b.r)){
-      bullets.splice(i, 1);
-      ufo.alive = false;
-      ufo = null;
-      hasBomb = true;
-      // Little reward ping: re-use hit sound if it exists.
-      try { sfxHit.currentTime = 0; sfxHit.play(); } catch(e){}
-      break;
-    }
-  }
-}
-
-function drawUFO(){
-  if (!ufo || !ufo.alive) return;
-
-  // Strobing black/white oval
-  const strobe = (Math.floor(ufo.t * 24) % 2) === 0;
-  ctx.save();
-  ctx.translate(ufo.x, ufo.y);
-
-  // Outer oval
-  ctx.fillStyle = strobe ? "#fff" : "#000";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, ufo.w * 0.60, ufo.h * 0.60, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Inner window stripe for "UFO" vibe
-  ctx.fillStyle = strobe ? "#000" : "#fff";
-  ctx.beginPath();
-  ctx.ellipse(0, -ufo.h*0.10, ufo.w * 0.28, ufo.h * 0.18, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
-}
-
-function triggerBomb(){
-  if (!hasBomb || bomb) return;
-  hasBomb = false;
-  bomb = { x: player.x, y: player.y, t: 0, armed: true, exploded: false };
-}
-
-function explodeBomb(){
-  if (!bomb || bomb.exploded) return;
-
-  bomb.exploded = true;
-
-  const R = 170; // radius of pain
-  const R2 = R * R;
-
-  // Delete enemies in radius
-  for (let i = enemies.length - 1; i >= 0; i--){
-    const e = enemies[i];
-    const dx = e.x - bomb.x;
-    const dy = e.y - bomb.y;
-    if (dx*dx + dy*dy <= R2){
-      enemies.splice(i, 1);
-      score += 10;
-    }
-  }
-
-  // Also clear enemy bullets in radius so it feels fair.
-  for (let i = enemyBullets.length - 1; i >= 0; i--){
-    const eb = enemyBullets[i];
-    const dx = eb.x - bomb.x;
-    const dy = eb.y - bomb.y;
-    if (dx*dx + dy*dy <= R2){
-      enemyBullets.splice(i, 1);
-    }
-  }
-
-  try { sfxOof.currentTime = 0; sfxOof.play(); } catch(e){} // "boom" substitute
-
-  // Remove after a short visual linger
-  bomb.t = 0.0;
-}
-
-function updateBomb(dt){
-  if (!bomb) return;
-
-  bomb.t += dt;
-
-  // Flashing for ~1.1s, then explode.
-  if (!bomb.exploded && bomb.t >= 1.10){
-    explodeBomb();
-  }
-
-  // After explode, linger a bit then delete
-  if (bomb.exploded && bomb.t >= 0.30){
-    bomb = null;
-  }
-}
-
-function drawBomb(){
-  if (!bomb) return;
-
-  ctx.save();
-  const flash = (Math.floor(bomb.t * 20) % 2) === 0;
-  ctx.globalAlpha = bomb.exploded ? 0.65 : 1;
-
-  // Flashing yellow/red circle
-  ctx.fillStyle = flash ? "#ff0" : "#f00";
-  ctx.beginPath();
-  const r = bomb.exploded ? 170 : 14;
-  ctx.arc(bomb.x, bomb.y, r, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.restore();
-}
-
 function spawnEnemies(){
   enemies = [];
   const baseY = 80; // start higher (top zone)
@@ -816,6 +639,8 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 /* =======================
    Bullets
 ======================= */
+let ufo = null; // v1.24: optional bonus target (25% chance each wave)
+
 const bullets = [];
 const enemyBullets = [];
 
@@ -964,7 +789,6 @@ window.addEventListener("keydown", (e) => {
   keys[k] = true;
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
-  if (k === "q" && gameState === STATE.PLAYING) triggerBomb();
   if (k === "escape") showMenu();
 }, { passive:false });
 
@@ -1002,6 +826,34 @@ function update(dt){
   if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
+
+// v1.24: Update UFO (tiny fast bonus target)
+if (ufo){
+  ufo.phase += dt * 14;
+
+  // Move
+  ufo.x += ufo.vx;
+  ufo.y += ufo.vy;
+
+  // Bounce in a top-zone box
+  const minX = 18, maxX = canvas.width - 18;
+  const minY = 40, maxY = canvas.height * 0.42;
+
+  if (ufo.x < minX){ ufo.x = minX; ufo.vx *= -1; }
+  if (ufo.x > maxX){ ufo.x = maxX; ufo.vx *= -1; }
+  if (ufo.y < minY){ ufo.y = minY; ufo.vy *= -1; }
+  if (ufo.y > maxY){ ufo.y = maxY; ufo.vy *= -1; }
+
+  // Mild avoidance: if the player is moving toward it, nudge away horizontally
+  const playerMoveDir = (keys["a"] || keys["arrowleft"]) ? -1 : ((keys["d"] || keys["arrowright"]) ? 1 : 0);
+  if (playerMoveDir !== 0){
+    const toward = (playerMoveDir < 0 && ufo.x < player.x) || (playerMoveDir > 0 && ufo.x > player.x);
+    if (toward){
+      ufo.vx += Math.sign(ufo.x - player.x) * 0.25;
+      ufo.vx = Math.max(-9, Math.min(9, ufo.vx));
+    }
+  }
+}
 
   // v1.19: smooth the aim angle (shortest-path wrap) for nicer feel
   const da = normAngle(aimAngle - aimAngleSmoothed);
@@ -1067,11 +919,7 @@ function update(dt){
     }
   }
 
-  
-  // v1.24: power-up systems
-  updateUFO(dt);
-  updateBomb(dt);
-// v1.15: attempt to launch swoop attackers
+  // v1.15: attempt to launch swoop attackers
   tryStartSwoop(dt);
 
   // compute enemy positions
@@ -1220,8 +1068,8 @@ if (baseY > maxBaseY){
 
     resetFormation();
     spawnEnemies();
-    maybeSpawnUFO();
-}
+    trySpawnUFO();
+  }
 }
 
 function draw(){
@@ -1273,16 +1121,29 @@ if (gameState === STATE.PLAYING){
   ctx.restore();
 }
 
+
+  // v1.24: Draw UFO (strobing black/white oval)
+  if (ufo){
+    ctx.save();
+    ctx.translate(ufo.x, ufo.y);
+    const strobe = (Math.floor(time * 22) % 2) === 0;
+    ctx.fillStyle = strobe ? "#fff" : "#000";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // tiny outline so it doesn't vanish on white stars
+    ctx.strokeStyle = strobe ? "#000" : "#fff";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // enemies
   for (const e of enemies){
     ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
   }
 
-    // v1.24: UFO + bomb visuals
-  drawUFO();
-  drawBomb();
-
-// bullets (player)
+  // bullets (player)
   // v1.21: draw as simple circles (no text/letter-like shapes)
   ctx.fillStyle = "#ff0";
   for (const b of bullets){
@@ -1299,38 +1160,7 @@ if (gameState === STATE.PLAYING){
     ctx.fill();
   }
 
-  
-  // v1.24: Bomb item slot UI (bottom right)
-  if (gameState === STATE.PLAYING && (hasBomb || bomb)){
-    const slotSize = 54;
-    const pad = 14;
-    const x = canvas.width - pad - slotSize;
-    const y = canvas.height - pad - slotSize;
-
-    ctx.save();
-    ctx.globalAlpha = hasBomb ? 1 : 0.65;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.rect(x, y, slotSize, slotSize);
-    ctx.fill();
-    ctx.stroke();
-
-    // Emoji (explosion)
-    ctx.font = "28px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fff";
-    ctx.fillText("💥", x + slotSize/2, y + slotSize/2 - 4);
-
-    ctx.font = "bold 12px monospace";
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.fillText("Press Q", x + slotSize/2, y + slotSize + 12);
-    ctx.restore();
-  }
-
-overlay.innerHTML =
+  overlay.innerHTML =
     `Galaga-ish Clone v1.24<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
