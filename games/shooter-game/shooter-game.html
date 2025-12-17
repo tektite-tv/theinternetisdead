@@ -260,12 +260,12 @@
     // Helpers
     // -------------------------
     function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-    function aabbOverlap\(a, b\) \{
-      return a\.x < b\.x \+ b\.w &&
-             a\.x \+ a\.w > b\.x &&
-             a\.y < b\.y \+ b\.h &&
-             a\.y \+ a\.h > b\.y;
-    \}
+    function aabbOverlap(a, b) {
+      return a.x < b.x + b.w &&
+             a.x + a.w > b.x &&
+             a.y < b.y + b.h &&
+             a.y + a.h > b.y;
+    }
 function enemyRenderRect(e, t) {
       // Per-enemy phase so the whole group feels "alive" instead of perfectly synchronized.
       const breathe = Math.sin(t * formation.breatheSpeed + (e.breathePhase || 0));
