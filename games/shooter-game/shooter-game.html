@@ -2,383 +2,964 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Shooter Game v1.21</title>
+<title>Galaga-ish Clone v1.15</title>
 <style>
-html, body {
-  margin: 0;
-  padding: 0;
-  background: #000;
-  color: #fff;
-  overflow: hidden;
-  font-family: monospace;
-}
-canvas { display:block; background:#000; }
-#waveBanner{
-  position:absolute; top:38%;
-  width:100%; text-align:center;
-  font-size:48px; color:rgba(0,255,0,0.85);
-  pointer-events:none;
-}
-#hint{
-  position:absolute; left:12px; top:10px;
-  font-size:14px; opacity:0.8; pointer-events:none;
-}
+  html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
+  canvas { display:block; }
+  #overlay{
+    position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
+    text-shadow:0 0 6px rgba(0,255,0,0.35);
+   display:none; /* HUD hidden by default (toggle with /) */
+  }
+
+
+  #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .panel{
+    pointer-events:auto;
+    width:min(520px, 92vw);
+    border:1px solid rgba(0,255,0,0.35);
+    border-radius:14px;
+    background: rgba(0,0,0,0.72);
+    box-shadow: 0 0 28px rgba(0,255,0,0.08);
+    padding: 18px 18px 16px;
+    text-align:center;
+  }
+  .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
+  .subimg{
+    width:120px; height:120px; display:block; margin:0 auto 10px;
+    image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
+  }
+  .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  button{
+    font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    padding:10px 14px; border-radius:12px; cursor:pointer; min-width:160px;
+  }
+  button:hover{ background: rgba(0,255,0,0.08); }
+  .smallBtn{ min-width:120px; padding:8px 12px; border-radius:10px; }
+  .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:left; margin-top:10px; }
+  .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
+  .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
+  input[type="range"]{ width:100%; accent-color:#00ff66; }
+  .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
+  .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
 </style>
 </head>
 <body>
-<div id="waveBanner"></div>
-<div id="hint">Aim: mouse (top 180°). Shoot: Space or Left Click. Move: ← →</div>
 <canvas id="game"></canvas>
+<div id="overlay"></div>
+
+<div id="uiRoot">
+  <div id="startMenu" class="panel">
+    <div class="title">GALAGA-ISH CLONE</div>
+    <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
+    <div class="hint">Move: A/D or ⬅➡ · Shoot: Space · ESC: Menu · HUD: /</div>
+    <div class="btnRow">
+      <button id="btnStart">Start Game</button>
+      <button id="btnOptions">Options</button>
+    </div>
+    <div id="assetStatus" class="statusLine">Loading enemy images...</div>
+  </div>
+
+  <div id="optionsMenu" class="panel" style="display:none;">
+    <div class="title">OPTIONS</div>
+
+    <div class="optionsGrid">
+      <div class="optRow">
+        <div class="optLabel"><span>Enemy Rows</span><span id="rowsVal">4</span></div>
+        <input id="rowsSlider" type="range" min="1" max="10" value="4" step="1" />
+      </div>
+
+      <div class="optRow">
+        <div class="optLabel"><span>Enemy Columns</span><span id="colsVal">6</span></div>
+        <input id="colsSlider" type="range" min="1" max="14" value="6" step="1" />
+      </div>
+
+      <div class="optRow">
+        <div class="optLabel"><span>Total Enemies</span><span id="totalVal">24</span></div>
+        <div class="hint">Rows × Columns. More enemies = more chaos.</div>
+      </div>
+    </div>
+
+    <div class="btnRow" style="margin-top:14px;">
+      <button id="btnBack" class="smallBtn">Back</button>
+      <button id="btnApply" class="smallBtn">Apply</button>
+    </div>
+  </div>
+</div>
 
 <script>
-// ==============================
-// Shooter Game v1.21
-// Fixes / improvements (because games should not crash just because you resized a window):
-// - Keeps 180° top-aim + spawn-from-top-of-player.
-// - Prevents Space from scrolling the page (browser loves stealing Space).
-// - Restores Galaga-style "swoop" dives: formation stays top, individual enemies dive into player zone then return.
-// - Dives scale gently with wave, but still fun not "laser hell".
-// - Bullet-vs-bullet cancellation remains.
-// ==============================
+/* ======================================================================
+  PROJECT CHANGELOG / REMOVAL LOG
+========================================================================
+[REMOVAL LOG]
 
-// ---- BASIC SETUP ----
+- 2025-12-17 | v1.12.1
+  Fixed: Game not starting / enemy images not loading due to runtime error.
+  Cause: resize() called resetStarfield() before starLayers const initialized (TDZ).
+  Fix: Initialize starfield definitions before resize() runs; make resize() safe.
+
+- 2025-12-17 | v1.12.3
+  Undo: v1.12.2 "simplified demo" version (removed menus/options/combat/etc.).
+  Reason: User requested undo; restored full game build.
+  Added: Player size increase + enforced vertical padding between formation and player.
+  Location: player sizing, spawnEnemies baseY, update() formation Y clamp.
+
+- 2025-12-17 | v1.12.4
+  Added: Responsive desktop spacing so enemy formation uses screen width better.
+  Added: Hard top-of-screen clamp so enemies stay visible even after step-downs.
+  Tweaked: Reduced enemy base size + breathing scale to prevent overlap on desktop.
+  Tweaked: Formation edge detection uses predicted next position to avoid clipping.
+
+
+- 2025-12-17 | v1.14
+  Added: Galaga-like enemy descent (continuous downward pressure) + predictable wobble.
+  Tweaked: Enemy formation clamped to ~top half of screen (prevents encroaching into player zone).
+  Tweaked: Increased base enemy spacing (X/Y) for clearer separation.
+  Added: Wave banner ("WAVE 1", "WAVE 2", etc.) shown on start and after wave clears.
+  Tweaked: Difficulty scaling per wave (enemy horizontal speed, descent speed, step-down).
+
+
+- 2025-12-17 | v1.17
+  Added: Wave spawn scaling: Wave 1 = 1 enemy, then doubles each wave (capped).
+  Tweaked: FUN MODE: more lives, slower enemy pressure, slower swoops, faster bullets, gentler scaling.
+  Added: Dynamic formation packing: auto-cols/rows + auto enemy sizing to fit top-zone area.
+  Kept: Galaga-style 'swoop' attackers: individual enemies break formation, dive toward the player, then return.
+  Kept: Main formation stays in the top zone; only swoopers can enter player space.
+  Tweaked: Player fire rate increases each wave (cooldown decreases).
+====================================================================== */
+
+
+/* =======================
+   Paths (EDIT IF NEEDED)
+======================= */
+const GIF_BASE = "/media/images/gifs/";
+const AUDIO_HIT = "/media/audio/hitmarker.mp3";
+const AUDIO_OOF = "/media/audio/oof.mp3";
+
+/* =======================
+   Player Firing Tuning
+======================= */
+const BASE_PLAYER_FIRE_COOLDOWN = 0.26; // seconds (wave scaling reduces this)
+const PLAYER_BULLET_SPEED  = -8.0; // slower bullets
+
+function getPlayerFireCooldown(){
+  // v1.13: player shoots faster every wave (lower cooldown)
+  return Math.max(0.14, BASE_PLAYER_FIRE_COOLDOWN * Math.pow(0.94, (wave-1)));
+}
+
+/* =======================
+   Canvas + Globals
+======================= */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
 
-const TOP_ZONE_RATIO = 0.48;        // enemy formation "home" lives in top ~half
-const DIVE_FLOOR_RATIO = 0.82;      // how far a diver is allowed to go (relative to canvas height)
+let hudVisible = false; // v1.12.5: HUD hidden by default; toggle with / (Slash)
 
-const banner = document.getElementById("waveBanner");
+let time = 0;
+let score = 0;
+let lives = 5;
+let wave = 1;
 
-const player = {
-  x: window.innerWidth / 2,
-  y: window.innerHeight * 0.85,
-  r: 15,
-  lives: 5,
-  invuln: 0
-};
+// v1.17: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
+let formationCols = 1;
+let formationRows = 1;
 
+
+// v1.13: wave banner (big text popup)
+let waveBanner = { text:"", t:0 };
+function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; }
+
+const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
+let gameState = STATE.MENU;
+
+/* =======================
+   Utility
+======================= */
+function rand(min, max){ return min + Math.random() * (max - min); }
+
+/* =======================
+   Parallax Starfield (safe init order)
+======================= */
+const starLayers = [
+  { count: 180, baseSpeedY: 40,  parallaxX: 0.35, sizeMin: 1, sizeMax: 2 },
+  { count: 120, baseSpeedY: 80,  parallaxX: 0.60, sizeMin: 1, sizeMax: 3 },
+  { count: 70,  baseSpeedY: 140, parallaxX: 0.90, sizeMin: 2, sizeMax: 4 }
+];
+
+let stars = [];
+let playerVxSmoothed = 0;
+let starfieldReady = false;
+
+function resetStarfield(){
+  stars = starLayers.map(layer => {
+    const arr = [];
+    for (let i = 0; i < layer.count; i++){
+      arr.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        s: rand(layer.sizeMin, layer.sizeMax),
+        vyMul: rand(0.7, 1.3)
+      });
+    }
+    return arr;
+  });
+  starfieldReady = true;
+}
+
+function updateStarfield(dt, keys, playerSpeed){
+  if (!starfieldReady) return;
+
+  let vxIntent = 0;
+  if (gameState === STATE.PLAYING){
+    if (keys["a"] || keys["arrowleft"])  vxIntent -= 1;
+    if (keys["d"] || keys["arrowright"]) vxIntent += 1;
+  } else {
+    vxIntent = 0.15 * Math.sin(time * 0.6);
+  }
+
+  const targetVx = vxIntent * playerSpeed * 55;
+  playerVxSmoothed += (targetVx - playerVxSmoothed) * Math.min(1, dt * 8);
+
+  for (let li = 0; li < starLayers.length; li++){
+    const layer = starLayers[li];
+    const arr = stars[li];
+
+    const driftX = -playerVxSmoothed * layer.parallaxX;
+    const driftY = layer.baseSpeedY;
+
+    for (const st of arr){
+      st.x += driftX * dt;
+      st.y += driftY * st.vyMul * dt;
+
+      if (st.y > canvas.height + 10) st.y = -10;
+      if (st.x < -10) st.x = canvas.width + 10;
+      if (st.x > canvas.width + 10) st.x = -10;
+    }
+  }
+}
+
+function drawStarfield(){
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  if (!starfieldReady) return;
+
+  for (let li = 0; li < starLayers.length; li++){
+    const arr = stars[li];
+    const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    for (const st of arr){
+      ctx.fillRect(st.x, st.y, st.s, st.s);
+    }
+  }
+}
+
+/* =======================
+   Resize
+======================= */
 function resize(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  player.y = canvas.height * 0.85;
-  player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
+
+  // v1.12.3: keep player anchored nicely after resizes
+  player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+
+  resetStarfield();
 }
 window.addEventListener("resize", resize);
-resize();
 
-// ---- AIMING ----
-let mouseX = canvas.width/2, mouseY = canvas.height/2;
-let mouseDown = false;
+/* =======================
+   Audio
+======================= */
+const sfxHit = new Audio(AUDIO_HIT);
+const sfxOof = new Audio(AUDIO_OOF);
+sfxHit.preload = "auto";
+sfxOof.preload = "auto";
+sfxHit.volume = 0.7;
+sfxOof.volume = 0.8;
 
-function setMouseFromEvent(e){
-  const rect = canvas.getBoundingClientRect();
-  mouseX = e.clientX - rect.left;
-  mouseY = e.clientY - rect.top;
+let audioUnlocked = false;
+function unlockAudioOnce(){
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try{
+    sfxHit.muted = true;
+    sfxHit.play().then(() => { sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false; }).catch(()=>{ sfxHit.muted = false; });
+
+    sfxOof.muted = true;
+    sfxOof.play().then(() => { sfxOof.pause(); sfxOof.currentTime = 0; sfxOof.muted = false; }).catch(()=>{ sfxOof.muted = false; });
+  }catch(e){}
 }
-canvas.addEventListener("mousemove", setMouseFromEvent);
-canvas.addEventListener("mousedown", (e)=>{ if(e.button===0){ mouseDown=true; setMouseFromEvent(e); }});
-window.addEventListener("mouseup", (e)=>{ if(e.button===0) mouseDown=false; });
-
-function getAimAngle(){
-  const dx = mouseX - player.x;
-  const dy = mouseY - (player.y - player.r); // reference point: top edge of player
-  let ang = Math.atan2(dy, dx);              // -PI..PI
-
-  // Clamp to top hemisphere: [-PI, 0]
-  // If the mouse is below the player (ang > 0), snap to nearest boundary (left/right).
-  if (ang > 0) ang = (dx < 0) ? -Math.PI : 0;
-  if (ang < -Math.PI) ang = -Math.PI;
-
-  return ang;
+function playSfx(a){
+  try{
+    const c = a.cloneNode();
+    c.volume = a.volume;
+    c.play().catch(()=>{});
+  }catch(e){}
 }
 
-// ---- INPUT ----
-const keys = {};
-window.addEventListener("keydown", (e)=>{
-  keys[e.key] = true;
-  if (e.key === " ") e.preventDefault(); // stop page scroll
+/* =======================
+   UI
+======================= */
+const uiRoot = document.getElementById("uiRoot");
+const startMenu = document.getElementById("startMenu");
+const optionsMenu = document.getElementById("optionsMenu");
+const assetStatus = document.getElementById("assetStatus");
+
+const btnStart = document.getElementById("btnStart");
+const btnOptions = document.getElementById("btnOptions");
+const btnBack = document.getElementById("btnBack");
+const btnApply = document.getElementById("btnApply");
+
+const rowsSlider = document.getElementById("rowsSlider");
+const colsSlider = document.getElementById("colsSlider");
+const rowsVal = document.getElementById("rowsVal");
+const colsVal = document.getElementById("colsVal");
+const totalVal = document.getElementById("totalVal");
+
+let ENEMY_ROWS = parseInt(rowsSlider.value, 10);
+let ENEMY_COLS = parseInt(colsSlider.value, 10);
+
+function syncOptionsLabels(){
+  rowsVal.textContent = rowsSlider.value;
+  colsVal.textContent = colsSlider.value;
+
+  // v1.17: sliders still display a grid size, but waves now control actual spawn count (1, 2, 4, 8...)
+  const sliderTotal = (parseInt(rowsSlider.value,10) * parseInt(colsSlider.value,10));
+  const waveTotal = Math.min(256, Math.pow(2, (wave - 1)));
+  totalVal.textContent = sliderTotal.toString() + " | wave spawn: " + waveTotal.toString();
+}
+rowsSlider.addEventListener("input", syncOptionsLabels);
+colsSlider.addEventListener("input", syncOptionsLabels);
+syncOptionsLabels();
+
+function showMenu(){
+  gameState = STATE.MENU;
+  startMenu.style.display = "block";
+  optionsMenu.style.display = "none";
+  uiRoot.style.display = "flex";
+}
+function showOptions(){
+  gameState = STATE.OPTIONS;
+  startMenu.style.display = "none";
+  optionsMenu.style.display = "block";
+  uiRoot.style.display = "flex";
+}
+function startGame(){
+  unlockAudioOnce();
+  gameState = STATE.PLAYING;
+  uiRoot.style.display = "none";
+
+  score = 0; lives = 3; wave = 1;
+  showWaveBanner(1);
+  bullets.length = 0;
+  enemyBullets.length = 0;
+  fireCooldown = 0;
+
+  resetFormation();
+  spawnEnemies();
+  window.focus();
+}
+
+btnStart.addEventListener("click", startGame);
+btnOptions.addEventListener("click", showOptions);
+btnBack.addEventListener("click", showMenu);
+btnApply.addEventListener("click", () => {
+  ENEMY_ROWS = parseInt(rowsSlider.value, 10);
+  ENEMY_COLS = parseInt(colsSlider.value, 10);
+  resetFormation();
+  spawnEnemies();
 });
-window.addEventListener("keyup", (e)=>{ keys[e.key] = false; });
 
-// ---- HELPERS ----
-function dist(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
-function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+function setAssetStatus(msg){ assetStatus.textContent = msg; }
 
-// ---- GAME STATE ----
-let wave = 1;
-let enemies = [];
-let playerBullets = [];
-let enemyBullets = [];
+/* =======================
+   Player (v1.12.3 bigger)
+======================= */
+const playerImg = new Image();
+playerImg.src = GIF_BASE + "bananarama.gif";
+
+// v1.12.3 sizing + anchoring
+const PLAYER_SIZE = 72;                 // was 48
+const PLAYER_BOTTOM_MARGIN = 100;       // gives breathing room vs browser UI
+const FORMATION_PLAYER_GAP = 160;       // v1.13: no longer enforced (kept for tuning/experiments)
+
+const player = {
+  x: 0,
+  y: 0,
+  w: PLAYER_SIZE,
+  h: PLAYER_SIZE,
+  speed: 6,
+  invuln: 0
+};
+
+const keys = {};
 let fireCooldown = 0;
 
-// ---- UI ----
-function showWave(){
-  banner.textContent = "WAVE " + wave;
-  setTimeout(()=> banner.textContent="", 1100);
+/* =======================
+   Enemy Images from index.json
+======================= */
+let enemyImages = [];
+let assetsReady = false;
+
+const FALLBACK_URLS = [
+  GIF_BASE + "frog.gif",
+  GIF_BASE + "skeleton.gif",
+  GIF_BASE + "dragon.gif",
+  GIF_BASE + "firework.gif"
+];
+
+function preloadImages(urls){
+  return new Promise((resolve) => {
+    const imgs = [];
+    let done = 0;
+    if (!urls.length) resolve(imgs);
+
+    urls.forEach((url) => {
+      const img = new Image();
+      img.onload = () => { done++; if (done === urls.length) resolve(imgs); };
+      img.onerror = () => { done++; if (done === urls.length) resolve(imgs); };
+      img.src = url;
+      imgs.push(img);
+    });
+  });
 }
 
-// ---- WAVES / ENEMIES ----
-function spawnWave(){
+async function loadEnemyImagesFromIndex(){
+  try{
+    setAssetStatus("Fetching index.json...");
+    const res = await fetch(GIF_BASE + "index.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const list = await res.json();
+    if (!Array.isArray(list)) throw new Error("index.json not an array");
+
+    const urls = list
+      .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".gif"))
+      .map(name => GIF_BASE + name);
+
+    if (!urls.length) throw new Error("No gifs in index.json");
+
+    setAssetStatus(`Preloading ${urls.length} enemy images...`);
+    let imgs = await preloadImages(urls);
+    imgs = imgs.filter(img => img && img.naturalWidth > 0);
+    if (!imgs.length) throw new Error("All enemy images failed to load");
+
+    enemyImages = imgs;
+    assetsReady = true;
+    setAssetStatus(`Loaded ${enemyImages.length} enemy images ✅`);
+  }catch(err){
+    console.warn("Failed to load index.json enemy list:", err);
+    setAssetStatus("Failed to load index.json. Using fallback images.");
+    let imgs = await preloadImages(FALLBACK_URLS);
+    enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
+    assetsReady = true;
+  }
+}
+loadEnemyImagesFromIndex();
+
+/* =======================
+   Enemies + Formation Movement
+======================= */
+const BASE_SPACING_X = 105;
+
+function getSpacingX(){
+  // v1.12.4: Responsive horizontal spacing (desktop-friendly)
+  const maxFormationWidth = canvas.width * 0.82;     // use most of the screen width
+  const cols = Math.max(1, formationCols - 1);       // gaps between columns (dynamic per wave)
+  return Math.min(120, Math.max(80, maxFormationWidth / cols));
+}
+
+function getSpacingY(){
+  // v1.17: Responsive vertical spacing based on current wave formation size
+  const maxFormationHeight = canvas.height * 0.38; // keep formation mostly in top zone
+  const rows = Math.max(1, formationRows - 1);
+  return Math.min(110, Math.max(45, maxFormationHeight / rows));
+}
+
+
+let enemies = [];
+
+const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, descentSpeed:12, boundsPad:40 };
+
+function resetFormation(){
+  formation.xOffset = 0;
+  formation.yOffset = 0;
+  formation.dir = 1;
+
+  // v1.13: difficulty scaling per wave
+  formation.speed = 1.05 + (wave-1) * 0.12;      // horizontal sweep speed
+  formation.stepDown = 12 + (wave-1) * 1.0;      // extra drop when bouncing off edges
+  formation.descentSpeed = 4 + (wave-1) * 2.0;  // constant downward pressure (Galaga-ish)
+}
+
+function randEnemyImg(){
+  if (!enemyImages.length) return playerImg;
+  return enemyImages[Math.floor(Math.random() * enemyImages.length)];
+}
+
+function spawnEnemies(){
   enemies = [];
-  const count = Math.min(2 ** (wave - 1), 128);
+  const baseY = 80; // start higher (top zone)
 
-  const cols = Math.ceil(Math.sqrt(count));
-  const rows = Math.ceil(count / cols);
+  // v1.17: Wave sizing
+  // Wave 1 spawns 1 enemy, then doubles each wave (2x previous).
+  // We cap it to keep browsers from melting into a puddle.
+  const MAX_WAVE_ENEMIES = 128;
+  const count = Math.min(MAX_WAVE_ENEMIES, Math.pow(2, (wave - 1)));
 
-  const zoneH = canvas.height * TOP_ZONE_RATIO;
-  const spacingX = canvas.width / (cols + 1);
-  const spacingY = zoneH / (rows + 1);
+  // v1.17: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
+  // Keep the "formation area" mostly in the top half.
+  const zoneW = canvas.width * 0.82;
+  const zoneH = canvas.height * 0.38;
 
-  // shrink to fit as waves grow
-  const r = Math.min(spacingX, spacingY) * 0.32;
+  // Choose columns/rows to fit the count into the zone with a roughly square-ish grid.
+  const idealCols = Math.ceil(Math.sqrt(count * (zoneW / Math.max(1, zoneH))));
+  formationCols = Math.max(1, Math.min(count, idealCols));
+  formationRows = Math.max(1, Math.ceil(count / formationCols));
 
-  let i = 0;
-  for (let rr=0; rr<rows; rr++){
-    for (let cc=0; cc<cols && i<count; cc++){
-      const homeX = spacingX * (cc + 1);
-      const homeY = spacingY * (rr + 1);
-      enemies.push({
-        x: homeX, y: homeY,
-        homeX, homeY,
-        r,
-        t: Math.random() * Math.PI * 2, // wobble phase
-        diving: false,
-        diveT: 0,
-        diveDir: (Math.random()<0.5 ? -1 : 1),
-        hp: 1
-      });
-      i++;
-    }
+  // Compute a size that fits nicely in each cell.
+  const cellW = zoneW / formationCols;
+  const cellH = zoneH / formationRows;
+  const baseSize = Math.max(18, Math.min(56, Math.min(cellW, cellH) * 0.60));
+
+  for (let i = 0; i < count; i++){
+    const r = Math.floor(i / formationCols);
+    const c = i % formationCols;
+
+    enemies.push({ row:r, col:c, baseY, img: randEnemyImg(), size:baseSize, hp:1, x:0,y:0,w:0,h:0,
+      fx:0, fy:0, // formation-space position (computed each frame)
+      swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
+      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
+    });
   }
-  showWave();
 }
 
-// ---- SHOOTING ----
-function shootPlayer(){
+/* =======================
+   Bullets
+======================= */
+const bullets = [];
+const enemyBullets = [];
+
+function shoot(){
   if (fireCooldown > 0) return;
+  bullets.push({ x: player.x, y: player.y - (player.h/2) + 6, vy: PLAYER_BULLET_SPEED, r: 4 });
 
-  const ang = getAimAngle();
-  const speed = 10;
-  const vx = Math.cos(ang) * speed;
-  const vy = Math.sin(ang) * speed; // <= 0 in top hemisphere
-
-  // spawn from the top of player circle (above bottom of its "image")
-  const spawnX = player.x;
-  const spawnY = player.y - player.r;
-
-  playerBullets.push({ x: spawnX, y: spawnY, vx, vy, r: 4 });
-  fireCooldown = Math.max(12 - wave, 5); // slightly slower by default, speeds up with wave
+  // v1.13: faster firing as waves increase
+  fireCooldown = getPlayerFireCooldown();
 }
 
-// ---- ENEMY DIVE LOGIC ----
-function tryStartDive(e){
-  // keep it fun: chance rises with wave but stays reasonable
-  const base = 0.0006;
-  const perWave = 0.00025;
-  const chance = base + perWave * Math.min(wave, 10);
+let enemyShootTimer = 0;
+function enemyTryShoot(dt){
+  enemyShootTimer -= dt;
+  if (enemyShootTimer > 0) return;
 
-  // fewer dives when there are tons of enemies (prevents "everyone dives at once")
-  const crowd = clamp(60 / Math.max(enemies.length, 1), 0.25, 1.0);
+  const alive = enemies.length;
+  const base = Math.max(0.18, 0.55 - wave*0.04 - Math.min(0.22, alive*0.002));
+  enemyShootTimer = base;
 
-  if (!e.diving && Math.random() < chance * crowd){
-    e.diving = true;
-    e.diveT = 0;
-    // choose a deterministic-ish curve direction (left/right) so it looks patterned
-    e.diveDir = (e.x < canvas.width/2) ? 1 : -1;
-  }
+  if (!enemies.length) return;
+
+  const e = enemies[Math.floor(Math.random() * enemies.length)];
+  enemyBullets.push({ x: e.x, y: e.y + e.h/2 + 6, vy: 6 + wave*0.35, r: 4 });
 }
 
-function updateEnemy(e){
-  // predictable formation wobble (home positions drift slightly)
-  e.t += 0.02;
-  const wobbleX = Math.sin(e.t) * 0.8;
-  const wobbleY = Math.cos(e.t*0.7) * 0.3;
 
-  // formation drift stays in top zone
-  const homeClampY = canvas.height * TOP_ZONE_RATIO - e.r * 1.5;
-  e.homeY = clamp(e.homeY + wobbleY * 0.2, e.r*1.5, homeClampY);
+let swoopTimer = 0;
 
-  // Occasionally start dives
-  tryStartDive(e);
-
-  if (!e.diving){
-    // ease back to home
-    e.x += (e.homeX + wobbleX - e.x) * 0.08;
-    e.y += (e.homeY - e.y) * 0.08;
-
-    // shoot occasionally from formation
-    const shootChance = 0.0012 + 0.00025 * Math.min(wave, 8);
-    if (Math.random() < shootChance){
-      enemyBullets.push({ x: e.x, y: e.y, vy: 4 + Math.min(wave, 5), r: 4 });
-    }
-    return;
-  }
-
-  // Diving: swoop down then arc back up and rejoin formation
-  e.diveT += 1;
-  const t = e.diveT;
-
-  // dive speed scales gently
-  const downSpeed = 2.2 + 0.25 * Math.min(wave, 8);
-  const sideSpeed = 2.0 + 0.20 * Math.min(wave, 8);
-
-  // A smooth "S" curve using sin
-  e.x += Math.sin(t * 0.08) * sideSpeed * e.diveDir;
-  e.y += downSpeed;
-
-  // Divers shoot less often than you'd think (because fun)
-  if (Math.random() < 0.0025){
-    enemyBullets.push({ x: e.x, y: e.y, vy: 5 + Math.min(wave, 5), r: 4 });
-  }
-
-  // If diver reaches the dive floor, start returning
-  const diveFloorY = canvas.height * DIVE_FLOOR_RATIO;
-  if (e.y >= diveFloorY){
-    // force return by "telegraphing" a curved retreat
-    e.diveT = 9999; // triggers return behavior below
-  }
-
-  if (e.diveT > 180){
-    // Return: lerp strongly back toward home in top zone
-    e.x += (e.homeX - e.x) * 0.12;
-    e.y += (e.homeY - e.y) * 0.12;
-
-    // Once close enough, snap back to formation and stop diving
-    if (dist(e.x, e.y, e.homeX, e.homeY) < e.r * 0.6){
-      e.x = e.homeX; e.y = e.homeY;
-      e.diving = false;
-      e.diveT = 0;
-    }
-  }
-}
-
-// ---- MAIN LOOP ----
-function update(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // Player move
-  if (keys["ArrowLeft"]) player.x -= 6;
-  if (keys["ArrowRight"]) player.x += 6;
-  player.x = clamp(player.x, player.r, canvas.width - player.r);
-
-  // Shoot: Space or mouse
-  if (keys[" "] || mouseDown) shootPlayer();
-  if (fireCooldown > 0) fireCooldown--;
-
-  // Update bullets
-  for (const b of playerBullets){ b.x += b.vx; b.y += b.vy; }
-  for (const b of enemyBullets){ b.y += b.vy; }
-
-  // Cull offscreen
-  playerBullets = playerBullets.filter(b => b.x>-60 && b.x<canvas.width+60 && b.y>-60 && b.y<canvas.height+60);
-  enemyBullets  = enemyBullets.filter(b => b.y>-60 && b.y<canvas.height+60);
-
-  // Bullet vs bullet (cancel)
-  for (let i=playerBullets.length-1; i>=0; i--){
-    for (let j=enemyBullets.length-1; j>=0; j--){
-      const a = playerBullets[i], e = enemyBullets[j];
-      if (dist(a.x,a.y,e.x,e.y) < (a.r + e.r)){
-        playerBullets.splice(i,1);
-        enemyBullets.splice(j,1);
-        break;
-      }
-    }
-  }
-
-  // Update enemies
-  for (const e of enemies) updateEnemy(e);
-
-  // Player bullets vs enemies
-  for (let i=playerBullets.length-1; i>=0; i--){
-    const b = playerBullets[i];
-    for (let j=enemies.length-1; j>=0; j--){
-      const e = enemies[j];
-      if (dist(b.x,b.y,e.x,e.y) < e.r){
-        enemies.splice(j,1);
-        playerBullets.splice(i,1);
-        break;
-      }
-    }
-  }
-
-  // Enemy bullets vs player
-  if (player.invuln > 0) player.invuln--;
-  for (let i=enemyBullets.length-1; i>=0; i--){
-    const b = enemyBullets[i];
-    if (dist(b.x,b.y,player.x,player.y) < (player.r + b.r) && player.invuln<=0){
-      enemyBullets.splice(i,1);
-      player.lives--;
-      player.invuln = 70; // slightly longer i-frames = funner
-    }
-  }
-
-  // Aim guide
-  const ang = getAimAngle();
-  ctx.beginPath();
-  ctx.moveTo(player.x, player.y - player.r);
-  ctx.lineTo(player.x + Math.cos(ang)*90, (player.y - player.r) + Math.sin(ang)*90);
-  ctx.strokeStyle = "rgba(0,255,255,0.35)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.lineWidth = 1;
-
-  // Draw separation line (enemy zone bottom) as a subtle hint
-  const sepY = canvas.height * TOP_ZONE_RATIO;
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
-  ctx.beginPath();
-  ctx.moveTo(0, sepY);
-  ctx.lineTo(canvas.width, sepY);
-  ctx.stroke();
-
-  // Draw player
-  ctx.beginPath();
-  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
-  ctx.fillStyle = player.invuln ? "yellow" : "white";
-  ctx.fill();
-
-  // Draw enemies
+/*
+  v1.15: Galaga-like swoop attackers.
+  The *formation* is clamped to the top zone.
+  Individual enemies can temporarily dive into the player zone ("swoop") and then return.
+*/
+function tryStartSwoop(dt){
+  // tick per-enemy cooldowns
   for (const e of enemies){
+    if (e.swoopCooldown > 0) e.swoopCooldown = Math.max(0, e.swoopCooldown - dt);
+  }
+
+  swoopTimer -= dt;
+  if (swoopTimer > 0) return;
+
+  // How often a swoop starts (faster on higher waves)
+  const interval = Math.max(0.7, 2.0 - wave * 0.12);
+  swoopTimer = interval;
+
+  // Limit simultaneous swoopers so it stays readable.
+  const maxSwoopers = Math.min(3, 1 + Math.floor((wave-1) / 3));
+  const currentlySwooping = enemies.reduce((n, e) => n + (e.swoop ? 1 : 0), 0);
+  if (currentlySwooping >= maxSwoopers) return;
+
+  // Pick an eligible enemy.
+  const candidates = enemies.filter(e => !e.swoop && e.swoopCooldown <= 0);
+  if (!candidates.length) return;
+
+  const e = candidates[Math.floor(Math.random() * candidates.length)];
+
+  // Start at current formation position (fx/fy computed in update loop).
+  const sx = e.fx || e.x;
+  const sy = e.fy || e.y;
+
+  // End near player area, but not *below* the player.
+  const endY = Math.min(canvas.height * 0.90, player.y - 40);
+  const endX = Math.max(40, Math.min(canvas.width - 40, player.x + rand(-140, 140)));
+
+  // Control point makes an arcing dive (sideways + down).
+  const c1x = sx + rand(-220, 220);
+  const c1y = sy + rand(140, 260);
+
+  // Duration scales with wave (faster dives later).
+  const dur = Math.max(1.1, 1.75 - wave * 0.03);
+
+  e.swoop = { t:0, dur, phase:"down", sx, sy, c1x, c1y, ex:endX, ey:endY };
+  e.swoopCooldown = Math.max(1.2, 3.0 - wave * 0.10); // wait before it can swoop again
+}
+
+function quadBezier(t, a, b, c){
+  // (1-t)^2 a + 2(1-t)t b + t^2 c
+  const mt = 1 - t;
+  return (mt*mt)*a + (2*mt*t)*b + (t*t)*c;
+}
+
+
+/* =======================
+   Collision helpers
+======================= */
+function circleRect(cx, cy, cr, rx, ry, rw, rh){
+  const testX = Math.max(rx, Math.min(cx, rx+rw));
+  const testY = Math.max(ry, Math.min(cy, ry+rh));
+  const dx = cx - testX;
+  const dy = cy - testY;
+  return (dx*dx + dy*dy) <= cr*cr;
+}
+
+function damagePlayer(){
+  if (player.invuln > 0) return;
+  lives -= 1;
+  player.invuln = 1.20;
+  playSfx(sfxOof);
+  if (lives <= 0) showMenu();
+}
+
+/* =======================
+   Input
+======================= */
+window.addEventListener("keydown", (e) => {
+  unlockAudioOnce();
+  if (e.code === "Space") e.preventDefault();
+
+  // v1.12.5: HUD toggle (Slash key) - hidden by default
+  if (e.code === "Slash"){
+    hudVisible = !hudVisible;
+    overlay.style.display = hudVisible ? "block" : "none";
+  }
+
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+
+  if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
+  if (k === "escape") showMenu();
+}, { passive:false });
+
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+
+canvas.addEventListener("pointerdown", () => {
+  unlockAudioOnce();
+  if (gameState === STATE.PLAYING) shoot();
+});
+
+/* =======================
+   Update + Draw
+======================= */
+function update(dt){
+  time += dt;
+
+  // starfield updates always
+  updateStarfield(dt, keys, player.speed);
+
+  if (gameState !== STATE.PLAYING) return;
+
+  if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
+  if (fireCooldown > 0) fireCooldown = Math.max(0, fireCooldown - dt);
+
+  if (waveBanner.t > 0) waveBanner.t = Math.max(0, waveBanner.t - dt);
+
+  // player move
+  if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
+  if (keys["d"] || keys["arrowright"]) player.x += player.speed;
+  player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
+
+  // formation movement bounds depend on breathing spacing
+  const breath = Math.sin(time * 2) * 0.5 + 0.5;
+  const spacingX = getSpacingX() * (1 + breath * 0.25);
+
+  const formationWidth = (formationCols - 1) * spacingX;
+
+  // v1.12.4: predict next X so we don't clip enemies on wider desktop layouts
+  const nextXOffset = formation.xOffset + (formation.dir * formation.speed);
+
+  const leftEdgeNext  = canvas.width/2 - formationWidth/2 + nextXOffset;
+  const rightEdgeNext = canvas.width/2 + formationWidth/2 + nextXOffset;
+
+  if (leftEdgeNext < formation.boundsPad){
+    formation.dir = 1;
+    formation.xOffset += 2;
+    formation.yOffset += formation.stepDown;
+  } else if (rightEdgeNext > canvas.width - formation.boundsPad){
+    formation.dir = -1;
+    formation.xOffset -= 2;
+    formation.yOffset += formation.stepDown;
+  } else {
+    formation.xOffset = nextXOffset;
+  }
+
+  // v1.13: always drift downward toward the player (Galaga pressure)
+  formation.yOffset += formation.descentSpeed * dt;
+
+  // update bullets
+  for (let i = bullets.length - 1; i >= 0; i--){
+    bullets[i].y += bullets[i].vy;
+    if (bullets[i].y < -50) bullets.splice(i, 1);
+  }
+
+  for (let i = enemyBullets.length - 1; i >= 0; i--){
+    enemyBullets[i].y += enemyBullets[i].vy;
+    if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
+  }
+
+  // v1.15: attempt to launch swoop attackers
+  tryStartSwoop(dt);
+
+  // compute enemy positions
+  const spacingY = getSpacingY() * (1 + breath * 0.15);
+  const formationHeight = (formationRows - 1) * spacingY;
+
+  const startX = canvas.width/2 - formationWidth/2 + formation.xOffset;
+
+  // v1.12.3: base spawn Y from each enemy, plus formation yOffset
+  // then clamp so the formation bottom never gets too close to player
+  let baseY = 80 + formation.yOffset;
+
+// Keep enemies in the TOP half-ish of the screen.
+// We still drift downward (Galaga pressure), but we *cap* the formation so it doesn't
+// invade the player's space like it's paying rent down there.
+const TOP_SAFE_MARGIN = 60;
+const ENEMY_ZONE_MAX_Y = canvas.height * 0.48; // ~top half with a little buffer
+
+// Clamp TOP
+if (baseY < TOP_SAFE_MARGIN){
+  formation.yOffset += (TOP_SAFE_MARGIN - baseY);
+  baseY = TOP_SAFE_MARGIN;
+}
+
+// Clamp BOTTOM (based on full formation height)
+const maxBaseY = ENEMY_ZONE_MAX_Y - formationHeight;
+if (baseY > maxBaseY){
+  // pull the whole formation back up
+  formation.yOffset -= (baseY - maxBaseY);
+  baseY = maxBaseY;
+  // if the formation is too tall to fit, at least respect the top margin
+  if (baseY < TOP_SAFE_MARGIN) baseY = TOP_SAFE_MARGIN;
+}
+
+
+  for (const e of enemies){
+    if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
+
+    const scale = 1 + breath * 0.18;
+    const size = e.size * scale;
+
+    // v1.13: predictable formation wobble (non-random, just annoying)
+    const wobbleAmpX = 6 + Math.min(14, wave * 1.2);
+    const wobbleAmpY = 3 + Math.min(10, wave * 0.7);
+    const wobbleX = Math.sin(time * (0.9 + wave*0.03) + e.row * 0.7) * wobbleAmpX;
+    const wobbleY = Math.cos(time * (1.1 + wave*0.02) + e.col * 0.6) * wobbleAmpY;
+
+    e.fx = startX + e.col * spacingX + wobbleX;
+    e.fy = baseY + e.row * spacingY + wobbleY;
+
+    if (!e.swoop){
+      // Normal formation tracking.
+      e.x = e.fx;
+      e.y = e.fy;
+    } else {
+      // Swoop motion: dive down along a bezier arc, then return back to formation.
+      e.swoop.t += dt;
+      const u = Math.min(1, e.swoop.t / e.swoop.dur);
+
+      if (e.swoop.phase === "down"){
+        e.x = quadBezier(u, e.swoop.sx, e.swoop.c1x, e.swoop.ex);
+        e.y = quadBezier(u, e.swoop.sy, e.swoop.c1y, e.swoop.ey);
+
+        if (u >= 1){
+          // Switch to return phase.
+          e.swoop.phase = "up";
+          e.swoop.t = 0;
+          e.swoop.dur = Math.max(0.75, e.swoop.dur * 0.85);
+
+          // Return target is the *current* formation slot (fx/fy),
+          // so the enemy rejoins smoothly even if the formation moved.
+          e.swoop.sx = e.x;
+          e.swoop.sy = e.y;
+          e.swoop.ex = e.fx;
+          e.swoop.ey = e.fy;
+          // new control point arcs upward.
+          e.swoop.c1x = e.x + rand(-200, 200);
+          e.swoop.c1y = Math.max(60, e.y - rand(160, 260));
+        }
+      } else {
+        // Return-to-formation arc
+        e.x = quadBezier(u, e.swoop.sx, e.swoop.c1x, e.swoop.ex);
+        e.y = quadBezier(u, e.swoop.sy, e.swoop.c1y, e.swoop.ey);
+
+        if (u >= 1){
+          // Back in formation.
+          e.swoop = null;
+          e.x = e.fx;
+          e.y = e.fy;
+        }
+      }
+    }
+
+    e.w = size;
+    e.h = size;
+  }
+
+  // bullet -> enemy collision
+  for (let bi = bullets.length - 1; bi >= 0; bi--){
+    const b = bullets[bi];
+    for (let ei = enemies.length - 1; ei >= 0; ei--){
+      const e = enemies[ei];
+      const rx = e.x - e.w/2, ry = e.y - e.h/2;
+
+      if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
+        enemies.splice(ei, 1);
+        bullets.splice(bi, 1);
+        score += 10;
+        playSfx(sfxHit);
+        break;
+      }
+    }
+  }
+
+  // enemy bullet -> player collision
+  const prx = player.x - player.w/2, pry = player.y - player.h/2;
+  for (let i = enemyBullets.length - 1; i >= 0; i--){
+    const b = enemyBullets[i];
+    if (circleRect(b.x, b.y, b.r, prx, pry, player.w, player.h)){
+      enemyBullets.splice(i, 1);
+      damagePlayer();
+    }
+  }
+
+  // enemy contact damage
+  if (player.invuln <= 0){
+    for (const e of enemies){
+      const rx = e.x - e.w/2, ry = e.y - e.h/2;
+      const overlap =
+        prx < rx + e.w &&
+        prx + player.w > rx &&
+        pry < ry + e.h &&
+        pry + player.h > ry;
+      if (overlap){ damagePlayer(); break; }
+    }
+  }
+
+  enemyTryShoot(dt);
+
+  // wave clear
+  if (enemies.length === 0){
+    wave += 1;
+    showWaveBanner(wave);
+
+    resetFormation();
+    spawnEnemies();
+  }
+}
+
+function draw(){
+  drawStarfield();
+
+  // v1.13: Wave banner popup
+  if (gameState === STATE.PLAYING && waveBanner.t > 0){
+    const p = Math.min(1, waveBanner.t / 1.35);
+    const alpha = Math.min(1, 0.2 + p);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = "bold 48px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#00ff66";
+    ctx.shadowColor = "rgba(0,255,102,0.35)";
+    ctx.shadowBlur = 12;
+    ctx.fillText(waveBanner.text, canvas.width/2, canvas.height*0.25);
+    ctx.restore();
+  }
+
+  // player flicker on invulnerability
+  const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
+  if (gameState === STATE.PLAYING){
+    if (!flicker){
+      ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+    }
+  } else {
+    ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+  }
+
+  // enemies
+  for (const e of enemies){
+    ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
+  }
+
+  // bullets (player)
+  ctx.fillStyle = "#0f0";
+  for (const b of bullets){
+    ctx.fillRect(b.x - 2, b.y - 10, 4, 12);
+  }
+
+  // bullets (enemy)
+  ctx.fillStyle = "#0a6";
+  for (const b of enemyBullets){
     ctx.beginPath();
-    ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
-    ctx.fillStyle = e.diving ? "rgba(255,80,80,1)" : "rgba(255,0,0,1)";
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
     ctx.fill();
   }
 
-  // Draw bullets
-  ctx.fillStyle = "cyan";
-  for (const b of playerBullets) ctx.fillRect(b.x-2, b.y-2, 4, 4);
-  ctx.fillStyle = "orange";
-  for (const b of enemyBullets) ctx.fillRect(b.x-2, b.y, 4, 6);
-
-  // HUD
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.font = "16px monospace";
-  ctx.textAlign = "left";
-  ctx.fillText("Lives: " + player.lives, 12, canvas.height - 20);
-  ctx.fillText("Wave: " + wave, 12, canvas.height - 40);
-
-  // Game over
-  if (player.lives <= 0){
-    ctx.fillStyle = "rgba(255,0,0,0.85)";
-    ctx.font = "52px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2);
-    return;
-  }
-
-  // Next wave
-  if (enemies.length === 0){
-    wave++;
-    spawnWave();
-  }
-
-  requestAnimationFrame(update);
+  overlay.innerHTML =
+    `Galaga-ish Clone v1.15<br>` +
+    `State: ${gameState}<br>` +
+    `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
+    `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
+    `Enemy pool: ${enemyImages.length || 0} images<br>` +
+    `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
+    `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
+    `Player: ${player.w}px | Gap: ${FORMATION_PLAYER_GAP}px<br>` +
+    `ESC: Menu`;
 }
 
-// Start
-spawnWave();
-update();
+let lastT = performance.now();
+function loop(t){
+  const dt = Math.min(0.033, (t - lastT) / 1000);
+  lastT = t;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* =======================
+   Boot
+======================= */
+player.x = canvas.width / 2;
+player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+
+resetStarfield();
+resize(); // also resets starfield + anchors player
+showMenu();
+spawnEnemies();
+
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
