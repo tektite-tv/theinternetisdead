@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Shooter Game v1.18</title>
+<title>Shooter Game v1.19</title>
 <style>
 html, body {
     margin: 0;
@@ -26,30 +26,86 @@ canvas {
     color: rgba(0,255,0,0.8);
     pointer-events: none;
 }
+#hint {
+    position: absolute;
+    left: 12px;
+    top: 10px;
+    font-size: 14px;
+    opacity: 0.8;
+    pointer-events: none;
+}
 </style>
 </head>
 <body>
 <div id="waveBanner"></div>
+<div id="hint">Aim with mouse (top 180° only). Shoot: Space or Left Click</div>
 <canvas id="game"></canvas>
 
 <script>
+// ==============================
+// Shooter Game v1.19
+// Change log (v1.18 -> v1.19):
+// - Player can aim bullets in any direction within the TOP 180 degrees (above the player).
+// - Bullets spawn from the top edge of the player "sprite" (top of the circle).
+// - Shooting works with Space OR left mouse button.
+// - Enemy bullet vs player bullet cancellation kept.
+// ==============================
+
 // ---- BASIC SETUP ----
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    player.y = canvas.height * 0.85;
+}
+window.addEventListener("resize", resize);
+resize();
 
 const TOP_ZONE_RATIO = 0.45;
-const PLAYER_Y = canvas.height * 0.85;
 
 // ---- PLAYER ----
 const player = {
     x: canvas.width / 2,
-    y: PLAYER_Y,
+    y: canvas.height * 0.85,
     r: 15,
     lives: 5,
     invuln: 0
 };
+
+// ---- AIMING ----
+let mouseX = canvas.width / 2;
+let mouseY = canvas.height / 2;
+let mouseDown = false;
+
+canvas.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+});
+canvas.addEventListener("mousedown", (e) => {
+    if (e.button === 0) mouseDown = true;
+});
+window.addEventListener("mouseup", (e) => {
+    if (e.button === 0) mouseDown = false;
+});
+
+// Returns a clamped aiming angle (radians) within the top 180° hemisphere.
+// 0 rad = right, -PI/2 = up, -PI = left
+function getAimAngle() {
+    const dx = mouseX - player.x;
+    const dy = mouseY - (player.y - player.r); // reference: top of player
+    let ang = Math.atan2(dy, dx);
+
+    // Clamp to the top hemisphere: [-PI, 0]
+    if (ang > 0) ang = 0;
+    if (ang < -Math.PI) ang = -Math.PI;
+
+    // If mouse is below player, force angle to be one of the nearest top directions (left/right)
+    // This keeps the "top 180°" promise even if you aim downward.
+    // (You can still aim horizontally along the top boundary.)
+    return ang;
+}
 
 // ---- GAME STATE ----
 let wave = 1;
@@ -71,8 +127,8 @@ window.addEventListener("keydown", e => keys[e.key] = true);
 window.addEventListener("keyup", e => keys[e.key] = false);
 
 // ---- HELPERS ----
-function dist(a,b,c,d) {
-    return Math.hypot(a-c,b-d);
+function dist(ax,ay,bx,by) {
+    return Math.hypot(ax-bx, ay-by);
 }
 
 // ---- SPAWN ENEMIES ----
@@ -85,6 +141,8 @@ function spawnWave() {
     const zoneHeight = canvas.height * TOP_ZONE_RATIO;
     const spacingX = canvas.width / (cols + 1);
     const spacingY = zoneHeight / (rows + 1);
+
+    // Shrink enemies to fit their zone as count grows
     const size = Math.min(spacingX, spacingY) * 0.35;
 
     let i = 0;
@@ -94,7 +152,6 @@ function spawnWave() {
                 x: spacingX * (c + 1),
                 y: spacingY * (r + 1),
                 r: size,
-                dive: false,
                 t: Math.random() * Math.PI * 2
             });
             i++;
@@ -105,56 +162,70 @@ function spawnWave() {
 
 // ---- SHOOTING ----
 function shootPlayer() {
-    if (fireCooldown <= 0) {
-        playerBullets.push({x: player.x, y: player.y, vy: -8});
-        fireCooldown = Math.max(10 - wave, 4);
-    }
+    if (fireCooldown > 0) return;
+
+    const ang = getAimAngle();
+    const speed = 9; // bullet speed
+    const vx = Math.cos(ang) * speed;
+    const vy = Math.sin(ang) * speed;
+
+    // Spawn from top edge of player (above the bottom of the image)
+    const spawnX = player.x;
+    const spawnY = player.y - player.r;
+
+    playerBullets.push({ x: spawnX, y: spawnY, vx, vy, r: 4 });
+    fireCooldown = Math.max(10 - wave, 4);
 }
 
 // ---- GAME LOOP ----
 function update() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Player move
     if (keys["ArrowLeft"]) player.x -= 6;
     if (keys["ArrowRight"]) player.x += 6;
     player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
 
-    if (keys[" "] ) shootPlayer();
+    // Shoot: Space or left click
+    if (keys[" "] || mouseDown) shootPlayer();
     if (fireCooldown > 0) fireCooldown--;
 
     // Update bullets
-    playerBullets.forEach(b => b.y += b.vy);
-    enemyBullets.forEach(b => b.y += b.vy);
+    for (const b of playerBullets) { b.x += b.vx; b.y += b.vy; }
+    for (const b of enemyBullets)  { b.y += b.vy; }
 
-    // Bullet vs bullet
-    for (let i = playerBullets.length-1; i>=0; i--) {
-        for (let j = enemyBullets.length-1; j>=0; j--) {
-            if (dist(playerBullets[i].x, playerBullets[i].y,
-                     enemyBullets[j].x, enemyBullets[j].y) < 6) {
-                playerBullets.splice(i,1);
-                enemyBullets.splice(j,1);
+    // Cull offscreen bullets
+    playerBullets = playerBullets.filter(b => b.x > -50 && b.x < canvas.width + 50 && b.y > -50 && b.y < canvas.height + 50);
+    enemyBullets  = enemyBullets.filter(b => b.y > -50 && b.y < canvas.height + 50);
+
+    // Bullet vs bullet cancellation (player <-> enemy)
+    for (let i = playerBullets.length - 1; i >= 0; i--) {
+        for (let j = enemyBullets.length - 1; j >= 0; j--) {
+            if (dist(playerBullets[i].x, playerBullets[i].y, enemyBullets[j].x, enemyBullets[j].y) < (playerBullets[i].r + 3)) {
+                playerBullets.splice(i, 1);
+                enemyBullets.splice(j, 1);
                 break;
             }
         }
     }
 
-    // Enemies
-    enemies.forEach(e => {
+    // Enemies: predictable wobble + occasional shots
+    for (const e of enemies) {
         e.t += 0.02;
         e.x += Math.sin(e.t) * 0.6;
-        if (Math.random() < 0.002 * wave) {
-            enemyBullets.push({x: e.x, y: e.y, vy: 4 + wave});
+
+        // Enemy shooting rate scales gently with wave
+        if (Math.random() < 0.0015 * wave) {
+            enemyBullets.push({ x: e.x, y: e.y, vy: 4 + Math.min(wave, 6) });
         }
-    });
+    }
 
     // Bullet vs enemy
-    for (let i = playerBullets.length-1; i>=0; i--) {
-        for (let j = enemies.length-1; j>=0; j--) {
-            if (dist(playerBullets[i].x, playerBullets[i].y,
-                     enemies[j].x, enemies[j].y) < enemies[j].r) {
-                enemies.splice(j,1);
-                playerBullets.splice(i,1);
+    for (let i = playerBullets.length - 1; i >= 0; i--) {
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            if (dist(playerBullets[i].x, playerBullets[i].y, enemies[j].x, enemies[j].y) < enemies[j].r) {
+                enemies.splice(j, 1);
+                playerBullets.splice(i, 1);
                 break;
             }
         }
@@ -162,33 +233,60 @@ function update() {
 
     // Enemy bullet vs player
     if (player.invuln > 0) player.invuln--;
-    for (let i = enemyBullets.length-1; i>=0; i--) {
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
         if (dist(enemyBullets[i].x, enemyBullets[i].y, player.x, player.y) < player.r && player.invuln <= 0) {
-            enemyBullets.splice(i,1);
+            enemyBullets.splice(i, 1);
             player.lives--;
             player.invuln = 60;
         }
     }
 
+    // Draw aim guide (line from player top toward aim direction)
+    const aimAng = getAimAngle();
+    const guideLen = 80;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y - player.r);
+    ctx.lineTo(player.x + Math.cos(aimAng) * guideLen, (player.y - player.r) + Math.sin(aimAng) * guideLen);
+    ctx.strokeStyle = "rgba(0,255,255,0.35)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.lineWidth = 1;
+
     // Draw player
     ctx.beginPath();
-    ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+    ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
     ctx.fillStyle = player.invuln ? "yellow" : "white";
     ctx.fill();
 
     // Draw enemies
-    enemies.forEach(e => {
+    for (const e of enemies) {
         ctx.beginPath();
-        ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+        ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
         ctx.fillStyle = "red";
         ctx.fill();
-    });
+    }
 
     // Draw bullets
     ctx.fillStyle = "cyan";
-    playerBullets.forEach(b => ctx.fillRect(b.x-2,b.y-6,4,6));
+    for (const b of playerBullets) ctx.fillRect(b.x - 2, b.y - 2, 4, 4);
     ctx.fillStyle = "orange";
-    enemyBullets.forEach(b => ctx.fillRect(b.x-2,b.y,4,6));
+    for (const b of enemyBullets) ctx.fillRect(b.x - 2, b.y, 4, 6);
+
+    // HUD
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillText("Lives: " + player.lives, 12, canvas.height - 20);
+    ctx.fillText("Wave: " + wave, 12, canvas.height - 36);
+
+    // Lose condition (simple)
+    if (player.lives <= 0) {
+        ctx.fillStyle = "rgba(255,0,0,0.85)";
+        ctx.font = "48px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+        ctx.font = "16px monospace";
+        ctx.textAlign = "left";
+        return; // stop updating
+    }
 
     // Next wave
     if (enemies.length === 0) {
