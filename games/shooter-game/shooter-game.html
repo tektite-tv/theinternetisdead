@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.08</title>
+<title>Galaga-ish Clone v1.10</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -65,12 +65,12 @@
     <div class="optionsGrid">
       <div class="optRow">
         <div class="optLabel"><span>Enemy Rows</span><span id="rowsVal">4</span></div>
-        <input id="rowsSlider" type="range" min="1" max="8" value="4" step="1" />
+        <input id="rowsSlider" type="range" min="1" max="10" value="4" step="1" />
       </div>
 
       <div class="optRow">
         <div class="optLabel"><span>Enemy Columns</span><span id="colsVal">6</span></div>
-        <input id="colsSlider" type="range" min="1" max="12" value="6" step="1" />
+        <input id="colsSlider" type="range" min="1" max="14" value="6" step="1" />
       </div>
 
       <div class="optRow">
@@ -87,6 +87,22 @@
 </div>
 
 <script>
+/* =========================================================
+   v1.10 CHANGES
+   - Enemy formation movement (left/right bounce + step down)
+   - Bullet->enemy collision (hitmarker.mp3)
+   - Enemy bullets + player collision (oof.mp3)
+   - Contact damage on overlap (oof.mp3)
+   - Audio unlock for browsers
+========================================================= */
+
+/* =======================
+   Paths (EDIT IF NEEDED)
+======================= */
+const GIF_BASE = "/media/images/gifs/";
+const AUDIO_HIT = "/media/audio/hitmarker.mp3";
+const AUDIO_OOF = "/media/audio/oof.mp3";
+
 /* =======================
    Canvas + Globals
 ======================= */
@@ -99,11 +115,53 @@ resize();
 
 let time = 0;
 let score = 0;
-let lives = 2;
+let lives = 3;
 let wave = 1;
 
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
+
+/* =======================
+   Audio (unlock + play)
+======================= */
+const sfxHit = new Audio(AUDIO_HIT);
+const sfxOof = new Audio(AUDIO_OOF);
+sfxHit.preload = "auto";
+sfxOof.preload = "auto";
+sfxHit.volume = 0.7;
+sfxOof.volume = 0.8;
+
+let audioUnlocked = false;
+function unlockAudioOnce(){
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+
+  // The browser wants a "user gesture". This is our offering.
+  try{
+    sfxHit.muted = true;
+    sfxHit.play().then(() => {
+      sfxHit.pause();
+      sfxHit.currentTime = 0;
+      sfxHit.muted = false;
+    }).catch(()=>{ sfxHit.muted = false; });
+
+    sfxOof.muted = true;
+    sfxOof.play().then(() => {
+      sfxOof.pause();
+      sfxOof.currentTime = 0;
+      sfxOof.muted = false;
+    }).catch(()=>{ sfxOof.muted = false; });
+  }catch(e){}
+}
+
+function playSfx(a){
+  // Clone so rapid-fire doesn’t cut off the previous sound
+  try{
+    const c = a.cloneNode();
+    c.volume = a.volume;
+    c.play().catch(()=>{});
+  }catch(e){}
+}
 
 /* =======================
    UI
@@ -149,12 +207,16 @@ function showOptions(){
   uiRoot.style.display = "flex";
 }
 function startGame(){
+  unlockAudioOnce();
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
-  score = 0; lives = 2; wave = 1;
+  score = 0; lives = 3; wave = 1;
+
   bullets.length = 0;
+  enemyBullets.length = 0;
+
+  resetFormation();
   spawnEnemies();
-  // NEW (v1.08): make sure the page has focus so keydown fires after clicking buttons
   window.focus();
 }
 
@@ -164,6 +226,7 @@ btnBack.addEventListener("click", showMenu);
 btnApply.addEventListener("click", () => {
   ENEMY_ROWS = parseInt(rowsSlider.value, 10);
   ENEMY_COLS = parseInt(colsSlider.value, 10);
+  resetFormation();
   spawnEnemies();
 });
 
@@ -171,16 +234,15 @@ btnApply.addEventListener("click", () => {
    Player
 ======================= */
 const playerImg = new Image();
-playerImg.src = "/media/images/gifs/bananarama.gif";
-const player = { x: canvas.width/2, y: canvas.height-80, w:48, h:48, speed:6 };
+playerImg.src = GIF_BASE + "bananarama.gif";
+
+const player = { x: canvas.width/2, y: canvas.height-80, w:48, h:48, speed:6, invuln:0 };
 const keys = {};
 
 /* =======================
-   Enemy images from index.json
+   Enemy Images from index.json
 ======================= */
-const GIF_BASE = "/media/images/gifs/";
 let enemyImages = [];
-let enemyImageUrls = [];
 let assetsReady = false;
 
 const FALLBACK_URLS = [
@@ -216,38 +278,54 @@ async function loadEnemyImagesFromIndex(){
     const list = await res.json();
     if (!Array.isArray(list)) throw new Error("index.json not an array");
 
-    enemyImageUrls = list
+    const urls = list
       .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".gif"))
       .map(name => GIF_BASE + name);
 
-    if (enemyImageUrls.length === 0) throw new Error("No gifs in index.json");
+    if (!urls.length) throw new Error("No gifs in index.json");
 
-    setAssetStatus(`Preloading ${enemyImageUrls.length} enemy images...`);
-    enemyImages = await preloadImages(enemyImageUrls);
+    setAssetStatus(`Preloading ${urls.length} enemy images...`);
+    let imgs = await preloadImages(urls);
+    imgs = imgs.filter(img => img && img.naturalWidth > 0);
+    if (!imgs.length) throw new Error("All enemy images failed to load");
 
-    const loaded = enemyImages.filter(img => img && img.naturalWidth > 0);
-    if (loaded.length === 0) throw new Error("All enemy images failed to load");
-
-    enemyImages = loaded;
+    enemyImages = imgs;
     assetsReady = true;
-    setAssetStatus(`Loaded ${enemyImages.length} enemy images from index.json ✅`);
+    setAssetStatus(`Loaded ${enemyImages.length} enemy images ✅`);
   }catch(err){
     console.warn("Failed to load index.json enemy list:", err);
-    setAssetStatus("Failed to load index.json. Using fallback enemy images.");
-    enemyImageUrls = [...FALLBACK_URLS];
-    enemyImages = await preloadImages(enemyImageUrls);
-    enemyImages = enemyImages.filter(img => img && img.naturalWidth > 0);
+    setAssetStatus("Failed to load index.json. Using fallback images.");
+    let imgs = await preloadImages(FALLBACK_URLS);
+    enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     assetsReady = true;
   }
 }
 loadEnemyImagesFromIndex();
 
 /* =======================
-   Enemies
+   Enemies + Formation Movement
 ======================= */
 const BASE_SPACING_X = 95;
 const BASE_SPACING_Y = 75;
+
 let enemies = [];
+
+// Formation movement state
+const formation = {
+  xOffset: 0,
+  yOffset: 0,
+  dir: 1,
+  speed: 1.2,         // horizontal speed
+  stepDown: 18,       // how much it drops when bouncing
+  boundsPad: 40       // keeps it from touching edge
+};
+
+function resetFormation(){
+  formation.xOffset = 0;
+  formation.yOffset = 0;
+  formation.dir = 1;
+  formation.speed = 1.2 + (wave-1) * 0.15;
+}
 
 function randEnemyImg(){
   if (!enemyImages.length) return playerImg;
@@ -256,15 +334,19 @@ function randEnemyImg(){
 
 function spawnEnemies(){
   enemies = [];
-  const centerY = 120;
+  const baseY = 120;
+
   for (let r = 0; r < ENEMY_ROWS; r++){
     for (let c = 0; c < ENEMY_COLS; c++){
       enemies.push({
         row: r,
         col: c,
-        baseY: centerY,
+        baseY,
         img: randEnemyImg(),
-        size: 52
+        size: 56,           // slightly larger
+        hp: 1,
+        // runtime draw data (filled each frame)
+        x: 0, y: 0, w: 0, h: 0
       });
     }
   }
@@ -274,49 +356,206 @@ function spawnEnemies(){
    Bullets
 ======================= */
 const bullets = [];
+const enemyBullets = [];
+
 function shoot(){
-  bullets.push({ x: player.x, y: player.y - 20, vy: -8 });
+  bullets.push({ x: player.x, y: player.y - 22, vy: -10, r: 4 });
+}
+
+// Enemy shooting cadence
+let enemyShootTimer = 0;
+function enemyTryShoot(dt){
+  enemyShootTimer -= dt;
+  if (enemyShootTimer > 0) return;
+
+  // Reset timer: faster with more enemies + wave
+  const alive = enemies.length;
+  const base = Math.max(0.18, 0.55 - wave*0.04 - Math.min(0.22, alive*0.002));
+  enemyShootTimer = base;
+
+  if (!enemies.length) return;
+
+  // pick a random enemy to shoot
+  const e = enemies[Math.floor(Math.random() * enemies.length)];
+  enemyBullets.push({
+    x: e.x,
+    y: e.y + e.h/2 + 6,
+    vy: 6 + wave*0.35,
+    r: 4
+  });
 }
 
 /* =======================
-   Input (FIXED v1.08)
+   Collision helpers
+======================= */
+function circleRect(cx, cy, cr, rx, ry, rw, rh){
+  const testX = Math.max(rx, Math.min(cx, rx+rw));
+  const testY = Math.max(ry, Math.min(cy, ry+rh));
+  const dx = cx - testX;
+  const dy = cy - testY;
+  return (dx*dx + dy*dy) <= cr*cr;
+}
+
+function damagePlayer(){
+  if (player.invuln > 0) return;
+  lives -= 1;
+  player.invuln = 0.85; // seconds
+  playSfx(sfxOof);
+  if (lives <= 0){
+    // back to menu on death (simple)
+    showMenu();
+  }
+}
+
+/* =======================
+   Input (Space fixed)
 ======================= */
 window.addEventListener("keydown", (e) => {
-  // NEW: prevent page scroll + standardize shooting key detection
+  unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
 
   const k = e.key.toLowerCase();
   keys[k] = true;
 
-  // FIX: Use e.code so Space works across browsers/layouts
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
-
   if (k === "escape") showMenu();
-}, { passive: false });
+}, { passive:false });
 
 window.addEventListener("keyup", (e) => {
   keys[e.key.toLowerCase()] = false;
 });
 
-/* Optional: click/tap shooting so you can test instantly */
+// tap/click shoot
 canvas.addEventListener("pointerdown", () => {
+  unlockAudioOnce();
   if (gameState === STATE.PLAYING) shoot();
 });
 
 /* =======================
-   Loop
+   Update + Draw
 ======================= */
-function update(){
-  time += 0.016;
+function update(dt){
+  time += dt;
+
   if (gameState !== STATE.PLAYING) return;
 
+  // invuln tick
+  if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
+
+  // player move
   if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
-  bullets.forEach(b => b.y += b.vy);
+  // formation movement: compute width using current breathing spacing
+  const breath = Math.sin(time * 2) * 0.5 + 0.5;
+  const spacingX = BASE_SPACING_X * (1 + breath * 0.35);
+
+  const formationWidth = (ENEMY_COLS - 1) * spacingX;
+  const leftEdge = canvas.width/2 - formationWidth/2 + formation.xOffset;
+  const rightEdge = canvas.width/2 + formationWidth/2 + formation.xOffset;
+
+  formation.xOffset += formation.dir * formation.speed;
+
+  // bounce and step down if we hit bounds
+  if (leftEdge < formation.boundsPad){
+    formation.dir = 1;
+    formation.xOffset += 2;
+    formation.yOffset += formation.stepDown;
+  } else if (rightEdge > canvas.width - formation.boundsPad){
+    formation.dir = -1;
+    formation.xOffset -= 2;
+    formation.yOffset += formation.stepDown;
+  }
+
+  // bullets update
   for (let i = bullets.length - 1; i >= 0; i--){
-    if (bullets[i].y < -20) bullets.splice(i, 1);
+    bullets[i].y += bullets[i].vy;
+    if (bullets[i].y < -50) bullets.splice(i, 1);
+  }
+
+  // enemy bullets update
+  for (let i = enemyBullets.length - 1; i >= 0; i--){
+    enemyBullets[i].y += enemyBullets[i].vy;
+    if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
+  }
+
+  // enemies compute draw positions for collisions (same math as draw)
+  const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
+  const startX = canvas.width/2 - formationWidth/2 + formation.xOffset;
+  const baseY = 120 + formation.yOffset;
+
+  for (const e of enemies){
+    if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
+
+    const scale = 1 + breath * 0.25;
+    const size = e.size * scale;
+
+    const x = startX + e.col * spacingX;
+    const y = baseY + e.row * spacingY;
+
+    e.x = x;
+    e.y = y;
+    e.w = size;
+    e.h = size;
+  }
+
+  // bullet -> enemy collision
+  for (let bi = bullets.length - 1; bi >= 0; bi--){
+    const b = bullets[bi];
+    let hit = false;
+
+    for (let ei = enemies.length - 1; ei >= 0; ei--){
+      const e = enemies[ei];
+      const rx = e.x - e.w/2, ry = e.y - e.h/2;
+
+      if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
+        // hit
+        enemies.splice(ei, 1);
+        bullets.splice(bi, 1);
+        score += 10;
+        playSfx(sfxHit);
+        hit = true;
+        break;
+      }
+    }
+    if (hit) continue;
+  }
+
+  // enemy bullet -> player collision
+  const prx = player.x - player.w/2, pry = player.y - player.h/2;
+  for (let i = enemyBullets.length - 1; i >= 0; i--){
+    const b = enemyBullets[i];
+    if (circleRect(b.x, b.y, b.r, prx, pry, player.w, player.h)){
+      enemyBullets.splice(i, 1);
+      damagePlayer();
+    }
+  }
+
+  // enemy contact damage
+  if (player.invuln <= 0){
+    for (const e of enemies){
+      const rx = e.x - e.w/2, ry = e.y - e.h/2;
+      const overlap =
+        prx < rx + e.w &&
+        prx + player.w > rx &&
+        pry < ry + e.h &&
+        pry + player.h > ry;
+      if (overlap){
+        damagePlayer();
+        break;
+      }
+    }
+  }
+
+  // enemy shooting
+  enemyTryShoot(dt);
+
+  // wave clear
+  if (enemies.length === 0){
+    wave += 1;
+    resetFormation();
+    spawnEnemies();
   }
 }
 
@@ -333,45 +572,50 @@ function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawBackgroundStars();
 
-  ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+  // player flicker when invuln
+  const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
+  if (!flicker){
+    ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+  }
 
-  const breath = Math.sin(time * 2) * 0.5 + 0.5;
-  const spacingX = BASE_SPACING_X * (1 + breath * 0.35);
-  const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
+  // enemies
+  for (const e of enemies){
+    ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
+  }
 
-  const formationWidth = (ENEMY_COLS - 1) * spacingX;
-  const startX = canvas.width/2 - formationWidth/2;
-
-  enemies.forEach(e => {
-    if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
-
-    const scale = 1 + breath * 0.25;
-    const size = e.size * scale;
-    const x = startX + e.col * spacingX;
-    const y = e.baseY + e.row * spacingY;
-
-    ctx.drawImage(e.img, x - size/2, y - size/2, size, size);
-  });
-
+  // bullets
   ctx.fillStyle = "#0f0";
-  bullets.forEach(b => ctx.fillRect(b.x - 2, b.y - 10, 4, 10));
+  for (const b of bullets){
+    ctx.fillRect(b.x - 2, b.y - 10, 4, 12);
+  }
+
+  // enemy bullets
+  ctx.fillStyle = "#0a6";
+  for (const b of enemyBullets){
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.fill();
+  }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.08<br>` +
+    `Galaga-ish Clone v1.10<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
-    `Bullets: ${bullets.length}<br>` +
+    `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
     `ESC: Menu`;
 }
 
-function loop(){
-  update();
+let lastT = performance.now();
+function loop(t){
+  const dt = Math.min(0.033, (t - lastT) / 1000);
+  lastT = t;
+  update(dt);
   draw();
   requestAnimationFrame(loop);
 }
-loop();
+requestAnimationFrame(loop);
 
 showMenu();
 </script>
