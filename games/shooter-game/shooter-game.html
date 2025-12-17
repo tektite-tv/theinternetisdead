@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Shooter Game v0.05</title>
+  <title>Shooter Game v0.06</title>
 
   <style>
-    /* v0.01–v0.05 baseline styling */
+    /* v0.01–v0.06 baseline styling */
     html, body {
       margin: 0;
       padding: 0;
@@ -73,10 +73,11 @@
     <canvas id="game"></canvas>
 
     <div id="ui">
-      <div>shooter-game v0.05</div>
+      <div>shooter-game v0.06</div>
       <div>WASD = move | Mouse = aim | LMB = shoot | R = restart</div>
       <div>HP: <span id="hpDisplay">100</span></div>
       <div>Score: <span id="scoreDisplay">0</span></div>
+      <div style="opacity:0.85">Enemy art: /media/images/gifs/ via index.json</div>
     </div>
 
     <div id="gameOverMessage">GAME OVER</div>
@@ -84,20 +85,18 @@
 
   <script>
     // ================================================================
-    // Shooter Game v0.05 (FULL FILE)
+    // Shooter Game v0.06 (FULL FILE)
     //
-    // New in v0.05:
-    //  - Removed world boundaries: infinite movement.
-    //  - Ground is black by default.
-    //  - Fog-of-war style trail: walking illuminates a big circular
-    //    radius along the path you've walked.
-    //  - Grid/parallax floor removed in favor of path illumination.
-    //  - Enemies spawn in a ring around player (no finite map edges).
+    // New in v0.06:
+    //  - Enemies use random GIF images from /media/images/gifs/index.json
+    //  - Enemy size is randomized; size drives difficulty (HP + health bar)
+    //  - Audio SFX:
+    //      * hitmarker.mp3 for enemy damage
+    //      * oof.mp3 for player damage
     //
-    // Kept from v0.04:
-    //  - Camera centered on player.
-    //  - 1200x800 logical "viewport" used for scaling.
-    //  - Softer contact damage & hit cooldown.
+    // Kept from v0.05:
+    //  - Infinite movement, camera centered on player
+    //  - Fog/trail illumination system
     // ================================================================
 
     const canvas = document.getElementById("game");
@@ -116,10 +115,7 @@
     const HEIGHT = VIRTUAL_HEIGHT;
 
     // Camera follows the player; screen is always centered on camera
-    const camera = {
-      x: WIDTH / 2,
-      y: HEIGHT / 2
-    };
+    const camera = { x: WIDTH / 2, y: HEIGHT / 2 };
 
     // Resize real canvas to match its CSS box
     function resizeCanvas() {
@@ -127,7 +123,6 @@
       canvas.width = rect.width;
       canvas.height = rect.height;
     }
-
     window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
@@ -136,7 +131,6 @@
       const viewportX = (worldX - camera.x) + VIRTUAL_WIDTH / 2;
       return (viewportX / VIRTUAL_WIDTH) * canvas.width;
     }
-
     function sy(worldY) {
       const viewportY = (worldY - camera.y) + VIRTUAL_HEIGHT / 2;
       return (viewportY / VIRTUAL_HEIGHT) * canvas.height;
@@ -158,7 +152,6 @@
     const bullets = [];
     const enemies = [];
     const keys = { w: false, a: false, s: false, d: false };
-
     const mouse = { x: WIDTH / 2, y: HEIGHT / 2, isDown: false };
 
     let score = 0;
@@ -178,16 +171,109 @@
     const PLAYER_HIT_COOLDOWN = 0.7;
 
     // v0.05: Trail / fog-of-war
-    // We store positions along the player's path and render big circular
-    // light patches at each point to reveal where they've been.
     const trailPoints = [];
-    const TRAIL_STEP_DIST = 25;   // distance between sampled trail points
-    const TRAIL_LIGHT_RADIUS = 220; // radius (in world units) of illuminated area
+    const TRAIL_STEP_DIST = 25;
+    const TRAIL_LIGHT_RADIUS = 220;
     let lastTrailX = player.x;
     let lastTrailY = player.y;
-
-    // Initialize trail with starting position
     trailPoints.push({ x: player.x, y: player.y });
+
+    // =================================================================
+    // v0.06: ENEMY GIF LIST + IMAGE CACHE
+    // =================================================================
+    const ENEMY_GIF_INDEX_URL = "/media/images/gifs/index.json";
+    const ENEMY_GIF_BASE_URL = "/media/images/gifs/";
+
+    let enemyGifFilenames = []; // array of filenames (strings)
+    const imageCache = new Map(); // src -> HTMLImageElement
+
+    function normalizeIndexJsonToFilenames(json) {
+      // We try to be flexible because humans love inventing "index.json" formats.
+      // Supported:
+      //  - ["a.gif","b.gif"]
+      //  - {"files":["a.gif","b.gif"]}
+      //  - {"gifs":["a.gif","b.gif"]}
+      //  - {"items":[{"name":"a.gif"}, ...]}
+      //  - {"something":{"a.gif":true,"b.gif":true}} (keys-as-files)
+      if (Array.isArray(json)) {
+        return json.filter(v => typeof v === "string");
+      }
+      if (json && typeof json === "object") {
+        for (const key of ["files", "gifs", "images", "items"]) {
+          if (Array.isArray(json[key])) {
+            const arr = json[key];
+            // items could be strings or objects with name/filename
+            const out = [];
+            for (const it of arr) {
+              if (typeof it === "string") out.push(it);
+              else if (it && typeof it === "object") {
+                if (typeof it.name === "string") out.push(it.name);
+                else if (typeof it.filename === "string") out.push(it.filename);
+                else if (typeof it.file === "string") out.push(it.file);
+              }
+            }
+            if (out.length) return out;
+          }
+        }
+        // fallback: if object keys look like filenames, use them
+        const keys = Object.keys(json);
+        const looksLikeFiles = keys.filter(k => /\.(gif|png|jpg|jpeg|webp)$/i.test(k));
+        if (looksLikeFiles.length) return looksLikeFiles;
+      }
+      return [];
+    }
+
+    async function loadEnemyGifIndex() {
+      try {
+        const res = await fetch(ENEMY_GIF_INDEX_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const names = normalizeIndexJsonToFilenames(json)
+          .map(s => String(s).trim())
+          .filter(Boolean);
+
+        // Optional: only gifs (but keep other formats too if present)
+        enemyGifFilenames = names.filter(n => !n.endsWith("/") && !n.includes(".."));
+        console.log("[v0.06] Loaded enemy GIF list:", enemyGifFilenames.length);
+      } catch (err) {
+        console.warn("[v0.06] Failed to load /media/images/gifs/index.json:", err);
+        enemyGifFilenames = [];
+      }
+    }
+
+    function getOrCreateImage(src) {
+      if (imageCache.has(src)) return imageCache.get(src);
+      const img = new Image();
+      // Same-origin path, so no CORS drama needed.
+      img.src = src;
+      imageCache.set(src, img);
+      return img;
+    }
+
+    function getRandomEnemyImageSrc() {
+      if (!enemyGifFilenames.length) return null;
+      const filename = enemyGifFilenames[Math.floor(Math.random() * enemyGifFilenames.length)];
+      return ENEMY_GIF_BASE_URL + filename;
+    }
+
+    // Kick off index loading ASAP (non-blocking).
+    loadEnemyGifIndex();
+
+    // =================================================================
+    // v0.06: AUDIO (simple, overlap-friendly)
+    // =================================================================
+    const SFX = {
+      enemyHit: "/media/audio/hitmarker.mp3",
+      playerHit: "/media/audio/oof.mp3"
+    };
+
+    function playSfx(url, volume = 0.8) {
+      // Clone-per-play so rapid hits can overlap (yes, this is how games do it).
+      const a = new Audio(url);
+      a.volume = volume;
+      // ignore play rejections (autoplay policies, etc.)
+      a.play().catch(() => {});
+    }
 
     // =================================================================
     // INPUT HANDLERS
@@ -213,7 +299,6 @@
       const rect = canvas.getBoundingClientRect();
       const nx = (e.clientX - rect.left) / canvas.width;
       const ny = (e.clientY - rect.top) / canvas.height;
-      // Screen center corresponds to camera center (player)
       mouse.x = camera.x + (nx - 0.5) * VIRTUAL_WIDTH;
       mouse.y = camera.y + (ny - 0.5) * VIRTUAL_HEIGHT;
     });
@@ -248,8 +333,12 @@
       });
     }
 
+    function clamp(n, a, b) {
+      return Math.max(a, Math.min(b, n));
+    }
+
     function spawnEnemy() {
-      // v0.05: Spawn in an annulus around player instead of finite map edges
+      // v0.05: Spawn in an annulus around player
       const angle = Math.random() * Math.PI * 2;
       const minDist = 500;
       const maxDist = 900;
@@ -258,12 +347,35 @@
       const x = player.x + Math.cos(angle) * dist;
       const y = player.y + Math.sin(angle) * dist;
 
+      // v0.06: Random size drives difficulty
+      // Size factor: small 0.65 .. big 2.2
+      const sizeFactor = 0.65 + Math.random() * 1.55;
+
+      // Radius range roughly: 12..40
+      const baseRadius = 18;
+      const radius = clamp(baseRadius * sizeFactor, 12, 42);
+
+      // HP scales with size (roughly with area)
+      // baseline keeps small guys from being 1-tap jokes
+      const maxHp = Math.max(2, Math.round(2 + (radius * radius) / 220));
+      const hp = maxHp;
+
+      // Speed slightly inversely related to size (big = slower, small = faster)
+      const speed = clamp(140 - radius * 1.2 + Math.random() * 25, 55, 150);
+
+      // Random image (if index isn't loaded yet, this may be null; we fallback to circle)
+      const src = getRandomEnemyImageSrc();
+      const img = src ? getOrCreateImage(src) : null;
+
       enemies.push({
         x,
         y,
-        radius: 14,
-        speed: 90 + Math.random() * 35,
-        hp: 3
+        radius,
+        speed,
+        hp,
+        maxHp,
+        img,
+        imgSrc: src
       });
     }
 
@@ -291,7 +403,6 @@
       mvx /= mag;
       mvy /= mag;
 
-      // v0.05: No boundary clamping; infinite world
       player.x += mvx * player.speed * dt;
       player.y += mvy * player.speed * dt;
 
@@ -299,7 +410,7 @@
       camera.x = player.x;
       camera.y = player.y;
 
-      // Record trail points as the player moves
+      // Record trail points
       const dxTrail = player.x - lastTrailX;
       const dyTrail = player.y - lastTrailY;
       const trailDist = Math.hypot(dxTrail, dyTrail);
@@ -309,10 +420,7 @@
         lastTrailX = player.x;
         lastTrailY = player.y;
 
-        // Optional safety: cap trail length so it doesn't blow up forever
-        if (trailPoints.length > 2000) {
-          trailPoints.shift();
-        }
+        if (trailPoints.length > 2000) trailPoints.shift();
       }
 
       // Shooting cooldown
@@ -330,11 +438,7 @@
         b.x += b.vx * dt;
         b.y += b.vy * dt;
         b.life -= dt;
-
-        // We mostly rely on life now; world is infinite.
-        if (b.life <= 0) {
-          bullets.splice(i, 1);
-        }
+        if (b.life <= 0) bullets.splice(i, 1);
       }
 
       // Spawn enemies in ring around player
@@ -364,6 +468,9 @@
           player.hp -= PLAYER_CONTACT_DAMAGE;
           playerHitTimer = PLAYER_HIT_COOLDOWN;
 
+          // v0.06: player damage sound
+          playSfx(SFX.playerHit, 0.85);
+
           if (player.hp <= 0) {
             player.hp = 0;
             handleGameOver();
@@ -378,18 +485,19 @@
 
           if (distBE < collisionRadius) {
             bullets.splice(j, 1);
+
             e.hp -= 1;
+
+            // v0.06: enemy hit sound
+            playSfx(SFX.enemyHit, 0.65);
 
             if (e.hp <= 0) {
               enemies.splice(i, 1);
-              score += 10;
+              score += 10 + Math.round(e.maxHp); // tiny bonus for bigger threats
               break;
             }
           }
         }
-
-        // Optional: if enemy drifts *very* far, you could despawn it
-        // but infinite world + ring spawn means it's not strictly required.
       }
 
       // UI updates
@@ -412,7 +520,7 @@
         const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
         grad.addColorStop(0, "rgba(120, 180, 255, 0.9)");
         grad.addColorStop(0.4, "rgba(60, 120, 220, 0.5)");
-        grad.addColorStop(1, "rgba(0, 0, 0, 0.0)"); // fade to black
+        grad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
 
         ctx.fillStyle = grad;
         ctx.beginPath();
@@ -424,6 +532,30 @@
     // =================================================================
     // DRAW LOOP
     // =================================================================
+    function drawEnemyHealthBar(e, scaleFactor) {
+      // Health bar above enemy
+      const barW = (e.radius * 2) * scaleFactor;
+      const barH = 6;
+      const pad = 2;
+
+      const x = sx(e.x) - barW / 2;
+      const y = sy(e.y) - (e.radius * scaleFactor) - 14;
+
+      // background
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillRect(x - pad, y - pad, barW + pad * 2, barH + pad * 2);
+
+      // fill
+      const pct = e.maxHp > 0 ? (e.hp / e.maxHp) : 0;
+      ctx.fillStyle = "rgba(90,255,120,0.9)";
+      ctx.fillRect(x, y, barW * clamp(pct, 0, 1), barH);
+
+      // border
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x - pad, y - pad, barW + pad * 2, barH + pad * 2);
+    }
+
     function draw() {
       // Base ground = black everywhere
       ctx.fillStyle = "#000000";
@@ -437,13 +569,7 @@
       // Bullets
       for (const b of bullets) {
         ctx.beginPath();
-        ctx.arc(
-          sx(b.x),
-          sy(b.y),
-          b.radius * scaleFactor,
-          0,
-          Math.PI * 2
-        );
+        ctx.arc(sx(b.x), sy(b.y), b.radius * scaleFactor, 0, Math.PI * 2);
         ctx.fillStyle = "#ffdd55";
         ctx.fill();
       }
@@ -451,13 +577,35 @@
       // Enemies
       for (const e of enemies) {
         const rr = e.radius * scaleFactor;
-        ctx.beginPath();
-        ctx.arc(sx(e.x), sy(e.y), rr, 0, Math.PI * 2);
-        ctx.fillStyle = "#ff4444";
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#880000";
-        ctx.stroke();
+        const ex = sx(e.x);
+        const ey = sy(e.y);
+
+        // v0.06: draw enemy image if available and loaded; else fallback circle
+        if (e.img && e.img.complete && e.img.naturalWidth > 0) {
+          ctx.save();
+          // draw centered
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(e.img, ex - rr, ey - rr, rr * 2, rr * 2);
+          ctx.restore();
+
+          // subtle outline so gifs don't vanish into the void
+          ctx.beginPath();
+          ctx.arc(ex, ey, rr, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(255,80,80,0.55)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(ex, ey, rr, 0, Math.PI * 2);
+          ctx.fillStyle = "#ff4444";
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "#880000";
+          ctx.stroke();
+        }
+
+        // health bar
+        drawEnemyHealthBar(e, scaleFactor);
       }
 
       // Player
@@ -499,7 +647,6 @@
     // MAIN LOOP
     // =================================================================
     let lastTime = performance.now();
-
     function gameLoop(t) {
       const dt = (t - lastTime) / 1000;
       lastTime = t;
@@ -509,9 +656,7 @@
 
       requestAnimationFrame(gameLoop);
     }
-
     requestAnimationFrame(gameLoop);
-
   </script>
 </body>
 </html>
