@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.30</title>
+<title>Galaga-ish Clone v1.31</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -114,6 +114,13 @@
     cursor:pointer;
   }
   #btnRestart:hover{ background: rgba(255,0,0,0.10); }
+
+
+  /* v1.31: keep HUD off the menu and keep menu clickable */
+  #uiRoot{ z-index: 50; }
+  #deathOverlay{ z-index: 100; }
+  #livesSlot{ display:none; }
+  #powerupSlot{ display:none; }
 
 </style>
 </head>
@@ -260,7 +267,7 @@ function getPlayerFireCooldown(){
 ======================= */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const overlay = document\.getElementById\("overlay"\);
+const overlay = document.getElementById("overlay");
 const livesSlot = document.getElementById("livesSlot");
 const livesText = document.getElementById("livesText");
 const powerupSlot = document.getElementById("powerupSlot");
@@ -298,10 +305,16 @@ function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; 
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
 
+// Powerup state (v1.31)
+let ufo = null;
+let bomb = null;
+let hasBomb = false;
+
+
 /* =======================
    Utility
 ======================= */
-function rand\(min, max\)\{ return min \+ Math\.random\(\) \* \(max - min\); \}
+function rand(min, max){ return min + Math.random() * (max - min); }
 
 /* =======================
    UFO + Bomb Powerup (v1.29)
@@ -678,21 +691,30 @@ syncOptionsLabels();
 function showMenu(){
   gameState = STATE.MENU;
   deathOverlay.style.display = "none";
+  // v1.31: HUD should not appear on the menu
+  livesSlot.style.display = "none";
+  powerupSlot.style.display = "none";
+
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
   uiRoot.style.display = "flex";
 }
 
 function restartRun(){
-  // v1.29: Restart from GAME OVER screen (full reset to beginning)
+  // v1.31: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
   hasBomb = false;
   bomb = null;
   ufo = null;
+  powerupSlot.style.display = "none";
   startGame();
 }
 function showOptions(){
   gameState = STATE.OPTIONS;
+  // v1.31: hide HUD in menus
+  livesSlot.style.display = "none";
+  powerupSlot.style.display = "none";
+
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
   uiRoot.style.display = "flex";
@@ -703,15 +725,25 @@ function startGame(){
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
 
+  // v1.31: show HUD only in-game
+  livesSlot.style.display = "flex";
+  powerupSlot.style.display = "none";
+
   score = 0;
-  // v1.28: health replaces lives (4 hits total)
+
+  // v1.31: 3 lives, each life has 4-hit (25%) health
+  lives = 3;
+  livesText.textContent = "x" + lives;
+
   health = 1.0;
-  lives = 0;
   isDead = false;
   deathTimer = 0;
+  deathGameOver = false;
   deathParticles.length = 0;
+
   wave = 1;
   showWaveBanner(1);
+
   bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
@@ -719,10 +751,11 @@ function startGame(){
   hasBomb = false;
   bomb = null;
   ufo = null;
+
   resetFormation();
   spawnEnemies();
-  window.focus();
   trySpawnUFO();
+
   window.focus();
 }
 
@@ -734,7 +767,6 @@ btnApply.addEventListener("click", () => {
   ENEMY_COLS = parseInt(colsSlider.value, 10);
   resetFormation();
   spawnEnemies();
-    trySpawnUFO();
   });
 
 btnRestart.addEventListener("click", () => {
@@ -1209,7 +1241,6 @@ function update(dt){
       }
     }
     return; // freeze gameplay while dead
-  }ead
   }
 
   if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
@@ -1576,7 +1607,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.30<br>` +
+    `Galaga-ish Clone v1.31<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
