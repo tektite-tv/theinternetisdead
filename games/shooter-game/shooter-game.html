@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.07</title>
+<title>Galaga-ish Clone v1.08</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -154,6 +154,8 @@ function startGame(){
   score = 0; lives = 2; wave = 1;
   bullets.length = 0;
   spawnEnemies();
+  // NEW (v1.08): make sure the page has focus so keydown fires after clicking buttons
+  window.focus();
 }
 
 btnStart.addEventListener("click", startGame);
@@ -174,14 +176,13 @@ const player = { x: canvas.width/2, y: canvas.height-80, w:48, h:48, speed:6 };
 const keys = {};
 
 /* =======================
-   Enemy images from index.json (v1.07)
+   Enemy images from index.json
 ======================= */
 const GIF_BASE = "/media/images/gifs/";
-let enemyImages = [];          // array of loaded Image()
-let enemyImageUrls = [];       // array of url strings
+let enemyImages = [];
+let enemyImageUrls = [];
 let assetsReady = false;
 
-// fallback if fetch fails (keeps game functional)
 const FALLBACK_URLS = [
   GIF_BASE + "frog.gif",
   GIF_BASE + "skeleton.gif",
@@ -196,7 +197,6 @@ function preloadImages(urls){
     const imgs = [];
     let done = 0;
     if (!urls.length) resolve(imgs);
-
     urls.forEach((url) => {
       const img = new Image();
       img.onload = () => { done++; if (done === urls.length) resolve(imgs); };
@@ -214,11 +214,8 @@ async function loadEnemyImagesFromIndex(){
     if (!res.ok) throw new Error("HTTP " + res.status);
 
     const list = await res.json();
-
-    // Expecting an array of filenames like ["frog.gif", ...]
     if (!Array.isArray(list)) throw new Error("index.json not an array");
 
-    // Convert to URLs and filter basic garbage
     enemyImageUrls = list
       .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".gif"))
       .map(name => GIF_BASE + name);
@@ -228,7 +225,6 @@ async function loadEnemyImagesFromIndex(){
     setAssetStatus(`Preloading ${enemyImageUrls.length} enemy images...`);
     enemyImages = await preloadImages(enemyImageUrls);
 
-    // Keep only images that actually loaded (naturalWidth>0 usually signals success)
     const loaded = enemyImages.filter(img => img && img.naturalWidth > 0);
     if (loaded.length === 0) throw new Error("All enemy images failed to load");
 
@@ -244,7 +240,6 @@ async function loadEnemyImagesFromIndex(){
     assetsReady = true;
   }
 }
-// kick off async load immediately
 loadEnemyImagesFromIndex();
 
 /* =======================
@@ -255,7 +250,6 @@ const BASE_SPACING_Y = 75;
 let enemies = [];
 
 function randEnemyImg(){
-  // if assets not ready yet, return a temp placeholder image (player img), game still runs
   if (!enemyImages.length) return playerImg;
   return enemyImages[Math.floor(Math.random() * enemyImages.length)];
 }
@@ -263,7 +257,6 @@ function randEnemyImg(){
 function spawnEnemies(){
   enemies = [];
   const centerY = 120;
-
   for (let r = 0; r < ENEMY_ROWS; r++){
     for (let c = 0; c < ENEMY_COLS; c++){
       enemies.push({
@@ -281,19 +274,34 @@ function spawnEnemies(){
    Bullets
 ======================= */
 const bullets = [];
-function shoot(){ bullets.push({ x: player.x, y: player.y - 20, vy: -8 }); }
+function shoot(){
+  bullets.push({ x: player.x, y: player.y - 20, vy: -8 });
+}
 
 /* =======================
-   Input
+   Input (FIXED v1.08)
 ======================= */
 window.addEventListener("keydown", (e) => {
+  // NEW: prevent page scroll + standardize shooting key detection
+  if (e.code === "Space") e.preventDefault();
+
   const k = e.key.toLowerCase();
   keys[k] = true;
 
-  if (e.key === " " && gameState === STATE.PLAYING) shoot();
+  // FIX: Use e.code so Space works across browsers/layouts
+  if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
+
   if (k === "escape") showMenu();
+}, { passive: false });
+
+window.addEventListener("keyup", (e) => {
+  keys[e.key.toLowerCase()] = false;
 });
-window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+
+/* Optional: click/tap shooting so you can test instantly */
+canvas.addEventListener("pointerdown", () => {
+  if (gameState === STATE.PLAYING) shoot();
+});
 
 /* =======================
    Loop
@@ -325,10 +333,8 @@ function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   drawBackgroundStars();
 
-  // Player
   ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
 
-  // Enemy breathing (scale + spacing)
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
   const spacingX = BASE_SPACING_X * (1 + breath * 0.35);
   const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
@@ -337,7 +343,6 @@ function draw(){
   const startX = canvas.width/2 - formationWidth/2;
 
   enemies.forEach(e => {
-    // If assets became ready after spawn, upgrade any placeholder imgs on the fly
     if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
 
     const scale = 1 + breath * 0.25;
@@ -348,16 +353,16 @@ function draw(){
     ctx.drawImage(e.img, x - size/2, y - size/2, size, size);
   });
 
-  // Bullets
   ctx.fillStyle = "#0f0";
   bullets.forEach(b => ctx.fillRect(b.x - 2, b.y - 10, 4, 10));
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.07<br>` +
+    `Galaga-ish Clone v1.08<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
+    `Bullets: ${bullets.length}<br>` +
     `ESC: Menu`;
 }
 
