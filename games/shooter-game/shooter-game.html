@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.27</title>
+<title>Galaga-ish Clone v1.28</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -132,10 +132,12 @@
 - 2025-12-17 | v1.23
   Tweaked: Player bullets are slightly larger than enemy bullets (visual clarity).
   Added: Player bullets can collide with enemy bullets; both are deleted on contact (counter-shot mechanic).
-- 2025-12-17 | v1.24–v1.26
-  Added: 25% chance at the start of any wave to spawn a tiny, fast, bouncing UFO (top zone).
-  Added: UFO takes 3 hits: turns RED → GREEN → BLUE, then fades away and grants a power-up indicator (💥) bottom-right.
-  Kept: All v1.23 mechanics (360° aim, orbiting triangle, straight bullets, bullet-vs-bullet cancel, no grid compaction).
+
+- 2025-12-17 | v1.28
+  Added: Always-on player health bar under the player.
+  Changed: Health replaces lives. Each enemy hit drains 25% health (4 hits total).
+  Added: On death, player explodes into violent pixel-dust particles and returns to menu.
+
 ====================================================================== */
 
 
@@ -173,7 +175,12 @@ let score = 0;
 const SPECTRAL_FUNK = 1000;
 const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
-let lives = 5;
+let lives = 0; // (deprecated) replaced by health bar system
+let health = 1.0; // 0..1 (4 hits -> 0)
+let isDead = false;
+let deathTimer = 0;
+const deathParticles = [];
+
 let wave = 1;
 
 // v1.17: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
@@ -366,7 +373,14 @@ function startGame(){
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
 
-  score = 0; lives = 3; wave = 1;
+  score = 0;
+  // v1.28: health replaces lives (4 hits total)
+  health = 1.0;
+  lives = 0;
+  isDead = false;
+  deathTimer = 0;
+  deathParticles.length = 0;
+  wave = 1;
   showWaveBanner(1);
   bullets.length = 0;
   enemyBullets.length = 0;
@@ -374,8 +388,6 @@ function startGame(){
 
   resetFormation();
   spawnEnemies();
-    trySpawnUFO();
-  trySpawnUFO();
   window.focus();
 }
 
@@ -387,7 +399,6 @@ btnApply.addEventListener("click", () => {
   ENEMY_COLS = parseInt(colsSlider.value, 10);
   resetFormation();
   spawnEnemies();
-    trySpawnUFO();
 });
 
 function setAssetStatus(msg){ assetStatus.textContent = msg; }
@@ -627,58 +638,6 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 const bullets = [];
 const enemyBullets = [];
 
-// v1.24–v1.26: Bonus UFO (25% chance per wave start) + power-up indicator
-let ufo = null; // {x,y,r,vx,vy,phase,hits,stage,fade}
-let ufoCooldownWave = -1; // prevent double-spawn in the same wave start call path
-
-const powerup = {
-  hasBomb: false // 💥 in a box (bottom-right). Press Q to deploy the bomb.
-};
-
-// v1.27: Q-bomb (drops a flashing +, then explodes and knocks enemies back)
-let groundBomb = null; // {x,y,t,flashTimer,flashOn}
-let explosion = null;  // {x,y,r,maxR,t,dur,applied}
-
-function deployBomb(){
-  if (!powerup.hasBomb) return;
-  if (groundBomb || explosion) return; // one at a time
-
-  powerup.hasBomb = false;
-  groundBomb = {
-    x: player.x,
-    y: player.y,
-    t: 0,
-    flashTimer: 0,
-    flashOn: true
-  };
-}
-
-
-function grantUfoPowerup(){
-  powerup.hasBomb = true;
-}
-
-function trySpawnUFO(){
-  // Ensure this function is only evaluated once per wave start even if called twice.
-  if (ufoCooldownWave === wave) return;
-  ufoCooldownWave = wave;
-
-  if (Math.random() > 0.25) return;
-
-  ufo = {
-    x: rand(30, canvas.width - 30),
-    y: rand(40, 90),
-    r: 9,                       // very tiny
-    vx: rand(-8.5, 8.5),        // very fast
-    vy: rand(6.5, 9.0),         // very fast
-    phase: 0,
-    hits: 0,
-    stage: "strobe",            // strobe | red | green | blue | fading
-    fade: 1.0
-  };
-}
-
-
 function shoot(){
   if (fireCooldown > 0) return;
 
@@ -799,12 +758,36 @@ function circleRect(cx, cy, cr, rx, ry, rw, rh){
   return (dx*dx + dy*dy) <= cr*cr;
 }
 
+function spawnPlayerDeath(){
+  // v1.28: violent pixel-dust death
+  isDead = true;
+  deathTimer = 1.2; // seconds before returning to menu
+  const n = 140;
+  for (let i = 0; i < n; i++){
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 120 + Math.random() * 420;
+    deathParticles.push({
+      x: player.x + rand(-player.w*0.15, player.w*0.15),
+      y: player.y + rand(-player.h*0.15, player.h*0.15),
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd,
+      life: 0.55 + Math.random()*0.55,
+      s: 1 + Math.random()*3
+    });
+  }
+}
+
 function damagePlayer(){
-  if (player.invuln > 0) return;
-  lives -= 1;
-  player.invuln = 1.20;
+  if (player.invuln > 0 || isDead) return;
+
+  // Each hit drains 25% health (4 hits total).
+  health = Math.max(0, health - 0.25);
+  player.invuln = 1.00;
   playSfx(sfxOof);
-  if (lives <= 0) showMenu();
+
+  if (health <= 0){
+    spawnPlayerDeath();
+  }
 }
 
 /* =======================
@@ -824,7 +807,6 @@ window.addEventListener("keydown", (e) => {
   keys[k] = true;
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
-  if (e.code === "KeyQ" && gameState === STATE.PLAYING) deployBomb();
   if (k === "escape") showMenu();
 }, { passive:false });
 
@@ -853,6 +835,25 @@ function update(dt){
 
   if (gameState !== STATE.PLAYING) return;
 
+  // v1.28: death particles update + lockout
+  if (isDead){
+    deathTimer -= dt;
+    // update particles
+    for (let i = deathParticles.length - 1; i >= 0; i--){
+      const p = deathParticles[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 980 * dt; // gravity-ish
+      p.vx *= Math.pow(0.10, dt); // heavy drag for 'dust'
+      if (p.life <= 0) deathParticles.splice(i, 1);
+    }
+    if (deathTimer <= 0){
+      showMenu();
+    }
+    return; // freeze gameplay while dead
+  }
+
   if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
   if (fireCooldown > 0) fireCooldown = Math.max(0, fireCooldown - dt);
 
@@ -866,100 +867,6 @@ function update(dt){
   // v1.19: smooth the aim angle (shortest-path wrap) for nicer feel
   const da = normAngle(aimAngle - aimAngleSmoothed);
   aimAngleSmoothed = normAngle(aimAngleSmoothed + da * Math.min(1, dt * 18));
-
-// v1.24–v1.26: UFO update (tiny, fast, bouncing in top zone; avoids player approach a bit)
-if (ufo){
-  ufo.phase += dt * 18;
-
-  // Player "approach" vector: if the player moves toward the UFO, it nudges away.
-  const playerDir = (keys["d"] || keys["arrowright"]) ? 1 : ((keys["a"] || keys["arrowleft"]) ? -1 : 0);
-  const toward = Math.sign(ufo.x - player.x) * -1; // +1 means player is left moving right toward, etc.
-  if (playerDir !== 0 && playerDir === toward){
-    // dodge a bit more when approached
-    ufo.vx += Math.sign(ufo.x - player.x) * 0.35;
-    ufo.vy += (ufo.y < 80 ? 0.15 : -0.10);
-  }
-
-  // baseline chaotic movement
-  ufo.x += ufo.vx;
-  ufo.y += ufo.vy;
-
-  // bounce bounds (top zone only)
-  const left = 16, right = canvas.width - 16;
-  const top = 28, bottom = canvas.height * 0.42;
-
-  if (ufo.x < left){ ufo.x = left; ufo.vx *= -1; }
-  if (ufo.x > right){ ufo.x = right; ufo.vx *= -1; }
-  if (ufo.y < top){ ufo.y = top; ufo.vy *= -1; }
-  if (ufo.y > bottom){ ufo.y = bottom; ufo.vy *= -1; }
-
-  // If it's fading, fade out then grant power-up.
-  if (ufo.stage === "fading"){
-    ufo.fade = Math.max(0, ufo.fade - dt * 1.8);
-    if (ufo.fade <= 0){
-      ufo = null;
-      grantUfoPowerup();
-    }
-  }
-
-// v1.27: Update ground bomb + explosion
-if (groundBomb){
-  groundBomb.t += dt;
-  groundBomb.flashTimer += dt;
-  if (groundBomb.flashTimer >= 0.5){
-    groundBomb.flashTimer -= 0.5;
-    groundBomb.flashOn = !groundBomb.flashOn;
-  }
-
-  // After 3 × 0.5s flashes (1.5s), explode.
-  if (groundBomb.t >= 1.5){
-    const refW = (enemies[0] && enemies[0].w) ? enemies[0].w : 48;
-    const maxR = refW * 1.5; // “radius of 1.5 enemies wide”
-    explosion = { x: groundBomb.x, y: groundBomb.y, r: 0, maxR, t: 0, dur: 0.35, applied: false };
-    groundBomb = null;
-  }
-}
-
-if (explosion){
-  explosion.t += dt;
-  const p = Math.min(1, explosion.t / explosion.dur);
-  explosion.r = explosion.maxR * p;
-
-  // Apply damage + knockback once when the blast starts.
-  if (!explosion.applied){
-    explosion.applied = true;
-
-    for (let ei = enemies.length - 1; ei >= 0; ei--){
-      const e = enemies[ei];
-      const dx = e.x - explosion.x;
-      const dy = e.y - explosion.y;
-      const d = Math.hypot(dx, dy);
-      if (d <= explosion.maxR){
-        // Damage (hp-aware). Most enemies are hp=1, so this usually deletes.
-        e.hp = (e.hp ?? 1) - 1;
-
-        // Knockback impulse away from center
-        const nx = d > 0.0001 ? dx / d : rand(-1,1);
-        const ny = d > 0.0001 ? dy / d : -1;
-        const strength = (1 - (d / explosion.maxR)) * 22;
-        e.kx = (e.kx || 0) + nx * strength;
-        e.ky = (e.ky || 0) + ny * strength;
-
-        if (e.hp <= 0){
-          enemies.splice(ei, 1);
-          score += 10;
-          playSfx(sfxHit);
-        }
-      }
-    }
-  }
-
-  if (p >= 1){
-    explosion = null;
-  }
-}
-
-}
 
   // formation movement bounds depend on breathing spacing
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
@@ -1115,53 +1022,14 @@ if (baseY > maxBaseY){
       }
     }
 
-
-    // v1.27: apply knockback offsets (from bomb explosion), then decay
-    if (e.kx || e.ky){
-      e.x += (e.kx || 0);
-      e.y += (e.ky || 0);
-      const damp = Math.pow(0.86, dt * 60);
-      e.kx *= damp;
-      e.ky *= damp;
-      if (Math.abs(e.kx) < 0.05) e.kx = 0;
-      if (Math.abs(e.ky) < 0.05) e.ky = 0;
-    }
-
     e.w = size;
     e.h = size;
   }
 
   // bullet -> enemy collision
-for (let bi = bullets.length - 1; bi >= 0; bi--){
-  const b = bullets[bi];
-
-  // v1.24–v1.26: Bullet -> UFO collision (3 hits: red -> green -> blue -> fade away + power-up)
-  if (ufo){
-    const dxu = b.x - ufo.x;
-    const dyu = b.y - ufo.y;
-    const rr = (b.r + ufo.r);
-    if (dxu*dxu + dyu*dyu <= rr*rr){
-      bullets.splice(bi, 1);
-
-      if (ufo.stage !== "fading"){
-        ufo.hits += 1;
-        if (ufo.hits === 1) ufo.stage = "red";
-        else if (ufo.hits === 2) ufo.stage = "green";
-        else {
-          ufo.stage = "blue";
-          // After the 3rd hit, start fading away.
-          ufo.stage = "fading";
-        }
-      }
-
-      // tiny score bump for tagging the UFO
-      score += 15;
-      playSfx(sfxHit);
-      continue; // bullet is gone, move on
-    }
-  }
-
-  for (let ei = enemies.length - 1; ei >= 0; ei--){
+  for (let bi = bullets.length - 1; bi >= 0; bi--){
+    const b = bullets[bi];
+    for (let ei = enemies.length - 1; ei >= 0; ei--){
       const e = enemies[ei];
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
@@ -1209,7 +1077,6 @@ for (let bi = bullets.length - 1; bi >= 0; bi--){
 
     resetFormation();
     spawnEnemies();
-    trySpawnUFO();
   }
 }
 
@@ -1232,6 +1099,17 @@ function draw(){
     ctx.restore();
   }
 
+  // v1.28: death particles
+  if (deathParticles.length){
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    for (const p of deathParticles){
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
+      ctx.fillRect(p.x - p.s/2, p.y - p.s/2, p.s, p.s);
+    }
+    ctx.restore();
+  }
+
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
   if (gameState === STATE.PLAYING){
@@ -1240,6 +1118,26 @@ function draw(){
     }
   } else {
     ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+  }
+
+  // v1.28: always-on health bar under the player (4 hits total)
+  if (gameState === STATE.PLAYING){
+    const barW = player.w;
+    const barH = 7;
+    const bx = player.x - barW/2;
+    const by = player.y + player.h/2 + 10;
+
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.fillRect(bx-1, by-1, barW+2, barH+2);
+
+    ctx.fillStyle = "rgba(255,0,0,0.22)";
+    ctx.fillRect(bx, by, barW, barH);
+
+    ctx.fillStyle = "rgba(0,255,102,0.85)";
+    ctx.fillRect(bx, by, barW * Math.max(0, Math.min(1, health)), barH);
+    ctx.restore();
   }
 
 // v1.19: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
@@ -1262,97 +1160,7 @@ if (gameState === STATE.PLAYING){
   ctx.restore();
 }
 
-  
-// v1.24–v1.26: UFO draw (strobing oval, then color stages, then fade)
-if (ufo){
-  ctx.save();
-  ctx.globalAlpha = (ufo.stage === "fading" ? ufo.fade : 1.0);
-
-  let fill = "#fff";
-  if (ufo.stage === "red") fill = "#f00";
-  else if (ufo.stage === "green") fill = "#0f0";
-  else if (ufo.stage === "blue") fill = "#00f";
-  else {
-    // strobe
-    fill = (Math.floor(time * 30) % 2 === 0) ? "#fff" : "#000";
-  }
-
-  ctx.fillStyle = fill;
-  ctx.beginPath();
-  ctx.ellipse(ufo.x, ufo.y, 14, 7, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // tiny rim so it stays visible on black/white strobe
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.beginPath();
-  ctx.ellipse(ufo.x, ufo.y, 14, 7, 0, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.restore();
-}
-
-// v1.24–v1.26: Power-up indicator slot (bottom-right)
-if (powerup.hasBomb && gameState === STATE.PLAYING){
-  const size = 52;
-  const pad = 14;
-  const x = canvas.width - pad - size;
-  const y = canvas.height - pad - size;
-
-  ctx.save();
-  ctx.globalAlpha = 0.95;
-  ctx.strokeStyle = "rgba(0,255,102,0.55)";
-  ctx.fillStyle = "rgba(0,0,0,0.45)";
-  ctx.lineWidth = 2;
-  ctx.fillRect(x, y, size, size);
-  ctx.strokeRect(x, y, size, size);
-
-  ctx.font = "30px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "#fff";
-  ctx.fillText("💥", x + size/2, y + size/2 + 2);
-
-  ctx.font = "12px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = "rgba(0,255,102,0.95)";
-  ctx.fillText("Press Q", x + size/2, y + size + 6);
-
-  ctx.restore();
-}
-
-// v1.27: draw ground bomb (+) and explosion ring
-if (gameState === STATE.PLAYING && groundBomb){
-  ctx.save();
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = groundBomb.flashOn ? "yellow" : "red";
-  ctx.globalAlpha = 0.95;
-  const s = 14;
-  ctx.beginPath();
-  ctx.moveTo(groundBomb.x - s, groundBomb.y);
-  ctx.lineTo(groundBomb.x + s, groundBomb.y);
-  ctx.moveTo(groundBomb.x, groundBomb.y - s);
-  ctx.lineTo(groundBomb.x, groundBomb.y + s);
-  ctx.stroke();
-  ctx.restore();
-}
-
-if (gameState === STATE.PLAYING && explosion){
-  ctx.save();
-  ctx.globalAlpha = 0.9;
-  ctx.strokeStyle = "rgba(255,0,0,0.55)";
-  ctx.fillStyle = "rgba(255,0,0,0.18)";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(explosion.x, explosion.y, explosion.r, 0, Math.PI*2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(explosion.x, explosion.y, explosion.r, 0, Math.PI*2);
-  ctx.fill();
-  ctx.restore();
-}
-
-// enemies
+  // enemies
   for (const e of enemies){
     ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
   }
@@ -1375,9 +1183,9 @@ if (gameState === STATE.PLAYING && explosion){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.27<br>` +
+    `Galaga-ish Clone v1.28<br>` +
     `State: ${gameState}<br>` +
-    `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
+    `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
