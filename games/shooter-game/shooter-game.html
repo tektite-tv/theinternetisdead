@@ -1,113 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Shooter Game v1.20</title>
+<meta charset="UTF-8" />
+<title>Shooter Game v1.21</title>
 <style>
 html, body {
-    margin: 0;
-    padding: 0;
-    background: black;
-    color: white;
-    overflow: hidden;
-    font-family: monospace;
+  margin: 0;
+  padding: 0;
+  background: #000;
+  color: #fff;
+  overflow: hidden;
+  font-family: monospace;
 }
-canvas {
-    display: block;
-    margin: 0 auto;
-    background: black;
+canvas { display:block; background:#000; }
+#waveBanner{
+  position:absolute; top:38%;
+  width:100%; text-align:center;
+  font-size:48px; color:rgba(0,255,0,0.85);
+  pointer-events:none;
 }
-#waveBanner {
-    position: absolute;
-    top: 40%;
-    width: 100%;
-    text-align: center;
-    font-size: 48px;
-    color: rgba(0,255,0,0.8);
-    pointer-events: none;
-}
-#hint {
-    position: absolute;
-    left: 12px;
-    top: 10px;
-    font-size: 14px;
-    opacity: 0.8;
-    pointer-events: none;
+#hint{
+  position:absolute; left:12px; top:10px;
+  font-size:14px; opacity:0.8; pointer-events:none;
 }
 </style>
 </head>
 <body>
 <div id="waveBanner"></div>
-<div id="hint">Aim with mouse (top 180° only). Shoot: Space or Left Click</div>
+<div id="hint">Aim: mouse (top 180°). Shoot: Space or Left Click. Move: ← →</div>
 <canvas id="game"></canvas>
 
 <script>
 // ==============================
-// Shooter Game v1.20
-// Change log (v1.18 -> v1.20):
-// - Player can aim bullets in any direction within the TOP 180 degrees (above the player).
-// - Bullets spawn from the top edge of the player "sprite" (top of the circle).
-// - Shooting works with Space OR left mouse button.
-// - Enemy bullet vs player bullet cancellation kept.
+// Shooter Game v1.21
+// Fixes / improvements (because games should not crash just because you resized a window):
+// - Keeps 180° top-aim + spawn-from-top-of-player.
+// - Prevents Space from scrolling the page (browser loves stealing Space).
+// - Restores Galaga-style "swoop" dives: formation stays top, individual enemies dive into player zone then return.
+// - Dives scale gently with wave, but still fun not "laser hell".
+// - Bullet-vs-bullet cancellation remains.
 // ==============================
 
 // ---- BASIC SETUP ----
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const TOP_ZONE_RATIO = 0.45;
+const TOP_ZONE_RATIO = 0.48;        // enemy formation "home" lives in top ~half
+const DIVE_FLOOR_RATIO = 0.82;      // how far a diver is allowed to go (relative to canvas height)
 
-// ---- PLAYER ----
+const banner = document.getElementById("waveBanner");
+
 const player = {
-    x: window.innerWidth / 2,
-    y: window.innerHeight * 0.85,
-    r: 15,
-    lives: 5,
-    invuln: 0
+  x: window.innerWidth / 2,
+  y: window.innerHeight * 0.85,
+  r: 15,
+  lives: 5,
+  invuln: 0
 };
 
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    // Keep player anchored to bottom area after resize
-    player.y = canvas.height * 0.85;
-    player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  player.y = canvas.height * 0.85;
+  player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
 }
 window.addEventListener("resize", resize);
 resize();
 
 // ---- AIMING ----
-let mouseX = canvas.width / 2;
-let mouseY = canvas.height / 2;
+let mouseX = canvas.width/2, mouseY = canvas.height/2;
 let mouseDown = false;
 
-canvas.addEventListener("mousemove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
-});
-canvas.addEventListener("mousedown", (e) => {
-    if (e.button === 0) mouseDown = true;
-});
-window.addEventListener("mouseup", (e) => {
-    if (e.button === 0) mouseDown = false;
-});
-
-// Returns a clamped aiming angle (radians) within the top 180° hemisphere.
-// 0 rad = right, -PI/2 = up, -PI = left
-function getAimAngle() {
-    const dx = mouseX - player.x;
-    const dy = mouseY - (player.y - player.r); // reference: top of player
-    let ang = Math.atan2(dy, dx);
-
-    // Clamp to the top hemisphere: [-PI, 0]
-//  - If the mouse is in the bottom half (ang > 0), snap to the nearest boundary
-//    based on which side of the player you're aiming at (left = -PI, right = 0).
-if (ang > 0) ang = (dx < 0) ? -Math.PI : 0;
-if (ang < -Math.PI) ang = -Math.PI;
-
-return ang;
+function setMouseFromEvent(e){
+  const rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
 }
+canvas.addEventListener("mousemove", setMouseFromEvent);
+canvas.addEventListener("mousedown", (e)=>{ if(e.button===0){ mouseDown=true; setMouseFromEvent(e); }});
+window.addEventListener("mouseup", (e)=>{ if(e.button===0) mouseDown=false; });
+
+function getAimAngle(){
+  const dx = mouseX - player.x;
+  const dy = mouseY - (player.y - player.r); // reference point: top edge of player
+  let ang = Math.atan2(dy, dx);              // -PI..PI
+
+  // Clamp to top hemisphere: [-PI, 0]
+  // If the mouse is below the player (ang > 0), snap to nearest boundary (left/right).
+  if (ang > 0) ang = (dx < 0) ? -Math.PI : 0;
+  if (ang < -Math.PI) ang = -Math.PI;
+
+  return ang;
+}
+
+// ---- INPUT ----
+const keys = {};
+window.addEventListener("keydown", (e)=>{
+  keys[e.key] = true;
+  if (e.key === " ") e.preventDefault(); // stop page scroll
+});
+window.addEventListener("keyup", (e)=>{ keys[e.key] = false; });
+
+// ---- HELPERS ----
+function dist(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
 
 // ---- GAME STATE ----
 let wave = 1;
@@ -117,189 +113,270 @@ let enemyBullets = [];
 let fireCooldown = 0;
 
 // ---- UI ----
-const banner = document.getElementById("waveBanner");
-function showWave() {
-    banner.textContent = "WAVE " + wave;
-    setTimeout(() => banner.textContent = "", 1200);
+function showWave(){
+  banner.textContent = "WAVE " + wave;
+  setTimeout(()=> banner.textContent="", 1100);
 }
 
-// ---- INPUT ----
-const keys = {};
-window.addEventListener("keydown", e => keys[e.key] = true);
-window.addEventListener("keyup", e => keys[e.key] = false);
+// ---- WAVES / ENEMIES ----
+function spawnWave(){
+  enemies = [];
+  const count = Math.min(2 ** (wave - 1), 128);
 
-// ---- HELPERS ----
-function dist(ax,ay,bx,by) {
-    return Math.hypot(ax-bx, ay-by);
-}
+  const cols = Math.ceil(Math.sqrt(count));
+  const rows = Math.ceil(count / cols);
 
-// ---- SPAWN ENEMIES ----
-function spawnWave() {
-    enemies = [];
-    const count = Math.min(2 ** (wave - 1), 128);
-    const cols = Math.ceil(Math.sqrt(count));
-    const rows = Math.ceil(count / cols);
+  const zoneH = canvas.height * TOP_ZONE_RATIO;
+  const spacingX = canvas.width / (cols + 1);
+  const spacingY = zoneH / (rows + 1);
 
-    const zoneHeight = canvas.height * TOP_ZONE_RATIO;
-    const spacingX = canvas.width / (cols + 1);
-    const spacingY = zoneHeight / (rows + 1);
+  // shrink to fit as waves grow
+  const r = Math.min(spacingX, spacingY) * 0.32;
 
-    // Shrink enemies to fit their zone as count grows
-    const size = Math.min(spacingX, spacingY) * 0.35;
-
-    let i = 0;
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols && i < count; c++) {
-            enemies.push({
-                x: spacingX * (c + 1),
-                y: spacingY * (r + 1),
-                r: size,
-                t: Math.random() * Math.PI * 2
-            });
-            i++;
-        }
+  let i = 0;
+  for (let rr=0; rr<rows; rr++){
+    for (let cc=0; cc<cols && i<count; cc++){
+      const homeX = spacingX * (cc + 1);
+      const homeY = spacingY * (rr + 1);
+      enemies.push({
+        x: homeX, y: homeY,
+        homeX, homeY,
+        r,
+        t: Math.random() * Math.PI * 2, // wobble phase
+        diving: false,
+        diveT: 0,
+        diveDir: (Math.random()<0.5 ? -1 : 1),
+        hp: 1
+      });
+      i++;
     }
-    showWave();
+  }
+  showWave();
 }
 
 // ---- SHOOTING ----
-function shootPlayer() {
-    if (fireCooldown > 0) return;
+function shootPlayer(){
+  if (fireCooldown > 0) return;
 
-    const ang = getAimAngle();
-    const speed = 9; // bullet speed
-    const vx = Math.cos(ang) * speed;
-    const vy = Math.sin(ang) * speed;
+  const ang = getAimAngle();
+  const speed = 10;
+  const vx = Math.cos(ang) * speed;
+  const vy = Math.sin(ang) * speed; // <= 0 in top hemisphere
 
-    // Spawn from top edge of player (above the bottom of the image)
-    const spawnX = player.x;
-    const spawnY = player.y - player.r;
+  // spawn from the top of player circle (above bottom of its "image")
+  const spawnX = player.x;
+  const spawnY = player.y - player.r;
 
-    playerBullets.push({ x: spawnX, y: spawnY, vx, vy, r: 4 });
-    fireCooldown = Math.max(10 - wave, 4);
+  playerBullets.push({ x: spawnX, y: spawnY, vx, vy, r: 4 });
+  fireCooldown = Math.max(12 - wave, 5); // slightly slower by default, speeds up with wave
 }
 
-// ---- GAME LOOP ----
-function update() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// ---- ENEMY DIVE LOGIC ----
+function tryStartDive(e){
+  // keep it fun: chance rises with wave but stays reasonable
+  const base = 0.0006;
+  const perWave = 0.00025;
+  const chance = base + perWave * Math.min(wave, 10);
 
-    // Player move
-    if (keys["ArrowLeft"]) player.x -= 6;
-    if (keys["ArrowRight"]) player.x += 6;
-    player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
+  // fewer dives when there are tons of enemies (prevents "everyone dives at once")
+  const crowd = clamp(60 / Math.max(enemies.length, 1), 0.25, 1.0);
 
-    // Shoot: Space or left click
-    if (keys[" "] || mouseDown) shootPlayer();
-    if (fireCooldown > 0) fireCooldown--;
+  if (!e.diving && Math.random() < chance * crowd){
+    e.diving = true;
+    e.diveT = 0;
+    // choose a deterministic-ish curve direction (left/right) so it looks patterned
+    e.diveDir = (e.x < canvas.width/2) ? 1 : -1;
+  }
+}
 
-    // Update bullets
-    for (const b of playerBullets) { b.x += b.vx; b.y += b.vy; }
-    for (const b of enemyBullets)  { b.y += b.vy; }
+function updateEnemy(e){
+  // predictable formation wobble (home positions drift slightly)
+  e.t += 0.02;
+  const wobbleX = Math.sin(e.t) * 0.8;
+  const wobbleY = Math.cos(e.t*0.7) * 0.3;
 
-    // Cull offscreen bullets
-    playerBullets = playerBullets.filter(b => b.x > -50 && b.x < canvas.width + 50 && b.y > -50 && b.y < canvas.height + 50);
-    enemyBullets  = enemyBullets.filter(b => b.y > -50 && b.y < canvas.height + 50);
+  // formation drift stays in top zone
+  const homeClampY = canvas.height * TOP_ZONE_RATIO - e.r * 1.5;
+  e.homeY = clamp(e.homeY + wobbleY * 0.2, e.r*1.5, homeClampY);
 
-    // Bullet vs bullet cancellation (player <-> enemy)
-    for (let i = playerBullets.length - 1; i >= 0; i--) {
-        for (let j = enemyBullets.length - 1; j >= 0; j--) {
-            if (dist(playerBullets[i].x, playerBullets[i].y, enemyBullets[j].x, enemyBullets[j].y) < (playerBullets[i].r + 3)) {
-                playerBullets.splice(i, 1);
-                enemyBullets.splice(j, 1);
-                break;
-            }
-        }
+  // Occasionally start dives
+  tryStartDive(e);
+
+  if (!e.diving){
+    // ease back to home
+    e.x += (e.homeX + wobbleX - e.x) * 0.08;
+    e.y += (e.homeY - e.y) * 0.08;
+
+    // shoot occasionally from formation
+    const shootChance = 0.0012 + 0.00025 * Math.min(wave, 8);
+    if (Math.random() < shootChance){
+      enemyBullets.push({ x: e.x, y: e.y, vy: 4 + Math.min(wave, 5), r: 4 });
     }
+    return;
+  }
 
-    // Enemies: predictable wobble + occasional shots
-    for (const e of enemies) {
-        e.t += 0.02;
-        e.x += Math.sin(e.t) * 0.6;
+  // Diving: swoop down then arc back up and rejoin formation
+  e.diveT += 1;
+  const t = e.diveT;
 
-        // Enemy shooting rate scales gently with wave
-        if (Math.random() < 0.0015 * wave) {
-            enemyBullets.push({ x: e.x, y: e.y, vy: 4 + Math.min(wave, 6) });
-        }
+  // dive speed scales gently
+  const downSpeed = 2.2 + 0.25 * Math.min(wave, 8);
+  const sideSpeed = 2.0 + 0.20 * Math.min(wave, 8);
+
+  // A smooth "S" curve using sin
+  e.x += Math.sin(t * 0.08) * sideSpeed * e.diveDir;
+  e.y += downSpeed;
+
+  // Divers shoot less often than you'd think (because fun)
+  if (Math.random() < 0.0025){
+    enemyBullets.push({ x: e.x, y: e.y, vy: 5 + Math.min(wave, 5), r: 4 });
+  }
+
+  // If diver reaches the dive floor, start returning
+  const diveFloorY = canvas.height * DIVE_FLOOR_RATIO;
+  if (e.y >= diveFloorY){
+    // force return by "telegraphing" a curved retreat
+    e.diveT = 9999; // triggers return behavior below
+  }
+
+  if (e.diveT > 180){
+    // Return: lerp strongly back toward home in top zone
+    e.x += (e.homeX - e.x) * 0.12;
+    e.y += (e.homeY - e.y) * 0.12;
+
+    // Once close enough, snap back to formation and stop diving
+    if (dist(e.x, e.y, e.homeX, e.homeY) < e.r * 0.6){
+      e.x = e.homeX; e.y = e.homeY;
+      e.diving = false;
+      e.diveT = 0;
     }
+  }
+}
 
-    // Bullet vs enemy
-    for (let i = playerBullets.length - 1; i >= 0; i--) {
-        for (let j = enemies.length - 1; j >= 0; j--) {
-            if (dist(playerBullets[i].x, playerBullets[i].y, enemies[j].x, enemies[j].y) < enemies[j].r) {
-                enemies.splice(j, 1);
-                playerBullets.splice(i, 1);
-                break;
-            }
-        }
+// ---- MAIN LOOP ----
+function update(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Player move
+  if (keys["ArrowLeft"]) player.x -= 6;
+  if (keys["ArrowRight"]) player.x += 6;
+  player.x = clamp(player.x, player.r, canvas.width - player.r);
+
+  // Shoot: Space or mouse
+  if (keys[" "] || mouseDown) shootPlayer();
+  if (fireCooldown > 0) fireCooldown--;
+
+  // Update bullets
+  for (const b of playerBullets){ b.x += b.vx; b.y += b.vy; }
+  for (const b of enemyBullets){ b.y += b.vy; }
+
+  // Cull offscreen
+  playerBullets = playerBullets.filter(b => b.x>-60 && b.x<canvas.width+60 && b.y>-60 && b.y<canvas.height+60);
+  enemyBullets  = enemyBullets.filter(b => b.y>-60 && b.y<canvas.height+60);
+
+  // Bullet vs bullet (cancel)
+  for (let i=playerBullets.length-1; i>=0; i--){
+    for (let j=enemyBullets.length-1; j>=0; j--){
+      const a = playerBullets[i], e = enemyBullets[j];
+      if (dist(a.x,a.y,e.x,e.y) < (a.r + e.r)){
+        playerBullets.splice(i,1);
+        enemyBullets.splice(j,1);
+        break;
+      }
     }
+  }
 
-    // Enemy bullet vs player
-    if (player.invuln > 0) player.invuln--;
-    for (let i = enemyBullets.length - 1; i >= 0; i--) {
-        if (dist(enemyBullets[i].x, enemyBullets[i].y, player.x, player.y) < player.r && player.invuln <= 0) {
-            enemyBullets.splice(i, 1);
-            player.lives--;
-            player.invuln = 60;
-        }
+  // Update enemies
+  for (const e of enemies) updateEnemy(e);
+
+  // Player bullets vs enemies
+  for (let i=playerBullets.length-1; i>=0; i--){
+    const b = playerBullets[i];
+    for (let j=enemies.length-1; j>=0; j--){
+      const e = enemies[j];
+      if (dist(b.x,b.y,e.x,e.y) < e.r){
+        enemies.splice(j,1);
+        playerBullets.splice(i,1);
+        break;
+      }
     }
+  }
 
-    // Draw aim guide (line from player top toward aim direction)
-    const aimAng = getAimAngle();
-    const guideLen = 80;
+  // Enemy bullets vs player
+  if (player.invuln > 0) player.invuln--;
+  for (let i=enemyBullets.length-1; i>=0; i--){
+    const b = enemyBullets[i];
+    if (dist(b.x,b.y,player.x,player.y) < (player.r + b.r) && player.invuln<=0){
+      enemyBullets.splice(i,1);
+      player.lives--;
+      player.invuln = 70; // slightly longer i-frames = funner
+    }
+  }
+
+  // Aim guide
+  const ang = getAimAngle();
+  ctx.beginPath();
+  ctx.moveTo(player.x, player.y - player.r);
+  ctx.lineTo(player.x + Math.cos(ang)*90, (player.y - player.r) + Math.sin(ang)*90);
+  ctx.strokeStyle = "rgba(0,255,255,0.35)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.lineWidth = 1;
+
+  // Draw separation line (enemy zone bottom) as a subtle hint
+  const sepY = canvas.height * TOP_ZONE_RATIO;
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.beginPath();
+  ctx.moveTo(0, sepY);
+  ctx.lineTo(canvas.width, sepY);
+  ctx.stroke();
+
+  // Draw player
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+  ctx.fillStyle = player.invuln ? "yellow" : "white";
+  ctx.fill();
+
+  // Draw enemies
+  for (const e of enemies){
     ctx.beginPath();
-    ctx.moveTo(player.x, player.y - player.r);
-    ctx.lineTo(player.x + Math.cos(aimAng) * guideLen, (player.y - player.r) + Math.sin(aimAng) * guideLen);
-    ctx.strokeStyle = "rgba(0,255,255,0.35)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.lineWidth = 1;
-
-    // Draw player
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
-    ctx.fillStyle = player.invuln ? "yellow" : "white";
+    ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+    ctx.fillStyle = e.diving ? "rgba(255,80,80,1)" : "rgba(255,0,0,1)";
     ctx.fill();
+  }
 
-    // Draw enemies
-    for (const e of enemies) {
-        ctx.beginPath();
-        ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
-        ctx.fillStyle = "red";
-        ctx.fill();
-    }
+  // Draw bullets
+  ctx.fillStyle = "cyan";
+  for (const b of playerBullets) ctx.fillRect(b.x-2, b.y-2, 4, 4);
+  ctx.fillStyle = "orange";
+  for (const b of enemyBullets) ctx.fillRect(b.x-2, b.y, 4, 6);
 
-    // Draw bullets
-    ctx.fillStyle = "cyan";
-    for (const b of playerBullets) ctx.fillRect(b.x - 2, b.y - 2, 4, 4);
-    ctx.fillStyle = "orange";
-    for (const b of enemyBullets) ctx.fillRect(b.x - 2, b.y, 4, 6);
+  // HUD
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.font = "16px monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("Lives: " + player.lives, 12, canvas.height - 20);
+  ctx.fillText("Wave: " + wave, 12, canvas.height - 40);
 
-    // HUD
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.fillText("Lives: " + player.lives, 12, canvas.height - 20);
-    ctx.fillText("Wave: " + wave, 12, canvas.height - 36);
+  // Game over
+  if (player.lives <= 0){
+    ctx.fillStyle = "rgba(255,0,0,0.85)";
+    ctx.font = "52px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2);
+    return;
+  }
 
-    // Lose condition (simple)
-    if (player.lives <= 0) {
-        ctx.fillStyle = "rgba(255,0,0,0.85)";
-        ctx.font = "48px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
-        ctx.font = "16px monospace";
-        ctx.textAlign = "left";
-        return; // stop updating
-    }
+  // Next wave
+  if (enemies.length === 0){
+    wave++;
+    spawnWave();
+  }
 
-    // Next wave
-    if (enemies.length === 0) {
-        wave++;
-        spawnWave();
-    }
-
-    requestAnimationFrame(update);
+  requestAnimationFrame(update);
 }
 
-// ---- START ----
+// Start
 spawnWave();
 update();
 </script>
