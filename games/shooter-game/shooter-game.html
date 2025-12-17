@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.29</title>
+<title>Galaga-ish Clone v1.30</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -228,6 +228,12 @@
   Changed: Health replaces lives. Each enemy hit drains 25% health (4 hits total).
   Added: On death, player explodes into violent pixel-dust particles and returns to menu.
 
+
+
+- 2025-12-17 | v1.30
+  Fix: Restored any accidentally removed gameplay systems while adding UI and powerups.
+  Kept: 360° aim + orbit triangle, straight bullets, bullet-vs-bullet cancel, Galaga formation + swoops, wave sizing 1/2/4/6/..., HUD toggle, menus/options.
+  Added: Lives box (bottom-left), powerup slot with 'Press Q', YOU DIED overlay + Restart reset, UFO 25% wave spawn with 3-hit color cycle + fade granting 💥, Q bomb drop (+ flash then AoE + knockback), health bar (4 hits per life), pixel-dust death.
 ====================================================================== */
 
 
@@ -1570,7 +1576,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.29<br>` +
+    `Galaga-ish Clone v1.30<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
