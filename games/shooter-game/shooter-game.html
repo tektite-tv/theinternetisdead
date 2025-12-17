@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Shooter Game v0.08</title>
+  <title>Shooter Game v0.09</title>
 
   <style>
     html, body {
@@ -13,21 +13,18 @@
       color: #fff;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
-
     body {
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
     }
-
     #gameContainer {
       position: relative;
       width: 100vw;
       height: 100vh;
       overflow: hidden;
     }
-
     #game {
       width: 100%;
       height: 100%;
@@ -35,7 +32,6 @@
       background: #000;
       border: 2px solid #444;
     }
-
     #ui {
       position: absolute;
       left: 10px;
@@ -46,7 +42,16 @@
       text-shadow: 0 0 6px rgba(0,0,0,0.9);
       line-height: 1.35;
     }
-
+    #hint {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      pointer-events: none;
+      z-index: 10;
+      font-size: 12px;
+      opacity: 0.75;
+      text-shadow: 0 0 6px rgba(0,0,0,0.9);
+    }
     #gameOverMessage {
       position: absolute;
       inset: 0;
@@ -62,17 +67,6 @@
       pointer-events: none;
       z-index: 30;
     }
-
-    #hint {
-      position: absolute;
-      left: 10px;
-      bottom: 10px;
-      pointer-events: none;
-      z-index: 10;
-      font-size: 12px;
-      opacity: 0.75;
-      text-shadow: 0 0 6px rgba(0,0,0,0.9);
-    }
   </style>
 </head>
 
@@ -81,15 +75,16 @@
     <canvas id="game"></canvas>
 
     <div id="ui">
-      <div><b>shooter-game v0.08</b> (tunnel runner)</div>
-      <div>WASD = move | Mouse = aim | LMB = shoot | R = restart</div>
+      <div><b>shooter-game v0.09</b> (helicopter mode)</div>
+      <div>WASD = fly | Mouse = aim | LMB = shoot | R = restart</div>
       <div>HP: <span id="hpDisplay">100</span> | Score: <span id="scoreDisplay">0</span></div>
       <div>Waypoint: <span id="wpDisplay">0</span> | Enemies: <span id="enemyDisplay">0</span></div>
-      <div style="opacity:0.85">GIF enemies via /media/images/gifs/index.json</div>
+      <div>Distance: <span id="distDisplay">0</span></div>
+      <div style="opacity:0.85">Progress happens because YOU move, not because the world shoves you.</div>
     </div>
 
     <div id="hint">
-      Tip: don’t fall behind the scroll. Waypoints spawn harder waves.
+      Tip: push right to reach waypoint gates. They spawn harder waves.
     </div>
 
     <div id="gameOverMessage">GAME OVER</div>
@@ -97,26 +92,20 @@
 
   <script>
     // ================================================================
-    // Shooter Game v0.08 (FULL FILE)
+    // Shooter Game v0.09 (FULL FILE)
     //
-    // CORE SHIFT: Arena -> Left-to-right scrolling tunnel runner.
-    // - Camera auto-advances right through a tunnel with walls & obstacles.
-    // - Waypoints every segment; crossing triggers progressively harder waves.
-    // - Obstacles are procedural per segment (deterministic).
-    // - Enemies still come from /media/images/gifs/index.json
-    // - Enemy behavior is deterministic from image filename (hash):
-    //     speed + style + wobble/jitter/charge patterns
+    // BIG CHANGE (requested):
+    // - "Helicopter game" feel: NO auto-scroll. The player must move forward.
+    // - Camera follows player; tunnel is static in world space.
+    // - Waypoints are gates you fly through; crossing spawns harder waves.
     //
-    // Collision:
-    // - Player circle vs tunnel walls and obstacle AABBs (push-out resolution).
-    // - Bullets use swept segment-vs-circle for enemies (prevents phasing).
-    // - Bullets collide with obstacles (stop).
-    //
-    // Audio:
-    // - hitmarker.mp3 for enemy damage
-    // - oof.mp3 for player damage
-    //
-    // No visible enemy hitbox circles.
+    // Kept:
+    // - Procedural tunnel obstacles with collision.
+    // - Enemy GIFs via /media/images/gifs/index.json
+    // - Deterministic per-image enemy style/speed (hash-based).
+    // - Swept bullet collision vs enemies; bullets collide with obstacles.
+    // - hitmarker.mp3 for enemy damage, oof.mp3 for player damage
+    // - No visible enemy hitbox circles.
     // ================================================================
 
     // ---------------------------
@@ -129,9 +118,9 @@
     const scoreDisplay = document.getElementById("scoreDisplay");
     const wpDisplay = document.getElementById("wpDisplay");
     const enemyDisplay = document.getElementById("enemyDisplay");
+    const distDisplay = document.getElementById("distDisplay");
     const gameOverMessage = document.getElementById("gameOverMessage");
 
-    // Virtual viewport (world units)
     const VIRTUAL_WIDTH = 1200;
     const VIRTUAL_HEIGHT = 800;
 
@@ -162,7 +151,6 @@
     // Deterministic RNG utilities
     // ---------------------------
     function hashStringFNV1a(str) {
-      // 32-bit FNV-1a
       let h = 0x811c9dc5;
       for (let i = 0; i < str.length; i++) {
         h ^= str.charCodeAt(i);
@@ -185,118 +173,85 @@
     // ---------------------------
     // World: tunnel + segments
     // ---------------------------
-    const TUNNEL_TOP = 60;                 // world y
-    const TUNNEL_BOTTOM = 740;             // world y
-    const TUNNEL_H = TUNNEL_BOTTOM - TUNNEL_TOP;
+    const TUNNEL_TOP = 60;
+    const TUNNEL_BOTTOM = 740;
 
-    const SEG_LEN = 1500;                 // world x length per segment
-    const SEG_BUFFER_AHEAD = 3;           // keep generated segments ahead
-    const SEG_BUFFER_BEHIND = 1;          // keep segments behind (for collision/cleanup)
+    const SEG_LEN = 1500;
+    const SEG_BUFFER_AHEAD = 4;
+    const SEG_BUFFER_BEHIND = 2;
 
-    // Auto-scroll
-    const SCROLL_BASE = 250;              // world units/sec
-    let scrollSpeed = SCROLL_BASE;
-
-    // Pressure behind camera
-    const BACK_SOFT_LIMIT = 520;          // behind camera.x
-    const BACK_HARD_LIMIT = 700;          // gameover if farther behind
-
-    // Waypoint system
-    let waypointIndex = 0;                // number of passed waypoints
-    function waypointX(i) { return (i + 1) * SEG_LEN; } // waypoint lines at segment boundaries
+    // Waypoints at segment boundaries
+    let waypointIndex = 0;
+    function waypointX(i) { return (i + 1) * SEG_LEN; }
 
     // Segments store obstacles (rects)
     // rect: {x,y,w,h}
-    const segments = new Map(); // key: segIndex -> { obstacles: [] }
+    const segments = new Map();
 
     function worldSegIndex(x) {
       return Math.floor(x / SEG_LEN);
     }
 
-    function ensureSegmentsAroundCamera() {
-      const camSeg = worldSegIndex(camera.x);
-      const minSeg = camSeg - SEG_BUFFER_BEHIND;
-      const maxSeg = camSeg + SEG_BUFFER_AHEAD;
+    function ensureSegmentsAroundPlayer() {
+      const pSeg = worldSegIndex(player.x);
+      const minSeg = pSeg - SEG_BUFFER_BEHIND;
+      const maxSeg = pSeg + SEG_BUFFER_AHEAD;
 
       for (let si = minSeg; si <= maxSeg; si++) {
-        if (!segments.has(si)) {
-          segments.set(si, generateSegment(si));
-        }
+        if (!segments.has(si)) segments.set(si, generateSegment(si));
       }
 
       // Cleanup far segments
       for (const key of segments.keys()) {
-        if (key < minSeg - 2 || key > maxSeg + 4) {
-          segments.delete(key);
-        }
+        if (key < minSeg - 3 || key > maxSeg + 6) segments.delete(key);
       }
     }
 
     function generateSegment(segIndex) {
-      // Deterministic segment generation based on segIndex
       const seed = hashStringFNV1a("SEG:" + segIndex);
       const rand = makeRng(seed);
 
       const obstacles = [];
+      const difficulty = segIndex;
+      const density = clamp(0.9 + difficulty * 0.03, 0.9, 2.6);
 
-      // Difficulty influences obstacle density mildly
-      const difficulty = segIndex; // roughly increases as you go right
-      const density = clamp(0.9 + difficulty * 0.03, 0.9, 2.4); // scaling factor
-
-      // Number of obstacle "sets" in segment
       const baseSets = 3;
       const sets = Math.floor(baseSets * density);
 
       const segX0 = segIndex * SEG_LEN;
       const segX1 = segX0 + SEG_LEN;
 
-      // We create obstacle sets as vertical blockers leaving a guaranteed gap lane.
-      // Each set: one big block from top or bottom, sometimes both with a corridor.
       for (let k = 0; k < sets; k++) {
         const px = lerp(segX0 + 260, segX1 - 260, rand());
         const w = lerp(90, 180, rand());
-        const gap = lerp(170, 280, rand()); // passable corridor height
+        const gap = lerp(170, 300, rand());
         const gapCenter = lerp(TUNNEL_TOP + 120, TUNNEL_BOTTOM - 120, rand());
+
         const gapTop = clamp(gapCenter - gap / 2, TUNNEL_TOP + 20, TUNNEL_BOTTOM - 20 - gap);
         const gapBottom = gapTop + gap;
 
-        // Top block
+        // top block
         const topH = gapTop - TUNNEL_TOP;
-        if (topH > 40) {
-          obstacles.push({
-            x: px - w / 2,
-            y: TUNNEL_TOP,
-            w,
-            h: topH
-          });
-        }
+        if (topH > 40) obstacles.push({ x: px - w / 2, y: TUNNEL_TOP, w, h: topH });
 
-        // Bottom block
+        // bottom block
         const bottomH = TUNNEL_BOTTOM - gapBottom;
-        if (bottomH > 40) {
-          obstacles.push({
-            x: px - w / 2,
-            y: gapBottom,
-            w,
-            h: bottomH
-          });
-        }
+        if (bottomH > 40) obstacles.push({ x: px - w / 2, y: gapBottom, w, h: bottomH });
 
-        // Occasionally add a mid "pillar" to force lateral adjustments
-        if (rand() < 0.35) {
-          const ph = lerp(60, 140, rand());
+        // occasional mid pillar
+        if (rand() < 0.38) {
+          const ph = lerp(60, 150, rand());
           const py = lerp(gapTop + 10, gapBottom - 10 - ph, rand());
           obstacles.push({
-            x: px + lerp(-240, 240, rand()) - w * 0.35,
+            x: px + lerp(-260, 260, rand()) - w * 0.30,
             y: py,
-            w: lerp(50, 90, rand()),
+            w: lerp(50, 95, rand()),
             h: ph
           });
         }
       }
 
-      // Safety: don’t put obstacles right at the segment boundary where waypoint triggers
-      // We’ll keep collision but allow a small buffer.
+      // keep a small safe buffer near waypoint boundary
       const safe = 90;
       const filtered = obstacles.filter(r => r.x + r.w > segX0 + safe && r.x < segX1 - safe);
 
@@ -320,7 +275,7 @@
       x: 180,
       y: (TUNNEL_TOP + TUNNEL_BOTTOM) / 2,
       radius: 14,
-      speed: 290,
+      speed: 310,        // helicopter feel: responsive
       angle: 0,
       hp: 100,
       maxHp: 100,
@@ -332,6 +287,9 @@
     const bullets = [];
     const enemies = [];
 
+    // Tracking progress distance (how far right you've reached)
+    let maxX = player.x;
+
     const keys = { w: false, a: false, s: false, d: false };
     const mouse = { x: 0, y: 0, isDown: false };
 
@@ -341,6 +299,9 @@
     // Shooting
     let lastShotTime = 0;
     const SHOT_COOLDOWN = 0.13;
+
+    // Optional “ambient” spawns as you move forward (not treadmill, still player-driven)
+    let nextAmbientSpawnX = 900;
 
     // ---------------------------
     // Enemy images: index.json
@@ -383,9 +344,9 @@
           .map(s => String(s).trim())
           .filter(Boolean)
           .filter(n => !n.endsWith("/") && !n.includes(".."));
-        console.log("[v0.08] Loaded enemy list:", enemyGifFilenames.length);
+        console.log("[v0.09] Loaded enemy list:", enemyGifFilenames.length);
       } catch (err) {
-        console.warn("[v0.08] Failed to load enemy index.json:", err);
+        console.warn("[v0.09] Failed to load enemy index.json:", err);
         enemyGifFilenames = [];
       }
     }
@@ -454,8 +415,6 @@
       const rect = canvas.getBoundingClientRect();
       const nx = (e.clientX - rect.left) / canvas.width;
       const ny = (e.clientY - rect.top) / canvas.height;
-
-      // Map mouse to world using camera-centered virtual viewport
       mouse.x = camera.x + (nx - 0.5) * VIRTUAL_WIDTH;
       mouse.y = camera.y + (ny - 0.5) * VIRTUAL_HEIGHT;
     });
@@ -483,7 +442,6 @@
     }
 
     function circleVsAABBResolve(c, r, rect) {
-      // Push circle (center c:{x,y}) out of rect if overlapping.
       const closestX = clamp(c.x, rect.x, rect.x + rect.w);
       const closestY = clamp(c.y, rect.y, rect.y + rect.h);
       const dx = c.x - closestX;
@@ -495,7 +453,6 @@
         const nx = dx / d;
         const ny = dy / d;
         const push = (r - d);
-
         c.x += nx * push;
         c.y += ny * push;
         return { hit: true, nx, ny, push };
@@ -504,7 +461,6 @@
     }
 
     function clampToTunnel(entity) {
-      // Tunnel walls: y in [TUNNEL_TOP + r, TUNNEL_BOTTOM - r]
       const r = entity.radius;
       if (entity.y < TUNNEL_TOP + r) entity.y = TUNNEL_TOP + r;
       if (entity.y > TUNNEL_BOTTOM - r) entity.y = TUNNEL_BOTTOM - r;
@@ -522,70 +478,56 @@
 
       const style = ENEMY_STYLES[seed % ENEMY_STYLES.length];
 
-      // Size influences HP and collision radius.
       const sizeFactor = clamp(0.70 + rand() * 1.60, 0.65, 2.25);
       const radius = clamp(16 * sizeFactor, 12, 46);
 
-      // Base HP: size + difficulty ramp
       const hpBase = Math.round(2 + (radius * radius) / 240);
       const hp = Math.max(2, Math.round(hpBase + difficulty * 0.35));
 
-      // Speed: style + difficulty ramp (deterministic)
-      const speedBase = 120 + rand() * 120 + difficulty * 2.6;
+      const speedBase = 115 + rand() * 125 + difficulty * 2.4;
 
-      // Personality params
       const wobbleAmp = 30 + rand() * 110;
       const wobbleFreq = 0.7 + rand() * 1.6;
       const jitter = rand() * 1.0;
 
-      // Dash params
       const dashPeriod = 1.0 + rand() * 1.2;
       const dashDuration = 0.25 + rand() * 0.22;
       const dashBoost = 1.8 + rand() * 1.5;
 
-      // Drift params
       const driftBias = (rand() * 2 - 1) * 0.9;
 
       return {
-        name,
-        seed,
-        rand,
-        style,
+        name, seed, rand, style,
         radius,
         maxHp: hp,
         baseSpeed: speedBase,
-        wobbleAmp,
-        wobbleFreq,
-        jitter,
-        dashPeriod,
-        dashDuration,
-        dashBoost,
+        wobbleAmp, wobbleFreq, jitter,
+        dashPeriod, dashDuration, dashBoost,
         driftBias
       };
     }
 
     function spawnWave(waypointIdx) {
-      // Difficulty increases with waypoint
       const difficulty = waypointIdx;
 
-      // Determine spawn count
       const base = 4 + Math.floor(difficulty * 0.8);
       const variance = Math.floor(difficulty * 0.35);
-      const count = clamp(base + Math.floor(Math.random() * (variance + 1)), 4, 30);
+      const count = clamp(base + Math.floor(Math.random() * (variance + 1)), 4, 34);
 
-      // Spawn in the next segment (ahead of the waypoint)
+      // Spawn ahead of the *next* segment, so you fly INTO the trouble
       const waveSeg = waypointIdx + 1;
       const segX0 = waveSeg * SEG_LEN;
       const segX1 = segX0 + SEG_LEN;
 
       const rand = makeRng(hashStringFNV1a("WAVE:" + waypointIdx));
+
       for (let i = 0; i < count; i++) {
         const src = getRandomEnemyImageSrc(rand);
         const img = src ? getOrCreateImage(src) : null;
 
         const profile = makeEnemyProfileFromImage(src || "fallback", difficulty);
 
-        const x = lerp(segX0 + 250, segX1 - 250, rand());
+        const x = lerp(segX0 + 260, segX1 - 240, rand());
         const y = lerp(TUNNEL_TOP + 40, TUNNEL_BOTTOM - 40, rand());
 
         enemies.push({
@@ -595,12 +537,10 @@
           maxHp: profile.maxHp,
           img, imgSrc: src,
 
-          // Behavior
           style: profile.style,
           baseSpeed: profile.baseSpeed,
           seed: profile.seed,
 
-          // State
           t0: performance.now() / 1000,
           phase: rand() * Math.PI * 2,
           hitFlash: 0,
@@ -608,7 +548,53 @@
           knockY: 0,
           dashTimer: rand() * profile.dashPeriod,
 
-          // Params
+          wobbleAmp: profile.wobbleAmp,
+          wobbleFreq: profile.wobbleFreq,
+          jitter: profile.jitter,
+          dashPeriod: profile.dashPeriod,
+          dashDuration: profile.dashDuration,
+          dashBoost: profile.dashBoost,
+          driftBias: profile.driftBias
+        });
+      }
+    }
+
+    function spawnAmbientPack() {
+      // Ambient spawns only happen because YOU advanced far enough.
+      // This keeps the tunnel from feeling empty between waypoints.
+      const difficulty = waypointIndex;
+      const rand = makeRng(hashStringFNV1a("AMBIENT:" + Math.floor(player.x / 500)));
+
+      const pack = clamp(2 + Math.floor(difficulty * 0.25), 2, 6);
+
+      const x0 = player.x + 700;
+      const x1 = player.x + 1200;
+
+      for (let i = 0; i < pack; i++) {
+        const src = getRandomEnemyImageSrc(rand);
+        const img = src ? getOrCreateImage(src) : null;
+
+        const profile = makeEnemyProfileFromImage(src || "fallback", Math.floor(difficulty * 0.8));
+
+        enemies.push({
+          x: lerp(x0, x1, rand()),
+          y: lerp(TUNNEL_TOP + 50, TUNNEL_BOTTOM - 50, rand()),
+          radius: profile.radius,
+          hp: Math.max(2, Math.round(profile.maxHp * 0.75)),
+          maxHp: Math.max(2, Math.round(profile.maxHp * 0.75)),
+          img, imgSrc: src,
+
+          style: profile.style,
+          baseSpeed: profile.baseSpeed * 0.95,
+          seed: profile.seed,
+
+          t0: performance.now() / 1000,
+          phase: rand() * Math.PI * 2,
+          hitFlash: 0,
+          knockX: 0,
+          knockY: 0,
+          dashTimer: rand() * profile.dashPeriod,
+
           wobbleAmp: profile.wobbleAmp,
           wobbleFreq: profile.wobbleFreq,
           jitter: profile.jitter,
@@ -627,11 +613,10 @@
       const dx = mouse.x - player.x;
       const dy = mouse.y - player.y;
       const len = hypot(dx, dy) || 1;
-
       const dirX = dx / len;
       const dirY = dy / len;
 
-      const bulletSpeed = 800;
+      const bulletSpeed = 820;
 
       bullets.push({
         x: player.x,
@@ -660,33 +645,39 @@
     function update(dt) {
       if (isGameOver) return;
 
-      // Auto scroll ramps slightly with waypoint (difficulty)
-      scrollSpeed = SCROLL_BASE + waypointIndex * 10;
-      camera.x += scrollSpeed * dt;
+      // Player-facing
+      const dmx = mouse.x - player.x;
+      const dmy = mouse.y - player.y;
+      player.angle = Math.atan2(dmy, dmx);
 
-      // Keep camera centered vertically in tunnel
+      // Camera follows player (helicopter mode)
+      camera.x = player.x + 240; // offset forward so you can see ahead
       camera.y = (TUNNEL_TOP + TUNNEL_BOTTOM) / 2;
 
-      ensureSegmentsAroundCamera();
+      // Ensure procedural segments exist around you
+      ensureSegmentsAroundPlayer();
 
-      // Waypoint check: player crosses line (in world X)
+      // Waypoint check: YOU must cross it
       const nextWpX = waypointX(waypointIndex);
       if (player.x >= nextWpX) {
         waypointIndex++;
         wpDisplay.textContent = waypointIndex.toString();
 
-        // Ensure new segments exist and spawn a new wave
-        ensureSegmentsAroundCamera();
+        // Spawn next wave
         spawnWave(waypointIndex);
 
-        // Small reward for progress (optional feel-good)
+        // Tiny reward for progress
         player.hp = clamp(player.hp + 4, 0, player.maxHp);
+
+        // Push next ambient spawn farther ahead
+        nextAmbientSpawnX = Math.max(nextAmbientSpawnX, player.x + 900);
       }
 
-      // Player facing
-      const dmx = mouse.x - player.x;
-      const dmy = mouse.y - player.y;
-      player.angle = Math.atan2(dmy, dmx);
+      // Ambient spawns are tied to progress, not time
+      if (player.x >= nextAmbientSpawnX) {
+        spawnAmbientPack();
+        nextAmbientSpawnX += 700 + waypointIndex * 30;
+      }
 
       // Player i-frames
       player.iFrames = Math.max(0, player.iFrames - dt);
@@ -699,34 +690,30 @@
       if (keys.d) mvx += 1;
 
       const mag = hypot(mvx, mvy) || 1;
-      mvx /= mag; mvy /= mag;
+      mvx /= mag;
+      mvy /= mag;
 
-      // Bump velocity decay
+      // Bump decay
       const bumpDecay = Math.pow(0.0007, dt);
       player.bumpVelX *= bumpDecay;
       player.bumpVelY *= bumpDecay;
 
+      // Integrate player
       player.x += (mvx * player.speed + player.bumpVelX) * dt;
       player.y += (mvy * player.speed + player.bumpVelY) * dt;
 
-      // Pressure: prevent staying too far behind camera
-      const behind = camera.x - player.x;
-      if (behind > BACK_SOFT_LIMIT) {
-        // Soft push forward (rubber band)
-        player.x += (behind - BACK_SOFT_LIMIT) * 1.6 * dt;
-      }
-      if (behind > BACK_HARD_LIMIT) {
-        // If you fall way behind, you lose.
-        handleGameOver();
-      }
-
-      // Clamp to tunnel walls
+      // Clamp to tunnel
       clampToTunnel(player);
 
-      // Player obstacle collisions
+      // Player vs obstacles
       const nearbyObs = getNearbyObstacles(player.x);
       for (const r of nearbyObs) {
-        circleVsAABBResolve(player, player.radius, r);
+        const res = circleVsAABBResolve(player, player.radius, r);
+        if (res.hit) {
+          // Little slide-feel: dampen bump into wall
+          player.bumpVelX *= 0.6;
+          player.bumpVelY *= 0.6;
+        }
         clampToTunnel(player);
       }
 
@@ -748,18 +735,15 @@
         b.y += b.vy * dt;
         b.life -= dt;
 
-        // Remove if out of tunnel vertical bounds too far
         if (b.y < TUNNEL_TOP - 120 || b.y > TUNNEL_BOTTOM + 120) {
           bullets.splice(i, 1);
           continue;
         }
 
-        // Bullet hits obstacles: stop it
+        // Bullet hits obstacles
         const obs = getNearbyObstacles(b.x);
         let hitObs = false;
         for (const r of obs) {
-          // Swept-ish: check segment vs expanded rect by bullet radius
-          // Simple approximation: test current point inside rect expanded
           const ex = r.x - b.radius, ey = r.y - b.radius, ew = r.w + b.radius * 2, eh = r.h + b.radius * 2;
           const insideNow = (b.x >= ex && b.x <= ex + ew && b.y >= ey && b.y <= ey + eh);
           const insidePrev = (b.prevX >= ex && b.prevX <= ex + ew && b.prevY >= ey && b.prevY <= ey + eh);
@@ -773,101 +757,93 @@
         if (b.life <= 0) bullets.splice(i, 1);
       }
 
-      // Enemies update: move styles + collisions
+      // Track distance/progress
+      maxX = Math.max(maxX, player.x);
+      distDisplay.textContent = Math.floor(maxX).toString();
+
+      // Enemy update
       const now = performance.now() / 1000;
 
-      // Cleanup enemies that are far behind camera
+      // Cleanup enemies far behind you (keeps list sane)
       for (let i = enemies.length - 1; i >= 0; i--) {
-        if (enemies[i].x < camera.x - (VIRTUAL_WIDTH / 2 + 900)) {
-          enemies.splice(i, 1);
-        }
+        if (enemies[i].x < player.x - 1600) enemies.splice(i, 1);
       }
 
       for (let i = 0; i < enemies.length; i++) {
         const e = enemies[i];
-
         e.hitFlash = Math.max(0, e.hitFlash - dt);
 
-        // Knockback decay
+        // Knock decay
         const kd = Math.pow(0.0008, dt);
         e.knockX *= kd;
         e.knockY *= kd;
 
-        // Targeting vectors
+        // Target player
         const dx = player.x - e.x;
         const dy = player.y - e.y;
         const dist = hypot(dx, dy) || 1;
         const tx = dx / dist;
         const ty = dy / dist;
 
-        // Default velocities
         let vx = 0, vy = 0;
 
-        // Style logic (deterministic parameters baked into enemy)
         if (e.style === "chaser") {
           vx = tx * e.baseSpeed;
           vy = ty * e.baseSpeed;
 
         } else if (e.style === "zigzag") {
-          // Moves forward (right) and oscillates vertically, still slightly attracted to player
           const phase = e.phase + (now - e.t0) * e.wobbleFreq;
           const osc = Math.sin(phase) * e.wobbleAmp;
-          vx = (0.92 * e.baseSpeed) + tx * (0.35 * e.baseSpeed);
-          vy = (ty * 0.40 * e.baseSpeed) + osc;
+          // helicopter mode: less forced right drift, more “harass”
+          vx = tx * (0.85 * e.baseSpeed);
+          vy = ty * (0.35 * e.baseSpeed) + osc;
 
         } else if (e.style === "dasher") {
-          // Periodic dash bursts toward player’s x with some y correction
           e.dashTimer += dt;
           const t = e.dashTimer % e.dashPeriod;
           const dashing = (t < e.dashDuration);
-
           const boost = dashing ? e.dashBoost : 0.75;
-          vx = tx * e.baseSpeed * boost + 0.35 * e.baseSpeed;
-          vy = ty * e.baseSpeed * (dashing ? 0.55 : 0.30);
+          vx = tx * e.baseSpeed * boost;
+          vy = ty * e.baseSpeed * (dashing ? 0.60 : 0.35);
 
         } else if (e.style === "drifter") {
-          // Slow float that prefers lane denial: drifts to player y, but tries to sit near player x+offset
-          const desiredX = player.x + 220; // “in your way” behavior
+          // tries to sit a bit ahead of player to block lanes
+          const desiredX = player.x + 220;
           const ddx = desiredX - e.x;
           const dd = Math.abs(ddx) + 1;
           const dirX = ddx / dd;
 
-          vx = dirX * (0.85 * e.baseSpeed) + 0.25 * e.baseSpeed;
-          vy = (ty * 0.45 * e.baseSpeed) + e.driftBias * 30;
+          vx = dirX * (0.95 * e.baseSpeed);
+          vy = (ty * 0.40 * e.baseSpeed) + e.driftBias * 30;
 
         } else if (e.style === "skitter") {
-          // Fast erratic nuisance: biased forward, jitter in y, low-ish HP naturally via size
           const seedRand = makeRng((e.seed ^ (Math.floor(now * 8) >>> 0)) >>> 0);
           const j = (seedRand() * 2 - 1) * (60 + e.jitter * 140);
-
-          vx = 1.05 * e.baseSpeed + tx * 0.25 * e.baseSpeed;
-          vy = ty * 0.30 * e.baseSpeed + j;
+          vx = tx * (0.95 * e.baseSpeed);
+          vy = ty * (0.25 * e.baseSpeed) + j;
         }
 
-        // Apply knockback
         vx += e.knockX;
         vy += e.knockY;
 
-        // Integrate
         e.x += vx * dt;
         e.y += vy * dt;
 
-        // Clamp to tunnel walls
         clampToTunnel(e);
 
-        // Enemy obstacle collision (push out)
+        // Enemy vs obstacles
         const obs = getNearbyObstacles(e.x);
         for (const r of obs) {
           const res = circleVsAABBResolve(e, e.radius, r);
           if (res.hit) {
-            // Slight bounce in y if we hit something (keeps them from sticking)
             e.knockY += res.ny * 120;
+            e.knockX += res.nx * 90;
           }
           clampToTunnel(e);
         }
       }
 
-      // Enemy repulsion (reduces unfair stacks)
+      // Enemy repulsion (stops dogpiles)
       for (let i = 0; i < enemies.length; i++) {
         for (let j = i + 1; j < enemies.length; j++) {
           const a = enemies[i], b = enemies[j];
@@ -884,7 +860,7 @@
         }
       }
 
-      // Player/enemy contact damage (arcadey, not glue)
+      // Player/enemy contact damage
       for (let i = 0; i < enemies.length; i++) {
         const e = enemies[i];
         const dx = e.x - player.x;
@@ -893,7 +869,7 @@
         const combined = e.radius + player.radius;
 
         if (d < combined) {
-          // Separate a bit immediately
+          // separate
           const nx = dx / d, ny = dy / d;
           const push = (combined - d) * 0.9;
           player.x -= nx * push;
@@ -901,18 +877,15 @@
           clampToTunnel(player);
 
           if (player.iFrames <= 0) {
-            // Damage scales with enemy size and current waypoint
             const sizeFactor = clamp(e.radius / 22, 0.7, 2.4);
             const dmg = Math.round(10 * sizeFactor + waypointIndex * 0.18);
 
             player.hp -= dmg;
             player.iFrames = 0.55;
 
-            // Knockback away
             player.bumpVelX -= nx * (520 / sizeFactor);
             player.bumpVelY -= ny * (520 / sizeFactor);
 
-            // Enemy also jolts
             e.knockX += nx * (240 * sizeFactor);
             e.knockY += ny * (240 * sizeFactor);
 
@@ -933,14 +906,13 @@
 
         for (let j = bullets.length - 1; j >= 0; j--) {
           const b = bullets[j];
-
           const hitR = e.radius + b.radius * 1.35;
+
           if (segmentHitsCircle(b.prevX, b.prevY, b.x, b.y, e.x, e.y, hitR)) {
             e.hp -= b.damage;
             e.hitFlash = 0.08;
             playSfx("enemyHit", 0.65);
 
-            // Knock enemy in bullet direction
             const vx = b.x - b.prevX;
             const vy = b.y - b.prevY;
             const vlen = hypot(vx, vy) || 1;
@@ -972,41 +944,27 @@
     // ---------------------------
     // Drawing
     // ---------------------------
-    function drawGridTunnelFloor() {
-      // Subtle scrolling grid that reads like a “tunnel floor”
-      // Grid aligned to world coords for stability.
+    function drawGridTunnel() {
       const left = camera.x - VIRTUAL_WIDTH / 2;
       const right = camera.x + VIRTUAL_WIDTH / 2;
-      const top = TUNNEL_TOP;
-      const bottom = TUNNEL_BOTTOM;
 
-      // Background inside tunnel
+      // Tunnel panel background
       ctx.fillStyle = "rgba(0,0,0,1)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Dark vignette outside tunnel
-      ctx.save();
-      ctx.fillStyle = "rgba(0,0,0,0.92)";
+      // Dark outside tunnel
       const tunnelTopS = sy(TUNNEL_TOP);
       const tunnelBottomS = sy(TUNNEL_BOTTOM);
+      ctx.fillStyle = "rgba(0,0,0,0.92)";
       ctx.fillRect(0, 0, canvas.width, tunnelTopS);
       ctx.fillRect(0, tunnelBottomS, canvas.width, canvas.height - tunnelBottomS);
-      ctx.restore();
 
-      // Tunnel floor panel (very subtle)
-      ctx.save();
-      ctx.globalAlpha = 1;
       ctx.fillStyle = "rgba(6, 10, 18, 1)";
       ctx.fillRect(0, tunnelTopS, canvas.width, tunnelBottomS - tunnelTopS);
-      ctx.restore();
 
-      // Grid lines
+      // Grid
       const minor = 60;
       const major = 240;
-
-      // Minor
-      ctx.save();
-      ctx.lineWidth = 1;
 
       function drawLines(spacing, alpha, width) {
         ctx.lineWidth = width;
@@ -1016,13 +974,13 @@
         for (; x <= right; x += spacing) {
           const px = sx(x);
           ctx.beginPath();
-          ctx.moveTo(px, sy(top));
-          ctx.lineTo(px, sy(bottom));
+          ctx.moveTo(px, tunnelTopS);
+          ctx.lineTo(px, tunnelBottomS);
           ctx.stroke();
         }
 
-        let y = Math.floor(top / spacing) * spacing;
-        for (; y <= bottom; y += spacing) {
+        let y = Math.floor(TUNNEL_TOP / spacing) * spacing;
+        for (; y <= TUNNEL_BOTTOM; y += spacing) {
           const py = sy(y);
           ctx.beginPath();
           ctx.moveTo(0, py);
@@ -1033,25 +991,21 @@
 
       drawLines(minor, 0.08, 1);
       drawLines(major, 0.14, 2);
-      ctx.restore();
 
       // Tunnel walls
-      ctx.save();
       ctx.strokeStyle = "rgba(255,255,255,0.25)";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(0, sy(TUNNEL_TOP));
-      ctx.lineTo(canvas.width, sy(TUNNEL_TOP));
+      ctx.moveTo(0, tunnelTopS);
+      ctx.lineTo(canvas.width, tunnelTopS);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(0, sy(TUNNEL_BOTTOM));
-      ctx.lineTo(canvas.width, sy(TUNNEL_BOTTOM));
+      ctx.moveTo(0, tunnelBottomS);
+      ctx.lineTo(canvas.width, tunnelBottomS);
       ctx.stroke();
-      ctx.restore();
     }
 
     function drawObstacles() {
-      // Draw nearby obstacles for performance
       const leftX = camera.x - VIRTUAL_WIDTH / 2 - 100;
       const rightX = camera.x + VIRTUAL_WIDTH / 2 + 100;
 
@@ -1063,7 +1017,6 @@
         if (!seg) continue;
 
         for (const r of seg.obstacles) {
-          // Only draw if in view
           if (r.x + r.w < leftX || r.x > rightX) continue;
 
           const x = sx(r.x);
@@ -1071,8 +1024,6 @@
           const w = (r.w / VIRTUAL_WIDTH) * canvas.width;
           const h = (r.h / VIRTUAL_HEIGHT) * canvas.height;
 
-          // Slight neon-ish obstruction feel
-          ctx.save();
           ctx.fillStyle = "rgba(25, 35, 55, 0.95)";
           ctx.fillRect(x, y, w, h);
 
@@ -1080,31 +1031,21 @@
           ctx.lineWidth = 2;
           ctx.strokeRect(x, y, w, h);
 
-          // Subtle inner highlight
           ctx.strokeStyle = "rgba(255, 255, 255, 0.10)";
           ctx.lineWidth = 1;
           ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
-
-          ctx.restore();
         }
       }
     }
 
     function drawWaypointGate() {
-      // Draw the upcoming waypoint as a faint vertical beacon
       const nextX = waypointX(waypointIndex);
       const px = sx(nextX);
-
-      // Only if visible
-      if (px < -50 || px > canvas.width + 50) return;
+      if (px < -60 || px > canvas.width + 60) return;
 
       const top = sy(TUNNEL_TOP);
       const bottom = sy(TUNNEL_BOTTOM);
 
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-
-      // Glow columns
       const grad = ctx.createLinearGradient(px, 0, px, canvas.height);
       grad.addColorStop(0, "rgba(0,0,0,0)");
       grad.addColorStop(0.25, "rgba(120, 220, 255, 0.15)");
@@ -1121,8 +1062,6 @@
       ctx.moveTo(px, top);
       ctx.lineTo(px, bottom);
       ctx.stroke();
-
-      ctx.restore();
     }
 
     function drawEnemyHealthBar(e, scaleFactor) {
@@ -1156,7 +1095,7 @@
         ctx.fill();
       }
 
-      // Enemies (no visible hitbox circles)
+      // Enemies
       for (const e of enemies) {
         const rr = e.radius * scaleFactor;
         const ex = sx(e.x);
@@ -1174,11 +1113,8 @@
           ctx.drawImage(e.img, ex - rr, ey - rr, rr * 2, rr * 2);
           ctx.restore();
         } else {
-          // fallback placeholder (still not a circle)
-          ctx.save();
           ctx.fillStyle = "rgba(255, 80, 80, 0.85)";
           ctx.fillRect(ex - rr, ey - rr, rr * 2, rr * 2);
-          ctx.restore();
         }
 
         drawEnemyHealthBar(e, scaleFactor);
@@ -1194,7 +1130,7 @@
       ctx.strokeStyle = "#ffffff";
       ctx.stroke();
 
-      // Gun direction
+      // Gun line
       const gunLen = player.radius + 12;
       const gx = player.x + Math.cos(player.angle) * gunLen;
       const gy = player.y + Math.sin(player.angle) * gunLen;
@@ -1207,40 +1143,12 @@
       ctx.stroke();
     }
 
-    function drawBackPressureWarning() {
-      // Visual cue if player is lagging behind camera
-      const behind = camera.x - player.x;
-      const t = clamp((behind - (BACK_SOFT_LIMIT - 120)) / 220, 0, 1);
-      if (t <= 0) return;
-
-      ctx.save();
-      ctx.globalAlpha = 0.28 * t;
-
-      // Red gradient on left side
-      const grad = ctx.createLinearGradient(0, 0, canvas.width * 0.35, 0);
-      grad.addColorStop(0, "rgba(255, 40, 40, 1)");
-      grad.addColorStop(1, "rgba(255, 40, 40, 0)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width * 0.35, canvas.height);
-
-      ctx.restore();
-    }
-
     function draw() {
-      // World background
-      drawGridTunnelFloor();
-
-      // Obstacles + waypoint gate
+      drawGridTunnel();
       drawObstacles();
       drawWaypointGate();
-
-      // Entities
       drawEntities();
 
-      // Pressure warning
-      drawBackPressureWarning();
-
-      // Game over overlay
       if (isGameOver) {
         ctx.fillStyle = "rgba(0,0,0,0.45)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1250,12 +1158,10 @@
     // ---------------------------
     // Boot + main loop
     // ---------------------------
-    // Set initial camera to player
     camera.x = player.x + 240;
     camera.y = (TUNNEL_TOP + TUNNEL_BOTTOM) / 2;
 
-    // Pre-generate initial segments and spawn first wave at waypoint 0 (ahead of start)
-    ensureSegmentsAroundCamera();
+    ensureSegmentsAroundPlayer();
     spawnWave(0);
 
     let lastTime = performance.now();
