@@ -2,41 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.06</title>
+<title>Galaga-ish Clone v1.07</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: black;
-    overflow: hidden;
-    color: #0f0;
-    font-family: monospace;
-  }
-  canvas { display: block; }
-
-  #overlay {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    font-size: 14px;
-    line-height: 1.4;
-    pointer-events: none;
-    text-shadow: 0 0 6px rgba(0,255,0,0.35);
+  html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
+  canvas { display:block; }
+  #overlay{
+    position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
+    text-shadow:0 0 6px rgba(0,255,0,0.35);
   }
 
-  /* =======================
-     NEW (v1.06): Start Menu + Options UI
-     - Simple centered panel
-     - Uses pointer events (buttons/sliders)
-  ======================= */
-  #uiRoot{
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    pointer-events:none; /* enable only inside panels */
-  }
+  #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   .panel{
     pointer-events:auto;
     width:min(520px, 92vw);
@@ -47,134 +22,66 @@
     padding: 18px 18px 16px;
     text-align:center;
   }
-  .title{
-    font-size: 26px;
-    letter-spacing: 1px;
-    margin: 4px 0 10px;
-  }
+  .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
   .subimg{
-    width: 120px;
-    height: 120px;
-    image-rendering: pixelated;
-    display:block;
-    margin: 0 auto 10px;
-    filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
+    width:120px; height:120px; display:block; margin:0 auto 10px;
+    image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
   }
-  .btnRow{
-    display:flex;
-    gap:10px;
-    justify-content:center;
-    margin-top: 12px;
-    flex-wrap:wrap;
-  }
+  .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
   button{
-    font-family: monospace;
-    color:#0f0;
-    background: rgba(0,0,0,0.55);
-    border: 1px solid rgba(0,255,0,0.45);
-    padding: 10px 14px;
-    border-radius: 12px;
-    cursor: pointer;
-    min-width: 160px;
+    font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    padding:10px 14px; border-radius:12px; cursor:pointer; min-width:160px;
   }
-  button:hover{
-    background: rgba(0,255,0,0.08);
-  }
-  .smallBtn{
-    min-width: 120px;
-    padding: 8px 12px;
-    border-radius: 10px;
-  }
-  .optionsGrid{
-    display:grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    text-align:left;
-    margin-top: 10px;
-  }
-  .optRow{
-    border:1px solid rgba(0,255,0,0.2);
-    border-radius: 12px;
-    padding: 10px 12px;
-    background: rgba(0,0,0,0.35);
-  }
-  .optLabel{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom: 8px;
-    font-size: 14px;
-  }
-  input[type="range"]{
-    width: 100%;
-    accent-color: #00ff66;
-  }
-  .hint{
-    opacity: 0.8;
-    font-size: 12px;
-    margin-top: 10px;
-    line-height: 1.35;
-  }
+  button:hover{ background: rgba(0,255,0,0.08); }
+  .smallBtn{ min-width:120px; padding:8px 12px; border-radius:10px; }
+  .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:left; margin-top:10px; }
+  .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
+  .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
+  input[type="range"]{ width:100%; accent-color:#00ff66; }
+  .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
+  .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="overlay"></div>
 
-<!-- NEW (v1.06): UI Root with Start Menu + Options -->
 <div id="uiRoot">
-  <!-- Start Menu Panel -->
   <div id="startMenu" class="panel">
     <div class="title">GALAGA-ISH CLONE</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">
-      Move: A/D or ⬅➡ · Shoot: Space · (Options lets you change enemy count)
-    </div>
+    <div class="hint">Move: A/D or ⬅➡ · Shoot: Space · ESC: Menu</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
     </div>
+    <div id="assetStatus" class="statusLine">Loading enemy images...</div>
   </div>
 
-  <!-- Options Panel -->
   <div id="optionsMenu" class="panel" style="display:none;">
     <div class="title">OPTIONS</div>
 
     <div class="optionsGrid">
       <div class="optRow">
-        <div class="optLabel">
-          <span>Enemy Rows</span>
-          <span id="rowsVal">4</span>
-        </div>
+        <div class="optLabel"><span>Enemy Rows</span><span id="rowsVal">4</span></div>
         <input id="rowsSlider" type="range" min="1" max="8" value="4" step="1" />
       </div>
 
       <div class="optRow">
-        <div class="optLabel">
-          <span>Enemy Columns</span>
-          <span id="colsVal">6</span>
-        </div>
+        <div class="optLabel"><span>Enemy Columns</span><span id="colsVal">6</span></div>
         <input id="colsSlider" type="range" min="1" max="12" value="6" step="1" />
       </div>
 
       <div class="optRow">
-        <div class="optLabel">
-          <span>Total Enemies</span>
-          <span id="totalVal">24</span>
-        </div>
-        <div class="hint">
-          Rows × Columns. More enemies = more targets, more chaos, more regrets.
-        </div>
+        <div class="optLabel"><span>Total Enemies</span><span id="totalVal">24</span></div>
+        <div class="hint">Rows × Columns. More enemies = more chaos.</div>
       </div>
     </div>
 
     <div class="btnRow" style="margin-top:14px;">
       <button id="btnBack" class="smallBtn">Back</button>
       <button id="btnApply" class="smallBtn">Apply</button>
-    </div>
-
-    <div class="hint">
-      Apply will respawn the formation using the new count (even mid-game).
     </div>
   </div>
 </div>
@@ -186,11 +93,7 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const overlay = document.getElementById("overlay");
-
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 window.addEventListener("resize", resize);
 resize();
 
@@ -199,16 +102,16 @@ let score = 0;
 let lives = 2;
 let wave = 1;
 
-/* NEW (v1.06): simple game state */
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
 
 /* =======================
-   UI (v1.06)
+   UI
 ======================= */
 const uiRoot = document.getElementById("uiRoot");
 const startMenu = document.getElementById("startMenu");
 const optionsMenu = document.getElementById("optionsMenu");
+const assetStatus = document.getElementById("assetStatus");
 
 const btnStart = document.getElementById("btnStart");
 const btnOptions = document.getElementById("btnOptions");
@@ -221,7 +124,6 @@ const rowsVal = document.getElementById("rowsVal");
 const colsVal = document.getElementById("colsVal");
 const totalVal = document.getElementById("totalVal");
 
-/* NEW (v1.06): enemy count settings controlled by sliders */
 let ENEMY_ROWS = parseInt(rowsSlider.value, 10);
 let ENEMY_COLS = parseInt(colsSlider.value, 10);
 
@@ -249,22 +151,18 @@ function showOptions(){
 function startGame(){
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
-  // Reset basic run state
-  score = 0;
-  lives = 2;
-  wave = 1;
+  score = 0; lives = 2; wave = 1;
   bullets.length = 0;
-  spawnEnemies(); // uses current ENEMY_ROWS/COLS
+  spawnEnemies();
 }
 
-/* Buttons */
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 btnBack.addEventListener("click", showMenu);
 btnApply.addEventListener("click", () => {
   ENEMY_ROWS = parseInt(rowsSlider.value, 10);
   ENEMY_COLS = parseInt(colsSlider.value, 10);
-  spawnEnemies(); // Apply immediately
+  spawnEnemies();
 });
 
 /* =======================
@@ -272,203 +170,204 @@ btnApply.addEventListener("click", () => {
 ======================= */
 const playerImg = new Image();
 playerImg.src = "/media/images/gifs/bananarama.gif";
-
-const player = {
-  x: canvas.width / 2,
-  y: canvas.height - 80,
-  w: 48,
-  h: 48,
-  speed: 6
-};
-
+const player = { x: canvas.width/2, y: canvas.height-80, w:48, h:48, speed:6 };
 const keys = {};
+
+/* =======================
+   Enemy images from index.json (v1.07)
+======================= */
+const GIF_BASE = "/media/images/gifs/";
+let enemyImages = [];          // array of loaded Image()
+let enemyImageUrls = [];       // array of url strings
+let assetsReady = false;
+
+// fallback if fetch fails (keeps game functional)
+const FALLBACK_URLS = [
+  GIF_BASE + "frog.gif",
+  GIF_BASE + "skeleton.gif",
+  GIF_BASE + "dragon.gif",
+  GIF_BASE + "firework.gif"
+];
+
+function setAssetStatus(msg){ assetStatus.textContent = msg; }
+
+function preloadImages(urls){
+  return new Promise((resolve) => {
+    const imgs = [];
+    let done = 0;
+    if (!urls.length) resolve(imgs);
+
+    urls.forEach((url) => {
+      const img = new Image();
+      img.onload = () => { done++; if (done === urls.length) resolve(imgs); };
+      img.onerror = () => { done++; if (done === urls.length) resolve(imgs); };
+      img.src = url;
+      imgs.push(img);
+    });
+  });
+}
+
+async function loadEnemyImagesFromIndex(){
+  try{
+    setAssetStatus("Fetching index.json...");
+    const res = await fetch(GIF_BASE + "index.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const list = await res.json();
+
+    // Expecting an array of filenames like ["frog.gif", ...]
+    if (!Array.isArray(list)) throw new Error("index.json not an array");
+
+    // Convert to URLs and filter basic garbage
+    enemyImageUrls = list
+      .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".gif"))
+      .map(name => GIF_BASE + name);
+
+    if (enemyImageUrls.length === 0) throw new Error("No gifs in index.json");
+
+    setAssetStatus(`Preloading ${enemyImageUrls.length} enemy images...`);
+    enemyImages = await preloadImages(enemyImageUrls);
+
+    // Keep only images that actually loaded (naturalWidth>0 usually signals success)
+    const loaded = enemyImages.filter(img => img && img.naturalWidth > 0);
+    if (loaded.length === 0) throw new Error("All enemy images failed to load");
+
+    enemyImages = loaded;
+    assetsReady = true;
+    setAssetStatus(`Loaded ${enemyImages.length} enemy images from index.json ✅`);
+  }catch(err){
+    console.warn("Failed to load index.json enemy list:", err);
+    setAssetStatus("Failed to load index.json. Using fallback enemy images.");
+    enemyImageUrls = [...FALLBACK_URLS];
+    enemyImages = await preloadImages(enemyImageUrls);
+    enemyImages = enemyImages.filter(img => img && img.naturalWidth > 0);
+    assetsReady = true;
+  }
+}
+// kick off async load immediately
+loadEnemyImagesFromIndex();
 
 /* =======================
    Enemies
 ======================= */
-const enemyImages = [];
-/* Kept from prior version: a small rotating set. If you later wire in index.json, this still works. */
-const enemySrcs = [
-  "/media/images/gifs/banana.gif",
-  "/media/images/gifs/frog.gif",
-  "/media/images/gifs/hand.gif",
-  "/media/images/gifs/monk.gif"
-];
-
-enemySrcs.forEach(src => {
-  const img = new Image();
-  img.src = src;
-  enemyImages.push(img);
-});
-
-/* Wider formation spacing (from your request) */
-const BASE_SPACING_X = 95;   // wider formation
+const BASE_SPACING_X = 95;
 const BASE_SPACING_Y = 75;
-
 let enemies = [];
 
-function spawnEnemies() {
+function randEnemyImg(){
+  // if assets not ready yet, return a temp placeholder image (player img), game still runs
+  if (!enemyImages.length) return playerImg;
+  return enemyImages[Math.floor(Math.random() * enemyImages.length)];
+}
+
+function spawnEnemies(){
   enemies = [];
-  const centerX = canvas.width / 2;
   const centerY = 120;
 
-  for (let r = 0; r < ENEMY_ROWS; r++) {
-    for (let c = 0; c < ENEMY_COLS; c++) {
+  for (let r = 0; r < ENEMY_ROWS; r++){
+    for (let c = 0; c < ENEMY_COLS; c++){
       enemies.push({
         row: r,
         col: c,
         baseY: centerY,
-        img: enemyImages[Math.floor(Math.random() * enemyImages.length)],
+        img: randEnemyImg(),
         size: 52
       });
     }
   }
 }
-spawnEnemies();
 
 /* =======================
    Bullets
 ======================= */
 const bullets = [];
-
-function shoot() {
-  bullets.push({
-    x: player.x,
-    y: player.y - 20,
-    vy: -8
-  });
-}
+function shoot(){ bullets.push({ x: player.x, y: player.y - 20, vy: -8 }); }
 
 /* =======================
    Input
 ======================= */
-window.addEventListener("keydown", e => {
+window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   keys[k] = true;
 
-  // Space shoots only while playing
   if (e.key === " " && gameState === STATE.PLAYING) shoot();
-
-  // NEW (v1.06): quick escape back to menu
-  if (k === "escape") {
-    showMenu();
-  }
+  if (k === "escape") showMenu();
 });
-window.addEventListener("keyup", e => {
-  keys[e.key.toLowerCase()] = false;
-});
-
-/* =======================
-   Collision
-======================= */
-function aabb(a, b) {
-  return (
-    a.x < b.x + b.w &&
-    a.x + a.w > b.x &&
-    a.y < b.y + b.h &&
-    a.y + a.h > b.y
-  );
-}
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
 /* =======================
    Loop
 ======================= */
-function update() {
+function update(){
   time += 0.016;
-
   if (gameState !== STATE.PLAYING) return;
 
-  /* Player movement */
   if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
+  player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
-  player.x = Math.max(player.w / 2, Math.min(canvas.width - player.w / 2, player.x));
-
-  /* Bullets */
   bullets.forEach(b => b.y += b.vy);
-  for (let i = bullets.length - 1; i >= 0; i--) {
+  for (let i = bullets.length - 1; i >= 0; i--){
     if (bullets[i].y < -20) bullets.splice(i, 1);
   }
-
-  /* NOTE:
-     This file keeps your lightweight baseline gameplay.
-     If you had more advanced hit logic in your older file,
-     you can paste it back in here without touching the UI bits. */
 }
 
 function drawBackgroundStars(){
   ctx.fillStyle = "#000";
   ctx.fillRect(0,0,canvas.width,canvas.height);
-
   ctx.fillStyle = "#111";
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 200; i++){
     ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 1, 1);
   }
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   drawBackgroundStars();
 
-  /* Player */
-  ctx.drawImage(
-    playerImg,
-    player.x - player.w / 2,
-    player.y - player.h / 2,
-    player.w,
-    player.h
-  );
+  // Player
+  ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
 
-  /* Enemy breathing: scale + spacing */
+  // Enemy breathing (scale + spacing)
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
-
-  // IMPORTANT: spacing breath is what makes the formation "expand/contract"
   const spacingX = BASE_SPACING_X * (1 + breath * 0.35);
   const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
 
   const formationWidth = (ENEMY_COLS - 1) * spacingX;
-  const startX = canvas.width / 2 - formationWidth / 2;
+  const startX = canvas.width/2 - formationWidth/2;
 
   enemies.forEach(e => {
+    // If assets became ready after spawn, upgrade any placeholder imgs on the fly
+    if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
+
     const scale = 1 + breath * 0.25;
     const size = e.size * scale;
-
     const x = startX + e.col * spacingX;
     const y = e.baseY + e.row * spacingY;
 
-    ctx.drawImage(
-      e.img,
-      x - size / 2,
-      y - size / 2,
-      size,
-      size
-    );
+    ctx.drawImage(e.img, x - size/2, y - size/2, size, size);
   });
 
-  /* Bullets */
+  // Bullets
   ctx.fillStyle = "#0f0";
-  bullets.forEach(b => {
-    ctx.fillRect(b.x - 2, b.y - 10, 4, 10);
-  });
+  bullets.forEach(b => ctx.fillRect(b.x - 2, b.y - 10, 4, 10));
 
-  /* Overlay */
   overlay.innerHTML =
-    `Galaga-ish Clone v1.06<br>` +
+    `Galaga-ish Clone v1.07<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Lives: ${lives} | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
+    `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `ESC: Menu`;
 }
 
-function loop() {
+function loop(){
   update();
   draw();
   requestAnimationFrame(loop);
 }
 loop();
 
-/* Start on menu */
 showMenu();
 </script>
 </body>
