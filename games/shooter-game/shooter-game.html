@@ -120,8 +120,10 @@
   Tweaked: Difficulty scaling per wave (enemy horizontal speed, descent speed, step-down).
 
 
-- 2025-12-17 | v1.15
-  Added: Galaga-style 'swoop' attackers: individual enemies break formation, dive toward the player, then return.
+- 2025-12-17 | v1.16
+  Added: Wave spawn scaling: Wave 1 = 1 enemy, then doubles each wave (capped).
+  Added: Dynamic formation packing: auto-cols/rows + auto enemy sizing to fit top-zone area.
+  Kept: Galaga-style 'swoop' attackers: individual enemies break formation, dive toward the player, then return.
   Kept: Main formation stays in the top zone; only swoopers can enter player space.
   Tweaked: Player fire rate increases each wave (cooldown decreases).
 ====================================================================== */
@@ -158,6 +160,11 @@ let time = 0;
 let score = 0;
 let lives = 3;
 let wave = 1;
+
+// v1.16: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
+let formationCols = 1;
+let formationRows = 1;
+
 
 // v1.13: wave banner (big text popup)
 let waveBanner = { text:"", t:0 };
@@ -317,7 +324,11 @@ let ENEMY_COLS = parseInt(colsSlider.value, 10);
 function syncOptionsLabels(){
   rowsVal.textContent = rowsSlider.value;
   colsVal.textContent = colsSlider.value;
-  totalVal.textContent = (parseInt(rowsSlider.value,10) * parseInt(colsSlider.value,10)).toString();
+
+  // v1.16: sliders still display a grid size, but waves now control actual spawn count (1, 2, 4, 8...)
+  const sliderTotal = (parseInt(rowsSlider.value,10) * parseInt(colsSlider.value,10));
+  const waveTotal = Math.min(256, Math.pow(2, (wave - 1)));
+  totalVal.textContent = sliderTotal.toString() + " | wave spawn: " + waveTotal.toString();
 }
 rowsSlider.addEventListener("input", syncOptionsLabels);
 colsSlider.addEventListener("input", syncOptionsLabels);
@@ -452,14 +463,19 @@ loadEnemyImagesFromIndex();
    Enemies + Formation Movement
 ======================= */
 const BASE_SPACING_X = 105;
-const BASE_SPACING_Y = 85;
-
 
 function getSpacingX(){
   // v1.12.4: Responsive horizontal spacing (desktop-friendly)
   const maxFormationWidth = canvas.width * 0.82;     // use most of the screen width
-  const cols = Math.max(1, ENEMY_COLS - 1);          // gaps between columns
+  const cols = Math.max(1, formationCols - 1);       // gaps between columns (dynamic per wave)
   return Math.min(120, Math.max(80, maxFormationWidth / cols));
+}
+
+function getSpacingY(){
+  // v1.16: Responsive vertical spacing based on current wave formation size
+  const maxFormationHeight = canvas.height * 0.38; // keep formation mostly in top zone
+  const rows = Math.max(1, formationRows - 1);
+  return Math.min(110, Math.max(45, maxFormationHeight / rows));
 }
 
 
@@ -485,16 +501,38 @@ function randEnemyImg(){
 
 function spawnEnemies(){
   enemies = [];
-  const baseY = 80; // v1.12.3: start higher (was ~120)
+  const baseY = 80; // start higher (top zone)
 
-  for (let r = 0; r < ENEMY_ROWS; r++){
-    for (let c = 0; c < ENEMY_COLS; c++){
-      enemies.push({ row:r, col:c, baseY, img: randEnemyImg(), size:52, hp:1, x:0,y:0,w:0,h:0,
-        fx:0, fy:0, // formation-space position (computed each frame)
-        swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
-        swoopCooldown: rand(0.2, 1.6) // seconds until eligible to swoop
-      });
-    }
+  // v1.16: Wave sizing
+  // Wave 1 spawns 1 enemy, then doubles each wave (2x previous).
+  // We cap it to keep browsers from melting into a puddle.
+  const MAX_WAVE_ENEMIES = 256;
+  const count = Math.min(MAX_WAVE_ENEMIES, Math.pow(2, (wave - 1)));
+
+  // v1.16: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
+  // Keep the "formation area" mostly in the top half.
+  const zoneW = canvas.width * 0.82;
+  const zoneH = canvas.height * 0.38;
+
+  // Choose columns/rows to fit the count into the zone with a roughly square-ish grid.
+  const idealCols = Math.ceil(Math.sqrt(count * (zoneW / Math.max(1, zoneH))));
+  formationCols = Math.max(1, Math.min(count, idealCols));
+  formationRows = Math.max(1, Math.ceil(count / formationCols));
+
+  // Compute a size that fits nicely in each cell.
+  const cellW = zoneW / formationCols;
+  const cellH = zoneH / formationRows;
+  const baseSize = Math.max(18, Math.min(56, Math.min(cellW, cellH) * 0.60));
+
+  for (let i = 0; i < count; i++){
+    const r = Math.floor(i / formationCols);
+    const c = i % formationCols;
+
+    enemies.push({ row:r, col:c, baseY, img: randEnemyImg(), size:baseSize, hp:1, x:0,y:0,w:0,h:0,
+      fx:0, fy:0, // formation-space position (computed each frame)
+      swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
+      swoopCooldown: rand(0.2, 1.6) // seconds until eligible to swoop
+    });
   }
 }
 
@@ -656,7 +694,7 @@ function update(dt){
   const breath = Math.sin(time * 2) * 0.5 + 0.5;
   const spacingX = getSpacingX() * (1 + breath * 0.25);
 
-  const formationWidth = (ENEMY_COLS - 1) * spacingX;
+  const formationWidth = (formationCols - 1) * spacingX;
 
   // v1.12.4: predict next X so we don't clip enemies on wider desktop layouts
   const nextXOffset = formation.xOffset + (formation.dir * formation.speed);
@@ -694,8 +732,8 @@ function update(dt){
   tryStartSwoop(dt);
 
   // compute enemy positions
-  const spacingY = BASE_SPACING_Y * (1 + breath * 0.15);
-  const formationHeight = (ENEMY_ROWS - 1) * spacingY;
+  const spacingY = getSpacingY() * (1 + breath * 0.15);
+  const formationHeight = (formationRows - 1) * spacingY;
 
   const startX = canvas.width/2 - formationWidth/2 + formation.xOffset;
 
