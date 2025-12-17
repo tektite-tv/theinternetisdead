@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Galaga-ish Clone v1.02</title>
+  <title>Galaga-ish Clone v1.03</title>
   <style>
     html, body {
       margin: 0;
@@ -65,7 +65,7 @@
     <canvas id="game"></canvas>
 
     <div id="ui">
-      <div><b>Galaga-ish Clone v1.02</b></div>
+      <div><b>Galaga-ish Clone v1.03</b></div>
       <div>Move: A/D or ←/→ | Shoot: Space or LMB | Restart: R</div>
       <div>Score: <span id="score">0</span> | Lives: <span id="lives">3</span> | Wave: <span id="wave">1</span></div>
       <div>Enemies: <span id="enemyCount">0</span></div>
@@ -73,7 +73,7 @@
     </div>
 
     <div id="hint">
-      If enemies show as red blocks: that’s the fallback while images load. v1.02 prevents the first-wave “empty index” problem.
+      If enemies show as red blocks: that’s the fallback while images load. v1.03 adds enemy “breathing” (pulse size + spacing) and slightly larger enemy visuals.
     </div>
 
     <div id="centerMsg"></div>
@@ -81,9 +81,10 @@
 
   <script>
     // ================================================================
-    // Galaga-ish Clone v1.02 (FULL FILE)
+    // Galaga-ish Clone v1.03 (FULL FILE)
     //
     // FIX:
+    // - v1.03: enemies “breathe” (pulse size + spacing) + slightly larger formation.
     // - Wait for index.json to load before spawning first wave.
     // - Pre-warm a handful of images so wave 1 doesn't start as red squares.
     // ================================================================
@@ -259,11 +260,36 @@
     // Helpers
     // -------------------------
     function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-    function aabbOverlap(a, b) {
-      return a.x < b.x + b.w &&
-             a.x + a.w > b.x &&
-             a.y < b.y + b.h &&
-             a.y + a.h > b.y;
+    function aabbOverlap\(a, b\) \{
+      return a\.x < b\.x \+ b\.w &&
+             a\.x \+ a\.w > b\.x &&
+             a\.y < b\.y \+ b\.h &&
+             a\.y \+ a\.h > b\.y;
+    \}
+function enemyRenderRect(e, t) {
+      // Per-enemy phase so the whole group feels "alive" instead of perfectly synchronized.
+      const breathe = Math.sin(t * formation.breatheSpeed + (e.breathePhase || 0));
+      const scale = 1 + formation.breatheScaleAmp * breathe;
+
+      // Scale is drawn around the enemy's center so it doesn't "crawl" off its slot.
+      const bw = e.baseW ?? e.w;
+      const bh = e.baseH ?? e.h;
+
+      // Base position is e.x/e.y (top-left) for the *base* box.
+      const cx = e.x + bw / 2;
+      const cy = e.y + bh / 2;
+
+      const rw = bw * scale;
+      const rh = bh * scale;
+
+      return {
+        breathe,
+        scale,
+        x: cx - rw / 2,
+        y: cy - rh / 2,
+        w: rw,
+        h: rh
+      };
     }
 
     // -------------------------
@@ -294,7 +320,18 @@
       stepDown: 26,
       boundsPad: 70,
       sway: 0,
-      swaySpeed: 0.85
+      swaySpeed: 0.85,
+
+      // "Breathing" formation: enemies pulse in size AND subtly push away/toward each other.
+      // (Yes, your space bugs are now doing cardio.)
+      cols: 0,
+      rows: 0,
+      cellW: 70,
+      cellH: 58,
+      breathe: 0,
+      breatheSpeed: 2.2,         // radians/sec multiplier (higher = faster pulse)
+      breatheScaleAmp: 0.12,     // +/- scale amount (0.12 = 12% bigger/smaller)
+      breatheSpacingAmp: 7       // pixels of spacing in/out (subtle but noticeable)
     };
 
     let lastShot = 0;
@@ -344,8 +381,15 @@
       const rows = clamp(3 + Math.floor((w - 1) / 2), 3, 6);
       const cols = clamp(8 + Math.floor((w - 1) / 2), 8, 12);
 
-      const cellW = 70;
-      const cellH = 58;
+      // Make enemies and their formation slots a bit larger,
+      // but also adapt spacing so it doesn't explode off-screen on small viewports.
+      const cellW = clamp(Math.floor(canvas.width / (cols + 2)), 64, 92);
+      const cellH = clamp(Math.floor(canvas.height / (rows + 9)), 60, 86);
+
+      formation.cols = cols;
+      formation.rows = rows;
+      formation.cellW = cellW;
+      formation.cellH = cellH;
 
       const totalW = cols * cellW;
       formation.x = (canvas.width - totalW) / 2;
@@ -358,8 +402,10 @@
           const img = src ? getOrCreateImage(src) : null;
 
           const etype = enemyTypeFromSrc(src);
-          const baseSize = 46;
-          const size = clamp(baseSize + (rand() * 18 - 9), 32, 62);
+
+          // Slightly larger baseline enemy size (with a little per-enemy variance).
+          const baseSize = 56;
+          const size = clamp(baseSize + (rand() * 20 - 10), 40, 74);
 
           let hp = 1;
           if (etype === 3) hp = 3 + Math.floor(w * 0.2);
@@ -370,9 +416,30 @@
           const shootBias  = (etype === 2) ? 0.85 : 0.35;
 
           enemies.push({
-            fx: c * cellW + (cellW - size) / 2,
-            fy: r * cellH,
-            x: 0, y: 0, w: size, h: size,
+            // Base formation slot position (relative to formation.x / formation.y)
+            baseFx: c * cellW + (cellW - size) / 2,
+            baseFy: r * cellH,
+
+            // Current formation offsets (we'll compute fx/fy each frame so "breathing" can affect spacing)
+            fx: 0,
+            fy: 0,
+
+            // Base hitbox size (breathing scales are applied at render/collision time, centered)
+            baseW: size,
+            baseH: size,
+
+            // Current base box top-left position in world space (used as anchor for scaling)
+            x: 0,
+            y: 0,
+            w: size,
+            h: size,
+
+            // Grid coords so spacing can push outward/inward
+            gridC: c,
+            gridR: r,
+
+            // Per-enemy breathe phase (deterministic per sprite, so it feels consistent)
+            breathePhase: (hashStringFNV1a("BREATHE:" + (src || ("r" + r + "c" + c))) % 1000) / 1000 * Math.PI * 2,
 
             img, src,
             type: etype,
@@ -433,9 +500,12 @@
     }
 
     function enemyShootFrom(e) {
+      const t = performance.now() / 1000;
+      const rr = enemyRenderRect(e, t);
+
       enemyBullets.push({
-        x: e.x + e.w / 2 - 3,
-        y: e.y + e.h - 2,
+        x: rr.x + rr.w / 2 - 3,
+        y: rr.y + rr.h - 2,
         w: 6,
         h: 14,
         vy: 520 + wave * 10,
@@ -488,13 +558,37 @@
       formation.x += formation.dir * formation.speed * dt;
 
       let minX = Infinity, maxX = -Infinity;
+      const t = performance.now() / 1000;
+
       for (const e of enemies) {
         if (e.state === "formation") {
-          const ex = formation.x + e.fx;
-          minX = Math.min(minX, ex);
-          maxX = Math.max(maxX, ex + e.w);
+          // Compute current slot position with breathing spacing.
+          const breathe = Math.sin(t * formation.breatheSpeed + (e.breathePhase || 0));
+          const spacing = formation.breatheSpacingAmp * breathe;
+
+          const cx = (formation.cols - 1) / 2;
+          const cy = (formation.rows - 1) / 2;
+          let dx = (e.gridC ?? 0) - cx;
+          let dy = (e.gridR ?? 0) - cy;
+          const mag = Math.hypot(dx, dy) || 1;
+          dx /= mag; dy /= mag;
+
+          const fx = (e.baseFx ?? e.fx) + dx * spacing;
+          const x = formation.x + fx + swayOffset;
+
+          // Anchor a temporary base position to get a render rect.
+          const bw = e.baseW ?? e.w;
+          const bh = e.baseH ?? e.h;
+          const baseY = formation.y + (e.baseFy ?? e.fy);
+
+          const tmp = { ...e, x, y: baseY, w: bw, h: bh, baseW: bw, baseH: bh };
+          const rr = enemyRenderRect(tmp, t);
+
+          minX = Math.min(minX, rr.x);
+          maxX = Math.max(maxX, rr.x + rr.w);
         }
       }
+
       if (minX === Infinity) { minX = formation.x; maxX = formation.x + 400; }
 
       if (minX < formation.boundsPad) {
@@ -519,7 +613,20 @@
           const pick = candidates[Math.floor(Math.random() * candidates.length)];
           if (Math.random() < pick.diveChance) {
             pick.state = "diving";
-            const dx = (player.x + player.w/2) - (formation.x + pick.fx + pick.w/2);
+            // Aim dive based on current slot (using baseFx so wave start doesn't mis-aim).
+            const bw = pick.baseW ?? pick.w;
+            const breathe = Math.sin(t * formation.breatheSpeed + (pick.breathePhase || 0));
+            const spacing = formation.breatheSpacingAmp * breathe;
+
+            const cx = (formation.cols - 1) / 2;
+            const cy = (formation.rows - 1) / 2;
+            let ddx = (pick.gridC ?? 0) - cx;
+            let ddy = (pick.gridR ?? 0) - cy;
+            const mag = Math.hypot(ddx, ddy) || 1;
+            ddx /= mag; ddy /= mag;
+
+            const slotX = formation.x + (pick.baseFx ?? 0) + ddx * spacing + swayOffset;
+            const dx = (player.x + player.w/2) - (slotX + bw/2);
             pick.vx = clamp(dx * 0.9, -420, 420);
             pick.vy = 260 + wave * 10;
           }
@@ -534,8 +641,10 @@
         const shooters = enemies
           .filter(e => e.state !== "returning")
           .sort((a, b) => {
-            const ax = Math.abs((a.x + a.w/2) - (player.x + player.w/2));
-            const bx = Math.abs((b.x + b.w/2) - (player.x + player.w/2));
+            const ar = enemyRenderRect(a, t);
+            const br = enemyRenderRect(b, t);
+            const ax = Math.abs((ar.x + ar.w/2) - (player.x + player.w/2));
+            const bx = Math.abs((br.x + br.w/2) - (player.x + player.w/2));
             return (ax - bx) + (b.shootBias - a.shootBias) * 80;
           });
 
@@ -550,6 +659,20 @@
         e.flash = Math.max(0, e.flash - dt);
 
         if (e.state === "formation") {
+          // Breathing spacing only affects enemies in formation (not divers mid-attack).
+          const breathe = Math.sin(t * formation.breatheSpeed + (e.breathePhase || 0));
+          const spacing = formation.breatheSpacingAmp * breathe;
+
+          const cx = (formation.cols - 1) / 2;
+          const cy = (formation.rows - 1) / 2;
+          let dx = (e.gridC ?? 0) - cx;
+          let dy = (e.gridR ?? 0) - cy;
+          const mag = Math.hypot(dx, dy) || 1;
+          dx /= mag; dy /= mag;
+
+          e.fx = (e.baseFx ?? e.fx) + dx * spacing;
+          e.fy = (e.baseFy ?? e.fy) + dy * spacing * 0.55;
+
           e.x = formation.x + e.fx + swayOffset;
           e.y = formation.y + e.fy;
         } else if (e.state === "diving") {
@@ -563,8 +686,8 @@
           }
         } else if (e.state === "returning") {
           e.y += e.vy * dt;
-          const tx = formation.x + e.fx + swayOffset;
-          const ty = formation.y + e.fy;
+          const tx = formation.x + (e.baseFx ?? e.fx) + swayOffset;
+          const ty = formation.y + (e.baseFy ?? e.fy);
           e.x = e.x + (tx - e.x) * clamp(dt * 3.5, 0, 1);
           if (e.y <= ty) e.state = "formation";
         }
@@ -585,7 +708,8 @@
       // Player bullets vs enemies
       for (let i = enemies.length - 1; i >= 0; i--) {
         const e = enemies[i];
-        const eb = { x: e.x, y: e.y, w: e.w, h: e.h };
+        const rr = enemyRenderRect(e, t);
+        const eb = { x: rr.x, y: rr.y, w: rr.w, h: rr.h };
 
         for (let j = bullets.length - 1; j >= 0; j--) {
           const b = bullets[j];
@@ -621,7 +745,8 @@
       if (player.iFrames <= 0) {
         const pb = { x: player.x, y: player.y, w: player.w, h: player.h };
         for (const e of enemies) {
-          const eb = { x: e.x, y: e.y, w: e.w, h: e.h };
+          const rr = enemyRenderRect(e, t);
+          const eb = { x: rr.x, y: rr.y, w: rr.w, h: rr.h };
           if (aabbOverlap(pb, eb)) { takeHit(); break; }
         }
       }
@@ -693,18 +818,20 @@
 
       // Enemies
       for (const e of enemies) {
+        const rr = enemyRenderRect(e, t);
+
         ctx.save();
         if (e.flash > 0) ctx.globalAlpha = 0.65;
-        drawSpriteOrFallback(e.img, e.x, e.y, e.w, e.h, "rgba(255,80,80,0.85)");
+        drawSpriteOrFallback(e.img, rr.x, rr.y, rr.w, rr.h, "rgba(255,80,80,0.85)");
         ctx.restore();
 
         if (e.maxHp > 1) {
           const pct = clamp(e.hp / e.maxHp, 0, 1);
           ctx.save();
           ctx.fillStyle = "rgba(0,0,0,0.55)";
-          ctx.fillRect(e.x, e.y - 8, e.w, 5);
+          ctx.fillRect(rr.x, rr.y - 9, rr.w, 5);
           ctx.fillStyle = "rgba(90,255,120,0.9)";
-          ctx.fillRect(e.x, e.y - 8, e.w * pct, 5);
+          ctx.fillRect(rr.x, rr.y - 9, rr.w * pct, 5);
           ctx.restore();
         }
       }
