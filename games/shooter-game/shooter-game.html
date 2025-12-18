@@ -1216,6 +1216,16 @@ function damagePlayer(){
 /* =======================
    Input
 ======================= */
+
+function toggleFullscreen(){
+  const elem = document.documentElement;
+  if (!document.fullscreenElement){
+    if (elem.requestFullscreen) elem.requestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+  }
+}
+
 window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
@@ -1230,6 +1240,7 @@ window.addEventListener("keydown", (e) => {
   keys[k] = true;
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
+  if (e.key === "f" || e.key === "F") toggleFullscreen();
   if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
   if (k === "escape") showMenu();
 }, { passive:false });
