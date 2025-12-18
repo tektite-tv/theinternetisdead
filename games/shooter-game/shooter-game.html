@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.38</title>
+<title>Galaga-ish Clone v1.39</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -1195,6 +1195,20 @@ window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
 
+  // v1.39: ESC is handled FIRST to avoid key-state conflicts (it should not behave like a held gameplay key).
+  if (e.code === "Escape"){
+    e.preventDefault();
+    // During a run: toggle pause/resume. In menus: return to menu (idempotent).
+    if (gameState === STATE.PLAYING){
+      gameState = STATE.PAUSED;
+    } else if (gameState === STATE.PAUSED){
+      gameState = STATE.PLAYING;
+    } else {
+      showMenu();
+    }
+    return;
+  }
+
   // v1.12.5: HUD toggle (Slash key) - hidden by default
   if (e.code === "Slash"){
     hudVisible = !hudVisible;
@@ -1206,15 +1220,6 @@ window.addEventListener("keydown", (e) => {
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
   if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
-  if (k === "escape"){
-    // v1.38: ESC toggles pause/resume during gameplay; in menus it returns to menu like before.
-    if (gameState === STATE.PLAYING){
-      gameState = STATE.PAUSED;
-    } else if (gameState === STATE.PAUSED){
-      gameState = STATE.PLAYING;
-    } else {
-      showMenu();
-    }
   }
 }, { passive:false });
 
@@ -1669,7 +1674,7 @@ if (inGameplay){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.38<br>` +
+    `Galaga-ish Clone v1.39<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
