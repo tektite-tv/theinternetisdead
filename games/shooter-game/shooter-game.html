@@ -128,6 +128,19 @@
 <canvas id="game"></canvas>
 <div id="overlay"></div>
 
+<div id="stageHud" style="
+  position:absolute;
+  top:10px;
+  left:10px;
+  font-family:monospace;
+  font-size:14px;
+  color:#00ff66;
+  text-shadow:0 0 6px rgba(0,255,0,0.35);
+  pointer-events:none;
+  z-index:20;
+"></div>
+
+
 <div id="livesSlot" class="cornerSlot" style="left:14px; bottom:14px;">
   <img src="/media/images/gifs/bananarama.gif" alt="lives"/>
   <div id="livesText" class="subtxt">x3</div>
@@ -293,6 +306,18 @@ const deathParticles = [];
 
 
 let wave = 1;
+
+
+function getStageInfo(wave){
+  if (wave <= 10){
+    return { stage: 1, start: 0, end: 10 };
+  } else if (wave <= 20){
+    return { stage: 2, start: 11, end: 20 };
+  } else {
+    return { stage: 3, start: 21, end: 30 };
+  }
+}
+
 
 // v1.17: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
 let formationCols = 1;
@@ -1667,6 +1692,15 @@ if (gameState === STATE.PLAYING){
   // v1.29: corner HUD updates
   livesText.textContent = "x" + lives;
   powerupSlot.style.display = hasBomb ? "flex" : "none";
+  if (gameState === STATE.PLAYING){
+    const info = getStageInfo(wave);
+    const clampedWave = Math.min(wave, info.end);
+    document.getElementById("stageHud").textContent =
+      `Stage ${info.stage}: Waves ${clampedWave}/${info.end}`;
+  } else {
+    document.getElementById("stageHud").textContent = "";
+  }
+
 }
 
 let lastT = performance.now();
