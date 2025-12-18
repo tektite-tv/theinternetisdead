@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.44</title>
+<title>Galaga-ish Clone v1.46</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -290,38 +290,54 @@ const btnRestart = document.getElementById("btnRestart");
 let hudVisible = false;
 
 // =======================
-// Right-Click Shield (v1.43)
+// Right-Click Shield (v1.45)
 // - Hold RIGHT MOUSE to raise a neon rainbow shield ring.
 // - Shield blocks/bounces enemy contact + enemy bullets.
-// - 3 blocked hits per activation.
-// - 30s cooldown after releasing or after hits are used.
+// - Uses "shield HP" so bullets don't erase it instantly.
+// - Shield persists while held; only drops on release or when HP is depleted.
+// - 30s cooldown after releasing or after shield breaks.
 // =======================
 let shieldActive = false;
 let shieldHolding = false;
-let shieldHitsLeft = 0;
-let shieldCooldown = 0; // seconds remaining
-const SHIELD_MAX_HITS = 3;
+
+// HP model (more sane than "3 hits" when bullets are flying)
+let shieldHP = 0;
+const SHIELD_HP_MAX = 120;             // "reasonable amount" of damage before it breaks
+const SHIELD_BULLET_DMG = 6;           // bullets nibble, they don't annihilate
+const SHIELD_COLLISION_DMG = 18;       // ramming the shield costs more
+let shieldCooldown = 0;                // seconds remaining
 const SHIELD_COOLDOWN_SECS = 30;
-const SHIELD_RADIUS_MULT = 0.78; // relative to player size
+const SHIELD_RADIUS_MULT = 0.78;       // relative to player size
+
+// If focus/pointer events get weird, don't insta-drop the shield.
+// Give a short grace period before forcing it off.
+let shieldHoldGrace = 0;
+const SHIELD_HOLD_GRACE_SECS = 0.25;
 
 function canActivateShield(){
   return (gameState === STATE.PLAYING && !isDead && shieldCooldown <= 0 && !shieldActive);
 }
 function startShield(){
   shieldActive = true;
-  shieldHitsLeft = SHIELD_MAX_HITS;
+  // v1.46: If you let go earlier, keep remaining HP for next time.
+  // Only refill to full when it was fully broken (shieldHP == 0) and cooldown has expired.
+  if (shieldHP <= 0) shieldHP = SHIELD_HP_MAX;
+  shieldHoldGrace = SHIELD_HOLD_GRACE_SECS;
 }
-function stopShield(startCooldown=true){
+function stopShield(startCooldown=false){
+  // v1.46: Releasing shield should NOT trigger cooldown and should NOT erase remaining HP.
   if (shieldActive){
     shieldActive = false;
+    shieldHoldGrace = 0;
     if (startCooldown) shieldCooldown = SHIELD_COOLDOWN_SECS;
   }
 }
-function shieldConsumeHit(){
+function shieldApplyDamage(dmg){
   if (!shieldActive) return;
-  shieldHitsLeft = Math.max(0, shieldHitsLeft - 1);
-  if (shieldHitsLeft <= 0){
-    stopShield(true);
+  shieldHP = Math.max(0, shieldHP - Math.max(0, dmg));
+  if (shieldHP <= 0){
+    // v1.46: Cooldown ONLY when the shield breaks.
+    stopShield(false);
   }
 }
  // v1.12.5: HUD hidden by default; toggle with / (Slash)
@@ -763,7 +779,7 @@ function showMenu(){
   gameState = STATE.MENU;
   // v1.43: drop shield when entering menus
   shieldHolding = false;
-  stopShield(true);
+  stopShield(false);
 
   deathOverlay.style.display = "none";
   // v1.37: HUD should not appear on the menu
@@ -788,7 +804,7 @@ function showOptions(){
   gameState = STATE.OPTIONS;
   // v1.43: drop shield when entering menus
   shieldHolding = false;
-  stopShield(true);
+  stopShield(false);
 
   // v1.37: hide HUD in menus
   livesSlot.style.display = "none";
@@ -1333,8 +1349,8 @@ canvas.addEventListener("pointerup", (e) => {
   // Release RMB shield
   if (e.button === 2){
     shieldHolding = false;
-    // If shield was active, releasing it starts cooldown.
-    if (shieldActive) stopShield(true);
+    // v1.46: Releasing it just deactivates; cooldown only happens if it BREAKS.
+    if (shieldActive) stopShield(false);
   }
 });
 
@@ -1349,11 +1365,19 @@ function update(dt){
 
   if (gameState !== STATE.PLAYING) return;
 
-  // v1.43: shield cooldown + hold logic
+  // v1.46: shield cooldown + hold logic
   if (shieldCooldown > 0) shieldCooldown = Math.max(0, shieldCooldown - dt);
-  if (shieldActive && !shieldHolding){
-    // Safety: if focus is lost and RMB isn't held, drop shield and start cooldown.
-    stopShield(true);
+
+  if (shieldActive){
+    if (shieldHolding){
+      shieldHoldGrace = SHIELD_HOLD_GRACE_SECS; // refresh grace while held
+    } else {
+      shieldHoldGrace = Math.max(0, shieldHoldGrace - dt);
+      if (shieldHoldGrace <= 0){
+        // v1.46: If RMB isn't held for a bit, drop shield WITHOUT cooldown (HP is saved).
+        stopShield(false);
+      }
+    }
   }
 
   // v1.28: death particles update + lockout
@@ -1615,7 +1639,7 @@ if (baseY > maxBaseY){
       const rr = (shieldR + b.r);
       if (dx*dx + dy*dy <= rr*rr){
         enemyBullets.splice(i, 1);
-        shieldConsumeHit();
+        shieldApplyDamage(SHIELD_BULLET_DMG);
         continue;
       }
     }
@@ -1657,7 +1681,7 @@ if (baseY > maxBaseY){
         e.col += nx * 0.35;
         e.row += ny * 0.25;
 
-        shieldConsumeHit();
+        shieldApplyDamage(SHIELD_BULLET_DMG);
         // If shield died from this hit, stop bouncing for this frame.
         if (!shieldActive) break;
       }
@@ -1728,11 +1752,15 @@ function drawShieldRing(){
   ctx.arc(0, 0, r - 6, 0, Math.PI*2);
   ctx.stroke();
 
-  // Hits-left pips (tiny dots at top)
+  // Shield HP pips (more pips = more remaining shield)
+  const PIPS = 6;
   const pipR = 3.2;
-  for (let i = 0; i < SHIELD_MAX_HITS; i++){
-    const on = (i < shieldHitsLeft);
-    const px = (i - (SHIELD_MAX_HITS-1)/2) * 10;
+  const hpPerPip = SHIELD_HP_MAX / PIPS;
+  const filled = Math.max(0, Math.min(PIPS, Math.ceil(shieldHP / hpPerPip)));
+
+  for (let i = 0; i < PIPS; i++){
+    const on = (i < filled);
+    const px = (i - (PIPS-1)/2) * 10;
     const py = -r - 12;
     ctx.fillStyle = on ? "rgba(0,255,255,0.9)" : "rgba(0,255,255,0.18)";
     ctx.beginPath();
@@ -1882,7 +1910,7 @@ if (gameState === STATE.PLAYING){
     `Galaga-ish Clone v1.37<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
-    `Shield: ${shieldActive ? (shieldHitsLeft + "/" + SHIELD_MAX_HITS) : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
+    `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
