@@ -634,10 +634,8 @@ function drawStarfield(){
     const arr = stars[li];
     const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
 
-    // v1.41: Boost star contrast in Stage 2+ (dark crimson instead of pure black)
-    ctx.fillStyle = isStage2Plus
-      ? `rgba(40,0,0,${Math.min(1, alpha + 0.25)})`
-      : `rgba(255,255,255,${alpha})`;
+    // v1.42: Keep stars white for maximum contrast (even in Stage 2+)
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
 
     for (const st of arr){
       ctx.fillRect(st.x, st.y, st.s, st.s);
