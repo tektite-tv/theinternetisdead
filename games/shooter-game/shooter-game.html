@@ -621,7 +621,11 @@ function updateStarfield(dt, keys, playerSpeed){
 }
 
 function drawStarfield(){
-  ctx.fillStyle = "#000";
+  // v1.40: Stage 2+ visual shift (wave >= 11)
+  const isStage2Plus = (gameState === STATE.PLAYING && wave >= 11);
+
+  // Background
+  ctx.fillStyle = isStage2Plus ? "#300" : "#000";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   if (!starfieldReady) return;
@@ -629,7 +633,12 @@ function drawStarfield(){
   for (let li = 0; li < starLayers.length; li++){
     const arr = stars[li];
     const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+
+    // Stars invert to black silhouettes in Stage 2+
+    ctx.fillStyle = isStage2Plus
+      ? `rgba(0,0,0,${alpha})`
+      : `rgba(255,255,255,${alpha})`;
+
     for (const st of arr){
       ctx.fillRect(st.x, st.y, st.s, st.s);
     }
