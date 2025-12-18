@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.37</title>
+<title>Galaga-ish Clone v1.44</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -287,7 +287,44 @@ const powerupSlot = document.getElementById("powerupSlot");
 const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 
-let hudVisible = false; // v1.12.5: HUD hidden by default; toggle with / (Slash)
+let hudVisible = false;
+
+// =======================
+// Right-Click Shield (v1.43)
+// - Hold RIGHT MOUSE to raise a neon rainbow shield ring.
+// - Shield blocks/bounces enemy contact + enemy bullets.
+// - 3 blocked hits per activation.
+// - 30s cooldown after releasing or after hits are used.
+// =======================
+let shieldActive = false;
+let shieldHolding = false;
+let shieldHitsLeft = 0;
+let shieldCooldown = 0; // seconds remaining
+const SHIELD_MAX_HITS = 3;
+const SHIELD_COOLDOWN_SECS = 30;
+const SHIELD_RADIUS_MULT = 0.78; // relative to player size
+
+function canActivateShield(){
+  return (gameState === STATE.PLAYING && !isDead && shieldCooldown <= 0 && !shieldActive);
+}
+function startShield(){
+  shieldActive = true;
+  shieldHitsLeft = SHIELD_MAX_HITS;
+}
+function stopShield(startCooldown=true){
+  if (shieldActive){
+    shieldActive = false;
+    if (startCooldown) shieldCooldown = SHIELD_COOLDOWN_SECS;
+  }
+}
+function shieldConsumeHit(){
+  if (!shieldActive) return;
+  shieldHitsLeft = Math.max(0, shieldHitsLeft - 1);
+  if (shieldHitsLeft <= 0){
+    stopShield(true);
+  }
+}
+ // v1.12.5: HUD hidden by default; toggle with / (Slash)
 
 let time = 0;
 let score = 0;
@@ -724,6 +761,10 @@ syncOptionsLabels();
 
 function showMenu(){
   gameState = STATE.MENU;
+  // v1.43: drop shield when entering menus
+  shieldHolding = false;
+  stopShield(true);
+
   deathOverlay.style.display = "none";
   // v1.37: HUD should not appear on the menu
   livesSlot.style.display = "none";
@@ -745,6 +786,10 @@ function restartRun(){
 }
 function showOptions(){
   gameState = STATE.OPTIONS;
+  // v1.43: drop shield when entering menus
+  shieldHolding = false;
+  stopShield(true);
+
   // v1.37: hide HUD in menus
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
@@ -1056,6 +1101,8 @@ const MAX_PLAYER_BULLETS = 90;
 const MAX_ENEMY_BULLETS  = 140;
 
 function shoot(){
+  // v1.44: cannot shoot while shield is active
+  if (shieldActive) return;
   if (fireCooldown > 0) return;
 
   // v1.19: fire in the current aim direction (defaults upward if aim is unset)
@@ -1224,6 +1271,12 @@ function damagePlayer(){
    Input
 ======================= */
 
+// Prevent right-click context menu so holding RMB can be used for shield.
+window.addEventListener("contextmenu", (e) => {
+  if (e.target === canvas) e.preventDefault();
+}, { passive:false });
+
+
 function toggleFullscreen(){
   const elem = document.documentElement;
   if (!document.fullscreenElement){
@@ -1263,7 +1316,26 @@ canvas.addEventListener("pointerdown", (e) => {
   unlockAudioOnce();
   // v1.19: clicking also aims and shoots
   setAimFromClient(e.clientX, e.clientY);
+
+  // v1.43: RIGHT CLICK hold = shield
+  // Note: pointer events use button 2 for right mouse.
+  if (e.button === 2){
+    e.preventDefault();
+    shieldHolding = true;
+    if (canActivateShield()) startShield();
+    return;
+  }
+
   if (gameState === STATE.PLAYING) shoot();
+});
+
+canvas.addEventListener("pointerup", (e) => {
+  // Release RMB shield
+  if (e.button === 2){
+    shieldHolding = false;
+    // If shield was active, releasing it starts cooldown.
+    if (shieldActive) stopShield(true);
+  }
 });
 
 /* =======================
@@ -1276,6 +1348,13 @@ function update(dt){
   updateStarfield(dt, keys, player.speed);
 
   if (gameState !== STATE.PLAYING) return;
+
+  // v1.43: shield cooldown + hold logic
+  if (shieldCooldown > 0) shieldCooldown = Math.max(0, shieldCooldown - dt);
+  if (shieldActive && !shieldHolding){
+    // Safety: if focus is lost and RMB isn't held, drop shield and start cooldown.
+    stopShield(true);
+  }
 
   // v1.28: death particles update + lockout
   if (isDead){
@@ -1524,8 +1603,23 @@ if (baseY > maxBaseY){
 
   // enemy bullet -> player collision
   const prx = player.x - player.w/2, pry = player.y - player.h/2;
+  const shieldR = player.w * SHIELD_RADIUS_MULT;
+
   for (let i = enemyBullets.length - 1; i >= 0; i--){
     const b = enemyBullets[i];
+
+    // v1.43: shield blocks bullets (counts as a "hit" on the shield)
+    if (shieldActive){
+      const dx = b.x - player.x;
+      const dy = b.y - player.y;
+      const rr = (shieldR + b.r);
+      if (dx*dx + dy*dy <= rr*rr){
+        enemyBullets.splice(i, 1);
+        shieldConsumeHit();
+        continue;
+      }
+    }
+
     if (circleRect(b.x, b.y, b.r, prx, pry, player.w, player.h)){
       enemyBullets.splice(i, 1);
       damagePlayer();
@@ -1533,6 +1627,43 @@ if (baseY > maxBaseY){
   }
 
   // enemy contact damage
+
+  // v1.43: shield makes enemies bounce off the player (and consumes shield hits on impact)
+  if (shieldActive){
+    const shieldR = player.w * SHIELD_RADIUS_MULT;
+    for (const e of enemies){
+      const dx = e.x - player.x;
+      const dy = e.y - player.y;
+      // approximate enemy radius from its sprite size
+      const er = Math.max(e.w, e.h) * 0.45;
+      const rr = shieldR + er;
+      const d2 = dx*dx + dy*dy;
+
+      if (d2 <= rr*rr){
+        const d = Math.max(1, Math.sqrt(d2));
+        const nx = dx / d;
+        const ny = dy / d;
+
+        // Push enemy out to the ring boundary
+        e.x = player.x + nx * (rr + 2);
+        e.y = player.y + ny * (rr + 2);
+
+        // If it's swooping, cancel its swoop so it doesn't keep clipping the shield.
+        if (e.swoop){
+          e.swoop = null;
+        }
+
+        // Nudge its formation slot slightly away so it doesn't immediately re-collide
+        e.col += nx * 0.35;
+        e.row += ny * 0.25;
+
+        shieldConsumeHit();
+        // If shield died from this hit, stop bouncing for this frame.
+        if (!shieldActive) break;
+      }
+    }
+  }
+
   if (player.invuln <= 0){
     for (const e of enemies){
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
@@ -1562,6 +1693,54 @@ function healPlayer(amount){
   // Heal up to 100%. Used by frog enemies.
   if (isDead) return;
   health = Math.min(1, health + amount);
+}
+
+
+function drawShieldRing(){
+  if (!(gameState === STATE.PLAYING && shieldActive)) return;
+
+  const r = player.w * SHIELD_RADIUS_MULT;
+  const segments = 72;
+  const baseHue = (time * 180) % 360; // shifting rainbow
+  ctx.save();
+  ctx.translate(player.x, player.y);
+
+  // Outer glow
+  ctx.lineWidth = 6;
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "rgba(0,255,255,0.35)";
+
+  for (let i = 0; i < segments; i++){
+    const a0 = (i / segments) * Math.PI * 2;
+    const a1 = ((i + 1) / segments) * Math.PI * 2;
+    const hue = (baseHue + i * (360 / segments)) % 360;
+    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.95)`;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, a0, a1);
+    ctx.stroke();
+  }
+
+  // Small inner ring to make it feel "contained"
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.beginPath();
+  ctx.arc(0, 0, r - 6, 0, Math.PI*2);
+  ctx.stroke();
+
+  // Hits-left pips (tiny dots at top)
+  const pipR = 3.2;
+  for (let i = 0; i < SHIELD_MAX_HITS; i++){
+    const on = (i < shieldHitsLeft);
+    const px = (i - (SHIELD_MAX_HITS-1)/2) * 10;
+    const py = -r - 12;
+    ctx.fillStyle = on ? "rgba(0,255,255,0.9)" : "rgba(0,255,255,0.18)";
+    ctx.beginPath();
+    ctx.arc(px, py, pipR, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
 }
 
 function draw(){
@@ -1615,7 +1794,10 @@ function draw(){
     ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
   }
 
-  // v1.28: always-on health bar under the player (4 hits total)
+    // v1.43: shield ring (RMB hold)
+  drawShieldRing();
+
+// v1.28: always-on health bar under the player (4 hits total)
   if (gameState === STATE.PLAYING){
     const barW = player.w;
     const barH = 7;
@@ -1700,6 +1882,7 @@ if (gameState === STATE.PLAYING){
     `Galaga-ish Clone v1.37<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
+    `Shield: ${shieldActive ? (shieldHitsLeft + "/" + SHIELD_MAX_HITS) : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
