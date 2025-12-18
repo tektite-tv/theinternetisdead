@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.38</title>
+<title>Galaga-ish Clone v1.39</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -116,7 +116,7 @@
   #btnRestart:hover{ background: rgba(255,0,0,0.10); }
 
 
-  /* v1.38: keep HUD off the menu and keep menu clickable */
+  /* v1.39: keep HUD off the menu and keep menu clickable */
   #uiRoot{ z-index: 50; }
   #deathOverlay{ z-index: 100; }
   #livesSlot{ display:none; }
@@ -340,7 +340,7 @@ function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; 
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
 
-// Powerup state (v1.38)
+// Powerup state (v1.39)
 let ufo = null;
 let bomb = null;
 let hasBomb = false;
@@ -727,7 +727,7 @@ syncOptionsLabels();
 function showMenu(){
   gameState = STATE.MENU;
   deathOverlay.style.display = "none";
-  // v1.38: HUD should not appear on the menu
+  // v1.39: HUD should not appear on the menu
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
 
@@ -737,7 +737,7 @@ function showMenu(){
 }
 
 function restartRun(){
-  // v1.38: Hard reset from GAME OVER screen (full reset to beginning)
+  // v1.39: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
   hasBomb = false;
   bomb = null;
@@ -747,7 +747,7 @@ function restartRun(){
 }
 function showOptions(){
   gameState = STATE.OPTIONS;
-  // v1.38: hide HUD in menus
+  // v1.39: hide HUD in menus
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
 
@@ -761,13 +761,13 @@ function startGame(){
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
 
-  // v1.38: show HUD only in-game
+  // v1.39: show HUD only in-game
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
 
   score = 0;
 
-  // v1.38: 3 lives, each life has 4-hit (25%) health
+  // v1.39: 3 lives, each life has 4-hit (25%) health
   lives = 3;
   livesText.textContent = "x" + lives;
 
@@ -1051,7 +1051,7 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 const bullets = [];
 const enemyBullets = [];
 
-// v1.38 PERF GUARDRAILS:
+// v1.39 PERF GUARDRAILS:
 // When bullet counts explode, the nested bullet-vs-bullet collision check can get expensive.
 // Cap counts to keep the game smooth instead of freezing when chaos spikes.
 const MAX_PLAYER_BULLETS = 90;
@@ -1065,7 +1065,7 @@ function shoot(){
   const dy = Math.sin(aimAngleSmoothed);
 
   const spawnDist = (player.w * 0.42);
-  // v1.38: cap bullets to prevent performance spikes
+  // v1.39: cap bullets to prevent performance spikes
   if (bullets.length >= MAX_PLAYER_BULLETS){
     bullets.splice(0, bullets.length - MAX_PLAYER_BULLETS + 1);
   }
@@ -1110,7 +1110,7 @@ function enemyTryShoot(dt){
   const vx = Math.max(-3.2, Math.min(3.2, dx * 0.012)); // gentle lead
   const vy = (5.6 + wave*0.45) * FUNK;
 
-  // v1.38: cap enemy bullets to prevent the counter-shot collision loop from going nuclear
+  // v1.39: cap enemy bullets to prevent the counter-shot collision loop from going nuclear
   if (enemyBullets.length >= MAX_ENEMY_BULLETS){
     enemyBullets.splice(0, enemyBullets.length - MAX_ENEMY_BULLETS + 1);
   }
@@ -1227,7 +1227,9 @@ function damagePlayer(){
 ======================= */
 window.
 function togglePause(){
-  if (!running) return; // only after Start Game
+  // Only after Start Game: pause/resume during gameplay.
+  if (typeof gameState === "undefined" || typeof STATE === "undefined") return;
+  if (gameState !== STATE.PLAYING && !paused) return;
   paused = !paused;
   document.body.classList.toggle("paused", paused);
   // Prevent giant dt jump when resuming
@@ -1236,12 +1238,15 @@ function togglePause(){
 
 addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    e.preventDefault();
-    togglePause();
-    return;
+    // Don't break the menu: only pause/resume when gameplay is active (or already paused).
+    const canPause = (typeof gameState !== "undefined" && typeof STATE !== "undefined" && gameState === STATE.PLAYING) || paused;
+    if (canPause){
+      e.preventDefault();
+      togglePause();
+      return;
+    }
   }
-
-  unlockAudioOnce();
+unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
 
   // v1.12.5: HUD toggle (Slash key) - hidden by default
@@ -1382,7 +1387,7 @@ function update(dt){
       const dx = p.x - e.x;
       const dy = p.y - e.y;
       const rr = (p.r + e.r);
-      // v1.38: cheap early-outs to avoid expensive nested collision work when bullets are far apart
+      // v1.39: cheap early-outs to avoid expensive nested collision work when bullets are far apart
       if (dy > rr + 6 || dy < -rr - 6) continue;
       if (dx > rr + 6 || dx < -rr - 6) continue;
       if (dx*dx + dy*dy <= rr*rr){
@@ -1667,7 +1672,7 @@ if (gameState === STATE.PLAYING){
 
   // enemies
   for (const e of enemies){
-    // v1.38: frog enemies get a pulsing green aura ring
+    // v1.39: frog enemies get a pulsing green aura ring
     if (e.isFrog){
       const pulse = 1 + 0.12 * Math.sin(time * 6.0);
       const r = Math.max(e.w, e.h) * 0.70 * pulse;
@@ -1703,7 +1708,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.38<br>` +
+    `Galaga-ish Clone v1.39<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
