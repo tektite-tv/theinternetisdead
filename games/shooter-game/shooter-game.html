@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.38</title>
+<title>Galaga-ish Clone v1.37</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -150,7 +150,7 @@
   <div id="startMenu" class="panel">
     <div class="title">GALAGA-ISH CLONE</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Pause · HUD: /</div>
+    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · HUD: /</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -241,10 +241,6 @@
   Fix: Restored any accidentally removed gameplay systems while adding UI and powerups.
   Kept: 360° aim + orbit triangle, straight bullets, bullet-vs-bullet cancel, Galaga formation + swoops, wave sizing 1/2/4/6/..., HUD toggle, menus/options.
   Added: Lives box (bottom-left), powerup slot with 'Press Q', YOU DIED overlay + Restart reset, UFO 25% wave spawn with 3-hit color cycle + fade granting 💥, Q bomb drop (+ flash then AoE + knockback), health bar (4 hits per life), pixel-dust death.
-
-- 2025-12-17 | v1.38
-  Added: ESC pause/resume during gameplay (freezes update loop + draws PAUSED overlay).
-  Fixed: Removed conflicting ESC->menu behavior that broke the menu / controls.
 ====================================================================== */
 
 
@@ -272,8 +268,6 @@ function getPlayerFireCooldown(){
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const overlay = document.getElementById("overlay");
-
-let paused = false; // v1.38: ESC pauses/resumes during gameplay
 const livesSlot = document.getElementById("livesSlot");
 const livesText = document.getElementById("livesText");
 const powerupSlot = document.getElementById("powerupSlot");
@@ -309,7 +303,7 @@ let formationRows = 1;
 let waveBanner = { text:"", t:0 };
 function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; }
 
-const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing", PAUSED:"paused" };
+const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
 
 // Powerup state (v1.37)
@@ -697,8 +691,6 @@ colsSlider.addEventListener("input", syncOptionsLabels);
 syncOptionsLabels();
 
 function showMenu(){
-  paused = false; // v1.38: leaving pause state
-
   gameState = STATE.MENU;
   deathOverlay.style.display = "none";
   // v1.37: HUD should not appear on the menu
@@ -720,8 +712,6 @@ function restartRun(){
   startGame();
 }
 function showOptions(){
-  paused = false; // v1.38: leaving pause state
-
   gameState = STATE.OPTIONS;
   // v1.37: hide HUD in menus
   livesSlot.style.display = "none";
@@ -732,8 +722,6 @@ function showOptions(){
   uiRoot.style.display = "flex";
 }
 function startGame(){
-  paused = false; // v1.38: leaving pause state
-
   unlockAudioOnce();
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
@@ -1215,32 +1203,10 @@ window.addEventListener("keydown", (e) => {
 
   const k = e.key.toLowerCase();
   keys[k] = true;
-  
-  // v1.38: ESC pauses/resumes during gameplay (menu remains accessible via game over / UI)
-  if (k === "escape"){
-    e.preventDefault();
-
-    if (gameState === STATE.PLAYING){
-      gameState = STATE.PAUSED;
-      paused = true;
-      return;
-    }
-    if (gameState === STATE.PAUSED){
-      gameState = STATE.PLAYING;
-      paused = false;
-      return;
-    }
-
-    // In menus/options, ESC just backs out to the main menu.
-    if (gameState === STATE.OPTIONS){
-      showMenu();
-      return;
-    }
-  }
-
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
   if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
+  if (k === "escape") showMenu();
 }, { passive:false });
 
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
@@ -1265,9 +1231,6 @@ function update(dt){
 
   // starfield updates always
   updateStarfield(dt, keys, player.speed);
-
-  // v1.38: freeze gameplay while paused (starfield keeps running)
-  if (gameState === STATE.PAUSED) return;
 
   if (gameState !== STATE.PLAYING) return;
 
@@ -1560,23 +1523,6 @@ function healPlayer(amount){
 
 function draw(){
   drawStarfield();
-  // v1.38: pause overlay (white text)
-  if (gameState === STATE.PAUSED){
-    ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 48px Courier New, monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2 - 20);
-
-    ctx.font = "20px Courier New, monospace";
-    ctx.fillText("Press Esc to Resume", canvas.width / 2, canvas.height / 2 + 30);
-    ctx.restore();
-  }
-
 
   // v1.28+: draw player death particles
   if (deathParticles.length){
@@ -1708,7 +1654,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.38<br>` +
+    `Galaga-ish Clone v1.37<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
@@ -1716,7 +1662,7 @@ if (gameState === STATE.PLAYING){
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
     `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
     `Player: ${player.w}px | Gap: ${FORMATION_PLAYER_GAP}px<br>` +
-    `ESC: Pause/Resume`;
+    `ESC: Menu`;
 
   // v1.29: corner HUD updates
   livesText.textContent = "x" + lives;
@@ -1755,4 +1701,30 @@ player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
 
 // v1.19: default aim straight up until the player moves the pointer
 aimX = player.x;
-aimY = playe
+aimY = player.y - 200;
+aimAngle = -Math.PI/2;
+aimAngleSmoothed = -Math.PI/2;
+
+resetStarfield();
+resize(); // also resets starfield + anchors player
+showMenu();
+powerupSlot.style.display = "none";
+spawnEnemies();
+updateHearts();
+
+requestAnimationFrame(loop);
+</script>
+
+<div id="heartsHud" style="
+position:fixed;
+bottom:12px;
+left:50%;
+transform:translateX(-50%);
+font-size:28px;
+letter-spacing:6px;
+pointer-events:none;
+z-index:9999;
+">❤️ ❤️ ❤️ ❤️</div>
+</body>
+
+</html>
