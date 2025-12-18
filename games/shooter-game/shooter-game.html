@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.37</title>
+<title>Galaga-ish Clone v1.38</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -303,7 +303,7 @@ let formationRows = 1;
 let waveBanner = { text:"", t:0 };
 function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; }
 
-const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
+const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing", PAUSED:"paused" };
 let gameState = STATE.MENU;
 
 // Powerup state (v1.37)
@@ -1206,7 +1206,16 @@ window.addEventListener("keydown", (e) => {
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
   if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
-  if (k === "escape") showMenu();
+  if (k === "escape"){
+    // v1.38: ESC toggles pause/resume during gameplay; in menus it returns to menu like before.
+    if (gameState === STATE.PLAYING){
+      gameState = STATE.PAUSED;
+    } else if (gameState === STATE.PAUSED){
+      gameState = STATE.PLAYING;
+    } else {
+      showMenu();
+    }
+  }
 }, { passive:false });
 
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
@@ -1227,9 +1236,12 @@ canvas.addEventListener("pointerdown", (e) => {
    Update + Draw
 ======================= */
 function update(dt){
+  // v1.38: When paused, freeze the entire game state exactly as-is (no timers, no movement, no star drift).
+  if (gameState === STATE.PAUSED) return;
+
   time += dt;
 
-  // starfield updates always
+  // starfield updates always (except PAUSED, see guard above)
   updateStarfield(dt, keys, player.speed);
 
   if (gameState !== STATE.PLAYING) return;
@@ -1524,6 +1536,9 @@ function healPlayer(amount){
 function draw(){
   drawStarfield();
 
+  // v1.38: PAUSED should render the exact gameplay frame, then overlay pause text.
+  const inGameplay = (gameState === STATE.PLAYING || gameState === STATE.PAUSED);
+
   // v1.28+: draw player death particles
   if (deathParticles.length){
     ctx.save();
@@ -1536,7 +1551,7 @@ function draw(){
   }
 
   // v1.13: Wave banner popup
-  if (gameState === STATE.PLAYING && waveBanner.t > 0){
+  if (inGameplay && waveBanner.t > 0){
     const p = Math.min(1, waveBanner.t / 1.35);
     const alpha = Math.min(1, 0.2 + p);
     ctx.save();
@@ -1564,7 +1579,7 @@ function draw(){
 
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  if (gameState === STATE.PLAYING){
+  if (inGameplay){
     if (!flicker){
       ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
     }
@@ -1573,7 +1588,7 @@ function draw(){
   }
 
   // v1.28: always-on health bar under the player (4 hits total)
-  if (gameState === STATE.PLAYING){
+  if (inGameplay){
     const barW = player.w;
     const barH = 7;
     const bx = player.x - barW/2;
@@ -1593,7 +1608,7 @@ function draw(){
   }
 
 // v1.19: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
-if (gameState === STATE.PLAYING){
+if (inGameplay){
   const a = aimAngleSmoothed;
   const orbitR = player.w * 0.62;
   const tx = player.x + Math.cos(a) * orbitR;
@@ -1654,7 +1669,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.37<br>` +
+    `Galaga-ish Clone v1.38<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
@@ -1667,6 +1682,25 @@ if (gameState === STATE.PLAYING){
   // v1.29: corner HUD updates
   livesText.textContent = "x" + lives;
   powerupSlot.style.display = hasBomb ? "flex" : "none";
+}
+
+  // v1.38: Pause overlay (white text)
+  if (gameState === STATE.PAUSED){
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.font = "bold 52px monospace";
+    ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2 - 34);
+
+    ctx.font = "20px monospace";
+    ctx.fillText("Press Esc to Resume", canvas.width / 2, canvas.height / 2 + 22);
+    ctx.restore();
+  }
 }
 
 let lastT = performance.now();
