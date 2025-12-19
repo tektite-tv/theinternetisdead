@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.46</title>
+<title>Galaga-ish Clone v1.48</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -254,6 +254,9 @@
   Fix: Restored any accidentally removed gameplay systems while adding UI and powerups.
   Kept: 360° aim + orbit triangle, straight bullets, bullet-vs-bullet cancel, Galaga formation + swoops, wave sizing 1/2/4/6/..., HUD toggle, menus/options.
   Added: Lives box (bottom-left), powerup slot with 'Press Q', YOU DIED overlay + Restart reset, UFO 25% wave spawn with 3-hit color cycle + fade granting 💥, Q bomb drop (+ flash then AoE + knockback), health bar (4 hits per life), pixel-dust death.
+- 2025-12-19 | v1.47
+  Changed: 💥 bomb is now a short-range shot (spawns ahead of player in aim direction).
+  Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
 ====================================================================== */
 
 
@@ -403,9 +406,15 @@ function rand(min, max){ return min + Math.random() * (max - min); }
    - Press Q drops a flashing + that explodes after 3 flashes (0.5s each)
 ======================= */
 
-function trySpawnUFO(){
+function shouldForceUFOForWave(w){
+  // v1.48: Always spawn a UFO on key milestone waves.
+  return (w === 11 || w === 21);
+}
+
+function trySpawnUFO(force=false){
   if (ufo) return; // only one at a time
-  if (Math.random() > 0.25) return;
+  // v1.48: Force-spawn on wave 11 and 21 (or when explicitly forced).
+  if (!force && !shouldForceUFOForWave(wave) && Math.random() > 0.25) return;
 
   // Spawn near top area, tiny and fast.
   ufo = {
@@ -511,12 +520,28 @@ function dropBomb(){
   hasBomb = false;
   powerupSlot.style.display = "none";
 
+  // v1.47: Bomb is now a short-range "shot" that travels a bit in the aim direction.
+  // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
+  const dx = Math.cos(aimAngleSmoothed);
+  const dy = Math.sin(aimAngleSmoothed);
+
+  const spawnDist = player.w * 0.55;
+  const maxTravel = 140;          // "short distance ahead" (px)
+  const speed = 900;              // px/sec while flying (feels snappy)
+
   bomb = {
-    x: player.x,
-    y: player.y,
-    t: 0,
-    flashes: 0,
+    x: player.x + dx * spawnDist,
+    y: player.y + dy * spawnDist,
+    vx: dx * speed,
+    vy: dy * speed,
+    travel: 0,
+    maxTravel,
+    r: 12,
+
+    mode: "flying",               // "flying" -> "armed" -> "exploding"
+    flashT: 0,
     flashOn: true,
+
     exploding: false,
     rad: 0,
     alpha: 0.0
@@ -526,36 +551,77 @@ function dropBomb(){
 function explodeBomb(){
   if (!bomb) return;
   bomb.exploding = true;
+  bomb.mode = "exploding";
   bomb.rad = 0;
   bomb.alpha = 0.55;
+}
+
+function bombHitsEnemy(){
+  if (!bomb || bomb.exploding) return false;
+  // Check contact against all enemies (both while flying and while armed).
+  for (let i = enemies.length - 1; i >= 0; i--){
+    const e = enemies[i];
+    const rx = e.x - e.w/2, ry = e.y - e.h/2;
+
+    // Treat bomb as a circle hitting an enemy rect.
+    if (circleRect(bomb.x, bomb.y, bomb.r, rx, ry, e.w, e.h)){
+      // Detonate at the point of contact.
+      explodeBomb();
+      return true;
+    }
+  }
+  return false;
 }
 
 function updateBomb(dt){
   if (!bomb) return;
 
+  // Flash toggle (used for both flying + armed for readability)
+  bomb.flashT += dt;
+  if (bomb.flashT >= 0.12){
+    bomb.flashT -= 0.12;
+    bomb.flashOn = !bomb.flashOn;
+  }
+
   if (!bomb.exploding){
-    bomb.t += dt;
-    // 0.5 second flashes, 3 times
-    if (bomb.t >= 0.5){
-      bomb.t -= 0.5;
-      bomb.flashOn = !bomb.flashOn;
-      bomb.flashes += 1;
-      if (bomb.flashes >= 3){
-        explodeBomb();
+    if (bomb.mode === "flying"){
+      // Move forward for a short distance.
+      const stepX = bomb.vx * dt;
+      const stepY = bomb.vy * dt;
+
+      bomb.x += stepX;
+      bomb.y += stepY;
+
+      bomb.travel += Math.hypot(stepX, stepY);
+
+      // If it hits an enemy while flying, detonate instantly.
+      if (bombHitsEnemy()) return;
+
+      // After maxTravel, stop and become an "armed mine" that detonates on contact.
+      if (bomb.travel >= bomb.maxTravel){
+        bomb.mode = "armed";
+        bomb.vx = 0;
+        bomb.vy = 0;
       }
+    } else if (bomb.mode === "armed"){
+      // Stationary: detonate on first enemy contact.
+      bombHitsEnemy();
     }
   } else {
     // expand shockwave
-    bomb.rad += (520 + 180 * FUNK) * dt;
-    bomb.alpha = Math.max(0, bomb.alpha - dt * 0.55);
+    bomb.rad += (560 + 220 * FUNK) * dt;
+    bomb.alpha = Math.max(0, bomb.alpha - dt * 0.60);
 
     // Apply damage + knockback ONCE at the start of explosion
     if (!bomb.didDamage){
       bomb.didDamage = true;
 
-      // Radius: 1.5 enemy widths (use average current enemy size or fallback)
+      // Radius: 1.7 enemy widths (use average current enemy size or fallback)
       const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
-      const radius = enemySize * 1.5;
+      const radius = enemySize * 1.7;
+
+      // v1.47: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
+      const BOMB_DAMAGE = 2;
 
       for (let i = enemies.length - 1; i >= 0; i--){
         const e = enemies[i];
@@ -564,18 +630,22 @@ function updateBomb(dt){
         const d2 = dx*dx + dy*dy;
 
         if (d2 <= radius*radius){
-          // kill enemy
-          enemies.splice(i, 1);
-          if (e.isFrog) healPlayer(0.50);
-          score += 10;
-          playSfx(sfxHit);
+          // damage/kill
+          e.hp = (typeof e.hp === "number") ? e.hp : 1;
+          e.hp -= BOMB_DAMAGE;
+
+          if (e.hp <= 0){
+            enemies.splice(i, 1);
+            if (e.isFrog) healPlayer(0.50);
+            score += 10;
+            playSfx(sfxHit);
+          }
         } else {
           // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
           const r2 = (radius * 2.2);
           if (d2 <= r2*r2){
             const d = Math.max(1, Math.sqrt(d2));
             const push = (radius * 0.55) / d;
-            // shove their formation-space offsets slightly
             e.col += (dx / d) * push * 0.02;
             e.row += (dy / d) * push * 0.02;
           }
@@ -593,12 +663,26 @@ function drawBomb(){
   if (!bomb) return;
 
   if (!bomb.exploding){
-    // flashing plus
+    // v1.47: flying/armed bomb (flashing plus)
     ctx.save();
     ctx.translate(bomb.x, bomb.y);
-    ctx.fillStyle = bomb.flashOn ? "rgba(255,255,0,0.95)" : "rgba(255,60,60,0.95)";
+
+    // Slightly different color when armed vs flying so you can read it at a glance.
+    const isArmed = (bomb.mode === "armed");
+    const onCol  = isArmed ? "rgba(255,80,80,0.95)" : "rgba(255,255,0,0.95)";
+    const offCol = isArmed ? "rgba(255,255,255,0.70)" : "rgba(255,60,60,0.95)";
+
+    ctx.fillStyle = bomb.flashOn ? onCol : offCol;
     ctx.fillRect(-4, -16, 8, 32);
     ctx.fillRect(-16, -4, 32, 8);
+
+    // tiny outline circle so it reads even when the plus is edge-on
+    ctx.strokeStyle = "rgba(255,255,255,0.22)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, bomb.r, 0, Math.PI * 2);
+    ctx.stroke();
+
     ctx.restore();
   } else {
     // explosion circle
@@ -1709,6 +1793,7 @@ if (baseY > maxBaseY){
 
     resetFormation();
     spawnEnemies();
+    trySpawnUFO();
   }
 }
 
