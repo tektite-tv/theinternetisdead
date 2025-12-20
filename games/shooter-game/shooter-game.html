@@ -163,7 +163,7 @@
   <div id="startMenu" class="panel">
     <div class="title">GALAGA-ISH CLONE</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · HUD: /</div>
+    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · HUD: / · Mute: M</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -271,6 +271,7 @@
 const GIF_BASE = "/media/images/gifs/";
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
 const AUDIO_OOF = "/media/audio/oof.mp3";
+const AUDIO_BGM = "/media/audio/spaceinvaders.mp3";
 
 /* =======================
    Player Firing Tuning
@@ -828,27 +829,60 @@ window.addEventListener("resize", resize);
 ======================= */
 const sfxHit = new Audio(AUDIO_HIT);
 const sfxOof = new Audio(AUDIO_OOF);
+const bgm = new Audio(AUDIO_BGM);
+
 sfxHit.preload = "auto";
 sfxOof.preload = "auto";
+bgm.preload = "auto";
+
 sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
+bgm.volume = 0.35;
+bgm.loop = true;
+
+// v1.50: Global mute toggle (M key) + always-on background music.
+let mutedAll = false;
+function setMutedAll(m){
+  mutedAll = !!m;
+  sfxHit.muted = mutedAll;
+  sfxOof.muted = mutedAll;
+  bgm.muted = mutedAll;
+
+  // If unmuting after audio unlock, attempt to resume BGM if it got paused.
+  if (!mutedAll && audioUnlocked){
+    try{ if (bgm.paused) bgm.play().catch(()=>{}); }catch(e){}
+  }
+}
 
 let audioUnlocked = false;
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
   try{
-    sfxHit.muted = true;
-    sfxHit.play().then(() => { sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false; }).catch(()=>{ sfxHit.muted = false; });
+    // "Warm up" SFX so browsers allow future plays.
+    [sfxHit, sfxOof].forEach(a => {
+      try{
+        a.muted = true;
+        a.play().then(() => {
+          a.pause();
+          a.currentTime = 0;
+          a.muted = mutedAll;
+        }).catch(()=>{ a.muted = mutedAll; });
+      }catch(e){}
+    });
 
-    sfxOof.muted = true;
-    sfxOof.play().then(() => { sfxOof.pause(); sfxOof.currentTime = 0; sfxOof.muted = false; }).catch(()=>{ sfxOof.muted = false; });
+    // Start looping background music.
+    bgm.muted = mutedAll;
+    bgm.play().catch(()=>{});
   }catch(e){}
 }
+
 function playSfx(a){
+  if (mutedAll) return;
   try{
     const c = a.cloneNode();
     c.volume = a.volume;
+    c.muted = mutedAll;
     c.play().catch(()=>{});
   }catch(e){}
 }
@@ -1441,6 +1475,8 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
   if (e.key === "f" || e.key === "F") toggleFullscreen();
   if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
+  // v1.50: toggle mute for all audio (including background music)
+  if (k === "m") setMutedAll(!mutedAll);
   if (k === "escape") showMenu();
 }, { passive:false });
 
