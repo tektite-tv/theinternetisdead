@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.48</title>
+<title>Galaga-ish Clone v1.49</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -257,6 +257,11 @@
 - 2025-12-19 | v1.47
   Changed: 💥 bomb is now a short-range shot (spawns ahead of player in aim direction).
   Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
+
+- 2025-12-19 | v1.49
+  Added: Bomb-killing a dragon.gif enemy grants a one-time +25% "armor" pip next to the hearts HUD.
+  Behavior: The armor absorbs the next hit (any damage) and then flips to ❌ briefly.
+
 ====================================================================== */
 
 
@@ -355,6 +360,14 @@ const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 let lives = 0; // (deprecated) replaced by health bar system
 let health = 1.0; // 0..1 (4 hits -> 0)
 const HIT_DAMAGE = 0.25; // 25% per hit (4 hits = one life)
+
+// =======================
+// Dragon Bomb-Kill Armor (v1.49)
+// - If a dragon.gif enemy is killed by the BOMB blast, grant a one-time +25% armor.
+// - Armor absorbs the next hit, then turns into an ❌ briefly next to the hearts HUD.
+// =======================
+let bonusArmor = 0;              // 0 or 0.25
+let bonusArmorBrokenT = 0;       // seconds remaining to show ❌
 let isDead = false;
 let deathTimer = 0;
 let deathGameOver = false;
@@ -397,6 +410,21 @@ let hasBomb = false;
    Utility
 ======================= */
 function rand(min, max){ return min + Math.random() * (max - min); }
+
+function isDragonEnemy(e){
+  return !!(e && e.img && e.img.src && e.img.src.toLowerCase().includes("dragon.gif"));
+}
+
+function grantBonusArmor(){
+  // Do not stack. Just refresh.
+  bonusArmor = 0.25;
+  bonusArmorBrokenT = 0;
+}
+
+function breakBonusArmor(){
+  bonusArmor = 0;
+  bonusArmorBrokenT = 1.8;
+}
 
 /* =======================
    UFO + Bomb Powerup (v1.29)
@@ -635,6 +663,7 @@ function updateBomb(dt){
           e.hp -= BOMB_DAMAGE;
 
           if (e.hp <= 0){
+            if (isDragonEnemy(e)) grantBonusArmor();
             enemies.splice(i, 1);
             if (e.isFrog) healPlayer(0.50);
             score += 10;
@@ -915,6 +944,8 @@ function startGame(){
   livesText.textContent = "x" + lives;
 
   health = 1.0;
+  bonusArmor = 0;
+  bonusArmorBrokenT = 0;
   isDead = false;
   deathTimer = 0;
   deathGameOver = false;
@@ -1355,6 +1386,14 @@ function spawnPlayerDeath(isGameOver){
 function damagePlayer(){
   if (player.invuln > 0 || isDead) return;
 
+  // v1.49: bonus armor absorbs one hit
+  if (bonusArmor > 0){
+    breakBonusArmor();
+    playSfx(sfxHit);
+    player.invuln = 0.35;
+    return;
+  }
+
   // Each hit drains 25% health (4 hits = one life).
   health = Math.max(0, health - HIT_DAMAGE);
   player.invuln = 1.00;
@@ -1443,6 +1482,8 @@ canvas.addEventListener("pointerup", (e) => {
 ======================= */
 function update(dt){
   time += dt;
+
+  if (bonusArmorBrokenT > 0) bonusArmorBrokenT = Math.max(0, bonusArmorBrokenT - dt);
 
   // starfield updates always
   updateStarfield(dt, keys, player.speed);
@@ -2028,6 +2069,13 @@ function updateHearts(){
   for (let i = 0; i < 4; i++){
     out += (i < hearts ? full : empty) + " ";
   }
+
+  // v1.49: bonus armor indicator next to hearts
+  let armorIcon = "";
+  if (bonusArmor > 0) armorIcon = "🛡️";
+  else if (bonusArmorBrokenT > 0) armorIcon = "❌";
+  if (armorIcon) out += "  " + armorIcon;
+
   const el = document.getElementById("heartsHud");
   if (el) el.textContent = out.trim();
 }
