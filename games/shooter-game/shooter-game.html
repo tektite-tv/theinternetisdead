@@ -272,6 +272,59 @@ const GIF_BASE = "/media/images/gifs/";
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
 const AUDIO_OOF = "/media/audio/oof.mp3";
 
+
+/* =======================
+   Audio
+======================= */
+const AUDIO_BG_MUSIC = "/media/audio/spaceinvaders.mp3";
+const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
+
+// Background music (loops). We start it on the first user interaction (autoplay rules).
+const musicBg = new Audio(AUDIO_BG_MUSIC);
+musicBg.loop = true;
+musicBg.preload = "auto";
+musicBg.volume = 0.6;
+
+// Death yell (plays once when GAME OVER screen appears)
+const sfxDeath = new Audio(AUDIO_DEATH_YELL);
+sfxDeath.preload = "auto";
+sfxDeath.volume = 0.9;
+
+// Global mute toggle (M key)
+let audioMuted = false;
+
+function applyMuteState(){
+  const m = !!audioMuted;
+  musicBg.muted = m;
+  sfxDeath.muted = m;
+  sfxHit.muted = m;
+  sfxOof.muted = m;
+}
+
+function ensureMusicPlaying(){
+  if (audioMuted) return;
+  // If it's already playing, don't restart it.
+  if (!musicBg.paused) return;
+  // Start from beginning if it somehow ended (it loops, but just in case).
+  try{ if (musicBg.currentTime > 0 && musicBg.currentTime < 0.05) {} }catch(e){}
+  musicBg.play().catch(()=>{});
+}
+
+function stopMusic(){
+  try{
+    musicBg.pause();
+    musicBg.currentTime = 0;
+  }catch(e){}
+}
+
+function playDeathYell(){
+  if (audioMuted) return;
+  try{
+    sfxDeath.currentTime = 0;
+    sfxDeath.play().catch(()=>{});
+  }catch(e){}
+}
+
 /* =======================
    Player Firing Tuning
 ======================= */
@@ -844,11 +897,26 @@ function unlockAudioOnce(){
     sfxOof.muted = true;
     sfxOof.play().then(() => { sfxOof.pause(); sfxOof.currentTime = 0; sfxOof.muted = false; }).catch(()=>{ sfxOof.muted = false; });
   }catch(e){}
+
+  // Prime music/death audio once the browser allows it.
+  try{
+    // touch the audio objects so they're "known" to the gesture
+    musicBg.muted = true;
+    musicBg.play().then(()=>{ musicBg.pause(); musicBg.currentTime = 0; musicBg.muted = false; }).catch(()=>{ musicBg.muted = false; });
+
+    sfxDeath.muted = true;
+    sfxDeath.play().then(()=>{ sfxDeath.pause(); sfxDeath.currentTime = 0; sfxDeath.muted = false; }).catch(()=>{ sfxDeath.muted = false; });
+  }catch(e){}
+
+  applyMuteState();
+  ensureMusicPlaying();
 }
 function playSfx(a){
+  if (audioMuted) return;
   try{
     const c = a.cloneNode();
     c.volume = a.volume;
+    c.muted = !!audioMuted;
     c.play().catch(()=>{});
   }catch(e){}
 }
@@ -905,6 +973,7 @@ function showMenu(){
 }
 
 function restartRun(){
+  ensureMusicPlaying();
   // v1.37: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
   hasBomb = false;
@@ -929,6 +998,7 @@ function showOptions(){
 }
 function startGame(){
   unlockAudioOnce();
+  ensureMusicPlaying();
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
@@ -1438,6 +1508,13 @@ window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   keys[k] = true;
 
+  if (k === "m"){
+    audioMuted = !audioMuted;
+    applyMuteState();
+    // If unmuting, try to resume background music.
+    if (!audioMuted) ensureMusicPlaying();
+  }
+
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
   if (e.key === "f" || e.key === "F") toggleFullscreen();
   if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
@@ -1523,6 +1600,8 @@ function update(dt){
       if (deathGameOver){
         // GAME OVER overlay
         deathOverlay.style.display = "flex";
+        stopMusic();
+        playDeathYell();
       } else {
         // Respawn for next life (keep wave/enemies as-is)
         isDead = false;
