@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.50</title>
+<title>Galaga-ish Clone v1.52</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -174,6 +175,32 @@
     accent-color:#00ff66;
   }
 
+
+  /* =======================
+     Audio Widget (v1.52)
+     - Compact button expands on hover with hint text
+  ======================= */
+  #audioBtn{
+    width:36px;
+    height:36px;
+    line-height:36px;
+    font-size:18px;
+    transition: width 0.18s ease, background 0.18s ease;
+    overflow:hidden;
+    white-space:nowrap;
+  }
+  #audioBtn .hint{
+    margin-left:6px;
+    font-size:11px;
+    opacity:0.85;
+    vertical-align:middle;
+  }
+  #audioBtn:hover{
+    width:170px;
+    text-align:left;
+    padding-left:10px;
+  }
+
 </style>
 </head>
 <body>
@@ -194,7 +221,7 @@
 
 
 <div id="audioWidget">
-  <button id="audioBtn" title="Audio" aria-label="Audio">🔊</button>
+  <button id="audioBtn" title="Audio" aria-label="Audio"><span class="icon">🔊</span><span class="hint">Press M to Mute</span></button>
   <div id="audioPanel">
     <div class="audioRow"><span>Music</span><span id="musicVolLabel">80%</span></div>
     <input id="musicVolSlider" type="range" min="0" max="100" value="80" step="1" />
@@ -320,7 +347,11 @@
   Changed: 💥 bomb is now a short-range shot (spawns ahead of player in aim direction).
   Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
 
-- 2025-12-21 | v1.50
+- 2025-12-21 | v1.52
+  Changed: Audio button is compact by default and expands on hover to show hint text.
+  Added: Press M to mute/unmute ALL audio (music + gameplay).
+
+2025-12-21 | v1.50
   Added: Always-on /media/audio/spaceinvaders.mp3 music loop with top-right 🔊 dropdown.
   Added: Separate sliders for Music volume and Gameplay (SFX) volume.
 
@@ -912,6 +943,8 @@ sfxOof.volume = 0.8;
 let gameplayVolume = 0.80; // 0..1 (affects SFX via playSfx())
 let musicVolume = 0.80;    // 0..1
 
+let isMuted = false;       // v1.52 global mute toggle
+
 // v1.50: Always-on background music (loops forever after user gesture unlock)
 const music = new Audio(AUDIO_MUSIC);
 music.preload = "auto";
@@ -920,6 +953,7 @@ music.volume = musicVolume;
 
 function tryStartMusic(){
   try{
+    if (isMuted) return;
     // Only try to play once audio is unlocked; browsers will block autoplay otherwise.
     if (!audioUnlocked) return;
     if (!music.paused && !music.ended) return;
@@ -928,12 +962,17 @@ function tryStartMusic(){
 }
 
 function updateAudioIcon(){
-  // 🔊 when playing + audible, 🔇 when volume is 0, 🔈 when paused
   if (!audioBtn) return;
+  const iconEl = audioBtn.querySelector(".icon");
+  if (!iconEl) return;
+
+  if (isMuted){
+    iconEl.textContent = "🔇";
+    return;
+  }
   const audible = (musicVolume > 0.001);
   const playing = (!music.paused && !music.ended);
-  if (!audible) audioBtn.textContent = "🔇";
-  else audioBtn.textContent = playing ? "🔊" : "🔈";
+  iconEl.textContent = (!audible) ? "🔇" : (playing ? "🔊" : "🔈");
 }
 
 
@@ -954,7 +993,7 @@ function unlockAudioOnce(){
 function playSfx(a){
   try{
     const c = a.cloneNode();
-    c.volume = a.volume * gameplayVolume;
+    c.volume = isMuted ? 0 : (a.volume * gameplayVolume);
     c.play().catch(()=>{});
   }catch(e){}
 }
@@ -1008,6 +1047,31 @@ if (gameVolSlider){
     syncAudioUI();
   });
 }
+
+
+// =======================
+// Global Mute Hotkey (v1.52)
+// - Press M to mute/unmute ALL audio (music + gameplay)
+// =======================
+function setMuted(nextMuted){
+  isMuted = !!nextMuted;
+  if (isMuted){
+    try{ music.pause(); }catch(e){}
+  }else{
+    // User gesture may be required; we still try.
+    tryStartMusic();
+  }
+  updateAudioIcon();
+}
+
+window.addEventListener("keydown", (e) => {
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+  if (tag === "input" || tag === "textarea") return;
+
+  if (e.code === "KeyM"){
+    setMuted(!isMuted);
+  }
+});
 
 // Click outside closes dropdown
 window.addEventListener("pointerdown", (e) => {
