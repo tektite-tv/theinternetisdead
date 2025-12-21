@@ -3,14 +3,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.49</title>
+<title>Galaga-ish Clone v1.50</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
   #overlay{
     position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
     text-shadow:0 0 6px rgba(0,255,0,0.35);
-   display:none; /* HUD hidden by default (toggle with /) */
+   display:none; /* Overlay hidden by default */
   }
 
 
@@ -123,6 +123,57 @@
   #livesSlot{ display:none; }
   #powerupSlot{ display:none; }
 
+
+  /* =======================
+     In-Game Chat Bar (v1.50)
+     - Toggle with / (Slash)
+     - Pauses gameplay while open
+  ======================= */
+  #chatOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    padding:18px;
+    background: rgba(0,0,0,0.25);
+    z-index:200;
+    pointer-events:auto;
+  }
+  #chatBar{
+    width:min(820px, 92vw);
+    border:1px solid rgba(0,255,0,0.45);
+    border-radius:14px;
+    background: rgba(0,0,0,0.78);
+    box-shadow: 0 0 26px rgba(0,255,0,0.10);
+    padding:10px 12px 12px;
+  }
+  #chatLog{
+    max-height:120px;
+    overflow:auto;
+    font-size:12px;
+    line-height:1.25;
+    opacity:0.95;
+    margin-bottom:8px;
+    white-space:pre-wrap;
+  }
+  #chatInput{
+    width:100%;
+    font-family:monospace;
+    font-size:14px;
+    color:#0f0;
+    background: rgba(0,0,0,0.45);
+    border:1px solid rgba(0,255,0,0.35);
+    border-radius:12px;
+    padding:10px 12px;
+    outline:none;
+  }
+  #chatHelp{
+    font-size:11px;
+    opacity:0.75;
+    margin-top:6px;
+  }
+
 </style>
 </head>
 <body>
@@ -164,7 +215,7 @@
   <div id="startMenu" class="panel">
     <div class="title">GALAGA-ISH CLONE</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · HUD: /</div>
+    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · Chat: /</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -299,6 +350,150 @@ const btnRestart = document.getElementById("btnRestart");
 let hudVisible = false;
 
 // =======================
+// Pause + Chat (v1.50)
+// - Slash opens an in-game chat bar and pauses gameplay.
+// - Used for runtime commands / cheats.
+// =======================
+const chatOverlay = document.getElementById("chatOverlay");
+const chatInput = document.getElementById("chatInput");
+const chatLog = document.getElementById("chatLog");
+
+let chatOpen = false;
+let gamePaused = false;
+
+// Lives + Bomb "counts" can be made infinite via commands.
+let livesInfinite = false;
+let bombsCount = 0;
+let bombsInfinite = false;
+
+function hasBombAvailable(){
+  return bombsInfinite || bombsCount > 0;
+}
+function formatCount(n, inf){
+  return inf ? "∞" : String(Math.max(0, Math.floor(n)));
+}
+function syncBombHUD(){
+  // Keep existing slot behavior, but drive it from bombsCount/infinite.
+  powerupSlot.style.display = hasBombAvailable() ? "flex" : "none";
+  const hint = document.getElementById("powerupHint");
+  if (hint){
+    hint.textContent = hasBombAvailable()
+      ? ("Press Q" + (bombsInfinite ? "" : ("  x" + bombsCount)))
+      : "Press Q";
+  }
+}
+function syncLivesHUD(){
+  livesText.textContent = "x" + (livesInfinite ? "∞" : lives);
+}
+function setLivesCount(val){
+  if (val === Infinity){
+    livesInfinite = true;
+    // Keep a non-zero backing value so nothing weird happens if code reads it.
+    lives = Math.max(1, lives || 1);
+  } else {
+    livesInfinite = false;
+    lives = Math.max(0, Math.floor(val));
+  }
+  syncLivesHUD();
+}
+function setBombsCount(val){
+  if (val === Infinity){
+    bombsInfinite = true;
+    bombsCount = 0;
+  } else {
+    bombsInfinite = false;
+    bombsCount = Math.max(0, Math.floor(val));
+  }
+  syncBombHUD();
+}
+function addBomb(n=1){
+  if (bombsInfinite) return;
+  bombsCount = Math.max(0, bombsCount + Math.max(0, Math.floor(n)));
+  syncBombHUD();
+}
+function consumeBomb(){
+  if (bombsInfinite) return true;
+  if (bombsCount > 0){
+    bombsCount--;
+    syncBombHUD();
+    return true;
+  }
+  return false;
+}
+
+function chatLogLine(msg){
+  if (!chatLog) return;
+  const lines = (chatLog.textContent || "").split("\n").filter(Boolean);
+  lines.push(msg);
+  while (lines.length > 8) lines.shift();
+  chatLog.textContent = lines.join("\n");
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function openChat(prefill="/"){
+  if (gamePaused) return;
+
+  if (gameState !== STATE.PLAYING) return;
+  if (isDead) return;
+  chatOpen = true;
+  gamePaused = true;
+  chatOverlay.style.display = "flex";
+  chatInput.value = prefill;
+  chatInput.focus();
+  chatInput.setSelectionRange(chatInput.value.length, chatInput.value.length);
+  chatLogLine("[PAUSED] Chat open");
+}
+
+function closeChat(){
+  chatOpen = false;
+  gamePaused = false;
+  chatOverlay.style.display = "none";
+  chatInput.blur();
+}
+
+function applyChatCommand(raw){
+  const line = (raw || "").trim();
+  if (!line) return;
+
+  // Normal chat text can exist later, but for now we only do /commands.
+  if (!line.startsWith("/")){
+    chatLogLine("chat: " + line);
+    return;
+  }
+
+  const parts = line.split(/\s+/);
+  const cmd = (parts[0] || "").toLowerCase();
+  const arg = (parts[1] || "").toLowerCase();
+
+  function parseCount(a){
+    if (!a) return null;
+    if (a === "inf" || a === "infinite" || a === "∞") return Infinity;
+    const n = Number(a);
+    if (!Number.isFinite(n)) return null;
+    return n;
+  }
+
+  if (cmd === "/lives_count"){
+    const v = parseCount(arg);
+    if (v === null){ chatLogLine("usage: /lives_count [#|infinite]"); return; }
+    setLivesCount(v);
+    chatLogLine("lives_count set to " + (v === Infinity ? "∞" : String(Math.floor(v))));
+    return;
+  }
+
+  if (cmd === "/bombs_count"){
+    const v = parseCount(arg);
+    if (v === null){ chatLogLine("usage: /bombs_count [#|infinite]"); return; }
+    setBombsCount(v);
+    chatLogLine("bombs_count set to " + (v === Infinity ? "∞" : String(Math.floor(v))));
+    return;
+  }
+
+  chatLogLine("unknown command: " + cmd);
+}
+
+
+// =======================
 // Right-Click Shield (v1.45)
 // - Hold RIGHT MOUSE to raise a neon rainbow shield ring.
 // - Shield blocks/bounces enemy contact + enemy bullets.
@@ -404,7 +599,6 @@ let gameState = STATE.MENU;
 // Powerup state (v1.37)
 let ufo = null;
 let bomb = null;
-let hasBomb = false;
 
 
 /* =======================
@@ -477,8 +671,7 @@ function updateUFO(dt){
     ufo.fade += dt;
     if (ufo.fade >= 0.55){
       ufo = null;
-      hasBomb = true;
-      powerupSlot.style.display = "flex";
+      addBomb(1);
     }
     return;
   }
@@ -543,11 +736,11 @@ function drawUFO(){
 }
 
 function dropBomb(){
-  if (!hasBomb) return;
+  if (!hasBombAvailable()) return;
   if (bomb) return; // only one active
 
-  hasBomb = false;
-  powerupSlot.style.display = "none";
+  // Consume a bomb charge (unless infinite).
+  if (!consumeBomb()) return;
 
   // v1.47: Bomb is now a short-range "shot" that travels a bit in the aim direction.
   // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
@@ -890,6 +1083,7 @@ colsSlider.addEventListener("input", syncOptionsLabels);
 syncOptionsLabels();
 
 function showMenu(){
+  closeChat();
   gameState = STATE.MENU;
   // v1.43: drop shield when entering menus
   shieldHolding = false;
@@ -908,13 +1102,15 @@ function showMenu(){
 function restartRun(){
   // v1.37: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
-  hasBomb = false;
+  bombsCount = 0;
+  bombsInfinite = false;
   bomb = null;
   ufo = null;
-  powerupSlot.style.display = "none";
+  syncBombHUD();
   startGame();
 }
 function showOptions(){
+  closeChat();
   gameState = STATE.OPTIONS;
   // v1.43: drop shield when entering menus
   shieldHolding = false;
@@ -942,7 +1138,7 @@ function startGame(){
 
   // v1.37: 3 lives, each life has 4-hit (25%) health
   lives = 3;
-  livesText.textContent = "x" + lives;
+  syncLivesHUD();
 
   health = 1.0;
   bonusArmor = 0;
@@ -959,9 +1155,11 @@ function startGame(){
   enemyBullets.length = 0;
   fireCooldown = 0;
 
-  hasBomb = false;
+  bombsCount = 0;
+  bombsInfinite = false;
   bomb = null;
   ufo = null;
+  syncBombHUD();
 
   resetFormation();
   updateHearts();
@@ -1402,8 +1600,11 @@ function damagePlayer(){
 
   if (health <= 0){
     // Lose a life and explode into pixel dust.
-    lives = Math.max(0, lives - 1);
-    spawnPlayerDeath(lives <= 0);
+    if (!livesInfinite){
+      lives = Math.max(0, lives - 1);
+    }
+    // Infinite lives never triggers a game over.
+    spawnPlayerDeath((!livesInfinite) && (lives <= 0));
   }
 }
 
@@ -1429,14 +1630,34 @@ function toggleFullscreen(){
 window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
-
-  // v1.12.5: HUD toggle (Slash key) - hidden by default
+  // v1.50: Slash opens chat + pauses gameplay (instead of toggling the overlay HUD).
   if (e.code === "Slash"){
-    hudVisible = !hudVisible;
-    overlay.style.display = hudVisible ? "block" : "none";
+    if (!chatOpen){
+      e.preventDefault();
+      openChat("/");
+      return; // don't set keys / shoot etc.
+    }
   }
 
-  const k = e.key.toLowerCase();
+  // If chat is open, we swallow most keybinds so you can type like a normal mammal.
+  if (chatOpen){
+    // Let the input handle typing; we only trap Enter/Escape here.
+    if (e.key === "Escape"){
+      e.preventDefault();
+      closeChat();
+      return;
+    }
+    if (e.key === "Enter"){
+      e.preventDefault();
+      applyChatCommand(chatInput.value);
+      chatInput.value = "";
+      return;
+    }
+    // Block gameplay binds while paused.
+    return;
+  }
+
+const k = e.key.toLowerCase();
   keys[k] = true;
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
@@ -1445,7 +1666,8 @@ window.addEventListener("keydown", (e) => {
   if (k === "escape") showMenu();
 }, { passive:false });
 
-window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener("keyup", (e) => {
+  if (chatOpen) return; keys[e.key.toLowerCase()] = false; });
 
 canvas.addEventListener("pointermove", (e) => {
   // v1.19: aim follows pointer (mouse or touch)
@@ -1488,6 +1710,8 @@ function update(dt){
 
   // starfield updates always
   updateStarfield(dt, keys, player.speed);
+
+  if (gamePaused) return;
 
   if (gameState !== STATE.PLAYING) return;
 
@@ -2046,8 +2270,8 @@ if (gameState === STATE.PLAYING){
     `ESC: Menu`;
 
   // v1.29: corner HUD updates
-  livesText.textContent = "x" + lives;
-  powerupSlot.style.display = hasBomb ? "flex" : "none";
+  syncLivesHUD();
+  syncBombHUD();
   if (gameState === STATE.PLAYING){
     const info = getStageInfo(wave);
     const clampedWave = Math.min(wave, info.end);
