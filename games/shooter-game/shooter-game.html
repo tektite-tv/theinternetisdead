@@ -3,14 +3,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.50</title>
+<title>Galaga-ish Clone v1.49</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
   #overlay{
     position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
     text-shadow:0 0 6px rgba(0,255,0,0.35);
-   display:none; /* Overlay hidden by default */
+   display:none; /* HUD hidden by default (toggle with /) */
   }
 
 
@@ -123,57 +123,6 @@
   #livesSlot{ display:none; }
   #powerupSlot{ display:none; }
 
-
-  /* =======================
-     In-Game Chat Bar (v1.50)
-     - Toggle with / (Slash)
-     - Pauses gameplay while open
-  ======================= */
-  #chatOverlay{
-    position:absolute;
-    inset:0;
-    display:none;
-    align-items:flex-end;
-    justify-content:center;
-    padding:18px;
-    background: rgba(0,0,0,0.25);
-    z-index:200;
-    pointer-events:auto;
-  }
-  #chatBar{
-    width:min(820px, 92vw);
-    border:1px solid rgba(0,255,0,0.45);
-    border-radius:14px;
-    background: rgba(0,0,0,0.78);
-    box-shadow: 0 0 26px rgba(0,255,0,0.10);
-    padding:10px 12px 12px;
-  }
-  #chatLog{
-    max-height:120px;
-    overflow:auto;
-    font-size:12px;
-    line-height:1.25;
-    opacity:0.95;
-    margin-bottom:8px;
-    white-space:pre-wrap;
-  }
-  #chatInput{
-    width:100%;
-    font-family:monospace;
-    font-size:14px;
-    color:#0f0;
-    background: rgba(0,0,0,0.45);
-    border:1px solid rgba(0,255,0,0.35);
-    border-radius:12px;
-    padding:10px 12px;
-    outline:none;
-  }
-  #chatHelp{
-    font-size:11px;
-    opacity:0.75;
-    margin-top:6px;
-  }
-
 </style>
 </head>
 <body>
@@ -215,7 +164,7 @@
   <div id="startMenu" class="panel">
     <div class="title">GALAGA-ISH CLONE</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · Chat: / · HUD: H</div>
+    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · HUD: /</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -349,165 +298,6 @@ const btnRestart = document.getElementById("btnRestart");
 
 let hudVisible = false;
 
-function applyHudVisibility(){
-  // HUD controls the gameplay counters: lives, bombs, and any corner indicators.
-  // Menus remain visible (they're in #uiRoot).
-  const show = !!hudVisible;
-  livesSlot.style.display = show ? "flex" : "none";
-  // powerupSlot is managed dynamically (bomb availability), but HUD can hard-hide it.
-  if (!show) powerupSlot.style.display = "none";
-  // stageHud (top-left debug text) isn't used much, but keep it consistent.
-  const stageHud = document.getElementById("stageHud");
-  if (stageHud) stageHud.style.display = show ? "block" : "none";
-}
-
-applyHudVisibility();
-
-
-// =======================
-// Pause + Chat (v1.50)
-// - Slash opens an in-game chat bar and pauses gameplay.
-// - Used for runtime commands / cheats.
-// =======================
-const chatOverlay = document.getElementById("chatOverlay");
-const chatInput = document.getElementById("chatInput");
-const chatLog = document.getElementById("chatLog");
-
-let chatOpen = false;
-let gamePaused = false;
-
-// Lives + Bomb "counts" can be made infinite via commands.
-let livesInfinite = false;
-let bombsCount = 0;
-let bombsInfinite = false;
-
-function hasBombAvailable(){
-  return bombsInfinite || bombsCount > 0;
-}
-function formatCount(n, inf){
-  return inf ? "∞" : String(Math.max(0, Math.floor(n)));
-}
-function syncBombHUD(){
-  // Keep existing slot behavior, but drive it from bombsCount/infinite.
-  powerupSlot.style.display = (hudVisible && hasBombAvailable()) ? "flex" : "none";
-  const hint = document.getElementById("powerupHint");
-  if (hint){
-    hint.textContent = hasBombAvailable()
-      ? ("Press Q" + (bombsInfinite ? "" : ("  x" + bombsCount)))
-      : "Press Q";
-  }
-}
-function syncLivesHUD(){
-  livesText.textContent = "x" + (livesInfinite ? "∞" : lives);
-}
-function setLivesCount(val){
-  if (val === Infinity){
-    livesInfinite = true;
-    // Keep a non-zero backing value so nothing weird happens if code reads it.
-    lives = Math.max(1, lives || 1);
-  } else {
-    livesInfinite = false;
-    lives = Math.max(0, Math.floor(val));
-  }
-  syncLivesHUD();
-}
-function setBombsCount(val){
-  if (val === Infinity){
-    bombsInfinite = true;
-    bombsCount = 0;
-  } else {
-    bombsInfinite = false;
-    bombsCount = Math.max(0, Math.floor(val));
-  }
-  syncBombHUD();
-}
-function addBomb(n=1){
-  if (bombsInfinite) return;
-  bombsCount = Math.max(0, bombsCount + Math.max(0, Math.floor(n)));
-  syncBombHUD();
-}
-function consumeBomb(){
-  if (bombsInfinite) return true;
-  if (bombsCount > 0){
-    bombsCount--;
-    syncBombHUD();
-    return true;
-  }
-  return false;
-}
-
-function chatLogLine(msg){
-  if (!chatLog) return;
-  const lines = (chatLog.textContent || "").split("\n").filter(Boolean);
-  lines.push(msg);
-  while (lines.length > 8) lines.shift();
-  chatLog.textContent = lines.join("\n");
-  chatLog.scrollTop = chatLog.scrollHeight;
-}
-
-function openChat(prefill="/"){
-  if (gamePaused) return;
-
-  if (gameState !== STATE.PLAYING) return;
-  if (isDead) return;
-  chatOpen = true;
-  gamePaused = true;
-  chatOverlay.style.display = "flex";
-  chatInput.value = prefill;
-  chatInput.focus();
-  chatInput.setSelectionRange(chatInput.value.length, chatInput.value.length);
-  chatLogLine("[PAUSED] Chat open");
-}
-
-function closeChat(){
-  chatOpen = false;
-  gamePaused = false;
-  chatOverlay.style.display = "none";
-  chatInput.blur();
-}
-
-function applyChatCommand(raw){
-  const line = (raw || "").trim();
-  if (!line) return;
-
-  // Normal chat text can exist later, but for now we only do /commands.
-  if (!line.startsWith("/")){
-    chatLogLine("chat: " + line);
-    return;
-  }
-
-  const parts = line.split(/\s+/);
-  const cmd = (parts[0] || "").toLowerCase();
-  const arg = (parts[1] || "").toLowerCase();
-
-  function parseCount(a){
-    if (!a) return null;
-    if (a === "inf" || a === "infinite" || a === "∞") return Infinity;
-    const n = Number(a);
-    if (!Number.isFinite(n)) return null;
-    return n;
-  }
-
-  if (cmd === "/lives_count"){
-    const v = parseCount(arg);
-    if (v === null){ chatLogLine("usage: /lives_count [#|infinite]"); return; }
-    setLivesCount(v);
-    chatLogLine("lives_count set to " + (v === Infinity ? "∞" : String(Math.floor(v))));
-    return;
-  }
-
-  if (cmd === "/bombs_count"){
-    const v = parseCount(arg);
-    if (v === null){ chatLogLine("usage: /bombs_count [#|infinite]"); return; }
-    setBombsCount(v);
-    chatLogLine("bombs_count set to " + (v === Infinity ? "∞" : String(Math.floor(v))));
-    return;
-  }
-
-  chatLogLine("unknown command: " + cmd);
-}
-
-
 // =======================
 // Right-Click Shield (v1.45)
 // - Hold RIGHT MOUSE to raise a neon rainbow shield ring.
@@ -614,6 +404,7 @@ let gameState = STATE.MENU;
 // Powerup state (v1.37)
 let ufo = null;
 let bomb = null;
+let hasBomb = false;
 
 
 /* =======================
@@ -686,7 +477,8 @@ function updateUFO(dt){
     ufo.fade += dt;
     if (ufo.fade >= 0.55){
       ufo = null;
-      addBomb(1);
+      hasBomb = true;
+      powerupSlot.style.display = "flex";
     }
     return;
   }
@@ -751,11 +543,11 @@ function drawUFO(){
 }
 
 function dropBomb(){
-  if (!hasBombAvailable()) return;
+  if (!hasBomb) return;
   if (bomb) return; // only one active
 
-  // Consume a bomb charge (unless infinite).
-  if (!consumeBomb()) return;
+  hasBomb = false;
+  powerupSlot.style.display = "none";
 
   // v1.47: Bomb is now a short-range "shot" that travels a bit in the aim direction.
   // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
@@ -1098,7 +890,6 @@ colsSlider.addEventListener("input", syncOptionsLabels);
 syncOptionsLabels();
 
 function showMenu(){
-  closeChat();
   gameState = STATE.MENU;
   // v1.43: drop shield when entering menus
   shieldHolding = false;
@@ -1117,15 +908,13 @@ function showMenu(){
 function restartRun(){
   // v1.37: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
-  bombsCount = 0;
-  bombsInfinite = false;
+  hasBomb = false;
   bomb = null;
   ufo = null;
-  syncBombHUD();
+  powerupSlot.style.display = "none";
   startGame();
 }
 function showOptions(){
-  closeChat();
   gameState = STATE.OPTIONS;
   // v1.43: drop shield when entering menus
   shieldHolding = false;
@@ -1146,14 +935,14 @@ function startGame(){
   deathOverlay.style.display = "none";
 
   // v1.37: show HUD only in-game
-  livesSlot.style.display = hudVisible ? "flex" : "none";
+  livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
 
   score = 0;
 
   // v1.37: 3 lives, each life has 4-hit (25%) health
   lives = 3;
-  syncLivesHUD();
+  livesText.textContent = "x" + lives;
 
   health = 1.0;
   bonusArmor = 0;
@@ -1170,11 +959,9 @@ function startGame(){
   enemyBullets.length = 0;
   fireCooldown = 0;
 
-  bombsCount = 0;
-  bombsInfinite = false;
+  hasBomb = false;
   bomb = null;
   ufo = null;
-  syncBombHUD();
 
   resetFormation();
   updateHearts();
@@ -1615,11 +1402,8 @@ function damagePlayer(){
 
   if (health <= 0){
     // Lose a life and explode into pixel dust.
-    if (!livesInfinite){
-      lives = Math.max(0, lives - 1);
-    }
-    // Infinite lives never triggers a game over.
-    spawnPlayerDeath((!livesInfinite) && (lives <= 0));
+    lives = Math.max(0, lives - 1);
+    spawnPlayerDeath(lives <= 0);
   }
 }
 
@@ -1645,41 +1429,14 @@ function toggleFullscreen(){
 window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
-  // v1.50: Slash opens chat + pauses gameplay (instead of toggling the overlay HUD).
+
+  // v1.12.5: HUD toggle (Slash key) - hidden by default
   if (e.code === "Slash"){
-    if (!chatOpen){
-      e.preventDefault();
-      openChat("/");
-      return; // don't set keys / shoot etc.
-    }
-  }
-
-  // v1.51: HUD toggle moved to H (since / is now chat).
-  if (e.code === "KeyH"){
     hudVisible = !hudVisible;
-    applyHudVisibility();
+    overlay.style.display = hudVisible ? "block" : "none";
   }
 
-
-  // If chat is open, we swallow most keybinds so you can type like a normal mammal.
-  if (chatOpen){
-    // Let the input handle typing; we only trap Enter/Escape here.
-    if (e.key === "Escape"){
-      e.preventDefault();
-      closeChat();
-      return;
-    }
-    if (e.key === "Enter"){
-      e.preventDefault();
-      applyChatCommand(chatInput.value);
-      chatInput.value = "";
-      return;
-    }
-    // Block gameplay binds while paused.
-    return;
-  }
-
-const k = e.key.toLowerCase();
+  const k = e.key.toLowerCase();
   keys[k] = true;
 
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
@@ -1688,8 +1445,7 @@ const k = e.key.toLowerCase();
   if (k === "escape") showMenu();
 }, { passive:false });
 
-window.addEventListener("keyup", (e) => {
-  if (chatOpen) return; keys[e.key.toLowerCase()] = false; });
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
 canvas.addEventListener("pointermove", (e) => {
   // v1.19: aim follows pointer (mouse or touch)
@@ -1732,8 +1488,6 @@ function update(dt){
 
   // starfield updates always
   updateStarfield(dt, keys, player.speed);
-
-  if (gamePaused) return;
 
   if (gameState !== STATE.PLAYING) return;
 
@@ -1889,485 +1643,4 @@ if (baseY < TOP_SAFE_MARGIN){
 
 // Clamp BOTTOM (based on full formation height)
 const maxBaseY = ENEMY_ZONE_MAX_Y - formationHeight;
-if (baseY > maxBaseY){
-  // pull the whole formation back up
-  formation.yOffset -= (baseY - maxBaseY);
-  baseY = maxBaseY;
-  // if the formation is too tall to fit, at least respect the top margin
-  if (baseY < TOP_SAFE_MARGIN) baseY = TOP_SAFE_MARGIN;
-}
-
-
-  for (const e of enemies){
-    if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
-
-    const scale = 1 + breath * 0.18;
-    const size = e.size * scale;
-
-    // v1.13: predictable formation wobble (non-random, just annoying)
-    const wobbleAmpX = 6 + Math.min(14, wave * 1.2);
-    const wobbleAmpY = 3 + Math.min(10, wave * 0.7);
-    const wobbleX = Math.sin(time * (0.9 + wave*0.03) + e.row * 0.7) * wobbleAmpX;
-    const wobbleY = Math.cos(time * (1.1 + wave*0.02) + e.col * 0.6) * wobbleAmpY;
-
-    e.fx = startX + e.col * spacingX + wobbleX;
-    e.fy = baseY + e.row * spacingY + wobbleY;
-
-    if (!e.swoop){
-      // Normal formation tracking.
-      e.x = e.fx;
-      e.y = e.fy;
-    } else {
-      // Swoop motion: dive down along a bezier arc, then return back to formation.
-      e.swoop.t += dt;
-      const u = Math.min(1, e.swoop.t / e.swoop.dur);
-
-      if (e.swoop.phase === "down"){
-        e.x = quadBezier(u, e.swoop.sx, e.swoop.c1x, e.swoop.ex);
-        e.y = quadBezier(u, e.swoop.sy, e.swoop.c1y, e.swoop.ey);
-
-        if (u >= 1){
-          // Switch to return phase.
-          e.swoop.phase = "up";
-          e.swoop.t = 0;
-          e.swoop.dur = Math.max(0.75, e.swoop.dur * 0.85);
-
-          // Return target is the *current* formation slot (fx/fy),
-          // so the enemy rejoins smoothly even if the formation moved.
-          e.swoop.sx = e.x;
-          e.swoop.sy = e.y;
-          e.swoop.ex = e.fx;
-          e.swoop.ey = e.fy;
-          // new control point arcs upward.
-          e.swoop.c1x = e.x + rand(-200, 200);
-          e.swoop.c1y = Math.max(60, e.y - rand(160, 260));
-        }
-      } else {
-        // Return-to-formation arc
-        e.x = quadBezier(u, e.swoop.sx, e.swoop.c1x, e.swoop.ex);
-        e.y = quadBezier(u, e.swoop.sy, e.swoop.c1y, e.swoop.ey);
-
-        if (u >= 1){
-          // Back in formation.
-          e.swoop = null;
-          e.x = e.fx;
-          e.y = e.fy;
-        }
-      }
-    }
-
-    e.w = size;
-    e.h = size;
-  }
-
-  // bullet -> enemy collision
-  for (let bi = bullets.length - 1; bi >= 0; bi--){
-    const b = bullets[bi];
-    // v1.24+: bullet -> UFO collision (3-hit color cycle, then fade + powerup)
-    if (ufo && ufo.fade === 0){
-      const dxU = b.x - ufo.x;
-      const dyU = b.y - ufo.y;
-      const rrU = (b.r + ufo.r);
-      if (dxU*dxU + dyU*dyU <= rrU*rrU){
-        bullets.splice(bi, 1);
-        ufo.hits += 1;
-        ufo.stage = Math.min(3, ufo.hits); // 1 red, 2 green, 3 blue
-        if (ufo.hits >= 3){
-          ufo.fade = 0.001; // start fade-out
-        }
-        playSfx(sfxHit);
-        continue; // bullet consumed
-      }
-    }
-
-    for (let ei = enemies.length - 1; ei >= 0; ei--){
-      const e = enemies[ei];
-      const rx = e.x - e.w/2, ry = e.y - e.h/2;
-
-      if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
-        enemies.splice(ei, 1);
-        if (e.isFrog) healPlayer(0.50);
-        // v1.22: compactEnemyGrid() disabled (it made the game too easy by collapsing targets into one firing lane).
-        // compactEnemyGrid();
-        bullets.splice(bi, 1);
-        score += 10;
-        playSfx(sfxHit);
-        break;
-      }
-    }
-  }
-
-  // enemy bullet -> player collision
-  const prx = player.x - player.w/2, pry = player.y - player.h/2;
-  const shieldR = player.w * SHIELD_RADIUS_MULT;
-
-  for (let i = enemyBullets.length - 1; i >= 0; i--){
-    const b = enemyBullets[i];
-
-    // v1.43: shield blocks bullets (counts as a "hit" on the shield)
-    if (shieldActive){
-      const dx = b.x - player.x;
-      const dy = b.y - player.y;
-      const rr = (shieldR + b.r);
-      if (dx*dx + dy*dy <= rr*rr){
-        enemyBullets.splice(i, 1);
-        shieldApplyDamage(SHIELD_BULLET_DMG);
-        continue;
-      }
-    }
-
-    if (circleRect(b.x, b.y, b.r, prx, pry, player.w, player.h)){
-      enemyBullets.splice(i, 1);
-      damagePlayer();
-    }
-  }
-
-  // enemy contact damage
-
-  // v1.43: shield makes enemies bounce off the player (and consumes shield hits on impact)
-  if (shieldActive){
-    const shieldR = player.w * SHIELD_RADIUS_MULT;
-    for (const e of enemies){
-      const dx = e.x - player.x;
-      const dy = e.y - player.y;
-      // approximate enemy radius from its sprite size
-      const er = Math.max(e.w, e.h) * 0.45;
-      const rr = shieldR + er;
-      const d2 = dx*dx + dy*dy;
-
-      if (d2 <= rr*rr){
-        const d = Math.max(1, Math.sqrt(d2));
-        const nx = dx / d;
-        const ny = dy / d;
-
-        // Push enemy out to the ring boundary
-        e.x = player.x + nx * (rr + 2);
-        e.y = player.y + ny * (rr + 2);
-
-        // If it's swooping, cancel its swoop so it doesn't keep clipping the shield.
-        if (e.swoop){
-          e.swoop = null;
-        }
-
-        // Nudge its formation slot slightly away so it doesn't immediately re-collide
-        e.col += nx * 0.35;
-        e.row += ny * 0.25;
-
-        shieldApplyDamage(SHIELD_BULLET_DMG);
-        // If shield died from this hit, stop bouncing for this frame.
-        if (!shieldActive) break;
-      }
-    }
-  }
-
-  if (player.invuln <= 0){
-    for (const e of enemies){
-      const rx = e.x - e.w/2, ry = e.y - e.h/2;
-      const overlap =
-        prx < rx + e.w &&
-        prx + player.w > rx &&
-        pry < ry + e.h &&
-        pry + player.h > ry;
-      if (overlap){ damagePlayer(); break; }
-    }
-  }
-
-  enemyTryShoot(dt);
-
-  // wave clear
-  if (enemies.length === 0){
-    wave += 1;
-    showWaveBanner(wave);
-
-    resetFormation();
-    spawnEnemies();
-    trySpawnUFO();
-  }
-}
-
-
-function healPlayer(amount){
-  // Heal up to 100%. Used by frog enemies.
-  if (isDead) return;
-  health = Math.min(1, health + amount);
-}
-
-
-function drawShieldRing(){
-  if (!(gameState === STATE.PLAYING && shieldActive)) return;
-
-  const r = player.w * SHIELD_RADIUS_MULT;
-  const segments = 72;
-  const baseHue = (time * 180) % 360; // shifting rainbow
-  ctx.save();
-  ctx.translate(player.x, player.y);
-
-  // Outer glow
-  ctx.lineWidth = 6;
-  ctx.shadowBlur = 18;
-  ctx.shadowColor = "rgba(0,255,255,0.35)";
-
-  for (let i = 0; i < segments; i++){
-    const a0 = (i / segments) * Math.PI * 2;
-    const a1 = ((i + 1) / segments) * Math.PI * 2;
-    const hue = (baseHue + i * (360 / segments)) % 360;
-    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.95)`;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, a0, a1);
-    ctx.stroke();
-  }
-
-  // Small inner ring to make it feel "contained"
-  ctx.shadowBlur = 10;
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.beginPath();
-  ctx.arc(0, 0, r - 6, 0, Math.PI*2);
-  ctx.stroke();
-
-  // Shield HP pips (more pips = more remaining shield)
-  const PIPS = 6;
-  const pipR = 3.2;
-  const hpPerPip = SHIELD_HP_MAX / PIPS;
-  const filled = Math.max(0, Math.min(PIPS, Math.ceil(shieldHP / hpPerPip)));
-
-  for (let i = 0; i < PIPS; i++){
-    const on = (i < filled);
-    const px = (i - (PIPS-1)/2) * 10;
-    const py = -r - 12;
-    ctx.fillStyle = on ? "rgba(0,255,255,0.9)" : "rgba(0,255,255,0.18)";
-    ctx.beginPath();
-    ctx.arc(px, py, pipR, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-function draw(){
-  drawStarfield();
-
-  // v1.28+: draw player death particles
-  if (deathParticles.length){
-    ctx.save();
-    ctx.fillStyle = "#ff0";
-    for (const p of deathParticles){
-      ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
-      ctx.fillRect(p.x, p.y, p.s, p.s);
-    }
-    ctx.restore();
-  }
-
-  // v1.13: Wave banner popup
-  if (gameState === STATE.PLAYING && waveBanner.t > 0){
-    const p = Math.min(1, waveBanner.t / 1.35);
-    const alpha = Math.min(1, 0.2 + p);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.font = "bold 48px monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#00ff66";
-    ctx.shadowColor = "rgba(0,255,102,0.35)";
-    ctx.shadowBlur = 12;
-    ctx.fillText(waveBanner.text, canvas.width/2, canvas.height*0.25);
-    ctx.restore();
-  }
-
-  // v1.28: death particles
-  if (deathParticles.length){
-    ctx.save();
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    for (const p of deathParticles){
-      ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
-      ctx.fillRect(p.x - p.s/2, p.y - p.s/2, p.s, p.s);
-    }
-    ctx.restore();
-  }
-
-  // player flicker on invulnerability
-  const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  if (gameState === STATE.PLAYING){
-    if (!flicker){
-      ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
-    }
-  } else {
-    ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
-  }
-
-    // v1.43: shield ring (RMB hold)
-  drawShieldRing();
-
-// v1.28: always-on health bar under the player (4 hits total)
-  if (gameState === STATE.PLAYING){
-    const barW = player.w;
-    const barH = 7;
-    const bx = player.x - barW/2;
-    const by = player.y + player.h/2 + 10;
-
-    ctx.save();
-    ctx.globalAlpha = 0.95;
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.fillRect(bx-1, by-1, barW+2, barH+2);
-
-    ctx.fillStyle = "rgba(255,0,0,0.22)";
-    ctx.fillRect(bx, by, barW, barH);
-
-    ctx.fillStyle = "rgba(0,255,102,0.85)";
-    ctx.fillRect(bx, by, barW * Math.max(0, Math.min(1, health)), barH);
-    ctx.restore();
-  }
-
-// v1.19: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
-if (gameState === STATE.PLAYING){
-  const a = aimAngleSmoothed;
-  const orbitR = player.w * 0.62;
-  const tx = player.x + Math.cos(a) * orbitR;
-  const ty = player.y + Math.sin(a) * orbitR;
-
-  ctx.save();
-  ctx.translate(tx, ty);
-  ctx.rotate(a); // point outward
-  ctx.fillStyle = "rgba(255,255,0,0.95)";
-  ctx.beginPath();
-  ctx.moveTo(16, 0);     // tip
-  ctx.lineTo(-8, -7);    // base left
-  ctx.lineTo(-8, 7);     // base right
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-  // UFO + bomb
-  drawUFO();
-  drawBomb();
-
-  // enemies
-  for (const e of enemies){
-    // v1.37: frog enemies get a pulsing green aura ring
-    if (e.isFrog){
-      const pulse = 1 + 0.12 * Math.sin(time * 6.0);
-      const r = Math.max(e.w, e.h) * 0.70 * pulse;
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = "rgba(0,255,0,0.10)";
-      ctx.strokeStyle = "rgba(0,255,0,0.45)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, r, 0, Math.PI*2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    }
-    ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
-  }
-
-  // bullets (player)
-  // v1.21: draw as simple circles (no text/letter-like shapes)
-  ctx.fillStyle = "#ff0";
-  for (const b of bullets){
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // bullets (enemy)
-  ctx.fillStyle = "rgba(255,0,0,0.95)";
-  for (const b of enemyBullets){
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  overlay.innerHTML =
-    `Galaga-ish Clone v1.37<br>` +
-    `State: ${gameState}<br>` +
-    `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
-    `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
-    `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
-    `Enemy pool: ${enemyImages.length || 0} images<br>` +
-    `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
-    `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
-    `Player: ${player.w}px | Gap: ${FORMATION_PLAYER_GAP}px<br>` +
-    `ESC: Menu`;
-
-  // v1.29: corner HUD updates
-  syncLivesHUD();
-  syncBombHUD();
-  if (gameState === STATE.PLAYING){
-    const info = getStageInfo(wave);
-    const clampedWave = Math.min(wave, info.end);
-    document.getElementById("stageHud").textContent =
-      `Stage ${info.stage}: Waves ${clampedWave}/${info.end}`;
-  } else {
-    document.getElementById("stageHud").textContent = "";
-  }
-
-}
-
-let lastT = performance.now();
-
-function updateHearts(){
-  // 4 hits = 0 health, each hit is 0.25
-  const hearts = Math.max(0, Math.min(4, Math.ceil(health / 0.25)));
-  const full = "❤️";
-  const empty = "❌";
-  let out = "";
-  for (let i = 0; i < 4; i++){
-    out += (i < hearts ? full : empty) + " ";
-  }
-
-  // v1.49: bonus armor indicator next to hearts
-  let armorIcon = "";
-  if (bonusArmor > 0) armorIcon = "🛡️";
-  else if (bonusArmorBrokenT > 0) armorIcon = "❌";
-  if (armorIcon) out += "  " + armorIcon;
-
-  const el = document.getElementById("heartsHud");
-  if (el) el.textContent = out.trim();
-}
-
-function loop(t){
-  const dt = Math.min(0.033, (t - lastT) / 1000);
-  lastT = t;
-  update(dt);
-  draw();
-  updateHearts();
-  requestAnimationFrame(loop);
-}
-
-/* =======================
-   Boot
-======================= */
-player.x = canvas.width / 2;
-player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
-
-// v1.19: default aim straight up until the player moves the pointer
-aimX = player.x;
-aimY = player.y - 200;
-aimAngle = -Math.PI/2;
-aimAngleSmoothed = -Math.PI/2;
-
-resetStarfield();
-resize(); // also resets starfield + anchors player
-showMenu();
-powerupSlot.style.display = "none";
-spawnEnemies();
-updateHearts();
-
-requestAnimationFrame(loop);
-</script>
-
-<div id="heartsHud" style="
-position:fixed;
-bottom:12px;
-left:50%;
-transform:translateX(-50%);
-font-size:28px;
-letter-spacing:6px;
-pointer-events:none;
-z-index:9999;
-">❤️ ❤️ ❤️ ❤️</div>
-</body>
-
-</html>
+if (b
