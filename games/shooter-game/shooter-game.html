@@ -215,7 +215,7 @@
   <div id="startMenu" class="panel">
     <div class="title">GALAGA-ISH CLONE</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · Chat: /</div>
+    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · Chat: / · HUD: H</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -349,6 +349,21 @@ const btnRestart = document.getElementById("btnRestart");
 
 let hudVisible = false;
 
+function applyHudVisibility(){
+  // HUD controls the gameplay counters: lives, bombs, and any corner indicators.
+  // Menus remain visible (they're in #uiRoot).
+  const show = !!hudVisible;
+  livesSlot.style.display = show ? "flex" : "none";
+  // powerupSlot is managed dynamically (bomb availability), but HUD can hard-hide it.
+  if (!show) powerupSlot.style.display = "none";
+  // stageHud (top-left debug text) isn't used much, but keep it consistent.
+  const stageHud = document.getElementById("stageHud");
+  if (stageHud) stageHud.style.display = show ? "block" : "none";
+}
+
+applyHudVisibility();
+
+
 // =======================
 // Pause + Chat (v1.50)
 // - Slash opens an in-game chat bar and pauses gameplay.
@@ -374,7 +389,7 @@ function formatCount(n, inf){
 }
 function syncBombHUD(){
   // Keep existing slot behavior, but drive it from bombsCount/infinite.
-  powerupSlot.style.display = hasBombAvailable() ? "flex" : "none";
+  powerupSlot.style.display = (hudVisible && hasBombAvailable()) ? "flex" : "none";
   const hint = document.getElementById("powerupHint");
   if (hint){
     hint.textContent = hasBombAvailable()
@@ -1131,7 +1146,7 @@ function startGame(){
   deathOverlay.style.display = "none";
 
   // v1.37: show HUD only in-game
-  livesSlot.style.display = "flex";
+  livesSlot.style.display = hudVisible ? "flex" : "none";
   powerupSlot.style.display = "none";
 
   score = 0;
@@ -1638,6 +1653,13 @@ window.addEventListener("keydown", (e) => {
       return; // don't set keys / shoot etc.
     }
   }
+
+  // v1.51: HUD toggle moved to H (since / is now chat).
+  if (e.code === "KeyH"){
+    hudVisible = !hudVisible;
+    applyHudVisibility();
+  }
+
 
   // If chat is open, we swallow most keybinds so you can type like a normal mammal.
   if (chatOpen){
