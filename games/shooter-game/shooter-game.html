@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -176,28 +177,53 @@
 
 
   /* =======================
-     Audio Widget (v1.52)
-     - Compact button expands on hover with hint text
+     Audio Widget (v1.52.1)
+     - FIX: Button no longer changes size/padding when hovered/clicked.
+     - Hint is now a tooltip that doesn't affect layout (so it stays pinned top-right).
   ======================= */
+  #audioWidget, #audioBtn, #audioPanel{ box-sizing:border-box; }
   #audioBtn{
     width:36px;
     height:36px;
     line-height:36px;
     font-size:18px;
-    transition: width 0.18s ease, background 0.18s ease;
-    overflow:hidden;
+    padding:0;
+    overflow:visible; /* allow tooltip to render */
     white-space:nowrap;
+    outline:none;
+    border:1px solid rgba(0,255,0,0.55);
+    border-radius:12px;
+    background: rgba(0,0,0,0.55);
+    box-shadow: 0 0 18px rgba(0,255,0,0.10);
+    cursor:pointer;
+    user-select:none;
+    -webkit-appearance:none;
+    appearance:none;
+    position:relative;
   }
+
+  /* tooltip-style hint (does not change button size) */
   #audioBtn .hint{
-    margin-left:6px;
+    position:absolute;
+    right:42px;                 /* sits to the left of the button */
+    top:50%;
+    transform: translateY(-50%);
+    margin:0;
+    padding:6px 8px;
+    border:1px solid rgba(0,255,0,0.35);
+    border-radius:10px;
+    background: rgba(0,0,0,0.78);
+    box-shadow: 0 0 20px rgba(0,255,0,0.10);
     font-size:11px;
-    opacity:0.85;
-    vertical-align:middle;
+    line-height:1;
+    opacity:0;
+    pointer-events:none;        /* prevent hover jitter */
+    transition: opacity 0.15s ease;
   }
-  #audioBtn:hover{
-    width:170px;
-    text-align:left;
-    padding-left:10px;
+
+  #audioBtn:hover .hint,
+  #audioBtn:focus-visible .hint{
+    opacity:0.95;
   }
 
 </style>
