@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.49</title>
+<title>Galaga-ish Clone v1.50</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -123,6 +122,58 @@
   #livesSlot{ display:none; }
   #powerupSlot{ display:none; }
 
+
+  /* =======================
+     Audio Widget (v1.50)
+     - Always-on music + volume dropdown
+  ======================= */
+  #audioWidget{
+    position:absolute;
+    top:10px;
+    right:10px;
+    z-index:80;
+    pointer-events:auto;
+    font-family:monospace;
+    color:#0f0;
+  }
+  #audioBtn{
+    width:44px;
+    height:44px;
+    border-radius:12px;
+    border:1px solid rgba(0,255,0,0.55);
+    background: rgba(0,0,0,0.55);
+    box-shadow: 0 0 18px rgba(0,255,0,0.10);
+    cursor:pointer;
+    font-size:22px;
+    line-height:44px;
+    text-align:center;
+    padding:0;
+    user-select:none;
+  }
+  #audioBtn:hover{ background: rgba(0,255,0,0.08); }
+  #audioPanel{
+    margin-top:8px;
+    width:220px;
+    border:1px solid rgba(0,255,0,0.35);
+    border-radius:14px;
+    background: rgba(0,0,0,0.78);
+    box-shadow: 0 0 28px rgba(0,255,0,0.10);
+    padding: 12px 12px 10px;
+    display:none;
+  }
+  .audioRow{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:12px;
+    opacity:0.95;
+    margin:6px 0 6px;
+  }
+  #audioPanel input[type="range"]{
+    width:100%;
+    accent-color:#00ff66;
+  }
+
 </style>
 </head>
 <body>
@@ -141,6 +192,16 @@
   z-index:20;
 "></div>
 
+
+<div id="audioWidget">
+  <button id="audioBtn" title="Audio" aria-label="Audio">🔊</button>
+  <div id="audioPanel">
+    <div class="audioRow"><span>Music</span><span id="musicVolLabel">80%</span></div>
+    <input id="musicVolSlider" type="range" min="0" max="100" value="80" step="1" />
+    <div class="audioRow"><span>Gameplay</span><span id="gameVolLabel">80%</span></div>
+    <input id="gameVolSlider" type="range" min="0" max="100" value="80" step="1" />
+  </div>
+</div>
 
 <div id="livesSlot" class="cornerSlot" style="left:14px; bottom:14px;">
   <img src="/media/images/gifs/bananarama.gif" alt="lives"/>
@@ -259,6 +320,10 @@
   Changed: 💥 bomb is now a short-range shot (spawns ahead of player in aim direction).
   Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
 
+- 2025-12-21 | v1.50
+  Added: Always-on /media/audio/spaceinvaders.mp3 music loop with top-right 🔊 dropdown.
+  Added: Separate sliders for Music volume and Gameplay (SFX) volume.
+
 - 2025-12-19 | v1.49
   Added: Bomb-killing a dragon.gif enemy grants a one-time +25% "armor" pip next to the hearts HUD.
   Behavior: The armor absorbs the next hit (any damage) and then flips to ❌ briefly.
@@ -273,6 +338,7 @@ const GIF_BASE = "/media/images/gifs/";
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
 const AUDIO_OOF = "/media/audio/oof.mp3";
 
+const AUDIO_MUSIC = "/media/audio/spaceinvaders.mp3";
 /* =======================
    Player Firing Tuning
 ======================= */
@@ -296,6 +362,14 @@ const powerupSlot = document.getElementById("powerupSlot");
 const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 
+
+// Audio widget (v1.50)
+const audioBtn = document.getElementById("audioBtn");
+const audioPanel = document.getElementById("audioPanel");
+const musicVolSlider = document.getElementById("musicVolSlider");
+const gameVolSlider  = document.getElementById("gameVolSlider");
+const musicVolLabel  = document.getElementById("musicVolLabel");
+const gameVolLabel   = document.getElementById("gameVolLabel");
 let hudVisible = false;
 
 // =======================
@@ -834,11 +908,42 @@ sfxOof.preload = "auto";
 sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
 
+// v1.50: Separate volume controls (Music vs Gameplay SFX)
+let gameplayVolume = 0.80; // 0..1 (affects SFX via playSfx())
+let musicVolume = 0.80;    // 0..1
+
+// v1.50: Always-on background music (loops forever after user gesture unlock)
+const music = new Audio(AUDIO_MUSIC);
+music.preload = "auto";
+music.loop = true;
+music.volume = musicVolume;
+
+function tryStartMusic(){
+  try{
+    // Only try to play once audio is unlocked; browsers will block autoplay otherwise.
+    if (!audioUnlocked) return;
+    if (!music.paused && !music.ended) return;
+    music.play().then(() => { updateAudioIcon(); }).catch(() => { /* ignored */ });
+  }catch(e){}
+}
+
+function updateAudioIcon(){
+  // 🔊 when playing + audible, 🔇 when volume is 0, 🔈 when paused
+  if (!audioBtn) return;
+  const audible = (musicVolume > 0.001);
+  const playing = (!music.paused && !music.ended);
+  if (!audible) audioBtn.textContent = "🔇";
+  else audioBtn.textContent = playing ? "🔊" : "🔈";
+}
+
+
 let audioUnlocked = false;
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
   try{
+    tryStartMusic();
+
     sfxHit.muted = true;
     sfxHit.play().then(() => { sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false; }).catch(()=>{ sfxHit.muted = false; });
 
@@ -849,10 +954,76 @@ function unlockAudioOnce(){
 function playSfx(a){
   try{
     const c = a.cloneNode();
-    c.volume = a.volume;
+    c.volume = a.volume * gameplayVolume;
     c.play().catch(()=>{});
   }catch(e){}
 }
+
+
+/* =======================
+   Audio Widget UI (v1.50)
+======================= */
+function syncAudioUI(){
+  if (!musicVolSlider || !gameVolSlider) return;
+
+  // labels
+  musicVolLabel.textContent = Math.round(musicVolume * 100) + "%";
+  gameVolLabel.textContent  = Math.round(gameplayVolume * 100) + "%";
+
+  // sliders
+  musicVolSlider.value = Math.round(musicVolume * 100);
+  gameVolSlider.value  = Math.round(gameplayVolume * 100);
+
+  // apply volumes
+  music.volume = musicVolume;
+  updateAudioIcon();
+}
+
+function toggleAudioPanel(force){
+  if (!audioPanel) return;
+  const open = (typeof force === "boolean") ? force : (audioPanel.style.display !== "block");
+  audioPanel.style.display = open ? "block" : "none";
+}
+
+if (audioBtn){
+  audioBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    unlockAudioOnce();
+    // If the browser paused it, clicking the widget is a user gesture, so try again.
+    tryStartMusic();
+    toggleAudioPanel();
+  });
+}
+
+if (musicVolSlider){
+  musicVolSlider.addEventListener("input", () => {
+    musicVolume = Math.max(0, Math.min(1, parseInt(musicVolSlider.value, 10) / 100));
+    music.volume = musicVolume;
+    syncAudioUI();
+  });
+}
+if (gameVolSlider){
+  gameVolSlider.addEventListener("input", () => {
+    gameplayVolume = Math.max(0, Math.min(1, parseInt(gameVolSlider.value, 10) / 100));
+    syncAudioUI();
+  });
+}
+
+// Click outside closes dropdown
+window.addEventListener("pointerdown", (e) => {
+  if (!audioPanel || audioPanel.style.display !== "block") return;
+  if (e.target === audioBtn || audioPanel.contains(e.target)) return;
+  toggleAudioPanel(false);
+});
+
+// If the tab becomes visible again, try to resume music.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible"){
+    tryStartMusic();
+    updateAudioIcon();
+  }
+});
+
 
 /* =======================
    UI
