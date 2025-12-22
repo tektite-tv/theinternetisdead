@@ -1099,8 +1099,10 @@ function resize(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  // v1.54.3: keep player anchored nicely after resizes
-  player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+  // v1.54.3+: only bottom-anchor in menus; gameplay keeps spawn position
+  if (gameState !== STATE.PLAYING){
+    player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+  }
 
   resetStarfield();
 }
@@ -1273,6 +1275,10 @@ function startGame(){
 
   health = 1.0;
 
+  // Spawn player mid-screen, above hearts HUD
+  player.x = canvas.width / 2;
+  player.y = canvas.height * PLAYER_SPAWN_Y_FACTOR;
+
   shieldPips = Math.max(0, parseInt(START_SHIELDS, 10) || 0);
 
   bombsCount = Math.max(0, parseInt(START_BOMBS, 10) || 0);
@@ -1283,6 +1289,10 @@ function startGame(){
   }
 
   health = 1.0;
+
+  // Spawn player mid-screen, above hearts HUD
+  player.x = canvas.width / 2;
+  player.y = canvas.height * PLAYER_SPAWN_Y_FACTOR;
   bonusArmor = 0;
   bonusArmorBrokenT = 0;
   isDead = false;
@@ -1341,7 +1351,8 @@ playerImg.src = GIF_BASE + "bananarama.gif";
 
 // v1.54.3 sizing + anchoring
 const PLAYER_SIZE = 72;                 // was 48
-const PLAYER_BOTTOM_MARGIN = 100;       // gives breathing room vs browser UI
+const PLAYER_BOTTOM_MARGIN = 100;
+const PLAYER_SPAWN_Y_FACTOR = 0.58; // middle-ish, above hearts HUD       // gives breathing room vs browser UI
 const FORMATION_PLAYER_GAP = 160;       // v1.54: no longer enforced (kept for tuning/experiments)
 
 const player = {
@@ -1909,6 +1920,10 @@ function update(dt){
   deathYellPlayed = false;
         deathParticles.length = 0;
         health = 1.0;
+
+  // Spawn player mid-screen, above hearts HUD
+  player.x = canvas.width / 2;
+  player.y = canvas.height * PLAYER_SPAWN_Y_FACTOR;
         player.invuln = 1.25;
       }
     }
