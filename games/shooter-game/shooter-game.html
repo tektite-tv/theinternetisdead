@@ -301,13 +301,21 @@ function applyMuteState(){
   sfxOof.muted = m;
 }
 
-function ensureMusicPlaying(){
+function ensureMusicPlaying(restart=false){
+  // Start/resume looping background music immediately when gameplay begins.
+  // "restart=true" forces it back to the beginning.
+  try{
+    if (restart){
+      musicBg.currentTime = 0;
+    }
+    musicBg.loop = true;
+  }catch(e){}
   if (audioMuted) return;
-  // If it's already playing, don't restart it.
-  if (!musicBg.paused) return;
-  // Start from beginning if it somehow ended (it loops, but just in case).
-  try{ if (musicBg.currentTime > 0 && musicBg.currentTime < 0.05) {} }catch(e){}
-  musicBg.play().catch(()=>{});
+  try{
+    // If already playing and not restarting, leave it alone.
+    if (!restart && !musicBg.paused) return;
+    musicBg.play().catch(()=>{});
+  }catch(e){}
 }
 
 function stopMusic(){
@@ -973,7 +981,8 @@ function showMenu(){
 }
 
 function restartRun(){
-  ensureMusicPlaying();
+  // Restart music immediately when restarting a run.
+  ensureMusicPlaying(true);
   // v1.37: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
   hasBomb = false;
@@ -998,7 +1007,8 @@ function showOptions(){
 }
 function startGame(){
   unlockAudioOnce();
-  ensureMusicPlaying();
+  // Start looping music exactly when the game starts.
+  ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
