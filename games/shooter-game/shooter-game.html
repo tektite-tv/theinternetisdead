@@ -414,6 +414,17 @@ let isPaused = false;
 function setPaused(p){
   isPaused = !!p;
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
+
+  // v1.51: pause ALSO pauses the looping music (resume continues from same timestamp)
+  try{
+    if (isPaused){
+      if (!musicBg.paused) musicBg.pause();
+    } else {
+      // only resume if we're in gameplay and not muted
+      if (gameState === STATE.PLAYING && !audioMuted) musicBg.play().catch(()=>{});
+    }
+  }catch(e){}
+
   // When pausing, clear held movement keys so you don't "drift" on resume.
   if (isPaused){
     for (const k in keys) keys[k] = false;
@@ -422,9 +433,7 @@ function setPaused(p){
 
 function togglePause(){
   if (gameState !== STATE.PLAYING) return;
-
-  // v1.51: pause freezes gameplay updates
-  if (isPaused) return;
+  if (isDead) return; // don't pause during death freeze/respawn
   if (deathOverlay && deathOverlay.style.display === "flex") return; // don't pause on GAME OVER
   setPaused(!isPaused);
 }
@@ -1652,6 +1661,9 @@ function update(dt){
 
   // starfield updates always
   updateStarfield(dt, keys, player.speed);
+
+  // PAUSE_GUARD_v1_51: freeze gameplay updates while paused
+  if (gameState === STATE.PLAYING && isPaused) return;
 
   if (gameState !== STATE.PLAYING) return;
 
