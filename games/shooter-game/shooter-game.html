@@ -200,6 +200,19 @@
   <div id="pausePanel">
     <div id="pauseTitle">PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
+    <button id="btnPauseQuit" style="
+      margin-top:16px;
+      font-family:monospace;
+      font-size:18px;
+      font-weight:800;
+      color:#0f0;
+      background: rgba(0,0,0,0.55);
+      border:2px solid rgba(0,255,0,0.55);
+      padding:10px 18px;
+      border-radius:14px;
+      cursor:pointer;
+      pointer-events:auto;
+    ">Quit to Menu</button>
   </div>
 </div>
 
@@ -410,6 +423,15 @@ let hudVisible = false;
 // =======================
 const pauseOverlay = document.getElementById("pauseOverlay");
 let isPaused = false;
+const btnPauseQuit = document.getElementById("btnPauseQuit");
+if (btnPauseQuit){
+  btnPauseQuit.addEventListener("click", () => {
+    // Unpause and return to start menu
+    setPaused(false);
+    stopMusic();
+    showMenu();
+  });
+}
 
 function setPaused(p){
   isPaused = !!p;
