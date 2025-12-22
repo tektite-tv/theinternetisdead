@@ -642,20 +642,49 @@ function isDragonEnemy(e){
   return !!(e && e.img && e.img.src && e.img.src.toLowerCase().includes("dragon.gif"));
 }
 
-function markEnemyHit(e){
+// =======================
+// Enemy hit feedback (v1.53)
+// - flash red briefly when damaged
+// - fade out when killed (instead of instantly vanishing)
+// NOTE: This only touches canvas drawing + enemy objects; it will not mess with menus.
+// =======================
+const ENEMY_HIT_FLASH_SECS = 0.12;   // how long the red flash lasts
+const ENEMY_DEATH_FADE_SECS = 0.35;  // how long the death fade lasts
+
+function enemyMarkHit(e){
   if (!e) return;
-  e.hitFlash = HIT_FLASH_DUR;
-  e.hitFade = HIT_FADE_DUR;
-  e.hitFadeDur = HIT_FADE_DUR;
+  e.hitFlash = ENEMY_HIT_FLASH_SECS;
 }
 
-function startEnemyDeath(e){
+function enemyKill(e, source){
   if (!e || e.dying) return;
   e.dying = true;
-  e.dieT = 0;
-  e.dieDur = ENEMY_DIE_DUR;
-  // also flash on death start
-  e.hitFlash = Math.max(e.hitFlash || 0, HIT_FLASH_DUR);
+  e.fade = 1;
+  e.fadeRate = 1 / ENEMY_DEATH_FADE_SECS;
+
+  // Freeze where it died so the formation doesn't yoink it around while fading.
+  e.lockX = e.x; e.lockY = e.y;
+  e.lockW = e.w; e.lockH = e.h;
+  e.swoop = null;
+
+  // One-time kill side effects.
+  if (!e._killAwarded){
+    e._killAwarded = true;
+    if (source === "bomb" && isDragonEnemy(e)) grantBonusArmor();
+    if (e.isFrog) healPlayer(0.50);
+    score += 10;
+    playSfx(sfxHit);
+  }
+}
+
+function enemyApplyDamage(e, dmg, source){
+  if (!e) return;
+  enemyMarkHit(e);
+  e.hp = (typeof e.hp === "number") ? e.hp : 1;
+  e.hp -= Math.max(0, dmg|0);
+  if (e.hp <= 0){
+    enemyKill(e, source);
+  }
 }
 
 function grantBonusArmor(){
@@ -833,6 +862,7 @@ function bombHitsEnemy(){
   // Check contact against all enemies (both while flying and while armed).
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
+    if (e.dying) continue;
     const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
     // Treat bomb as a circle hitting an enemy rect.
@@ -895,33 +925,16 @@ function updateBomb(dt){
       // v1.51: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
       const BOMB_DAMAGE = 2;
 
-      
-// Enemy hit feedback
-const HIT_FLASH_DUR = 0.10;      // seconds: red flash when damaged
-const HIT_FADE_DUR  = 0.18;      // seconds: slight alpha dip on hit
-const ENEMY_DIE_DUR = 0.35;      // seconds: fade-out on death
-for (let i = enemies.length - 1; i >= 0; i--){
+      for (let i = enemies.length - 1; i >= 0; i--){
         const e = enemies[i];
-        const dx = e.x - bomb.x;
-        if (e && e.dying) continue;
+        if (e.dying) continue;
         const dx = e.x - bomb.x;
         const dy = e.y - bomb.y;
         const d2 = dx*dx + dy*dy;
 
         if (d2 <= radius*radius){
-          // damage/kill
-          e.hp = (typeof e.hp === "number") ? e.hp : 1;
-          e.hp -= BOMB_DAMAGE;
-          markEnemyHit(e);
-
-          if (e.hp <= 0){
-            if (isDragonEnemy(e)) grantBonusArmor();
-            markEnemyHit(e);
-            startEnemyDeath(e);
-            if (e.isFrog) healPlayer(0.50);
-            score += 10;
-            playSfx(sfxHit);
-          }
+          // damage/kill (flash red, then fade out if killed)
+          enemyApplyDamage(e, BOMB_DAMAGE, "bomb");
         } else {
           // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
           const r2 = (radius * 2.2);
@@ -1527,7 +1540,7 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
     const img = randEnemyImg();
     const isFrog = (img && img.src && img.src.toLowerCase().includes("frog.gif"));
 
-    enemies.push({ row:r, col:c, baseY, img, isFrog, size:baseSize, hp:1, x:0,y:0,w:0,h:0,
+    enemies.push({ row:r, col:c, baseY, img, isFrog, size:baseSize, hp:1, hitFlash:0, dying:false, fade:1, fadeRate:0, lockX:0, lockY:0, lockW:0, lockH:0, _killAwarded:false, x:0,y:0,w:0,h:0,
       fx:0, fy:0, // formation-space position (computed each frame)
       swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
       swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
@@ -2002,13 +2015,6 @@ if (baseY > maxBaseY){
 
 
   for (const e of enemies){
-    // Hit/death timers
-    if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
-    if (e.hitFade > 0) e.hitFade = Math.max(0, e.hitFade - dt);
-    if (e.dying){
-      e.dieT = (e.dieT || 0) + dt;
-    }
-
     if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
 
     const scale = 1 + breath * 0.18;
@@ -2070,15 +2076,6 @@ if (baseY > maxBaseY){
     e.h = size;
   }
 
-
-  // Remove enemies after their death fade completes
-  for (let i = enemies.length - 1; i >= 0; i--){
-    const e = enemies[i];
-    if (e && e.dying && (e.dieT || 0) >= (e.dieDur || ENEMY_DIE_DUR)){
-      enemies.splice(i, 1);
-    }
-  }
-
   // bullet -> enemy collision
   for (let bi = bullets.length - 1; bi >= 0; bi--){
     const b = bullets[bi];
@@ -2101,18 +2098,14 @@ if (baseY > maxBaseY){
 
     for (let ei = enemies.length - 1; ei >= 0; ei--){
       const e = enemies[ei];
-      if (e && e.dying) continue;
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
+      if (e.dying) continue;
+
       if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
-        markEnemyHit(e);
-        startEnemyDeath(e);
-        if (e.isFrog) healPlayer(0.50);
-        // v1.51: compactEnemyGrid() disabled (it made the game too easy by collapsing targets into one firing lane).
-        // compactEnemyGrid();
+        enemyApplyDamage(e, 1, "bullet");
+        // Bullet consumed on hit.
         bullets.splice(bi, 1);
-        score += 10;
-        playSfx(sfxHit);
         break;
       }
     }
@@ -2149,7 +2142,6 @@ if (baseY > maxBaseY){
   if (shieldActive){
     const shieldR = player.w * SHIELD_RADIUS_MULT;
     for (const e of enemies){
-    if (e && e.dying) continue;
       const dx = e.x - player.x;
       const dy = e.y - player.y;
       // approximate enemy radius from its sprite size
@@ -2195,6 +2187,31 @@ if (baseY > maxBaseY){
   }
 
   enemyTryShoot(dt);
+
+  // Enemy hit flash + death fade timers (v1.53)
+  for (let i = enemies.length - 1; i >= 0; i--){
+    const e = enemies[i];
+    if (e.dying) continue;
+
+    if (e.hitFlash > 0){
+      e.hitFlash = Math.max(0, e.hitFlash - dt);
+    }
+
+    if (e.dying){
+      // Keep the corpse where it died while fading out.
+      if (typeof e.lockX === "number") e.x = e.lockX;
+      if (typeof e.lockY === "number") e.y = e.lockY;
+      if (typeof e.lockW === "number" && e.lockW > 0) e.w = e.lockW;
+      if (typeof e.lockH === "number" && e.lockH > 0) e.h = e.lockH;
+
+      const rate = (e.fadeRate && e.fadeRate > 0) ? e.fadeRate : (1 / ENEMY_DEATH_FADE_SECS);
+      e.fade = Math.max(0, (typeof e.fade === "number" ? e.fade : 1) - dt * rate);
+
+      if (e.fade <= 0){
+        enemies.splice(i, 1);
+      }
+    }
+  }
 
   // wave clear
   if (enemies.length === 0){
@@ -2381,39 +2398,19 @@ if (gameState === STATE.PLAYING){
       ctx.stroke();
       ctx.restore();
     }
-    // v1.53: enemy hit flash + death fade
-    let a = 1;
-
-    // death fade
-    if (e.dying){
-      const p = Math.min(1, (e.dieT || 0) / (e.dieDur || ENEMY_DIE_DUR));
-      a *= (1 - p);
-    }
-
-    // slight alpha dip on hit
-    const hf = (e.hitFade || 0);
-    const hfd = (e.hitFadeDur || HIT_FADE_DUR);
-    if (hf > 0 && hfd > 0){
-      a *= (1 - 0.35 * Math.min(1, hf / hfd));
-    }
-
-    if (a <= 0.001) continue;
-
-    const ex = e.x - e.w/2;
-    const ey = e.y - e.h/2;
-
+    // v1.53: enemy flash red on hit + fade out on death
+    const ex = e.x - e.w/2, ey = e.y - e.h/2;
+    const alpha = (e.dying ? Math.max(0, Math.min(1, e.fade)) : 1);
     ctx.save();
-    ctx.globalAlpha = a;
-
+    ctx.globalAlpha = alpha;
     ctx.drawImage(e.img, ex, ey, e.w, e.h);
 
-    // flash red on damage
-    if ((e.hitFlash || 0) > 0){
+    if (e.hitFlash > 0){
+      const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
       ctx.globalCompositeOperation = "source-atop";
-      ctx.fillStyle = "rgba(255,0,0,0.65)";
+      ctx.fillStyle = `rgba(255,0,0,${0.85 * p})`;
       ctx.fillRect(ex, ey, e.w, e.h);
     }
-
     ctx.restore();
   }
 
