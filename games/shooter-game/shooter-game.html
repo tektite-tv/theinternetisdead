@@ -908,10 +908,7 @@ function unlockAudioOnce(){
 
   // Prime music/death audio once the browser allows it.
   try{
-    // touch the audio objects so they're "known" to the gesture
-    musicBg.muted = true;
-    musicBg.play().then(()=>{ musicBg.pause(); musicBg.currentTime = 0; musicBg.muted = false; }).catch(()=>{ musicBg.muted = false; });
-
+    // Prime the death yell audio once the browser allows it.
     sfxDeath.muted = true;
     sfxDeath.play().then(()=>{ sfxDeath.pause(); sfxDeath.currentTime = 0; sfxDeath.muted = false; }).catch(()=>{ sfxDeath.muted = false; });
   }catch(e){}
