@@ -359,6 +359,29 @@ function applyMuteState(){
   sfxOof.muted = m;
 }
 
+function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
+  if (!audioEl || audioMuted) return;
+  try{
+    audioEl.muted = !!audioMuted;
+  }catch(e){}
+  try{
+    const p = audioEl.play();
+    if (p && typeof p.catch === "function"){
+      p.catch(() => {
+        // Some browsers reject play() briefly even when audio is "unlocked".
+        // We retry a handful of times so the sound lands as soon as it's allowed.
+        if (retries > 0){
+          setTimeout(() => tryPlayWithRetry(audioEl, retries - 1, delayMs), delayMs);
+        }
+      });
+    }
+  }catch(e){
+    if (retries > 0){
+      setTimeout(() => tryPlayWithRetry(audioEl, retries - 1, delayMs), delayMs);
+    }
+  }
+}
+
 function ensureMusicPlaying(restart=false){
   // Start/resume looping background music immediately when gameplay begins.
   // "restart=true" forces it back to the beginning.
@@ -387,8 +410,9 @@ function playDeathYell(){
   if (audioMuted) return;
   try{
     sfxDeath.currentTime = 0;
-    sfxDeath.play().catch(()=>{});
   }catch(e){}
+  // Try immediately, then retry briefly to avoid "plays only after next keypress" behavior.
+  tryPlayWithRetry(sfxDeath, 30, 60);
 }
 
 /* =======================
