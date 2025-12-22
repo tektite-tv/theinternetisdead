@@ -91,6 +91,21 @@
     image-rendering:pixelated;
     filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
   }
+
+
+  .livesButton{
+    flex-direction:row;
+    justify-content:center;
+    gap:8px;
+  }
+  .livesLabel{
+    font-family:"Courier New", monospace;
+    font-size:12px;
+    color:#00ff66;
+    opacity:0.95;
+    white-space:nowrap;
+  }
+
   #deathOverlay{
     position:absolute;
     inset:0;
@@ -194,7 +209,8 @@
 "></div>
 
 
-<div id="livesSlot" class="cornerSlot" style="left:14px; bottom:14px;">
+<div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
+  <span class="livesLabel">LIVES:</span>
   <img src="/media/images/gifs/bananarama.gif" alt="lives"/>
   <div id="livesText" class="subtxt">x3</div>
 </div>
