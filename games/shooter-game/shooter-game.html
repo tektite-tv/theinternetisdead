@@ -535,6 +535,7 @@ let bonusArmorBrokenT = 0;       // seconds remaining to show ❌
 let isDead = false;
 let deathTimer = 0;
 let deathGameOver = false;
+let deathYellPlayed = false;
 const deathParticles = [];
 
 
@@ -1067,6 +1068,7 @@ syncOptionsLabels();
 
 function showMenu(){
   setPaused(false);
+  deathYellPlayed = false;
   gameState = STATE.MENU;
   // v1.51: drop shield when entering menus
   shieldHolding = false;
@@ -1134,6 +1136,7 @@ function startGame(){
   isDead = false;
   deathTimer = 0;
   deathGameOver = false;
+  deathYellPlayed = false;
   deathParticles.length = 0;
 
   wave = 1;
@@ -1722,12 +1725,15 @@ function update(dt){
       if (deathGameOver){
         // GAME OVER overlay
         deathOverlay.style.display = "flex";
+        // v1.51: death yell fires exactly when YOU DIED appears
         stopMusic();
         playDeathYell();
+        stopMusic();
       } else {
         // Respawn for next life (keep wave/enemies as-is)
         isDead = false;
         deathGameOver = false;
+  deathYellPlayed = false;
         deathParticles.length = 0;
         health = 1.0;
         player.invuln = 1.25;
