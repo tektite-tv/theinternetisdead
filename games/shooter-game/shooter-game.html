@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Galaga-ish Clone v1.50</title>
+<title>Bananaman Shooter v1.51</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -45,7 +45,7 @@
   .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
 
   /* =======================
-     HUD Corner Slots (v1.29)
+     HUD Corner Slots (v1.51)
   ======================= */
   .cornerSlot{
     position:absolute;
@@ -116,7 +116,44 @@
   #btnRestart:hover{ background: rgba(255,0,0,0.10); }
 
 
-  /* v1.37: keep HUD off the menu and keep menu clickable */
+
+  #pauseOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,0.55);
+    pointer-events:none;
+    z-index: 90;
+  }
+  #pausePanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(0,255,0,0.65);
+    border-radius:16px;
+    background: rgba(0,0,0,0.72);
+    padding: 18px 18px 16px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(0,255,0,0.14);
+  }
+  #pauseTitle{
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:2px;
+    color:#00ff66;
+    text-shadow: 0 0 10px rgba(0,255,0,0.25);
+  }
+  #pauseHint{
+    margin-top:10px;
+    font-family:monospace;
+    font-size:14px;
+    opacity:0.9;
+    color:#b6ffcf;
+  }
+
+
+  /* v1.51: keep HUD off the menu and keep menu clickable */
   #uiRoot{ z-index: 50; }
   #deathOverlay{ z-index: 100; }
   #livesSlot{ display:none; }
@@ -155,6 +192,14 @@
   <div id="deathPanel">
     <div id="deathTitle">YOU DIED</div>
     <button id="btnRestart">Restart</button>
+  </div>
+</div>
+
+
+<div id="pauseOverlay">
+  <div id="pausePanel">
+    <div id="pauseTitle">PAUSED</div>
+    <div id="pauseHint">Press ESC to resume</div>
   </div>
 </div>
 
@@ -204,25 +249,25 @@
 ========================================================================
 [REMOVAL LOG]
 
-- 2025-12-17 | v1.12.1
+- 2025-12-17 | v1.51.1
   Fixed: Game not starting / enemy images not loading due to runtime error.
   Cause: resize() called resetStarfield() before starLayers const initialized (TDZ).
   Fix: Initialize starfield definitions before resize() runs; make resize() safe.
 
-- 2025-12-17 | v1.12.3
-  Undo: v1.12.2 "simplified demo" version (removed menus/options/combat/etc.).
+- 2025-12-17 | v1.51.3
+  Undo: v1.51.2 "simplified demo" version (removed menus/options/combat/etc.).
   Reason: User requested undo; restored full game build.
   Added: Player size increase + enforced vertical padding between formation and player.
   Location: player sizing, spawnEnemies baseY, update() formation Y clamp.
 
-- 2025-12-17 | v1.12.4
+- 2025-12-17 | v1.51.4
   Added: Responsive desktop spacing so enemy formation uses screen width better.
   Added: Hard top-of-screen clamp so enemies stay visible even after step-downs.
   Tweaked: Reduced enemy base size + breathing scale to prevent overlap on desktop.
   Tweaked: Formation edge detection uses predicted next position to avoid clipping.
 
 
-- 2025-12-17 | v1.14
+- 2025-12-17 | v1.51
   Added: Galaga-like enemy descent (continuous downward pressure) + predictable wobble.
   Tweaked: Enemy formation clamped to ~top half of screen (prevents encroaching into player zone).
   Tweaked: Increased base enemy spacing (X/Y) for clearer separation.
@@ -230,7 +275,7 @@
   Tweaked: Difficulty scaling per wave (enemy horizontal speed, descent speed, step-down).
 
 
-- 2025-12-17 | v1.17
+- 2025-12-17 | v1.51
   Added: Wave spawn scaling: Wave 1 = 1 enemy, then doubles each wave (capped).
   Tweaked: FUN MODE: more lives, slower enemy pressure, slower swoops, faster bullets, gentler scaling.
   Added: Dynamic formation packing: auto-cols/rows + auto enemy sizing to fit top-zone area.
@@ -239,26 +284,26 @@
   Tweaked: Player fire rate increases each wave (cooldown decreases).
 
 
-- 2025-12-17 | v1.23
+- 2025-12-17 | v1.51
   Tweaked: Player bullets are slightly larger than enemy bullets (visual clarity).
   Added: Player bullets can collide with enemy bullets; both are deleted on contact (counter-shot mechanic).
 
-- 2025-12-17 | v1.28
+- 2025-12-17 | v1.51
   Added: Always-on player health bar under the player.
   Changed: Health replaces lives. Each enemy hit drains 25% health (4 hits total).
   Added: On death, player explodes into violent pixel-dust particles and returns to menu.
 
 
 
-- 2025-12-17 | v1.30
+- 2025-12-17 | v1.51
   Fix: Restored any accidentally removed gameplay systems while adding UI and powerups.
   Kept: 360° aim + orbit triangle, straight bullets, bullet-vs-bullet cancel, Galaga formation + swoops, wave sizing 1/2/4/6/..., HUD toggle, menus/options.
   Added: Lives box (bottom-left), powerup slot with 'Press Q', YOU DIED overlay + Restart reset, UFO 25% wave spawn with 3-hit color cycle + fade granting 💥, Q bomb drop (+ flash then AoE + knockback), health bar (4 hits per life), pixel-dust death.
-- 2025-12-19 | v1.47
+- 2025-12-19 | v1.51
   Changed: 💥 bomb is now a short-range shot (spawns ahead of player in aim direction).
   Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
 
-- 2025-12-19 | v1.49
+- 2025-12-19 | v1.51
   Added: Bomb-killing a dragon.gif enemy grants a one-time +25% "armor" pip next to the hearts HUD.
   Behavior: The armor absorbs the next hit (any damage) and then flips to ❌ briefly.
 
@@ -340,7 +385,7 @@ const BASE_PLAYER_FIRE_COOLDOWN = 0.26; // seconds (wave scaling reduces this)
 const PLAYER_BULLET_SPEED  = 8.0; // pixels per frame-ish (magnitude); direction comes from aim
 
 function getPlayerFireCooldown(){
-  // v1.13: player shoots faster every wave (lower cooldown)
+  // v1.51: player shoots faster every wave (lower cooldown)
   return Math.max(0.14, BASE_PLAYER_FIRE_COOLDOWN * Math.pow(0.94, (wave-1)));
 }
 
@@ -359,7 +404,34 @@ const btnRestart = document.getElementById("btnRestart");
 let hudVisible = false;
 
 // =======================
-// Right-Click Shield (v1.45)
+// Pause (v1.51)
+// - ESC toggles pause while playing.
+// - Freezes gameplay updates and input-driven actions.
+// =======================
+const pauseOverlay = document.getElementById("pauseOverlay");
+let isPaused = false;
+
+function setPaused(p){
+  isPaused = !!p;
+  if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
+  // When pausing, clear held movement keys so you don't "drift" on resume.
+  if (isPaused){
+    for (const k in keys) keys[k] = false;
+  }
+}
+
+function togglePause(){
+  if (gameState !== STATE.PLAYING) return;
+
+  // v1.51: pause freezes gameplay updates
+  if (isPaused) return;
+  if (deathOverlay && deathOverlay.style.display === "flex") return; // don't pause on GAME OVER
+  setPaused(!isPaused);
+}
+
+
+// =======================
+// Right-Click Shield (v1.51)
 // - Hold RIGHT MOUSE to raise a neon rainbow shield ring.
 // - Shield blocks/bounces enemy contact + enemy bullets.
 // - Uses "shield HP" so bullets don't erase it instantly.
@@ -388,13 +460,13 @@ function canActivateShield(){
 }
 function startShield(){
   shieldActive = true;
-  // v1.46: If you let go earlier, keep remaining HP for next time.
+  // v1.51: If you let go earlier, keep remaining HP for next time.
   // Only refill to full when it was fully broken (shieldHP == 0) and cooldown has expired.
   if (shieldHP <= 0) shieldHP = SHIELD_HP_MAX;
   shieldHoldGrace = SHIELD_HOLD_GRACE_SECS;
 }
 function stopShield(startCooldown=false){
-  // v1.46: Releasing shield should NOT trigger cooldown and should NOT erase remaining HP.
+  // v1.51: Releasing shield should NOT trigger cooldown and should NOT erase remaining HP.
   if (shieldActive){
     shieldActive = false;
     shieldHoldGrace = 0;
@@ -405,15 +477,15 @@ function shieldApplyDamage(dmg){
   if (!shieldActive) return;
   shieldHP = Math.max(0, shieldHP - Math.max(0, dmg));
   if (shieldHP <= 0){
-    // v1.46: Cooldown ONLY when the shield breaks.
+    // v1.51: Cooldown ONLY when the shield breaks.
     stopShield(false);
   }
 }
- // v1.12.5: HUD hidden by default; toggle with / (Slash)
+ // v1.51.5: HUD hidden by default; toggle with / (Slash)
 
 let time = 0;
 let score = 0;
-// v1.22: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
+// v1.51: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
 const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
@@ -423,7 +495,7 @@ let health = 1.0; // 0..1 (4 hits -> 0)
 const HIT_DAMAGE = 0.25; // 25% per hit (4 hits = one life)
 
 // =======================
-// Dragon Bomb-Kill Armor (v1.49)
+// Dragon Bomb-Kill Armor (v1.51)
 // - If a dragon.gif enemy is killed by the BOMB blast, grant a one-time +25% armor.
 // - Armor absorbs the next hit, then turns into an ❌ briefly next to the hearts HUD.
 // =======================
@@ -449,19 +521,19 @@ function getStageInfo(wave){
 }
 
 
-// v1.17: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
+// v1.51: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
 let formationCols = 1;
 let formationRows = 1;
 
 
-// v1.13: wave banner (big text popup)
+// v1.51: wave banner (big text popup)
 let waveBanner = { text:"", t:0 };
 function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; }
 
 const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
 let gameState = STATE.MENU;
 
-// Powerup state (v1.37)
+// Powerup state (v1.51)
 let ufo = null;
 let bomb = null;
 let hasBomb = false;
@@ -488,7 +560,7 @@ function breakBonusArmor(){
 }
 
 /* =======================
-   UFO + Bomb Powerup (v1.29)
+   UFO + Bomb Powerup (v1.51)
    - 25% chance to spawn at wave start
    - UFO takes 3 hits: red -> green -> blue -> fade
    - On fade, grants 💥 item (Press Q)
@@ -496,13 +568,13 @@ function breakBonusArmor(){
 ======================= */
 
 function shouldForceUFOForWave(w){
-  // v1.48: Always spawn a UFO on key milestone waves.
+  // v1.51: Always spawn a UFO on key milestone waves.
   return (w === 11 || w === 21);
 }
 
 function trySpawnUFO(force=false){
   if (ufo) return; // only one at a time
-  // v1.48: Force-spawn on wave 11 and 21 (or when explicitly forced).
+  // v1.51: Force-spawn on wave 11 and 21 (or when explicitly forced).
   if (!force && !shouldForceUFOForWave(wave) && Math.random() > 0.25) return;
 
   // Spawn near top area, tiny and fast.
@@ -603,13 +675,14 @@ function drawUFO(){
 }
 
 function dropBomb(){
+  if (isPaused) return;
   if (!hasBomb) return;
   if (bomb) return; // only one active
 
   hasBomb = false;
   powerupSlot.style.display = "none";
 
-  // v1.47: Bomb is now a short-range "shot" that travels a bit in the aim direction.
+  // v1.51: Bomb is now a short-range "shot" that travels a bit in the aim direction.
   // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
@@ -709,7 +782,7 @@ function updateBomb(dt){
       const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
       const radius = enemySize * 1.7;
 
-      // v1.47: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
+      // v1.51: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
       const BOMB_DAMAGE = 2;
 
       for (let i = enemies.length - 1; i >= 0; i--){
@@ -753,7 +826,7 @@ function drawBomb(){
   if (!bomb) return;
 
   if (!bomb.exploding){
-    // v1.47: flying/armed bomb (flashing plus)
+    // v1.51: flying/armed bomb (flashing plus)
     ctx.save();
     ctx.translate(bomb.x, bomb.y);
 
@@ -848,7 +921,7 @@ function updateStarfield(dt, keys, playerSpeed){
 }
 
 function drawStarfield(){
-  // v1.40: Stage 2+ visual shift (wave >= 11)
+  // v1.51: Stage 2+ visual shift (wave >= 11)
   const isStage2Plus = (gameState === STATE.PLAYING && wave >= 11);
 
   // Background
@@ -861,7 +934,7 @@ function drawStarfield(){
     const arr = stars[li];
     const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
 
-    // v1.42: Keep stars white for maximum contrast (even in Stage 2+)
+    // v1.51: Keep stars white for maximum contrast (even in Stage 2+)
     ctx.fillStyle = `rgba(255,255,255,${alpha})`;
 
     for (const st of arr){
@@ -877,7 +950,7 @@ function resize(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  // v1.12.3: keep player anchored nicely after resizes
+  // v1.51.3: keep player anchored nicely after resizes
   player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
 
   resetStarfield();
@@ -952,7 +1025,7 @@ function syncOptionsLabels(){
   rowsVal.textContent = rowsSlider.value;
   colsVal.textContent = colsSlider.value;
 
-  // v1.17: sliders still display a grid size, but waves now control actual spawn count (1, 2, 4, 8...)
+  // v1.51: sliders still display a grid size, but waves now control actual spawn count (1, 2, 4, 8...)
   const sliderTotal = (parseInt(rowsSlider.value,10) * parseInt(colsSlider.value,10));
   const waveTotal = Math.min(256, Math.pow(2, (wave - 1)));
   totalVal.textContent = sliderTotal.toString() + " | wave spawn: " + waveTotal.toString();
@@ -962,13 +1035,14 @@ colsSlider.addEventListener("input", syncOptionsLabels);
 syncOptionsLabels();
 
 function showMenu(){
+  setPaused(false);
   gameState = STATE.MENU;
-  // v1.43: drop shield when entering menus
+  // v1.51: drop shield when entering menus
   shieldHolding = false;
   stopShield(false);
 
   deathOverlay.style.display = "none";
-  // v1.37: HUD should not appear on the menu
+  // v1.51: HUD should not appear on the menu
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
 
@@ -978,9 +1052,10 @@ function showMenu(){
 }
 
 function restartRun(){
+  setPaused(false);
   // Restart music immediately when restarting a run.
   ensureMusicPlaying(true);
-  // v1.37: Hard reset from GAME OVER screen (full reset to beginning)
+  // v1.51: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
   hasBomb = false;
   bomb = null;
@@ -989,12 +1064,13 @@ function restartRun(){
   startGame();
 }
 function showOptions(){
+  setPaused(false);
   gameState = STATE.OPTIONS;
-  // v1.43: drop shield when entering menus
+  // v1.51: drop shield when entering menus
   shieldHolding = false;
   stopShield(false);
 
-  // v1.37: hide HUD in menus
+  // v1.51: hide HUD in menus
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
 
@@ -1003,6 +1079,7 @@ function showOptions(){
   uiRoot.style.display = "flex";
 }
 function startGame(){
+  setPaused(false);
   unlockAudioOnce();
   // Start looping music exactly when the game starts.
   ensureMusicPlaying(true);
@@ -1010,13 +1087,13 @@ function startGame(){
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
 
-  // v1.37: show HUD only in-game
+  // v1.51: show HUD only in-game
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
 
   score = 0;
 
-  // v1.37: 3 lives, each life has 4-hit (25%) health
+  // v1.51: 3 lives, each life has 4-hit (25%) health
   lives = 3;
   livesText.textContent = "x" + lives;
 
@@ -1065,15 +1142,15 @@ btnRestart.addEventListener("click", () => {
 function setAssetStatus(msg){ assetStatus.textContent = msg; }
 
 /* =======================
-   Player (v1.12.3 bigger)
+   Player (v1.51.3 bigger)
 ======================= */
 const playerImg = new Image();
 playerImg.src = GIF_BASE + "bananarama.gif";
 
-// v1.12.3 sizing + anchoring
+// v1.51.3 sizing + anchoring
 const PLAYER_SIZE = 72;                 // was 48
 const PLAYER_BOTTOM_MARGIN = 100;       // gives breathing room vs browser UI
-const FORMATION_PLAYER_GAP = 160;       // v1.13: no longer enforced (kept for tuning/experiments)
+const FORMATION_PLAYER_GAP = 160;       // v1.51: no longer enforced (kept for tuning/experiments)
 
 const player = {
   x: 0,
@@ -1088,7 +1165,7 @@ const keys = {};
 let fireCooldown = 0;
 
 /* =======================
-   Aim (v1.19: 360° aim)
+   Aim (v1.51: 360° aim)
    - Mouse / touch sets an aim point.
    - We smooth the aim angle so the triangle feels less twitchy.
 ======================= */
@@ -1178,14 +1255,14 @@ loadEnemyImagesFromIndex();
 const BASE_SPACING_X = 105;
 
 function getSpacingX(){
-  // v1.12.4: Responsive horizontal spacing (desktop-friendly)
+  // v1.51.4: Responsive horizontal spacing (desktop-friendly)
   const maxFormationWidth = canvas.width * 0.82;     // use most of the screen width
   const cols = Math.max(1, formationCols - 1);       // gaps between columns (dynamic per wave)
   return Math.min(120, Math.max(80, maxFormationWidth / cols));
 }
 
 function getSpacingY(){
-  // v1.17: Responsive vertical spacing based on current wave formation size
+  // v1.51: Responsive vertical spacing based on current wave formation size
   const maxFormationHeight = canvas.height * 0.38; // keep formation mostly in top zone
   const rows = Math.max(1, formationRows - 1);
   return Math.min(110, Math.max(45, maxFormationHeight / rows));
@@ -1201,7 +1278,7 @@ function resetFormation(){
   formation.yOffset = 0;
   formation.dir = 1;
 
-  // v1.22: challenge/fun rebalance.
+  // v1.51: challenge/fun rebalance.
   // Horizontal sweep ramps, but capped so it stays readable.
   formation.speed = (0.95 + (wave-1) * 0.09) * FUNK;
   formation.speed = Math.min(2.2, formation.speed);
@@ -1213,8 +1290,8 @@ function resetFormation(){
   formation.descentSpeed = 3.5 + Math.min(10, (wave-1) * 1.25);
 }
 
-// v1.19: When an enemy dies, re-pack the remaining enemies into a tidy rectangle
-// v1.22: Disabled by default because it turns the game into 'hold fire in one lane to win' mode.
+// v1.51: When an enemy dies, re-pack the remaining enemies into a tidy rectangle
+// v1.51: Disabled by default because it turns the game into 'hold fire in one lane to win' mode.
 // (no "missing tooth" gaps in the grid).
 function compactEnemyGrid(){
   const count = enemies.length;
@@ -1249,11 +1326,11 @@ function spawnEnemies(){
   enemies = [];
   const baseY = 80; // start higher (top zone)
 
-  // v1.17: Wave sizing
+  // v1.51: Wave sizing
   // Wave 1 spawns 1 enemy, then doubles each wave (2x previous).
   // We cap it to keep browsers from melting into a puddle.
   const MAX_WAVE_ENEMIES = 128;
-// v1.19: Balanced wave sizing (requested):
+// v1.51: Balanced wave sizing (requested):
 // Wave 1: 1 enemy
 // Wave 2: 2 enemies
 // Wave 3: 4 enemies
@@ -1266,7 +1343,7 @@ function getEnemyCountForWave(w){
 }
 const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 
-  // v1.17: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
+  // v1.51: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
   // Keep the "formation area" mostly in the top half.
   const zoneW = canvas.width * 0.82;
   const zoneH = canvas.height * 0.38;
@@ -1302,23 +1379,24 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
 const bullets = [];
 const enemyBullets = [];
 
-// v1.37 PERF GUARDRAILS:
+// v1.51 PERF GUARDRAILS:
 // When bullet counts explode, the nested bullet-vs-bullet collision check can get expensive.
 // Cap counts to keep the game smooth instead of freezing when chaos spikes.
 const MAX_PLAYER_BULLETS = 90;
 const MAX_ENEMY_BULLETS  = 140;
 
 function shoot(){
-  // v1.44: cannot shoot while shield is active
+  if (isPaused) return;
+  // v1.51: cannot shoot while shield is active
   if (shieldActive) return;
   if (fireCooldown > 0) return;
 
-  // v1.19: fire in the current aim direction (defaults upward if aim is unset)
+  // v1.51: fire in the current aim direction (defaults upward if aim is unset)
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
 
   const spawnDist = (player.w * 0.42);
-  // v1.37: cap bullets to prevent performance spikes
+  // v1.51: cap bullets to prevent performance spikes
   if (bullets.length >= MAX_PLAYER_BULLETS){
     bullets.splice(0, bullets.length - MAX_PLAYER_BULLETS + 1);
   }
@@ -1331,7 +1409,7 @@ function shoot(){
     r: 5
   });
 
-  // v1.13: faster firing as waves increase
+  // v1.51: faster firing as waves increase
   fireCooldown = getPlayerFireCooldown();
 }
 
@@ -1343,7 +1421,7 @@ function enemyTryShoot(dt){
 
   const alive = enemies.length;
 
-  // v1.22: shot pacing is less spammy early, more spicy later.
+  // v1.51: shot pacing is less spammy early, more spicy later.
   // FUNK scales the aggression (1000 = baseline).
   const base = Math.max(
     0.16,
@@ -1363,7 +1441,7 @@ function enemyTryShoot(dt){
   const vx = Math.max(-3.2, Math.min(3.2, dx * 0.012)); // gentle lead
   const vy = (5.6 + wave*0.45) * FUNK;
 
-  // v1.37: cap enemy bullets to prevent the counter-shot collision loop from going nuclear
+  // v1.51: cap enemy bullets to prevent the counter-shot collision loop from going nuclear
   if (enemyBullets.length >= MAX_ENEMY_BULLETS){
     enemyBullets.splice(0, enemyBullets.length - MAX_ENEMY_BULLETS + 1);
   }
@@ -1374,7 +1452,7 @@ function enemyTryShoot(dt){
 let swoopTimer = 0;
 
 /*
-  v1.15: Galaga-like swoop attackers.
+  v1.51: Galaga-like swoop attackers.
   The *formation* is clamped to the top zone.
   Individual enemies can temporarily dive into the player zone ("swoop") and then return.
 */
@@ -1440,7 +1518,7 @@ function circleRect(cx, cy, cr, rx, ry, rw, rh){
 }
 
 function spawnPlayerDeath(isGameOver){
-  // v1.28+: violent pixel-dust death
+  // v1.51+: violent pixel-dust death
   isDead = true;
   deathGameOver = !!isGameOver;
   deathTimer = deathGameOver ? 1.2 : 0.85;
@@ -1463,7 +1541,7 @@ function spawnPlayerDeath(isGameOver){
 function damagePlayer(){
   if (player.invuln > 0 || isDead) return;
 
-  // v1.49: bonus armor absorbs one hit
+  // v1.51: bonus armor absorbs one hit
   if (bonusArmor > 0){
     breakBonusArmor();
     playSfx(sfxHit);
@@ -1506,7 +1584,7 @@ window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
 
-  // v1.12.5: HUD toggle (Slash key) - hidden by default
+  // v1.51.5: HUD toggle (Slash key) - hidden by default
   if (e.code === "Slash"){
     hudVisible = !hudVisible;
     overlay.style.display = hudVisible ? "block" : "none";
@@ -1525,22 +1603,25 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
   if (e.key === "f" || e.key === "F") toggleFullscreen();
   if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
-  if (k === "escape") showMenu();
+  if (k === "escape"){
+    // v1.51: ESC pauses/resumes instead of opening the menu
+    togglePause();
+  }
 }, { passive:false });
 
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
 canvas.addEventListener("pointermove", (e) => {
-  // v1.19: aim follows pointer (mouse or touch)
+  // v1.51: aim follows pointer (mouse or touch)
   setAimFromClient(e.clientX, e.clientY);
 });
 
 canvas.addEventListener("pointerdown", (e) => {
   unlockAudioOnce();
-  // v1.19: clicking also aims and shoots
+  // v1.51: clicking also aims and shoots
   setAimFromClient(e.clientX, e.clientY);
 
-  // v1.43: RIGHT CLICK hold = shield
+  // v1.51: RIGHT CLICK hold = shield
   // Note: pointer events use button 2 for right mouse.
   if (e.button === 2){
     e.preventDefault();
@@ -1556,7 +1637,7 @@ canvas.addEventListener("pointerup", (e) => {
   // Release RMB shield
   if (e.button === 2){
     shieldHolding = false;
-    // v1.46: Releasing it just deactivates; cooldown only happens if it BREAKS.
+    // v1.51: Releasing it just deactivates; cooldown only happens if it BREAKS.
     if (shieldActive) stopShield(false);
   }
 });
@@ -1574,7 +1655,7 @@ function update(dt){
 
   if (gameState !== STATE.PLAYING) return;
 
-  // v1.46: shield cooldown + hold logic
+  // v1.51: shield cooldown + hold logic
   if (shieldCooldown > 0) shieldCooldown = Math.max(0, shieldCooldown - dt);
 
   if (shieldActive){
@@ -1583,13 +1664,13 @@ function update(dt){
     } else {
       shieldHoldGrace = Math.max(0, shieldHoldGrace - dt);
       if (shieldHoldGrace <= 0){
-        // v1.46: If RMB isn't held for a bit, drop shield WITHOUT cooldown (HP is saved).
+        // v1.51: If RMB isn't held for a bit, drop shield WITHOUT cooldown (HP is saved).
         stopShield(false);
       }
     }
   }
 
-  // v1.28: death particles update + lockout
+  // v1.51: death particles update + lockout
   if (isDead){
     deathTimer -= dt;
 
@@ -1631,7 +1712,7 @@ function update(dt){
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
-  // v1.19: smooth the aim angle (shortest-path wrap) for nicer feel
+  // v1.51: smooth the aim angle (shortest-path wrap) for nicer feel
   const da = normAngle(aimAngle - aimAngleSmoothed);
   aimAngleSmoothed = normAngle(aimAngleSmoothed + da * Math.min(1, dt * 18));
 
@@ -1644,7 +1725,7 @@ function update(dt){
 
   const formationWidth = (formationCols - 1) * spacingX;
 
-  // v1.12.4: predict next X so we don't clip enemies on wider desktop layouts
+  // v1.51.4: predict next X so we don't clip enemies on wider desktop layouts
   const nextXOffset = formation.xOffset + (formation.dir * formation.speed);
 
   const leftEdgeNext  = canvas.width/2 - formationWidth/2 + nextXOffset;
@@ -1662,7 +1743,7 @@ function update(dt){
     formation.xOffset = nextXOffset;
   }
 
-  // v1.13: always drift downward toward the player (Galaga pressure)
+  // v1.51: always drift downward toward the player (Galaga pressure)
   formation.yOffset += formation.descentSpeed * dt;
 
   // update bullets
@@ -1681,7 +1762,7 @@ function update(dt){
   }
 
 
-  // v1.23: player bullet <-> enemy bullet collision (both vanish on contact)
+  // v1.51: player bullet <-> enemy bullet collision (both vanish on contact)
   // This prevents bullet spam from feeling unfair and adds a satisfying "counter-shot" mechanic.
   for (let pi = bullets.length - 1; pi >= 0; pi--){
     const p = bullets[pi];
@@ -1690,7 +1771,7 @@ function update(dt){
       const dx = p.x - e.x;
       const dy = p.y - e.y;
       const rr = (p.r + e.r);
-      // v1.37: cheap early-outs to avoid expensive nested collision work when bullets are far apart
+      // v1.51: cheap early-outs to avoid expensive nested collision work when bullets are far apart
       if (dy > rr + 6 || dy < -rr - 6) continue;
       if (dx > rr + 6 || dx < -rr - 6) continue;
       if (dx*dx + dy*dy <= rr*rr){
@@ -1701,7 +1782,7 @@ function update(dt){
     }
   }
 
-  // v1.15: attempt to launch swoop attackers
+  // v1.51: attempt to launch swoop attackers
   tryStartSwoop(dt);
 
   // compute enemy positions
@@ -1710,7 +1791,7 @@ function update(dt){
 
   const startX = canvas.width/2 - formationWidth/2 + formation.xOffset;
 
-  // v1.12.3: base spawn Y from each enemy, plus formation yOffset
+  // v1.51.3: base spawn Y from each enemy, plus formation yOffset
   // then clamp so the formation bottom never gets too close to player
   let baseY = 80 + formation.yOffset;
 
@@ -1743,7 +1824,7 @@ if (baseY > maxBaseY){
     const scale = 1 + breath * 0.18;
     const size = e.size * scale;
 
-    // v1.13: predictable formation wobble (non-random, just annoying)
+    // v1.51: predictable formation wobble (non-random, just annoying)
     const wobbleAmpX = 6 + Math.min(14, wave * 1.2);
     const wobbleAmpY = 3 + Math.min(10, wave * 0.7);
     const wobbleX = Math.sin(time * (0.9 + wave*0.03) + e.row * 0.7) * wobbleAmpX;
@@ -1802,7 +1883,7 @@ if (baseY > maxBaseY){
   // bullet -> enemy collision
   for (let bi = bullets.length - 1; bi >= 0; bi--){
     const b = bullets[bi];
-    // v1.24+: bullet -> UFO collision (3-hit color cycle, then fade + powerup)
+    // v1.51+: bullet -> UFO collision (3-hit color cycle, then fade + powerup)
     if (ufo && ufo.fade === 0){
       const dxU = b.x - ufo.x;
       const dyU = b.y - ufo.y;
@@ -1826,7 +1907,7 @@ if (baseY > maxBaseY){
       if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         enemies.splice(ei, 1);
         if (e.isFrog) healPlayer(0.50);
-        // v1.22: compactEnemyGrid() disabled (it made the game too easy by collapsing targets into one firing lane).
+        // v1.51: compactEnemyGrid() disabled (it made the game too easy by collapsing targets into one firing lane).
         // compactEnemyGrid();
         bullets.splice(bi, 1);
         score += 10;
@@ -1843,7 +1924,7 @@ if (baseY > maxBaseY){
   for (let i = enemyBullets.length - 1; i >= 0; i--){
     const b = enemyBullets[i];
 
-    // v1.43: shield blocks bullets (counts as a "hit" on the shield)
+    // v1.51: shield blocks bullets (counts as a "hit" on the shield)
     if (shieldActive){
       const dx = b.x - player.x;
       const dy = b.y - player.y;
@@ -1863,7 +1944,7 @@ if (baseY > maxBaseY){
 
   // enemy contact damage
 
-  // v1.43: shield makes enemies bounce off the player (and consumes shield hits on impact)
+  // v1.51: shield makes enemies bounce off the player (and consumes shield hits on impact)
   if (shieldActive){
     const shieldR = player.w * SHIELD_RADIUS_MULT;
     for (const e of enemies){
@@ -1986,7 +2067,7 @@ function drawShieldRing(){
 function draw(){
   drawStarfield();
 
-  // v1.28+: draw player death particles
+  // v1.51+: draw player death particles
   if (deathParticles.length){
     ctx.save();
     ctx.fillStyle = "#ff0";
@@ -1997,7 +2078,7 @@ function draw(){
     ctx.restore();
   }
 
-  // v1.13: Wave banner popup
+  // v1.51: Wave banner popup
   if (gameState === STATE.PLAYING && waveBanner.t > 0){
     const p = Math.min(1, waveBanner.t / 1.35);
     const alpha = Math.min(1, 0.2 + p);
@@ -2013,7 +2094,7 @@ function draw(){
     ctx.restore();
   }
 
-  // v1.28: death particles
+  // v1.51: death particles
   if (deathParticles.length){
     ctx.save();
     ctx.fillStyle = "rgba(255,255,255,0.9)";
@@ -2034,10 +2115,10 @@ function draw(){
     ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
   }
 
-    // v1.43: shield ring (RMB hold)
+    // v1.51: shield ring (RMB hold)
   drawShieldRing();
 
-// v1.28: always-on health bar under the player (4 hits total)
+// v1.51: always-on health bar under the player (4 hits total)
   if (gameState === STATE.PLAYING){
     const barW = player.w;
     const barH = 7;
@@ -2057,7 +2138,7 @@ function draw(){
     ctx.restore();
   }
 
-// v1.19: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
+// v1.51: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
 if (gameState === STATE.PLAYING){
   const a = aimAngleSmoothed;
   const orbitR = player.w * 0.62;
@@ -2083,7 +2164,7 @@ if (gameState === STATE.PLAYING){
 
   // enemies
   for (const e of enemies){
-    // v1.37: frog enemies get a pulsing green aura ring
+    // v1.51: frog enemies get a pulsing green aura ring
     if (e.isFrog){
       const pulse = 1 + 0.12 * Math.sin(time * 6.0);
       const r = Math.max(e.w, e.h) * 0.70 * pulse;
@@ -2102,7 +2183,7 @@ if (gameState === STATE.PLAYING){
   }
 
   // bullets (player)
-  // v1.21: draw as simple circles (no text/letter-like shapes)
+  // v1.51: draw as simple circles (no text/letter-like shapes)
   ctx.fillStyle = "#ff0";
   for (const b of bullets){
     ctx.beginPath();
@@ -2119,7 +2200,7 @@ if (gameState === STATE.PLAYING){
   }
 
   overlay.innerHTML =
-    `Galaga-ish Clone v1.37<br>` +
+    `Bananaman Shooter v1.51<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
@@ -2130,7 +2211,7 @@ if (gameState === STATE.PLAYING){
     `Player: ${player.w}px | Gap: ${FORMATION_PLAYER_GAP}px<br>` +
     `ESC: Menu`;
 
-  // v1.29: corner HUD updates
+  // v1.51: corner HUD updates
   livesText.textContent = "x" + lives;
   powerupSlot.style.display = hasBomb ? "flex" : "none";
   if (gameState === STATE.PLAYING){
@@ -2156,7 +2237,7 @@ function updateHearts(){
     out += (i < hearts ? full : empty) + " ";
   }
 
-  // v1.49: bonus armor indicator next to hearts
+  // v1.51: bonus armor indicator next to hearts
   let armorIcon = "";
   if (bonusArmor > 0) armorIcon = "🛡️";
   else if (bonusArmorBrokenT > 0) armorIcon = "❌";
@@ -2181,7 +2262,7 @@ function loop(t){
 player.x = canvas.width / 2;
 player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
 
-// v1.19: default aim straight up until the player moves the pointer
+// v1.51: default aim straight up until the player moves the pointer
 aimX = player.x;
 aimY = player.y - 200;
 aimAngle = -Math.PI/2;
