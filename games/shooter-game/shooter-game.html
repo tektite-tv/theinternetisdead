@@ -891,11 +891,19 @@ function updateBomb(dt){
           e.hp -= BOMB_DAMAGE;
 
           if (e.hp <= 0){
-            if (isDragonEnemy(e)) grantBonusArmor();
-            enemies.splice(i, 1);
-            if (e.isFrog) healPlayer(0.50);
-            score += 10;
-            playSfx(sfxHit);
+            // v1.52: same visual death as bullets: fade out instead of instantly disappearing
+            if (!e.dying){
+              if (isDragonEnemy(e)) grantBonusArmor();
+              e.dying = true;
+              e.dieT = 0;
+              e.dieDur = e.dieDur || 0.45;
+              e.hitFlash = 0.16;
+              e.hitFade = e.hitFadeDur || 0.18;
+
+              if (e.isFrog) healPlayer(0.50);
+              score += 10;
+              playSfx(sfxHit);
+            }
           }
         } else {
           // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
@@ -1505,7 +1513,14 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
     enemies.push({ row:r, col:c, baseY, img, isFrog, size:baseSize, hp:1, x:0,y:0,w:0,h:0,
       fx:0, fy:0, // formation-space position (computed each frame)
       swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
-      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
+      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop,
+      // v1.52: damage feedback (flash red + slight fade dip on hit, full fade on death)
+      hitFlash: 0,
+      hitFade: 0,
+      hitFadeDur: 0.18,
+      dying: false,
+      dieT: 0,
+      dieDur: 0.45
     });
   }
 }
@@ -2036,6 +2051,11 @@ if (baseY > maxBaseY){
 
     e.w = size;
     e.h = size;
+
+    // v1.52: update hit/death timers (visual only)
+    e.hitFlash = Math.max(0, (e.hitFlash || 0) - dt);
+    e.hitFade  = Math.max(0, (e.hitFade  || 0) - dt);
+    if (e.dying) e.dieT = (e.dieT || 0) + dt;
   }
 
   // bullet -> enemy collision
@@ -2063,15 +2083,35 @@ if (baseY > maxBaseY){
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
       if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
-        enemies.splice(ei, 1);
-        if (e.isFrog) healPlayer(0.50);
-        // v1.51: compactEnemyGrid() disabled (it made the game too easy by collapsing targets into one firing lane).
-        // compactEnemyGrid();
+        // v1.52: damage feedback. Enemies don't instantly vanish; they flash red and (if killed) fade out.
+        e.hp = (typeof e.hp === "number") ? e.hp : 1;
+        e.hp -= 1;
+
+        // hit feedback even if it survives (future hp>1 enemies)
+        e.hitFlash = 0.14;
+        e.hitFade = e.hitFadeDur || 0.18;
+
+        if (e.hp <= 0 && !e.dying){
+          e.dying = true;
+          e.dieT = 0;
+          e.dieDur = e.dieDur || 0.45;
+
+          if (e.isFrog) healPlayer(0.50);
+          score += 10;
+          playSfx(sfxHit);
+        }
+
         bullets.splice(bi, 1);
-        score += 10;
-        playSfx(sfxHit);
         break;
       }
+    }
+  }
+
+  // v1.52: remove enemies after their death fade completes
+  for (let i = enemies.length - 1; i >= 0; i--){
+    const e = enemies[i];
+    if (e && e.dying && (e.dieT || 0) >= (e.dieDur || 0.45)){
+      enemies.splice(i, 1);
     }
   }
 
@@ -2222,6 +2262,48 @@ function drawShieldRing(){
   ctx.restore();
 }
 
+
+function drawEnemySprite(e){
+  if (!e || !e.img) return;
+
+  const x = e.x - e.w/2;
+  const y = e.y - e.h/2;
+
+  // Base alpha
+  let a = 1;
+
+  // Small "fade dip" on hit (even if it survives).
+  const hf = (e.hitFade || 0);
+  const hfd = (e.hitFadeDur || 0.18);
+  if (hf > 0 && hfd > 0){
+    a *= (1 - 0.35 * Math.min(1, hf / hfd));
+  }
+
+  // Full fade-out on death.
+  if (e.dying){
+    const p = Math.min(1, (e.dieT || 0) / (e.dieDur || 0.45));
+    a *= (1 - p);
+  }
+
+  if (a <= 0.001) return;
+
+  ctx.save();
+  ctx.globalAlpha = a;
+
+  // Draw sprite
+  ctx.drawImage(e.img, x, y, e.w, e.h);
+
+  // Flash red on damage (and briefly on death start).
+  const flashT = (e.hitFlash || 0) > 0;
+  if (flashT){
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.fillStyle = "rgba(255,0,0,0.65)";
+    ctx.fillRect(x, y, e.w, e.h);
+  }
+
+  ctx.restore();
+}
+
 function draw(){
   drawStarfield();
 
@@ -2337,7 +2419,7 @@ if (gameState === STATE.PLAYING){
       ctx.stroke();
       ctx.restore();
     }
-    ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
+    drawEnemySprite(e);
   }
 
   // bullets (player)
