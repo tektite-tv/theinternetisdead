@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Bananaman Shooter v1.51</title>
+<title>Bananaman Shooter v1.52</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -232,20 +232,36 @@
   <div id="optionsMenu" class="panel" style="display:none;">
     <div class="title">OPTIONS</div>
 
+    
     <div class="optionsGrid">
       <div class="optRow">
-        <div class="optLabel"><span>Enemy Rows</span><span id="rowsVal">4</span></div>
-        <input id="rowsSlider" type="range" min="1" max="10" value="4" step="1" />
+        <div class="optLabel"><span>Starting Lives</span><span id="livesVal">3</span></div>
+        <input id="livesSlider" type="range" min="0" max="20" value="3" step="1" />
       </div>
 
       <div class="optRow">
-        <div class="optLabel"><span>Enemy Columns</span><span id="colsVal">6</span></div>
-        <input id="colsSlider" type="range" min="1" max="14" value="6" step="1" />
+        <div class="optLabel"><span>Starting Hearts</span><span id="heartsVal">4</span></div>
+        <input id="heartsSlider" type="range" min="1" max="12" value="4" step="1" />
+        <div class="hint">Hearts = max hits per life. More hearts = smaller damage per hit.</div>
       </div>
 
       <div class="optRow">
-        <div class="optLabel"><span>Total Enemies</span><span id="totalVal">24</span></div>
-        <div class="hint">Rows × Columns. More enemies = more chaos.</div>
+        <div class="optLabel"><span>Starting Shields</span><span id="shieldsVal">0</span></div>
+        <input id="shieldsSlider" type="range" min="0" max="10" value="0" step="1" />
+        <div class="hint">Shields act like extra one-hit armor pips (🛡️) next to your hearts.</div>
+      </div>
+
+      <div class="optRow">
+        <div class="optLabel"><span>Starting Bombs</span><span id="bombsVal">0</span></div>
+        <input id="bombsSlider" type="range" min="0" max="20" value="0" step="1" />
+      </div>
+
+      <div class="optRow" style="gap:10px;">
+        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
+          <input id="infiniteToggle" type="checkbox" style="transform:scale(1.2);" />
+          <span>Infinite (no damage, no resource consumption)</span>
+        </label>
+        <div class="hint">For testing, chaos, or avoiding consequences. Pick one.</div>
       </div>
     </div>
 
@@ -435,6 +451,8 @@ const overlay = document.getElementById("overlay");
 const livesSlot = document.getElementById("livesSlot");
 const livesText = document.getElementById("livesText");
 const powerupSlot = document.getElementById("powerupSlot");
+const powerupHint = document.getElementById("powerupHint");
+;
 const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 
@@ -547,7 +565,8 @@ const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
 let lives = 0; // (deprecated) replaced by health bar system
 let health = 1.0; // 0..1 (4 hits -> 0)
-const HIT_DAMAGE = 0.25; // 25% per hit (4 hits = one life)
+let MAX_HEARTS = 4; // v1.52: configurable hearts per life
+let HIT_DAMAGE = 0.25; // 25% per hit (4 hearts = one life)
 
 // =======================
 // Dragon Bomb-Kill Armor (v1.51)
@@ -556,6 +575,7 @@ const HIT_DAMAGE = 0.25; // 25% per hit (4 hits = one life)
 // =======================
 let bonusArmor = 0;              // 0 or 0.25
 let bonusArmorBrokenT = 0;       // seconds remaining to show ❌
+let shieldPips = 0;            // v1.52: extra one-hit armor pips
 let isDead = false;
 let deathTimer = 0;
 let deathGameOver = false;
@@ -580,8 +600,9 @@ function getStageInfo(wave){
 // v1.51: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
 let formationCols = 1;
 let formationRows = 1;
-
-
+// v1.52: debug-only numbers shown in the HUD overlay
+let ENEMY_COLS = formationCols;
+let ENEMY_ROWS = formationRows;
 // v1.51: wave banner (big text popup)
 let waveBanner = { text:"", t:0 };
 function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; }
@@ -592,7 +613,8 @@ let gameState = STATE.MENU;
 // Powerup state (v1.51)
 let ufo = null;
 let bomb = null;
-let hasBomb = false;
+let bombsCount = 0;
+let infiniteModeActive = false;
 
 
 /* =======================
@@ -665,7 +687,7 @@ function updateUFO(dt){
     ufo.fade += dt;
     if (ufo.fade >= 0.55){
       ufo = null;
-      hasBomb = true;
+      bombsCount += 1;
       powerupSlot.style.display = "flex";
     }
     return;
@@ -732,10 +754,10 @@ function drawUFO(){
 
 function dropBomb(){
   if (isPaused) return;
-  if (!hasBomb) return;
+  if (!infiniteModeActive && bombsCount <= 0) return;
   if (bomb) return; // only one active
 
-  hasBomb = false;
+  bombsCount = 0;
   powerupSlot.style.display = "none";
 
   // v1.51: Bomb is now a short-range "shot" that travels a bit in the aim direction.
@@ -1068,28 +1090,39 @@ const btnOptions = document.getElementById("btnOptions");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 
-const rowsSlider = document.getElementById("rowsSlider");
-const colsSlider = document.getElementById("colsSlider");
-const rowsVal = document.getElementById("rowsVal");
-const colsVal = document.getElementById("colsVal");
-const totalVal = document.getElementById("totalVal");
+  // =======================
+  // Start Options (v1.52)
+  // =======================
+  const livesSlider = document.getElementById("livesSlider");
+  const heartsSlider = document.getElementById("heartsSlider");
+  const shieldsSlider = document.getElementById("shieldsSlider");
+  const bombsSlider = document.getElementById("bombsSlider");
+  const infiniteToggle = document.getElementById("infiniteToggle");
 
-let ENEMY_ROWS = parseInt(rowsSlider.value, 10);
-let ENEMY_COLS = parseInt(colsSlider.value, 10);
+  const livesVal = document.getElementById("livesVal");
+  const heartsVal = document.getElementById("heartsVal");
+  const shieldsVal = document.getElementById("shieldsVal");
+  const bombsVal = document.getElementById("bombsVal");
 
-function syncOptionsLabels(){
-  rowsVal.textContent = rowsSlider.value;
-  colsVal.textContent = colsSlider.value;
+  // Saved settings (persist for the session)
+  let START_LIVES = 3;
+  let START_HEARTS = 4;
+  let START_SHIELDS = 0;
+  let START_BOMBS = 0;
+  let INFINITE_MODE = false;
 
-  // v1.51: sliders still display a grid size, but waves now control actual spawn count (1, 2, 4, 8...)
-  const sliderTotal = (parseInt(rowsSlider.value,10) * parseInt(colsSlider.value,10));
-  const waveTotal = Math.min(256, Math.pow(2, (wave - 1)));
-  totalVal.textContent = sliderTotal.toString() + " | wave spawn: " + waveTotal.toString();
-}
-rowsSlider.addEventListener("input", syncOptionsLabels);
-colsSlider.addEventListener("input", syncOptionsLabels);
-syncOptionsLabels();
+  function syncStartOptionsLabels(){
+    livesVal.textContent = livesSlider.value;
+    heartsVal.textContent = heartsSlider.value;
+    shieldsVal.textContent = shieldsSlider.value;
+    bombsVal.textContent = bombsSlider.value;
+  }
 
+  [livesSlider, heartsSlider, shieldsSlider, bombsSlider].forEach(s => {
+    s.addEventListener("input", syncStartOptionsLabels);
+  });
+  infiniteToggle.addEventListener("change", () => {});
+  syncStartOptionsLabels();
 function showMenu(){
   setPaused(false);
   deathYellPlayed = false;
@@ -1114,7 +1147,7 @@ function restartRun(){
   ensureMusicPlaying(true);
   // v1.51: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
-  hasBomb = false;
+  bombsCount = 0;
   bomb = null;
   ufo = null;
   powerupSlot.style.display = "none";
@@ -1123,7 +1156,15 @@ function restartRun(){
 function showOptions(){
   setPaused(false);
   gameState = STATE.OPTIONS;
-  // v1.51: drop shield when entering menus
+    // v1.52: populate start options UI with saved settings
+  livesSlider.value = START_LIVES;
+  heartsSlider.value = START_HEARTS;
+  shieldsSlider.value = START_SHIELDS;
+  bombsSlider.value = START_BOMBS;
+  infiniteToggle.checked = !!INFINITE_MODE;
+  syncStartOptionsLabels();
+
+// v1.51: drop shield when entering menus
   shieldHolding = false;
   stopShield(false);
 
@@ -1150,9 +1191,25 @@ function startGame(){
 
   score = 0;
 
-  // v1.51: 3 lives, each life has 4-hit (25%) health
-  lives = 3;
+  // v1.52: Apply starting settings from OPTIONS menu
+  infiniteModeActive = !!INFINITE_MODE;
+
+  lives = Math.max(0, parseInt(START_LIVES, 10) || 0);
   livesText.textContent = "x" + lives;
+
+  MAX_HEARTS = Math.max(1, parseInt(START_HEARTS, 10) || 4);
+  HIT_DAMAGE = 1 / MAX_HEARTS;
+
+  health = 1.0;
+
+  shieldPips = Math.max(0, parseInt(START_SHIELDS, 10) || 0);
+
+  bombsCount = Math.max(0, parseInt(START_BOMBS, 10) || 0);
+  powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
+  if (powerupHint){
+    if (infiniteModeActive) powerupHint.textContent = "Press Q (∞)";
+    else powerupHint.textContent = "Press Q" + (bombsCount > 1 ? (" x" + bombsCount) : "");
+  }
 
   health = 1.0;
   bonusArmor = 0;
@@ -1170,7 +1227,7 @@ function startGame(){
   enemyBullets.length = 0;
   fireCooldown = 0;
 
-  hasBomb = false;
+  bombsCount = 0;
   bomb = null;
   ufo = null;
 
@@ -1186,11 +1243,17 @@ btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 btnBack.addEventListener("click", showMenu);
 btnApply.addEventListener("click", () => {
-  ENEMY_ROWS = parseInt(rowsSlider.value, 10);
-  ENEMY_COLS = parseInt(colsSlider.value, 10);
-  resetFormation();
-  spawnEnemies();
-  });
+  // v1.52: Save start settings (lives/hearts/shields/bombs + infinite)
+  START_LIVES = parseInt(livesSlider.value, 10);
+  START_HEARTS = parseInt(heartsSlider.value, 10);
+  START_SHIELDS = parseInt(shieldsSlider.value, 10);
+  START_BOMBS = parseInt(bombsSlider.value, 10);
+  INFINITE_MODE = !!infiniteToggle.checked;
+
+  // Keep the UI labels in sync and return to the main menu.
+  syncStartOptionsLabels();
+  showMenu();
+});
 
 btnRestart.addEventListener("click", () => {
   restartRun();
@@ -1599,6 +1662,21 @@ function spawnPlayerDeath(isGameOver){
 function damagePlayer(){
   if (player.invuln > 0 || isDead) return;
 
+  // v1.52: Infinite mode means consequences are cancelled.
+  if (infiniteModeActive){
+    playSfx(sfxHit);
+    player.invuln = 0.15;
+    return;
+  }
+
+  // v1.52: shield pips absorb one hit (before health)
+  if (shieldPips > 0){
+    shieldPips = Math.max(0, shieldPips - 1);
+    playSfx(sfxHit);
+    player.invuln = 0.35;
+    return;
+  }
+
   // v1.51: bonus armor absorbs one hit
   if (bonusArmor > 0){
     breakBonusArmor();
@@ -1607,7 +1685,7 @@ function damagePlayer(){
     return;
   }
 
-  // Each hit drains 25% health (4 hits = one life).
+  // Each hit drains HIT_DAMAGE health (MAX_HEARTS hearts per life).
   health = Math.max(0, health - HIT_DAMAGE);
   player.invuln = 1.00;
   playSfx(sfxOof);
@@ -2262,9 +2340,12 @@ if (gameState === STATE.PLAYING){
     ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
     ctx.fill();
   }
+  // v1.52: keep debug grid numbers aligned with current formation
+  ENEMY_ROWS = formationRows;
+  ENEMY_COLS = formationCols;
 
   overlay.innerHTML =
-    `Bananaman Shooter v1.51<br>` +
+    `Bananaman Shooter v1.52<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
@@ -2277,7 +2358,7 @@ if (gameState === STATE.PLAYING){
 
   // v1.51: corner HUD updates
   livesText.textContent = "x" + lives;
-  powerupSlot.style.display = hasBomb ? "flex" : "none";
+  powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
   if (gameState === STATE.PLAYING){
     const info = getStageInfo(wave);
     const clampedWave = Math.min(wave, info.end);
@@ -2292,13 +2373,25 @@ if (gameState === STATE.PLAYING){
 let lastT = performance.now();
 
 function updateHearts(){
-  // 4 hits = 0 health, each hit is 0.25
-  const hearts = Math.max(0, Math.min(4, Math.ceil(health / 0.25)));
+  // v1.52: Hearts are configurable (MAX_HEARTS), and shields/bomb-armor show here too.
+  const maxH = Math.max(1, MAX_HEARTS|0);
+  const dmg = Math.max(0.0001, HIT_DAMAGE || (1/maxH));
+
+  // Convert 0..1 health into "filled hearts" count.
+  const hearts = Math.max(0, Math.min(maxH, Math.ceil(health / dmg)));
+
   const full = "❤️";
   const empty = "❌";
   let out = "";
-  for (let i = 0; i < 4; i++){
+  for (let i = 0; i < maxH; i++){
     out += (i < hearts ? full : empty) + " ";
+  }
+
+  // v1.52: shield pips (one-hit armor) next to hearts
+  if (shieldPips > 0){
+    const show = Math.min(10, shieldPips);
+    out += "  " + "🛡️ ".repeat(show);
+    if (shieldPips > 10) out += "x" + shieldPips + " ";
   }
 
   // v1.51: bonus armor indicator next to hearts
@@ -2306,6 +2399,9 @@ function updateHearts(){
   if (bonusArmor > 0) armorIcon = "🛡️";
   else if (bonusArmorBrokenT > 0) armorIcon = "❌";
   if (armorIcon) out += "  " + armorIcon;
+
+  // v1.52: infinite marker so you remember you're cheating
+  if (infiniteModeActive) out += "  ♾️";
 
   const el = document.getElementById("heartsHud");
   if (el) el.textContent = out.trim();
