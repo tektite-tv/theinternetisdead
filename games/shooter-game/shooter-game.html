@@ -648,30 +648,6 @@ function grantBonusArmor(){
   bonusArmorBrokenT = 0;
 }
 
-function killEnemy(e, fromBomb=false){
-  // v1.55: enemies don't vanish instantly. They flicker red and fade out.
-  if (!e) return;
-
-  // Start dying animation if not already.
-  if (!e.dying){
-    e.dying = true;
-    e.deathT = 0;
-  }
-
-  // Make sure we only grant rewards once.
-  if (e.killedProcessed) return;
-  e.killedProcessed = true;
-
-  // Only bomb-kills on dragon.gif grant armor (per existing design).
-  if (fromBomb && isDragonEnemy(e)) grantBonusArmor();
-
-  if (e.isFrog) healPlayer(0.50);
-
-  score += 10;
-  playSfx(sfxHit);
-}
-
-
 function breakBonusArmor(){
   bonusArmor = 0;
   bonusArmorBrokenT = 1.8;
@@ -915,7 +891,11 @@ function updateBomb(dt){
           e.hp -= BOMB_DAMAGE;
 
           if (e.hp <= 0){
-            killEnemy(e, true);
+            if (isDragonEnemy(e)) grantBonusArmor();
+            enemies.splice(i, 1);
+            if (e.isFrog) healPlayer(0.50);
+            score += 10;
+            playSfx(sfxHit);
           }
         } else {
           // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
@@ -1525,11 +1505,7 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
     enemies.push({ row:r, col:c, baseY, img, isFrog, size:baseSize, hp:1, x:0,y:0,w:0,h:0,
       fx:0, fy:0, // formation-space position (computed each frame)
       swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
-      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop,
-      // v1.55: enemy death animation (flicker red + fade)
-      dying:false,
-      deathT:0,
-      killedProcessed:false
+      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
     });
   }
 }
@@ -1595,13 +1571,7 @@ function enemyTryShoot(dt){
   if (!enemies.length) return;
 
   // Shoot from a random alive enemy (classic arcade chaos).
-  // v1.55: skip dying enemies so they don't fire while fading out.
-  let e = null;
-  for (let t = 0; t < 12; t++){
-    const cand = enemies[Math.floor(Math.random() * enemies.length)];
-    if (cand && !cand.dying){ e = cand; break; }
-  }
-  if (!e) return;
+  const e = enemies[Math.floor(Math.random() * enemies.length)];
 
   // Straight-line shots, but slightly aimed (vx is constant, so still a straight path).
   const dx = (player.x - e.x);
@@ -1626,7 +1596,6 @@ let swoopTimer = 0;
 function tryStartSwoop(dt){
   // tick per-enemy cooldowns
   for (const e of enemies){
-    if (e.dying) continue;
     if (e.swoopCooldown > 0) e.swoopCooldown = Math.max(0, e.swoopCooldown - dt);
   }
 
@@ -1974,17 +1943,6 @@ function update(dt){
   // v1.51: attempt to launch swoop attackers
   tryStartSwoop(dt);
 
-  // v1.55: enemy death timer (flicker red + fade out)
-  for (let i = enemies.length - 1; i >= 0; i--){
-    const e = enemies[i];
-    if (e && e.dying){
-      e.deathT = (typeof e.deathT === "number" ? e.deathT : 0) + dt * 3.2;
-      if (e.deathT >= 1){
-        enemies.splice(i, 1);
-      }
-    }
-  }
-
   // compute enemy positions
   const spacingY = getSpacingY() * (1 + breath * 0.15);
   const formationHeight = (formationRows - 1) * spacingY;
@@ -2104,12 +2062,14 @@ if (baseY > maxBaseY){
       const e = enemies[ei];
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
-      if (e.dying) continue;
       if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
-        killEnemy(e, false);
+        enemies.splice(ei, 1);
+        if (e.isFrog) healPlayer(0.50);
         // v1.51: compactEnemyGrid() disabled (it made the game too easy by collapsing targets into one firing lane).
         // compactEnemyGrid();
         bullets.splice(bi, 1);
+        score += 10;
+        playSfx(sfxHit);
         break;
       }
     }
@@ -2367,7 +2327,7 @@ if (gameState === STATE.PLAYING){
       const pulse = 1 + 0.12 * Math.sin(time * 6.0);
       const r = Math.max(e.w, e.h) * 0.70 * pulse;
       ctx.save();
-      ctx.globalAlpha = 0.85 * (e.dying ? Math.max(0, 1 - (e.deathT || 0)) : 1);
+      ctx.globalAlpha = 0.85;
       ctx.fillStyle = "rgba(0,255,0,0.10)";
       ctx.strokeStyle = "rgba(0,255,0,0.45)";
       ctx.lineWidth = 3;
@@ -2377,23 +2337,7 @@ if (gameState === STATE.PLAYING){
       ctx.stroke();
       ctx.restore();
     }
-    // v1.55: death animation (flicker red + fade out)
-    const deathAlpha = e.dying ? Math.max(0, 1 - (e.deathT || 0)) : 1;
-
-    ctx.save();
-    ctx.globalAlpha = deathAlpha;
-
-    // Draw sprite
     ctx.drawImage(e.img, e.x - e.w/2, e.y - e.h/2, e.w, e.h);
-
-    // Red flicker overlay while dying
-    if (e.dying && (Math.floor(time * 24) % 2 === 0)){
-      ctx.globalCompositeOperation = "source-atop";
-      ctx.fillStyle = "rgba(255,0,0,0.65)";
-      ctx.fillRect(e.x - e.w/2, e.y - e.h/2, e.w, e.h);
-      ctx.globalCompositeOperation = "source-over";
-    }
-    ctx.restore();
   }
 
   // bullets (player)
