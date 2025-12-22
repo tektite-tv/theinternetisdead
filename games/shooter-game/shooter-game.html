@@ -2191,12 +2191,13 @@ if (baseY > maxBaseY){
   // Enemy hit flash + death fade timers (v1.53)
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
-    if (e.dying) continue;
 
+    // Hit flash timer
     if (e.hitFlash > 0){
       e.hitFlash = Math.max(0, e.hitFlash - dt);
     }
 
+    // Death fade timer
     if (e.dying){
       // Keep the corpse where it died while fading out.
       if (typeof e.lockX === "number") e.x = e.lockX;
@@ -2212,6 +2213,7 @@ if (baseY > maxBaseY){
       }
     }
   }
+
 
   // wave clear
   if (enemies.length === 0){
@@ -2408,7 +2410,7 @@ if (gameState === STATE.PLAYING){
     if (e.hitFlash > 0){
       const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
       ctx.globalCompositeOperation = "source-atop";
-      ctx.fillStyle = `rgba(255,0,0,${0.85 * p})`;
+      ctx.fillStyle = `rgba(255,0,0,${0.28 * p})`;
       ctx.fillRect(ex, ey, e.w, e.h);
     }
     ctx.restore();
