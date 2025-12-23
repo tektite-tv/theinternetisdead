@@ -2931,19 +2931,3 @@ z-index:9999;
 </body>
 
 </html>
-
-
-function drawWaveHUD(ctx){
-  if (gameState !== STATE.PLAYING) return;
-  const lab = getWaveLabel(wave);
-  ctx.save();
-  ctx.font = "bold 20px monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = lab.color;
-  // subtle shadow for readability
-  ctx.shadowColor = "rgba(0,0,0,0.45)";
-  ctx.shadowBlur = 6;
-  ctx.fillText(lab.text, canvas.width/2, 10);
-  ctx.restore();
-}
