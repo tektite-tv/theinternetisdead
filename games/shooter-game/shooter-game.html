@@ -416,6 +416,48 @@ musicBg.loop = true;
 musicBg.preload = "auto";
 musicBg.volume = 0.6;
 
+
+// =======================
+// Beat Analysis (music-reactive visuals)
+// =======================
+let audioCtxFx = null;
+let analyserFx = null;
+let freqDataFx = null;
+let sourceNodeFx = null;
+
+function setupBeatAnalyser(){
+  if (audioCtxFx) return;
+  try{
+    audioCtxFx = new (window.AudioContext || window.webkitAudioContext)();
+    analyserFx = audioCtxFx.createAnalyser();
+    analyserFx.fftSize = 256;
+    freqDataFx = new Uint8Array(analyserFx.frequencyBinCount);
+
+    // Connect the <audio> element to the analyser.
+    sourceNodeFx = audioCtxFx.createMediaElementSource(musicBg);
+    sourceNodeFx.connect(analyserFx);
+    analyserFx.connect(audioCtxFx.destination);
+  }catch(e){
+    // If the browser refuses (rare, but humans love edge cases), we just fall back to a fake beat.
+    audioCtxFx = null;
+    analyserFx = null;
+    freqDataFx = null;
+    sourceNodeFx = null;
+  }
+}
+
+function getBeat(){
+  // Returns 0..1
+  if (!analyserFx || !freqDataFx){
+    // Fallback: gentle pulse so the effect still "does something"
+    return 0.35 + 0.25 * Math.sin(time * 2.1);
+  }
+  analyserFx.getByteFrequencyData(freqDataFx);
+  let sum = 0;
+  for (let i = 0; i < freqDataFx.length; i++) sum += freqDataFx[i];
+  return (sum / freqDataFx.length) / 255;
+}
+
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
@@ -504,6 +546,20 @@ function getPlayerFireCooldown(){
 ======================= */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+
+
+// =======================
+// Post FX (Chromatic + Hue Shift)
+// - Applies ONLY to the game canvas (not DOM UI).
+// - Driven by beat intensity from the background music.
+// =======================
+const fxCanvas = document.createElement("canvas");
+const fxCtx = fxCanvas.getContext("2d");
+
+function resizeFX(){
+  fxCanvas.width = canvas.width;
+  fxCanvas.height = canvas.height;
+}
 const overlay = document.getElementById("overlay");
 const livesSlot = document.getElementById("livesSlot");
 const livesText = document.getElementById("livesText");
@@ -1181,6 +1237,9 @@ function resize(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
+  // v1.55: keep post-fx buffer matched to the main canvas
+  try{ resizeFX(); }catch(e){}
+
   // v1.54.3+: only bottom-anchor in menus; gameplay keeps spawn position
   if (gameState !== STATE.PLAYING){
     player.y = getPlayerAlignedY();
@@ -1227,6 +1286,9 @@ let audioUnlocked = false;
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
+  // v1.55: ensure audio context is live so beat-reactive FX can read the music.
+  setupBeatAnalyser();
+  try{ if (audioCtxFx && audioCtxFx.state === "suspended") audioCtxFx.resume(); }catch(e){}
   try{
     sfxHit.muted = true;
     sfxHit.play().then(() => { sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false; }).catch(()=>{ sfxHit.muted = false; });
@@ -2905,11 +2967,52 @@ function updateHearts(){
   if (el) el.textContent = out.trim();
 }
 
+
+// =======================
+// Post FX application
+// =======================
+function applyChromaticAberration(beat){
+  const w = canvas.width, h = canvas.height;
+  if (!w || !h) return;
+
+  // Keep buffers matched even if something weird happened.
+  if (fxCanvas.width !== w || fxCanvas.height !== h) resizeFX();
+
+  fxCtx.clearRect(0, 0, w, h);
+
+  const shift = 4 + beat * 18;                  // px
+  const hue = (time * 42 + beat * 520) % 360;   // deg
+
+  // Base layer: hue shift the whole frame slightly
+  fxCtx.filter = `hue-rotate(${hue}deg)`;
+  fxCtx.drawImage(canvas, 0, 0);
+
+  // Channel offsets: "screen" blend gives you that neon RGB split
+  fxCtx.globalCompositeOperation = "screen";
+
+  fxCtx.filter = `hue-rotate(${hue + 70}deg)`;
+  fxCtx.drawImage(canvas, -shift, 0);
+
+  fxCtx.filter = `hue-rotate(${hue + 150}deg)`;
+  fxCtx.drawImage(canvas, shift, 0);
+
+  // Reset composite state
+  fxCtx.globalCompositeOperation = "source-over";
+  fxCtx.filter = "none";
+
+  // Copy back to the real canvas
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(fxCanvas, 0, 0);
+}
+
 function loop(t){
   const dt = Math.min(0.033, (t - lastT) / 1000);
   lastT = t;
   update(dt);
   draw();
+  // v1.55: full-screen post FX (canvas-only) driven by music beat
+  const __beat = getBeat();
+  applyChromaticAberration(__beat);
   updateHearts();
   requestAnimationFrame(loop);
 }
@@ -2928,6 +3031,7 @@ aimAngleSmoothed = -Math.PI/2;
 
 resetStarfield();
 resize(); // also resets starfield + anchors player
+setupBeatAnalyser();
 showMenu();
 powerupSlot.style.display = "none";
 spawnEnemies();
