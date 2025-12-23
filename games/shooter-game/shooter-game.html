@@ -295,7 +295,16 @@
           <span>Infinite (no damage, no resource consumption)</span>
         </label>
         <div class="hint">For testing, chaos, or avoiding consequences. Pick one.</div>
+      
+      <div class="optRow" style="gap:10px;">
+        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
+          <input id="bossModeCheckbox" type="checkbox" style="transform:scale(1.2);" />
+          <span>Boss Mode (start on Wave 11)</span>
+        </label>
+        <div class="hint">Starts you on the Wave 11 boss fight for practice/testing.</div>
       </div>
+
+</div>
     </div>
 
     <div class="btnRow" style="margin-top:14px;">
@@ -1172,6 +1181,7 @@ const btnApply = document.getElementById("btnApply");
   const shieldsSlider = document.getElementById("shieldsSlider");
   const bombsSlider = document.getElementById("bombsSlider");
   const infiniteToggle = document.getElementById("infiniteToggle");
+  const bossModeCheckbox = document.getElementById("bossModeCheckbox");
 
   const livesVal = document.getElementById("livesVal");
   const heartsVal = document.getElementById("heartsVal");
@@ -1184,6 +1194,7 @@ const btnApply = document.getElementById("btnApply");
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
   let INFINITE_MODE = false;
+  let START_WAVE = 1; // 1 normally, 11 when Boss Mode is enabled
 
   function syncStartOptionsLabels(){
     livesVal.textContent = livesSlider.value;
@@ -1225,8 +1236,7 @@ function restartRun(){
   bomb = null;
   ufo = null;
   powerupSlot.style.display = "none";
-  applyBossModeFromOptions();
-startGame();
+  startGame();
 }
 function showOptions(){
   setPaused(false);
@@ -1237,6 +1247,7 @@ function showOptions(){
   shieldsSlider.value = START_SHIELDS;
   bombsSlider.value = START_BOMBS;
   infiniteToggle.checked = !!INFINITE_MODE;
+  if (bossModeCheckbox) bossModeCheckbox.checked = (START_WAVE === 11);
   syncStartOptionsLabels();
 
 // v1.54: drop shield when entering menus
@@ -1303,10 +1314,9 @@ function startGame(){
   deathYellPlayed = false;
   deathParticles.length = 0;
 
-  wave = 1;
-  showWaveBanner(1);
-
-  bullets.length = 0;
+  wave = START_WAVE;
+  showWaveBanner(wave);
+bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
 
@@ -1332,6 +1342,7 @@ btnApply.addEventListener("click", () => {
   START_SHIELDS = parseInt(shieldsSlider.value, 10);
   START_BOMBS = parseInt(bombsSlider.value, 10);
   INFINITE_MODE = !!infiniteToggle.checked;
+  START_WAVE = (bossModeCheckbox && bossModeCheckbox.checked) ? 11 : 1;
 
   // Keep the UI labels in sync and return to the main menu.
   syncStartOptionsLabels();
