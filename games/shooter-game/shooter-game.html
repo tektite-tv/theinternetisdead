@@ -649,11 +649,28 @@ let formationRows = 1;
 let ENEMY_COLS = formationCols;
 let ENEMY_ROWS = formationRows;
 // v1.54: wave banner (big text popup)
-let waveBanner = { text:"", t:0 };
-function showWaveBanner(n){ waveBanner.text = "WAVE " + n; waveBanner.t = 1.35; }
+let waveBanner = { text:"", t:0, color:"#00ff66" };
 
-const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing" };
+function getWaveLabel(n){
+  // Wave label rules:
+  // - Waves 1-10: "Wave N"
+  // - Wave 11: "Boss Mode" (red)
+  // - Waves 12-21: "INSANITY WAVE: K" where K = n-11
+  if (n === 11) return { text:"Boss Mode", color:"#ff3333" };
+  if (n >= 12 && n <= 21) return { text:"INSANITY WAVE: " + (n - 11), color:"#ffffff" };
+  return { text:"Wave " + n, color:"#ffffff" };
+}
+
+function showWaveBanner(n){
+  const lab = getWaveLabel(n);
+  waveBanner.text = lab.text;
+  waveBanner.color = lab.color;
+  waveBanner.t = 1.35;
+}
+
+const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
+let gameWon = false;
 
 // Powerup state (v1.54)
 let ufo = null;
@@ -2582,6 +2599,13 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
 
   // wave clear
   if (enemies.length === 0){
+    // If player beat INSANITY WAVE: 10 (wave 21), show a win screen.
+    if (wave === 21){
+      gameWon = true;
+      gameState = STATE.WIN;
+      return;
+    }
+
     wave += 1;
     showWaveBanner(wave);
 
@@ -2673,10 +2697,10 @@ function draw(){
     ctx.font = "bold 48px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#00ff66";
+    ctx.fillStyle = waveBanner.color || "#00ff66";
     ctx.shadowColor = "rgba(0,255,102,0.35)";
     ctx.shadowBlur = 12;
-    ctx.fillText(waveBanner.text, canvas.width/2, canvas.height*0.25);
+    ctx.fillText(waveBanner.text, canvas.width/2, Math.max(60, canvas.height*0.12));
     ctx.restore();
   }
 
@@ -2907,3 +2931,19 @@ z-index:9999;
 </body>
 
 </html>
+
+
+function drawWaveHUD(ctx){
+  if (gameState !== STATE.PLAYING) return;
+  const lab = getWaveLabel(wave);
+  ctx.save();
+  ctx.font = "bold 20px monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = lab.color;
+  // subtle shadow for readability
+  ctx.shadowColor = "rgba(0,0,0,0.45)";
+  ctx.shadowBlur = 6;
+  ctx.fillText(lab.text, canvas.width/2, 10);
+  ctx.restore();
+}
