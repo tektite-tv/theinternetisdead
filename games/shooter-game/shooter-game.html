@@ -779,6 +779,32 @@ function isDragonEnemy(e){
 }
 
 // =======================
+// Dragon Marker (visual)
+// - Draw an upside-down red equilateral triangle around any enemy using dragon.gif
+// =======================
+function drawDragonTriangle(cx, cy, r, alpha=0.85){
+  // Inverted equilateral triangle: one vertex pointing down.
+  // r is the distance from center to each vertex (circumradius).
+  const a0 = Math.PI / 2;              // down
+  const a1 = a0 + (Math.PI * 2 / 3);   // up-left
+  const a2 = a0 + (Math.PI * 4 / 3);   // up-right
+
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.strokeStyle = `rgba(255,0,0,${alpha})`;
+  ctx.lineWidth = Math.max(2, r * 0.08);
+  ctx.beginPath();
+  ctx.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+  ctx.lineTo(cx + Math.cos(a1) * r, cy + Math.sin(a1) * r);
+  ctx.lineTo(cx + Math.cos(a2) * r, cy + Math.sin(a2) * r);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+
+
+// =======================
 // Enemy hit feedback (v1.54)
 // - flash red briefly when damaged
 // - fade out when killed (instead of instantly vanishing)
@@ -2898,6 +2924,13 @@ if (gameState === STATE.PLAYING){
       ctx.fillStyle = `rgba(255,0,0,${0.28 * p})`;
       ctx.fillRect(ex, ey, e.w, e.h);
     }
+
+    // Dragon marker: upside-down red equilateral triangle (visual only)
+    if (typeof isDragonEnemy === "function" && isDragonEnemy(e)){
+      const rr = Math.max(e.w, e.h) * 0.55;
+      drawDragonTriangle(e.x, e.y, rr, 0.85);
+    }
+
     ctx.restore();
   }
 
