@@ -425,6 +425,9 @@ let analyserFx = null;
 let freqDataFx = null;
 let sourceNodeFx = null;
 
+// Smoothed beat value so visuals don\'t strobe
+let beatSmooth = 0;
+
 function setupBeatAnalyser(){
   if (audioCtxFx) return;
   try{
@@ -447,15 +450,31 @@ function setupBeatAnalyser(){
 }
 
 function getBeat(){
-  // Returns 0..1
+  // Returns a SMOOTHED 0..1 value (less chaos, more vibe).
+  let raw = 0;
   if (!analyserFx || !freqDataFx){
     // Fallback: gentle pulse so the effect still "does something"
-    return 0.35 + 0.25 * Math.sin(time * 2.1);
+    raw = 0.30 + 0.12 * Math.sin(time * 1.4);
+  } else {
+    analyserFx.getByteFrequencyData(freqDataFx);
+
+    // Average energy across bins (simple + cheap)
+    let sum = 0;
+    for (let i = 0; i < freqDataFx.length; i++) sum += freqDataFx[i];
+    raw = (sum / freqDataFx.length) / 255;
   }
-  analyserFx.getByteFrequencyData(freqDataFx);
-  let sum = 0;
-  for (let i = 0; i < freqDataFx.length; i++) sum += freqDataFx[i];
-  return (sum / freqDataFx.length) / 255;
+
+  // Clamp + shape: reduce sensitivity to tiny noise, emphasize musical peaks
+  raw = Math.max(0, Math.min(1, raw));
+  raw = Math.pow(raw, 1.25);
+
+  // Smooth: fast attack, slower release
+  const attack = 0.22;   // higher = quicker response
+  const release = 0.08;  // lower = calmer
+  const k = (raw > beatSmooth) ? attack : release;
+  beatSmooth += (raw - beatSmooth) * k;
+
+  return beatSmooth;
 }
 
 // Death yell (plays once when GAME OVER screen appears)
@@ -2980,23 +2999,29 @@ function applyChromaticAberration(beat){
 
   fxCtx.clearRect(0, 0, w, h);
 
-  const shift = 4 + beat * 18;                  // px
-  const hue = (time * 42 + beat * 520) % 360;   // deg
+  // Less chaos:
+  // - tiny channel separation
+  // - slow hue drift
+  // - beat adds a gentle push instead of going full disco
+  const shift = 1.2 + beat * 2.8;                // px
+  const hue = (time * 10 + beat * 55) % 360;     // deg
 
-  // Base layer: hue shift the whole frame slightly
+  // Base layer: very mild hue shift
   fxCtx.filter = `hue-rotate(${hue}deg)`;
   fxCtx.drawImage(canvas, 0, 0);
 
-  // Channel offsets: "screen" blend gives you that neon RGB split
+  // Channel offsets: subtle "screen" blend for a light RGB split
   fxCtx.globalCompositeOperation = "screen";
+  fxCtx.globalAlpha = 0.55 + beat * 0.20;
 
-  fxCtx.filter = `hue-rotate(${hue + 70}deg)`;
+  fxCtx.filter = `hue-rotate(${(hue + 18) % 360}deg)`;
   fxCtx.drawImage(canvas, -shift, 0);
 
-  fxCtx.filter = `hue-rotate(${hue + 150}deg)`;
+  fxCtx.filter = `hue-rotate(${(hue - 18 + 360) % 360}deg)`;
   fxCtx.drawImage(canvas, shift, 0);
 
   // Reset composite state
+  fxCtx.globalAlpha = 1;
   fxCtx.globalCompositeOperation = "source-over";
   fxCtx.filter = "none";
 
