@@ -600,12 +600,14 @@ function shieldApplyDamage(dmg){
 
 let time = 0;
 let score = 0;
+  frogKills = 0;
 // v1.54: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
 const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
-let lives = 0; // (deprecated) replaced by health bar system
+let lives = 0; // extra lives (decremented when health hits 0)
+let frogKills = 0; // counts frog kills; every 3 frogs awards +1 life
 let health = 1.0; // 0..1 (4 hits -> 0)
 let MAX_HEARTS = 4; // v1.54: configurable hearts per life
 let HIT_DAMAGE = 0.25; // 25% per hit (4 hearts = one life)
@@ -684,6 +686,30 @@ function enemyMarkHit(e){
   e.hitFlash = ENEMY_HIT_FLASH_SECS;
 }
 
+
+function drawFloatingTexts(ctx){
+  if (!window._floatTexts || window._floatTexts.length === 0) return;
+  ctx.save();
+  ctx.font = "16px monospace";
+  ctx.textAlign = "center";
+  for (let i = window._floatTexts.length - 1; i >= 0; i--){
+    const f = window._floatTexts[i];
+    f.t += (window._dt || 0.016);
+    const a = Math.max(0, 1 - (f.t / f.ttl));
+    const yy = f.y - (f.t * 28);
+    ctx.globalAlpha = a;
+    ctx.fillText(f.text, f.x, yy);
+    if (f.t >= f.ttl) window._floatTexts.splice(i, 1);
+  }
+  ctx.restore();
+}
+
+function spawnFloatingText(x, y, text, ttl=0.9){
+  // Lightweight popup text. Stored in particles array if available, otherwise ignored gracefully.
+  if (!window._floatTexts) window._floatTexts = [];
+  window._floatTexts.push({x, y, text, t:0, ttl});
+}
+
 function enemyKill(e, source){
   if (!e || e.dying) return;
   e.dying = true;
@@ -699,8 +725,21 @@ function enemyKill(e, source){
   if (!e._killAwarded){
     e._killAwarded = true;
     if (source === "bomb" && isDragonEnemy(e)) grantBonusArmor();
-    if (e.isFrog) healPlayer(0.50);
-    score += 10;
+
+    if (e.isFrog){
+      healPlayer(0.50);
+
+      // Extra life system: every 3 frog kills, award +1 life.
+      frogKills += 1;
+      if (frogKills % 3 === 0){
+        lives += 1;
+        livesText.textContent = "x" + lives;
+        // Optional tiny feedback burst (kept simple and non-breaking).
+        spawnFloatingText(e.x, e.y - 18, "+1 LIFE", 0.85);
+        playSfx(sfxPowerup || sfxHit);
+      }
+    }
+score += 10;
     playSfx(sfxHit);
   }
 }
@@ -1301,6 +1340,7 @@ function startGame(){
   powerupSlot.style.display = "none";
 
   score = 0;
+  frogKills = 0;
 
   // v1.54: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
