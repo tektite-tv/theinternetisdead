@@ -1585,10 +1585,13 @@ function spawnBossWave11(additive=false){
   const baseSize = Math.max(26, Math.min(62, Math.min(zoneW/12, zoneH/7)));
 
   // Boss: noticeably bigger than everything else (requested).
-  const bossSize = Math.max(baseSize * 3.0, 92);
+  const bossSize = Math.max(baseSize * 4.0, 130);
 
   const bossImg = new Image();
   bossImg.src = GIF_BASE + "180px-NO_U_cycle.gif";
+
+  // Shared HP for core + orbiters (requested).
+  const BOSS_HP = 28;
 
   // Core boss: uses normal enemy damage system, but has more HP.
   const boss = {
@@ -1596,7 +1599,7 @@ function spawnBossWave11(additive=false){
     img: bossImg,
     isFrog:false,
     size: bossSize,
-    hp: 28,
+    hp: BOSS_HP,
     hitFlash:0,
     dying:false,
     fade:1,
@@ -1636,7 +1639,7 @@ function spawnBossWave11(additive=false){
       img: bossImg,
       isFrog:false,
       size: shieldSize,
-      hp: 3,
+      hp: BOSS_HP,
       hitFlash:0,
       dying:false,
       fade:1,
@@ -1650,7 +1653,10 @@ function spawnBossWave11(additive=false){
       isBossShield:true,
       bossWave:true,
       bossRef: boss,
-      orbitIndex: i
+      orbitIndex: i,
+      // Shield shooting (predictable pattern)
+      shootInterval: 1.2,
+      shootTimer: i * 0.25
     };
     enemies.push(shield);
   }
@@ -2213,9 +2219,8 @@ if (baseY > maxBaseY){
 
 // Boss wave controller: sporadic movement + orbiting shield ring.
 // We compute boss.x/y directly, then force shields to orbit it.
-let bossCore = null;
-if (wave === 11){
-  bossCore = enemies.find(x => x && x.isBossCore && !x.dying);
+let bossCore = enemies.find(x => x && x.isBossCore && !x.dying);
+if (bossCore){
   if (bossCore){
     // Update sporadic target selection
     bossCore.moveTimer -= dt;
@@ -2257,6 +2262,28 @@ if (wave === 11){
     // Orbit angle
     bossCore.orbitAngle += dt * bossCore.orbitSpeed;
 
+    // Shield firing pattern: each orbiter shoots on a fixed cadence with a fixed spread.
+    // This makes a predictable 'screen sweep' pattern rather than random snipes.
+    for (const s of enemies){
+      if (!s || s.dying) continue;
+      if (!s.isBossShield || s.bossRef !== bossCore) continue;
+      if (typeof s.shootTimer !== 'number') s.shootTimer = 0;
+      s.shootTimer -= dt;
+      if (s.shootTimer <= 0){
+        // Fixed vx by index: [-3, -1, 1, 3] (scaled), always downward.
+        const vxMap = [-3, -1, 1, 3];
+        const idx = Math.max(0, Math.min(3, (s.orbitIndex|0)));
+        const vx = vxMap[idx] * 1.15 * FUNK;
+        const vy = (6.4 + wave * 0.35) * FUNK;
+        if (enemyBullets.length >= MAX_ENEMY_BULLETS){
+          enemyBullets.splice(0, enemyBullets.length - MAX_ENEMY_BULLETS + 1);
+        }
+        enemyBullets.push({ x: s.x, y: s.y + s.h/2 + 6, vx, vy, r: 4 });
+        const interval = (typeof s.shootInterval === 'number') ? s.shootInterval : 1.2;
+        s.shootTimer += interval;
+      }
+    }
+
     // Count alive shields (for invulnerability logic)
     let alive = 0;
     for (const s of enemies){
@@ -2282,8 +2309,8 @@ if (wave === 11){
 e.fx = startX + e.col * spacingX + wobbleX;
 e.fy = baseY + e.row * spacingY + wobbleY;
 
-// Boss wave: override formation positioning with custom behaviour.
-if (wave === 11){
+// Boss group: override formation positioning with custom behaviour.
+if (bossCore){
   if (e.isBossCore){
     e.fx = e.x;
     e.fy = e.y;
