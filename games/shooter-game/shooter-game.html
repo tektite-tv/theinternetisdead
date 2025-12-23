@@ -1561,13 +1561,22 @@ function randEnemyImg(){
   return enemyImages[Math.floor(Math.random() * enemyImages.length)];
 }
 
-function spawnBossWave11(){
-  enemies = [];
-  const baseY = 110; // keep boss in the top zone
+function spawnBossWave11(additive=false){
+  // additive=true means "spawn the boss group on top of whatever enemies already exist"
+  // (used for waves 12+). In that case we must NOT wipe the current wave's enemies or
+  // clobber the formation grid settings.
+  const prevEnemies = enemies;
+  const prevCols = formationCols;
+  const prevRows = formationRows;
 
-  // Boss wave doesn't use the grid for gameplay, but other code expects these.
-  formationCols = 1;
-  formationRows = 1;
+  if (!additive){
+    enemies = [];
+    // Boss wave doesn't use the grid for gameplay, but other code expects these.
+    formationCols = 1;
+    formationRows = 1;
+  }
+
+  const baseY = 110; // keep boss in the top zone
 
   const zoneW = canvas.width * 0.82;
   const zoneH = canvas.height * 0.38;
@@ -1645,12 +1654,21 @@ function spawnBossWave11(){
     };
     enemies.push(shield);
   }
+
+  // Restore formation settings if we were additive.
+  if (additive){
+    formationCols = prevCols;
+    formationRows = prevRows;
+    // ensure we're still writing into the live enemies array reference
+    enemies = prevEnemies;
+  }
 }
+
 
 function spawnEnemies(){
   // v1.55: Boss wave
   if (wave === 11){
-    spawnBossWave11();
+    spawnBossWave11(false);
     return;
   }
 
@@ -1835,7 +1853,14 @@ function tryStartSwoop(dt){
   const dur = Math.max(1.1, 1.75 - wave * 0.03);
 
   e.swoop = { t:0, dur, phase:"down", sx, sy, c1x, c1y, ex:endX, ey:endY };
-  e.swoopCooldown = Math.max(1.2, 3.0 - wave * 0.10); // wait before it can swoop again
+  e.swoopCooldown = Math.max(1.2, 3.0 - wave * 0.10); // wait before it can swoop agai
+
+  // Waves 12+ : spawn the boss group alongside the normal wave enemies.
+  if (wave > 11){
+    spawnBossWave11(true);
+  }
+}
+
 }
 
 function quadBezier(t, a, b, c){
