@@ -1672,7 +1672,7 @@ function spawnBossWave11(additive=false){
 
 
 function spawnEnemies(){
-  // v1.55: Boss wave
+  // v1.55+: Boss wave / additive boss waves
   if (wave === 11){
     spawnBossWave11(false);
     return;
@@ -1726,6 +1726,8 @@ const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
       swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
     });
   }
+
+  if (wave > 11){ spawnBossWave11(true); }
 }
 
 /* =======================
@@ -1861,13 +1863,8 @@ function tryStartSwoop(dt){
   e.swoop = { t:0, dur, phase:"down", sx, sy, c1x, c1y, ex:endX, ey:endY };
   e.swoopCooldown = Math.max(1.2, 3.0 - wave * 0.10); // wait before it can swoop agai
 
-  // Waves 12+ : spawn the boss group alongside the normal wave enemies.
-  if (wave > 11){
-    spawnBossWave11(true);
-  }
 }
 
-}
 
 function quadBezier(t, a, b, c){
   // (1-t)^2 a + 2(1-t)t b + t^2 c
@@ -2831,8 +2828,7 @@ powerupSlot.style.display = "none";
 spawnEnemies();
 updateHearts();
 
-requestAnimationFrame(loop);
-</script>
+requestAnimationFrame(loop);</script>
 
 <div id="heartsHud" style="
 position:fixed;
