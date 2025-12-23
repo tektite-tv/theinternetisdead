@@ -725,7 +725,8 @@ function breakBonusArmor(){
 
 function shouldForceUFOForWave(w){
   // v1.54: Always spawn a UFO on key milestone waves.
-  return (w === 11 || w === 21);
+  // v1.55: Wave 11 is now a boss wave, so don't force a UFO there.
+  return (w === 21);
 }
 
 function trySpawnUFO(force=false){
@@ -1525,7 +1526,83 @@ function randEnemyImg(){
   return enemyImages[Math.floor(Math.random() * enemyImages.length)];
 }
 
+function spawnBossWave11(){
+  enemies = [];
+  const baseY = 80; // keep boss in the "top zone"
+
+  // Formation is a 3x3 cross: boss in the center with 4 minions radiating out.
+  formationCols = 3;
+  formationRows = 3;
+
+  // Reuse the same sizing logic as normal waves, but tuned for 5 units (one of them huge).
+  const zoneW = canvas.width * 0.82;
+  const zoneH = canvas.height * 0.38;
+
+  // Target a comfortable base size, then clamp so the 2x boss doesn't clip the zone.
+  const baseSize = Math.max(26, Math.min(58, Math.min(zoneW/10, zoneH/6)));
+  const bossSize = baseSize * 2;
+
+  const bossImg = new Image();
+  bossImg.src = GIF_BASE + "180px-NO_U_cycle.gif";
+
+  // Boss: chunkier HP so it feels like a boss (still uses normal enemy damage system).
+  const boss = {
+    row:1, col:1, baseY,
+    img: bossImg,
+    isFrog:false,
+    size: bossSize,
+    hp: 14,
+    hitFlash:0,
+    dying:false,
+    fade:1,
+    fadeRate:0,
+    lockX:0, lockY:0, lockW:0, lockH:0,
+    _killAwarded:false,
+    x:0,y:0,w:0,h:0,
+    fx:0, fy:0,
+    swoop:null,
+    swoopCooldown: rand(1.5, 3.5),
+    isBoss:true
+  };
+  enemies.push(boss);
+
+  // Minions (regular enemies) around the boss.
+  const slots = [
+    {row:0, col:1},
+    {row:2, col:1},
+    {row:1, col:0},
+    {row:1, col:2},
+  ];
+
+  for (const s of slots){
+    const img = randEnemyImg();
+    const isFrog = (img && img.src && img.src.toLowerCase().includes("frog.gif"));
+    enemies.push({
+      row:s.row, col:s.col, baseY,
+      img, isFrog,
+      size: baseSize,
+      hp: 1,
+      hitFlash:0,
+      dying:false,
+      fade:1,
+      fadeRate:0,
+      lockX:0, lockY:0, lockW:0, lockH:0,
+      _killAwarded:false,
+      x:0,y:0,w:0,h:0,
+      fx:0, fy:0,
+      swoop:null,
+      swoopCooldown: rand(1.0, 3.0)
+    });
+  }
+}
+
 function spawnEnemies(){
+  // v1.55: Boss wave
+  if (wave === 11){
+    spawnBossWave11();
+    return;
+  }
+
   enemies = [];
   const baseY = 80; // start higher (top zone)
 
