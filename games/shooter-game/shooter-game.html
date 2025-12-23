@@ -236,7 +236,15 @@
   user-select:none;
 }
 
+
+/* =======================
+   Invert Colors Mode
+======================= */
+body.invert-colors {
+  filter: invert(1) hue-rotate(180deg);
+}
 </style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -342,6 +350,15 @@
           <span>Infinite (no damage, no resource consumption)</span>
         </label>
         <div class="hint">For testing, chaos, or avoiding consequences. Pick one.</div>
+
+      <div class="optRow" style="gap:10px;">
+        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
+          <input id="invertColorsCheckbox" type="checkbox" style="transform:scale(1.2);" />
+          <span>Invert Colors</span>
+        </label>
+        <div class="hint">Flips all colors for night mode, screenshots, or chaos.</div>
+      </div>
+
       
       <div class="optRow" style="gap:10px;">
         <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
@@ -1474,7 +1491,23 @@ const btnApply = document.getElementById("btnApply");
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
   let INFINITE_MODE = false;
-  let START_WAVE = 1; // 1 normally, 11 when Boss Mode is enabled
+  
+let START_WAVE = 1; // 1 normally, 11 when Boss Mode is enabled
+
+let INVERT_COLORS = false;
+const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
+
+function applyInvertColors(){
+  document.body.classList.toggle("invert-colors", INVERT_COLORS);
+}
+
+if (invertColorsCheckbox){
+  invertColorsCheckbox.addEventListener("change", () => {
+    INVERT_COLORS = invertColorsCheckbox.checked;
+    applyInvertColors();
+  });
+}
+
 
   function syncStartOptionsLabels(){
     livesVal.textContent = livesSlider.value;
@@ -1529,6 +1562,7 @@ function showOptions(){
   bombsSlider.value = START_BOMBS;
   infiniteToggle.checked = !!INFINITE_MODE;
   if (bossModeCheckbox) bossModeCheckbox.checked = (START_WAVE === 11);
+  if (invertColorsCheckbox) invertColorsCheckbox.checked = INVERT_COLORS;
   syncStartOptionsLabels();
 
 // v1.54: drop shield when entering menus
@@ -1632,6 +1666,8 @@ btnApply.addEventListener("click", () => {
   START_SHIELDS = parseInt(shieldsSlider.value, 10);
   START_BOMBS = parseInt(bombsSlider.value, 10);
   INFINITE_MODE = !!infiniteToggle.checked;
+  if (invertColorsCheckbox) INVERT_COLORS = invertColorsCheckbox.checked;
+  applyInvertColors();
   START_WAVE = (bossModeCheckbox && bossModeCheckbox.checked) ? 11 : 1;
 
   // Keep the UI labels in sync and return to the main menu.
