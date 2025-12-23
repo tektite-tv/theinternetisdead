@@ -734,8 +734,8 @@ function enemyKill(e, source){
         lives += 1;
         livesText.textContent = "x" + lives;
         // Optional tiny feedback burst (kept simple and non-breaking).
-        spawnFloatingText(e.x, e.y - 18, "+1 LIFE", 0.85);
-        playSfx(sfxPowerup || sfxHit);
+        if (typeof spawnFloatingText === 'function') spawnFloatingText(e.x, e.y - 18, "+1 LIFE", 0.85);
+        if (typeof playSfx === 'function') playSfx(sfxHit);
       }
     }
 score += 10;
