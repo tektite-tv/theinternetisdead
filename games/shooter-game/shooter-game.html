@@ -710,28 +710,7 @@ function isDragonEnemy(e){
 // NOTE: This only touches canvas drawing + enemy objects; it will not mess with menus.
 // =======================
 const ENEMY_HIT_FLASH_SECS = 0.12;   // how long the red flash lasts
-const ENEMY_DEATH_FADE_SECS = 0.35;
-
-// =======================
-// Respawn-on-kill mechanic
-// =======================
-// Pick which enemy type can "fake die" and come back.
-// Match against the image filename substring. (Edit this freely.)
-const RESPAWN_ELIGIBLE_IMG_MATCH = "skeleton.gif";
-// 25% chance on kill to trigger the respawn.
-const RESPAWN_ON_KILL_CHANCE = 0.25;
-// Seconds to wait while flashing red before respawning.
-const RESPAWN_DELAY_SECS = 3.0;
-// How long to flash white after respawn.
-const RESPAWN_WHITE_FLASH_SECS = 0.8;
-
-function isRespawnEligibleEnemy(e){
-  if (!e || !e.img || !e.img.src) return false;
-  // Don't respawn bosses/UFO/etc.
-  if (e.bossWave || e.isBossCore || e.isBossOrbiter || e.isUFO) return false;
-  return e.img.src.includes(RESPAWN_ELIGIBLE_IMG_MATCH);
-}
-  // how long the death fade lasts
+const ENEMY_DEATH_FADE_SECS = 0.35;  // how long the death fade lasts
 
 function enemyMarkHit(e){
   if (!e) return;
@@ -791,27 +770,7 @@ function enemyKill(e, source){
         if (typeof playSfx === 'function') playSfx(sfxHit);
       }
     }
-// 25% chance: for a particular enemy type, "fake die" then respawn after a delay.
-    // IMPORTANT: We remove it from the enemies array so it does NOT block wave-clear logic.
-    if (isRespawnEligibleEnemy(e) && Math.random() < RESPAWN_ON_KILL_CHANCE){
-      // Snapshot where it died.
-      e.lockX = e.lockX ?? e.x;
-      e.lockY = e.lockY ?? e.y;
-      e.lockW = e.lockW ?? e.w;
-      e.lockH = e.lockH ?? e.h;
-
-      // Remember max HP so respawn restores properly.
-      if (typeof e.maxHp !== "number") e.maxHp = (typeof e.hp === "number" ? Math.max(1, e.hp) : 1);
-      // Remove from active enemies immediately.
-      const idx = enemies.indexOf(e);
-      if (idx !== -1) enemies.splice(idx, 1);
-
-      // Schedule respawn.
-      pendingRespawns.push({ enemy: e, t: RESPAWN_DELAY_SECS, blink: 0 });
-      return; // do not run normal fade-out removal
-    }
-
-    score += 10;
+score += 10;
     playSfx(sfxHit);
   }
 }
@@ -820,7 +779,6 @@ function enemyApplyDamage(e, dmg, source){
   if (!e) return;
   enemyMarkHit(e);
   e.hp = (typeof e.hp === "number") ? e.hp : 1;
-  if (typeof e.maxHp !== \"number\") e.maxHp = e.hp;
   e.hp -= Math.max(0, dmg|0);
   if (e.hp <= 0){
     enemyKill(e, source);
@@ -1003,11 +961,6 @@ function bombHitsEnemy(){
   // Check contact against all enemies (both while flying and while armed).
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
-
-    // Respawn flash timers
-    if (typeof e.whiteFlashT === "number" && e.whiteFlashT > 0){
-      e.whiteFlashT = Math.max(0, e.whiteFlashT - dt);
-    }
     if (e.dying) continue;
     const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
@@ -1629,8 +1582,6 @@ function getSpacingY(){
 
 
 let enemies = [];
-let pendingRespawns = []; // enemies waiting to respawn (do not block wave clear)
-
 
 const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, descentSpeed:12, boundsPad:40 };
 
@@ -2860,17 +2811,7 @@ if (gameState === STATE.PLAYING){
     ctx.globalAlpha = alpha;
     ctx.drawImage(e.img, ex, ey, e.w, e.h);
 
-    
-        // Respawn white flash overlay
-        if (typeof e.whiteFlashT === "number" && e.whiteFlashT > 0){
-          const a = Math.max(0, Math.min(1, e.whiteFlashT / RESPAWN_WHITE_FLASH_SECS));
-          ctx.save();
-          ctx.globalAlpha = 0.65 * a;
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(x, y, w, h);
-          ctx.restore();
-        }
-if (e.hitFlash > 0){
+    if (e.hitFlash > 0){
       const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
       ctx.globalCompositeOperation = "source-atop";
       ctx.fillStyle = `rgba(255,0,0,${0.28 * p})`;
