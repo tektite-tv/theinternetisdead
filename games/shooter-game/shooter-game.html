@@ -773,16 +773,6 @@ function enemyKill(e, source){
   e.lockW = e.w; e.lockH = e.h;
   e.swoop = null;
 
-  // 25% chance: for eligible enemies, "fake die" then respawn after a delay.
-  // We keep the enemy object instead of removing it when fade would hit 0.
-  if (isRespawnEligibleEnemy(e) && Math.random() < RESPAWN_ON_KILL_CHANCE){
-    e.respawnT = RESPAWN_DELAY_SECS;
-    e.respawnBlink = 0;
-    e.respawnPending = true;
-    // Don't fade out while waiting.
-    e.fade = 1;
-  }
-
   // One-time kill side effects.
   if (!e._killAwarded){
     e._killAwarded = true;
@@ -801,7 +791,27 @@ function enemyKill(e, source){
         if (typeof playSfx === 'function') playSfx(sfxHit);
       }
     }
-score += 10;
+// 25% chance: for a particular enemy type, "fake die" then respawn after a delay.
+    // IMPORTANT: We remove it from the enemies array so it does NOT block wave-clear logic.
+    if (isRespawnEligibleEnemy(e) && Math.random() < RESPAWN_ON_KILL_CHANCE){
+      // Snapshot where it died.
+      e.lockX = e.lockX ?? e.x;
+      e.lockY = e.lockY ?? e.y;
+      e.lockW = e.lockW ?? e.w;
+      e.lockH = e.lockH ?? e.h;
+
+      // Remember max HP so respawn restores properly.
+      if (typeof e.maxHp !== "number") e.maxHp = (typeof e.hp === "number" ? Math.max(1, e.hp) : 1);
+      // Remove from active enemies immediately.
+      const idx = enemies.indexOf(e);
+      if (idx !== -1) enemies.splice(idx, 1);
+
+      // Schedule respawn.
+      pendingRespawns.push({ enemy: e, t: RESPAWN_DELAY_SECS, blink: 0 });
+      return; // do not run normal fade-out removal
+    }
+
+    score += 10;
     playSfx(sfxHit);
   }
 }
@@ -1619,6 +1629,8 @@ function getSpacingY(){
 
 
 let enemies = [];
+let pendingRespawns = []; // enemies waiting to respawn (do not block wave clear)
+
 
 const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, descentSpeed:12, boundsPad:40 };
 
@@ -2638,28 +2650,6 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
       if (typeof e.lockY === "number") e.y = e.lockY;
       if (typeof e.lockW === "number" && e.lockW > 0) e.w = e.lockW;
       if (typeof e.lockH === "number" && e.lockH > 0) e.h = e.lockH;
-
-      // If this enemy is in a respawn delay, keep it alive and flash red.
-      if (e.respawnPending && typeof e.respawnT === "number" && e.respawnT > 0){
-        e.respawnT = Math.max(0, e.respawnT - dt);
-        e.respawnBlink = (typeof e.respawnBlink === "number" ? e.respawnBlink : 0) + dt;
-
-        // Flash red by toggling hitFlash rapidly.
-        const blinkOn = (Math.floor(e.respawnBlink * 10) % 2) === 0;
-        e.hitFlash = blinkOn ? 1 : 0;
-
-        // When timer ends, respawn (restore HP) and flash white briefly.
-        if (e.respawnT <= 0){
-          e.respawnPending = false;
-          e.dying = false;
-          e.hitFlash = 0;
-          e.fade = 1;
-          e.fadeRate = 0;
-          e.hp = (typeof e.maxHp === "number") ? e.maxHp : 1;
-          e.whiteFlashT = RESPAWN_WHITE_FLASH_SECS;
-        }
-        continue;
-      }
 
       const rate = (e.fadeRate && e.fadeRate > 0) ? e.fadeRate : (1 / ENEMY_DEATH_FADE_SECS);
       e.fade = Math.max(0, (typeof e.fade === "number" ? e.fade : 1) - dt * rate);
