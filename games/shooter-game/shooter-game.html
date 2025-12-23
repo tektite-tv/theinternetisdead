@@ -206,19 +206,19 @@
   pointer-events: none;
 }
 
-
-/* Accuracy Score HUD (top-left) */
+/* Accuracy score (top-left, 2x wave counter) */
 #accuracyScore{
   position:absolute;
   top:10px;
   left:14px;
   font-family:monospace;
-  font-size:40px; /* ~2x wave label */
   font-weight:900;
+  font-size:40px;
   color:#ffd400;
-  text-shadow:0 0 10px rgba(0,0,0,0.75);
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
   pointer-events:none;
   z-index:60;
+  user-select:none;
 }
 
 </style>
@@ -239,7 +239,6 @@
   z-index:20;
 "></div>
 <div id="accuracyScore">0</div>
-
 
 
 <div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
@@ -521,6 +520,95 @@ function getPlayerFireCooldown(){
 ======================= */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+// =======================
+// Post FX: chromatic aberration + gentle hue drift (beat-reactive)
+// =======================
+const fxCanvas = document.createElement("canvas");
+const fxCtx = fxCanvas.getContext("2d");
+
+function resizeFX(){
+  fxCanvas.width = canvas.width;
+  fxCanvas.height = canvas.height;
+}
+
+// Audio analysis (uses the looping background music)
+let audioCtx = null;
+let analyser = null;
+let freqData = null;
+let beatLevel = 0; // smoothed 0..1
+
+function initAudioAnalyser(){
+  if (analyser || !musicBg) return;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+
+    const srcNode = audioCtx.createMediaElementSource(musicBg);
+    srcNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+  }catch(e){
+    // If the browser refuses (some do), we silently run FX in "ambient" mode.
+    analyser = null;
+  }
+}
+
+function getBeat(){
+  // Gentle smoothing: quick rise, slow fall (prevents strobe)
+  let v = 0;
+  if (analyser && freqData){
+    analyser.getByteFrequencyData(freqData);
+    let sum = 0;
+    for (let i = 0; i < freqData.length; i++) sum += freqData[i];
+    v = (sum / freqData.length) / 255; // 0..1
+  } else {
+    // fallback "ambient pulse" if audio analysis unavailable
+    v = 0.10 + 0.06 * Math.sin(time * 1.7);
+  }
+
+  // Smooth
+  const attack = 0.45;
+  const release = 0.08;
+  if (v > beatLevel) beatLevel += (v - beatLevel) * attack;
+  else beatLevel += (v - beatLevel) * release;
+
+  return Math.max(0, Math.min(1, beatLevel));
+}
+
+function applyChromaticAberration(beat){
+  const w = canvas.width, h = canvas.height;
+  if (!w || !h) return;
+
+  // Subtle offsets: ~1..4px
+  const shift = 1.2 + beat * 2.8;
+
+  // Slow hue drift; beat adds a gentle push
+  const hue = (time * 10 + beat * 55) % 360;
+
+  fxCtx.clearRect(0,0,w,h);
+
+  // Base image with hue shift
+  fxCtx.filter = `hue-rotate(${hue}deg)`;
+  fxCtx.drawImage(canvas, 0, 0);
+
+  // Light channel separation glow
+  fxCtx.globalCompositeOperation = "screen";
+
+  fxCtx.filter = `hue-rotate(${hue + 25}deg)`;
+  fxCtx.drawImage(canvas, -shift, 0);
+
+  fxCtx.filter = `hue-rotate(${hue + 55}deg)`;
+  fxCtx.drawImage(canvas, shift, 0);
+
+  fxCtx.globalCompositeOperation = "source-over";
+  fxCtx.filter = "none";
+
+  // Copy back
+  ctx.clearRect(0,0,w,h);
+  ctx.drawImage(fxCanvas, 0, 0);
+}
+
 const overlay = document.getElementById("overlay");
 const livesSlot = document.getElementById("livesSlot");
 const livesText = document.getElementById("livesText");
@@ -632,37 +720,9 @@ function shieldApplyDamage(dmg){
 
 let time = 0;
 let score = 0;
-
-// =======================
-// Accuracy-based scoring
-// - shotsFired: increments when a player bullet is spawned
-// - hitsConnected: increments when a player bullet damages an enemy
-// - damageDealt: total bullet damage dealt (for stats / future tuning)
-// Score awards are multiplied by accuracy so spray-and-pray pays less.
-// =======================
 let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
-
-function getAccuracy(){
-  return hitsConnected / Math.max(1, shotsFired);
-}
-
-// Award points scaled by accuracy (clamped so score never goes to zero)
-function awardScore(basePoints){
-  const acc = getAccuracy();           // 0..1
-  const mult = Math.max(0.35, Math.min(2.0, 0.50 + acc * 1.50)); // 0.35..2.0
-  score += Math.round(basePoints * mult);
-}
-
-const accuracyScoreEl = document.getElementById("accuracyScore");
-function updateAccuracyScoreHUD(){
-  if (!accuracyScoreEl) return;
-  // Only show in gameplay (hide in menus)
-  accuracyScoreEl.style.display = (gameState === STATE.PLAYING) ? "block" : "none";
-  accuracyScoreEl.textContent = String(score|0);
-}
-
 // v1.54: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
@@ -745,7 +805,52 @@ let infiniteModeActive = false;
 /* =======================
    Utility
 ======================= */
+// =======================
+// Accuracy Scoring (v1.56)
+// - shotsFired: player bullets spawned
+// - hitsConnected: player bullet hits that dealt damage
+// - damageDealt: sum of bullet damage that landed
+// Score awards scale with accuracy so spray-and-pray pays less.
+// =======================
+function getAccuracy(){
+  if (shotsFired <= 0) return 0;
+  return Math.max(0, Math.min(1, hitsConnected / shotsFired));
+}
+
+function getAccuracyMultiplier(){
+  // 0% -> 0.55x, 100% -> 1.75x (gentle, not punitive)
+  const a = getAccuracy();
+  return 0.55 + a * 1.20;
+}
+
+function awardScore(basePoints){
+  score += Math.round(Math.max(0, basePoints) * getAccuracyMultiplier());
+}
+
+const accuracyScoreEl = document.getElementById("accuracyScore");
+function updateAccuracyScoreHUD(){
+  if (!accuracyScoreEl) return;
+  if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
+  else accuracyScoreEl.style.display = "none";
+  accuracyScoreEl.textContent = String(Math.floor(score));
+}
+
 function rand(min, max){ return min + Math.random() * (max - min); }
+
+function drawInvertedTriangle(x, y, r){
+  // Upside-down equilateral triangle around (x,y)
+  const a0 = Math.PI/2; // point down
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++){
+    const a = a0 + i * (Math.PI * 2 / 3);
+    const px = x + Math.cos(a) * r;
+    const py = y + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.stroke();
+}
 
 function isDragonEnemy(e){
   return !!(e && e.img && e.img.src && e.img.src.toLowerCase().includes("dragon.gif"));
@@ -818,7 +923,7 @@ function enemyKill(e, source){
         if (typeof playSfx === 'function') playSfx(sfxHit);
       }
     }
-    awardScore(10);
+awardScore(10);
     playSfx(sfxHit);
   }
 }
@@ -1235,6 +1340,7 @@ function resize(){
   }
 
   resetStarfield();
+  resizeFX();
 }
 window.addEventListener("resize", resize);
 
@@ -1275,6 +1381,8 @@ let audioUnlocked = false;
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
+  initAudioAnalyser();
+  try{ if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }catch(e){}
   try{
     sfxHit.muted = true;
     sfxHit.play().then(() => { sfxHit.pause(); sfxHit.currentTime = 0; sfxHit.muted = false; }).catch(()=>{ sfxHit.muted = false; });
@@ -1420,7 +1528,6 @@ function startGame(){
 
   score = 0;
   frogKills = 0;
-
   shotsFired = 0;
   hitsConnected = 0;
   damageDealt = 0;
@@ -1890,19 +1997,16 @@ function shoot(){
   }
   bullets.push({
 
-
     x: player.x + dx * spawnDist,
     y: player.y + dy * spawnDist,
     vx: dx * PLAYER_BULLET_SPEED,
     vy: dy * PLAYER_BULLET_SPEED,
     r: 5
-  })
+  });
 
-  // Accuracy: count bullets actually fired
+  
   shotsFired += 1;
-;
-
-  // v1.54: faster firing as waves increase
+// v1.54: faster firing as waves increase
   fireCooldown = getPlayerFireCooldown();
 }
 
@@ -2557,7 +2661,6 @@ if (wave === 11 && e.isBossCore){
 }
 
 if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
-        // Accuracy: a hit only counts when it actually damages an enemy
         hitsConnected += 1;
         damageDealt += 1;
         enemyApplyDamage(e, 1, "bullet");
@@ -2871,6 +2974,16 @@ if (gameState === STATE.PLAYING){
     ctx.globalAlpha = alpha;
     ctx.drawImage(e.img, ex, ey, e.w, e.h);
 
+// Dragon marker: upside-down red equilateral triangle (because dragons deserve drama)
+if (isDragonEnemy(e)){
+  const r = Math.max(e.w, e.h) * 0.78;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,0,0,0.85)";
+  ctx.lineWidth = 3;
+  drawInvertedTriangle(e.x, e.y, r);
+  ctx.restore();
+}
+
     if (e.hitFlash > 0){
       const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
       ctx.globalCompositeOperation = "source-atop";
@@ -2912,6 +3025,8 @@ if (gameState === STATE.PLAYING){
     `Player: ${player.w}px | Gap: ${FORMATION_PLAYER_GAP}px<br>` +
     `ESC: Menu`;
 
+  updateAccuracyScoreHUD();
+
   // v1.54: corner HUD updates
   livesText.textContent = "x" + lives;
   powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
@@ -2925,6 +3040,10 @@ if (gameState === STATE.PLAYING){
   } else {
     document.getElementById("stageHud").textContent = "";
   }
+
+  // Post FX pass (subtle)
+  const beat = getBeat();
+  applyChromaticAberration(beat);
 
 }
 
@@ -2971,8 +3090,7 @@ function loop(t){
   update(dt);
   draw();
   updateHearts();
-    updateAccuracyScoreHUD();
-requestAnimationFrame(loop);
+  requestAnimationFrame(loop);
 }
 
 /* =======================
