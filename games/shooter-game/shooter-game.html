@@ -1558,6 +1558,10 @@ function startGame(){
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "block";
 
+
+  // v1.54.x: Reset run timer at the start of each game
+  runTimer = 0;
+  updateTimerHUD();
   score = 0;
   frogKills = 0;
   shotsFired = 0;
