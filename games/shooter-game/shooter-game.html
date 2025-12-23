@@ -690,6 +690,27 @@ function shieldApplyDamage(dmg){
 
 let time = 0;
 let score = 0;
+// =======================
+// Accuracy + Score Scaling (v1.55)
+// - Track shots fired, hits landed, and total damage dealt.
+// - Award score with an accuracy multiplier so spray-and-pray pays less.
+// =======================
+let shotsFired = 0;
+let hitsConnected = 0;
+let damageDealt = 0;
+
+function getAccuracy(){
+  return hitsConnected / Math.max(1, shotsFired);
+}
+
+function awardScore(basePoints){
+  const acc = getAccuracy();                 // 0..1 typically
+  const mult = Math.max(0.35, Math.min(2.0, 0.5 + acc)); // 0.5..1.5 normally, clamped
+  const pts = Math.max(0, Math.round(basePoints * mult));
+  score += pts;
+  return pts;
+}
+
 // v1.54: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
@@ -871,7 +892,7 @@ function enemyKill(e, source){
         if (typeof playSfx === 'function') playSfx(sfxHit);
       }
     }
-score += 10;
+awardScore(10);
     playSfx(sfxHit);
   }
 }
@@ -1480,6 +1501,10 @@ function startGame(){
   score = 0;
   frogKills = 0;
 
+  shotsFired = 0;
+  hitsConnected = 0;
+  damageDealt = 0;
+
   // v1.54: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
 
@@ -1943,6 +1968,8 @@ function shoot(){
   if (bullets.length >= MAX_PLAYER_BULLETS){
     bullets.splice(0, bullets.length - MAX_PLAYER_BULLETS + 1);
   }
+  // Accuracy tracking
+  shotsFired += 1;
   bullets.push({
 
     x: player.x + dx * spawnDist,
@@ -2607,7 +2634,13 @@ if (wave === 11 && e.isBossCore){
 }
 
 if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
-        enemyApplyDamage(e, 1, "bullet");
+        // Accuracy tracking: a bullet connected and dealt damage.
+
+        hitsConnected += 1;
+
+        damageDealt += 1;
+
+        enemyApplyDamage(e, 1, \"bullet\");
         // Bullet consumed on hit.
         bullets.splice(bi, 1);
         break;
@@ -2958,6 +2991,7 @@ if (gameState === STATE.PLAYING){
     `Bananaman Shooter v1.54<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
+    `Accuracy: ${Math.round(getAccuracy()*100)}% | Shots: ${shotsFired} | Hits: ${hitsConnected} | Dmg: ${damageDealt}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
