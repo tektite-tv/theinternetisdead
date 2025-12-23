@@ -221,6 +221,21 @@
   user-select:none;
 }
 
+#timerHud{
+  position:absolute;
+  top:10px;
+  right:14px;
+  font-family:monospace;
+  font-weight:800;
+  font-size:18px;
+  color:#ffffff;
+  opacity:0.95;
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+}
+
 </style>
 </head>
 <body>
@@ -239,6 +254,7 @@
   z-index:20;
 "></div>
 <div id="accuracyScore">0</div>
+<div id="timerHud">0.0s</div>
 
 
 <div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
@@ -723,6 +739,8 @@ let score = 0;
 let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
+  runTimer = 0;
+let runTimer = 0; // seconds since Start Game
 // v1.54: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
@@ -828,11 +846,23 @@ function awardScore(basePoints){
 }
 
 const accuracyScoreEl = document.getElementById("accuracyScore");
+const timerHud = document.getElementById("timerHud");
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
   else accuracyScoreEl.style.display = "none";
   accuracyScoreEl.textContent = String(Math.floor(score));
+}
+
+function updateTimerHUD(){
+  if (!timerHud) return;
+  // Show timer only while actually playing
+  if (gameState !== STATE.PLAYING){
+    timerHud.style.display = "none";
+    return;
+  }
+  timerHud.style.display = "block";
+  timerHud.textContent = runTimer.toFixed(1) + "s";
 }
 
 function rand(min, max){ return min + Math.random() * (max - min); }
@@ -1471,6 +1501,7 @@ function showMenu(){
   // v1.54: HUD should not appear on the menu
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "none";
 
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
@@ -1508,6 +1539,7 @@ function showOptions(){
   // v1.54: hide HUD in menus
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "none";
 
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
@@ -1525,12 +1557,15 @@ function startGame(){
   // v1.54: show HUD only in-game
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "block";
 
   score = 0;
   frogKills = 0;
   shotsFired = 0;
   hitsConnected = 0;
   damageDealt = 0;
+
+  runTimer = 0;
 
   // v1.54: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
@@ -2280,6 +2315,9 @@ function update(dt){
 
   if (gameState !== STATE.PLAYING) return;
 
+  // Run timer (seconds since Start Game)
+  runTimer += dt;
+
   // v1.54: shield cooldown + hold logic
   if (shieldCooldown > 0) shieldCooldown = Math.max(0, shieldCooldown - dt);
 
@@ -3026,6 +3064,7 @@ if (isDragonEnemy(e)){
     `ESC: Menu`;
 
   updateAccuracyScoreHUD();
+  updateTimerHUD();
 
   // v1.54: corner HUD updates
   livesText.textContent = "x" + lives;
