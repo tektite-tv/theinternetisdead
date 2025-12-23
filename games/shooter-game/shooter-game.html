@@ -191,6 +191,19 @@
   #livesSlot{ display:none; }
   #powerupSlot{ display:none; }
 
+
+/* Centered wave label (replaces old Stage/Waves HUD) */
+#stageHud{
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font: bold 20px monospace;
+  z-index: 50;
+  text-shadow: 0 0 8px rgba(0,0,0,0.65);
+  pointer-events: none;
+}
+
 </style>
 </head>
 <body>
@@ -2843,8 +2856,10 @@ if (gameState === STATE.PLAYING){
   if (gameState === STATE.PLAYING){
     const info = getStageInfo(wave);
     const clampedWave = Math.min(wave, info.end);
-    document.getElementById("stageHud").textContent =
-      `Stage ${info.stage}: Waves ${clampedWave}/${info.end}`;
+    const lab = getWaveLabel(wave);
+    const stageHudEl = document.getElementById("stageHud");
+    stageHudEl.textContent = lab.text;
+    stageHudEl.style.color = lab.color;
   } else {
     document.getElementById("stageHud").textContent = "";
   }
