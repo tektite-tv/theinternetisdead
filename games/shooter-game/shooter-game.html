@@ -1111,12 +1111,35 @@ function resize(){
 
   // v1.54.3+: only bottom-anchor in menus; gameplay keeps spawn position
   if (gameState !== STATE.PLAYING){
-    player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+    player.y = getPlayerAlignedY();
   }
 
   resetStarfield();
 }
 window.addEventListener("resize", resize);
+
+/* =======================
+   HUD/Player Alignment
+   - Keep the bottom of the player aligned to the top of the hearts HUD (DOM element),
+     regardless of fullscreen, browser chrome, or embedding under a site banner.
+======================= */
+function getHeartsTopInCanvas(){
+  const heartsEl = document.getElementById("heartsHud");
+  if (!heartsEl) return canvas.height - 60;
+  const hRect = heartsEl.getBoundingClientRect();
+  const cRect = canvas.getBoundingClientRect();
+  // Convert viewport pixels to canvas pixel space. This assumes 1:1 CSS sizing for the canvas.
+  return (hRect.top - cRect.top);
+}
+
+function getPlayerAlignedY(gapPx = 6){
+  const heartsTop = getHeartsTopInCanvas();
+  // player.y is CENTER-based, so subtract half-height.
+  let y = heartsTop - (player.h / 2) - gapPx;
+  // Clamp to canvas bounds
+  y = Math.max(player.h/2, Math.min(canvas.height - player.h/2, y));
+  return y;
+}
 
 /* =======================
    Audio
@@ -1290,7 +1313,7 @@ function startGame(){
 
   // Spawn player mid-screen, above hearts HUD
   player.x = canvas.width / 2;
-  player.y = canvas.height * PLAYER_SPAWN_Y_FACTOR;
+  player.y = getPlayerAlignedY();
 
   shieldPips = Math.max(0, parseInt(START_SHIELDS, 10) || 0);
 
@@ -1305,7 +1328,7 @@ function startGame(){
 
   // Spawn player mid-screen, above hearts HUD
   player.x = canvas.width / 2;
-  player.y = canvas.height * PLAYER_SPAWN_Y_FACTOR;
+  player.y = getPlayerAlignedY();
   bonusArmor = 0;
   bonusArmorBrokenT = 0;
   isDead = false;
@@ -2036,7 +2059,7 @@ function update(dt){
 
   // Spawn player mid-screen, above hearts HUD
   player.x = canvas.width / 2;
-  player.y = canvas.height * PLAYER_SPAWN_Y_FACTOR;
+  player.y = getPlayerAlignedY();
         player.invuln = 1.25;
       }
     }
@@ -2052,6 +2075,9 @@ function update(dt){
   if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
   if (keys["d"] || keys["arrowright"]) player.x += player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
+
+  // Keep player vertically aligned to the hearts HUD
+  player.y = getPlayerAlignedY();
 
   // v1.54: smooth the aim angle (shortest-path wrap) for nicer feel
   const da = normAngle(aimAngle - aimAngleSmoothed);
@@ -2738,7 +2764,7 @@ function loop(t){
    Boot
 ======================= */
 player.x = canvas.width / 2;
-player.y = canvas.height - PLAYER_BOTTOM_MARGIN;
+player.y = getPlayerAlignedY();
 
 // v1.54: default aim straight up until the player moves the pointer
 aimX = player.x;
