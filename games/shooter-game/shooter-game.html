@@ -1528,71 +1528,87 @@ function randEnemyImg(){
 
 function spawnBossWave11(){
   enemies = [];
-  const baseY = 80; // keep boss in the "top zone"
+  const baseY = 110; // keep boss in the top zone
 
-  // Formation is a 3x3 cross: boss in the center with 4 minions radiating out.
-  formationCols = 3;
-  formationRows = 3;
+  // Boss wave doesn't use the grid for gameplay, but other code expects these.
+  formationCols = 1;
+  formationRows = 1;
 
-  // Reuse the same sizing logic as normal waves, but tuned for 5 units (one of them huge).
   const zoneW = canvas.width * 0.82;
   const zoneH = canvas.height * 0.38;
 
-  // Target a comfortable base size, then clamp so the 2x boss doesn't clip the zone.
-  const baseSize = Math.max(26, Math.min(58, Math.min(zoneW/10, zoneH/6)));
-  const bossSize = baseSize * 2;
+  // Base "normal enemy" sizing in this zone.
+  const baseSize = Math.max(26, Math.min(62, Math.min(zoneW/12, zoneH/7)));
+
+  // Boss: noticeably bigger than everything else (requested).
+  const bossSize = Math.max(baseSize * 3.0, 92);
 
   const bossImg = new Image();
   bossImg.src = GIF_BASE + "180px-NO_U_cycle.gif";
 
-  // Boss: chunkier HP so it feels like a boss (still uses normal enemy damage system).
+  // Core boss: uses normal enemy damage system, but has more HP.
   const boss = {
-    row:1, col:1, baseY,
+    row:0, col:0, baseY,
     img: bossImg,
     isFrog:false,
     size: bossSize,
-    hp: 14,
+    hp: 28,
     hitFlash:0,
     dying:false,
     fade:1,
     fadeRate:0,
     lockX:0, lockY:0, lockW:0, lockH:0,
     _killAwarded:false,
-    x:0,y:0,w:0,h:0,
+    x: canvas.width/2, y: baseY + 40, w:0, h:0,
     fx:0, fy:0,
     swoop:null,
-    swoopCooldown: rand(1.5, 3.5),
-    isBoss:true
+    swoopCooldown: 9999,
+    // Boss-wave behaviour flags/state
+    isBossCore:true,
+    bossWave:true,
+    // Sporadic movement
+    mx: canvas.width/2,
+    my: baseY + 40,
+    tx: canvas.width/2,
+    ty: baseY + 40,
+    moveTimer: 0,
+    moveSpeed: 220,
+    dashChance: 0.22,
+    // Orbiting shield ring
+    orbitAngle: 0,
+    orbitSpeed: 1.7,
+    orbitRadius: Math.max(52, bossSize * 0.62),
+    shieldsAlive: 4
   };
   enemies.push(boss);
 
-  // Minions (regular enemies) around the boss.
-  const slots = [
-    {row:0, col:1},
-    {row:2, col:1},
-    {row:1, col:0},
-    {row:1, col:2},
-  ];
+  // Shields: 4 copies of the same GIF orbiting around the boss.
+  // They do NOT move independently; their x/y is forced each frame.
+  const shieldSize = Math.max(baseSize * 1.25, 44);
 
-  for (const s of slots){
-    const img = randEnemyImg();
-    const isFrog = (img && img.src && img.src.toLowerCase().includes("frog.gif"));
-    enemies.push({
-      row:s.row, col:s.col, baseY,
-      img, isFrog,
-      size: baseSize,
-      hp: 1,
+  for (let i = 0; i < 4; i++){
+    const shield = {
+      row:0, col:0, baseY,
+      img: bossImg,
+      isFrog:false,
+      size: shieldSize,
+      hp: 3,
       hitFlash:0,
       dying:false,
       fade:1,
       fadeRate:0,
       lockX:0, lockY:0, lockW:0, lockH:0,
       _killAwarded:false,
-      x:0,y:0,w:0,h:0,
+      x: boss.x, y: boss.y, w:0, h:0,
       fx:0, fy:0,
       swoop:null,
-      swoopCooldown: rand(1.0, 3.0)
-    });
+      swoopCooldown: 9999,
+      isBossShield:true,
+      bossWave:true,
+      bossRef: boss,
+      orbitIndex: i
+    };
+    enemies.push(shield);
   }
 }
 
@@ -1713,8 +1729,16 @@ function enemyTryShoot(dt){
 
   if (!enemies.length) return;
 
-  // Shoot from a random alive enemy (classic arcade chaos).
-  const e = enemies[Math.floor(Math.random() * enemies.length)];
+  // Shoot source selection.
+  // Boss wave: shoot from the core so the orbiting shields stay 'shieldy' instead of acting like turrets.
+  let e = null;
+  if (wave === 11){
+    e = enemies.find(x => x && x.isBossCore);
+  }
+  if (!e){
+    // Classic arcade chaos: shoot from a random alive enemy.
+    e = enemies[Math.floor(Math.random() * enemies.length)];
+  }
 
   // Straight-line shots, but slightly aimed (vx is constant, so still a straight path).
   const dx = (player.x - e.x);
@@ -2088,7 +2112,8 @@ function update(dt){
   }
 
   // v1.54: attempt to launch swoop attackers
-  tryStartSwoop(dt);
+  // Boss wave uses its own movement, no swoops.
+  if (wave !== 11) tryStartSwoop(dt);
 
   // compute enemy positions
   const spacingY = getSpacingY() * (1 + breath * 0.15);
@@ -2123,6 +2148,61 @@ if (baseY > maxBaseY){
 }
 
 
+// Boss wave controller: sporadic movement + orbiting shield ring.
+// We compute boss.x/y directly, then force shields to orbit it.
+let bossCore = null;
+if (wave === 11){
+  bossCore = enemies.find(x => x && x.isBossCore && !x.dying);
+  if (bossCore){
+    // Update sporadic target selection
+    bossCore.moveTimer -= dt;
+
+    const left = 70;
+    const right = canvas.width - 70;
+    const top = 70;
+    const bottom = canvas.height * 0.36;
+
+    if (bossCore.moveTimer <= 0){
+      const dash = Math.random() < bossCore.dashChance;
+      bossCore.tx = rand(left, right);
+      bossCore.ty = rand(top, bottom);
+
+      // Occasionally do a more dramatic "dash" by picking a farther target + higher speed.
+      const baseSpeed = dash ? rand(520, 760) : rand(200, 340);
+      bossCore.moveSpeed = baseSpeed * FUNK;
+
+      // Short, snappy pacing feels more "alive"
+      bossCore.moveTimer = dash ? rand(0.35, 0.6) : rand(0.55, 1.15);
+
+      // Small randomness in orbit speed so it doesn't feel like a perfect clock
+      bossCore.orbitSpeed = rand(1.35, 2.25);
+    }
+
+    // Move toward target (ease-ish)
+    const dx = bossCore.tx - bossCore.mx;
+    const dy = bossCore.ty - bossCore.my;
+    const dist = Math.hypot(dx, dy) || 1;
+
+    const step = Math.min(dist, bossCore.moveSpeed * dt);
+    bossCore.mx += (dx / dist) * step;
+    bossCore.my += (dy / dist) * step;
+
+    // Apply to render positions
+    bossCore.x = bossCore.mx;
+    bossCore.y = bossCore.my;
+
+    // Orbit angle
+    bossCore.orbitAngle += dt * bossCore.orbitSpeed;
+
+    // Count alive shields (for invulnerability logic)
+    let alive = 0;
+    for (const s of enemies){
+      if (s && s.isBossShield && !s.dying) alive++;
+    }
+    bossCore.shieldsAlive = alive;
+  }
+}
+
   for (const e of enemies){
     if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
 
@@ -2135,10 +2215,27 @@ if (baseY > maxBaseY){
     const wobbleX = Math.sin(time * (0.9 + wave*0.03) + e.row * 0.7) * wobbleAmpX;
     const wobbleY = Math.cos(time * (1.1 + wave*0.02) + e.col * 0.6) * wobbleAmpY;
 
-    e.fx = startX + e.col * spacingX + wobbleX;
-    e.fy = baseY + e.row * spacingY + wobbleY;
 
-    if (!e.swoop){
+e.fx = startX + e.col * spacingX + wobbleX;
+e.fy = baseY + e.row * spacingY + wobbleY;
+
+// Boss wave: override formation positioning with custom behaviour.
+if (wave === 11){
+  if (e.isBossCore){
+    e.fx = e.x;
+    e.fy = e.y;
+  } else if (e.isBossShield && e.bossRef){
+    // Orbit around the core at 90° intervals.
+    const core = e.bossRef;
+    const ang = (core.orbitAngle || 0) + (e.orbitIndex || 0) * (Math.PI / 2);
+    const r = core.orbitRadius || 70;
+
+    e.fx = core.x + Math.cos(ang) * r;
+    e.fy = core.y + Math.sin(ang) * r;
+  }
+}
+
+if (!e.swoop){
       // Normal formation tracking.
       e.x = e.fx;
       e.y = e.fy;
@@ -2207,11 +2304,19 @@ if (baseY > maxBaseY){
 
     for (let ei = enemies.length - 1; ei >= 0; ei--){
       const e = enemies[ei];
-      const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
-      if (e.dying) continue;
+const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
-      if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
+if (e.dying) continue;
+
+// Boss wave: the orbiting shields protect the core.
+if (wave === 11 && e.isBossCore){
+  // If any shield is still alive, the core ignores direct hits.
+  const shieldsAlive = (e.shieldsAlive ?? enemies.reduce((n, s) => n + (s && s.isBossShield && !s.dying ? 1 : 0), 0));
+  if (shieldsAlive > 0) continue;
+}
+
+if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         enemyApplyDamage(e, 1, "bullet");
         // Bullet consumed on hit.
         bullets.splice(bi, 1);
