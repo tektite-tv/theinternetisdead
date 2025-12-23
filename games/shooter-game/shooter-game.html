@@ -2288,6 +2288,23 @@ if (bossCore){
     }
     bossCore.shieldsAlive = alive;
   }
+} else {
+  // If the boss core is gone (killed/fading), any remaining orbiters should NOT become
+  // a second full-health "boss". Make them a 1-hit cleanup target.
+  for (const s of enemies){
+    if (!s || s.dying) continue;
+    if (!s.isBossShield) continue;
+    if (!s.bossRef || s.bossRef.dying || (typeof s.bossRef.hp === "number" && s.bossRef.hp <= 0)){
+      s.hp = 1;
+      s.isBossShield = false;
+      s.isBossRemnant = true;
+      s.bossWave = false;
+      s.bossRef = null;
+      // stop shield firing
+      s.shootTimer = 9999;
+      s.shootInterval = 9999;
+    }
+  }
 }
 
   for (const e of enemies){
