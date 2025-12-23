@@ -710,7 +710,28 @@ function isDragonEnemy(e){
 // NOTE: This only touches canvas drawing + enemy objects; it will not mess with menus.
 // =======================
 const ENEMY_HIT_FLASH_SECS = 0.12;   // how long the red flash lasts
-const ENEMY_DEATH_FADE_SECS = 0.35;  // how long the death fade lasts
+const ENEMY_DEATH_FADE_SECS = 0.35;
+
+// =======================
+// Respawn-on-kill mechanic
+// =======================
+// Pick which enemy type can "fake die" and come back.
+// Match against the image filename substring. (Edit this freely.)
+const RESPAWN_ELIGIBLE_IMG_MATCH = "skeleton.gif";
+// 25% chance on kill to trigger the respawn.
+const RESPAWN_ON_KILL_CHANCE = 0.25;
+// Seconds to wait while flashing red before respawning.
+const RESPAWN_DELAY_SECS = 3.0;
+// How long to flash white after respawn.
+const RESPAWN_WHITE_FLASH_SECS = 0.8;
+
+function isRespawnEligibleEnemy(e){
+  if (!e || !e.img || !e.img.src) return false;
+  // Don't respawn bosses/UFO/etc.
+  if (e.bossWave || e.isBossCore || e.isBossOrbiter || e.isUFO) return false;
+  return e.img.src.includes(RESPAWN_ELIGIBLE_IMG_MATCH);
+}
+  // how long the death fade lasts
 
 function enemyMarkHit(e){
   if (!e) return;
@@ -752,6 +773,16 @@ function enemyKill(e, source){
   e.lockW = e.w; e.lockH = e.h;
   e.swoop = null;
 
+  // 25% chance: for eligible enemies, "fake die" then respawn after a delay.
+  // We keep the enemy object instead of removing it when fade would hit 0.
+  if (isRespawnEligibleEnemy(e) && Math.random() < RESPAWN_ON_KILL_CHANCE){
+    e.respawnT = RESPAWN_DELAY_SECS;
+    e.respawnBlink = 0;
+    e.respawnPending = true;
+    // Don't fade out while waiting.
+    e.fade = 1;
+  }
+
   // One-time kill side effects.
   if (!e._killAwarded){
     e._killAwarded = true;
@@ -779,6 +810,7 @@ function enemyApplyDamage(e, dmg, source){
   if (!e) return;
   enemyMarkHit(e);
   e.hp = (typeof e.hp === "number") ? e.hp : 1;
+  if (typeof e.maxHp !== \"number\") e.maxHp = e.hp;
   e.hp -= Math.max(0, dmg|0);
   if (e.hp <= 0){
     enemyKill(e, source);
@@ -961,6 +993,11 @@ function bombHitsEnemy(){
   // Check contact against all enemies (both while flying and while armed).
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
+
+    // Respawn flash timers
+    if (typeof e.whiteFlashT === "number" && e.whiteFlashT > 0){
+      e.whiteFlashT = Math.max(0, e.whiteFlashT - dt);
+    }
     if (e.dying) continue;
     const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
@@ -2602,6 +2639,28 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
       if (typeof e.lockW === "number" && e.lockW > 0) e.w = e.lockW;
       if (typeof e.lockH === "number" && e.lockH > 0) e.h = e.lockH;
 
+      // If this enemy is in a respawn delay, keep it alive and flash red.
+      if (e.respawnPending && typeof e.respawnT === "number" && e.respawnT > 0){
+        e.respawnT = Math.max(0, e.respawnT - dt);
+        e.respawnBlink = (typeof e.respawnBlink === "number" ? e.respawnBlink : 0) + dt;
+
+        // Flash red by toggling hitFlash rapidly.
+        const blinkOn = (Math.floor(e.respawnBlink * 10) % 2) === 0;
+        e.hitFlash = blinkOn ? 1 : 0;
+
+        // When timer ends, respawn (restore HP) and flash white briefly.
+        if (e.respawnT <= 0){
+          e.respawnPending = false;
+          e.dying = false;
+          e.hitFlash = 0;
+          e.fade = 1;
+          e.fadeRate = 0;
+          e.hp = (typeof e.maxHp === "number") ? e.maxHp : 1;
+          e.whiteFlashT = RESPAWN_WHITE_FLASH_SECS;
+        }
+        continue;
+      }
+
       const rate = (e.fadeRate && e.fadeRate > 0) ? e.fadeRate : (1 / ENEMY_DEATH_FADE_SECS);
       e.fade = Math.max(0, (typeof e.fade === "number" ? e.fade : 1) - dt * rate);
 
@@ -2811,7 +2870,17 @@ if (gameState === STATE.PLAYING){
     ctx.globalAlpha = alpha;
     ctx.drawImage(e.img, ex, ey, e.w, e.h);
 
-    if (e.hitFlash > 0){
+    
+        // Respawn white flash overlay
+        if (typeof e.whiteFlashT === "number" && e.whiteFlashT > 0){
+          const a = Math.max(0, Math.min(1, e.whiteFlashT / RESPAWN_WHITE_FLASH_SECS));
+          ctx.save();
+          ctx.globalAlpha = 0.65 * a;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(x, y, w, h);
+          ctx.restore();
+        }
+if (e.hitFlash > 0){
       const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
       ctx.globalCompositeOperation = "source-atop";
       ctx.fillStyle = `rgba(255,0,0,${0.28 * p})`;
