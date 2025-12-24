@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Topo Camo Lava Lamp</title>
+  <style>
+    html, body { margin:0; height:100%; background:#050606; overflow:hidden; }
+    canvas { display:block; width:100vw; height:100vh; touch-action:none; }
+    .hud{
+      position:fixed; left:12px; top:10px;
+      font:12px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color:rgba(230,240,235,.75);
+      background:rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.08);
+      padding:10px 12px; border-radius:10px;
+      user-select:none; pointer-events:none;
+      max-width:min(520px, calc(100vw - 24px));
+      backdrop-filter: blur(6px);
+    }
+    .hud b { color: rgba(240,255,245,.9); }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">
+  <b>Topo Camo Lava Lamp</b><br/>
+  Drag / swipe to stir the terrain. It’s like finger-painting a geological hallucination.
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  // --- Resize handling (hi-DPI) ---
+  let W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    W = Math.floor(window.innerWidth * DPR);
+    H = Math.floor(window.innerHeight * DPR);
+    canvas.width = W;
+    canvas.height = H;
+  }
+  window.addEventListener('resize', resize, { passive: true });
+  resize();
+
+  // --- Pointer interaction: stores a "stir" vector field via a few impulses ---
+  const impulses = [];
+  const MAX_IMPULSES = 10;
+
+  let dragging = false;
+  let lastX = 0, lastY = 0;
+
+  function addImpulse(x, y, vx, vy) {
+    impulses.push({
+      x, y, vx, vy,
+      t: 0,
+      life: 1.1 + Math.random() * 0.5,
+      r: 80 * DPR + Math.random() * 120 * DPR
+    });
+    while (impulses.length > MAX_IMPULSES) impulses.shift();
+  }
+
+  function pointerDown(e) {
+    dragging = true;
+    const p = getPos(e);
+    lastX = p.x; lastY = p.y;
+  }
+  function pointerMove(e) {
+    const p = getPos(e);
+    if (!dragging) {
+      // gentle hover drift without needing click
+      addImpulse(p.x, p.y, (p.x - lastX) * 0.002, (p.y - lastY) * 0.002);
+      lastX = p.x; lastY = p.y;
+      return;
+    }
+    const dx = p.x - lastX;
+    const dy = p.y - lastY;
+    lastX = p.x; lastY = p.y;
+
+    const speed = Math.hypot(dx, dy) || 1;
+    const vx = dx / speed;
+    const vy = dy / speed;
+
+    addImpulse(p.x, p.y, vx, vy);
+  }
+  function pointerUp() { dragging = false; }
+
+  function getPos(e) {
+    if (e.touches && e.touches.length) {
+      const t = e.touches[0];
+      return { x: t.clientX * DPR, y: t.clientY * DPR };
+    }
+    return { x: e.clientX * DPR, y: e.clientY * DPR };
+  }
+
+  canvas.addEventListener('mousedown', pointerDown);
+  window.addEventListener('mousemove', pointerMove, { passive: true });
+  window.addEventListener('mouseup', pointerUp, { passive: true });
+
+  canvas.addEventListener('touchstart', (e) => { pointerDown(e); }, { passive: false });
+  canvas.addEventListener('touchmove', (e) => { e.preventDefault(); pointerMove(e); }, { passive: false });
+  canvas.addEventListener('touchend', pointerUp, { passive: true });
+  canvas.addEventListener('touchcancel', pointerUp, { passive: true });
+
+  // --- Noise helpers (fast-ish value noise + fbm) ---
+  function fract(x) { return x - Math.floor(x); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function smooth(t){ return t*t*(3-2*t); }
+
+  // hash -> [0,1)
+  function hash2(x, y) {
+    // a compact deterministic hash
+    const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+    return fract(s);
+  }
+
+  // 2D value noise
+  function vnoise(x, y) {
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const u = smooth(xf), v = smooth(yf);
+
+    const a = hash2(xi, yi);
+    const b = hash2(xi + 1, yi);
+    const c = hash2(xi, yi + 1);
+    const d = hash2(xi + 1, yi + 1);
+
+    return lerp(lerp(a, b, u), lerp(c, d, u), v);
+  }
+
+  function fbm(x, y) {
+    let f = 0;
+    let amp = 0.55;
+    let freq = 1.0;
+    for (let i = 0; i < 5; i++) {
+      f += amp * (vnoise(x * freq, y * freq) * 2 - 1);
+      freq *= 2.02;
+      amp *= 0.5;
+    }
+    return f; // roughly [-1,1]
+  }
+
+  // Domain warp for "lava lamp" blobs
+  function warp(x, y, time) {
+    const w1 = fbm(x * 0.65 + 1.2 + time * 0.03, y * 0.65 - 0.8 - time * 0.02);
+    const w2 = fbm(x * 0.75 - 2.2 - time * 0.025, y * 0.75 + 1.6 + time * 0.035);
+    return { x: x + w1 * 0.9, y: y + w2 * 0.9 };
+  }
+
+  // Stir field from impulses: swirl + push
+  function applyImpulses(x, y, time) {
+    let ox = 0, oy = 0;
+    for (let i = 0; i < impulses.length; i++) {
+      const im = impulses[i];
+      const dx = x - im.x;
+      const dy = y - im.y;
+      const d2 = dx*dx + dy*dy;
+      const r2 = im.r * im.r;
+      if (d2 > r2) continue;
+
+      const d = Math.sqrt(d2) / (im.r + 1e-6); // 0..1
+      const fall = (1 - d);
+      const spin = 0.9 * fall * fall;
+
+      // Tangent for swirl
+      const tx = -dy;
+      const ty = dx;
+      const inv = 1 / (Math.hypot(tx, ty) + 1e-6);
+
+      // Push direction from drag vector
+      const push = 0.55 * fall;
+
+      ox += (tx * inv) * spin * (0.8 + 0.2*Math.sin(time*2 + i));
+      oy += (ty * inv) * spin * (0.8 + 0.2*Math.cos(time*2 + i));
+
+      ox += im.vx * push;
+      oy += im.vy * push;
+
+      // subtle ripple
+      const rip = Math.sin((1 - d) * 14 - time * 3) * 0.08 * fall;
+      ox += dx * rip / (im.r + 1e-6);
+      oy += dy * rip / (im.r + 1e-6);
+    }
+    return { x: x + ox * 120, y: y + oy * 120 };
+  }
+
+  // --- Palette: green/brown camo with weird gradients ---
+  // returns [r,g,b]
+  function camoColor(t, ridges) {
+    // t in [0,1], ridges accent edges
+    // banded topo "layer cake"
+    const bands = 10; // number of topo steps
+    const stepped = Math.floor(t * bands) / (bands - 1);
+
+    // base palette anchors
+    const a = [22, 45, 22];     // deep green
+    const b = [55, 88, 44];     // olive
+    const c = [104, 92, 58];    // khaki/brown
+    const d = [72, 52, 33];     // dark brown
+
+    // mix across anchors with non-linear weirdness
+    let m;
+    if (stepped < 0.33) {
+      m = stepped / 0.33;
+      return mixRGB(a, b, ease(m), ridges);
+    } else if (stepped < 0.66) {
+      m = (stepped - 0.33) / 0.33;
+      return mixRGB(b, c, ease(m), ridges);
+    } else {
+      m = (stepped - 0.66) / 0.34;
+      return mixRGB(c, d, ease(m), ridges);
+    }
+  }
+
+  function ease(x) { return x*x*(3-2*x); }
+
+  function mixRGB(p, q, t, ridges) {
+    // ridges boosts contrast on contour edges
+    const edge = Math.min(1, Math.max(0, ridges * 1.25));
+    const k = 0.12 + edge * 0.28;
+
+    const r = p[0] + (q[0] - p[0]) * t;
+    const g = p[1] + (q[1] - p[1]) * t;
+    const b = p[2] + (q[2] - p[2]) * t;
+
+    // weird gradient "lava lamp" sheen
+    const rr = r + k * 255 * (t - 0.5);
+    const gg = g + k * 255 * (0.5 - Math.abs(t - 0.5));
+    const bb = b + k * 200 * (0.5 - t);
+
+    return [clamp(rr), clamp(gg), clamp(bb)];
+  }
+
+  function clamp(x){ return x < 0 ? 0 : x > 255 ? 255 : x; }
+
+  // --- Render loop ---
+  const img = () => ctx.createImageData(W, H);
+  let imageData = img();
+
+  function render(timeMs) {
+    const time = timeMs * 0.001;
+
+    // age impulses
+    for (let i = impulses.length - 1; i >= 0; i--) {
+      const im = impulses[i];
+      im.t += 0.016;
+      im.r *= 0.992;
+      if (im.t > im.life || im.r < 35 * DPR) impulses.splice(i, 1);
+    }
+
+    const data = imageData.data;
+
+    // Choose a pixel step for performance. Lower = sharper, higher = faster.
+    const step = (W * H > 2_400_000) ? 2 : 1; // 2 for huge screens
+
+    // Scale coordinates into "noise space"
+    const scale = 0.0042; // terrain zoom
+    const driftX = Math.cos(time * 0.12) * 40;
+    const driftY = Math.sin(time * 0.10) * 40;
+
+    for (let y = 0; y < H; y += step) {
+      for (let x = 0; x < W; x += step) {
+        // interactive warp
+        let p = applyImpulses(x + driftX, y + driftY, time);
+
+        // noise space coords
+        let nx = p.x * scale;
+        let ny = p.y * scale;
+
+        // lava-lamp domain warp
+        const w = warp(nx, ny, time);
+        nx = w.x;
+        ny = w.y;
+
+        // height field
+        const h1 = fbm(nx * 1.1 + 0.0, ny * 1.1 + 0.0);
+        const h2 = fbm(nx * 2.0 + 5.0, ny * 2.0 - 3.0) * 0.45;
+        const h3 = vnoise(nx * 6.0 + time * 0.08, ny * 6.0 - time * 0.06) * 0.25 - 0.125;
+
+        // "camo blobs" mask
+        const blob = fbm(nx * 0.85 - 2.0, ny * 0.85 + 1.0);
+        const camoMask = smooth01((blob + 1) * 0.5);
+
+        // Combine into height map
+        let height = (h1 * 0.85 + h2 + h3) * 0.5 + 0.5; // approx [0,1]
+        height = clamp01(height);
+
+        // Add blobby mixing (camo gradient weirdness)
+        // push height around based on mask to get "layer cake" zones
+        const swizzle = 0.14 * (camoMask - 0.5);
+        height = clamp01(height + swizzle);
+
+        // contour/ridge emphasis
+        const bandFreq = 10;
+        const band = height * bandFreq;
+        const fracBand = band - Math.floor(band);
+        const ridges = 1 - Math.abs(fracBand - 0.5) * 2; // peaks at band centers
+        const edge = 1 - smooth01(ridges); // edges between bands
+
+        // base camo color from height (quantized "topo")
+        let col = camoColor(height, edge);
+
+        // subtle darker contour lines
+        const contourLine = Math.pow(edge, 1.8);
+        col[0] *= (1 - contourLine * 0.28);
+        col[1] *= (1 - contourLine * 0.28);
+        col[2] *= (1 - contourLine * 0.28);
+
+        // "lava lamp" blending glow (without neon, still organic)
+        const glow = (smooth01(camoMask) - 0.5) * 0.14 + Math.sin(time + height * 7) * 0.02;
+        col[0] = clamp(col[0] + glow * 80);
+        col[1] = clamp(col[1] + glow * 55);
+        col[2] = clamp(col[2] + glow * 35);
+
+        // Write pixel (and replicate for step>1 to avoid holes)
+        writePixel(data, x, y, col[0], col[1], col[2], step);
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    requestAnimationFrame(render);
+  }
+
+  function clamp01(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function smooth01(x){ x = clamp01(x); return x*x*(3-2*x); }
+
+  function writePixel(data, x, y, r, g, b, step) {
+    // fill a step x step block for speed modes
+    for (let yy = 0; yy < step; yy++) {
+      const py = y + yy;
+      if (py >= H) continue;
+      for (let xx = 0; xx < step; xx++) {
+        const px = x + xx;
+        if (px >= W) continue;
+        const i = (py * W + px) * 4;
+        data[i+0] = r|0;
+        data[i+1] = g|0;
+        data[i+2] = b|0;
+        data[i+3] = 255;
+      }
+    }
+  }
+
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>
