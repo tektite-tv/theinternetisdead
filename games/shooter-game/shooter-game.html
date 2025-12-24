@@ -1329,6 +1329,9 @@ function updateStarfield(dt, keys, playerSpeed){
   if (gameState === STATE.PLAYING){
     if (keys["a"] || keys["arrowleft"])  vxIntent -= 1;
     if (keys["d"] || keys["arrowright"]) vxIntent += 1;
+    // Xbox/Gamepad: use left-stick/D-pad horizontal intent too
+    vxIntent += (typeof gpMoveX !== "undefined" ? (gpMoveX || 0) : 0);
+    vxIntent = Math.max(-1, Math.min(1, vxIntent));
   } else {
     vxIntent = 0.15 * Math.sin(time * 0.6);
   }
