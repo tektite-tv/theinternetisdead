@@ -1733,6 +1733,7 @@ let gpAimX = 0;
 let gpAimY = 0;
 let gpFireHeld = false;
 let gpShieldHeld = false;
+let gpSpeedBoostHeld = false;
 let gpHasAnyInput = false;
 let gpIsConnected = false;
 
@@ -1775,6 +1776,7 @@ function pollGamepad(dt){
   gpAimY = 0;
   gpFireHeld = false;
   gpShieldHeld = false;
+  gpSpeedBoostHeld = false;
 
   if (!gp){
     gpPrev = null;
@@ -1815,10 +1817,12 @@ function pollGamepad(dt){
   const rb = gpBtn(gp, 5).pressed; // RB
   const back  = gpBtn(gp, 8).pressed; // View/Back
   const start = gpBtn(gp, 9).pressed; // Menu/Start
+  const lStick = gpBtn(gp, 10).pressed; // LS click
   const rStick = gpBtn(gp, 11).pressed; // RS click
 
   gpFireHeld = (rt > GP_TRIGGER_DEADZONE) || a;
-  gpShieldHeld = lb || (lt > GP_TRIGGER_DEADZONE);
+  gpSpeedBoostHeld = (lt > GP_TRIGGER_DEADZONE);
+  gpShieldHeld = lStick;
 
   // Consider any noticeable stick or trigger motion as input
   if (Math.abs(lx) > 0.01 || Math.abs(rx) > 0.01 || Math.abs(ry) > 0.01 || lt > 0.05 || rt > 0.05){
@@ -2602,7 +2606,7 @@ function update(dt){
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
 
-  player.x += moveX * player.speed;
+  player.x += moveX * player.speed * (gpSpeedBoostHeld ? 1.75 : 1.0);
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
   // Keep player vertically aligned to the hearts HUD
@@ -2620,7 +2624,7 @@ if (aimMag > GP_AIM_DEADZONE){
   aimAngle = Math.atan2(aimY - player.y, aimX - player.x);
 }
 
-// v1.57: shield (LB/LT hold) and fire (RT/A hold)
+// v1.58: shield (LS click hold) and fire (RT/A hold); LT = speed boost
 shieldHolding = !!gpShieldHeld;
 if (shieldHolding && canActivateShield()) startShield();
 
