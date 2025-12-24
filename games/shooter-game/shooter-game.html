@@ -1556,6 +1556,16 @@ function showMenu(){
   updateMenuSelectionUI();
 
   optionsMenu.style.display = "none";
+
+  // v1.62: clear any lingering option highlights
+  try{
+    const items = getOptionsNavItems();
+    for (const it of items){
+      const row = it.rowEl || it.el;
+      if (row) row.classList.remove("menuSelected");
+    }
+  }catch(_){}
+
   uiRoot.style.display = "flex";
 }
 
@@ -1596,6 +1606,10 @@ function showOptions(){
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
   uiRoot.style.display = "flex";
+
+  // v1.62: controller selection starts at the top of the options list
+  optionsSelection = 0;
+  updateOptionsSelectionUI();
 }
 function startGame(){
   setPaused(false);
@@ -1771,6 +1785,95 @@ function updateMenuSelectionUI(){
   }catch(e){}
 }
 
+// v1.62: Options + Pause menu navigation (gamepad)
+// Options selection list is linear: sliders -> checkboxes -> Back -> Apply
+let optionsSelection = 0;
+let optionsNavCooldown = 0;
+let optionsAdjustCooldown = 0;
+
+function getOptionsNavItems(){
+  // Each item: { kind: "slider"|"checkbox"|"button", el, rowEl? }
+  const items = [];
+  try{
+    const addRow = (controlEl) => controlEl ? (controlEl.closest(".optRow") || controlEl.parentElement) : null;
+
+    if (typeof livesSlider !== "undefined")   items.push({kind:"slider", el:livesSlider,   rowEl:addRow(livesSlider)});
+    if (typeof heartsSlider !== "undefined")  items.push({kind:"slider", el:heartsSlider,  rowEl:addRow(heartsSlider)});
+    if (typeof shieldsSlider !== "undefined") items.push({kind:"slider", el:shieldsSlider, rowEl:addRow(shieldsSlider)});
+    if (typeof bombsSlider !== "undefined")   items.push({kind:"slider", el:bombsSlider,   rowEl:addRow(bombsSlider)});
+
+    if (typeof infiniteToggle !== "undefined")       items.push({kind:"checkbox", el:infiniteToggle, rowEl:addRow(infiniteToggle)});
+    if (typeof invertColorsCheckbox !== "undefined" && invertColorsCheckbox) items.push({kind:"checkbox", el:invertColorsCheckbox, rowEl:addRow(invertColorsCheckbox)});
+    if (typeof bossModeCheckbox !== "undefined" && bossModeCheckbox)         items.push({kind:"checkbox", el:bossModeCheckbox, rowEl:addRow(bossModeCheckbox)});
+
+    const backBtn = document.getElementById("btnBack");
+    const applyBtn = document.getElementById("btnApply");
+    if (backBtn)  items.push({kind:"button", el:backBtn, rowEl:backBtn});
+    if (applyBtn) items.push({kind:"button", el:applyBtn, rowEl:applyBtn});
+  }catch(e){}
+  return items;
+}
+
+function updateOptionsSelectionUI(){
+  try{
+    const items = getOptionsNavItems();
+    // Clamp index
+    if (!items.length) return;
+    optionsSelection = Math.max(0, Math.min(optionsSelection, items.length - 1));
+    for (let i=0;i<items.length;i++){
+      const row = items[i].rowEl || items[i].el;
+      if (!row) continue;
+      row.classList.toggle("menuSelected", i === optionsSelection);
+    }
+    // Ensure selected item is visible in scrollable options panel
+    const active = items[optionsSelection];
+    const target = (active && (active.rowEl || active.el)) ? (active.rowEl || active.el) : null;
+    if (target && optionsMenu && optionsMenu.scrollIntoView){
+      // scroll within the options panel container
+      try{ target.scrollIntoView({block:"nearest", inline:"nearest"}); }catch(_){}
+    }
+  }catch(e){}
+}
+
+function adjustOptionItem(item, dir){
+  // dir: -1 left, +1 right
+  if (!item || !item.el) return;
+  if (item.kind === "slider"){
+    const el = item.el;
+    const step = parseFloat(el.step || "1") || 1;
+    const min = parseFloat(el.min || "0") || 0;
+    const max = parseFloat(el.max || "100") || 100;
+    const cur = parseFloat(el.value || "0") || 0;
+    const next = Math.max(min, Math.min(max, cur + dir * step));
+    el.value = String(next);
+    // Trigger existing UI updates
+    try{ el.dispatchEvent(new Event("input", {bubbles:true})); }catch(_){}
+  } else if (item.kind === "checkbox"){
+    item.el.checked = !item.el.checked;
+    try{ item.el.dispatchEvent(new Event("change", {bubbles:true})); }catch(_){}
+  }
+}
+
+function clickOptionItem(item){
+  if (!item || !item.el) return;
+  if (item.kind === "button"){
+    try{ item.el.click(); }catch(_){}
+  } else if (item.kind === "checkbox"){
+    adjustOptionItem(item, 1);
+  }
+}
+
+// v1.62: pause menu selection (currently only one button, but keep structure)
+let pauseSelection = 0;
+function updatePauseSelectionUI(){
+  try{
+    const btn = document.getElementById("btnPauseQuit");
+    if (!btn) return;
+    btn.classList.toggle("menuSelected", true);
+  }catch(e){}
+}
+
+
 
 const GP_DEADZONE = 0.18;
 const GP_AIM_DEADZONE = 0.22;
@@ -1921,22 +2024,95 @@ function pollGamepad(dt){
       updateMenuSelectionUI();
       showOptions();
     }
-  } else if (gameState === STATE.OPTIONS){{
-    if (pressB) showMenu();
-    if (pressA){
-      // Mirror the Apply button click
-      btnApply && btnApply.click();
+  } else if (gameState === STATE.OPTIONS){
+    // v1.62: controller can navigate Options menu (Up/Down select, Left/Right adjust, A activate, B back)
+    optionsNavCooldown = Math.max(0, optionsNavCooldown - dt);
+    optionsAdjustCooldown = Math.max(0, optionsAdjustCooldown - dt);
+
+    const dpadUp    = gpBtn(gp, 12).pressed;
+    const dpadDown  = gpBtn(gp, 13).pressed;
+    const dpadLeft  = gpBtn(gp, 14).pressed;
+    const dpadRight = gpBtn(gp, 15).pressed;
+
+    const stickUp    = (ly < -0.55);
+    const stickDown  = (ly >  0.55);
+    const stickLeft  = (lx < -0.55);
+    const stickRight = (lx >  0.55);
+
+    const items = getOptionsNavItems();
+
+    // Keep highlight in sync
+    updateOptionsSelectionUI();
+
+    // Back always works
+    if (pressB){
+      // Clear highlights when leaving
+      try{
+        for (const it of items){
+          const row = it.rowEl || it.el;
+          if (row) row.classList.remove("menuSelected");
+        }
+      }catch(_){}
+      showMenu();
     }
-  } else if (deathOverlay && deathOverlay.style.display === "flex"){
+
+    // Navigate list
+    if (items.length && optionsNavCooldown <= 0 && (dpadUp || dpadDown || stickUp || stickDown)){
+      if (dpadUp || stickUp) optionsSelection--;
+      if (dpadDown || stickDown) optionsSelection++;
+      optionsSelection = (items.length ? ( (optionsSelection % items.length) + items.length ) % items.length : 0);
+      optionsNavCooldown = 0.18;
+      updateOptionsSelectionUI();
+    }
+
+    // Adjust current item (sliders/checkboxes)
+    if (items.length && optionsAdjustCooldown <= 0 && (dpadLeft || dpadRight || stickLeft || stickRight)){
+      const dir = (dpadLeft || stickLeft) ? -1 : 1;
+      adjustOptionItem(items[optionsSelection], dir);
+      optionsAdjustCooldown = 0.12;
+      updateOptionsSelectionUI();
+    }
+
+    // A activates current item (button click or checkbox toggle)
+    if (items.length && pressA){
+      clickOptionItem(items[optionsSelection]);
+      updateOptionsSelectionUI();
+    }
+
+    // Start acts like Apply (handy)
+    if (pressStart){
+      try{
+        const applyBtn = document.getElementById("btnApply");
+        if (applyBtn) applyBtn.click();
+      }catch(_){}
+    }
+  } else if (deathOverlay} else if (deathOverlay && deathOverlay.style.display === "flex"){
     // Death screen: A restarts
     if (pressA) restartRun();
   } else if (gameState === STATE.PLAYING){
+    // Start toggles pause
     if (pressStart){
       togglePause();
     }
-    // One-shot bomb actions
-    if (pressX || pressRB){
-      dropBomb();
+
+    if (isPaused){
+      // v1.62: pause menu button selectable/clickable with controller
+      updatePauseSelectionUI();
+      if (pressA){
+        try{
+          const quitBtn = document.getElementById("btnPauseQuit");
+          if (quitBtn) quitBtn.click();
+        }catch(_){}
+      }
+      // B also resumes (nice muscle memory)
+      if (pressB){
+        togglePause();
+      }
+    } else {
+      // One-shot bomb actions
+      if (pressX || pressRB){
+        dropBomb();
+      }
     }
   }
 
