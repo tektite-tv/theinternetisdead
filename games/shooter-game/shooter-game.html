@@ -679,6 +679,9 @@ if (btnPauseQuit){
     setPaused(false);
     stopMusic();
     showMenu();
+setUIInputEnabled(true);
+canvas.style.display = "none";
+
   });
 }
 
@@ -1480,6 +1483,12 @@ const startMenu = document.getElementById("startMenu");
 const optionsMenu = document.getElementById("optionsMenu");
 const assetStatus = document.getElementById("assetStatus");
 
+// v1.63: UI hit-testing toggle (menus need clicks; gameplay should pass through)
+function setUIInputEnabled(enabled){
+  if (!uiRoot) return;
+  uiRoot.style.pointerEvents = enabled ? "auto" : "none";
+}
+
 const btnStart = document.getElementById("btnStart");
 const btnOptions = document.getElementById("btnOptions");
 const btnBack = document.getElementById("btnBack");
@@ -1566,6 +1575,8 @@ function showMenu(){
     }
   }catch(_){}
 
+  setUIInputEnabled(true);
+  canvas.style.display = "none";
   uiRoot.style.display = "flex";
 }
 
@@ -1605,6 +1616,8 @@ function showOptions(){
 
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
+  setUIInputEnabled(true);
+  canvas.style.display = "none";
   uiRoot.style.display = "flex";
 
   // v1.62: controller selection starts at the top of the options list
@@ -1618,6 +1631,8 @@ function startGame(){
   ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
+  setUIInputEnabled(false);
+  canvas.style.display = "block";
   deathOverlay.style.display = "none";
 
   // v1.54: show HUD only in-game
