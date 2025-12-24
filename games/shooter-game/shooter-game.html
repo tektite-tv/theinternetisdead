@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Bananaman Shooter v1.54</title>
+<title>Bananaman Shooter v1.57</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -61,7 +61,7 @@
   .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
 
   /* =======================
-     HUD Corner Slots (v1.54)
+     HUD Corner Slots (v1.57)
   ======================= */
   .cornerSlot{
     position:absolute;
@@ -309,7 +309,7 @@ body.invert-colors {
   <div id="startMenu" class="panel">
     <div class="title">Bananaman Shooter <span style="font-size:14px; opacity:0.75;">(v1.54)</span></div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ · Aim: Mouse/Touch · Shoot: Space/Click · ESC: Menu · HUD: /</div>
+    <div class="hint">Move: A/D or ⬅➡ (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Bomb: Q (or X/RB) · Shield: RMB (or LB/LT) · Pause: ESC (or Start) · HUD: / (or View)</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -383,6 +383,10 @@ body.invert-colors {
   PROJECT CHANGELOG / REMOVAL LOG
 ========================================================================
 [REMOVAL LOG]
+
+- 2025-12-23 | v1.57
+  Added: Native Xbox controller support via Gamepad API (move/aim/shoot/shield/bomb/pause + menu navigation).
+
 
 - 2025-12-17 | v1.54.1
   Fixed: Game not starting / enemy images not loading due to runtime error.
@@ -1705,6 +1709,180 @@ const player = {
 
 const keys = {};
 let fireCooldown = 0;
+/* =======================
+   Gamepad (Xbox Controller) Support (v1.57)
+   - Uses the standard Gamepad API (works in modern Chromium/Firefox).
+   - Mappings (Xbox layout):
+     * Move: Left Stick X / D-Pad Left-Right
+     * Aim:  Right Stick (360°)
+     * Shoot: RT (hold) or A (hold)
+     * Bomb:  X (press) or RB (press)
+     * Shield: LB (hold) or LT (hold)
+     * Pause: START (press)
+     * HUD toggle: BACK/VIEW (press)
+     * Fullscreen: Right Stick Click (press)
+     * Menus:
+        - Main Menu: A = Start, Y = Options
+        - Options: A = Apply, B = Back
+        - Death Screen: A = Restart
+======================= */
+let gpIndex = 0;
+let gpPrev = null; // previous button pressed states
+let gpMoveX = 0;
+let gpAimX = 0;
+let gpAimY = 0;
+let gpFireHeld = false;
+let gpShieldHeld = false;
+let gpHasAnyInput = false;
+let gpIsConnected = false;
+
+const GP_DEADZONE = 0.18;
+const GP_AIM_DEADZONE = 0.22;
+const GP_TRIGGER_DEADZONE = 0.35;
+
+function gpDead(v, dz){ return (Math.abs(v) < dz) ? 0 : v; }
+
+function getGamepad(){
+  const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
+  if (!pads || !pads.length) return null;
+  // Prefer last known index, otherwise first non-null.
+  if (pads[gpIndex]) return pads[gpIndex];
+  for (let i = 0; i < pads.length; i++){
+    if (pads[i]){ gpIndex = i; return pads[i]; }
+  }
+  return null;
+}
+
+function gpBtn(gp, i){
+  if (!gp || !gp.buttons || !gp.buttons[i]) return { pressed:false, value:0 };
+  const b = gp.buttons[i];
+  return { pressed: !!b.pressed, value: (typeof b.value === "number" ? b.value : (b.pressed ? 1 : 0)) };
+}
+
+function gpEdge(i, nowPressed){
+  // true on rising edge
+  const was = gpPrev ? !!gpPrev[i] : false;
+  return (!!nowPressed && !was);
+}
+
+function pollGamepad(dt){
+  const gp = getGamepad();
+  gpIsConnected = !!gp;
+  gpHasAnyInput = false;
+
+  gpMoveX = 0;
+  gpAimX = 0;
+  gpAimY = 0;
+  gpFireHeld = false;
+  gpShieldHeld = false;
+
+  if (!gp){
+    gpPrev = null;
+    return;
+  }
+
+  // Build previous button snapshot on first sight
+  if (!gpPrev || gpPrev.length !== gp.buttons.length){
+    gpPrev = new Array(gp.buttons.length).fill(false);
+  }
+
+  // Axes
+  const ax0 = gp.axes && gp.axes.length > 0 ? gp.axes[0] : 0; // LX
+  const ax2 = gp.axes && gp.axes.length > 2 ? gp.axes[2] : 0; // RX
+  const ax3 = gp.axes && gp.axes.length > 3 ? gp.axes[3] : 0; // RY
+
+  const lx = gpDead(ax0, GP_DEADZONE);
+  const rx = gpDead(ax2, GP_AIM_DEADZONE);
+  const ry = gpDead(ax3, GP_AIM_DEADZONE);
+
+  // D-Pad left/right (14/15)
+  const dLeft  = gpBtn(gp, 14).pressed ? -1 : 0;
+  const dRight = gpBtn(gp, 15).pressed ?  1 : 0;
+
+  gpMoveX = Math.max(-1, Math.min(1, lx + dLeft + dRight));
+
+  gpAimX = rx;
+  gpAimY = ry;
+
+  // Triggers + face buttons
+  const lt = gpBtn(gp, 6).value; // LT
+  const rt = gpBtn(gp, 7).value; // RT
+  const a  = gpBtn(gp, 0).pressed; // A
+  const b  = gpBtn(gp, 1).pressed; // B
+  const x  = gpBtn(gp, 2).pressed; // X
+  const y  = gpBtn(gp, 3).pressed; // Y
+  const lb = gpBtn(gp, 4).pressed; // LB
+  const rb = gpBtn(gp, 5).pressed; // RB
+  const back  = gpBtn(gp, 8).pressed; // View/Back
+  const start = gpBtn(gp, 9).pressed; // Menu/Start
+  const rStick = gpBtn(gp, 11).pressed; // RS click
+
+  gpFireHeld = (rt > GP_TRIGGER_DEADZONE) || a;
+  gpShieldHeld = lb || (lt > GP_TRIGGER_DEADZONE);
+
+  // Consider any noticeable stick or trigger motion as input
+  if (Math.abs(lx) > 0.01 || Math.abs(rx) > 0.01 || Math.abs(ry) > 0.01 || lt > 0.05 || rt > 0.05){
+    gpHasAnyInput = true;
+  }
+
+  // Edges (one-shot actions)
+  const pressStart = gpEdge(9, start);
+  const pressBack  = gpEdge(8, back);
+  const pressX     = gpEdge(2, x);
+  const pressRB    = gpEdge(5, rb);
+  const pressY     = gpEdge(3, y);
+  const pressB     = gpEdge(1, b);
+  const pressA     = gpEdge(0, a);
+  const pressRS    = gpEdge(11, rStick);
+
+  // Unlock audio the first time the user touches the pad
+  if ((gpHasAnyInput || pressA || pressB || pressX || pressY || pressStart || pressBack || pressRB || pressRS) && !audioUnlocked){
+    unlockAudioOnce();
+  }
+
+  // Global toggles (work anywhere sensible)
+  if (pressBack){
+    hudVisible = !hudVisible;
+    overlay.style.display = hudVisible ? "block" : "none";
+  }
+  if (pressRS){
+    toggleFullscreen();
+  }
+
+  // Menu navigation
+  if (gameState === STATE.MENU){
+    if (pressA) startGame();
+    if (pressY) showOptions();
+  } else if (gameState === STATE.OPTIONS){
+    if (pressB) showMenu();
+    if (pressA){
+      // Mirror the Apply button click
+      btnApply && btnApply.click();
+    }
+  } else if (deathOverlay && deathOverlay.style.display === "flex"){
+    // Death screen: A restarts
+    if (pressA) restartRun();
+  } else if (gameState === STATE.PLAYING){
+    if (pressStart){
+      togglePause();
+    }
+    // One-shot bomb actions
+    if (pressX || pressRB){
+      dropBomb();
+    }
+  }
+
+  // Save prev pressed states
+  for (let i = 0; i < gp.buttons.length; i++){
+    gpPrev[i] = !!(gp.buttons[i] && gp.buttons[i].pressed);
+  }
+}
+
+window.addEventListener("gamepadconnected", (e) => {
+  try{
+    gpIndex = e.gamepad && typeof e.gamepad.index === "number" ? e.gamepad.index : gpIndex;
+  }catch(_){}
+});
 
 /* =======================
    Aim (v1.54: 360° aim)
@@ -2346,6 +2524,9 @@ function update(dt){
   // starfield updates always
   updateStarfield(dt, keys, player.speed);
 
+  // v1.57: gamepad input (Xbox controller)
+  pollGamepad(dt);
+
   // PAUSE_GUARD_v1_51: freeze gameplay updates while paused
   if (gameState === STATE.PLAYING && isPaused) return;
 
@@ -2413,13 +2594,37 @@ function update(dt){
 
   if (waveBanner.t > 0) waveBanner.t = Math.max(0, waveBanner.t - dt);
 
-  // player move
-  if (keys["a"] || keys["arrowleft"]) player.x -= player.speed;
-  if (keys["d"] || keys["arrowright"]) player.x += player.speed;
+  // player move (keyboard + gamepad)
+  let moveX = 0;
+  if (keys["a"] || keys["arrowleft"]) moveX -= 1;
+  if (keys["d"] || keys["arrowright"]) moveX += 1;
+  // add analog movement from Xbox pad
+  moveX += gpMoveX || 0;
+  moveX = Math.max(-1, Math.min(1, moveX));
+
+  player.x += moveX * player.speed;
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
 
   // Keep player vertically aligned to the hearts HUD
   player.y = getPlayerAlignedY();
+
+
+// v1.57: right stick aim (only when the stick is actually being pushed)
+const aimMag = Math.hypot(gpAimX || 0, gpAimY || 0);
+if (aimMag > GP_AIM_DEADZONE){
+  const nx = (gpAimX / aimMag);
+  const ny = (gpAimY / aimMag);
+  // Convert stick direction into an aim point in front of the player.
+  aimX = player.x + nx * 220;
+  aimY = player.y + ny * 220;
+  aimAngle = Math.atan2(aimY - player.y, aimX - player.x);
+}
+
+// v1.57: shield (LB/LT hold) and fire (RT/A hold)
+shieldHolding = !!gpShieldHeld;
+if (shieldHolding && canActivateShield()) startShield();
+
+if (gpFireHeld) shoot();
 
   // v1.54: smooth the aim angle (shortest-path wrap) for nicer feel
   const da = normAngle(aimAngle - aimAngleSmoothed);
