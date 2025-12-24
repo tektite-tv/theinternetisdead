@@ -243,6 +243,14 @@
 body.invert-colors {
   filter: invert(1) hue-rotate(180deg);
 }
+
+  /* v1.61: Gamepad-navigable menu highlight */
+  .menuSelected{
+    background: rgba(0,255,0,0.14) !important;
+    border-color: rgba(0,255,0,0.95) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.35), 0 0 18px rgba(0,255,0,0.28);
+    transform: translateY(-1px) scale(1.02);
+  }
 </style>
 
 </head>
@@ -1543,6 +1551,10 @@ function showMenu(){
   if (timerHud) timerHud.style.display = "none";
 
   startMenu.style.display = "block";
+  // v1.61: default selection for controller users
+  menuSelection = 0;
+  updateMenuSelectionUI();
+
   optionsMenu.style.display = "none";
   uiRoot.style.display = "flex";
 }
@@ -1740,6 +1752,26 @@ let gpSpeedBoostHeld = false;
 let gpHasAnyInput = false;
 let gpIsConnected = false;
 
+// v1.61: Start menu selection for gamepad navigation (0 = Start, 1 = Options)
+let menuSelection = 0;
+let menuNavCooldown = 0;
+
+// v1.61: helper to highlight the currently selected menu button
+function updateMenuSelectionUI(){
+  try{
+    if (!startMenu) return;
+    const btnStartEl = document.getElementById("btnStart");
+    const btnOptionsEl = document.getElementById("btnOptions");
+    if (!btnStartEl || !btnOptionsEl) return;
+
+    // Only highlight when a gamepad is connected and we're actually on the start menu
+    const shouldShow = (gpIsConnected && gameState === STATE.MENU && startMenu.style.display !== "none");
+    btnStartEl.classList.toggle("menuSelected", shouldShow && menuSelection === 0);
+    btnOptionsEl.classList.toggle("menuSelected", shouldShow && menuSelection === 1);
+  }catch(e){}
+}
+
+
 const GP_DEADZONE = 0.18;
 const GP_AIM_DEADZONE = 0.22;
 const GP_TRIGGER_DEADZONE = 0.35;
@@ -1858,9 +1890,38 @@ function pollGamepad(dt){
 
   // Menu navigation
   if (gameState === STATE.MENU){
-    if (pressA) startGame();
-    if (pressY) showOptions();
-  } else if (gameState === STATE.OPTIONS){
+    // v1.61: controller can navigate start menu (Start / Options) and click with A
+    menuNavCooldown = Math.max(0, menuNavCooldown - dt);
+
+    // D-pad left/right navigation
+    const dpadLeft  = gpBtn(gp, 14).pressed;
+    const dpadRight = gpBtn(gp, 15).pressed;
+
+    // Stick horizontal intent (debounced by cooldown)
+    const stickLeft  = (lx < -0.55);
+    const stickRight = (lx >  0.55);
+
+    if (menuNavCooldown <= 0 && (dpadLeft || dpadRight || stickLeft || stickRight)){
+      if (dpadLeft || stickLeft)  menuSelection = 0;
+      if (dpadRight || stickRight) menuSelection = 1;
+      menuNavCooldown = 0.18;
+      updateMenuSelectionUI();
+    } else {
+      // Keep highlight in sync if gamepad connects/disconnects while on menu
+      updateMenuSelectionUI();
+    }
+
+    if (pressA){
+      if (menuSelection === 0) startGame();
+      else showOptions();
+    }
+    // Keep Y as a quick shortcut to Options
+    if (pressY){
+      menuSelection = 1;
+      updateMenuSelectionUI();
+      showOptions();
+    }
+  } else if (gameState === STATE.OPTIONS){{
     if (pressB) showMenu();
     if (pressA){
       // Mirror the Apply button click
