@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Topo Camo Lava Lamp (Fast)</title>
+  <title>Topo Camo Lava Lamp (Unhinged)</title>
   <style>
     html, body { margin:0; height:100%; background:#000; overflow:hidden; }
     canvas { display:block; width:100vw; height:100vh; touch-action:none; }
@@ -17,251 +17,181 @@
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d', { alpha:false });
 
-  // Offscreen low-res buffer for speed.
   const buf = document.createElement('canvas');
   const bctx = buf.getContext('2d', { alpha:false });
 
-  let DPR = 1, W = 0, H = 0;
-  let BW = 0, BH = 0;
+  let DPR = 1, W = 0, H = 0, BW = 0, BH = 0;
   let imageData = null;
 
-  // Adaptive internal scale: lower = faster. Will auto-adjust a bit.
-  let quality = 0.75; // start decent; will drop if frame time is bad
-  const MIN_Q = 0.45;
-  const MAX_Q = 1.00;
+  let quality = 0.75;
+  const MIN_Q = 0.45, MAX_Q = 1.0;
 
-  function resize() {
-    DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    W = Math.floor(innerWidth * DPR);
-    H = Math.floor(innerHeight * DPR);
+  function resize(){
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = innerWidth * DPR | 0;
+    H = innerHeight * DPR | 0;
     canvas.width = W;
     canvas.height = H;
 
-    // internal buffer resolution
-    BW = Math.max(220, Math.floor(W * quality));
-    BH = Math.max(220, Math.floor(H * quality));
+    BW = Math.max(220, W * quality | 0);
+    BH = Math.max(220, H * quality | 0);
     buf.width = BW;
     buf.height = BH;
-
     imageData = bctx.createImageData(BW, BH);
   }
-  addEventListener('resize', resize, { passive:true });
+  addEventListener('resize', resize);
   resize();
 
-  // --- Interaction: a single "stir" vector + decaying swirl center ---
-  let dragging = false;
-  let px = 0, py = 0;
-  let stirX = 0, stirY = 0;
-  let centerX = 0.5, centerY = 0.5; // normalized
-  let swirl = 0;
+  // Interaction
+  let cxN = 0.5, cyN = 0.5, swirl = 0, stirX = 0, stirY = 0;
+  let px = 0, py = 0, dragging = false;
 
-  function pos(e){
-    if (e.touches && e.touches.length) {
-      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    }
-    return { x: e.clientX, y: e.clientY };
-  }
+  const pos = e =>
+    e.touches ? {x:e.touches[0].clientX,y:e.touches[0].clientY} : e;
 
-  function down(e){
+  canvas.onmousedown = e => {
+    dragging = true;
+    px = e.clientX; py = e.clientY;
+  };
+  addEventListener('mousemove', e => {
+    if(!dragging) return;
+    const dx = e.clientX - px, dy = e.clientY - py;
+    px = e.clientX; py = e.clientY;
+    const m = Math.hypot(dx,dy)||1;
+    stirX = stirX*0.7 + dx/m*0.3;
+    stirY = stirY*0.7 + dy/m*0.3;
+    swirl = Math.min(1, swirl + m/60);
+    cxN = px/innerWidth;
+    cyN = py/innerHeight;
+  });
+  addEventListener('mouseup', ()=>dragging=false);
+
+  canvas.ontouchstart = e => {
     dragging = true;
     const p = pos(e);
     px = p.x; py = p.y;
-    centerX = p.x / innerWidth;
-    centerY = p.y / innerHeight;
-  }
-
-  function move(e){
+  };
+  canvas.ontouchmove = e => {
+    e.preventDefault();
     const p = pos(e);
-    const dx = p.x - px;
-    const dy = p.y - py;
-    px = p.x; py = p.y;
+    const dx = p.x-px, dy = p.y-py;
+    px=p.x; py=p.y;
+    const m = Math.hypot(dx,dy)||1;
+    stirX = stirX*0.7 + dx/m*0.3;
+    stirY = stirY*0.7 + dy/m*0.3;
+    swirl = Math.min(1, swirl + m/60);
+    cxN = px/innerWidth;
+    cyN = py/innerHeight;
+  };
+  canvas.ontouchend = ()=>dragging=false;
 
-    // update stir vector (normalized)
-    const mag = Math.hypot(dx, dy) || 1;
-    const nx = dx / mag;
-    const ny = dy / mag;
+  // Noise
+  const hash = n => ((n=(n^61)^(n>>>16),n+=n<<3,n^=n>>>4,n*=0x27d4eb2d,n^=n>>>15)>>>0)/4294967296;
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const smooth=t=>t*t*(3-2*t);
 
-    // keep a decaying directional bias
-    stirX = stirX * 0.75 + nx * 0.25;
-    stirY = stirY * 0.75 + ny * 0.25;
-
-    // swirl strength based on speed
-    swirl = Math.min(1, swirl * 0.8 + Math.min(1, mag / 40) * 0.35);
-
-    // move swirl center even when not dragging, feels alive
-    centerX = p.x / innerWidth;
-    centerY = p.y / innerHeight;
+  function vnoise(x,y){
+    const xi=x|0, yi=y|0;
+    const xf=x-xi, yf=y-yi;
+    const u=smooth(xf), v=smooth(yf);
+    const a=hash(xi*374761393^yi*668265263);
+    const b=hash((xi+1)*374761393^yi*668265263);
+    const c=hash(xi*374761393^(yi+1)*668265263);
+    const d=hash((xi+1)*374761393^(yi+1)*668265263);
+    return lerp(lerp(a,b,u),lerp(c,d,u),v);
   }
 
-  function up(){ dragging = false; }
-
-  canvas.addEventListener('mousedown', down);
-  addEventListener('mousemove', (e)=>{ if(dragging) move(e); }, { passive:true });
-  addEventListener('mouseup', up, { passive:true });
-
-  canvas.addEventListener('touchstart', (e)=>{ down(e); }, { passive:false });
-  canvas.addEventListener('touchmove', (e)=>{ e.preventDefault(); move(e); }, { passive:false });
-  canvas.addEventListener('touchend', up, { passive:true });
-  canvas.addEventListener('touchcancel', up, { passive:true });
-
-  // --- Fast-ish hash noise (no sin) ---
-  function hash(n){
-    // integer hash to [0,1)
-    n = (n ^ 61) ^ (n >>> 16);
-    n = n + (n << 3);
-    n = n ^ (n >>> 4);
-    n = n * 0x27d4eb2d;
-    n = n ^ (n >>> 15);
-    return (n >>> 0) / 4294967296;
-  }
-  function lerp(a,b,t){ return a + (b-a)*t; }
-  function smooth(t){ return t*t*(3-2*t); }
-
-  function vnoise(x, y){
-    const xi = x|0, yi = y|0;
-    const xf = x - xi, yf = y - yi;
-    const u = smooth(xf), v = smooth(yf);
-
-    const a = hash((xi*374761393) ^ (yi*668265263));
-    const b = hash(((xi+1)*374761393) ^ (yi*668265263));
-    const c = hash((xi*374761393) ^ ((yi+1)*668265263));
-    const d = hash(((xi+1)*374761393) ^ ((yi+1)*668265263));
-
-    return lerp(lerp(a,b,u), lerp(c,d,u), v);
-  }
-
-  // 3 octaves is plenty here (fast)
-  function fbm(x, y){
-    let f = 0, amp = 0.6, freq = 1.0;
+  function fbm(x,y){
+    let f=0, a=0.6, fr=1;
     for(let i=0;i<3;i++){
-      f += amp * (vnoise(x*freq, y*freq)*2 - 1);
-      freq *= 2.03;
-      amp *= 0.5;
+      f+=a*(vnoise(x*fr,y*fr)*2-1);
+      fr*=2.03; a*=0.5;
     }
-    return f; // ~[-1,1]
+    return f;
   }
 
-  function clamp(x){ return x<0?0:x>255?255:x; }
-  function clamp01(x){ return x<0?0:x>1?1:x; }
-
-  // topo camo palette (green->olive->khaki->brown)
-  function camo(t){
-    // quantized "layer cake"
-    const bands = 11;
-    const s = Math.floor(t * bands) / (bands - 1);
-
-    const A=[20,44,20], B=[60,92,44], C=[110,98,60], D=[70,52,34];
-    let r,g,b, m;
-
-    if (s < 0.33){
-      m = s/0.33;
-      r = lerp(A[0],B[0],m); g = lerp(A[1],B[1],m); b = lerp(A[2],B[2],m);
-    } else if (s < 0.66){
-      m = (s-0.33)/0.33;
-      r = lerp(B[0],C[0],m); g = lerp(B[1],C[1],m); b = lerp(B[2],C[2],m);
-    } else {
-      m = (s-0.66)/0.34;
-      r = lerp(C[0],D[0],m); g = lerp(C[1],D[1],m); b = lerp(C[2],D[2],m);
+  // HSV helpers
+  function rgb2hsv(r,g,b){
+    r/=255; g/=255; b/=255;
+    const m=Math.max(r,g,b), n=Math.min(r,g,b), d=m-n;
+    let h=0;
+    if(d){
+      if(m===r) h=((g-b)/d)%6;
+      else if(m===g) h=(b-r)/d+2;
+      else h=(r-g)/d+4;
+      h/=6; if(h<0)h+=1;
     }
-    return [r,g,b,s];
+    return [h, m?d/m:0, m];
   }
 
-  // Performance control
-  let lastT = performance.now();
-  let avgDt = 16;
+  function hsv2rgb(h,s,v){
+    const i=(h*6)|0;
+    const f=h*6-i;
+    const p=v*(1-s);
+    const q=v*(1-f*s);
+    const t=v*(1-(1-f)*s);
+    const mod=i%6;
+    const r=[v,q,p,p,t,v][mod];
+    const g=[t,v,v,q,p,p][mod];
+    const b=[p,p,t,v,v,q][mod];
+    return [r*255,g*255,b*255];
+  }
+
+  let last=performance.now(), avg=16;
 
   function frame(t){
-    const dt = t - lastT; lastT = t;
-    avgDt = avgDt * 0.92 + dt * 0.08;
+    const dt=t-last; last=t;
+    avg=avg*0.9+dt*0.1;
+    if(avg>20&&quality>MIN_Q){quality-=0.05;resize();}
+    if(avg<15&&quality<MAX_Q){quality+=0.02;resize();}
 
-    // If things get choppy, lower internal resolution. If stable, raise a bit.
-    if (avgDt > 20 && quality > MIN_Q){
-      quality = Math.max(MIN_Q, quality - 0.05);
-      resize();
-    } else if (avgDt < 15.5 && quality < MAX_Q){
-      quality = Math.min(MAX_Q, quality + 0.02);
-      resize();
-    }
+    stirX*=0.94; stirY*=0.94; swirl*=0.93;
 
-    // decay interaction
-    stirX *= 0.94;
-    stirY *= 0.94;
-    swirl *= 0.93;
+    const time=t*0.001;
+    const d=imageData.data;
+    const cx=cxN*BW, cy=cyN*BH;
+    const scale=0.018;
+    const hueShift=time*0.08;
+    const rgbShift=Math.sin(time*1.3)*1.5;
 
-    const time = t * 0.001;
-    const data = imageData.data;
+    let i=0;
+    for(let y=0;y<BH;y++){
+      for(let x=0;x<BW;x++){
+        const dx=x-cx, dy=y-cy;
+        const sw=swirl*200/(Math.hypot(dx,dy)+20);
+        const wx=x-dy*sw+stirX*24;
+        const wy=y+dx*sw+stirY*24;
 
-    // coordinate mapping
-    const cx = centerX * BW;
-    const cy = centerY * BH;
+        const nx=wx*scale, ny=wy*scale;
+        let h=fbm(nx*1.2+time*0.15,ny*1.2-time*0.1)*0.5+0.5;
+        h=Math.min(1,Math.max(0,h));
 
-    // noise zoom (tune to taste)
-    const scale = 0.018; // larger => more zoomed out
-    const driftX = Math.cos(time * 0.12) * 2.2;
-    const driftY = Math.sin(time * 0.10) * 2.2;
+        let r=lerp(30,120,h);
+        let g=lerp(60,180,h);
+        let b=lerp(40,90,h);
 
-    let i = 0;
-    for (let y = 0; y < BH; y++){
-      for (let x = 0; x < BW; x++){
-        // swirl around touch/drag center (cheap polar-ish warp)
-        const dx = x - cx;
-        const dy = y - cy;
-        const inv = 1 / (Math.hypot(dx, dy) + 18);
-        const sw = swirl * 220 * inv;
+        let [hh,ss,vv]=rgb2hsv(r,g,b);
+        hh=(hh+hueShift+h*0.2)%1;
+        ss=Math.min(1,ss*1.8);
+        [r,g,b]=hsv2rgb(hh,ss,vv);
 
-        const wx = x + (-dy * sw) + stirX * 26;
-        const wy = y + ( dx * sw) + stirY * 26;
-
-        // convert to noise space
-        const nx = wx * scale + driftX;
-        const ny = wy * scale + driftY;
-
-        // lava-lamp blobs: domain warp via 1 fbm call
-        const w = fbm(nx*0.9 + time*0.15, ny*0.9 - time*0.12);
-        const hx = nx + w * 0.85;
-        const hy = ny - w * 0.85;
-
-        // height field
-        let h = fbm(hx*1.25, hy*1.25) * 0.62 + (vnoise(hx*3.2 + time*0.25, hy*3.2 - time*0.18) - 0.5) * 0.35;
-        h = clamp01(h * 0.5 + 0.5);
-
-        // camo mixing mask
-        const mask = clamp01(fbm(nx*0.75 - 2.0, ny*0.75 + 1.0) * 0.5 + 0.5);
-        h = clamp01(h + (mask - 0.5) * 0.16);
-
-        // topo edge: emphasize band transitions
-        const bands = 11;
-        const band = h * bands;
-        const frac = band - (band|0);
-        const edge = 1 - Math.abs(frac - 0.5) * 2; // 0..1 (center high)
-        const contour = Math.pow(1 - edge, 1.6);    // edges darker
-
-        // base camo color
-        const [r0,g0,b0,s] = camo(h);
-
-        // slight "weird gradient" sheen tied to mask + time
-        const sheen = (mask - 0.5) * 22 + Math.sin(time + s * 7) * 6;
-
-        const r = clamp(r0 + sheen - contour * 44);
-        const g = clamp(g0 + sheen * 0.7 - contour * 44);
-        const b = clamp(b0 + sheen * 0.4 - contour * 44);
-
-        data[i++] = r|0;
-        data[i++] = g|0;
-        data[i++] = b|0;
-        data[i++] = 255;
+        d[i++]=r;
+        d[i++]=g;
+        d[i++]=b;
+        d[i++]=255;
       }
     }
 
-    // Draw low-res to main, scaled up crisp-ish
-    bctx.putImageData(imageData, 0, 0);
+    bctx.putImageData(imageData,0,0);
 
-    ctx.imageSmoothingEnabled = true; // smooth upscaling for gradients
-    ctx.drawImage(buf, 0, 0, W, H);
+    ctx.clearRect(0,0,W,H);
+    ctx.drawImage(buf, rgbShift, 0, W, H);
+    ctx.globalCompositeOperation="screen";
+    ctx.drawImage(buf, -rgbShift, 0, W, H);
+    ctx.globalCompositeOperation="source-over";
 
     requestAnimationFrame(frame);
   }
-
   requestAnimationFrame(frame);
 })();
 </script>
