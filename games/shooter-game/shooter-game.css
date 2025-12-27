@@ -1,0 +1,247 @@
+html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
+  canvas { display:block; }
+  #overlay{
+    position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
+    text-shadow:0 0 6px rgba(0,255,0,0.35);
+   display:none; /* HUD hidden by default (toggle with /) */
+  }
+
+
+  #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .panel{
+    pointer-events:auto;
+    width:min(520px, 92vw);
+    border:1px solid rgba(0,255,0,0.35);
+    border-radius:14px;
+    background: rgba(0,0,0,0.72);
+    box-shadow: 0 0 28px rgba(0,255,0,0.08);
+    padding: 18px 18px 16px;
+    text-align:center;
+  }
+  .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
+  .subimg{
+    width:120px; height:120px; display:block; margin:0 auto 10px;
+    image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
+  }
+  .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  button{
+    font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    padding:10px 14px; border-radius:12px; cursor:pointer; min-width:160px;
+  }
+  button:hover{ background: rgba(0,255,0,0.08); }
+  .smallBtn{ min-width:120px; padding:8px 12px; border-radius:10px; }
+  .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:left; margin-top:10px; }
+  .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
+  .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
+  input[type="range"]{ width:100%; accent-color:#00ff66; }
+  .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
+
+  /* OPTIONS MENU: keep it on-screen, scroll if needed */
+  #optionsMenu.panel{ max-height:88vh; overflow:auto; }
+  #optionsMenu .title{ font-size:22px; margin:2px 0 8px; }
+  #optionsMenu .optionsGrid{ gap:8px; }
+  #optionsMenu .optRow{ padding:8px 10px; }
+  #optionsMenu .optLabel{ margin-bottom:6px; }
+  #optionsMenu .hint{ margin-top:6px; line-height:1.25; }
+
+  @media (max-height: 700px){
+    #optionsMenu.panel{ padding:12px; }
+    #optionsMenu .title{ font-size:20px; }
+    #optionsMenu .optionsGrid{ gap:6px; }
+    #optionsMenu .optRow{ padding:7px 9px; }
+  }
+
+  .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
+
+  /* =======================
+     HUD Corner Slots (v1.96)
+  ======================= */
+  .cornerSlot{
+    position:absolute;
+    min-width:120px;
+    height:86px;
+    padding:8px 10px;
+    border:2px solid rgba(0,255,0,0.55);
+    border-radius:12px;
+    background: rgba(0,0,0,0.55);
+    box-shadow: 0 0 18px rgba(0,255,0,0.10);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:4px;
+    pointer-events:none;
+  }
+  .cornerSlot .subtxt{
+    font-family: "Courier New", monospace;
+    font-size:12px;
+    line-height:1;
+    opacity:0.95;
+    color:#0f0;
+    text-align:center;
+  }
+  #livesSlot img{
+    width:40px; height:40px;
+    image-rendering:pixelated;
+    filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
+  }
+
+
+  .livesButton{
+    flex-direction:row;
+    justify-content:center;
+    gap:8px;
+  }
+  .livesLabel{
+    font-family:"Courier New", monospace;
+    font-size:12px;
+    color:#00ff66;
+    opacity:0.95;
+    white-space:nowrap;
+  }
+
+  #deathOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(255,0,0,0.22);
+    pointer-events:auto;
+  }
+  #deathPanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(255,0,0,0.65);
+    border-radius:16px;
+    background: rgba(0,0,0,0.72);
+    padding: 18px 18px 16px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(255,0,0,0.14);
+  }
+  #deathTitle{
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:2px;
+    color:#ff4444;
+    text-shadow: 0 0 10px rgba(255,0,0,0.25);
+  }
+  #btnRestart{
+    margin-top:14px;
+    font-family:"Courier New", monospace;
+    font-size:20px;
+    font-weight:800;
+    color:#ffdddd;
+    background: rgba(0,0,0,0.55);
+    border:2px solid rgba(255,0,0,0.55);
+    padding:10px 18px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  #btnRestart:hover{ background: rgba(255,0,0,0.10); }
+
+
+
+  #pauseOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,0.55);
+    pointer-events:none;
+    z-index: 90;
+  }
+  #pausePanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(0,255,0,0.65);
+    border-radius:16px;
+    background: rgba(0,0,0,0.72);
+    padding: 18px 18px 16px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(0,255,0,0.14);
+  
+  box-sizing: border-box;
+  max-width: min(520px, 92vw);
+  width: min(520px, 92vw);
+
+  position: relative;
+
+  pointer-events: auto;
+}
+  #pauseTitle{
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:2px;
+    color:#00ff66;
+    text-shadow: 0 0 10px rgba(0,255,0,0.25);
+  }
+  #pauseHint{
+    margin-top:10px;
+    font-family:monospace;
+    font-size:14px;
+    opacity:0.9;
+    color:#b6ffcf;
+  }
+
+
+  /* v1.96: keep HUD off the menu and keep menu clickable */
+  #uiRoot{ z-index: 50; }
+  #deathOverlay{ z-index: 100; }
+  #livesSlot{ display:none; }
+  #powerupSlot{ display:none; }
+
+
+/* Centered wave label (replaces old Stage/Waves HUD) */
+/* Centered wave label (final) */
+#stageHud{
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font: bold 20px monospace;
+  z-index: 50;
+  text-shadow: 0 0 8px rgba(0,0,0,0.65);
+  pointer-events: none;
+}
+
+/* Accuracy score (top-left, 2x wave counter) */
+#accuracyScore{
+  position:absolute;
+  top:10px;
+  left:14px;
+  font-family:monospace;
+  font-weight:900;
+  font-size:40px;
+  color:#ffd400;
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+}
+
+#timerHud{
+  position:absolute;
+  top:10px;
+  right:14px;
+  font-family:monospace;
+  font-weight:800;
+  font-size:18px;
+  color:#ffffff;
+  opacity:0.95;
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+}
+
+
+/* =======================
+   Invert Colors Mode
+======================= */
+body.invert-colors {
+  filter: invert(1) hue-rotate(180deg);
+}

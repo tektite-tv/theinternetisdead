@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Bananaman Shooter v1.96</title>
+
+
+<link rel="stylesheet" href="shooter-game.css" />
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="overlay"></div>
+
+<div id="stageHud" style="
+  position:absolute;
+  top:10px;
+  left:10px;
+  font-family:monospace;
+  font-size:14px;
+  color:#00ff66;
+  text-shadow:0 0 6px rgba(0,255,0,0.35);
+  pointer-events:none;
+  z-index:20;
+"></div>
+<div id="accuracyScore">0</div>
+<div id="timerHud">0.0s</div>
+
+
+<div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
+  <span class="livesLabel">LIVES:</span>
+  <img src="/media/images/gifs/bananarama.gif" alt="lives"/>
+  <div id="livesText" class="subtxt">x3</div>
+</div>
+
+<div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
+  <div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
+  <div id="powerupHint" class="subtxt">Press Q</div>
+</div>
+
+<div id="deathOverlay">
+  <div id="deathPanel">
+    <div id="deathTitle">YOU DIED</div>
+    <button id="btnRestart">Restart</button>
+</div>
+</div>
+
+
+<div id="pauseOverlay">
+  <div id="pausePanel">
+    <div id="pauseTitle">PAUSED</div>
+    <div id="pauseHint">Press ESC to resume</div>
+
+    <!-- v1.96: Pause command input -->
+    <input id="pauseCommand" type="text" autocomplete="off" spellcheck="false"
+      placeholder="Type a command… (e.g. /help)" style="width: 100%;
+        max-width: 420px;
+        box-sizing: border-box;
+        margin-top: 14px;
+        padding: 10px 12px;
+        font-family: monospace;
+        font-size: 16px;
+        color: #00ff66;
+        background: rgba(0,0,0,0.65);
+        border: 2px solid rgba(0,255,0,0.45);
+        border-radius: 12px;
+        outline: none;
+        pointer-events: auto;" />
+
+    <div id="pauseCmdSuggest" style="width: 100%;
+      max-width: 420px;
+      box-sizing: border-box;
+      margin: 8px auto 0;
+      text-align: left;
+      font-family: monospace;
+      font-size: 14px;
+      color: #b6ffcf;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(0,255,0,0.25);
+      border-radius: 12px;
+      padding: 8px 10px;
+      display: none;
+      pointer-events: auto;
+      max-height: 180px;
+      overflow: auto;
+      box-shadow: 0 0 18px rgba(0,255,0,0.08);"></div>
+    <button id="btnPauseQuit" style="
+      margin-top:16px;
+      font-family:monospace;
+      font-size:18px;
+      font-weight:800;
+      color:#0f0;
+      background: rgba(0,0,0,0.55);
+      border:2px solid rgba(0,255,0,0.55);
+      padding:10px 18px;
+      border-radius:14px;
+      cursor:pointer;
+      pointer-events:auto;
+    ">Quit to Menu</button>
+    <button id="btnPauseResume" style="
+      margin-top:10px;
+      font-family:monospace;
+      font-size:18px;
+      font-weight:800;
+      color:#0f0;
+      background: rgba(0,0,0,0.55);
+      border:2px solid rgba(0,255,0,0.55);
+      padding:10px 18px;
+      border-radius:14px;
+      cursor:pointer;
+      pointer-events:auto;
+    ">Resume</button>
+
+  </div>
+</div>
+
+
+<div id="uiRoot">
+  <div id="startMenu" class="panel">
+    <div class="title">Bananaman Shooter <span style="font-size:14px; opacity:0.75;">(v1.96)</span></div>
+    <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
+    <div class="hint">Move: A/D or ⬅➡ (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Bomb: Q (or X/RB) · Shield: RMB (or LB/LT) · Pause: ESC (or Start) · HUD: / (or View)</div>
+    <div class="btnRow">
+      <button id="btnStart">Start Game</button>
+      <button id="btnOptions">Options</button>
+    </div>
+    <div id="assetStatus" class="statusLine">Loading enemy images...</div>
+  </div>
+
+  <div id="optionsMenu" class="panel" style="display:none;">
+    <div class="title">OPTIONS</div>
+
+    
+    <div class="optionsGrid">
+      <div class="optRow">
+        <div class="optLabel"><span>Starting Lives</span><span id="livesVal">3</span></div>
+        <input id="livesSlider" type="range" min="0" max="20" value="3" step="1" />
+      </div>
+
+      <div class="optRow">
+        <div class="optLabel"><span>Starting Hearts</span><span id="heartsVal">4</span></div>
+        <input id="heartsSlider" type="range" min="1" max="12" value="4" step="1" />
+        <div class="hint">Hearts = max hits per life. More hearts = smaller damage per hit.</div>
+      </div>
+
+      <div class="optRow">
+        <div class="optLabel"><span>Starting Shields</span><span id="shieldsVal">0</span></div>
+        <input id="shieldsSlider" type="range" min="0" max="10" value="0" step="1" />
+        <div class="hint">Shields act like extra one-hit armor pips (🛡️) next to your hearts.</div>
+      </div>
+
+      <div class="optRow">
+        <div class="optLabel"><span>Starting Bombs</span><span id="bombsVal">0</span></div>
+        <input id="bombsSlider" type="range" min="0" max="20" value="0" step="1" />
+      </div>
+
+
+      <div class="optRow">
+        <div class="optLabel"><span>Game Speed</span><span id="speedVal">5</span></div>
+        <input id="speedSlider" type="range" min="1" max="10" value="5" step="1" />
+        <div class="hint">5 = normal. 1 = slow-mo. 10 = turbo.</div>
+      </div>
+
+      <div class="optRow" style="gap:10px;">
+        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
+          <input id="infiniteToggle" type="checkbox" style="transform:scale(1.2);" />
+          <span>Infinite (no damage, no resource consumption)</span>
+        </label>
+        <div class="hint">For testing, chaos, or avoiding consequences. Pick one.</div>
+
+      <div class="optRow" style="gap:10px;">
+        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
+          <input id="invertColorsCheckbox" type="checkbox" style="transform:scale(1.2);" />
+          <span>Invert Colors</span>
+        </label>
+        <div class="hint">Flips all colors for night mode, screenshots, or chaos.</div>
+      </div>
+
+      
+      <div class="optRow" style="gap:10px;">
+        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
+          <input id="bossModeCheckbox" type="checkbox" style="transform:scale(1.2);" />
+          <span>Boss Mode (start on Wave 11)</span>
+        </label>
+        <div class="hint">Starts you on the Wave 11 boss fight for practice/testing.</div>
+      </div>
+
+</div>
+    </div>
+
+    <div class="btnRow" style="margin-top:14px;">
+      <button id="btnBack" class="smallBtn">Back</button>
+      <button id="btnApply" class="smallBtn">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======================================================================
+  PROJECT CHANGELOG / REMOVAL LOG
+========================================================================
+[REMOVAL LOG]
+
+- 2025-12-24 | v1.96
+  Added: Pause commands /fullscreen (toggle fullscreen) and /help (lists commands alphabetically).
+
+
+- 2025-12-23 | v1.96
+  Added: Native Xbox controller support via Gamepad API (move/aim/shoot/shield/bomb/pause + menu navigation).
+
+
+- 2025-12-17 | v1.96
+  Fixed: Game not starting / enemy images not loading due to runtime error.
+  Cause: resize() called resetStarfield() before starLayers const initialized (TDZ).
+  Fix: Initialize starfield definitions before resize() runs; make resize() safe.
+
+- 2025-12-17 | v1.96
+  Undo: v1.96 "simplified demo" version (removed menus/options/combat/etc.).
+  Reason: User requested undo; restored full game build.
+  Added: Player size increase + enforced vertical padding between formation and player.
+  Location: player sizing, spawnEnemies baseY, update() formation Y clamp.
+
+- 2025-12-17 | v1.96
+  Added: Responsive desktop spacing so enemy formation uses screen width better.
+  Added: Hard top-of-screen clamp so enemies stay visible even after step-downs.
+  Tweaked: Reduced enemy base size + breathing scale to prevent overlap on desktop.
+  Tweaked: Formation edge detection uses predicted next position to avoid clipping.
+
+
+- 2025-12-17 | v1.96
+  Added: Galaga-like enemy descent (continuous downward pressure) + predictable wobble.
+  Tweaked: Enemy formation clamped to ~top half of screen (prevents encroaching into player zone).
+  Tweaked: Increased base enemy spacing (X/Y) for clearer separation.
+  Added: Wave banner ("WAVE 1", "WAVE 2", etc.) shown on start and after wave clears.
+  Tweaked: Difficulty scaling per wave (enemy horizontal speed, descent speed, step-down).
+
+
+- 2025-12-17 | v1.96
+  Added: Wave spawn scaling: Wave 1 = 1 enemy, then doubles each wave (capped).
+  Tweaked: FUN MODE: more lives, slower enemy pressure, slower swoops, faster bullets, gentler scaling.
+  Added: Dynamic formation packing: auto-cols/rows + auto enemy sizing to fit top-zone area.
+  Kept: Galaga-style 'swoop' attackers: individual enemies break formation, dive toward the player, then return.
+  Kept: Main formation stays in the top zone; only swoopers can enter player space.
+  Tweaked: Player fire rate increases each wave (cooldown decreases).
+
+
+- 2025-12-17 | v1.96
+  Tweaked: Player bullets are slightly larger than enemy bullets (visual clarity).
+  Added: Player bullets can collide with enemy bullets; both are deleted on contact (counter-shot mechanic).
+
+- 2025-12-17 | v1.96
+  Added: Always-on player health bar under the player.
+  Changed: Health replaces lives. Each enemy hit drains 25% health (4 hits total).
+  Added: On death, player explodes into violent pixel-dust particles and returns to menu.
+
+
+
+- 2025-12-17 | v1.96
+  Fix: Restored any accidentally removed gameplay systems while adding UI and powerups.
+  Kept: 360° aim + orbit triangle, straight bullets, bullet-vs-bullet cancel, Galaga formation + swoops, wave sizing 1/2/4/6/..., HUD toggle, menus/options.
+  Added: Lives box (bottom-left), powerup slot with 'Press Q', YOU DIED overlay + Restart reset, UFO 25% wave spawn with 3-hit color cycle + fade granting 💥, Q bomb drop (+ flash then AoE + knockback), health bar (4 hits per life), pixel-dust death.
+- 2025-12-19 | v1.96
+  Changed: 💥 bomb is now a short-range shot (spawns ahead of player in aim direction).
+  Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
+
+- 2025-12-19 | v1.96
+  Added: Bomb-killing a dragon.gif enemy grants a one-time +25% "armor" pip next to the hearts HUD.
+  Behavior: The armor absorbs the next hit (any damage) and then flips to ❌ briefly.
+
+====================================================================== */
+
+
+/* =======================
+   Paths (EDIT IF NEEDED)
+======================= */
+const GIF_BASE = "/media/images/gifs/";
+const AUDIO_HIT = "/media/audio/hitmarker.mp3";
+const AUDIO_OOF = "/media/audio/oof.mp3";
+
+
+/* =======================
+   Audio
+======================= */
+const AUDIO_BG_MUSIC = "/media/audio/spaceinvaders.mp3";
+const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
+
+// Background music (loops). We start it on the first user interaction (autoplay rules).
+const musicBg = new Audio(AUDIO_BG_MUSIC);
+musicBg.loop = true;
+musicBg.preload = "auto";
+musicBg.volume = 0.6;
+
+// Death yell (plays once when GAME OVER screen appears)
+const sfxDeath = new Audio(AUDIO_DEATH_YELL);
+sfxDeath.preload = "auto";
+sfxDeath.volume = 0.9;
+
+// Global mute toggle (M key)
+let audioMuted = false;
+
+function applyMuteState(){
+  const m = !!audioMuted;
+  musicBg.muted = m;
+  sfxDeath.muted = m;
+  sfxHit.muted = m;
+  sfxOof.muted = m;
+}
+
+function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
+  if (!audioEl || audioMuted) return;
+  try{
+    audioEl.muted = !!audioMuted;
+  }catch(e){}
+  try{
+    const p = audioEl.play();
+    if (p && typeof p.catch === "function"){
+      p.catch(() => {
+        // Some browsers reject play() briefly even when audio is "unlocked".
+        // We retry a handful of times so the sound lands as soon as it's allowed.
+        if (retries > 0){
+          setTimeout(() => tryPlayWithRetry(audioEl, retries - 1, delayMs), delayMs);
+        }
+      });
+    }
+  }catch(e){
+    if (retries > 0){
+      setTimeout(() => tryPlayWithRetry(audioEl, retries - 1, delayMs), delayMs);
+    }
+  }
+}
+
+function ensureMusicPlaying(restart=false){
+  // Start/resume looping background music immediately when gameplay begins.
+  // "restart=true" forces it back to the beginning.
+  try{
+    if (restart){
+      musicBg.currentTime = 0;
+    }
+    musicBg.loop = true;
+  }catch(e){}
+  if (audioMuted) return;
+  try{
+    // If already playing and not restarting, leave it alone.
+    if (!restart && !musicBg.paused) return;
+    musicBg.play().catch(()=>{});
+  }catch(e){}
+}
+
+function stopMusic(){
+  try{
+    musicBg.pause();
+    musicBg.currentTime = 0;
+  }catch(e){}
+}
+
+function playDeathYell(){
+  if (audioMuted) return;
+  try{
+    sfxDeath.currentTime = 0;
+  }catch(e){}
+  // Try immediately, then retry briefly to avoid "plays only after next keypress" behavior.
+  tryPlayWithRetry(sfxDeath, 30, 60);
+}
+
+/* =======================
+   Player Firing Tuning
+======================= */
+const BASE_PLAYER_FIRE_COOLDOWN = 0.26; // seconds (wave scaling r
