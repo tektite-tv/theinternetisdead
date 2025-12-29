@@ -84,6 +84,9 @@
   <script>
     (() => {
       const bgLayer = document.getElementById("bgLayer");
+      const playerEl = document.getElementById("player");
+      let facing = 1; // 1 = left (default), -1 = right
+
 
       // World-space player position (the sprite stays centered; the world moves).
       const player = {
@@ -139,6 +142,15 @@
         const spd = player.speed * (shift ? player.sprint : 1);
         player.x += vx * spd * dt;
         player.y += vy * spd * dt;
+
+        // Flip player horizontally when moving right (D / ArrowRight)
+        if (vx > 0 && facing !== -1) {
+          facing = -1;
+          playerEl.style.transform = "translate(-50%, -50%) scaleX(-1)";
+        } else if (vx < 0 && facing !== 1) {
+          facing = 1;
+          playerEl.style.transform = "translate(-50%, -50%) scaleX(1)";
+        }
 
         // Move background layer with parallax using GPU-friendly transform.
         // Wrap to keep numbers small.
