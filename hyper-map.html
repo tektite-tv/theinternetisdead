@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>hyper-map</title>
+  <style>
+    :root{
+      --bg0:#04050a;
+      --bg1:#080a12;
+      --hud:#9ff;
+      --r:#ff0038;
+      --g:#00ff6a;
+      --b:#00a3ff;
+    }
+    html,body{height:100%; margin:0; background: radial-gradient(1200px 800px at 50% 40%, #0b1230 0%, var(--bg0) 55%, #020308 100%); overflow:hidden;}
+    body{font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#cfe;}
+
+    /* Layering */
+    #wrap{position:fixed; inset:0; display:grid; place-items:center;}
+    canvas, svg {position:absolute; inset:0; width:100%; height:100%;}
+
+    /* Hologram-y additive blend */
+    .screen { mix-blend-mode: screen; }
+    .soft   { filter: drop-shadow(0 0 10px rgba(0,255,255,.12)) drop-shadow(0 0 26px rgba(0,160,255,.08)); }
+    .glowR  { filter: drop-shadow(0 0 10px rgba(255,0,56,.12)); }
+    .glowG  { filter: drop-shadow(0 0 10px rgba(0,255,106,.12)); }
+    .glowB  { filter: drop-shadow(0 0 10px rgba(0,163,255,.12)); }
+
+    /* UI */
+    .hud{
+      position:fixed; left:16px; bottom:14px;
+      font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+      color: rgba(210,255,255,.72);
+      background: rgba(0,10,18,.35);
+      border: 1px solid rgba(120,255,255,.18);
+      border-radius: 12px;
+      padding: 10px 12px;
+      backdrop-filter: blur(10px);
+      user-select:none;
+    }
+    .hud b{color: rgba(255,255,255,.85); font-weight:650;}
+    .hud .k{color: rgba(0,255,200,.9);}
+    .hud .warn{opacity:.85}
+    .corner{
+      position:fixed; right:16px; top:14px;
+      font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+      color: rgba(200,230,255,.55);
+      user-select:none;
+      text-align:right;
+    }
+    .reticle{
+      position:fixed; left:50%; top:50%;
+      width:10px; height:10px; transform:translate(-50%,-50%);
+      border:1px solid rgba(160,255,255,.22);
+      border-radius:50%;
+      box-shadow:0 0 16px rgba(0,255,255,.08);
+      pointer-events:none;
+    }
+
+    /* Accessibility: stop motion if user prefers */
+    @media (prefers-reduced-motion: reduce){
+      *{ animation:none !important; transition:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="stars"></canvas>
+
+    <!-- Vector HUD scene -->
+    <svg id="scene" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <!-- Subtle scanlines -->
+        <pattern id="scan" width="4" height="4" patternUnits="userSpaceOnUse">
+          <rect width="4" height="1" fill="rgba(255,255,255,0.06)"></rect>
+          <rect y="2" width="4" height="1" fill="rgba(0,255,255,0.03)"></rect>
+        </pattern>
+
+        <!-- Hologram shimmer -->
+        <filter id="holo">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="2" result="noise">
+            <animate attributeName="baseFrequency" dur="6s" values="0.7;1.0;0.8;0.9;0.7" repeatCount="indefinite"/>
+          </feTurbulence>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+
+        <!-- Globe clip -->
+        <clipPath id="globeClip">
+          <circle id="globeClipCircle" cx="500" cy="290" r="190"></circle>
+        </clipPath>
+
+        <!-- Globe edge glow -->
+        <radialGradient id="edgeGlow" cx="50%" cy="45%" r="65%">
+          <stop offset="0%"  stop-color="rgba(0,255,255,0.05)"/>
+          <stop offset="70%" stop-color="rgba(0,180,255,0.05)"/>
+          <stop offset="92%" stop-color="rgba(0,255,255,0.20)"/>
+          <stop offset="100%" stop-color="rgba(0,255,255,0.00)"/>
+        </radialGradient>
+
+        <!-- Subtle interior gradient -->
+        <radialGradient id="globeFill" cx="38%" cy="35%" r="75%">
+          <stop offset="0%" stop-color="rgba(0,255,255,0.10)"/>
+          <stop offset="60%" stop-color="rgba(0,90,130,0.06)"/>
+          <stop offset="100%" stop-color="rgba(0,20,40,0.14)"/>
+        </radialGradient>
+
+        <!-- Reusable latitude/longitude line styles -->
+        <style>
+          .gridR{ stroke: var(--r); stroke-width: 1.2; opacity: .55; }
+          .gridG{ stroke: var(--g); stroke-width: 1.2; opacity: .55; }
+          .gridB{ stroke: var(--b); stroke-width: 1.2; opacity: .55; }
+
+          .thinR{ stroke: var(--r); stroke-width: .7; opacity: .30; }
+          .thinG{ stroke: var(--g); stroke-width: .7; opacity: .30; }
+          .thinB{ stroke: var(--b); stroke-width: .7; opacity: .30; }
+
+          .wire { fill:none; vector-effect: non-scaling-stroke; }
+          .land { fill: rgba(0,0,0,0); stroke: rgba(200,255,255,0.45); stroke-width: 0.8; opacity: .78; }
+        </style>
+      </defs>
+
+      <!-- RGB overlay grid (moves with parallax) -->
+      <g id="rgbGrid" class="screen soft" opacity="0.95" filter="url(#holo)">
+        <!-- Big grid -->
+        <g id="bigGrid">
+          <!-- Red lines -->
+          <g class="glowR">
+            <path id="rLines" class="wire gridR" d=""></path>
+          </g>
+          <!-- Green lines -->
+          <g class="glowG">
+            <path id="gLines" class="wire gridG" d=""></path>
+          </g>
+          <!-- Blue lines -->
+          <g class="glowB">
+            <path id="bLines" class="wire gridB" d=""></path>
+          </g>
+        </g>
+
+        <!-- Scanline overlay -->
+        <rect x="0" y="0" width="1000" height="600" fill="url(#scan)" opacity="0.55"></rect>
+      </g>
+
+      <!-- Globe group -->
+      <g id="globe" class="screen soft">
+        <!-- Outer glow ring -->
+        <circle cx="500" cy="290" r="198" fill="url(#edgeGlow)" opacity="0.8"></circle>
+
+        <!-- Globe body -->
+        <circle cx="500" cy="290" r="190" fill="url(#globeFill)" opacity="0.92"></circle>
+
+        <!-- Lat/Lon and map, clipped -->
+        <g clip-path="url(#globeClip)" filter="url(#holo)">
+          <!-- Lat/Lon lines (move differently than RGB grid) -->
+          <g id="latlon" class="screen" opacity="0.9">
+            <g class="glowB">
+              <path id="lonLines" class="wire thinB" d=""></path>
+            </g>
+            <g class="glowG">
+              <path id="latLines" class="wire thinG" d=""></path>
+            </g>
+            <g class="glowR">
+              <path id="tiltLines" class="wire thinR" d=""></path>
+            </g>
+          </g>
+
+          <!-- Map injected here -->
+          <g id="mapLayer" transform="" opacity="0.86"></g>
+
+          <!-- A faint vignette inside the clip to fake curvature depth -->
+          <radialGradient id="vign" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stop-color="rgba(0,0,0,0)"/>
+            <stop offset="70%" stop-color="rgba(0,0,0,0)"/>
+            <stop offset="100%" stop-color="rgba(0,0,0,0.28)"/>
+          </radialGradient>
+          <rect x="310" y="100" width="380" height="380" fill="url(#vign)"></rect>
+        </g>
+
+        <!-- Globe outline -->
+        <circle cx="500" cy="290" r="190" fill="none" stroke="rgba(160,255,255,0.35)" stroke-width="1.2"></circle>
+      </g>
+
+      <!-- Little “UI brackets” -->
+      <g opacity="0.55" class="screen">
+        <path d="M70 80 h40 v6 h-34 v34 h-6z" stroke="rgba(0,255,255,.45)" fill="none"/>
+        <path d="M930 80 h-40 v6 h34 v34 h6z" stroke="rgba(0,255,255,.45)" fill="none"/>
+        <path d="M70 520 h40 v-6 h-34 v-34 h-6z" stroke="rgba(0,255,255,.35)" fill="none"/>
+        <path d="M930 520 h-40 v-6 h34 v-34 h6z" stroke="rgba(0,255,255,.35)" fill="none"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="reticle"></div>
+
+  <div class="corner">
+    hyper-map / holo-grid<br/>
+    <span style="opacity:.7">WASD pan • hold Shift = faster</span>
+  </div>
+
+  <div class="hud">
+    <b>Controls</b><br/>
+    <span class="k">W</span> up • <span class="k">A</span> left • <span class="k">S</span> down • <span class="k">D</span> right<br/>
+    <span class="warn">If the map fails to load (CORS), download the SVG and replace the URL.</span>
+  </div>
+
+<script>
+(() => {
+  // Public-domain world SVG (Wikimedia Commons BlankMap-World.svg)
+  // Source page: https://commons.wikimedia.org/wiki/File:BlankMap-World.svg
+  // Direct file URL (works in most browsers; if blocked, download it locally and point to ./BlankMap-World.svg)
+  const WORLD_SVG_URL = "https://upload.wikimedia.org/wikipedia/commons/4/4d/BlankMap-World.svg";
+
+  const scene = document.getElementById("scene");
+  const mapLayer = document.getElementById("mapLayer");
+  const rgbGrid = document.getElementById("rgbGrid");
+
+  const rLines = document.getElementById("rLines");
+  const gLines = document.getElementById("gLines");
+  const bLines = document.getElementById("bLines");
+
+  const lonLines = document.getElementById("lonLines");
+  const latLines = document.getElementById("latLines");
+  const tiltLines = document.getElementById("tiltLines");
+
+  // State
+  const keys = new Set();
+  let pan = { x: 0, y: 0 };
+  let vel = { x: 0, y: 0 };
+
+  // Viewbox reference space: 1000x600
+  const VB = { w: 1000, h: 600 };
+  const CENTER = { x: 500, y: 290 };
+  const GLOBE_R = 190;
+
+  // Build an RGB “projection grid” across the whole scene
+  function buildGridPaths() {
+    const stepBig = 38;
+    const stepSmall = 19;
+
+    // We'll draw as a single path each: lots of move/line segments
+    const mk = (offsetX, offsetY, step, skewX, skewY) => {
+      let d = "";
+
+      // vertical-ish lines
+      for (let x = -VB.w; x <= VB.w * 2; x += step) {
+        const x0 = x + offsetX;
+        const y0 = -VB.h;
+        const x1 = x + offsetX + skewX;
+        const y1 = VB.h * 2 + skewY;
+        d += `M ${x0} ${y0} L ${x1} ${y1} `;
+      }
+
+      // horizontal-ish lines
+      for (let y = -VB.h; y <= VB.h * 2; y += step) {
+        const x0 = -VB.w;
+        const y0 = y + offsetY;
+        const x1 = VB.w * 2;
+        const y1 = y + offsetY + skewY;
+        d += `M ${x0} ${y0} L ${x1} ${y1} `;
+      }
+      return d;
+    };
+
+    // A little different skew per channel for chromatic separation
+    return {
+      r: mk(0, 0, stepBig, 30, -10) + mk(10, -6, stepSmall, 18, 8),
+      g: mk(0, 0, stepBig, -18, 14) + mk(-12, 9, stepSmall, -10, -10),
+      b: mk(0, 0, stepBig, 10, 22) + mk(6, 12, stepSmall, 22, 2),
+    };
+  }
+
+  // Build latitude/longitude curves inside the globe (simple “fake sphere” arcs)
+  function buildLatLonPaths() {
+    const lonCount = 14;
+    const latCount = 9;
+
+    const mkArc = (cx, cy, r, start, end) => {
+      // SVG arc command
+      const x0 = cx + r * Math.cos(start);
+      const y0 = cy + r * Math.sin(start);
+      const x1 = cx + r * Math.cos(end);
+      const y1 = cy + r * Math.sin(end);
+      const large = (end - start) > Math.PI ? 1 : 0;
+      return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} `;
+    };
+
+    // Longitude: a set of vertical ellipses (projected)
+    let dLon = "";
+    for (let i = 0; i < lonCount; i++) {
+      const t = (i / (lonCount - 1)) * 2 - 1; // -1..1
+      const rx = Math.cos(t * Math.PI * 0.5) * GLOBE_R;
+      const ry = GLOBE_R;
+      // draw as two arcs to complete ellipse
+      dLon += `M ${CENTER.x - rx} ${CENTER.y} A ${rx} ${ry} 0 0 1 ${CENTER.x + rx} ${CENTER.y} `;
+      dLon += `A ${rx} ${ry} 0 0 1 ${CENTER.x - rx} ${CENTER.y} `;
+    }
+
+    // Latitude: horizontal ellipses
+    let dLat = "";
+    for (let i = 0; i < latCount; i++) {
+      const t = (i / (latCount - 1)) * 2 - 1; // -1..1
+      const ry = Math.cos(t * Math.PI * 0.5) * GLOBE_R;
+      const rx = GLOBE_R;
+      const y = CENTER.y + t * (GLOBE_R * 0.82);
+      dLat += `M ${CENTER.x - rx} ${y} A ${rx} ${ry} 0 0 1 ${CENTER.x + rx} ${y} `;
+      dLat += `A ${rx} ${ry} 0 0 1 ${CENTER.x - rx} ${y} `;
+    }
+
+    // “Tilt” diagonal lines for extra holo drama
+    let dTilt = "";
+    const tiltCount = 7;
+    for (let i = 0; i < tiltCount; i++) {
+      const off = (i - (tiltCount-1)/2) * 22;
+      dTilt += mkArc(CENTER.x + off, CENTER.y, GLOBE_R * 1.08, Math.PI * 0.15, Math.PI * 1.85);
+    }
+
+    return { dLon, dLat, dTilt };
+  }
+
+  // Starfield canvas (cheap, effective, humanity-approved)
+  const stars = document.getElementById("stars");
+  const ctx = stars.getContext("2d", { alpha: true });
+
+  let DPR = Math.min(2, window.devicePixelRatio || 1);
+  let W = 0, H = 0;
+
+  const starCount = 420;
+  const star = Array.from({length: starCount}, () => ({
+    x: Math.random(),
+    y: Math.random(),
+    z: Math.random() * 0.9 + 0.1,
+    tw: Math.random() * 0.6 + 0.4
+  }));
+
+  function resize() {
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = Math.floor(window.innerWidth * DPR);
+    H = Math.floor(window.innerHeight * DPR);
+    stars.width = W;
+    stars.height = H;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function drawStars(t) {
+    ctx.clearRect(0,0,W,H);
+
+    // subtle fog
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = "#0b1230";
+    ctx.fillRect(0,0,W,H);
+
+    ctx.globalAlpha = 1;
+    for (const s of star) {
+      // parallax based on pan
+      const px = (pan.x * 0.00025) * (1 / s.z);
+      const py = (pan.y * 0.00025) * (1 / s.z);
+
+      const x = ((s.x + px) % 1 + 1) % 1;
+      const y = ((s.y + py) % 1 + 1) % 1;
+
+      const sx = x * W;
+      const sy = y * H;
+
+      const flick = (0.65 + 0.35 * Math.sin(t*0.002 + s.tw*10));
+      const r = (0.6 + 1.8*(1-s.z)) * DPR;
+
+      ctx.globalAlpha = 0.20 * flick;
+      ctx.fillStyle = "#bfe8ff";
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI*2);
+      ctx.fill();
+
+      // tiny glow
+      ctx.globalAlpha = 0.08 * flick;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r*3.2, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Input
+  window.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+    if (["w","a","s","d","shift"].includes(k)) {
+      keys.add(k);
+      e.preventDefault();
+    }
+  }, { passive:false });
+
+  window.addEventListener("keyup", (e) => {
+    keys.delete(e.key.toLowerCase());
+  });
+
+  // Load SVG map and inject it into the globe clip
+  async function loadWorldSVG() {
+    try {
+      const res = await fetch(WORLD_SVG_URL, { mode: "cors" });
+      const txt = await res.text();
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(txt, "image/svg+xml");
+      const svg = doc.documentElement;
+
+      // Strip width/height, use viewBox for scaling
+      const vb = svg.getAttribute("viewBox");
+      if (!vb) {
+        // If missing, fake one from width/height
+        const w = parseFloat(svg.getAttribute("width") || "2754");
+        const h = parseFloat(svg.getAttribute("height") || "1398");
+        svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      }
+
+      // Wrap the contents into a group we can style
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      while (svg.firstChild) g.appendChild(svg.firstChild);
+
+      // Style: outlines only, hologram-y
+      g.querySelectorAll("*").forEach(el => {
+        if (el.tagName.toLowerCase() === "path" || el.tagName.toLowerCase() === "polygon") {
+          el.setAttribute("fill", "rgba(0,0,0,0)");
+          el.setAttribute("stroke", "rgba(200,255,255,0.55)");
+          el.setAttribute("stroke-width", "1");
+          el.setAttribute("vector-effect", "non-scaling-stroke");
+          el.setAttribute("opacity", "0.75");
+        }
+      });
+
+      // Inject into our doc
+      mapLayer.innerHTML = "";
+      mapLayer.appendChild(g);
+
+      // Initial transform: fit map to globe circle area (manual, but stable)
+      // BlankMap-World.svg nominal dims: 2754 x 1398
+      const MAP_W = 2754;
+      const MAP_H = 1398;
+
+      const targetW = GLOBE_R * 2.35; // slightly larger than circle to allow panning
+      const scale = targetW / MAP_W;
+      const x = CENTER.x - (MAP_W * scale)/2;
+      const y = CENTER.y - (MAP_H * scale)/2;
+
+      mapLayer.dataset.base = JSON.stringify({ scale, x, y, w:MAP_W, h:MAP_H });
+
+    } catch (err) {
+      // Silent failure, loud reality.
+      console.warn("Map load failed:", err);
+      mapLayer.innerHTML = `
+        <text x="500" y="290" fill="rgba(200,255,255,0.7)" text-anchor="middle" font-size="14">
+          Map failed to load (CORS). Download the SVG and point WORLD_SVG_URL to a local file.
+        </text>`;
+    }
+  }
+
+  // Initialize paths
+  const grids = buildGridPaths();
+  rLines.setAttribute("d", grids.r);
+  gLines.setAttribute("d", grids.g);
+  bLines.setAttribute("d", grids.b);
+
+  const ll = buildLatLonPaths();
+  lonLines.setAttribute("d", ll.dLon);
+  latLines.setAttribute("d", ll.dLat);
+  tiltLines.setAttribute("d", ll.dTilt);
+
+  loadWorldSVG();
+
+  // Animation loop
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.033, (now - last) / 1000);
+    last = now;
+
+    // Movement
+    const accel = (keys.has("shift") ? 1300 : 780);
+    const drag = 10.5;
+
+    const ax = (keys.has("d") ? 1 : 0) - (keys.has("a") ? 1 : 0);
+    const ay = (keys.has("s") ? 1 : 0) - (keys.has("w") ? 1 : 0);
+
+    vel.x += ax * accel * dt;
+    vel.y += ay * accel * dt;
+
+    // Drag
+    vel.x -= vel.x * drag * dt;
+    vel.y -= vel.y * drag * dt;
+
+    pan.x += vel.x * dt;
+    pan.y += vel.y * dt;
+
+    // A little idle float so it's not dead inside
+    const idleX = Math.sin(now * 0.00065) * 22;
+    const idleY = Math.cos(now * 0.00055) * 14;
+
+    // Parallax: RGB grid moves more than globe; lat/lon medium; map slightly less
+    const gridX = (pan.x + idleX) * 0.22;
+    const gridY = (pan.y + idleY) * 0.22;
+
+    const globeX = (pan.x + idleX) * 0.07;
+    const globeY = (pan.y + idleY) * 0.07;
+
+    const latlonX = (pan.x + idleX) * 0.12;
+    const latlonY = (pan.y + idleY) * 0.12;
+
+    // Apply transforms
+    rgbGrid.setAttribute("transform", `translate(${gridX}, ${gridY})`);
+
+    // Globe subtle offset + micro “menu wobble”
+    const wobble = Math.sin(now * 0.0012) * 1.6;
+    const globe = document.getElementById("globe");
+    globe.setAttribute("transform", `translate(${globeX}, ${globeY}) rotate(${wobble}, ${CENTER.x}, ${CENTER.y})`);
+
+    // LatLon drift inside globe
+    const latlon = document.getElementById("latlon");
+    latlon.setAttribute("transform", `translate(${latlonX}, ${latlonY})`);
+
+    // Map drift (slightly different) + fake rotation by shifting X
+    const base = mapLayer.dataset.base ? JSON.parse(mapLayer.dataset.base) : null;
+    if (base) {
+      const shiftX = (pan.x * 0.18) + Math.sin(now*0.0009) * 28;
+      const shiftY = (pan.y * 0.10) + Math.cos(now*0.0008) * 18;
+
+      // slight “curvature” illusion: scale Y a bit and shear a touch
+      const sx = base.scale;
+      const sy = base.scale * 1.02;
+
+      const tx = base.x + shiftX;
+      const ty = base.y + shiftY;
+
+      mapLayer.setAttribute("transform", `translate(${tx}, ${ty}) scale(${sx}, ${sy}) skewX(${Math.sin(now*0.0007)*0.8})`);
+    }
+
+    // Stars
+    drawStars(now);
+
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
