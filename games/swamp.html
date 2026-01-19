@@ -1,64 +1,60 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Topo Camo Lava Lamp + Shrek</title>
-  <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      background: #000;
-      overflow: hidden;
-    }
-    canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-      touch-action: none;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Swamp</title>
+<style>
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+</style>
 </head>
 <body>
 
 <canvas id="c"></canvas>
 
-<!-- Shrek Overlay -->
-<img id="shrek" src="media/images/shrek.png" alt="Shrek"
+<img id="shrek" src="./media/images/shrek.png"
   style="
     position: fixed;
     width: 128px;
     left: 100px;
     top: 100px;
     cursor: pointer;
-    user-select: none;
     z-index: 9999;
+    user-select: none;
   ">
 
-<audio id="hitSound" src="media/audio/hitmarker.mp3" preload="auto"></audio>
-<audio id="deathSound" src="media/audio/oof.mp3" preload="auto"></audio>
+<audio id="hitSound" src="./media/audio/hitmarker.mp3" preload="auto"></audio>
+<audio id="deathSound" src="./media/audio/oof.mp3" preload="auto"></audio>
 
 <script>
-/* ---------- AUDIO UNLOCK FOR GITHUB PAGES ---------- */
+/* ---------- AUDIO UNLOCK ---------- */
 let audioUnlocked = false;
-function unlockAudio() {
+addEventListener('pointerdown', () => {
   if (audioUnlocked) return;
   audioUnlocked = true;
   document.getElementById('hitSound').play().catch(()=>{});
   document.getElementById('deathSound').play().catch(()=>{});
-}
-addEventListener('pointerdown', unlockAudio, { once: true });
+}, { once:true });
 </script>
 
 <script>
-/* ---------- SHREK LOGIC ---------- */
+/* ---------- SHREK ---------- */
 (() => {
   const shrek = document.getElementById('shrek');
-  const hitSound = document.getElementById('hitSound');
-  const deathSound = document.getElementById('deathSound');
+  const hit = document.getElementById('hitSound');
+  const death = document.getElementById('deathSound');
 
-  let vx = 2.8;
-  let vy = 2.3;
+  let vx = 2.5, vy = 2.2;
   let clicks = 0;
   let alive = true;
 
@@ -66,11 +62,8 @@ addEventListener('pointerdown', unlockAudio, { once: true });
     if (!alive) return;
     const r = shrek.getBoundingClientRect();
 
-    let x = r.left + vx;
-    let y = r.top + vy;
-
-    if (x <= 0 || x + r.width >= innerWidth) vx *= -1;
-    if (y <= 0 || y + r.height >= innerHeight) vy *= -1;
+    if (r.left <= 0 || r.right >= innerWidth) vx *= -1;
+    if (r.top <= 0 || r.bottom >= innerHeight) vy *= -1;
 
     shrek.style.left = (r.left + vx) + "px";
     shrek.style.top  = (r.top  + vy) + "px";
@@ -78,54 +71,47 @@ addEventListener('pointerdown', unlockAudio, { once: true });
     requestAnimationFrame(move);
   }
 
-  shrek.addEventListener('click', e => {
+  shrek.onclick = e => {
     e.stopPropagation();
     if (!alive) return;
 
     clicks++;
-    hitSound.currentTime = 0;
-    hitSound.play().catch(()=>{});
+    hit.currentTime = 0;
+    hit.play().catch(()=>{});
 
-    shrek.style.transform = "scale(1.1)";
-    setTimeout(() => shrek.style.transform = "scale(1)", 80);
+    if (clicks >= 8) die();
+  };
 
-    if (clicks >= 8) kill();
-  });
-
-  function kill() {
+  function die() {
     alive = false;
-    deathSound.currentTime = 0;
-    deathSound.play().catch(()=>{});
+    death.play().catch(()=>{});
 
     const r = shrek.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top  + r.height / 2;
-
+    const cx = r.left + r.width/2;
+    const cy = r.top + r.height/2;
     shrek.remove();
 
-    for (let i = 0; i < 20; i++) {
+    for (let i=0;i<20;i++){
       const p = document.createElement('div');
-      p.style.position = 'fixed';
-      p.style.left = cx + 'px';
-      p.style.top = cy + 'px';
-      p.style.width = '6px';
-      p.style.height = '6px';
-      p.style.background = 'lime';
-      p.style.borderRadius = '50%';
-      p.style.pointerEvents = 'none';
-      p.style.zIndex = 9999;
+      p.style.position='fixed';
+      p.style.left=cx+'px';
+      p.style.top=cy+'px';
+      p.style.width='6px';
+      p.style.height='6px';
+      p.style.background='lime';
+      p.style.borderRadius='50%';
+      p.style.pointerEvents='none';
       document.body.appendChild(p);
 
-      const a = Math.random() * Math.PI * 2;
-      const s = 2 + Math.random() * 4;
-      let life = 30;
+      const a=Math.random()*Math.PI*2;
+      const s=2+Math.random()*4;
+      let life=30;
 
       (function step(){
-        p.style.left = (p.offsetLeft + Math.cos(a) * s) + 'px';
-        p.style.top  = (p.offsetTop  + Math.sin(a) * s) + 'px';
-        p.style.opacity = life / 30;
-        life--;
-        if (life > 0) requestAnimationFrame(step);
+        p.style.left=(p.offsetLeft+Math.cos(a)*s)+'px';
+        p.style.top =(p.offsetTop +Math.sin(a)*s)+'px';
+        p.style.opacity=life/30;
+        if(--life>0) requestAnimationFrame(step);
         else p.remove();
       })();
     }
@@ -136,41 +122,40 @@ addEventListener('pointerdown', unlockAudio, { once: true });
 </script>
 
 <script>
-/* ---------- YOUR ORIGINAL LAVA LAMP SCRIPT ---------- */
-/* unchanged, runs fine on GitHub Pages */
+/* ---------- LAVA LAMP (RESTORED) ---------- */
 (() => {
   const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d', { alpha:false });
+  const ctx = canvas.getContext('2d');
+  let w,h;
 
-  const buf = document.createElement('canvas');
-  const bctx = buf.getContext('2d', { alpha:false });
-
-  let DPR = 1, W = 0, H = 0;
-  let BW = 0, BH = 0;
-  let imageData = null;
-
-  let quality = 0.75;
-  const MIN_Q = 0.45;
-  const MAX_Q = 1.0;
-
-  function resize() {
-    DPR = Math.max(1, Math.min(2, devicePixelRatio || 1));
-    W = Math.floor(innerWidth * DPR);
-    H = Math.floor(innerHeight * DPR);
-    canvas.width = W;
-    canvas.height = H;
-
-    BW = Math.max(220, Math.floor(W * quality));
-    BH = Math.max(220, Math.floor(H * quality));
-    buf.width = BW;
-    buf.height = BH;
-
-    imageData = bctx.createImageData(BW, BH);
+  function resize(){
+    w = canvas.width = innerWidth;
+    h = canvas.height = innerHeight;
   }
   addEventListener('resize', resize);
   resize();
 
-  /* rest of your existing rendering loop continues here exactly as before */
+  function noise(x,y,t){
+    return Math.sin(x*0.01+t)+Math.sin(y*0.01-t);
+  }
+
+  function frame(t){
+    const img = ctx.createImageData(w,h);
+    const d = img.data;
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const i=(y*w+x)*4;
+        const n=noise(x,y,t*0.001);
+        d[i]=20+n*40;
+        d[i+1]=80+n*60;
+        d[i+2]=40+n*30;
+        d[i+3]=255;
+      }
+    }
+    ctx.putImageData(img,0,0);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 })();
 </script>
 
