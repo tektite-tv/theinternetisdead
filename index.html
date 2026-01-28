@@ -12,7 +12,6 @@
       width: 100%;
       height: 100%;
       background: #000;
-      overflow: hidden;
       font-family: system-ui, sans-serif;
     }
 
@@ -27,7 +26,7 @@
       align-items: center;
       padding: 0 24px;
       box-sizing: border-box;
-      z-index: 1000;
+      z-index: 10000; /* hard pin */
       background: rgba(48, 24, 96, 0.5);
       backdrop-filter: blur(10px);
       border-bottom: solid 3px #00cc99;
@@ -77,18 +76,32 @@
         drop-shadow(0 0 14px rgba(0, 255, 180, 0.25));
     }
 
-    /* ===== MAIN ===== */
+    .blob-button img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+    }
+
+    /* ===== MAIN LAYOUT ===== */
     .container {
+      position: relative;
+      height: 100%;
+      padding-top: 96px; /* navbar clearance */
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100%;
-      padding-top: 96px;
-      perspective: 1200px;
+      overflow: hidden;
     }
 
-    /* ===== ROTATING README WRAPPER ===== */
+    /* ===== 3D SANDBOX (ISOLATED) ===== */
+    .scene {
+      perspective: 1200px;
+      pointer-events: none; /* scene itself is inert */
+    }
+
     .readme-wrapper {
+      pointer-events: auto; /* only this is interactive */
       cursor: grab;
       transform-style: preserve-3d;
       user-select: none;
@@ -101,7 +114,7 @@
     #readme {
       max-width: 800px;
       padding: 32px;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.65);
       color: #e6fff6;
       line-height: 1.6;
       border-radius: 12px;
@@ -146,8 +159,10 @@
 
   <!-- MAIN -->
   <div class="container">
-    <div class="readme-wrapper" id="spinner">
-      <div id="readme"></div>
+    <div class="scene">
+      <div class="readme-wrapper" id="spinner">
+        <div id="readme"></div>
+      </div>
     </div>
   </div>
 
