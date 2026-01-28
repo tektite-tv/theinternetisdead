@@ -31,7 +31,7 @@
 
       background: rgba(48, 24, 96, 0.5);
       backdrop-filter: blur(10px);
-      border-bottom:solid 3px #00cc99;
+      border-bottom: solid 3px #00cc99;
     }
 
     .nav-inner {
@@ -44,7 +44,6 @@
     .logo {
       height: 40px;
       flex-shrink: 0;
-
       filter:
         drop-shadow(0 12px 20px rgba(0, 255, 180, 0.35))
         drop-shadow(0 0 14px rgba(0, 255, 180, 0.25));
@@ -96,13 +95,31 @@
     /* ===== MAIN CONTENT ===== */
     .container {
       display: flex;
-      flex-wrap: wrap;
-      gap: 48px;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       height: 100%;
-      padding-top: 96px;
+      padding: 96px 24px 24px;
       box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    /* ===== README MARKDOWN ===== */
+    #readme {
+      max-width: 800px;
+      color: #e6fff6;
+      line-height: 1.6;
+    }
+
+    #readme h1,
+    #readme h2,
+    #readme h3 {
+      color: #00cc99;
+    }
+
+    #readme blockquote {
+      border-left: 4px solid #00cc99;
+      padding-left: 16px;
+      opacity: 0.9;
     }
 
     @media (max-width: 640px) {
@@ -142,8 +159,23 @@
 
   <!-- MAIN -->
   <div class="container">
-    
+    <div id="readme"></div>
   </div>
-  
+
+  <!-- MARKDOWN LOADER -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    fetch('readme.md')
+      .then(res => res.text())
+      .then(md => {
+        document.getElementById('readme').innerHTML = marked.parse(md);
+      })
+      .catch(err => {
+        document.getElementById('readme').innerText =
+          'README failed to load. Reality remains unstable.';
+        console.error(err);
+      });
+  </script>
+
 </body>
 </html>
