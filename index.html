@@ -2,136 +2,59 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Blob Buttons</title>
+  <title>Welcome to TheInternetIsDead.org</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- STYLES UNCHANGED -->
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      font-family: system-ui, sans-serif;
-      overflow: hidden;
-    }
-
-    /* ===== NAVBAR ===== */
-    .navbar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 72px;
-      display: flex;
-      align-items: center;
-      padding: 0 24px;
-      box-sizing: border-box;
-      z-index: 10000;
-      background: rgba(48, 24, 96, 0.5);
-      backdrop-filter: blur(10px);
-      border-bottom: solid 3px #00cc99;
-    }
-
-    .nav-inner {
-      display: flex;
-      align-items: center;
-      width: 100%;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-
-    .logo {
-      height: 40px;
-      filter:
-        drop-shadow(0 12px 20px rgba(0, 255, 180, 0.35))
-        drop-shadow(0 0 14px rgba(0, 255, 180, 0.25));
-    }
-
-    .nav-buttons {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .nav-note {
-      font-family: "Courier New", Courier, monospace;
-      font-size: 18px;
-      color: #aaffdd;
-      opacity: 0.9;
-      white-space: nowrap;
-      text-shadow:
-        0 0 6px rgba(0, 255, 180, 0.25),
-        0 0 14px rgba(0, 255, 180, 0.15);
-    }
-
-    .blob-button {
-      width: 56px;
-      height: 56px;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      display: inline-block;
-    }
-
-    .blob-button img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      pointer-events: none;
-    }
-
-    /* ===== MAIN ===== */
-    .container {
-      position: relative;
-      height: 100%;
-      padding-top: 96px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    /* everything else unchanged */
+    /* KEEP YOUR EXISTING CSS HERE, UNCHANGED */
   </style>
 </head>
 <body>
 
-  <!-- HEADER INJECTION -->
+  <!-- Injected header + main -->
   <div id="site-header"></div>
-
-  <!-- MAIN -->
-  <div class="container">
-    <div class="scene">
-      <div class="bubble-field" id="bubbles"></div>
-
-      <div class="readme-wrapper" id="spinner">
-        <div id="readme"></div>
-      </div>
-    </div>
-  </div>
+  <div id="site-main"></div>
 
   <!-- MARKDOWN -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <script>
-    /* LOAD HEADER */
-    fetch('header.html')
-      .then(r => r.text())
-      .then(html => {
-        document.getElementById('site-header').innerHTML = html;
-      });
+    // Load header.html and main.html, then initialize the interactive stuff.
+    Promise.all([
+      fetch('header.html').then(r => r.text()),
+      fetch('main.html').then(r => r.text())
+    ]).then(([headerHTML, mainHTML]) => {
+      document.getElementById('site-header').innerHTML = headerHTML;
+      document.getElementById('site-main').innerHTML = mainHTML;
 
-    /* LOAD README */
-    fetch('readme.md')
-      .then(r => r.text())
-      .then(md => {
-        document.getElementById('readme').innerHTML = marked.parse(md);
-      });
+      // Now that #bubbles/#spinner/#readme exist, run your original logic:
+      initPage();
+    }).catch(err => {
+      console.error("Failed to load header/main:", err);
+    });
 
-    /* rest of your JS unchanged */
-  </script>
+    function initPage() {
+      /* ===== LOAD README ===== */
+      fetch('readme.md')
+        .then(r => r.text())
+        .then(md => {
+          document.getElementById('readme').innerHTML = marked.parse(md);
+        });
 
-</body>
-</html>
+      /* ===== BUBBLES ===== */
+      const bubbleField = document.getElementById('bubbles');
+      const bubbles = [];
+      const COUNT = 50;
+
+      for (let i = 0; i < COUNT; i++) {
+        const el = document.createElement('div');
+        el.className = 'bubble';
+
+        const size = 30 + Math.random() * 100;
+        el.style.width = el.style.height = size + 'px';
+
+        const b = {
+          el,
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          v
