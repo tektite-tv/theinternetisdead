@@ -8,6 +8,7 @@
   <style>
     html, body {
       margin: 0;
+      padding: 0;
       width: 100%;
       height: 100%;
       background: #000;
@@ -21,21 +22,20 @@
   <div id="site-header"></div>
   <div id="site-main"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
   <script>
-    Promise.all([
-      fetch("header.html").then(r => r.text()),
-      fetch("main.html").then(r => r.text())
-    ]).then(([headerHTML, mainHTML]) => {
-      document.getElementById("site-header").innerHTML = headerHTML;
-      document.getElementById("site-main").innerHTML = mainHTML;
-      initPage();
-    });
+    // Load header
+    fetch("header.html")
+      .then(r => r.text())
+      .then(html => {
+        document.getElementById("site-header").innerHTML = html;
+      });
 
-    function initPage() {
-      // your existing JS goes here unchanged
-    }
+    // Load main (main.html will bootstrap itself)
+    fetch("main.html")
+      .then(r => r.text())
+      .then(html => {
+        document.getElementById("site-main").innerHTML = html;
+      });
   </script>
 
 </body>
