@@ -23,20 +23,43 @@
   <div id="site-main"></div>
 
   <script>
-    // Load header
-    fetch("header.html")
-      .then(r => r.text())
-      .then(html => {
-        document.getElementById("site-header").innerHTML = html;
+  function injectHTMLWithScripts(container, html) {
+    container.innerHTML = html;
+
+    // Find scripts inside injected HTML
+    const scripts = container.querySelectorAll("script");
+    scripts.forEach(oldScript => {
+      const newScript = document.createElement("script");
+
+      // Copy attributes
+      [...oldScript.attributes].forEach(attr => {
+        newScript.setAttribute(attr.name, attr.value);
       });
 
-    // Load main (main.html will bootstrap itself)
-    fetch("main.html")
-      .then(r => r.text())
-      .then(html => {
-        document.getElementById("site-main").innerHTML = html;
-      });
-  </script>
+      // Copy inline JS
+      newScript.textContent = oldScript.textContent;
+
+      // Replace script so it actually executes
+      oldScript.replaceWith(newScript);
+    });
+  }
+
+  // Load header
+  fetch("header.html")
+    .then(r => r.text())
+    .then(html => {
+      document.getElementById("site-header").innerHTML = html;
+    });
+
+  // Load main AND run its scripts
+  fetch("main.html")
+    .then(r => r.text())
+    .then(html => {
+      const container = document.getElementById("site-main");
+      injectHTMLWithScripts(container, html);
+    });
+</script>
+
 
 </body>
 </html>
