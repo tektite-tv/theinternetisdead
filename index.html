@@ -8,15 +8,13 @@
 <body>
 
   <div id="header-container"></div>
-
   <main id="main-container"></main>
 
   <script>
-    // Load header.html dynamically
-    fetch("/index/header.html")
+    fetch('/index/header.html')
       .then(r => r.text())
       .then(html => {
-        document.getElementById("header-container").innerHTML = html;
+        document.getElementById('header-container').innerHTML = html;
         startNavClock();
       });
 
@@ -48,7 +46,6 @@
       function updateClock() {
         const now = new Date();
         const parts = timeFormatter.formatToParts(now);
-
         const h = parts.find(p => p.type === 'hour').value;
         const m = parts.find(p => p.type === 'minute').value;
         const s = parts.find(p => p.type === 'second').value;
