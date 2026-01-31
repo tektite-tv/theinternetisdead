@@ -9,42 +9,58 @@
 
   <div id="header-container"></div>
 
-  <!-- add main content here -->
   <main id="main-container"></main>
 
   <script>
+    // Load header.html dynamically
     fetch("/index/header.html")
       .then(r => r.text())
-      .then(html => document.getElementById("header-container").innerHTML = html);
+      .then(html => {
+        document.getElementById("header-container").innerHTML = html;
+        startNavClock();
+      });
 
-    (function startNavClock() {
-  const clockEl = document.getElementById('navClock');
-  if (!clockEl) {
-    setTimeout(startNavClock, 50);
-    return;
-  }
+    function startNavClock() {
+      const clockTimeEl = document.getElementById('clockTime');
+      const tooltipEl = document.getElementById('clockTooltip');
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  });
+      if (!clockTimeEl || !tooltipEl) {
+        setTimeout(startNavClock, 50);
+        return;
+      }
 
-  function updateClock() {
-    const parts = formatter.formatToParts(new Date());
-    const h = parts.find(p => p.type === 'hour').value;
-    const m = parts.find(p => p.type === 'minute').value;
-    const s = parts.find(p => p.type === 'second').value;
-    const ap = parts.find(p => p.type === 'dayPeriod').value;
+      const timeFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
 
-    clockEl.textContent = `${h}:${m}:${s} ${ap} EST`;
-  }
+      const dateFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
 
-  updateClock();
-  setInterval(updateClock, 1000);
-})();
+      function updateClock() {
+        const now = new Date();
+        const parts = timeFormatter.formatToParts(now);
+
+        const h = parts.find(p => p.type === 'hour').value;
+        const m = parts.find(p => p.type === 'minute').value;
+        const s = parts.find(p => p.type === 'second').value;
+        const ap = parts.find(p => p.type === 'dayPeriod').value;
+
+        clockTimeEl.textContent = `${h}:${m}:${s} ${ap} EST`;
+        tooltipEl.textContent = dateFormatter.format(now);
+      }
+
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
   </script>
 
 </body>
