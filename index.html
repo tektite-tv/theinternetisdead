@@ -16,6 +16,35 @@
     fetch("/index/header.html")
       .then(r => r.text())
       .then(html => document.getElementById("header-container").innerHTML = html);
+
+    (function startNavClock() {
+  const clockEl = document.getElementById('navClock');
+  if (!clockEl) {
+    setTimeout(startNavClock, 50);
+    return;
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+
+  function updateClock() {
+    const parts = formatter.formatToParts(new Date());
+    const h = parts.find(p => p.type === 'hour').value;
+    const m = parts.find(p => p.type === 'minute').value;
+    const s = parts.find(p => p.type === 'second').value;
+    const ap = parts.find(p => p.type === 'dayPeriod').value;
+
+    clockEl.textContent = `${h}:${m}:${s} ${ap} EST`;
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+})();
   </script>
 
 </body>
