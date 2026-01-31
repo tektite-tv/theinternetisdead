@@ -40,6 +40,7 @@
     display: flex;
     gap: 16px;
     align-items: center;
+    flex: 1;
   }
 
   .blob-button {
@@ -60,6 +61,20 @@
     color: #aaffdd;
     white-space: nowrap;
   }
+
+  /* Clock container on far right */
+  .nav-clock {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    transform: scale(0.85);
+    transform-origin: right center;
+  }
+
+  .nav-clock iframe {
+    border: 0;
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -75,26 +90,18 @@
     </a>
 
     <nav class="nav-buttons">
-      <a href="index.html" class="blob-button">
-        <img src="files/png/flower.png" alt="">
-      </a>
-      <a href="index.html" class="blob-button">
-        <img src="files/png/flower.png" alt="">
-      </a>
-      <a href="index.html" class="blob-button">
-        <img src="files/png/flower.png" alt="">
-      </a>
-      <a href="index.html" class="blob-button">
-        <img src="files/png/flower.png" alt="">
-      </a>
-      <a href="index.html" class="blob-button">
-        <img src="files/png/flower.png" alt="">
-      </a>
+      <a href="index.html" class="blob-button"><img src="files/png/flower.png" alt=""></a>
+      <a href="index.html" class="blob-button"><img src="files/png/flower.png" alt=""></a>
+      <a href="index.html" class="blob-button"><img src="files/png/flower.png" alt=""></a>
+      <a href="index.html" class="blob-button"><img src="files/png/flower.png" alt=""></a>
+      <a href="index.html" class="blob-button"><img src="files/png/flower.png" alt=""></a>
 
-      <span class="nav-note">
-        The webmaster is not harvesting your soul for profit.
-      </span>
+      <span class="nav-note">The webmaster is not harvesting your soul for profit.</span>
     </nav>
+
+    <div class="nav-clock">
+      <iframe src="https://free.timeanddate.com/clock/ia9nftnf/n250/fn7/fs20/fc0f0/tct/pct/ftbiu/th2/ta1" width="178" height="30" allowtransparency="true"></iframe>
+    </div>
   </div>
 </header>
 
