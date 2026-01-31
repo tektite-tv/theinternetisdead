@@ -4,15 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  /* ===== NAVBAR SHELL ===== */
   .navbar {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 54px;
-    display: flex;
-    align-items: center;
     padding: 0 12px;
     box-sizing: border-box;
     z-index: 10000;
@@ -22,8 +19,8 @@
     overflow: hidden;
   }
 
-  /* ===== LAYOUT CONTAINER (NO TRANSFORMS HERE) ===== */
   .nav-inner {
+    position: relative;
     display: flex;
     align-items: center;
     width: 100%;
@@ -31,7 +28,6 @@
     gap: 12px;
   }
 
-  /* ===== SCALED CONTENT WRAPPER ===== */
   .nav-scale {
     display: flex;
     align-items: center;
@@ -40,7 +36,6 @@
     transform-origin: left center;
   }
 
-  /* ===== LOGO ===== */
   .logo {
     height: 40px;
     filter:
@@ -48,7 +43,6 @@
       drop-shadow(0 0 14px rgba(0, 255, 180, 0.25));
   }
 
-  /* ===== NAV BUTTONS ===== */
   .nav-buttons {
     display: flex;
     gap: 16px;
@@ -67,7 +61,6 @@
     display: block;
   }
 
-  /* ===== NAV NOTE ===== */
   .nav-note {
     font-family: "Courier New", Courier, monospace;
     font-size: 18px;
@@ -75,20 +68,19 @@
     white-space: nowrap;
   }
 
-  /* ===== CLOCK (TRUE FAR RIGHT) ===== */
+  /* CLOCK — HARD CENTERED, NO TOP PADDING */
   .nav-clock {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    height: 100%;
-    transform: scale(0.85);
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%) scale(0.85);
     transform-origin: right center;
+    line-height: 1;
   }
 
   .nav-clock iframe {
-    border: 0;
     display: block;
-    align-self: center;
+    border: 0;
   }
 </style>
 </head>
@@ -97,7 +89,6 @@
 <header class="navbar">
   <div class="nav-inner">
 
-    <!-- LEFT / CENTER SCALED CONTENT -->
     <div class="nav-scale">
       <a href="index.html">
         <img src="/files/png/deadlogo-green.png" alt="Logo" class="logo" />
@@ -109,14 +100,12 @@
         <a href="index.html" class="blob-button"><img src="files/png/flower.png" alt=""></a>
         <a href="index.html" class="blob-button"><img src="files/png/flower.png" alt=""></a>
         <a href="index.html" class="blob-button"><img src="files/png/flower.png" alt=""></a>
-
         <span class="nav-note">The webmaster is not harvesting your soul for profit.</span>
       </nav>
     </div>
 
-    <!-- FAR RIGHT CLOCK -->
     <div class="nav-clock">
-      <iframe src="https://free.timeanddate.com/clock/ia9nftnf/n250/fn7/fs20/fc0f0/tct/pct/ahl/avt/ftbiu/th2/ta1" frameborder="0" width="178" height="30" allowtransparency="true"></iframe>
+      <iframe src="https://free.timeanddate.com/clock/ia9nftnf/n250/fn7/fs20/fc0f0/tct/pct/ahl/avt/ftbiu/th2/ta1" width="178" height="30" allowtransparency="true"></iframe>
     </div>
 
   </div>
