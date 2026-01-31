@@ -68,7 +68,7 @@
     white-space: nowrap;
   }
 
-  /* CLOCK — NATIVE JS, NO IFRAME, NO LIES */
+  /* CLOCK */
   .nav-clock {
     position: absolute;
     right: 12px;
@@ -80,7 +80,34 @@
     line-height: 1;
     color: #00ff66;
     white-space: nowrap;
-    text-decoration:underline;
+    text-decoration: underline;
+    cursor: default;
+  }
+
+  /* CLOCK TOOLTIP */
+  .clock-tooltip {
+    position: absolute;
+    right: 0;
+    top: 140%;
+    background: rgba(20, 10, 40, 0.95);
+    border: 1px solid #00cc99;
+    padding: 6px 10px;
+    font-size: 14px;
+    font-weight: normal;
+    color: #aaffdd;
+    white-space: nowrap;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    z-index: 10001;
+  }
+
+  .nav-clock:hover .clock-tooltip {
+    opacity: 1;
+    transform: translateY(0);
   }
 </style>
 </head>
@@ -104,15 +131,19 @@
       </nav>
     </div>
 
-    <div class="nav-clock" id="navClock">--:--:-- -- EST</div>
+    <div class="nav-clock" id="navClock">
+      <span id="clockTime">--:--:-- -- EST</span>
+      <div class="clock-tooltip" id="clockTooltip"></div>
+    </div>
 
   </div>
 </header>
 
 <script>
-  const clockEl = document.getElementById('navClock');
+  const clockTimeEl = document.getElementById('clockTime');
+  const tooltipEl = document.getElementById('clockTooltip');
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
+  const timeFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
     hour: 'numeric',
     minute: '2-digit',
@@ -120,16 +151,25 @@
     hour12: true
   });
 
+  const dateFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
   function updateClock() {
     const now = new Date();
-    const parts = formatter.formatToParts(now);
+    const parts = timeFormatter.formatToParts(now);
 
     const h = parts.find(p => p.type === 'hour').value;
     const m = parts.find(p => p.type === 'minute').value;
     const s = parts.find(p => p.type === 'second').value;
-    const day = parts.find(p => p.type === 'dayPeriod').value;
+    const ap = parts.find(p => p.type === 'dayPeriod').value;
 
-    clockEl.textContent = `${h}:${m}:${s} ${day} EST`;
+    clockTimeEl.textContent = `${h}:${m}:${s} ${ap} EST`;
+    tooltipEl.textContent = dateFormatter.format(now);
   }
 
   updateClock();
