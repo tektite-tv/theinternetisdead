@@ -68,24 +68,17 @@
     white-space: nowrap;
   }
 
-  /* CLOCK — PIXEL-LOCKED CENTER */
+  /* CLOCK — NATIVE JS, NO IFRAME, NO LIES */
   .nav-clock {
     position: absolute;
     right: 12px;
     top: 50%;
     transform: translateY(-50%);
-    height: 30px;
-    display: flex;
-    align-items: center;
-  }
-
-  .nav-clock iframe {
-    display: block;
-    width: 178px;
-    height: 30px;
-    border: 0;
-    padding: 0;
-    margin: 0;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 20px;
+    line-height: 1;
+    color: #00ff66;
+    white-space: nowrap;
   }
 </style>
 </head>
@@ -109,12 +102,37 @@
       </nav>
     </div>
 
-    <div class="nav-clock">
-      <iframe src="https://free.timeanddate.com/clock/ia9nftnf/n250/fn7/fs20/fc0f0/tct/pct/ahl/avt/ftbiu/th2/ta1" allowtransparency="true"></iframe>
-    </div>
+    <div class="nav-clock" id="navClock">--:--:-- -- EST</div>
 
   </div>
 </header>
+
+<script>
+  const clockEl = document.getElementById('navClock');
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+
+  function updateClock() {
+    const now = new Date();
+    const parts = formatter.formatToParts(now);
+
+    const h = parts.find(p => p.type === 'hour').value;
+    const m = parts.find(p => p.type === 'minute').value;
+    const s = parts.find(p => p.type === 'second').value;
+    const day = parts.find(p => p.type === 'dayPeriod').value;
+
+    clockEl.textContent = `${h}:${m}:${s} ${day} EST`;
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
 
 </body>
 </html>
