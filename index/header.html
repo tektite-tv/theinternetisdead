@@ -25,6 +25,7 @@
     box-sizing: border-box;
     background-color: indigo;
     border-bottom: solid 3px lime;
+    gap: 12px;
   }
 
   .logo-link {
@@ -40,7 +41,6 @@
   }
 
   .welcome-text {
-    margin-left: 12px;
     font-family: "Courier New", Courier, monospace;
     font-weight: bold;
     color: #00ff66;
@@ -55,5 +55,33 @@
     text-decoration: underline;
     color: #00ff66;
     white-space: nowrap;
+  }
+
+  /* =========================
+     Mobile layout
+     ========================= */
+  @media (max-width: 640px) {
+    .site-header {
+      height: auto;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 8px;
+    }
+
+    .logo {
+      height: 36px;
+    }
+
+    .welcome-text {
+      text-align: center;
+      white-space: normal;
+      margin: 4px 0;
+      flex-grow: 0;
+    }
+
+    .nav-clock {
+      font-size: 22px;
+    }
   }
 </style>
