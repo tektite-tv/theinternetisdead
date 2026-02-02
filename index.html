@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <title>The Internet Is Dead</title>
 
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
   <style>
     html, body {
       margin: 0;
@@ -14,66 +16,59 @@
       overflow-x: hidden;
     }
 
-    /* =========================
-   Fire column background (ACTUALLY FIRE)
-   ========================= */
-html::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
+    html::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        repeating-linear-gradient(
+          180deg,
+          #ffcc88 0px,
+          #ff9933 6px,
+          #ff5500 12px,
+          #aa2200 18px,
+          #220000 24px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          rgba(0,0,0,0.45) 0px,
+          rgba(0,0,0,0.45) 6px,
+          rgba(0,0,0,0.0) 12px,
+          rgba(0,0,0,0.0) 48px
+        );
+      background-size: 100% 48px, 96px 100%;
+      background-blend-mode: screen;
+      animation: fireWaterfall 0.9s linear infinite;
+      image-rendering: pixelated;
+    }
 
-  background:
-    /* vertical fire texture (waterfall logic) */
-    repeating-linear-gradient(
-      180deg,
-      #ffcc88 0px,
-      #ff9933 6px,
-      #ff5500 12px,
-      #aa2200 18px,
-      #220000 24px
-    ),
+    @keyframes fireWaterfall {
+      from { background-position: 0 0, 0 0; }
+      to   { background-position: 0 -48px, 0 0; }
+    }
 
-    /* column separators */
-    repeating-linear-gradient(
-      90deg,
-      rgba(0,0,0,0.45) 0px,
-      rgba(0,0,0,0.45) 6px,
-      rgba(0,0,0,0.0) 12px,
-      rgba(0,0,0,0.0) 48px
-    );
-
-  background-size:
-    100% 48px,   /* fire tile height */
-    96px 100%;   /* column width */
-
-  background-blend-mode: screen;
-
-  animation: fireWaterfall 0.9s linear infinite;
-
-  image-rendering: pixelated;
-}
-
-@keyframes fireWaterfall {
-  from {
-    background-position:
-      0 0,
-      0 0;
-  }
-  to {
-    background-position:
-      0 -48px,
-      0 0;
-  }
-}
-
-    /* =========================
-       Header container
-       ========================= */
     #header-container {
       width: 100%;
       position: relative;
       z-index: 1;
+    }
+
+    #main-container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 24px;
+      font-family: "Courier New", Courier, monospace;
+      font-weight: bold;
+      color: #00ff99;
+      background: rgba(0,0,0,0.55);
+      border-radius: 8px;
+    }
+
+    #main-container h1,
+    #main-container h2,
+    #main-container h3 {
+      color: indigo;
     }
   </style>
 </head>
@@ -81,15 +76,14 @@ html::before {
 
   <div id="header-container"></div>
 
+  <div id="main-container">Loading README...</div>
+
   <script>
     fetch('/index/header.html')
-      .then(response => response.text())
+      .then(r => r.text())
       .then(html => {
         document.getElementById('header-container').innerHTML = html;
         startClock();
-      })
-      .catch(err => {
-        console.error('Failed to load header.html:', err);
       });
 
     function startClock() {
@@ -102,16 +96,22 @@ html::before {
           second: '2-digit',
           hour12: true
         });
-
         const clock = document.getElementById('nav-clock');
-        if (clock) {
-          clock.textContent = formatter.format(now) + ' EST';
-        }
+        if (clock) clock.textContent = formatter.format(now) + ' EST';
       }
-
       updateClock();
       setInterval(updateClock, 1000);
     }
+
+    fetch('/readme.md')
+      .then(res => res.text())
+      .then(md => {
+        document.getElementById('main-container').innerHTML = marked.parse(md);
+      })
+      .catch(() => {
+        document.getElementById('main-container').textContent =
+          'Failed to load README.md';
+      });
   </script>
 
 </body>
