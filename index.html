@@ -12,89 +12,54 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      background: transparent;
-      overflow-x: hidden;
-      user-select: none; /* helps while rotating; we'll re-enable selection inside main */
-    }
-
-    html::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      background:
-        repeating-linear-gradient(
-          180deg,
-          #3300ff 0px,
-          #0033ff 6px,
-          #5500ff 12px,
-          #cc0000 18px,
-          #660000 24px
-        ),
-        repeating-linear-gradient(
-          90deg,
-          rgba(0,0,0,0.45) 0px,
-          rgba(0,0,0,0.45) 6px,
-          rgba(0,0,0,0.0) 12px,
-          rgba(0,0,0,0.0) 48px
-        );
-      background-size: 100% 48px, 96px 100%;
-      background-blend-mode: screen;
-      animation: fireWaterfall 0.9s linear infinite;
-      image-rendering: pixelated;
-    }
-
-    @keyframes fireWaterfall {
-      from { background-position: 0 0, 0 0; }
-      to   { background-position: 0 -48px, 0 0; }
+      background: black;
+      overflow: hidden;
+      user-select: none;
     }
 
     #header-container {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
-      position: relative;
-      z-index: 2;
+      z-index: 10;
     }
 
     /* =========================
        MAIN CONTAINER (ROTATABLE)
        ========================= */
     #main-container {
-      max-width: 900px;
-      margin: 40px auto;
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) rotate(0deg);
+      transform-origin: 50% 50%;
+
+      width: 900px;
+      max-width: calc(100vw - 40px);
+      max-height: calc(100vh - 120px);
+
       padding: 24px;
-      font-family: "Courier New", Courier, monospace;
-      font-weight: bold;
-      color: #00ff99;
-      background: rgb(0,0,0);
-      border: 5px dashed blue;
-      border-radius: 8px;
       box-sizing: border-box;
 
-      /* Rotation essentials */
-      transform-origin: 50% 50%;
-      will-change: transform;
-      position: relative;
-      z-index: 1;
+      font-family: "Courier New", monospace;
+      font-weight: bold;
+      color: #00ff99;
 
-      /* Let text be selectable again inside the box */
-      user-select: text;
-      touch-action: none; /* better pointer behavior on touch devices */
+      background: black;
+      border: 5px dashed blue;
+      border-radius: 8px;
+
+      overflow: auto;
       cursor: grab;
+      touch-action: none;
+      will-change: transform;
+
+      user-select: text;
     }
 
     #main-container.is-rotating {
       cursor: grabbing;
-    }
-
-    /* Subtle edge hint that you can "grab" any side */
-    #main-container::after {
-      content: "";
-      position: absolute;
-      inset: -10px; /* expands the "feel" area a bit visually */
-      border-radius: 12px;
-      pointer-events: none;
-      opacity: 0.15;
-      border: 2px dotted #00ff99;
     }
 
     #main-container h1,
@@ -103,17 +68,18 @@
       color: red;
     }
 
-    /* Optional: make links readable */
-    #main-container a { color: #66ffcc; }
+    #main-container a {
+      color: #66ffcc;
+    }
   </style>
 </head>
 <body>
 
   <div id="header-container"></div>
-
   <div id="main-container">Loading README...</div>
 
   <script>
+    /* ---------- HEADER ---------- */
     fetch('/index/header.html')
       .then(r => r.text())
       .then(html => {
@@ -138,128 +104,77 @@
       setInterval(updateClock, 1000);
     }
 
+    /* ---------- CONTENT ---------- */
     fetch('/readme.md')
-      .then(res => res.text())
+      .then(r => r.text())
       .then(md => {
         document.getElementById('main-container').innerHTML = marked.parse(md);
       })
       .catch(() => {
-        document.getElementById('main-container').textContent =
-          'Failed to load README.md';
+        document.getElementById('main-container').textContent = 'Failed to load README.md';
       });
 
-    /* ===========================================
-       ROTATE #main-container by dragging its sides
-       - Drag near any edge/corner to rotate
-       - Rotation is about the element's center
-       - Persists in localStorage
-       =========================================== */
-
-    (function enableMainContainerRotation() {
+    /* ---------- ROTATION ---------- */
+    (function () {
       const el = document.getElementById('main-container');
-      if (!el) return;
 
-      // Restore saved rotation
-      const saved = parseFloat(localStorage.getItem('mainContainerRotationDeg') || '0');
-      let currentDeg = Number.isFinite(saved) ? saved : 0;
-      applyRotation(currentDeg);
-
-      const EDGE_GRAB_PX = 28; // "near the border" zone for starting rotation
+      let rotation = parseFloat(localStorage.getItem('mainRotation')) || 0;
       let rotating = false;
-      let pointerId = null;
-      let startRad = 0;
-      let startDeg = 0;
+      let startAngle = 0;
+      let startRotation = rotation;
 
-      function getCenter() {
-        const r = el.getBoundingClientRect();
-        return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, rect: r };
-      }
-
-      function angleRadFromCenter(clientX, clientY, cx, cy) {
-        return Math.atan2(clientY - cy, clientX - cx);
-      }
-
-      function radToDeg(rad) {
-        return rad * (180 / Math.PI);
-      }
-
-      function normalizeDeg(deg) {
-        // keep it tidy-ish: [-180, 180)
-        let d = deg % 360;
-        if (d >= 180) d -= 360;
-        if (d < -180) d += 360;
-        return d;
-      }
+      applyRotation(rotation);
 
       function applyRotation(deg) {
-        currentDeg = deg;
-        el.style.transform = `rotate(${deg}deg)`;
+        rotation = deg;
+        el.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
       }
 
-      function isNearEdge(evt) {
-        const { rect } = getCenter();
-        const x = evt.clientX;
-        const y = evt.clientY;
-
-        const left   = Math.abs(x - rect.left);
-        const right  = Math.abs(rect.right - x);
-        const top    = Math.abs(y - rect.top);
-        const bottom = Math.abs(rect.bottom - y);
-
-        // Near any edge OR corner within EDGE_GRAB_PX
-        return (left <= EDGE_GRAB_PX || right <= EDGE_GRAB_PX || top <= EDGE_GRAB_PX || bottom <= EDGE_GRAB_PX);
+      function angleFromCenter(x, y) {
+        const rect = el.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        return Math.atan2(y - cy, x - cx);
       }
 
-      // Start rotation only when grabbing near the edge to avoid hijacking clicks inside content.
-      el.addEventListener('pointerdown', (evt) => {
-        // left button only (or touch/pen)
-        if (evt.pointerType === 'mouse' && evt.button !== 0) return;
-        if (!isNearEdge(evt)) return;
+      el.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
 
-        const { cx, cy } = getCenter();
         rotating = true;
-        pointerId = evt.pointerId;
-        el.setPointerCapture(pointerId);
-
-        startRad = angleRadFromCenter(evt.clientX, evt.clientY, cx, cy);
-        startDeg = currentDeg;
-
+        el.setPointerCapture(e.pointerId);
         el.classList.add('is-rotating');
-        evt.preventDefault();
+
+        startAngle = angleFromCenter(e.clientX, e.clientY);
+        startRotation = rotation;
+        e.preventDefault();
       });
 
-      el.addEventListener('pointermove', (evt) => {
-        if (!rotating || evt.pointerId !== pointerId) return;
+      el.addEventListener('pointermove', e => {
+        if (!rotating) return;
 
-        const { cx, cy } = getCenter();
-        const nowRad = angleRadFromCenter(evt.clientX, evt.clientY, cx, cy);
+        const currentAngle = angleFromCenter(e.clientX, e.clientY);
+        const delta = currentAngle - startAngle;
+        const deg = startRotation + delta * (180 / Math.PI);
 
-        const deltaRad = nowRad - startRad;
-        const nextDeg = normalizeDeg(startDeg + radToDeg(deltaRad));
-
-        applyRotation(nextDeg);
-        evt.preventDefault();
+        applyRotation(deg);
+        e.preventDefault();
       });
 
-      function endRotation(evt) {
-        if (!rotating || evt.pointerId !== pointerId) return;
+      function end(e) {
+        if (!rotating) return;
         rotating = false;
-        try { el.releasePointerCapture(pointerId); } catch (e) {}
-        pointerId = null;
-
         el.classList.remove('is-rotating');
-        localStorage.setItem('mainContainerRotationDeg', String(currentDeg));
-        evt.preventDefault();
+        localStorage.setItem('mainRotation', rotation);
+        try { el.releasePointerCapture(e.pointerId); } catch {}
+        e.preventDefault();
       }
 
-      el.addEventListener('pointerup', endRotation);
-      el.addEventListener('pointercancel', endRotation);
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
 
-      // Bonus: double-click the border area to reset rotation.
-      el.addEventListener('dblclick', (evt) => {
-        if (!isNearEdge(evt)) return;
+      el.addEventListener('dblclick', () => {
         applyRotation(0);
-        localStorage.setItem('mainContainerRotationDeg', '0');
+        localStorage.setItem('mainRotation', 0);
       });
     })();
   </script>
