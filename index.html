@@ -12,12 +12,53 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      background: black;
       overflow: hidden;
       user-select: none;
       perspective: 1200px;
+      background: black;
     }
 
+    /* =========================
+       RED / BLUE BACKGROUND FIELD
+       ========================= */
+    html::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+
+      background:
+        repeating-linear-gradient(
+          180deg,
+          #2200ff 0px,
+          #2200ff 6px,
+          #000022 12px,
+          #660000 18px,
+          #990000 24px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          rgba(0,0,0,0.5) 0px,
+          rgba(0,0,0,0.5) 6px,
+          rgba(0,0,0,0) 12px,
+          rgba(0,0,0,0) 48px
+        );
+
+      background-size: 100% 48px, 96px 100%;
+      background-blend-mode: screen;
+      image-rendering: pixelated;
+      animation: signalDrift 0.9s linear infinite;
+    }
+
+    @keyframes signalDrift {
+      from { background-position: 0 0, 0 0; }
+      to   { background-position: 0 -48px, 0 0; }
+    }
+
+    /* =========================
+       HEADER
+       ========================= */
     #header-container {
       position: fixed;
       top: 0;
@@ -42,7 +83,7 @@
       max-width: calc(100vw - 40px);
       height: 70vh;
 
-      padding: 16px; /* slightly tighter to maximize usable area */
+      padding: 16px;
       box-sizing: border-box;
 
       font-family: "Courier New", monospace;
@@ -146,7 +187,6 @@
       const content = document.getElementById('md-scale');
       if (!container || !content) return;
 
-      // Reset transform before measuring
       content.style.transform = 'scale(1, 1)';
 
       const style = getComputedStyle(container);
@@ -164,7 +204,6 @@
       const scaleX = availW / contentW;
       const scaleY = availH / contentH;
 
-      // 🔥 NO ASPECT RATIO PRESERVATION 🔥
       content.style.transform = `scale(${scaleX}, ${scaleY})`;
     }
 
