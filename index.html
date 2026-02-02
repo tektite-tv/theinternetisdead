@@ -13,7 +13,7 @@
       width: 100%;
       height: 100%;
       background: black;
-      overflow: hidden; /* absolutely no scrollbars */
+      overflow: hidden;
       user-select: none;
       perspective: 1200px;
     }
@@ -53,7 +53,7 @@
       border: 5px dashed blue;
       border-radius: 8px;
 
-      overflow: hidden; /* no scrollbars */
+      overflow: hidden;
       cursor: grab;
       touch-action: none;
       will-change: transform;
@@ -134,26 +134,31 @@
       const content = document.getElementById('md-scale-wrapper');
       if (!container || !content) return;
 
+      // Reset scale before measuring
       content.style.transform = 'scale(1)';
 
-      const cRect = container.getBoundingClientRect();
-      const contentRect = content.getBoundingClientRect();
+      const availableWidth = container.clientWidth;
+      const availableHeight = container.clientHeight;
 
-      const scaleX = cRect.width / contentRect.width;
-      const scaleY = cRect.height / contentRect.height;
+      const contentWidth = content.scrollWidth;
+      const contentHeight = content.scrollHeight;
+
+      const scaleX = availableWidth / contentWidth;
+      const scaleY = availableHeight / contentHeight;
 
       const scale = Math.min(scaleX, scaleY, 1);
+
       content.style.transform = `scale(${scale})`;
     }
 
     window.addEventListener('resize', scaleMarkdownToFit);
 
-    /* ---------- 3D ROTATION ---------- */
+    /* ---------- 3D ROTATION (NO PERSISTENCE) ---------- */
     (function () {
       const el = document.getElementById('main-container');
 
-      let rotX = parseFloat(localStorage.getItem('rotX')) || 0;
-      let rotY = parseFloat(localStorage.getItem('rotY')) || 0;
+      let rotX = 0;
+      let rotY = 0;
 
       let dragging = false;
       let lastX = 0;
@@ -197,8 +202,6 @@
         if (!dragging) return;
         dragging = false;
         el.classList.remove('is-rotating');
-        localStorage.setItem('rotX', rotX);
-        localStorage.setItem('rotY', rotY);
         try { el.releasePointerCapture(e.pointerId); } catch {}
         e.preventDefault();
       }
@@ -210,8 +213,6 @@
         rotX = 0;
         rotY = 0;
         apply();
-        localStorage.setItem('rotX', 0);
-        localStorage.setItem('rotY', 0);
       });
     })();
   </script>
