@@ -69,6 +69,7 @@
     #md-scale-wrapper {
       transform-origin: top left;
       will-change: transform;
+      display: inline-block;
     }
 
     #main-container h1,
@@ -134,11 +135,17 @@
       const content = document.getElementById('md-scale-wrapper');
       if (!container || !content) return;
 
-      // Reset scale before measuring
+      // reset scale before measuring
       content.style.transform = 'scale(1)';
 
-      const availableWidth = container.clientWidth;
-      const availableHeight = container.clientHeight;
+      const style = getComputedStyle(container);
+      const paddingX =
+        parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const paddingY =
+        parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+
+      const availableWidth = container.clientWidth - paddingX;
+      const availableHeight = container.clientHeight - paddingY;
 
       const contentWidth = content.scrollWidth;
       const contentHeight = content.scrollHeight;
@@ -153,7 +160,7 @@
 
     window.addEventListener('resize', scaleMarkdownToFit);
 
-    /* ---------- 3D ROTATION (NO PERSISTENCE) ---------- */
+    /* ---------- 3D ROTATION (RESET ON REFRESH) ---------- */
     (function () {
       const el = document.getElementById('main-container');
 
