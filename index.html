@@ -14,6 +14,7 @@
       height: 100%;
       background: transparent;
       overflow-x: hidden;
+      user-select: none; /* helps while rotating; we'll re-enable selection inside main */
     }
 
     html::before {
@@ -51,9 +52,12 @@
     #header-container {
       width: 100%;
       position: relative;
-      z-index: 1;
+      z-index: 2;
     }
 
+    /* =========================
+       MAIN CONTAINER (ROTATABLE)
+       ========================= */
     #main-container {
       max-width: 900px;
       margin: 40px auto;
@@ -65,6 +69,32 @@
       border: 5px dashed blue;
       border-radius: 8px;
       box-sizing: border-box;
+
+      /* Rotation essentials */
+      transform-origin: 50% 50%;
+      will-change: transform;
+      position: relative;
+      z-index: 1;
+
+      /* Let text be selectable again inside the box */
+      user-select: text;
+      touch-action: none; /* better pointer behavior on touch devices */
+      cursor: grab;
+    }
+
+    #main-container.is-rotating {
+      cursor: grabbing;
+    }
+
+    /* Subtle edge hint that you can "grab" any side */
+    #main-container::after {
+      content: "";
+      position: absolute;
+      inset: -10px; /* expands the "feel" area a bit visually */
+      border-radius: 12px;
+      pointer-events: none;
+      opacity: 0.15;
+      border: 2px dotted #00ff99;
     }
 
     #main-container h1,
@@ -72,6 +102,9 @@
     #main-container h3 {
       color: red;
     }
+
+    /* Optional: make links readable */
+    #main-container a { color: #66ffcc; }
   </style>
 </head>
 <body>
@@ -114,6 +147,121 @@
         document.getElementById('main-container').textContent =
           'Failed to load README.md';
       });
+
+    /* ===========================================
+       ROTATE #main-container by dragging its sides
+       - Drag near any edge/corner to rotate
+       - Rotation is about the element's center
+       - Persists in localStorage
+       =========================================== */
+
+    (function enableMainContainerRotation() {
+      const el = document.getElementById('main-container');
+      if (!el) return;
+
+      // Restore saved rotation
+      const saved = parseFloat(localStorage.getItem('mainContainerRotationDeg') || '0');
+      let currentDeg = Number.isFinite(saved) ? saved : 0;
+      applyRotation(currentDeg);
+
+      const EDGE_GRAB_PX = 28; // "near the border" zone for starting rotation
+      let rotating = false;
+      let pointerId = null;
+      let startRad = 0;
+      let startDeg = 0;
+
+      function getCenter() {
+        const r = el.getBoundingClientRect();
+        return { cx: r.left + r.width / 2, cy: r.top + r.height / 2, rect: r };
+      }
+
+      function angleRadFromCenter(clientX, clientY, cx, cy) {
+        return Math.atan2(clientY - cy, clientX - cx);
+      }
+
+      function radToDeg(rad) {
+        return rad * (180 / Math.PI);
+      }
+
+      function normalizeDeg(deg) {
+        // keep it tidy-ish: [-180, 180)
+        let d = deg % 360;
+        if (d >= 180) d -= 360;
+        if (d < -180) d += 360;
+        return d;
+      }
+
+      function applyRotation(deg) {
+        currentDeg = deg;
+        el.style.transform = `rotate(${deg}deg)`;
+      }
+
+      function isNearEdge(evt) {
+        const { rect } = getCenter();
+        const x = evt.clientX;
+        const y = evt.clientY;
+
+        const left   = Math.abs(x - rect.left);
+        const right  = Math.abs(rect.right - x);
+        const top    = Math.abs(y - rect.top);
+        const bottom = Math.abs(rect.bottom - y);
+
+        // Near any edge OR corner within EDGE_GRAB_PX
+        return (left <= EDGE_GRAB_PX || right <= EDGE_GRAB_PX || top <= EDGE_GRAB_PX || bottom <= EDGE_GRAB_PX);
+      }
+
+      // Start rotation only when grabbing near the edge to avoid hijacking clicks inside content.
+      el.addEventListener('pointerdown', (evt) => {
+        // left button only (or touch/pen)
+        if (evt.pointerType === 'mouse' && evt.button !== 0) return;
+        if (!isNearEdge(evt)) return;
+
+        const { cx, cy } = getCenter();
+        rotating = true;
+        pointerId = evt.pointerId;
+        el.setPointerCapture(pointerId);
+
+        startRad = angleRadFromCenter(evt.clientX, evt.clientY, cx, cy);
+        startDeg = currentDeg;
+
+        el.classList.add('is-rotating');
+        evt.preventDefault();
+      });
+
+      el.addEventListener('pointermove', (evt) => {
+        if (!rotating || evt.pointerId !== pointerId) return;
+
+        const { cx, cy } = getCenter();
+        const nowRad = angleRadFromCenter(evt.clientX, evt.clientY, cx, cy);
+
+        const deltaRad = nowRad - startRad;
+        const nextDeg = normalizeDeg(startDeg + radToDeg(deltaRad));
+
+        applyRotation(nextDeg);
+        evt.preventDefault();
+      });
+
+      function endRotation(evt) {
+        if (!rotating || evt.pointerId !== pointerId) return;
+        rotating = false;
+        try { el.releasePointerCapture(pointerId); } catch (e) {}
+        pointerId = null;
+
+        el.classList.remove('is-rotating');
+        localStorage.setItem('mainContainerRotationDeg', String(currentDeg));
+        evt.preventDefault();
+      }
+
+      el.addEventListener('pointerup', endRotation);
+      el.addEventListener('pointercancel', endRotation);
+
+      // Bonus: double-click the border area to reset rotation.
+      el.addEventListener('dblclick', (evt) => {
+        if (!isNearEdge(evt)) return;
+        applyRotation(0);
+        localStorage.setItem('mainContainerRotationDeg', '0');
+      });
+    })();
   </script>
 
 </body>
