@@ -13,9 +13,9 @@
       width: 100%;
       height: 100%;
       background: black;
-      overflow: hidden; /* kill all scrollbars */
+      overflow: hidden; /* absolutely no scrollbars */
       user-select: none;
-      perspective: 1200px; /* THIS is what makes it 3D */
+      perspective: 1200px;
     }
 
     #header-container {
@@ -53,7 +53,7 @@
       border: 5px dashed blue;
       border-radius: 8px;
 
-      overflow: hidden; /* no scrollbar, ever */
+      overflow: hidden; /* no scrollbars */
       cursor: grab;
       touch-action: none;
       will-change: transform;
@@ -61,6 +61,14 @@
 
     #main-container.is-rotating {
       cursor: grabbing;
+    }
+
+    /* =========================
+       MARKDOWN SCALE WRAPPER
+       ========================= */
+    #md-scale-wrapper {
+      transform-origin: top left;
+      will-change: transform;
     }
 
     #main-container h1,
@@ -77,7 +85,10 @@
 <body>
 
   <div id="header-container"></div>
-  <div id="main-container">Loading README...</div>
+
+  <div id="main-container">
+    <div id="md-scale-wrapper">Loading README...</div>
+  </div>
 
   <script>
     /* ---------- HEADER ---------- */
@@ -105,16 +116,37 @@
       setInterval(updateClock, 1000);
     }
 
-    /* ---------- CONTENT ---------- */
+    /* ---------- MARKDOWN ---------- */
     fetch('/readme.md')
       .then(r => r.text())
       .then(md => {
-        document.getElementById('main-container').innerHTML = marked.parse(md);
+        const wrapper = document.getElementById('md-scale-wrapper');
+        wrapper.innerHTML = marked.parse(md);
+        requestAnimationFrame(scaleMarkdownToFit);
       })
       .catch(() => {
-        document.getElementById('main-container').textContent =
+        document.getElementById('md-scale-wrapper').textContent =
           'Failed to load README.md';
       });
+
+    function scaleMarkdownToFit() {
+      const container = document.getElementById('main-container');
+      const content = document.getElementById('md-scale-wrapper');
+      if (!container || !content) return;
+
+      content.style.transform = 'scale(1)';
+
+      const cRect = container.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+
+      const scaleX = cRect.width / contentRect.width;
+      const scaleY = cRect.height / contentRect.height;
+
+      const scale = Math.min(scaleX, scaleY, 1);
+      content.style.transform = `scale(${scale})`;
+    }
+
+    window.addEventListener('resize', scaleMarkdownToFit);
 
     /* ---------- 3D ROTATION ---------- */
     (function () {
@@ -150,10 +182,8 @@
         const dx = e.clientX - lastX;
         const dy = e.clientY - lastY;
 
-        rotY += dx * 0.4;   // horizontal drag → Y axis
-        rotX -= dy * 0.4;   // vertical drag → X axis
-
-        // clamp X so it doesn’t flip into the void
+        rotY += dx * 0.4;
+        rotX -= dy * 0.4;
         rotX = Math.max(-80, Math.min(80, rotX));
 
         lastX = e.clientX;
