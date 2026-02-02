@@ -64,12 +64,20 @@
     }
 
     /* =========================
-       MARKDOWN SCALE WRAPPER
+       MARKDOWN LAYOUT
        ========================= */
-    #md-scale-wrapper {
-      transform-origin: top left;
+    #md-center {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-start;   /* top-aligned */
+      justify-content: center;   /* horizontal centering */
+      overflow: hidden;
+    }
+
+    #md-scale {
+      transform-origin: top center;
       will-change: transform;
-      display: inline-block;
     }
 
     #main-container h1,
@@ -88,7 +96,9 @@
   <div id="header-container"></div>
 
   <div id="main-container">
-    <div id="md-scale-wrapper">Loading README...</div>
+    <div id="md-center">
+      <div id="md-scale">Loading README...</div>
+    </div>
   </div>
 
   <script>
@@ -121,41 +131,41 @@
     fetch('/readme.md')
       .then(r => r.text())
       .then(md => {
-        const wrapper = document.getElementById('md-scale-wrapper');
-        wrapper.innerHTML = marked.parse(md);
+        const scale = document.getElementById('md-scale');
+        scale.innerHTML = marked.parse(md);
         requestAnimationFrame(scaleMarkdownToFit);
       })
       .catch(() => {
-        document.getElementById('md-scale-wrapper').textContent =
+        document.getElementById('md-scale').textContent =
           'Failed to load README.md';
       });
 
     function scaleMarkdownToFit() {
       const container = document.getElementById('main-container');
-      const content = document.getElementById('md-scale-wrapper');
-      if (!container || !content) return;
+      const scale = document.getElementById('md-scale');
+      if (!container || !scale) return;
 
-      // reset scale before measuring
-      content.style.transform = 'scale(1)';
+      scale.style.transform = 'scale(1)';
 
       const style = getComputedStyle(container);
-      const paddingX =
+      const padX =
         parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-      const paddingY =
+      const padY =
         parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
 
-      const availableWidth = container.clientWidth - paddingX;
-      const availableHeight = container.clientHeight - paddingY;
+      const availW = container.clientWidth - padX;
+      const availH = container.clientHeight - padY;
 
-      const contentWidth = content.scrollWidth;
-      const contentHeight = content.scrollHeight;
+      const contentW = scale.scrollWidth;
+      const contentH = scale.scrollHeight;
 
-      const scaleX = availableWidth / contentWidth;
-      const scaleY = availableHeight / contentHeight;
+      const scaleFactor = Math.min(
+        availW / contentW,
+        availH / contentH,
+        1
+      );
 
-      const scale = Math.min(scaleX, scaleY, 1);
-
-      content.style.transform = `scale(${scale})`;
+      scale.style.transform = `scale(${scaleFactor})`;
     }
 
     window.addEventListener('resize', scaleMarkdownToFit);
@@ -166,7 +176,6 @@
 
       let rotX = 0;
       let rotY = 0;
-
       let dragging = false;
       let lastX = 0;
       let lastY = 0;
