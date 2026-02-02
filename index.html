@@ -5,16 +5,11 @@
   <title>The Internet Is Dead</title>
 
   <style>
-    /* Absolute bare-minimum reset */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-    }
-
-    body {
-      display: block;
     }
 
     #header-container {
@@ -24,7 +19,6 @@
 </head>
 <body>
 
-  <!-- Header loads here -->
   <div id="header-container"></div>
 
   <script>
@@ -32,10 +26,33 @@
       .then(response => response.text())
       .then(html => {
         document.getElementById('header-container').innerHTML = html;
+        startClock();
       })
       .catch(err => {
         console.error('Failed to load header.html:', err);
       });
+
+    function startClock() {
+      function updateClock() {
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+
+        const time = formatter.format(now);
+        const clock = document.getElementById('nav-clock');
+        if (clock) {
+          clock.textContent = time + ' EST';
+        }
+      }
+
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
   </script>
 
 </body>
