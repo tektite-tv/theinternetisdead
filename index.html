@@ -13,8 +13,9 @@
       width: 100%;
       height: 100%;
       background: black;
-      overflow: hidden;
+      overflow: hidden; /* kill all scrollbars */
       user-select: none;
+      perspective: 1200px; /* THIS is what makes it 3D */
     }
 
     #header-container {
@@ -26,18 +27,20 @@
     }
 
     /* =========================
-       MAIN CONTAINER (ROTATABLE)
+       MAIN CONTAINER (3D OBJECT)
        ========================= */
     #main-container {
       position: fixed;
       left: 50%;
       top: 50%;
-      transform: translate(-50%, -50%) rotate(0deg);
+
+      transform-style: preserve-3d;
       transform-origin: 50% 50%;
+      transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg);
 
       width: 900px;
       max-width: calc(100vw - 40px);
-      max-height: calc(100vh - 120px);
+      height: 70vh;
 
       padding: 24px;
       box-sizing: border-box;
@@ -50,12 +53,10 @@
       border: 5px dashed blue;
       border-radius: 8px;
 
-      overflow: auto;
+      overflow: hidden; /* no scrollbar, ever */
       cursor: grab;
       touch-action: none;
       will-change: transform;
-
-      user-select: text;
     }
 
     #main-container.is-rotating {
@@ -111,60 +112,63 @@
         document.getElementById('main-container').innerHTML = marked.parse(md);
       })
       .catch(() => {
-        document.getElementById('main-container').textContent = 'Failed to load README.md';
+        document.getElementById('main-container').textContent =
+          'Failed to load README.md';
       });
 
-    /* ---------- ROTATION ---------- */
+    /* ---------- 3D ROTATION ---------- */
     (function () {
       const el = document.getElementById('main-container');
 
-      let rotation = parseFloat(localStorage.getItem('mainRotation')) || 0;
-      let rotating = false;
-      let startAngle = 0;
-      let startRotation = rotation;
+      let rotX = parseFloat(localStorage.getItem('rotX')) || 0;
+      let rotY = parseFloat(localStorage.getItem('rotY')) || 0;
 
-      applyRotation(rotation);
+      let dragging = false;
+      let lastX = 0;
+      let lastY = 0;
 
-      function applyRotation(deg) {
-        rotation = deg;
-        el.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
-      }
+      apply();
 
-      function angleFromCenter(x, y) {
-        const rect = el.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        return Math.atan2(y - cy, x - cx);
+      function apply() {
+        el.style.transform =
+          `translate(-50%, -50%) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
       }
 
       el.addEventListener('pointerdown', e => {
         if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-        rotating = true;
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
         el.setPointerCapture(e.pointerId);
         el.classList.add('is-rotating');
-
-        startAngle = angleFromCenter(e.clientX, e.clientY);
-        startRotation = rotation;
         e.preventDefault();
       });
 
       el.addEventListener('pointermove', e => {
-        if (!rotating) return;
+        if (!dragging) return;
 
-        const currentAngle = angleFromCenter(e.clientX, e.clientY);
-        const delta = currentAngle - startAngle;
-        const deg = startRotation + delta * (180 / Math.PI);
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
 
-        applyRotation(deg);
+        rotY += dx * 0.4;   // horizontal drag → Y axis
+        rotX -= dy * 0.4;   // vertical drag → X axis
+
+        // clamp X so it doesn’t flip into the void
+        rotX = Math.max(-80, Math.min(80, rotX));
+
+        lastX = e.clientX;
+        lastY = e.clientY;
+
+        apply();
         e.preventDefault();
       });
 
       function end(e) {
-        if (!rotating) return;
-        rotating = false;
+        if (!dragging) return;
+        dragging = false;
         el.classList.remove('is-rotating');
-        localStorage.setItem('mainRotation', rotation);
+        localStorage.setItem('rotX', rotX);
+        localStorage.setItem('rotY', rotY);
         try { el.releasePointerCapture(e.pointerId); } catch {}
         e.preventDefault();
       }
@@ -173,8 +177,11 @@
       el.addEventListener('pointercancel', end);
 
       el.addEventListener('dblclick', () => {
-        applyRotation(0);
-        localStorage.setItem('mainRotation', 0);
+        rotX = 0;
+        rotY = 0;
+        apply();
+        localStorage.setItem('rotX', 0);
+        localStorage.setItem('rotY', 0);
       });
     })();
   </script>
