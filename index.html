@@ -22,6 +22,7 @@
 
     body {
       font-family: "Courier New", Courier, monospace;
+      color: #00ff66;
     }
 
     #header-container {
@@ -30,7 +31,78 @@
 
     #content {
       padding: 16px;
-      color: #00ff66;
+    }
+
+    /* ====== Two Column Layout ====== */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 900px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ====== README ====== */
+    #readme {
+      white-space: normal;
+      line-height: 1.6;
+    }
+
+    #readme h1,
+    #readme h2,
+    #readme h3 {
+      color: #4b6cff;
+      margin: 1em 0 0.5em;
+    }
+
+    #readme pre {
+      background: #020202;
+      border: 1px solid #003322;
+      padding: 12px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+
+    #readme code {
+      color: #00ffaa;
+    }
+
+    #readme a {
+      color: #00ffcc;
+      text-decoration: underline;
+    }
+
+    /* ====== YouTube Feed ====== */
+    #yt-feed h2 {
+      color: #ff3366;
+      margin-bottom: 12px;
+    }
+
+    .yt-item {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed #003322;
+    }
+
+    .yt-item a {
+      color: #00ffcc;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .yt-item a:hover {
+      text-decoration: underline;
+    }
+
+    .yt-date {
+      font-size: 0.8em;
+      color: #009966;
     }
   </style>
 </head>
@@ -40,7 +112,14 @@
   <div id="header-container"></div>
 
   <div id="content">
-    <!-- Future chaos lives here -->
+    <div class="content-grid">
+      <div id="readme">Loading README.md...</div>
+
+      <div id="yt-feed">
+        <h2>LATEST BROADCASTS</h2>
+        <div id="yt-items">Loading transmissions...</div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -48,22 +127,14 @@
        Header loader
        ========================= */
     fetch("/index/header.html")
-      .then(response => {
-        if (!response.ok) {
-          throw new Error("Failed to load header.html");
-        }
-        return response.text();
-      })
+      .then(r => r.text())
       .then(html => {
         document.getElementById("header-container").innerHTML = html;
-        startHeaderClock(); // IMPORTANT: run clock AFTER header exists
-      })
-      .catch(err => {
-        console.error(err);
+        startHeaderClock();
       });
 
     /* =========================
-       EST Clock Logic
+       EST Clock
        ========================= */
     function startHeaderClock() {
       const clockEl = document.getElementById("nav-clock");
@@ -71,9 +142,7 @@
 
       function updateClock() {
         const now = new Date();
-
-        // Convert to America/New_York time (EST/EDT handled automatically)
-        const estTime = new Intl.DateTimeFormat("en-US", {
+        const est = new Intl.DateTimeFormat("en-US", {
           timeZone: "America/New_York",
           hour: "numeric",
           minute: "2-digit",
@@ -81,12 +150,67 @@
           hour12: true
         }).format(now);
 
-        clockEl.textContent = `${estTime} EST`;
+        clockEl.textContent = est + " EST";
       }
 
       updateClock();
       setInterval(updateClock, 1000);
     }
+
+    /* =========================
+       README.md Loader
+       ========================= */
+    fetch("/readme.md")
+      .then(r => r.text())
+      .then(md => {
+        document.getElementById("readme").innerHTML = renderMarkdown(md);
+      })
+      .catch(() => {
+        document.getElementById("readme").textContent =
+          "Failed to load README.md. Reality has a typo.";
+      });
+
+    function renderMarkdown(md) {
+      return md
+        .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+        .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+        .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+        .replace(/```([^`]+)```/gim, "<pre><code>$1</code></pre>")
+        .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
+        .replace(/\*(.*?)\*/gim, "<em>$1</em>")
+        .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href=\"$2\" target=\"_blank\">$1</a>")
+        .replace(/\n$/gim, "<br />");
+    }
+
+    /* =========================
+       YouTube RSS Feed
+       ========================= */
+    const rssURL =
+      "https://api.rss2json.com/v1/api.json?rss_url=" +
+      encodeURIComponent("https://www.youtube.com/feeds/videos.xml?channel_id=UCkQnZQw5f5qYQpJ5p7Z1f3Q");
+
+    fetch(rssURL)
+      .then(r => r.json())
+      .then(data => {
+        const container = document.getElementById("yt-items");
+        container.innerHTML = "";
+
+        data.items.slice(0, 5).forEach(item => {
+          const div = document.createElement("div");
+          div.className = "yt-item";
+
+          div.innerHTML = `
+            <a href="${item.link}" target="_blank">${item.title}</a>
+            <div class="yt-date">${new Date(item.pubDate).toLocaleDateString()}</div>
+          `;
+
+          container.appendChild(div);
+        });
+      })
+      .catch(() => {
+        document.getElementById("yt-items").textContent =
+          "Broadcast receiver offline.";
+      });
   </script>
 
 </body>
