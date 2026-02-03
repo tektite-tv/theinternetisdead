@@ -7,7 +7,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    /* Reset the browser’s bad habits */
     * {
       margin: 0;
       padding: 0;
@@ -25,12 +24,10 @@
       font-family: "Courier New", Courier, monospace;
     }
 
-    /* Container that will receive header.html */
     #header-container {
       width: 100%;
     }
 
-    /* Optional future content area */
     #content {
       padding: 16px;
       color: #00ff66;
@@ -39,29 +36,57 @@
 </head>
 <body>
 
-  <!-- Header gets injected here -->
+  <!-- Header injection point -->
   <div id="header-container"></div>
 
-  <!-- Main page content (empty on purpose for now) -->
   <div id="content">
-    <!-- You’ll ruin this later. That’s fine. -->
+    <!-- Future chaos lives here -->
   </div>
 
   <script>
-    // Load header.html cleanly, no iframe nonsense
+    /* =========================
+       Header loader
+       ========================= */
     fetch("/index/header.html")
       .then(response => {
         if (!response.ok) {
-          throw new Error("Header failed to load");
+          throw new Error("Failed to load header.html");
         }
         return response.text();
       })
       .then(html => {
         document.getElementById("header-container").innerHTML = html;
+        startHeaderClock(); // IMPORTANT: run clock AFTER header exists
       })
       .catch(err => {
         console.error(err);
       });
+
+    /* =========================
+       EST Clock Logic
+       ========================= */
+    function startHeaderClock() {
+      const clockEl = document.getElementById("nav-clock");
+      if (!clockEl) return;
+
+      function updateClock() {
+        const now = new Date();
+
+        // Convert to America/New_York time (EST/EDT handled automatically)
+        const estTime = new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/New_York",
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true
+        }).format(now);
+
+        clockEl.textContent = `${estTime} EST`;
+      }
+
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
   </script>
 
 </body>
