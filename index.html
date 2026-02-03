@@ -104,41 +104,83 @@
     }
 
     /* =========================
-       MAIN CONTAINER (3D OBJECT)
-       ========================= */
-    #main-container {
-      position: fixed;
-      left: 50%;
-      top: 50%;
+   RED / BLUE SCANLINES (MAIN CONTAINER ONLY)
+   ========================= */
 
-      transform-style: preserve-3d;
-      transform-origin: 50% 50%;
-      transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg);
+#main-container {
+  position: relative;
+  overflow: hidden; /* clip scanlines to container */
+  z-index: 5;
+}
 
-      width: 900px;
-      max-width: calc(100vw - 40px);
-      height: 70vh;
+/* Scanlines layer */
+#main-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 
-      padding: 16px;
-      box-sizing: border-box;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(20, 0, 70, 0.95) 0px,
+      rgba(20, 0, 70, 0.95) 4px,
+      rgba(120, 0, 0, 0.85) 8px,
+      rgba(120, 0, 0, 0.85) 12px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0,0,0,0.55) 0px,
+      rgba(0,0,0,0.55) 10px,
+      rgba(0,0,0,0) 20px,
+      rgba(0,0,0,0) 70px
+    );
 
-      font-family: "Courier New", monospace;
-      font-weight: bold;
-      color: #00ff99;
+  background-size: 100% 24px, 120px 100%;
+  background-blend-mode: screen;
+  image-rendering: pixelated;
 
-      background: black;
-      border: 5px dashed blue;
-      border-radius: 8px;
+  animation: scanFall 0.9s linear infinite;
+  opacity: 0.95;
+}
 
-      overflow: hidden;
-      cursor: grab;
-      touch-action: none;
-      will-change: transform;
-    }
+/* Subtle shimmer */
+#main-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 
-    #main-container.is-rotating {
-      cursor: grabbing;
-    }
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255,255,255,0.04) 0px,
+    rgba(255,255,255,0.04) 1px,
+    rgba(0,0,0,0) 3px,
+    rgba(0,0,0,0) 6px
+  );
+
+  mix-blend-mode: overlay;
+  animation: shimmerFall 1.8s linear infinite;
+  opacity: 0.55;
+}
+
+/* Ensure actual content sits above the effects */
+#main-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes scanFall {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 0 24px, 0 0; }
+}
+
+@keyframes shimmerFall {
+  from { background-position: 0 0; }
+  to   { background-position: 0 48px; }
+}
 
     /* =========================
        MARKDOWN LAYOUT
