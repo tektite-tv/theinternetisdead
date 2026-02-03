@@ -24,59 +24,7 @@
     /* html::before with z-index:-1 often vanishes behind html's own background.
        We pin the effect to body::before and keep it behind the UI with z-index:0. */
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-
-      /* Layer 1: horizontal red/blue scanlines
-         Layer 2: faint vertical mask for "CRT-ish" banding */
-      background:
-        repeating-linear-gradient(
-          180deg,
-          rgba(20, 0, 70, 0.95) 0px,
-          rgba(20, 0, 70, 0.95) 4px,
-          rgba(120, 0, 0, 0.85) 8px,
-          rgba(120, 0, 0, 0.85) 12px
-        ),
-        repeating-linear-gradient(
-          90deg,
-          rgba(0,0,0,0.55) 0px,
-          rgba(0,0,0,0.55) 10px,
-          rgba(0,0,0,0) 20px,
-          rgba(0,0,0,0) 70px
-        );
-
-      background-size: 100% 24px, 120px 100%;
-      background-blend-mode: screen;
-      image-rendering: pixelated;
-
-      /* Move DOWN (positive Y) so it feels like scanlines falling. */
-      animation: scanFall 0.9s linear infinite;
-      opacity: 0.95;
-    }
-
     /* Extra shimmer so it doesn't look like a static wallpaper. */
-    body::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background: repeating-linear-gradient(
-        180deg,
-        rgba(255,255,255,0.04) 0px,
-        rgba(255,255,255,0.04) 1px,
-        rgba(0,0,0,0) 3px,
-        rgba(0,0,0,0) 6px
-      );
-      mix-blend-mode: overlay;
-      animation: shimmerFall 1.8s linear infinite;
-      opacity: 0.55;
-    }
-
     @keyframes scanFall {
       from { background-position: 0 0, 0 0; }
       to   { background-position: 0 24px, 0 0; }
@@ -93,27 +41,15 @@
     }
 
     /* =========================
-       HEADER
+       RED / BLUE SCANLINES (MAIN CONTAINER ONLY)
        ========================= */
-    #header-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      z-index: 10;
-    }
-
-    /* =========================
-   RED / BLUE SCANLINES (MAIN CONTAINER ONLY)
-   ========================= */
 
 #main-container {
   position: relative;
-  overflow: hidden; /* clip scanlines to container */
+  overflow: hidden;
   z-index: 5;
 }
 
-/* Scanlines layer */
 #main-container::before {
   content: "";
   position: absolute;
@@ -140,12 +76,10 @@
   background-size: 100% 24px, 120px 100%;
   background-blend-mode: screen;
   image-rendering: pixelated;
-
   animation: scanFall 0.9s linear infinite;
   opacity: 0.95;
 }
 
-/* Subtle shimmer */
 #main-container::after {
   content: "";
   position: absolute;
@@ -166,7 +100,6 @@
   opacity: 0.55;
 }
 
-/* Ensure actual content sits above the effects */
 #main-container > * {
   position: relative;
   z-index: 1;
@@ -181,6 +114,54 @@
   from { background-position: 0 0; }
   to   { background-position: 0 48px; }
 }
+
+/* =========================
+       HEADER
+       ========================= */
+    #header-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 10;
+    }
+
+    /* =========================
+       MAIN CONTAINER (3D OBJECT)
+       ========================= */
+    #main-container {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+
+      transform-style: preserve-3d;
+      transform-origin: 50% 50%;
+      transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg);
+
+      width: 900px;
+      max-width: calc(100vw - 40px);
+      height: 70vh;
+
+      padding: 16px;
+      box-sizing: border-box;
+
+      font-family: "Courier New", monospace;
+      font-weight: bold;
+      color: #00ff99;
+
+      background: black;
+      border: 5px dashed blue;
+      border-radius: 8px;
+
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+      will-change: transform;
+    }
+
+    #main-container.is-rotating {
+      cursor: grabbing;
+    }
 
     /* =========================
        MARKDOWN LAYOUT
