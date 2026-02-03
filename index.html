@@ -116,6 +116,44 @@
 }
 
 /* =========================
+   3D PARALLAX GRID BACKGROUND
+   ========================= */
+
+body {
+  background: #071a12;
+  perspective: 1200px;
+  overflow: hidden;
+}
+
+/* Grid wrapper behind main container */
+#grid-background {
+  position: fixed;
+  inset: -50%;
+  z-index: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+/* The grid itself */
+#grid-background::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,153,0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,153,0.25) 1px, transparent 1px);
+  background-size: 40px 40px;
+  transform-origin: center;
+  transform: rotateX(65deg) translateZ(-300px);
+  animation: gridDrift 12s linear infinite;
+}
+
+/* Slow drifting motion */
+@keyframes gridDrift {
+  from { transform: rotateX(65deg) translateZ(-300px) translateY(0); }
+  to   { transform: rotateX(65deg) translateZ(-300px) translateY(200px); }
+}
+/* =========================
        HEADER
        ========================= */
     #header-container {
@@ -193,6 +231,7 @@
   </style>
 </head>
 <body>
+  <div id="grid-background"></div>
 
   <div id="header-container"></div>
 
