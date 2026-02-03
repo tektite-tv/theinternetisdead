@@ -1,151 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>The Internet Is Dead</title>
-
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      user-select: none;
-      perspective: 1200px;
-      background: black;
-    }
-
-    /* =========================
-       RED / BLUE SCANLINES (FLOATING DOWN)
-       ========================= */
-    /* html::before with z-index:-1 often vanishes behind html's own background.
-       We pin the effect to body::before and keep it behind the UI with z-index:0. */
-
-    /* Extra shimmer so it doesn't look like a static wallpaper. */
-    @keyframes scanFall {
-      from { background-position: 0 0, 0 0; }
-      to   { background-position: 0 24px, 0 0; }
-    }
-
-    @keyframes shimmerFall {
-      from { background-position: 0 0; }
-      to   { background-position: 0 48px; }
-    }
-
-    /* Ensure UI sits above the background layers */
-    #header-container { z-index: 10; }
-    #main-container {
-  position: relative;
-  z-index: 5; z-index: 5; }
-    }
-
-    /* =========================
-       RED / BLUE SCANLINES (MAIN CONTAINER ONLY)
-       ========================= */
-
-#main-container {
-  position: relative;
+<meta charset="UTF-8">
+<title>Infinite Grid + Scanlines</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  z-index: 5;
-}
-
-#main-container::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-
-  background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(20, 0, 70, 0.95) 0px,
-      rgba(20, 0, 70, 0.95) 4px,
-      rgba(120, 0, 0, 0.85) 8px,
-      rgba(120, 0, 0, 0.85) 12px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(0,0,0,0.55) 0px,
-      rgba(0,0,0,0.55) 10px,
-      rgba(0,0,0,0) 20px,
-      rgba(0,0,0,0) 70px
-    );
-
-  background-size: 100% 24px, 120px 100%;
-  background-blend-mode: screen;
-  image-rendering: pixelated;
-  animation: scanFall 0.9s linear infinite;
-  opacity: 0.95;
-}
-
-#main-container::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-
-  background: repeating-linear-gradient(
-    180deg,
-    rgba(255,255,255,0.04) 0px,
-    rgba(255,255,255,0.04) 1px,
-    rgba(0,0,0,0) 3px,
-    rgba(0,0,0,0) 6px
-  );
-
-  mix-blend-mode: overlay;
-  animation: shimmerFall 1.8s linear infinite;
-  opacity: 0.55;
-}
-
-#main-container > * {
-  position: relative;
-  z-index: 1;
-}
-
-@keyframes scanFall {
-  from { background-position: 0 0, 0 0; }
-  to   { background-position: 0 24px, 0 0; }
-}
-
-@keyframes shimmerFall {
-  from { background-position: 0 0; }
-  to   { background-position: 0 48px; }
+  background: #071a12;
+  perspective: 1200px;
 }
 
 /* =========================
-   3D PARALLAX GRID BACKGROUND
+   HEADER (CLEAN, UNAFFECTED)
    ========================= */
-
-body {
-  background: #071a12;
-  perspective: 1200px;
-  overflow: hidden;
+#header-container {
+  position: relative;
+  z-index: 10;
 }
 
-/* Grid wrapper behind main container */
+/* =========================
+   INFINITE PARALLAX GRID
+   ========================= */
 #grid-background {
-  background-position: 0 0;
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  transform-style: preserve-3d;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-/* The grid itself */
-#grid-background::before {
-  content: "";
-  position: absolute;
   inset: 0;
+  z-index: 0;
+  pointer-events: none;
 
   background-image:
     linear-gradient(rgba(0,255,153,0.35) 1px, transparent 1px),
@@ -157,136 +41,107 @@ body {
   transform: rotateX(65deg) translateZ(-500px);
 }
 
-/* Slow drifting motion */
-
-  to   { transform: rotateX(65deg) translateZ(-300px) translateY(200px); }
-}
 /* =========================
-       HEADER
-       ========================= */
-    #header-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      z-index: 10;
-    }
+   MAIN CONTAINER
+   ========================= */
+#main-container {
+  position: relative;
+  z-index: 5;
+  margin: 80px auto;
+  width: 80vw;
+  height: 70vh;
+  background: black;
+  color: #00ff99;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
 
-    /* =========================
-       MAIN CONTAINER (3D OBJECT)
-       ========================= */
-    #main-container {
-      position: fixed;
-      left: 50%;
-      top: 50%;
+/* =========================
+   SCANLINES (MAIN ONLY)
+   ========================= */
+#main-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
 
-      transform-style: preserve-3d;
-      transform-origin: 50% 50%;
-      transform: translate(-50%, -50%) rotateX(0deg) rotateY(0deg);
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(20,0,70,0.9) 0px,
+      rgba(20,0,70,0.9) 4px,
+      rgba(120,0,0,0.85) 8px,
+      rgba(120,0,0,0.85) 12px
+    );
+  background-size: 100% 24px;
+  animation: scanFall 1s linear infinite;
+}
 
-      width: 900px;
-      max-width: calc(100vw - 40px);
-      height: 70vh;
+#main-container > * {
+  position: relative;
+  z-index: 1;
+}
 
-      padding: 16px;
-      box-sizing: border-box;
-
-      font-family: "Courier New", monospace;
-      font-weight: bold;
-      color: #00ff99;
-
-      background: black;
-      border: 5px dashed blue;
-      border-radius: 8px;
-
-      overflow: hidden;
-      cursor: grab;
-      touch-action: none;
-      will-change: transform;
-    }
-
-    #main-container.is-rotating {
-      cursor: grabbing;
-    }
-
-    /* =========================
-       MARKDOWN LAYOUT
-       ========================= */
-    #md-center {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    #md-scale {
-      transform-origin: top center;
-      will-change: transform;
-      display: inline-block;
-    }
-
-    #main-container h1,
-    #main-container h2,
-    #main-container h3 {
-      color: red;
-    }
-
-    #main-container a {
-      color: #66ffcc;
-    }
-  </style>
+@keyframes scanFall {
+  from { background-position: 0 0; }
+  to   { background-position: 0 24px; }
+}
+</style>
 </head>
+
 <body>
-  <div id="grid-background"></div>
 
-  <div id="header-container"></div>
+<div id="grid-background"></div>
 
-  <div id="main-container">
-    <div id="md-center">
-      <div id="md-scale">Loading README...</div>
-    </div>
-  </div>
+<div id="header-container">
+  <!-- header.html would be injected here -->
+</div>
 
-  
-
+<div id="main-container">
+  <h1>CONTENT</h1>
+  <p>This container rotates. The grid is infinite. The header is safe.</p>
+</div>
 
 <script>
-/* Infinite parallax grid synced to main container rotation */
-const grid = document.getElementById('grid-background');
+/* =========================
+   ROTATION + GRID COUPLING
+   ========================= */
 const container = document.getElementById('main-container');
+const grid = document.getElementById('grid-background');
 
-let offsetX = 0;
-let offsetY = 0;
+let rotX = 0, rotY = 0;
+let gridX = 0, gridY = 0;
+let dragging = false;
+let lastX = 0, lastY = 0;
 
-function loop() {
-  if (!grid || !container) return;
+container.addEventListener('mousedown', e => {
+  dragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
 
-  const style = getComputedStyle(container);
-  const transform = style.transform;
+window.addEventListener('mouseup', () => dragging = false);
 
-  if (transform && transform !== 'none') {
-    const m3d = transform.match(/matrix3d\((.+)\)/);
-    if (m3d) {
-      const m = m3d[1].split(',').map(Number);
-      const rotX = Math.asin(-m[9]);
-      const rotY = Math.asin(m[8]);
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
 
-      offsetX += rotY * 8;
-      offsetY += rotX * 8;
-    }
-  }
+  const dx = e.clientX - lastX;
+  const dy = e.clientY - lastY;
 
-  // wrap offsets to avoid float explosion
-  offsetX %= 40;
-  offsetY %= 40;
+  rotY += dx * 0.3;
+  rotX -= dy * 0.3;
 
-  grid.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
-  requestAnimationFrame(loop);
-}
+  container.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
 
-loop();
+  gridX += rotY * 0.4;
+  gridY += rotX * 0.4;
+
+  grid.style.backgroundPosition = `${gridX % 40}px ${gridY % 40}px`;
+
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
 </script>
 
 </body>
