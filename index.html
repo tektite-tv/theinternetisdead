@@ -19,41 +19,77 @@
     }
 
     /* =========================
-       RED / BLUE BACKGROUND FIELD
+       RED / BLUE SCANLINES (FLOATING DOWN)
        ========================= */
-    html::before {
+    /* html::before with z-index:-1 often vanishes behind html's own background.
+       We pin the effect to body::before and keep it behind the UI with z-index:0. */
+
+    body::before {
       content: "";
       position: fixed;
       inset: 0;
-      z-index: -1;
+      z-index: 0;
       pointer-events: none;
 
+      /* Layer 1: horizontal red/blue scanlines
+         Layer 2: faint vertical mask for "CRT-ish" banding */
       background:
         repeating-linear-gradient(
           180deg,
-          #2200ff 0px,
-          #2200ff 6px,
-          #000022 12px,
-          #660000 18px,
-          #990000 24px
+          rgba(20, 0, 70, 0.95) 0px,
+          rgba(20, 0, 70, 0.95) 4px,
+          rgba(120, 0, 0, 0.85) 8px,
+          rgba(120, 0, 0, 0.85) 12px
         ),
         repeating-linear-gradient(
           90deg,
-          rgba(0,0,0,0.5) 0px,
-          rgba(0,0,0,0.5) 6px,
-          rgba(0,0,0,0) 12px,
-          rgba(0,0,0,0) 48px
+          rgba(0,0,0,0.55) 0px,
+          rgba(0,0,0,0.55) 10px,
+          rgba(0,0,0,0) 20px,
+          rgba(0,0,0,0) 70px
         );
 
-      background-size: 100% 48px, 96px 100%;
+      background-size: 100% 24px, 120px 100%;
       background-blend-mode: screen;
       image-rendering: pixelated;
-      animation: signalDrift 0.9s linear infinite;
+
+      /* Move DOWN (positive Y) so it feels like scanlines falling. */
+      animation: scanFall 0.9s linear infinite;
+      opacity: 0.95;
     }
 
-    @keyframes signalDrift {
+    /* Extra shimmer so it doesn't look like a static wallpaper. */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        180deg,
+        rgba(255,255,255,0.04) 0px,
+        rgba(255,255,255,0.04) 1px,
+        rgba(0,0,0,0) 3px,
+        rgba(0,0,0,0) 6px
+      );
+      mix-blend-mode: overlay;
+      animation: shimmerFall 1.8s linear infinite;
+      opacity: 0.55;
+    }
+
+    @keyframes scanFall {
       from { background-position: 0 0, 0 0; }
-      to   { background-position: 0 -48px, 0 0; }
+      to   { background-position: 0 24px, 0 0; }
+    }
+
+    @keyframes shimmerFall {
+      from { background-position: 0 0; }
+      to   { background-position: 0 48px; }
+    }
+
+    /* Ensure UI sits above the background layers */
+    #header-container { z-index: 10; }
+    #main-container { z-index: 5; }
     }
 
     /* =========================
