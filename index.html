@@ -129,6 +129,7 @@ body {
 
 /* Grid wrapper behind main container */
 #grid-background {
+  background-position: 0 0;
   position: fixed;
   top: 0;
   left: 0;
@@ -144,24 +145,20 @@ body {
 #grid-background::before {
   content: "";
   position: absolute;
-  width: 300vw;
-  height: 300vh;
-  left: -100vw;
-  top: -100vh;
+  inset: 0;
 
   background-image:
     linear-gradient(rgba(0,255,153,0.35) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0,255,153,0.35) 1px, transparent 1px);
   background-size: 40px 40px;
+  background-repeat: repeat;
 
   transform-origin: center;
-  transform: rotateX(65deg) translateZ(-400px);
-  animation: gridDrift 14s linear infinite;
+  transform: rotateX(65deg) translateZ(-500px);
 }
 
 /* Slow drifting motion */
-@keyframes gridDrift {
-  from { transform: rotateX(65deg) translateZ(-300px) translateY(0); }
+
   to   { transform: rotateX(65deg) translateZ(-300px) translateY(200px); }
 }
 /* =========================
@@ -252,166 +249,44 @@ body {
     </div>
   </div>
 
-  <script>
-    /* ---------- HEADER ---------- */
-    fetch('/index/header.html')
-      .then(r => r.text())
-      .then(html => {
-        document.getElementById('header-container').innerHTML = html;
-        startClock();
-      });
-
-    function startClock() {
-      function updateClock() {
-        const now = new Date();
-        const formatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/New_York',
-          hour: 'numeric',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true
-        });
-        const clock = document.getElementById('nav-clock');
-        if (clock) clock.textContent = formatter.format(now) + ' EST';
-      }
-      updateClock();
-      setInterval(updateClock, 1000);
-    }
-
-    /* ---------- MARKDOWN ---------- */
-    fetch('/readme.md')
-      .then(r => r.text())
-      .then(md => {
-        const scale = document.getElementById('md-scale');
-        scale.innerHTML = marked.parse(md);
-        requestAnimationFrame(scaleMarkdownToFill);
-      })
-      .catch(() => {
-        document.getElementById('md-scale').textContent =
-          'Failed to load README.md';
-      });
-
-    function scaleMarkdownToFill() {
-      const container = document.getElementById('main-container');
-      const content = document.getElementById('md-scale');
-      if (!container || !content) return;
-
-      content.style.transform = 'scale(1, 1)';
-
-      const style = getComputedStyle(container);
-      const padX =
-        parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-      const padY =
-        parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-
-      const availW = container.clientWidth - padX;
-      const availH = container.clientHeight - padY;
-
-      const contentW = content.scrollWidth;
-      const contentH = content.scrollHeight;
-
-      const scaleX = availW / contentW;
-      const scaleY = availH / contentH;
-
-      content.style.transform = `scale(${scaleX}, ${scaleY})`;
-    }
-
-    window.addEventListener('resize', scaleMarkdownToFill);
-
-    /* ---------- 3D ROTATION (RESET ON REFRESH) ---------- */
-    (function () {
-      const el = document.getElementById('main-container');
-
-      let rotX = 0;
-      let rotY = 0;
-      let dragging = false;
-      let lastX = 0;
-      let lastY = 0;
-
-      apply();
-
-      function apply() {
-        el.style.transform =
-          `translate(-50%, -50%) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-      }
-
-      el.addEventListener('pointerdown', e => {
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
-        dragging = true;
-        lastX = e.clientX;
-        lastY = e.clientY;
-        el.setPointerCapture(e.pointerId);
-        el.classList.add('is-rotating');
-        e.preventDefault();
-      });
-
-      el.addEventListener('pointermove', e => {
-        if (!dragging) return;
-
-        const dx = e.clientX - lastX;
-        const dy = e.clientY - lastY;
-
-        rotY += dx * 0.4;
-        rotX -= dy * 0.4;
-        rotX = Math.max(-80, Math.min(80, rotX));
-
-        lastX = e.clientX;
-        lastY = e.clientY;
-
-        apply();
-        e.preventDefault();
-      });
-
-      function end(e) {
-        if (!dragging) return;
-        dragging = false;
-        el.classList.remove('is-rotating');
-        try { el.releasePointerCapture(e.pointerId); } catch {}
-        e.preventDefault();
-      }
-
-      el.addEventListener('pointerup', end);
-      el.addEventListener('pointercancel', end);
-
-      el.addEventListener('dblclick', () => {
-        rotX = 0;
-        rotY = 0;
-        apply();
-      });
-    })();
-  </script>
+  
 
 
 <script>
-/* Couple grid motion to main-container rotation */
+/* Infinite parallax grid synced to main container rotation */
 const grid = document.getElementById('grid-background');
 const container = document.getElementById('main-container');
 
-let gridX = 0, gridY = 0;
+let offsetX = 0;
+let offsetY = 0;
 
-function syncGrid() {
+function loop() {
   if (!grid || !container) return;
 
   const style = getComputedStyle(container);
   const transform = style.transform;
 
-  if (transform !== 'none') {
-    const values = transform.match(/matrix3d\((.+)\)/);
-    if (values) {
-      const m = values[1].split(',').map(parseFloat);
-      const rotX = Math.asin(-m[9]) * (180 / Math.PI);
-      const rotY = Math.asin(m[8]) * (180 / Math.PI);
+  if (transform && transform !== 'none') {
+    const m3d = transform.match(/matrix3d\((.+)\)/);
+    if (m3d) {
+      const m = m3d[1].split(',').map(Number);
+      const rotX = Math.asin(-m[9]);
+      const rotY = Math.asin(m[8]);
 
-      gridX += rotY * 0.15;
-      gridY += rotX * 0.15;
+      offsetX += rotY * 8;
+      offsetY += rotX * 8;
     }
   }
 
-  grid.style.transform = `translate3d(${gridX}px, ${gridY}px, 0)`;
-  requestAnimationFrame(syncGrid);
+  // wrap offsets to avoid float explosion
+  offsetX %= 40;
+  offsetY %= 40;
+
+  grid.style.backgroundPosition = `${offsetX}px ${offsetY}px`;
+  requestAnimationFrame(loop);
 }
 
-syncGrid();
+loop();
 </script>
 
 </body>
