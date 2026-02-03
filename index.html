@@ -37,7 +37,9 @@
 
     /* Ensure UI sits above the background layers */
     #header-container { z-index: 10; }
-    #main-container { z-index: 5; }
+    #main-container {
+  position: relative;
+  z-index: 5; z-index: 5; }
     }
 
     /* =========================
@@ -128,24 +130,33 @@ body {
 /* Grid wrapper behind main container */
 #grid-background {
   position: fixed;
-  inset: -50%;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   z-index: 0;
   transform-style: preserve-3d;
   pointer-events: none;
+  overflow: hidden;
 }
 
 /* The grid itself */
 #grid-background::before {
   content: "";
   position: absolute;
-  inset: 0;
+  width: 300vw;
+  height: 300vh;
+  left: -100vw;
+  top: -100vh;
+
   background-image:
-    linear-gradient(rgba(0,255,153,0.25) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,255,153,0.25) 1px, transparent 1px);
+    linear-gradient(rgba(0,255,153,0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,153,0.35) 1px, transparent 1px);
   background-size: 40px 40px;
+
   transform-origin: center;
-  transform: rotateX(65deg) translateZ(-300px);
-  animation: gridDrift 12s linear infinite;
+  transform: rotateX(65deg) translateZ(-400px);
+  animation: gridDrift 14s linear infinite;
 }
 
 /* Slow drifting motion */
@@ -369,6 +380,39 @@ body {
       });
     })();
   </script>
+
+
+<script>
+/* Couple grid motion to main-container rotation */
+const grid = document.getElementById('grid-background');
+const container = document.getElementById('main-container');
+
+let gridX = 0, gridY = 0;
+
+function syncGrid() {
+  if (!grid || !container) return;
+
+  const style = getComputedStyle(container);
+  const transform = style.transform;
+
+  if (transform !== 'none') {
+    const values = transform.match(/matrix3d\((.+)\)/);
+    if (values) {
+      const m = values[1].split(',').map(parseFloat);
+      const rotX = Math.asin(-m[9]) * (180 / Math.PI);
+      const rotY = Math.asin(m[8]) * (180 / Math.PI);
+
+      gridX += rotY * 0.15;
+      gridY += rotX * 0.15;
+    }
+  }
+
+  grid.style.transform = `translate3d(${gridX}px, ${gridY}px, 0)`;
+  requestAnimationFrame(syncGrid);
+}
+
+syncGrid();
+</script>
 
 </body>
 </html>
