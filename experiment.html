@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Alphabet Growth Exhibit (experiment.html)</title>
+  <style>
+    :root{
+      --bg:#07070a;
+      --ink:#e8e8f2;
+      --muted:#a9a9c2;
+      --glass: rgba(255,255,255,.06);
+      --glass2: rgba(255,255,255,.1);
+      --accent: rgba(180,140,255,.9);
+      --accent2: rgba(120,220,255,.9);
+      --shadow: rgba(0,0,0,.55);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 900px at 20% 15%, rgba(180,140,255,.16), transparent 60%),
+                  radial-gradient(1000px 800px at 80% 75%, rgba(120,220,255,.14), transparent 60%),
+                  var(--bg);
+      color:var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      overflow:hidden;
+    }
+
+    /* Top label */
+    .hud{
+      position:fixed;
+      left:16px; right:16px; top:14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      pointer-events:none;
+      z-index:30;
+    }
+    .hud .panel{
+      pointer-events:none;
+      padding:10px 12px;
+      border-radius:14px;
+      background: linear-gradient(180deg, var(--glass2), var(--glass));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: 0 14px 40px var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      max-width:min(560px, 70vw);
+    }
+    .title{
+      font-size:14px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      margin:0 0 6px 0;
+      color:rgba(255,255,255,.9);
+    }
+    .sub{
+      margin:0;
+      font-size:12px;
+      line-height:1.35;
+      color:var(--muted);
+    }
+    .sub b{color:rgba(255,255,255,.92); font-weight:600;}
+    .kbd{
+      display:inline-block;
+      padding:1px 6px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.25);
+      color: rgba(255,255,255,.88);
+      font-size:11px;
+      letter-spacing:.04em;
+      margin:0 2px;
+    }
+
+    /* Stage */
+    .stage{
+      position:fixed;
+      inset:0;
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap:0;
+      z-index:10;
+    }
+
+    /* Left: the "gallery wall" */
+    .wall{
+      position:relative;
+      overflow:hidden;
+      padding:72px 24px 20px 24px;
+      border-right:1px solid rgba(255,255,255,.08);
+    }
+
+    /* Right: curator card */
+    .curator{
+      position:relative;
+      padding:72px 18px 18px 18px;
+      overflow:hidden;
+    }
+    .card{
+      height:100%;
+      border-radius:22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 60px var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .card h2{
+      margin:0;
+      font-size:13px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.88);
+    }
+    .card p{
+      margin:0;
+      font-size:12px;
+      line-height:1.5;
+      color:var(--muted);
+    }
+    .stats{
+      margin-top:8px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .stat{
+      border-radius:16px;
+      padding:10px 10px;
+      background: rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .stat .k{font-size:11px; color:rgba(255,255,255,.72); letter-spacing:.08em; text-transform:uppercase}
+    .stat .v{font-size:16px; color:rgba(255,255,255,.92); margin-top:6px}
+    .divider{
+      height:1px;
+      background: rgba(255,255,255,.1);
+      margin:4px 0;
+    }
+
+    .controls{
+      margin-top:auto;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    button{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.26);
+      color: rgba(255,255,255,.9);
+      border-radius:14px;
+      padding:10px 12px;
+      font: inherit;
+      font-size:12px;
+      letter-spacing:.04em;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    }
+    button:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.26); background: rgba(0,0,0,.34); }
+    button:active{ transform: translateY(0px) scale(.99); }
+    .hint{
+      font-size:11px;
+      color:rgba(255,255,255,.62);
+      margin-top:6px;
+    }
+
+    /* The "rows" */
+    .rows{
+      position:absolute;
+      inset:0;
+      padding: 74px 24px 24px 24px;
+      overflow:hidden;
+      perspective: 900px;
+      transform-style:preserve-3d;
+    }
+    .row{
+      position:absolute;
+      left:24px;
+      right:24px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:10px 14px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      box-shadow: 0 14px 48px rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transform-style:preserve-3d;
+      transition: border-color .15s ease, background .15s ease;
+      overflow:hidden;
+    }
+    .row:hover{
+      border-color: rgba(255,255,255,.22);
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    }
+
+    .badge{
+      width:40px;
+      flex:0 0 40px;
+      height:40px;
+      border-radius:14px;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.24);
+      color: rgba(255,255,255,.9);
+      font-size:12px;
+      letter-spacing:.08em;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.2);
+    }
+    .text{
+      position:relative;
+      flex:1;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      font-size: 18px;
+      letter-spacing:.05em;
+      line-height:1.1;
+      text-shadow: 0 0 18px rgba(180,140,255,.16);
+    }
+    .ghost{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:.0;
+      filter: blur(.35px);
+      transform: translateZ(18px);
+      mix-blend-mode: screen;
+    }
+    .row.active .ghost{
+      opacity:.85;
+    }
+
+    .lineGlow{
+      position:absolute;
+      inset:-40px;
+      background: radial-gradient(300px 120px at var(--mx, 50%) var(--my, 50%),
+        rgba(180,140,255,.20),
+        rgba(120,220,255,.10),
+        transparent 62%);
+      opacity:.75;
+      pointer-events:none;
+      transform: translateZ(-10px);
+    }
+
+    /* Canvas background */
+    canvas{
+      position:fixed;
+      inset:0;
+      z-index:0;
+      opacity:.95;
+    }
+
+    /* Mobile: stack */
+    @media (max-width: 920px){
+      .stage{ grid-template-columns: 1fr; }
+      .wall{ border-right:none; border-bottom:1px solid rgba(255,255,255,.08); }
+      .curator{ padding-top:14px; }
+      .hud{ top:10px; }
+      .hud .panel{ max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg"></canvas>
+
+  <div class="hud">
+    <div class="panel">
+      <p class="title">The Alphabet Grows Up (Whether It Wants To Or Not)</p>
+      <p class="sub">
+        A tiny museum for a single repeated idea: <b>accumulation</b>.
+        Move your mouse to bend the wall. Click a piece to “listen” to it visually.
+        <span class="kbd">Space</span> pause, <span class="kbd">G</span> toggle ghosts, <span class="kbd">R</span> rehang.
+      </p>
+    </div>
+    <div class="panel">
+      <p class="title">Now Showing</p>
+      <p class="sub" id="nowShowing">Loading exhibit…</p>
+    </div>
+  </div>
+
+  <div class="stage">
+    <section class="wall" aria-label="Gallery wall">
+      <div class="rows" id="rows" aria-label="Alphabet pieces"></div>
+    </section>
+
+    <aside class="curator" aria-label="Curator notes">
+      <div class="card">
+        <h2>Curator Notes</h2>
+        <p>
+          Humans love systems that look inevitable. This one is just a ladder of letters.
+          The exhibit treats each rung like an artifact: numbered, framed, and slightly haunted.
+        </p>
+        <div class="divider"></div>
+        <p>
+          The “ghost” layer is a second copy of each string, offset and distorted by time and motion.
+          It makes the boring thing feel like it has a pulse. Which is basically modern art in a sentence.
+        </p>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="k">Pieces</div>
+            <div class="v" id="statPieces">0</div>
+          </div>
+          <div class="stat">
+            <div class="k">Selected</div>
+            <div class="v" id="statSelected">None</div>
+          </div>
+          <div class="stat">
+            <div class="k">Length</div>
+            <div class="v" id="statLen">0</div>
+          </div>
+          <div class="stat">
+            <div class="k">Tempo</div>
+            <div class="v" id="statTempo">1.00×</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="btnPlay">Play growth</button>
+          <button id="btnShuffle">Rehang</button>
+          <button id="btnGhost">Toggle ghosts</button>
+          <button id="btnReset">Reset selection</button>
+        </div>
+        <div class="hint" id="hint">Tip: drag your mouse across the wall like you’re smearing meaning across glass.</div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // Exhibit content: the ladder of accumulation.
+    const LINES = [
+      "A",
+      "AB",
+      "ABC",
+      "ABCD",
+      "ABCDE",
+      "ABCDEF",
+      "ABCDEFG",
+      "ABCDEFGH",
+      "ABCDEFGHI",
+      "ABCDEFGHIJ",
+      "ABCDEFGHIJK",
+      "ABCDEFGHIJKL",
+      "ABCDEFGHIJKLM",
+      "ABCDEFGHIJKLMN",
+      "ABCDEFGHIJKLMNO",
+      "ABCDEFGHIJKLMNOP",
+      "ABCDEFGHIJKLMNOPQ",
+      "ABCDEFGHIJKLMNOPQR",
+      "ABCDEFGHIJKLMNOPQRS",
+      "ABCDEFGHIJKLMNOPQRST",
+      "ABCDEFGHIJKLMNOPQRSTU",
+      "ABCDEFGHIJKLMNOPQRSTUV",
+      "ABCDEFGHIJKLMNOPQRSTUVW",
+      "ABCDEFGHIJKLMNOPQRSTUVWX",
+      "ABCDEFGHIJKLMNOPQRSTUVWXY",
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    ];
+
+    // ---- DOM refs
+    const rowsEl = document.getElementById("rows");
+    const nowShowing = document.getElementById("nowShowing");
+    const statPieces = document.getElementById("statPieces");
+    const statSelected = document.getElementById("statSelected");
+    const statLen = document.getElementById("statLen");
+    const statTempo = document.getElementById("statTempo");
+
+    const btnPlay = document.getElementById("btnPlay");
+    const btnShuffle = document.getElementById("btnShuffle");
+    const btnGhost = document.getElementById("btnGhost");
+    const btnReset = document.getElementById("btnReset");
+
+    // ---- State
+    let paused = false;
+    let ghostsOn = true;
+    let selectedIndex = -1;
+
+    // Layout seed: stable-ish randomness for a "rehang" feeling.
+    let seed = Math.random() * 1e9;
+
+    // Playback
+    let playMode = false;
+    let playIndex = 0;
+    let tempo = 1.0;
+
+    // Mouse
+    const mouse = { x: 0.5, y: 0.5, vx: 0, vy: 0, lastX: 0.5, lastY: 0.5 };
+
+    // ---- Utilities
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+    function lerp(a,b,t){ return a + (b-a)*t; }
+    function rand01(){
+      // Simple LCG for repeatable randomness per seed.
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    }
+    function niceIndex(i){ return String(i+1).padStart(2, "0"); }
+
+    // ---- Build rows
+    function buildRows(){
+      rowsEl.innerHTML = "";
+      const h = rowsEl.clientHeight || window.innerHeight;
+      const padTop = 0; // already padded in CSS
+      const padBottom = 0;
+
+      // "Curated" stacking: vertical positions with slight chaos, plus depth.
+      const n = LINES.length;
+      const baseGap = (h - padTop - padBottom) / (n + 1);
+
+      for(let i=0;i<n;i++){
+        const row = document.createElement("div");
+        row.className = "row";
+        row.dataset.index = String(i);
+
+        const badge = document.createElement("div");
+        badge.className = "badge";
+        badge.textContent = niceIndex(i);
+
+        const text = document.createElement("div");
+        text.className = "text";
+        text.textContent = LINES[i];
+
+        // Ghost copy: same text, animated in draw loop
+        const ghost = document.createElement("div");
+        ghost.className = "ghost";
+        ghost.textContent = LINES[i];
+
+        const glow = document.createElement("div");
+        glow.className = "lineGlow";
+
+        row.appendChild(glow);
+        row.appendChild(badge);
+        row.appendChild(text);
+        row.appendChild(ghost);
+
+        // Click select
+        row.addEventListener("click", () => {
+          selectIndex(i);
+        });
+
+        rowsEl.appendChild(row);
+      }
+
+      statPieces.textContent = String(LINES.length);
+      rehang();
+      updateNowShowing();
+    }
+
+    function rehang(){
+      // Assign each row a target Y, tilt, and depth.
+      const h = rowsEl.clientHeight || window.innerHeight;
+      const n = LINES.length;
+      const baseGap = h / (n + 1);
+
+      const rows = Array.from(rowsEl.querySelectorAll(".row"));
+      rows.forEach((row, i) => {
+        const jitterY = (rand01() - 0.5) * baseGap * 0.55;
+        const y = (i + 1) * baseGap + jitterY;
+
+        const depth = lerp(-220, 120, i / (n - 1));
+        const tilt = (rand01() - 0.5) * 10;
+        const drift = (rand01() - 0.5) * 24;
+
+        row.dataset.y = String(y);
+        row.dataset.depth = String(depth);
+        row.dataset.tilt = String(tilt);
+        row.dataset.drift = String(drift);
+      });
+    }
+
+    function selectIndex(i){
+      selectedIndex = i;
+      const rows = Array.from(rowsEl.querySelectorAll(".row"));
+      rows.forEach((r, idx) => {
+        r.classList.toggle("active", idx === i);
+      });
+
+      const line = (i >= 0) ? LINES[i] : null;
+      statSelected.textContent = (i >= 0) ? niceIndex(i) : "None";
+      statLen.textContent = (i >= 0) ? String(line.length) : "0";
+
+      // Nudge tempo based on selection length (subtle)
+      tempo = (i >= 0) ? clamp(0.65 + (line.length / 26) * 0.85, 0.65, 1.5) : 1.0;
+      statTempo.textContent = tempo.toFixed(2) + "×";
+
+      updateNowShowing();
+    }
+
+    function updateNowShowing(){
+      if(selectedIndex < 0){
+        nowShowing.textContent = "No piece selected. The wall breathes anyway.";
+        return;
+      }
+      const s = LINES[selectedIndex];
+      nowShowing.textContent = `Piece ${niceIndex(selectedIndex)}: "${s}" (${s.length} characters).`;
+    }
+
+    // ---- Background canvas: "museum air"
+    const canvas = document.getElementById("bg");
+    const ctx = canvas.getContext("2d", { alpha: true });
+    let cw = 0, ch = 0, dpr = 1;
+
+    function resize(){
+      dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      cw = Math.floor(window.innerWidth * dpr);
+      ch = Math.floor(window.innerHeight * dpr);
+      canvas.width = cw;
+      canvas.height = ch;
+      canvas.style.width = window.innerWidth + "px";
+      canvas.style.height = window.innerHeight + "px";
+      buildRows();
+    }
+    window.addEventListener("resize", resize);
+
+    // ---- Mouse parallax
+    window.addEventListener("mousemove", (e) => {
+      const nx = e.clientX / window.innerWidth;
+      const ny = e.clientY / window.innerHeight;
+
+      mouse.vx = nx - mouse.lastX;
+      mouse.vy = ny - mouse.lastY;
+      mouse.lastX = nx;
+      mouse.lastY = ny;
+
+      mouse.x = nx;
+      mouse.y = ny;
+    });
+
+    // ---- Keyboard controls
+    window.addEventListener("keydown", (e) => {
+      if(e.code === "Space"){
+        e.preventDefault();
+        paused = !paused;
+        document.getElementById("hint").textContent = paused
+          ? "Paused. Because humans love stopping time."
+          : "Running. Time resumes its relentless administrative duties.";
+      }
+      if(e.key.toLowerCase() === "g"){
+        toggleGhosts();
+      }
+      if(e.key.toLowerCase() === "r"){
+        seed = Math.random() * 1e9;
+        rehang();
+      }
+      if(e.key === "ArrowDown"){
+        if(selectedIndex < 0) selectIndex(0);
+        else selectIndex(clamp(selectedIndex + 1, 0, LINES.length - 1));
+      }
+      if(e.key === "ArrowUp"){
+        if(selectedIndex < 0) selectIndex(LINES.length - 1);
+        else selectIndex(clamp(selectedIndex - 1, 0, LINES.length - 1));
+      }
+    });
+
+    function toggleGhosts(){
+      ghostsOn = !ghostsOn;
+      const rows = Array.from(rowsEl.querySelectorAll(".row"));
+      rows.forEach(r => {
+        r.querySelector(".ghost").style.display = ghostsOn ? "block" : "none";
+      });
+      btnGhost.textContent = ghostsOn ? "Toggle ghosts" : "Toggle ghosts";
+      document.getElementById("hint").textContent = ghostsOn
+        ? "Ghosts on. The wall is now mildly haunted."
+        : "Ghosts off. Clean, clinical, and slightly less interesting.";
+    }
+
+    // ---- Buttons
+    btnShuffle.addEventListener("click", () => {
+      seed = Math.random() * 1e9;
+      rehang();
+      document.getElementById("hint").textContent = "Rehung. Curators call this “new context.”";
+    });
+
+    btnGhost.addEventListener("click", () => {
+      toggleGhosts();
+    });
+
+    btnReset.addEventListener("click", () => {
+      selectIndex(-1);
+      const rows = Array.from(rowsEl.querySelectorAll(".row"));
+      rows.forEach(r => r.classList.remove("active"));
+      tempo = 1.0;
+      statTempo.textContent = tempo.toFixed(2) + "×";
+      document.getElementById("hint").textContent = "Selection cleared. The wall pretends it never knew you.";
+    });
+
+    btnPlay.addEventListener("click", () => {
+      playMode = !playMode;
+      btnPlay.textContent = playMode ? "Stop growth" : "Play growth";
+      document.getElementById("hint").textContent = playMode
+        ? "Growth sequence running. Because linear progress is comforting fiction."
+        : "Growth sequence stopped. Entropy applauds politely.";
+    });
+
+    // ---- Animation loop
+    let t0 = performance.now();
+    function tick(now){
+      const dt = (now - t0) / 1000;
+      t0 = now;
+
+      if(!paused){
+        drawBackground(now / 1000);
+        layoutRows(now / 1000, dt);
+        if(playMode) advancePlayback(now / 1000, dt);
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    function advancePlayback(t, dt){
+      // Step through pieces at a tempo influenced by selection (if any)
+      const rate = 0.55 / tempo; // seconds per step
+      // Use a simple accumulator driven by time; piggyback on fractional time
+      // (good enough for art, which is famously strict about timing)
+      const phase = (t / rate);
+      const idx = Math.floor(phase) % LINES.length;
+      if(idx !== playIndex){
+        playIndex = idx;
+        selectIndex(playIndex);
+      }
+    }
+
+    function layoutRows(t, dt){
+      const rows = Array.from(rowsEl.querySelectorAll(".row"));
+      const wallTiltX = (mouse.y - 0.5) * -10;   // degrees
+      const wallTiltY = (mouse.x - 0.5) *  12;   // degrees
+      const pulse = Math.sin(t * 0.8) * 0.5 + 0.5;
+
+      // Give the whole wall a subtle tilt
+      rowsEl.style.transform =
+        `rotateX(${wallTiltX}deg) rotateY(${wallTiltY}deg)`;
+
+      rows.forEach((row, i) => {
+        const y = parseFloat(row.dataset.y || "0");
+        const depth = parseFloat(row.dataset.depth || "0");
+        const tilt = parseFloat(row.dataset.tilt || "0");
+        const drift = parseFloat(row.dataset.drift || "0");
+
+        const focus = (selectedIndex === i) ? 1 : 0;
+
+        // Mouse-induced parallax sway
+        const swayX = (mouse.x - 0.5) * 40;
+        const swayY = (mouse.y - 0.5) * 28;
+
+        // A gentle breathing motion across the wall
+        const breathe = Math.sin(t * 0.9 + i * 0.23) * 6;
+
+        // Active piece floats forward
+        const z = depth + focus * 160 + Math.sin(t * 1.6 + i) * 10;
+
+        const x = drift + swayX * (0.18 + i / (LINES.length * 1.8));
+        const yy = y + breathe + swayY * (0.08 + i / (LINES.length * 2.2));
+
+        // Slight skew and rotation for “mounted object” vibe
+        const rZ = tilt + (mouse.vx * 120) + focus * (Math.sin(t * 3.0) * 1.2);
+
+        row.style.top = `${yy}px`;
+        row.style.transform =
+          `translate3d(${x}px, -50%, ${z}px) rotateZ(${rZ}deg)`;
+
+        // Glow follows mouse, stronger on active row
+        const glow = row.querySelector(".lineGlow");
+        glow.style.setProperty("--mx", (mouse.x * 100).toFixed(1) + "%");
+        glow.style.setProperty("--my", (mouse.y * 100).toFixed(1) + "%");
+        glow.style.opacity = (0.45 + pulse * 0.25 + focus * 0.25).toFixed(3);
+
+        // Text sizing: longer lines slightly smaller to fit without killing the vibe
+        const text = row.querySelector(".text");
+        const len = LINES[i].length;
+        const size = clamp(22 - (len - 1) * 0.38, 12, 22);
+        text.style.fontSize = `${size}px`;
+
+        // Ghost layer: offset and shimmer based on velocity + time
+        const ghost = row.querySelector(".ghost");
+        if(ghostsOn){
+          const gx = (Math.sin(t * 3.2 + i * 0.7) * 10) + mouse.vx * 220;
+          const gy = (Math.cos(t * 2.6 + i * 0.4) * 5) + mouse.vy * 180;
+          const blur = clamp(0.2 + Math.abs(mouse.vx + mouse.vy) * 10, 0.2, 2.2);
+          ghost.style.transform = `translate(${gx}px, ${gy}px) translateZ(18px)`;
+          ghost.style.filter = `blur(${blur}px)`;
+          ghost.style.opacity = focus ? "0.9" : "0.0";
+          ghost.style.color = `rgba(180,140,255,${0.55 + focus*0.25})`;
+        }
+      });
+
+      // Damp velocities so motion doesn't stick
+      mouse.vx *= 0.86;
+      mouse.vy *= 0.86;
+    }
+
+    function drawBackground(t){
+      // Soft “field lines” + floating dust + scan-ish drift.
+      ctx.clearRect(0,0,cw,ch);
+
+      // Subtle vignette
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      const grad = ctx.createRadialGradient(
+        cw*0.5, ch*0.45, Math.min(cw,ch)*0.12,
+        cw*0.5, ch*0.5, Math.min(cw,ch)*0.75
+      );
+      grad.addColorStop(0, "rgba(255,255,255,0.03)");
+      grad.addColorStop(1, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,cw,ch);
+      ctx.restore();
+
+      // Field lines
+      ctx.save();
+      ctx.globalAlpha = 0.16;
+      ctx.lineWidth = 1 * dpr;
+
+      const base = 42 * dpr;
+      const wob = 10 * dpr;
+      const mx = mouse.x * cw;
+      const my = mouse.y * ch;
+
+      for(let y=0; y<=ch; y+=base){
+        ctx.beginPath();
+        for(let x=0; x<=cw; x+=base){
+          const dx = (x - mx) / cw;
+          const dy = (y - my) / ch;
+          const k = Math.sin((t*0.7) + x*0.002 + y*0.001);
+          const ox = k * wob * (0.35 + Math.abs(dy));
+          const oy = Math.cos((t*0.8) + x*0.001) * wob * (0.35 + Math.abs(dx));
+          const px = x + ox;
+          const py = y + oy;
+          if(x===0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "rgba(180,140,255,0.25)";
+        ctx.stroke();
+      }
+
+      for(let x=0; x<=cw; x+=base){
+        ctx.beginPath();
+        for(let y=0; y<=ch; y+=base){
+          const dx = (x - mx) / cw;
+          const dy = (y - my) / ch;
+          const k = Math.cos((t*0.75) + x*0.0015 + y*0.001);
+          const ox = k * wob * (0.35 + Math.abs(dy));
+          const oy = Math.sin((t*0.7) + y*0.0018) * wob * (0.35 + Math.abs(dx));
+          const px = x + ox;
+          const py = y + oy;
+          if(y===0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "rgba(120,220,255,0.20)";
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Dust motes
+      ctx.save();
+      ctx.globalAlpha = 0.26;
+      const moteCount = 90;
+      for(let i=0;i<moteCount;i++){
+        const px = (Math.sin(i*999 + t*0.11) * 0.5 + 0.5) * cw;
+        const py = (Math.cos(i*777 + t*0.14) * 0.5 + 0.5) * ch;
+        const r = (1.2 + (i%5)*0.55) * dpr;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI*2);
+        ctx.fillStyle = "rgba(255,255,255,0.10)";
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Slight scan drift (tasteful, not “TV from 1997” unless you insist)
+      ctx.save();
+      ctx.globalAlpha = 0.06;
+      const scanY = ((t * 40 * dpr) % ch);
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.fillRect(0, scanY, cw, 2*dpr);
+      ctx.restore();
+    }
+
+    // ---- Boot
+    function init(){
+      resize();
+      selectIndex(-1);
+      if(!ghostsOn) toggleGhosts();
+      requestAnimationFrame(tick);
+    }
+    init();
+  </script>
+</body>
+</html>
