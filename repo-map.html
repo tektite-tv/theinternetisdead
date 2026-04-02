@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Repo Map</title>
+<style>
+  :root{
+    --bg:#05070b;
+    --panel:#0d1117;
+    --panel2:#111827;
+    --line:#1f2937;
+    --text:#d1fae5;
+    --muted:#8fb3a3;
+    --accent:#7c3aed;
+    --accent2:#22c55e;
+    --warn:#f59e0b;
+    --missing:#ef4444;
+    --external:#60a5fa;
+    --folder:#a78bfa;
+    --html:#34d399;
+    --js:#f59e0b;
+    --json:#38bdf8;
+    --image:#f472b6;
+    --workflow:#f87171;
+    --css:#2dd4bf;
+    --media:#fb7185;
+    --doc:#94a3b8;
+    --file:#cbd5e1;
+    --tree:#2f4159;
+  }
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;height:100%;background:radial-gradient(circle at top,#0c1322 0,#06080d 45%,#020306 100%);
+    color:var(--text);font:14px/1.4 "Courier New", Courier, monospace; overflow:hidden;
+  }
+  .shell{
+    display:grid; grid-template-columns: 340px 1fr; height:100%;
+  }
+  .sidebar{
+    border-right:1px solid rgba(255,255,255,.08); background:linear-gradient(180deg, rgba(15,23,42,.92), rgba(3,7,18,.96));
+    padding:14px; overflow:auto;
+    backdrop-filter: blur(10px);
+  }
+  .main{position:relative; min-width:0;}
+  .title{font-size:22px; font-weight:700; color:#d8b4fe; margin-bottom:4px}
+  .subtitle{color:var(--muted); margin-bottom:12px}
+  .section{margin:0 0 14px 0; padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:16px; background:rgba(255,255,255,.03)}
+  .section h2{font-size:13px; margin:0 0 10px 0; color:#c4b5fd; text-transform:uppercase; letter-spacing:.08em}
+  .stats{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+  .stat{padding:10px; border-radius:12px; background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.06)}
+  .stat b{display:block; font-size:18px; color:white}
+  .controls label{display:block; margin:9px 0 4px; color:#cbd5e1}
+  .controls input[type="search"], .controls select{
+    width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.1); background:#050914; color:var(--text);
+  }
+  .row{display:flex; gap:8px; align-items:center}
+  .row > *{flex:1}
+  .btnbar{display:flex; gap:8px; flex-wrap:wrap}
+  button{
+    appearance:none; border:none; border-radius:999px; padding:9px 12px; background:#121827; color:#d1fae5; cursor:pointer;
+    border:1px solid rgba(255,255,255,.08)
+  }
+  button:hover{background:#172033}
+  .small{font-size:12px; color:var(--muted)}
+  .legend{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px}
+  .legendItem{display:flex; align-items:center; gap:8px; font-size:12px}
+  .swatch{width:14px; height:14px; border-radius:999px; border:1px solid rgba(255,255,255,.14)}
+  #viewport{position:absolute; inset:0; overflow:hidden;}
+  svg{width:100%; height:100%; display:block; cursor:grab}
+  svg.dragging{cursor:grabbing}
+  .backdrop-grid{
+    position:absolute; inset:0; pointer-events:none; opacity:.26;
+    background-image:
+      linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size:40px 40px;
+    mask-image: radial-gradient(circle at center, black 40%, transparent 92%);
+  }
+  .hud{
+    position:absolute; right:16px; top:16px; z-index:10;
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap; max-width:calc(100% - 24px);
+  }
+  .pill{
+    padding:8px 10px; border-radius:999px; background:rgba(7,10,17,.72); border:1px solid rgba(255,255,255,.08); backdrop-filter: blur(10px);
+    color:#d1fae5; font-size:12px;
+  }
+  .tooltip{
+    position:absolute; z-index:20; pointer-events:none; min-width:260px; max-width:420px;
+    background:rgba(6,10,18,.96); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:12px;
+    box-shadow:0 12px 40px rgba(0,0,0,.45); display:none;
+  }
+  .tooltip .path{font-size:12px; color:#93c5fd; word-break:break-word}
+  .tooltip .meta{font-size:12px; color:#9fb3a8; margin-top:6px}
+  .tooltip .sum{margin-top:8px; color:#dbeafe}
+  .node text{font-size:11px; fill:#e5f8ef; pointer-events:none}
+  .node circle, .node rect{stroke:rgba(255,255,255,.18); stroke-width:1.1}
+  .node.folder rect{rx:8}
+  .node.selected .ring{stroke:white; stroke-width:2.4; fill:none; opacity:.95}
+  .node.dimmed{opacity:.12}
+  .node.match{filter: drop-shadow(0 0 10px rgba(255,255,255,.28));}
+  .edge{fill:none; stroke-linecap:round; opacity:.65}
+  .edge.tree{stroke:var(--tree); opacity:.22}
+  .edge.fetch,.edge.iframe,.edge.script,.edge.js-import{stroke:var(--accent2)}
+  .edge.asset,.edge.link,.edge.json{stroke:#60a5fa; opacity:.5}
+  .edge.external{stroke:var(--external)}
+  .edge.missing{stroke:var(--missing)}
+  .edge.dimmed{opacity:.04}
+  .edge.highlight{opacity:.95; stroke-width:2.6}
+  .depthLabel{fill:#7dd3fc; font-size:12px; opacity:.6}
+  .list{display:flex; flex-direction:column; gap:8px; max-height:220px; overflow:auto}
+  .mini{padding:8px 10px; border-radius:12px; background:rgba(0,0,0,.18); border:1px solid rgba(255,255,255,.06); cursor:pointer}
+  .mini:hover{background:rgba(255,255,255,.05)}
+  .mini b{display:block; color:#e9d5ff}
+  .mini span{display:block; color:var(--muted); font-size:12px}
+  .kbd{display:inline-block; padding:1px 5px; border-radius:6px; border:1px solid rgba(255,255,255,.1); background:#050914; color:#e5e7eb}
+  @media (max-width: 900px){
+    .shell{grid-template-columns:1fr}
+    .sidebar{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="title">Repo Map</div>
+    <div class="subtitle">A spatial layer graph for the repo. Parent/child structure, file dependencies, and the weird little pathways where one file drags another into existence.</div>
+
+    <div class="section">
+      <h2>Stats</h2>
+      <div id="stats" class="stats"></div>
+      <div id="generated" class="small" style="margin-top:10px"></div>
+    </div>
+
+    <div class="section controls">
+      <h2>Filters</h2>
+      <label for="search">Search paths or roles</label>
+      <input id="search" type="search" placeholder="overlay, index, theme, json..." />
+      <div class="row">
+        <div>
+          <label for="kindFilter">Kind</label>
+          <select id="kindFilter"><option value="all">All kinds</option></select>
+        </div>
+        <div>
+          <label for="edgeFilter">Edges</label>
+          <select id="edgeFilter">
+            <option value="all">All edge types</option>
+            <option value="deps">Dependencies only</option>
+            <option value="tree">Tree only</option>
+          </select>
+        </div>
+      </div>
+      <label for="layoutMode">Layout</label>
+      <select id="layoutMode">
+        <option value="layered">Layered dependency view</option>
+        <option value="orbit">Orbit / web view</option>
+      </select>
+      <label for="depthRange">Visible depth: <span id="depthValue">all</span></label>
+      <input id="depthRange" type="range" min="0" max="12" value="12" style="width:100%" />
+      <div class="btnbar" style="margin-top:10px">
+        <button id="fitBtn">Fit view</button>
+        <button id="resetBtn">Reset focus</button>
+        <button id="toggleLabelsBtn">Toggle labels</button>
+      </div>
+      <div class="small" style="margin-top:10px">Pan by dragging. Zoom with wheel. Click a node to isolate its neighbors. Double-click to center it. Because clarity, unlike most repo structures, is not illegal.</div>
+    </div>
+
+    <div class="section">
+      <h2>Legend</h2>
+      <div class="legend" id="legend"></div>
+      <div class="small" style="margin-top:10px">
+        Solid pale lines show folder containment. Brighter lines show files reading, embedding, or loading each other.
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Hotspots</h2>
+      <div id="hotspots" class="list"></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="backdrop-grid"></div>
+    <div class="hud">
+      <div class="pill">Drag to pan</div>
+      <div class="pill">Wheel to zoom</div>
+      <div class="pill"><span class="kbd">Shift</span> + drag to lasso mentally. Sadly not literally.</div>
+    </div>
+    <div id="viewport">
+      <svg id="svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet">
+        <g id="camera">
+          <g id="depthLabels"></g>
+          <g id="edges"></g>
+          <g id="nodes"></g>
+        </g>
+      </svg>
+    </div>
+    <div id="tooltip" class="tooltip"></div>
+  </main>
+</div>
+
+<script>
+(async function(){
+  const response = await fetch('/data/repo-map-data.json');
+  const data = await response.json();
+
+  const svg = document.getElementById('svg');
+  const camera = document.getElementById('camera');
+  const edgesG = document.getElementById('edges');
+  const nodesG = document.getElementById('nodes');
+  const depthLabelsG = document.getElementById('depthLabels');
+  const tooltip = document.getElementById('tooltip');
+
+  const searchEl = document.getElementById('search');
+  const kindFilterEl = document.getElementById('kindFilter');
+  const edgeFilterEl = document.getElementById('edgeFilter');
+  const layoutModeEl = document.getElementById('layoutMode');
+  const depthRangeEl = document.getElementById('depthRange');
+  const depthValueEl = document.getElementById('depthValue');
+  const statsEl = document.getElementById('stats');
+  const generatedEl = document.getElementById('generated');
+  const hotspotsEl = document.getElementById('hotspots');
+  const legendEl = document.getElementById('legend');
+  const fitBtn = document.getElementById('fitBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const toggleLabelsBtn = document.getElementById('toggleLabelsBtn');
+
+  const colors = {
+    root:'#d8b4fe', folder:getCss('--folder'), html:getCss('--html'), js:getCss('--js'),
+    json:getCss('--json'), image:getCss('--image'), workflow:getCss('--workflow'),
+    css:getCss('--css'), media:getCss('--media'), doc:getCss('--doc'), file:getCss('--file'),
+    external:getCss('--external'), missing:getCss('--missing')
+  };
+  const edgeColor = {
+    tree:getCss('--tree'), fetch:getCss('--accent2'), iframe:getCss('--accent2'),
+    script:getCss('--accent2'), 'js-import':getCss('--accent2'), asset:'#60a5fa',
+    link:'#60a5fa', json:'#60a5fa', external:getCss('--external'), missing:getCss('--missing')
+  };
+
+  let showLabels = true;
+  let layoutMode = 'layered';
+  let transform = {x: 180, y: 80, k: 1};
+  let selectedNode = null;
+
+  const nodes = data.nodes.map(n => ({...n}));
+  const edges = data.edges.map(e => ({...e}));
+  const nodeById = new Map(nodes.map(n => [n.id, n]));
+  const childrenByParent = new Map();
+  nodes.forEach(n => {
+    const parent = n.parent ?? '__root__';
+    if(!childrenByParent.has(parent)) childrenByParent.set(parent, []);
+    childrenByParent.get(parent).push(n);
+  });
+
+  nodes.forEach(n => {
+    n.degree = (n.incoming || 0) + (n.outgoing || 0);
+    n.radius = Math.max(8, Math.min(26, 8 + n.degree * 1.8 + (n.kind === 'folder' ? 4 : 0)));
+  });
+
+  const maxDepth = Math.max(...nodes.map(n => n.depth || 0), 0);
+  depthRangeEl.max = String(Math.max(4, maxDepth));
+  depthRangeEl.value = String(Math.max(4, maxDepth));
+  depthValueEl.textContent = 'all';
+
+  renderStats();
+  renderLegend();
+  populateFilters();
+  buildPositions();
+  draw();
+  fitView();
+
+  function getCss(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function renderStats(){
+    const s = data.stats || {};
+    const items = [
+      ['Files', s.fileCount ?? nodes.filter(n => n.kind !== 'folder' && n.kind !== 'root').length],
+      ['Folders', s.folderCount ?? nodes.filter(n => n.kind === 'folder' || n.kind === 'root').length],
+      ['Nodes', s.nodeCount ?? nodes.length],
+      ['Edges', s.edgeCount ?? edges.length],
+    ];
+    statsEl.innerHTML = items.map(([k,v]) => `<div class="stat"><span>${k}</span><b>${v}</b></div>`).join('');
+    if (data.generatedAt) {
+      const dt = new Date(data.generatedAt * 1000);
+      generatedEl.textContent = `Generated: ${dt.toLocaleString()}`;
+    }
+    const hot = [...nodes]
+      .filter(n => n.kind !== 'folder' && n.kind !== 'root')
+      .sort((a,b) => (b.degree - a.degree) || (b.depth - a.depth))
+      .slice(0, 8);
+    hotspotsEl.innerHTML = '';
+    hot.forEach(n => {
+      const div = document.createElement('div');
+      div.className = 'mini';
+      div.innerHTML = `<b>${escapeHtml(n.name)}</b><span>${escapeHtml(n.path)}</span>`;
+      div.addEventListener('click', () => {
+        selectedNode = n.id;
+        applyFilters();
+        centerOn(n);
+      });
+      hotspotsEl.appendChild(div);
+    });
+  }
+
+  function renderLegend(){
+    const kinds = ['folder','html','js','json','css','image','workflow','external','missing'];
+    legendEl.innerHTML = kinds.map(kind => `
+      <div class="legendItem">
+        <span class="swatch" style="background:${colors[kind] || '#ccc'}"></span>
+        <span>${kind}</span>
+      </div>
+    `).join('');
+  }
+
+  function populateFilters(){
+    const kinds = ['all', ...new Set(nodes.map(n => n.kind))];
+    kindFilterEl.innerHTML = kinds.map(k => `<option value="${k}">${k === 'all' ? 'All kinds' : k}</option>`).join('');
+  }
+
+  function buildPositions(){
+    if (layoutModeEl.value === 'orbit') buildOrbitPositions();
+    else buildLayeredPositions();
+  }
+
+  function buildLayeredPositions(){
+    const cols = Math.max(...nodes.map(n => n.depth), 0) + 1;
+    const colGap = 280;
+    const rowGap = 82;
+    const groups = new Map();
+
+    nodes.forEach(n => {
+      const depth = Math.min(n.depth || 0, maxDepth + 1);
+      if(!groups.has(depth)) groups.set(depth, []);
+      groups.get(depth).push(n);
+    });
+
+    for(const [depth, arr] of groups){
+      arr.sort((a,b) => {
+        const parentCmp = String(a.parent).localeCompare(String(b.parent));
+        if(parentCmp) return parentCmp;
+        return a.path.localeCompare(b.path);
+      });
+      const bucketByParent = new Map();
+      arr.forEach(n => {
+        const key = n.parent || '.';
+        if(!bucketByParent.has(key)) bucketByParent.set(key, []);
+        bucketByParent.get(key).push(n);
+      });
+      const flattened = [...bucketByParent.entries()].sort((a,b)=>a[0].localeCompare(b[0])).flatMap(x=>x[1]);
+      const totalHeight = Math.max(1, flattened.length - 1) * rowGap;
+      flattened.forEach((n, i) => {
+        n.x = 120 + depth * colGap;
+        n.y = 120 + i * rowGap - totalHeight / 2 + 420;
+        if (n.kind === 'folder') n.y += 10;
+      });
+    }
+
+    // keep root centered
+    const root = nodeById.get('.');
+    if (root){ root.x = 80; root.y = 500; }
+
+    drawDepthLabels(cols, colGap);
+  }
+
+  function buildOrbitPositions(){
+    const centerX = 780, centerY = 520;
+    const byDepth = new Map();
+    nodes.forEach(n => {
+      const depth = n.depth || 0;
+      if(!byDepth.has(depth)) byDepth.set(depth, []);
+      byDepth.get(depth).push(n);
+    });
+    const max = Math.max(...byDepth.keys());
+    for (let depth = 0; depth <= max; depth++) {
+      const arr = (byDepth.get(depth) || []).slice().sort((a,b)=>a.path.localeCompare(b.path));
+      const r = 30 + depth * 125;
+      arr.forEach((n, i) => {
+        const angle = (Math.PI * 2 * i / Math.max(1, arr.length)) - Math.PI / 2;
+        const jitter = (n.degree || 0) * 2;
+        n.x = centerX + Math.cos(angle) * (r + jitter);
+        n.y = centerY + Math.sin(angle) * (r + jitter);
+      });
+    }
+    drawDepthLabels(max + 1, 125, true);
+  }
+
+  function drawDepthLabels(cols, gap, orbit=false){
+    depthLabelsG.innerHTML = '';
+    if (orbit) return;
+    for(let d = 0; d < cols; d++){
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', String(96 + d * gap));
+      t.setAttribute('y', '46');
+      t.setAttribute('class', 'depthLabel');
+      t.textContent = d === 0 ? 'root' : `depth ${d}`;
+      depthLabelsG.appendChild(t);
+    }
+  }
+
+  function draw(){
+    edgesG.innerHTML = '';
+    nodesG.innerHTML = '';
+
+    const visibleNodeIds = new Set(filteredNodes().map(n => n.id));
+    const visibleEdges = filteredEdges().filter(e => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target));
+
+    visibleEdges.forEach(e => {
+      const a = nodeById.get(e.source);
+      const b = nodeById.get(e.target);
+      if(!a || !b) return;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const dx = Math.abs((b.x || 0) - (a.x || 0));
+      const curve = layoutModeEl.value === 'orbit' ? 0.18 : Math.max(40, dx * 0.45);
+      const d = `M ${a.x} ${a.y} C ${a.x + curve} ${a.y}, ${b.x - curve} ${b.y}, ${b.x} ${b.y}`;
+      path.setAttribute('d', d);
+      path.setAttribute('class', `edge ${e.kind}`);
+      path.style.strokeWidth = e.kind === 'tree' ? '1.1' : String(1 + (e.strength || 1));
+      if(e.style === 'dashed') path.style.strokeDasharray = '6 7';
+      if(e.style === 'dotted') path.style.strokeDasharray = '2 8';
+      if (selectedNode && e.source !== selectedNode && e.target !== selectedNode) path.classList.add('dimmed');
+      edgesG.appendChild(path);
+    });
+
+    visibleNodeIds.forEach(id => {
+      const n = nodeById.get(id);
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', `node ${n.kind}${selectedNode === id ? ' selected' : ''}`);
+      g.setAttribute('transform', `translate(${n.x},${n.y})`);
+      if (matchesSearch(n)) g.classList.add('match');
+      if (selectedNode && !isNeighborOrSelf(id, selectedNode)) g.classList.add('dimmed');
+
+      const color = colors[n.kind] || '#d1d5db';
+      const isFolder = n.kind === 'folder' || n.kind === 'root';
+      const shape = document.createElementNS('http://www.w3.org/2000/svg', isFolder ? 'rect' : 'circle');
+
+      if (isFolder) {
+        const w = Math.max(28, Math.min(140, 36 + n.name.length * 7));
+        shape.setAttribute('x', String(-w/2));
+        shape.setAttribute('y', '-12');
+        shape.setAttribute('width', String(w));
+        shape.setAttribute('height', '24');
+        shape.setAttribute('fill', color);
+        shape.setAttribute('opacity', '0.9');
+      } else {
+        shape.setAttribute('r', String(n.radius));
+        shape.setAttribute('fill', color);
+        shape.setAttribute('opacity', '0.88');
+      }
+      g.appendChild(shape);
+
+      const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      ring.setAttribute('class','ring');
+      ring.setAttribute('r', String(isFolder ? 22 : n.radius + 5));
+      if(!selectedNode || selectedNode !== id) ring.style.display = 'none';
+      g.appendChild(ring);
+
+      if (showLabels) {
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', isFolder ? '0' : String(n.radius + 8));
+        text.setAttribute('y', '4');
+        text.setAttribute('text-anchor', isFolder ? 'middle' : 'start');
+        text.textContent = n.name;
+        g.appendChild(text);
+      }
+
+      g.addEventListener('mouseenter', evt => showTooltip(evt, n));
+      g.addEventListener('mousemove', evt => moveTooltip(evt));
+      g.addEventListener('mouseleave', hideTooltip);
+      g.addEventListener('click', evt => {
+        evt.stopPropagation();
+        selectedNode = selectedNode === id ? null : id;
+        applyFilters();
+      });
+      g.addEventListener('dblclick', evt => {
+        evt.stopPropagation();
+        centerOn(n);
+      });
+
+      nodesG.appendChild(g);
+    });
+
+    applyTransform();
+  }
+
+  function filteredNodes(){
+    const maxVisibleDepth = Number(depthRangeEl.value);
+    return nodes.filter(n => {
+      if (n.depth > maxVisibleDepth) return false;
+      const kindFilter = kindFilterEl.value;
+      if (kindFilter !== 'all' && n.kind !== kindFilter) return false;
+      if (!matchesSearch(n) && searchEl.value.trim() && !selectedNode) return false;
+      if (selectedNode && !isNeighborOrSelf(n.id, selectedNode)) return false;
+      return true;
+    });
+  }
+
+  function filteredEdges(){
+    const mode = edgeFilterEl.value;
+    return edges.filter(e => {
+      if (mode === 'deps' && e.kind === 'tree') return false;
+      if (mode === 'tree' && e.kind !== 'tree') return false;
+      return true;
+    });
+  }
+
+  function matchesSearch(n){
+    const q = searchEl.value.trim().toLowerCase();
+    if (!q) return true;
+    return [n.path, n.name, n.role, n.kind, n.summary].filter(Boolean).some(v => String(v).toLowerCase().includes(q));
+  }
+
+  function neighborsOf(id){
+    const out = new Set([id]);
+    edges.forEach(e => {
+      if (e.source === id) out.add(e.target);
+      if (e.target === id) out.add(e.source);
+    });
+    return out;
+  }
+
+  function isNeighborOrSelf(id, selected){
+    return neighborsOf(selected).has(id);
+  }
+
+  function showTooltip(evt, n){
+    tooltip.style.display = 'block';
+    tooltip.innerHTML = `
+      <div><strong>${escapeHtml(n.name)}</strong></div>
+      <div class="path">${escapeHtml(n.path)}</div>
+      <div class="meta">${escapeHtml(n.kind)} · ${escapeHtml(n.role || '')}${n.lines ? ` · ${n.lines} lines` : ''}${Number.isFinite(n.size) ? ` · ${fmtBytes(n.size)}` : ''}</div>
+      <div class="sum">${escapeHtml(n.summary || '')}</div>
+    `;
+    moveTooltip(evt);
+  }
+
+  function moveTooltip(evt){
+    const pad = 16;
+    const rect = svg.getBoundingClientRect();
+    tooltip.style.left = Math.min(window.innerWidth - tooltip.offsetWidth - 12, evt.clientX + pad) + 'px';
+    tooltip.style.top = Math.min(window.innerHeight - tooltip.offsetHeight - 12, evt.clientY + pad) + 'px';
+  }
+
+  function hideTooltip(){ tooltip.style.display = 'none'; }
+
+  function fmtBytes(v){
+    if (v < 1024) return v + ' B';
+    if (v < 1024 * 1024) return (v/1024).toFixed(1) + ' KB';
+    return (v/(1024*1024)).toFixed(2) + ' MB';
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  }
+
+  function applyFilters(){
+    draw();
+  }
+
+  function centerOn(n){
+    const rect = svg.getBoundingClientRect();
+    transform.x = rect.width / 2 - n.x * transform.k;
+    transform.y = rect.height / 2 - n.y * transform.k;
+    applyTransform();
+  }
+
+  function fitView(){
+    const visible = filteredNodes();
+    if (!visible.length) return;
+    const minX = Math.min(...visible.map(n => n.x - (n.radius || 12) - 40));
+    const minY = Math.min(...visible.map(n => n.y - (n.radius || 12) - 40));
+    const maxX = Math.max(...visible.map(n => n.x + (n.radius || 12) + 120));
+    const maxY = Math.max(...visible.map(n => n.y + (n.radius || 12) + 40));
+    const rect = svg.getBoundingClientRect();
+    const pad = 48;
+    const w = Math.max(1, maxX - minX);
+    const h = Math.max(1, maxY - minY);
+    transform.k = Math.max(0.25, Math.min(2.3, Math.min((rect.width - pad * 2)/w, (rect.height - pad * 2)/h)));
+    transform.x = rect.width / 2 - ((minX + maxX)/2) * transform.k;
+    transform.y = rect.height / 2 - ((minY + maxY)/2) * transform.k;
+    applyTransform();
+  }
+
+  function applyTransform(){
+    camera.setAttribute('transform', `translate(${transform.x},${transform.y}) scale(${transform.k})`);
+  }
+
+  let isPanning = false;
+  let panStart = null;
+  svg.addEventListener('mousedown', evt => {
+    isPanning = true;
+    panStart = {x: evt.clientX, y: evt.clientY, tx: transform.x, ty: transform.y};
+    svg.classList.add('dragging');
+    hideTooltip();
+  });
+  window.addEventListener('mousemove', evt => {
+    if (!isPanning) return;
+    transform.x = panStart.tx + (evt.clientX - panStart.x);
+    transform.y = panStart.ty + (evt.clientY - panStart.y);
+    applyTransform();
+  });
+  window.addEventListener('mouseup', () => {
+    isPanning = false;
+    svg.classList.remove('dragging');
+  });
+
+  svg.addEventListener('wheel', evt => {
+    evt.preventDefault();
+    const rect = svg.getBoundingClientRect();
+    const mx = evt.clientX - rect.left;
+    const my = evt.clientY - rect.top;
+    const wx = (mx - transform.x) / transform.k;
+    const wy = (my - transform.y) / transform.k;
+    const scale = Math.exp(-evt.deltaY * 0.0012);
+    const nextK = Math.max(0.18, Math.min(4.2, transform.k * scale));
+    transform.x = mx - wx * nextK;
+    transform.y = my - wy * nextK;
+    transform.k = nextK;
+    applyTransform();
+  }, {passive:false});
+
+  svg.addEventListener('click', evt => {
+    if (evt.target === svg) {
+      selectedNode = null;
+      applyFilters();
+    }
+  });
+
+  [searchEl, kindFilterEl, edgeFilterEl].forEach(el => el.addEventListener('input', applyFilters));
+  depthRangeEl.addEventListener('input', () => {
+    const max = Number(depthRangeEl.max);
+    depthValueEl.textContent = Number(depthRangeEl.value) >= max ? 'all' : depthRangeEl.value;
+    applyFilters();
+  });
+  layoutModeEl.addEventListener('input', () => {
+    layoutMode = layoutModeEl.value;
+    buildPositions();
+    draw();
+    fitView();
+  });
+  fitBtn.addEventListener('click', fitView);
+  resetBtn.addEventListener('click', () => {
+    selectedNode = null;
+    searchEl.value = '';
+    kindFilterEl.value = 'all';
+    edgeFilterEl.value = 'all';
+    depthRangeEl.value = depthRangeEl.max;
+    depthValueEl.textContent = 'all';
+    layoutModeEl.value = 'layered';
+    showLabels = true;
+    buildPositions();
+    draw();
+    fitView();
+  });
+  toggleLabelsBtn.addEventListener('click', () => {
+    showLabels = !showLabels;
+    draw();
+  });
+})();
+</script>
+</body>
+</html>

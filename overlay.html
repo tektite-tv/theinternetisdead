@@ -1,0 +1,573 @@
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  background: #000;
+}
+
+#overlay-root {
+  --overlay-bg: #3b0066;
+  --overlay-text: lime;
+  --sidebar-bg: #110019;
+  --page-bg: transparent;
+  --border-color: var(--overlay-text);
+  --preview-bg: #000000;
+  --backdrop-bg: rgba(0,0,0,.45);
+  --overlay-font-family: monospace;
+  --overlay-font-scale: 1;
+  --overlay-logo-filter: rgba(0,255,0,0);
+  --overlay-clock-filter: var(--overlay-text);
+
+  position: relative;
+  width: 100%;
+  background: var(--page-bg);
+  color: var(--overlay-text);
+  font-family: var(--overlay-font-family, monospace);
+  font-size: 16px;
+}
+
+/* MODIFIED: page font scaling should affect overlay text only.
+   It must ignore images and the sidebar, so do not zoom the whole overlay root. */
+#overlay-root .topbar,
+#overlay-root .hamburger,
+#overlay-root .clock-text {
+  font-size: calc(16px * var(--overlay-font-scale, 1));
+}
+
+#overlay-root,
+#overlay-root * {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+#overlay-root .topbar {
+  height: 76px;
+  background: var(--overlay-bg);
+  opacity: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+
+#overlay-root .hamburger {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(30px * var(--overlay-font-scale, 1));
+  cursor: pointer;
+  user-select: none;
+  color: var(--overlay-text);
+  line-height: 1;
+  flex: 0 0 auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#overlay-root .logo {
+  margin-left: 14px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#overlay-root .logo-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  isolation: isolate;
+  cursor: pointer;
+}
+
+#overlay-root .logo-tint-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--overlay-logo-filter);
+  mix-blend-mode: color;
+  -webkit-mask-image: var(--tint-mask);
+  mask-image: var(--tint-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+#overlay-root .logo img {
+  height: 46px;
+  width: auto;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+#overlay-root .spacer {
+  flex: 1;
+}
+
+#overlay-root .clock {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
+#overlay-root .clock-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280px;
+  min-width: 280px;
+  height: 44px;
+}
+
+#overlay-root .clock-text {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 100%;
+  color: var(--overlay-clock-filter, var(--overlay-text));
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: calc(34px * var(--overlay-font-scale, 1)) !important;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  text-transform: lowercase;
+}
+
+#overlay-root .clock-time {
+  font-family: inherit !important;
+}
+
+#overlay-root .clock-period {
+  font-family: inherit !important;
+  margin-left: 0.12ch;
+}
+
+#overlay-root .sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--backdrop-bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+  z-index: 9997;
+}
+
+#overlay-root .sidebar-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#overlay-root .sidebar {
+  position: fixed;
+  top: 0;
+  left: -320px;
+  width: 320px;
+  max-width: 92vw;
+  height: 100vh;
+  background: var(--sidebar-bg);
+  transition: left .25s ease;
+  box-shadow: 2px 0 10px rgba(0,0,0,.6);
+  display: flex;
+  flex-direction: column;
+  z-index: 9998;
+}
+
+#overlay-root .sidebar.open {
+  left: 0;
+}
+
+#overlay-root .sidebar-menu {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+#overlay-root .sidebar-item {
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+#overlay-root .sidebar-item a {
+  display: block;
+  background: var(--overlay-bg);
+  color: var(--overlay-text);
+  text-decoration: none;
+  border: 2px solid var(--border-color);
+  font-weight: bold;
+  text-align: center;
+  padding: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#overlay-root .sidebar-item a::-webkit-scrollbar {
+  display: none;
+}
+
+
+#overlay-root .sidebar-item a:hover,
+#overlay-root .sidebar-item a:focus-visible {
+  box-shadow: 0 0 0 1px var(--overlay-text);
+}
+
+#overlay-root .sidebar-preview {
+  width: 100%;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height .25s ease, opacity .25s ease;
+  background: var(--preview-bg);
+  margin-top: 10px;
+}
+
+#overlay-root .sidebar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .2s ease;
+}
+
+#overlay-root .sidebar-item:hover img {
+  transform: scale(1.05);
+}
+
+#overlay-root .sidebar-item:hover .sidebar-preview {
+  max-height: 200px;
+  opacity: 1;
+}
+
+#overlay-root .sidebar-bottom {
+  padding: 0 20px 20px;
+}
+
+@media (max-width: 768px) {
+  #overlay-root .topbar {
+    height: 112px;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    padding: 10px 14px 8px;
+  }
+
+  #overlay-root .hamburger {
+    width: 48px;
+    height: 48px;
+    font-size: calc(34px * var(--overlay-font-scale, 1));
+  }
+
+  #overlay-root .logo {
+    margin-left: 10px;
+    flex: 1 1 calc(100% - 58px);
+    justify-content: center;
+  }
+
+  #overlay-root .logo img {
+    height: 58px;
+    max-width: min(78vw, 430px);
+    object-fit: contain;
+  }
+
+  #overlay-root .spacer {
+    flex: 0 0 0;
+    width: 0;
+  }
+
+  #overlay-root .clock {
+    flex: 0 0 100%;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  #overlay-root .clock-box {
+    width: 240px;
+    min-width: 240px;
+    height: 34px;
+  }
+
+  #overlay-root .clock-text {
+    font-size: calc(24px * var(--overlay-font-scale, 1)) !important;
+  }
+
+  #overlay-root .sidebar {
+    left: -100vw;
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  #overlay-root .sidebar.open {
+    left: 0;
+  }
+
+  #overlay-root .sidebar .topbar {
+    height: 84px;
+    padding: 10px 14px;
+  }
+
+  #overlay-root .sidebar .logo {
+    justify-content: flex-start;
+  }
+
+  #overlay-root .sidebar .logo img {
+    height: 42px;
+    max-width: 70vw;
+  }
+
+  #overlay-root .sidebar-menu {
+    padding: 16px;
+  }
+
+  #overlay-root .sidebar-item a {
+    font-size: 18px;
+    padding: 14px 10px;
+  }
+
+  #overlay-root .sidebar-preview,
+  #overlay-root .sidebar-item:hover .sidebar-preview {
+    max-height: none;
+    opacity: 1;
+  }
+}
+</style>
+
+
+<div id="overlay-root">
+  <div class="topbar">
+    <div class="hamburger" data-action="toggle-sidebar" aria-label="Open sidebar" role="button" tabindex="0">☰</div>
+
+    <div class="logo">
+      <div class="logo-link" data-action="logo-chat" role="button" tabindex="0" aria-label="Open chat or go home">
+        <img id="dead-logo" src="/images/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
+        <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/images/deadlogo-green.png');"></span>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="clock">
+      <div class="clock-box">
+        <div id="native-clock" class="clock-text" aria-label="Toronto time">
+          <span class="clock-time">11:42:47</span><span class="clock-period">pm</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+  <div id="sidebar" class="sidebar" aria-hidden="true">
+    <div class="topbar">
+      <div class="hamburger" data-action="toggle-sidebar" aria-label="Close sidebar" role="button" tabindex="0">✕</div>
+
+      <div class="logo">
+        <div class="logo-link" data-action="logo-chat" role="button" tabindex="0" aria-label="Open chat or go home">
+          <img src="/images/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
+          <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/images/deadlogo-green.png');"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-menu">
+      <div class="sidebar-item">
+        <a href="/tektite-photosphere.html">
+          Tektite's Photosphere
+          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-photosphere.png" alt=""></div>
+        </a>
+      </div>
+
+      <div class="sidebar-item">
+        <a href="/tektite-image-editor.html">
+          Tektite's Image Editor
+          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-image-editor.png" alt=""></div>
+        </a>
+      </div>
+
+      <div class="sidebar-item">
+        <a href="/tektite-sound-machine.html">
+          Tektite's Sound Machine
+          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-sound-machine.png" alt=""></div>
+        </a>
+      </div>
+
+      <div class="sidebar-item">
+        <a href="/tektite-explorer.html">
+          Tektite's File Explorer
+          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-file-browser.png" alt=""></div>
+        </a>
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="sidebar-item">
+        <a href="/tektite-chat.html">
+          Tektite's Chat
+          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-chat.png" alt=""></div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const overlayRoot = document.getElementById('overlay-root');
+  if (!overlayRoot || overlayRoot.dataset.overlayInitialized === 'true') return;
+  overlayRoot.dataset.overlayInitialized = 'true';
+
+  function updateTorontoClock() {
+    const el = overlayRoot.querySelector('#native-clock');
+    if (!el) return;
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Toronto',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    }).formatToParts(new Date());
+
+    const timeText = parts
+      .filter((part) => part.type !== 'dayPeriod')
+      .map((part) => part.value)
+      .join('')
+      .trim();
+
+    const dayPeriod = (parts.find((part) => part.type === 'dayPeriod')?.value || '').toLowerCase();
+
+    const timeEl = el.querySelector('.clock-time');
+    const periodEl = el.querySelector('.clock-period');
+    if (timeEl) timeEl.textContent = timeText;
+    if (periodEl) periodEl.textContent = dayPeriod;
+  }
+
+  updateTorontoClock();
+  setInterval(updateTorontoClock, 1000);
+
+  const sidebar = overlayRoot.querySelector('#sidebar');
+  const backdrop = overlayRoot.querySelector('#sidebar-backdrop');
+  const toggles = overlayRoot.querySelectorAll('[data-action="toggle-sidebar"]');
+  const logoLinks = overlayRoot.querySelectorAll('.logo-link');
+
+  if (!sidebar || !backdrop) return;
+
+  function isMobileOverlayView() {
+    return window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function isInjectedIntoIndexOverlayContainer() {
+    const container = document.getElementById('overlay-container');
+    return !!(container && overlayRoot && container.contains(overlayRoot));
+  }
+
+  function requestParentChatOpen(seedSlash = false) {
+    // MODIFIED: when overlay.html is injected into index.html, prefer the old direct hook
+    // if it exists, but fall back to postMessage because index.html already listens for it.
+    if (!isInjectedIntoIndexOverlayContainer()) {
+      return false;
+    }
+
+    if (typeof window.__indexOpenChatOverlay === 'function') {
+      window.__indexOpenChatOverlay({ focus: true, seedSlash: !!seedSlash });
+      return true;
+    }
+
+    window.postMessage({ type: 'openChatFromChild', seedSlash: !!seedSlash }, '*');
+    return true;
+  }
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('open');
+    sidebar.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('sidebar-open');
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('open');
+    sidebar.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('sidebar-open');
+  }
+
+  function toggleSidebar() {
+    if (sidebar.classList.contains('open')) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  }
+
+  toggles.forEach((toggle) => {
+    toggle.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleSidebar();
+    });
+
+    toggle.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleSidebar();
+      }
+    });
+  });
+
+  backdrop.addEventListener('click', closeSidebar);
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeSidebar();
+    }
+  });
+
+  overlayRoot.querySelectorAll('#sidebar a').forEach((link) => {
+    link.addEventListener('click', closeSidebar);
+  });
+
+  function handleLogoActivate(event) {
+    const shouldOpenChat = isInjectedIntoIndexOverlayContainer();
+    const shouldGoHome = !!(event && event.shiftKey);
+
+    if (shouldOpenChat && !shouldGoHome) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      closeSidebar();
+      requestParentChatOpen(false);
+      return;
+    }
+
+    closeSidebar();
+
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    window.location.href = '/';
+  }
+
+  logoLinks.forEach((link) => {
+    link.addEventListener('click', handleLogoActivate);
+
+    link.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      handleLogoActivate(event);
+    });
+  });
+})();
+</script>

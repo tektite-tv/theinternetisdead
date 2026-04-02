@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>theinternetisdead.org</title>
+
+<style>
+
+html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    overflow:hidden; /* prevents outer scrollbar */
+    background:#111;
+    font-family:"Courier New", monospace;
+}
+
+/* iframe fills page normally */
+#main-frame{
+    width:100vw;
+    height:100vh;
+    border:none;
+    display:block;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="overlay-container"></div>
+
+<iframe id="main-frame" src="/image-editor.html"></iframe>
+
+<script>
+
+fetch("overlay.html")
+.then(res => res.text())
+.then(html=>{
+    document.getElementById("overlay-container").innerHTML = html;
+});
+
+function toggleSidebar(){
+    const sidebar=document.getElementById("sidebar");
+    sidebar.classList.toggle("open");
+}
+
+</script>
+
+</body>
+</html>
