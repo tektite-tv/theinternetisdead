@@ -70,8 +70,31 @@ html, body {
   margin-left: 14px;
   display: flex;
   align-items: center;
+  gap: 12px;
   min-width: 0;
   -webkit-tap-highlight-color: transparent;
+}
+
+#overlay-root .home-link {
+  color: lime;
+  font-family: 'Courier New', Courier, monospace !important;
+  font-weight: 700;
+  text-decoration: underline;
+  white-space: nowrap;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+#overlay-root .home-link:visited {
+  color: lime;
+}
+
+#overlay-root .home-link:hover,
+#overlay-root .home-link:focus-visible {
+  color: lime;
+  text-decoration-thickness: 2px;
+  outline: none;
 }
 
 #overlay-root .logo-link {
@@ -128,7 +151,6 @@ html, body {
 
 #overlay-root .clock-text {
   display: inline-flex;
-  cursor: pointer;
   align-items: baseline;
   justify-content: center;
   width: 100%;
@@ -354,6 +376,7 @@ html, body {
         <img id="dead-logo" src="/images/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
         <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/images/deadlogo-green.png');"></span>
       </div>
+      <a class="home-link" href="/">HOME</a>
     </div>
 
     <div class="spacer"></div>
@@ -435,40 +458,9 @@ html, body {
   if (!overlayRoot || overlayRoot.dataset.overlayInitialized === 'true') return;
   overlayRoot.dataset.overlayInitialized = 'true';
 
-  let overlayClockMode = 'time';
-
-  function formatTorontoDate(now = new Date()) {
-    const weekday = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
-      weekday: 'long'
-    }).format(now);
-
-    const month = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
-      month: 'long'
-    }).format(now);
-
-    const day = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
-      day: 'numeric'
-    }).format(now);
-
-    return `${weekday} / ${month} ${day}`;
-  }
-
   function updateTorontoClock() {
     const el = overlayRoot.querySelector('#native-clock');
     if (!el) return;
-
-    const timeEl = el.querySelector('.clock-time');
-    const periodEl = el.querySelector('.clock-period');
-
-    if (overlayClockMode === 'date') {
-      if (timeEl) timeEl.textContent = formatTorontoDate();
-      if (periodEl) periodEl.textContent = '';
-      return;
-    }
-
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Toronto',
       hour: 'numeric',
@@ -485,34 +477,14 @@ html, body {
 
     const dayPeriod = (parts.find((part) => part.type === 'dayPeriod')?.value || '').toLowerCase();
 
+    const timeEl = el.querySelector('.clock-time');
+    const periodEl = el.querySelector('.clock-period');
     if (timeEl) timeEl.textContent = timeText;
     if (periodEl) periodEl.textContent = dayPeriod;
   }
 
-  function toggleOverlayClockMode(event) {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    overlayClockMode = overlayClockMode === 'time' ? 'date' : 'time';
-    updateTorontoClock();
-  }
-
   updateTorontoClock();
   setInterval(updateTorontoClock, 1000);
-
-  const nativeClock = overlayRoot.querySelector('#native-clock');
-  if (nativeClock) {
-    nativeClock.setAttribute('role', 'button');
-    nativeClock.setAttribute('tabindex', '0');
-    nativeClock.setAttribute('aria-label', 'Toggle Toronto time and date');
-    nativeClock.addEventListener('click', toggleOverlayClockMode);
-    nativeClock.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        toggleOverlayClockMode(event);
-      }
-    });
-  }
 
   const sidebar = overlayRoot.querySelector('#sidebar');
   const backdrop = overlayRoot.querySelector('#sidebar-backdrop');
