@@ -185,6 +185,17 @@ html, body {
   text-transform: none;
   cursor: pointer;
   overflow: hidden;
+  transition: filter .18s ease;
+}
+
+#overlay-root .clock-text:hover,
+#overlay-root .clock-text:focus-visible {
+  animation: overlay-clock-hueshift 1.8s linear infinite;
+}
+
+@keyframes overlay-clock-hueshift {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
 }
 
 #overlay-root .clock-time {
