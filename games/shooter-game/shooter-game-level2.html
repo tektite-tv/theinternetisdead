@@ -847,9 +847,16 @@ let isPaused = false;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
   btnPauseQuit.addEventListener("click", () => {
-    // Unpause and return to start menu
+    // Unpause and return to the parent shell's reloaded level 1 when embedded.
     setPaused(false);
     stopMusic();
+    if (window.parent && window.parent !== window){
+      try {
+        window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");
+        return;
+      } catch (e) {}
+    }
+    // Fallback for standalone use.
     showMenu();
   });
 }
