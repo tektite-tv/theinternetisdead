@@ -823,6 +823,7 @@ const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 const winOverlay = document.getElementById("winOverlay");
 const btnContinue = document.getElementById("btnContinue");
+const AUTO_START_LEVEL = new URLSearchParams(window.location.search).get("autostart") === "1";
 
 let hudVisible = false;
 
@@ -2291,6 +2292,12 @@ spawnEnemies();
   trySpawnUFO();
 
   window.focus();
+}
+
+if (AUTO_START_LEVEL){
+  window.addEventListener("load", () => {
+    requestAnimationFrame(() => startGame());
+  }, { once: true });
 }
 
 btnStart.addEventListener("click", startGame);

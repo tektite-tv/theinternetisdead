@@ -2321,7 +2321,15 @@ btnRestart.addEventListener("click", () => {
 
 if (btnContinue){
   btnContinue.addEventListener("click", () => {
-    // Hook this up later. For now it simply closes the overlay.
+    if (window.parent && window.parent !== window){
+      try{
+        window.parent.postMessage({ type: "tektite:continue-to-level2" }, "*");
+        return;
+      }catch(err){
+        console.warn("Failed to notify parent iframe host about level transition.", err);
+      }
+    }
+
     if (winOverlay) winOverlay.style.display = "none";
   });
 }
