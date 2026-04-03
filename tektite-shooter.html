@@ -87,6 +87,24 @@
 
   <script>
     const overlayContainer = document.getElementById('overlay-container');
+    const tektiteFrame = document.getElementById('tektite-frame');
+    const LEVEL1_SRC = '/games/shooter-game/shooter-game.html';
+    const LEVEL2_SRC = '/games/shooter-game/shooter-game-level2.html?autostart=1';
+    let hasSwitchedToLevel2 = false;
+
+    function switchToLevel2() {
+      if (!tektiteFrame || hasSwitchedToLevel2) return;
+      hasSwitchedToLevel2 = true;
+      tektiteFrame.src = LEVEL2_SRC;
+    }
+
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'tektite:continue-to-level2') {
+        switchToLevel2();
+      }
+    });
 
     async function loadOverlay() {
       try {
