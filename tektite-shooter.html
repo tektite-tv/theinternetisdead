@@ -98,11 +98,20 @@
       tektiteFrame.src = LEVEL2_SRC;
     }
 
+    function switchToLevel1Reloaded() {
+      if (!tektiteFrame) return;
+      hasSwitchedToLevel2 = false;
+      tektiteFrame.src = `${LEVEL1_SRC}?reload=${Date.now()}`;
+    }
+
     window.addEventListener('message', (event) => {
       const data = event.data;
       if (!data || typeof data !== 'object') return;
       if (data.type === 'tektite:continue-to-level2') {
         switchToLevel2();
+      }
+      if (data.type === 'tektite:return-to-level1') {
+        switchToLevel1Reloaded();
       }
     });
 
