@@ -62,11 +62,43 @@ body::-webkit-scrollbar{
 <iframe id="photosphere-frame" src="/photosphere.html"></iframe>
 
 <script>
-fetch("overlay.html")
-.then(res => res.text())
-.then(html=>{
-    document.getElementById("overlay-container").innerHTML = html;
-});
+async function loadOverlay(){
+    try{
+        const res = await fetch("overlay.html", { cache: "no-store" });
+        if(!res.ok) throw new Error("Failed to load overlay.html");
+        const html = await res.text();
+        const container = document.getElementById("overlay-container");
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+
+        const fragment = document.createDocumentFragment();
+        const scripts = [];
+
+        Array.from(temp.childNodes).forEach((node) => {
+            if (node.nodeName && node.nodeName.toLowerCase() === "script") {
+                scripts.push(node);
+            } else {
+                fragment.appendChild(node.cloneNode(true));
+            }
+        });
+
+        container.innerHTML = "";
+        container.appendChild(fragment);
+
+        scripts.forEach((oldScript) => {
+            const newScript = document.createElement("script");
+            Array.from(oldScript.attributes).forEach((attr) => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            newScript.textContent = oldScript.textContent;
+            container.appendChild(newScript);
+        });
+    }catch(error){
+        console.error("Error loading overlay:", error);
+    }
+}
+
+loadOverlay();
 
 function toggleSidebar(){
     const sidebar=document.getElementById("sidebar");
