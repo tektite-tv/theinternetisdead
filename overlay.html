@@ -325,11 +325,41 @@ html, body {
   transition: transform .2s ease;
 }
 
+#overlay-root .sidebar-preview-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+#overlay-root .sidebar-preview-links a {
+  display: block;
+  background: #000;
+  color: var(--overlay-text);
+  text-decoration: underline;
+  border: 1px solid var(--border-color);
+  font-weight: 700;
+  text-align: left;
+  padding: 6px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: filter .18s ease, box-shadow .18s ease;
+}
+
+#overlay-root .sidebar-preview-links a:hover,
+#overlay-root .sidebar-preview-links a:focus-visible {
+  box-shadow: 0 0 0 1px var(--overlay-text);
+  animation: overlay-ui-hueshift 1.8s linear infinite;
+  outline: none;
+}
+
 #overlay-root .sidebar-item:hover img {
   transform: scale(1.05);
 }
 
-#overlay-root .sidebar-item:hover .sidebar-preview {
+#overlay-root .sidebar-item:hover .sidebar-preview,
+#overlay-root .sidebar-item:focus-within .sidebar-preview {
   max-height: 200px;
   opacity: 1;
 }
@@ -475,46 +505,33 @@ html, body {
 
     <div class="sidebar-menu">
       <div class="sidebar-item">
-        <a href="/tektite-photosphere.html">
-          Tektite's Photosphere
-          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-photosphere.png" alt=""></div>
+        <a href="/experiments">
+          Experiments
+          <div class="sidebar-preview">
+            <div class="sidebar-preview-links">
+              <a href="/">+ Placeholder</a>
+              <a href="/">+ Placeholder</a>
+              <a href="/">+ Placeholder</a>
+            </div>
+          </div>
         </a>
       </div>
 
       <div class="sidebar-item">
-        <a href="/tektite-image-editor.html">
-          Tektite's Image Editor
-          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-image-editor.png" alt=""></div>
-        </a>
-      </div>
-
-      <div class="sidebar-item">
-        <a href="/tektite-sound-machine.html">
-          Tektite's Sound Machine
-          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-sound-machine.png" alt=""></div>
-        </a>
-      </div>
-
-      <div class="sidebar-item">
-        <a href="/tektite-explorer.html">
-          Tektite's File Explorer
-          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-file-browser.png" alt=""></div>
-        </a>
-      </div>
-
-      <div class="sidebar-item">
-        <a href="/tektite-shooter.html">
-          Tektite's Shooter Game
-          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-shooter.png" alt=""></div>
+        <a href="/games">
+          Games
+          <div class="sidebar-preview">
+            <div class="sidebar-preview-links">
+              <a href="/">+ Placeholder</a>
+              <a href="/">+ Placeholder</a>
+              <a href="/">+ Placeholder</a>
+            </div>
+          </div>
         </a>
       </div>
     </div>
 
-    <div class="sidebar-bottom">
-      <div class="sidebar-item">
-        <a href="/tektite-chat.html">
-          Tektite's Chat
-          <div class="sidebar-preview"><img src="/images/link-thumbnails/tektite-chat.png" alt=""></div>
+    <div class="sidebar-bottom"></div>
         </a>
       </div>
     </div>
