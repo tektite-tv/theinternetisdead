@@ -335,7 +335,7 @@ body.invert-colors {
 <div id="winOverlay">
   <div id="winPanel">
     <div id="winTitle">You Win!</div>
-    <button id="btnContinue">Continue</button>
+    <button id="btnContinue">Continue to Level 2</button>
   </div>
 </div>
 
@@ -987,8 +987,18 @@ const PAUSE_COMMANDS = {
 };
 
 // v1.96: Fullscreen toggle (real browser fullscreen)
+function requestHostFullscreen(action="toggle"){
+  if (window.parent && window.parent !== window){
+    try{
+      window.parent.postMessage({ type: "tektite:fullscreen", action }, "*");
+      return true;
+    }catch(e){}
+  }
+  return false;
+}
 function toggleFullscreen(){
   try{
+    if (requestHostFullscreen("toggle")) return;
     if (!document.fullscreenElement){
       (document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : null);
     } else {
@@ -3114,6 +3124,7 @@ window.addEventListener("contextmenu", (e) => {
 
 
 function toggleFullscreen(){
+  if (requestHostFullscreen("toggle")) return;
   const elem = document.documentElement;
   if (!document.fullscreenElement){
     if (elem.requestFullscreen) elem.requestFullscreen();
