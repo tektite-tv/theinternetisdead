@@ -2365,6 +2365,11 @@ const player = {
   invuln: 0
 };
 
+// v2.04: faux-2.5D turn animation state
+let playerFacing = -1; // -1 = facing left/default, 1 = facing right
+let playerTurnT = 1;   // 0..1 progress through the current turn
+const PLAYER_TURN_DUR = 0.16;
+
 const keys = {};
 let fireCooldown = 0;
 /* =======================
@@ -2669,7 +2674,7 @@ function getMazeSpecForWave(w){
   const clamped = Math.max(1, Math.min(21, w|0));
   const tier = Math.max(1, Math.min(10, clamped));
 
-  // v2.02: Maze tiles are intentionally huge now.
+  // v2.03: Maze tiles are intentionally huge now.
   // Each tile is about 5x the player size so the maze feels like oversized rooms/corridors,
   // not a dense little grid crawling all over the screen.
   const cellSize = Math.max(320, Math.round(player.w * 5));
@@ -3467,6 +3472,18 @@ function update(dt){
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
 
+  // v2.04: faux-2.5D turn animation when switching horizontal direction
+  if (moveX > 0.08 && playerFacing !== 1){
+    playerFacing = 1;
+    playerTurnT = 0;
+  } else if (moveX < -0.08 && playerFacing !== -1){
+    playerFacing = -1;
+    playerTurnT = 0;
+  }
+  if (playerTurnT < 1){
+    playerTurnT = Math.min(1, playerTurnT + dt / PLAYER_TURN_DUR);
+  }
+
   const moveSpeedMul = (gpSpeedBoostHeld ? 1.75 : 1.0);
   let moveY = 0;
   if (keys["w"] || keys["arrowup"]) moveY -= 1;
@@ -3539,10 +3556,24 @@ if (gpFireHeld) shoot();
   formation.yOffset += formation.descentSpeed * dt;
 
   // update bullets
+  // v2.03: bullets now collide with maze walls and vanish on impact.
+  // Bullets are still stored in screen-space, so we convert them into maze/world space
+  // using the current camera offset before testing against wall tiles.
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+
   for (let i = bullets.length - 1; i >= 0; i--){
     const b = bullets[i];
     b.x += b.vx;
     b.y += b.vy;
+
+    const bwx = b.x + camX;
+    const bwy = b.y + camY;
+    if (isWallAtWorld(bwx, bwy)){
+      bullets.splice(i, 1);
+      continue;
+    }
+
     if (b.x < -80 || b.x > canvas.width + 80 || b.y < -80 || b.y > canvas.height + 80) bullets.splice(i, 1);
   }
 
@@ -3550,6 +3581,14 @@ if (gpFireHeld) shoot();
     const b = enemyBullets[i];
     b.x += (b.vx || 0);
     b.y += b.vy;
+
+    const bwx = b.x + camX;
+    const bwy = b.y + camY;
+    if (isWallAtWorld(bwx, bwy)){
+      enemyBullets.splice(i, 1);
+      continue;
+    }
+
     if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
   }
 
@@ -4052,12 +4091,27 @@ function draw(){
 
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
+
+  function drawPlayerSprite(){
+    ctx.save();
+    ctx.translate(player.x, player.y);
+
+    // v2.04: fake 2.5D turn by squeezing the sprite through a narrow midpoint.
+    const turnEase = Math.sin(Math.min(1, Math.max(0, playerTurnT)) * Math.PI);
+    const widthScale = 1 - turnEase * 0.82;
+    const facingScale = playerFacing >= 0 ? -1 : 1; // right = flipped horizontally
+    ctx.scale(facingScale * Math.max(0.12, widthScale), 1);
+
+    ctx.drawImage(playerImg, -player.w/2, -player.h/2, player.w, player.h);
+    ctx.restore();
+  }
+
   if (gameState === STATE.PLAYING){
     if (!flicker){
-      ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+      drawPlayerSprite();
     }
   } else {
-    ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+    drawPlayerSprite();
   }
 
     // v1.96: shield ring (RMB hold)
