@@ -158,6 +158,62 @@
     pointer-events:auto;
     z-index: 110;
   }
+
+  #mazeSummaryOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,0.68);
+    pointer-events:auto;
+    z-index: 105;
+  }
+  #mazeSummaryPanel{
+    width:min(560px, 92vw);
+    border:3px solid rgba(255,215,0,0.70);
+    border-radius:18px;
+    background: rgba(0,0,0,0.84);
+    padding: 22px 20px 18px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(255,215,0,0.16);
+  }
+  #mazeSummaryTitle{
+    font-family:"Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-weight:900;
+    font-size:44px;
+    letter-spacing:1px;
+    color:#ffe680;
+    text-shadow:0 0 12px rgba(255,215,0,0.20);
+  }
+  #mazeSummaryStats{
+    margin-top:12px;
+    font-family:monospace;
+    font-size:20px;
+    line-height:1.6;
+    color:#f7ffcf;
+  }
+  #mazeSummaryBonus{
+    margin-top:10px;
+    font-family:monospace;
+    font-weight:900;
+    font-size:28px;
+    color:#ffd400;
+    text-shadow:0 0 10px rgba(255,212,0,0.18);
+  }
+  #btnNextMaze{
+    margin-top:16px;
+    font-family:"Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-size:22px;
+    font-weight:800;
+    color:#fff6d5;
+    background: rgba(60,40,0,0.70);
+    border:2px solid rgba(255,215,0,0.62);
+    padding:10px 18px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  #btnNextMaze:hover{ background: rgba(255,215,0,0.12); }
   #winPanel{
     width:min(520px, 92vw);
     border:3px solid rgba(0,255,0,0.75);
@@ -336,6 +392,18 @@ body.invert-colors {
   <div id="winPanel">
     <div id="winTitle">You Win!</div>
     <button id="btnContinue">Continue</button>
+  </div>
+</div>
+
+<div id="mazeSummaryOverlay">
+  <div id="mazeSummaryPanel">
+    <div id="mazeSummaryTitle">Maze Clear</div>
+    <div id="mazeSummaryStats">
+      <div id="mazeSummaryCoverage">Coverage: 0 / 0 tiles</div>
+      <div id="mazeSummaryMissed">Unstepped tiles: 0</div>
+    </div>
+    <div id="mazeSummaryBonus">+0 points</div>
+    <button id="btnNextMaze">Next Maze</button>
   </div>
 </div>
 
@@ -830,6 +898,11 @@ const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 const winOverlay = document.getElementById("winOverlay");
 const btnContinue = document.getElementById("btnContinue");
+const mazeSummaryOverlay = document.getElementById("mazeSummaryOverlay");
+const mazeSummaryCoverage = document.getElementById("mazeSummaryCoverage");
+const mazeSummaryMissed = document.getElementById("mazeSummaryMissed");
+const mazeSummaryBonus = document.getElementById("mazeSummaryBonus");
+const btnNextMaze = document.getElementById("btnNextMaze");
 const AUTO_START_LEVEL = new URLSearchParams(window.location.search).get("autostart") === "1";
 
 let hudVisible = false;
@@ -1307,6 +1380,7 @@ if (pauseCmdSuggest){
 
 function togglePause(){
   if (gameState !== STATE.PLAYING) return;
+  if (mazeSummaryActive) return;
   if (isDead) return; // don't pause during death freeze/respawn
   if (deathOverlay && deathOverlay.style.display === "flex") return; // don't pause on GAME OVER
   setPaused(!isPaused);
@@ -2163,6 +2237,12 @@ function showMenu(){
 
   deathOverlay.style.display = "none";
   if (winOverlay) winOverlay.style.display = "none";
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  mazeSummaryActive = false;
+  mazePendingNextWave = null;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  mazeSummaryActive = false;
+  mazePendingNextWave = null;
   // v1.96: HUD should not appear on the menu
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
@@ -2177,6 +2257,7 @@ function showWinOverlay(){
   gameWon = true;
   gameState = STATE.WIN;
   if (winOverlay) winOverlay.style.display = "flex";
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
   if (pauseOverlay) pauseOverlay.style.display = "none";
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
@@ -2338,6 +2419,12 @@ if (btnContinue){
   btnContinue.addEventListener("click", () => {
     // Hook this up later. For now it simply closes the overlay.
     if (winOverlay) winOverlay.style.display = "none";
+  });
+}
+
+if (btnNextMaze){
+  btnNextMaze.addEventListener("click", () => {
+    advanceToNextMaze();
   });
 }
 
@@ -2724,6 +2811,10 @@ let mazeCompleted = false;
 let playerWorldX = 0;
 let playerWorldY = 0;
 let mazeExitPulse = 0;
+let mazeVisitedTiles = new Set();
+let mazeWalkableTileCount = 0;
+let mazeSummaryActive = false;
+let mazePendingNextWave = null;
 
 // v2.07: Maze enemies roam in world-space and only chase within a limited proximity.
 const MAZE_ENEMY_MIN = 5;
@@ -2807,6 +2898,62 @@ function openMazeLoops(grid, loops){
   }
 }
 
+function getMazeTileKey(c, r){
+  return c + "," + r;
+}
+
+function markCurrentMazeTileStepped(){
+  if (!maze) return;
+  const c = Math.max(0, Math.min(maze.cols - 1, Math.floor(playerWorldX / maze.cellSize)));
+  const r = Math.max(0, Math.min(maze.rows - 1, Math.floor(playerWorldY / maze.cellSize)));
+  if (maze.grid[r] && maze.grid[r][c] === 0){
+    mazeVisitedTiles.add(getMazeTileKey(c, r));
+  }
+}
+
+function countMazeWalkableTiles(){
+  if (!maze) return 0;
+  let total = 0;
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      if (maze.grid[r][c] === 0) total += 1;
+    }
+  }
+  return total;
+}
+
+function showMazeSummaryAndPauseAdvance(){
+  if (!maze || mazeSummaryActive) return;
+  const stepped = mazeVisitedTiles.size;
+  const total = mazeWalkableTileCount || countMazeWalkableTiles();
+  const missed = Math.max(0, total - stepped);
+  const bonus = stepped * 10;
+  score += bonus;
+  updateAccuracyScoreHUD();
+
+  mazeSummaryActive = true;
+  mazePendingNextWave = wave + 1;
+  if (mazeSummaryCoverage) mazeSummaryCoverage.textContent = `Coverage: ${stepped} / ${total} tiles stepped on`;
+  if (mazeSummaryMissed) mazeSummaryMissed.textContent = `Unstepped tiles: ${missed}`;
+  if (mazeSummaryBonus) mazeSummaryBonus.textContent = `+${bonus} points`;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "flex";
+}
+
+function advanceToNextMaze(){
+  if (!mazeSummaryActive) return;
+  const nextWave = mazePendingNextWave;
+  mazeSummaryActive = false;
+  mazePendingNextWave = null;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+
+  if (typeof nextWave !== "number") return;
+  wave = nextWave;
+  showWaveBanner(wave);
+  resetFormation();
+  spawnEnemies();
+  trySpawnUFO();
+}
+
 function makeMazeForWave(w){
   const spec = getMazeSpecForWave(w);
   const grid = carveMazeGrid(spec.cols, spec.rows);
@@ -2831,9 +2978,14 @@ function resetMazeForWave(w){
   maze = makeMazeForWave(w);
   mazeCompleted = false;
   mazeExitPulse = 0;
+  mazeSummaryActive = false;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
   enemies = [];
   playerWorldX = (maze.startCell.x + 0.5) * maze.cellSize;
   playerWorldY = (maze.startCell.y + 0.5) * maze.cellSize;
+  mazeVisitedTiles = new Set();
+  mazeWalkableTileCount = countMazeWalkableTiles();
+  markCurrentMazeTileStepped();
 }
 
 function getMazeWalkableCells(){
@@ -3008,6 +3160,7 @@ function moveMazePlayer(dx, dy){
 
   if (canOccupyWorld(nx, playerWorldY, radius)) playerWorldX = nx;
   if (canOccupyWorld(playerWorldX, ny, radius)) playerWorldY = ny;
+  markCurrentMazeTileStepped();
 
   const exitX = (maze.exitCell.x + 0.5) * maze.cellSize;
   const exitY = (maze.exitCell.y + 0.5) * maze.cellSize;
@@ -4206,12 +4359,10 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
       return;
     }
 
-    wave += 1;
-    showWaveBanner(wave);
-
-    resetFormation();
-    spawnEnemies();
-    trySpawnUFO();
+    if (!mazeSummaryActive){
+      showMazeSummaryAndPauseAdvance();
+    }
+    return;
   }
 }
 
