@@ -85,12 +85,14 @@ html, body {
 #overlay-root .top-links {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
 #overlay-root .home-link {
   color: lime;
+  background: #000;
+  border: 1px solid currentColor;
   font-family: 'Courier New', Courier, monospace !important;
   font-weight: 700;
   text-decoration: underline;
@@ -98,7 +100,8 @@ html, body {
   line-height: 1;
   display: inline-flex;
   align-items: center;
-  transition: filter .18s ease;
+  padding: 3px 6px;
+  transition: filter .18s ease, box-shadow .18s ease;
 }
 
 #overlay-root .home-link:visited {
@@ -110,6 +113,7 @@ html, body {
   color: lime;
   text-decoration-thickness: 2px;
   outline: none;
+  box-shadow: 0 0 0 1px currentColor;
   animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
