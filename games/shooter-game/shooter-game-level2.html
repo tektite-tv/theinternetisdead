@@ -2725,6 +2725,12 @@ let playerWorldX = 0;
 let playerWorldY = 0;
 let mazeExitPulse = 0;
 
+// v2.07: Maze enemies roam in world-space and only chase within a limited proximity.
+const MAZE_ENEMY_MIN = 5;
+const MAZE_ENEMY_MAX = 26;
+const MAZE_ENEMY_SAFE_CELLS_FROM_START = 2;
+const MAZE_ENEMY_SAFE_CELLS_FROM_EXIT = 2;
+
 function getMazeSpecForWave(w){
   const clamped = Math.max(1, Math.min(21, w|0));
   const tier = Math.max(1, Math.min(10, clamped));
@@ -2828,6 +2834,145 @@ function resetMazeForWave(w){
   enemies = [];
   playerWorldX = (maze.startCell.x + 0.5) * maze.cellSize;
   playerWorldY = (maze.startCell.y + 0.5) * maze.cellSize;
+}
+
+function getMazeWalkableCells(){
+  if (!maze) return [];
+  const out = [];
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      if (maze.grid[r][c] !== 0) continue;
+      const startDist = Math.abs(c - maze.startCell.x) + Math.abs(r - maze.startCell.y);
+      const exitDist = Math.abs(c - maze.exitCell.x) + Math.abs(r - maze.exitCell.y);
+      if (startDist <= MAZE_ENEMY_SAFE_CELLS_FROM_START) continue;
+      if (exitDist <= MAZE_ENEMY_SAFE_CELLS_FROM_EXIT) continue;
+      out.push({ x:c, y:r });
+    }
+  }
+  return out;
+}
+
+function spawnMazeEnemiesForWave(w){
+  if (!maze) return;
+  const walkable = getMazeWalkableCells();
+  if (!walkable.length) return;
+
+  const densityBase = Math.floor((maze.cols * maze.rows) / 20);
+  const desired = Math.max(MAZE_ENEMY_MIN, Math.min(MAZE_ENEMY_MAX, densityBase + Math.floor(Math.random() * 5) - 2 + Math.floor(w * 0.55)));
+  const shuffled = walkable.slice().sort(() => Math.random() - 0.5);
+  const used = [];
+  const minCellSeparation = Math.max(1, Math.min(4, Math.round(maze.cols / 10)));
+
+  for (const cell of shuffled){
+    if (used.length >= desired) break;
+    let tooClose = false;
+    for (const u of used){
+      const d = Math.abs(u.x - cell.x) + Math.abs(u.y - cell.y);
+      if (d < minCellSeparation){
+        tooClose = true;
+        break;
+      }
+    }
+    if (tooClose) continue;
+    used.push(cell);
+
+    const cx = (cell.x + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18);
+    const cy = (cell.y + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18);
+    const img = assetsReady && enemyImages.length ? randEnemyImg() : playerImg;
+    const size = Math.max(34, Math.min(72, player.w * rand(0.88, 1.18)));
+    const chaseRadius = maze.cellSize * rand(1.25, 1.9);
+    const dropRadius = chaseRadius * rand(1.2, 1.45);
+
+    enemies.push({
+      row: cell.y,
+      col: cell.x,
+      baseY: 0,
+      img,
+      isFrog: false,
+      size,
+      hp: 1,
+      hitFlash: 0,
+      dying: false,
+      fade: 1,
+      fadeRate: 0,
+      lockX: 0, lockY: 0, lockW: 0, lockH: 0,
+      _killAwarded: false,
+      x: -9999, y: -9999, w: size, h: size,
+      fx: 0, fy: 0,
+      swoop: null,
+      swoopCooldown: 9999,
+      mazeMob: true,
+      worldX: cx,
+      worldY: cy,
+      homeX: cx,
+      homeY: cy,
+      moveSpeed: rand(105, 175),
+      chaseRadius,
+      dropRadius,
+      chaseFalloff: rand(0.28, 0.58),
+      isChasing: false
+    });
+  }
+}
+
+function updateMazeEnemies(dt){
+  if (!(maze && enemies.length)) return;
+
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+
+  for (const e of enemies){
+    if (!e || !e.mazeMob || e.dying) continue;
+
+    const toPlayerX = playerWorldX - e.worldX;
+    const toPlayerY = playerWorldY - e.worldY;
+    const distToPlayer = Math.hypot(toPlayerX, toPlayerY) || 0.0001;
+
+    if (distToPlayer <= e.chaseRadius){
+      e.isChasing = true;
+    } else if (distToPlayer >= e.dropRadius){
+      e.isChasing = false;
+    }
+
+    let targetX = e.homeX;
+    let targetY = e.homeY;
+    let speedMul = 0.55;
+
+    if (e.isChasing){
+      const t = Math.max(0, 1 - (distToPlayer / e.chaseRadius));
+      const chaseStrength = Math.max(0.15, t * (1 - e.chaseFalloff) + 0.15);
+      targetX = playerWorldX;
+      targetY = playerWorldY;
+      speedMul = 0.62 + chaseStrength;
+    }
+
+    const dx = targetX - e.worldX;
+    const dy = targetY - e.worldY;
+    const d = Math.hypot(dx, dy) || 0.0001;
+    let step = e.moveSpeed * speedMul * dt;
+
+    if (!e.isChasing && d < 8){
+      step = 0;
+    }
+
+    if (step > 0){
+      const nx = dx / d;
+      const ny = dy / d;
+      const tryX = e.worldX + nx * step;
+      const tryY = e.worldY + ny * step;
+      const radius = Math.max(10, e.size * 0.22);
+
+      if (canOccupyWorld(tryX, e.worldY, radius)) e.worldX = tryX;
+      if (canOccupyWorld(e.worldX, tryY, radius)) e.worldY = tryY;
+    }
+
+    e.x = e.worldX - camX;
+    e.y = e.worldY - camY;
+    e.w = e.size;
+    e.h = e.size;
+    e.fx = e.x;
+    e.fy = e.y;
+  }
 }
 
 function isWallAtWorld(x, y){
@@ -3111,9 +3256,10 @@ function spawnBossWave11(additive=false){
 
 
 function spawnEnemies(){
-  // Maze mode replaces regular enemy spawning for now.
+  // Maze mode now spawns individual roaming enemies inside random open maze squares.
   enemies = [];
   resetMazeForWave(wave);
+  spawnMazeEnemiesForWave(wave);
 }
 
 /* =======================
@@ -3177,6 +3323,7 @@ function shoot(){
 
 let enemyShootTimer = 0;
 function enemyTryShoot(dt){
+  if (enemies.some(e => e && e.mazeMob && !e.dying)) return;
   enemyShootTimer -= dt;
   if (enemyShootTimer > 0) return;
 
@@ -3563,6 +3710,8 @@ function update(dt){
   player.x = canvas.width / 2;
   player.y = canvas.height / 2;
 
+  updateMazeEnemies(dt);
+
 
 // v1.96: right stick aim (only when the stick is actually being pushed)
 const aimMag = Math.hypot(gpAimX || 0, gpAimY || 0);
@@ -3814,6 +3963,10 @@ if (bossCore){
   for (const e of enemies){
     if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
 
+    if (e.mazeMob){
+      continue;
+    }
+
     const scale = 1 + breath * 0.18;
     const size = e.size * scale;
 
@@ -3981,6 +4134,12 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         // Push enemy out to the ring boundary
         e.x = player.x + nx * (rr + 2);
         e.y = player.y + ny * (rr + 2);
+        if (e.mazeMob){
+          const camX = playerWorldX - canvas.width / 2;
+          const camY = playerWorldY - canvas.height / 2;
+          e.worldX = e.x + camX;
+          e.worldY = e.y + camY;
+        }
 
         // If it's swooping, cancel its swoop so it doesn't keep clipping the shield.
         if (e.swoop){
