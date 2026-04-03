@@ -61,26 +61,6 @@
       background: #000;
     }
 
-    #chat-sandbox-frame {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: transparent;
-      z-index: 9999;
-      display: block;
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    #chat-sandbox-frame.visible {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-    }
-
     .overlay-error {
       padding: 12px 16px;
       background: #111;
@@ -105,25 +85,8 @@
     </div>
   </div>
 
-  <iframe
-    id="chat-sandbox-frame"
-    src="/chat-sandbox.html"
-    title="Chat Sandbox Overlay"
-    loading="eager"
-    allow="clipboard-read; clipboard-write"
-  ></iframe>
-
   <script>
     const overlayContainer = document.getElementById('overlay-container');
-    const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
-    const tektiteFrame = document.getElementById('tektite-frame');
-
-    let chatSandboxVisible = false;
-    let chatSandboxReady = false;
-
-    function getChatWindow() {
-      return chatSandboxFrame && chatSandboxFrame.contentWindow ? chatSandboxFrame.contentWindow : null;
-    }
 
     async function loadOverlay() {
       try {
@@ -136,8 +99,11 @@
         const scripts = [];
 
         Array.from(temp.childNodes).forEach((node) => {
-          if (node.nodeName.toLowerCase() === 'script') scripts.push(node);
-          else fragment.appendChild(node.cloneNode(true));
+          if (node.nodeName.toLowerCase() === 'script') {
+            scripts.push(node);
+          } else {
+            fragment.appendChild(node.cloneNode(true));
+          }
         });
 
         overlayContainer.innerHTML = '';
@@ -145,7 +111,9 @@
 
         scripts.forEach((oldScript) => {
           const newScript = document.createElement('script');
-          Array.from(oldScript.attributes).forEach((attr) => newScript.setAttribute(attr.name, attr.value));
+          Array.from(oldScript.attributes).forEach((attr) => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
           newScript.textContent = oldScript.textContent;
           overlayContainer.appendChild(newScript);
         });
@@ -166,128 +134,7 @@
       document.body.style.setProperty('--overlay-height', `${Math.max(overlayHeight, 1)}px`);
     }
 
-    function setChatFrameVisible(visible) {
-      chatSandboxVisible = !!visible;
-      chatSandboxFrame.classList.toggle('visible', chatSandboxVisible);
-    }
-
-    function postToChatSandbox(message) {
-      const chatWindow = getChatWindow();
-      if (!chatWindow) return false;
-      chatWindow.postMessage(message, '*');
-      return true;
-    }
-
-    function registerPageCommands() {
-      postToChatSandbox({
-        type: 'pageChatRegister',
-        pageOnly: true,
-        pageId: 'tektite-shooter',
-        title: 'Tektite Shooter',
-        sourceKey: 'tektite-shooter',
-        commands: []
-      });
-    }
-
-    function openChatFromParent(options = {}) {
-      setChatFrameVisible(true);
-      postToChatSandbox({
-        type: 'chatSandboxOpen',
-        focus: options.focus !== false,
-        seedSlash: !!options.seedSlash
-      });
-    }
-
-    function closeChatFromParent() {
-      postToChatSandbox({ type: 'chatSandboxClose' });
-      setChatFrameVisible(false);
-    }
-
-    function shouldIgnoreChatShortcutFromEvent(event) {
-      const view = event.view || window;
-      const doc = view.document || document;
-      const activeElement = doc.activeElement;
-      const activeTag = activeElement && activeElement.tagName ? activeElement.tagName.toUpperCase() : '';
-      return !!(activeElement && (
-        activeTag === 'INPUT' ||
-        activeTag === 'TEXTAREA' ||
-        activeTag === 'SELECT' ||
-        activeElement.isContentEditable
-      ));
-    }
-
-    function handleChatShortcutKeydown(event) {
-      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        if (shouldIgnoreChatShortcutFromEvent(event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        openChatFromParent({ focus: true, seedSlash: true });
-        return;
-      }
-
-      if (event.key === 'Escape' && chatSandboxVisible) {
-        event.preventDefault();
-        event.stopPropagation();
-        closeChatFromParent();
-      }
-    }
-
-    function bindChatShortcutToFrame(frame) {
-      try {
-        const frameWindow = frame && frame.contentWindow;
-        const frameDoc = frameWindow && frameWindow.document;
-        if (!frameWindow || !frameDoc || frameWindow.__tektiteShooterChatShortcutBound) return;
-        frameWindow.addEventListener('keydown', handleChatShortcutKeydown, true);
-        frameDoc.addEventListener('keydown', handleChatShortcutKeydown, true);
-        frameWindow.__tektiteShooterChatShortcutBound = true;
-      } catch (error) {
-        console.warn('Unable to bind chat shortcut to frame', error);
-      }
-    }
-
-    window.addEventListener('message', (event) => {
-      if (!event.data) return;
-
-      if (event.source === getChatWindow()) {
-        if (event.data.type === 'chatSandboxState') {
-          chatSandboxReady = true;
-          setChatFrameVisible(!!event.data.visible);
-          registerPageCommands();
-          return;
-        }
-
-        if (event.data.type === 'pageChatExecute') {
-          const command = (event.data.command || '').trim();
-          postToChatSandbox({
-            type: 'pageChatResult',
-            announce: true,
-            command,
-            message: command ? `${command} is not a known command` : 'No page command registered'
-          });
-          return;
-        }
-      }
-
-      if (event.data.type === 'openChatFromChild') {
-        openChatFromParent({ focus: true, seedSlash: !!event.data.seedSlash });
-      }
-    });
-
     window.addEventListener('resize', syncOverlayLayoutHeight);
-    window.addEventListener('keydown', handleChatShortcutKeydown, true);
-
-    chatSandboxFrame.addEventListener('load', () => {
-      chatSandboxReady = true;
-      registerPageCommands();
-      bindChatShortcutToFrame(chatSandboxFrame);
-    });
-
-    tektiteFrame.addEventListener('load', () => {
-      bindChatShortcutToFrame(tektiteFrame);
-      if (chatSandboxReady) {
-        registerPageCommands();
-      }
-    });
 
     loadOverlay();
   </script>
