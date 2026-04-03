@@ -669,7 +669,7 @@ const AUDIO_OOF = "/media/audio/oof.mp3";
 /* =======================
    Audio
 ======================= */
-const AUDIO_BG_MUSIC = "/media/audio/spaceinvaders.mp3";
+const AUDIO_BG_MUSIC = "/media/audio/do-that-there.mp3";
 const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
@@ -2262,7 +2262,7 @@ function showWinOverlay(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  stopMusic();
+  // keep music playing through the win/score screen
 }
 
 function restartRun(){
