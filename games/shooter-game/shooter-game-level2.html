@@ -3539,7 +3539,8 @@ function update(dt){
     playerTurnT = Math.min(1, playerTurnT + dt / PLAYER_TURN_DUR);
   }
 
-  const moveSpeedMul = (gpSpeedBoostHeld ? 1.75 : 1.0);
+  const sprintHeld = !!keys["shift"] || !!gpSpeedBoostHeld;
+  const moveSpeedMul = (sprintHeld ? 1.75 : 1.0);
   let moveY = 0;
   if (keys["w"] || keys["arrowup"]) moveY -= 1;
   if (keys["s"] || keys["arrowdown"]) moveY += 1;
