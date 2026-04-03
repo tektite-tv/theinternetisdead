@@ -82,6 +82,13 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
+#overlay-root .top-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
 #overlay-root .home-link {
   color: lime;
   font-family: 'Courier New', Courier, monospace !important;
@@ -430,7 +437,11 @@ html, body {
         <img id="dead-logo" src="/images/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
         <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/images/deadlogo-green.png');"></span>
       </div>
-      <a class="home-link" href="/">HOME</a>
+      <div class="top-links">
+        <a class="home-link" href="/">+ Home</a>
+        <a class="home-link" href="/experiments">+ Experiments</a>
+        <a class="home-link" href="/games">+ Games</a>
+      </div>
     </div>
 
     <div class="spacer"></div>
