@@ -412,7 +412,7 @@ body.invert-colors {
   <div id="startMenu" class="panel">
     <div class="title">Bananaman Shooter <span style="font-size:14px; opacity:0.75;">(v1.96)</span></div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Bomb: Q (or X/RB) · Shield: RMB (or LB/LT) · Pause: ESC (or Start) · HUD: / (or View)</div>
+    <div class="hint">Move: WASD or Arrow Keys (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Reach the glowing maze exit each wave · Pause: ESC (or Start) · HUD: / (or View)</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -483,7 +483,7 @@ body.invert-colors {
           <option value="8">Wave 8</option>
           <option value="9">Wave 9</option>
           <option value="10">Wave 10</option>
-          <option value="11">Boss Mode</option>
+          <option value="11">Bonus Mode</option>
           <option value="12">Insanity 1</option>
           <option value="13">Insanity 2</option>
           <option value="14">Insanity 3</option>
@@ -495,7 +495,7 @@ body.invert-colors {
           <option value="20">Insanity 9</option>
           <option value="21">Insanity 10</option>
         </select>
-        <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Boss Mode, or Insanity 1-10.</div>
+        <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Bonus Mode, or Insanity 1-10.</div>
       </div>
 
 </div>
@@ -513,6 +513,13 @@ body.invert-colors {
   PROJECT CHANGELOG / REMOVAL LOG
 ========================================================================
 [REMOVAL LOG]
+
+- 2026-04-03 | v2.00
+  Changed: Core loop converted from bottom-row shooter into center-locked procedural maze traversal.
+  Kept: Player movement, aiming, shooting, bullet logic, timer, lives, health, and enemy damage systems.
+  Disabled: Regular enemy wave spawning for now while maze progression is prototyped.
+  Renamed: Boss Mode -> Bonus Mode.
+
 
 - 2025-12-24 | v1.96
   Added: Pause commands /fullscreen (toggle fullscreen) and /help (lists commands alphabetically).
@@ -1421,9 +1428,9 @@ let waveBanner = { text:"", t:0, color:"#00ff66" };
 function getWaveLabel(n){
   // Wave label rules:
   // - Waves 1-10: "Wave N"
-  // - Wave 11: "Boss Mode" (red)
+  // - Wave 11: "Bonus Mode" (red)
   // - Waves 12-21: "INSANITY WAVE: K" where K = n-11
-  if (n === 11) return { text:"Boss Mode", color:"#ff3333" };
+  if (n === 11) return { text:"Bonus Mode", color:"#7dff7d" };
   if (n >= 12 && n <= 21) return { text:"INSANITY WAVE: " + (n - 11), color:"#ffffff" };
   return { text:"Wave " + n, color:"#ffffff" };
 }
@@ -1942,7 +1949,7 @@ function updateStarfield(dt, keys, playerSpeed){
     vxIntent = 0.15 * Math.sin(time * 0.6);
   }
 
-  const targetVx = vxIntent * playerSpeed * 55;
+  const targetVx = 0; // maze mode: starfield no longer reacts to player movement
   playerVxSmoothed += (targetVx - playerVxSmoothed) * Math.min(1, dt * 8);
 
   for (let li = 0; li < starLayers.length; li++){
@@ -2018,10 +2025,9 @@ function getHeartsTopInCanvas(){
 }
 
 function getPlayerAlignedY(gapPx = 6){
+  if (gameState === STATE.PLAYING) return canvas.height / 2;
   const heartsTop = getHeartsTopInCanvas();
-  // player.y is CENTER-based, so subtract half-height.
   let y = heartsTop - (player.h / 2) - gapPx;
-  // Clamp to canvas bounds
   y = Math.max(player.h/2, Math.min(canvas.height - player.h/2, y));
   return y;
 }
@@ -2112,7 +2118,7 @@ const btnApply = document.getElementById("btnApply");
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   let INFINITE_MODE = false;
   
-let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-10
+let START_WAVE = 1; // 1-10 = maze waves, 11 = Bonus Mode, 12-21 = Insanity 1-10
 
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
@@ -2131,7 +2137,7 @@ if (invertColorsCheckbox){
 
   function getStartWaveText(v){
     const n = parseInt(v, 10) || 1;
-    if (n === 11) return "Boss Mode";
+    if (n === 11) return "Bonus Mode";
     if (n >= 12 && n <= 21) return "Insanity " + (n - 11);
     return "Wave " + n;
   }
@@ -2257,9 +2263,9 @@ function startGame(){
 
   health = 1.0;
 
-  // Spawn player mid-screen, above hearts HUD
+  // Spawn player fixed in the center for maze traversal
   player.x = canvas.width / 2;
-  player.y = getPlayerAlignedY();
+  player.y = canvas.height / 2;
 
   shieldPips = Math.max(0, parseInt(START_SHIELDS, 10) || 0);
 
@@ -2272,9 +2278,9 @@ function startGame(){
 
   health = 1.0;
 
-  // Spawn player mid-screen, above hearts HUD
+  // Spawn player fixed in the center for maze traversal
   player.x = canvas.width / 2;
-  player.y = getPlayerAlignedY();
+  player.y = canvas.height / 2;
   bonusArmor = 0;
   bonusArmorBrokenT = 0;
   isDead = false;
@@ -2652,6 +2658,186 @@ function getSpacingY(){
 
 let enemies = [];
 
+// =======================
+// Procedural Maze Mode (v2.0 retrofit)
+// - Player stays visually fixed in the center while traversing a generated maze.
+// - Enemy systems, bullets, damage tracking, timer, and lives all remain in the build,
+//   but regular wave spawns are disabled for now.
+// =======================
+let maze = null;
+let mazeCompleted = false;
+let playerWorldX = 0;
+let playerWorldY = 0;
+let mazeExitPulse = 0;
+
+function getMazeSpecForWave(w){
+  const clamped = Math.max(1, Math.min(21, w|0));
+  const tier = Math.max(1, Math.min(10, clamped));
+  let cols = 8 + tier * 2;
+  let rows = 6 + tier * 2;
+  if (clamped === 11){
+    cols = 30; rows = 22;
+  } else if (clamped > 11){
+    const insanityTier = clamped - 11;
+    cols = 18 + insanityTier * 2;
+    rows = 14 + insanityTier * 2;
+  }
+  if (cols % 2 === 0) cols += 1;
+  if (rows % 2 === 0) rows += 1;
+  const cellSize = Math.max(22, Math.min(42, Math.floor(Math.min(canvas.width / Math.max(8, cols), canvas.height / Math.max(6, rows)))));
+  return { cols, rows, cellSize };
+}
+
+function carveMazeGrid(cols, rows){
+  const grid = Array.from({ length: rows }, () => Array(cols).fill(1));
+  const stack = [];
+  const dirs = [[2,0],[-2,0],[0,2],[0,-2]];
+  const start = { x: 1, y: 1 };
+  grid[start.y][start.x] = 0;
+  stack.push(start);
+
+  while (stack.length){
+    const cur = stack[stack.length - 1];
+    const neighbors = [];
+    for (const [dx, dy] of dirs){
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (nx > 0 && nx < cols - 1 && ny > 0 && ny < rows - 1 && grid[ny][nx] === 1){
+        neighbors.push({ x: nx, y: ny, wx: cur.x + dx / 2, wy: cur.y + dy / 2 });
+      }
+    }
+    if (!neighbors.length){
+      stack.pop();
+      continue;
+    }
+    const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+    grid[next.wy][next.wx] = 0;
+    grid[next.y][next.x] = 0;
+    stack.push({ x: next.x, y: next.y });
+  }
+
+  return grid;
+}
+
+function openMazeLoops(grid, loops){
+  const rows = grid.length;
+  const cols = grid[0].length;
+  let opened = 0;
+  let attempts = 0;
+  while (opened < loops && attempts < loops * 24){
+    attempts += 1;
+    const x = 1 + Math.floor(Math.random() * (cols - 2));
+    const y = 1 + Math.floor(Math.random() * (rows - 2));
+    if (grid[y][x] !== 1) continue;
+    const horiz = (grid[y][x-1] === 0 && grid[y][x+1] === 0);
+    const vert = (grid[y-1][x] === 0 && grid[y+1][x] === 0);
+    if (horiz || vert){
+      grid[y][x] = 0;
+      opened += 1;
+    }
+  }
+}
+
+function makeMazeForWave(w){
+  const spec = getMazeSpecForWave(w);
+  const grid = carveMazeGrid(spec.cols, spec.rows);
+  const loopCount = Math.max(0, Math.floor((Math.min(10, Math.max(1, w)) - 1) * 1.5));
+  openMazeLoops(grid, loopCount);
+  const startCell = { x: 1, y: 1 };
+  const exitCell = { x: spec.cols - 2, y: spec.rows - 2 };
+  grid[startCell.y][startCell.x] = 0;
+  grid[exitCell.y][exitCell.x] = 0;
+  return { ...spec, grid, startCell, exitCell, wallColor: w === 11 ? 'rgba(0,255,102,0.32)' : 'rgba(0,255,102,0.22)' };
+}
+
+function resetMazeForWave(w){
+  maze = makeMazeForWave(w);
+  mazeCompleted = false;
+  mazeExitPulse = 0;
+  enemies = [];
+  playerWorldX = (maze.startCell.x + 0.5) * maze.cellSize;
+  playerWorldY = (maze.startCell.y + 0.5) * maze.cellSize;
+}
+
+function isWallAtWorld(x, y){
+  if (!maze) return false;
+  const c = Math.floor(x / maze.cellSize);
+  const r = Math.floor(y / maze.cellSize);
+  if (r < 0 || r >= maze.rows || c < 0 || c >= maze.cols) return true;
+  return maze.grid[r][c] === 1;
+}
+
+function canOccupyWorld(x, y, radius){
+  if (!maze) return true;
+  const pts = [
+    [x - radius, y - radius], [x + radius, y - radius],
+    [x - radius, y + radius], [x + radius, y + radius],
+    [x, y - radius], [x, y + radius], [x - radius, y], [x + radius, y]
+  ];
+  return pts.every(([px, py]) => !isWallAtWorld(px, py));
+}
+
+function getMazePlayerRadius(){
+  return Math.max(8, Math.min(player.w, player.h) * 0.22);
+}
+
+function moveMazePlayer(dx, dy){
+  if (!maze) return;
+  const radius = getMazePlayerRadius();
+  const speed = player.speed * 60;
+  const stepX = dx * speed;
+  const stepY = dy * speed;
+  const nx = playerWorldX + stepX;
+  const ny = playerWorldY + stepY;
+
+  if (canOccupyWorld(nx, playerWorldY, radius)) playerWorldX = nx;
+  if (canOccupyWorld(playerWorldX, ny, radius)) playerWorldY = ny;
+
+  const exitX = (maze.exitCell.x + 0.5) * maze.cellSize;
+  const exitY = (maze.exitCell.y + 0.5) * maze.cellSize;
+  if (Math.hypot(playerWorldX - exitX, playerWorldY - exitY) <= maze.cellSize * 0.35){
+    mazeCompleted = true;
+  }
+}
+
+function drawMaze(){
+  if (!(gameState === STATE.PLAYING && maze)) return;
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+  ctx.save();
+
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      const sx = c * maze.cellSize - camX;
+      const sy = r * maze.cellSize - camY;
+      if (sx > canvas.width || sy > canvas.height || sx + maze.cellSize < 0 || sy + maze.cellSize < 0) continue;
+
+      if (maze.grid[r][c] === 1){
+        ctx.fillStyle = maze.wallColor;
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = 'rgba(0,255,102,0.10)';
+        ctx.strokeRect(sx + 0.5, sy + 0.5, maze.cellSize - 1, maze.cellSize - 1);
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+      }
+    }
+  }
+
+  mazeExitPulse += 0.05;
+  const ex = maze.exitCell.x * maze.cellSize - camX;
+  const ey = maze.exitCell.y * maze.cellSize - camY;
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,215,0,0.22)';
+  ctx.fillRect(ex, ey, maze.cellSize, maze.cellSize);
+  ctx.strokeStyle = `rgba(255,215,0,${0.55 + 0.35 * Math.sin(mazeExitPulse)})`;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(ex + 2, ey + 2, maze.cellSize - 4, maze.cellSize - 4);
+  ctx.restore();
+
+  ctx.restore();
+}
+
+
 const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, descentSpeed:12, boundsPad:40 };
 
 function resetFormation(){
@@ -2820,62 +3006,9 @@ function spawnBossWave11(additive=false){
 
 
 function spawnEnemies(){
-  // v1.96+: Boss wave / additive boss waves
-  if (wave === 11){
-    spawnBossWave11(false);
-    return;
-  }
-
+  // Maze mode replaces regular enemy spawning for now.
   enemies = [];
-  const baseY = 80; // start higher (top zone)
-
-  // v1.96: Wave sizing
-  // Wave 1 spawns 1 enemy, then doubles each wave (2x previous).
-  // We cap it to keep browsers from melting into a puddle.
-  const MAX_WAVE_ENEMIES = 128;
-// v1.96: Balanced wave sizing (requested):
-// Wave 1: 1 enemy
-// Wave 2: 2 enemies
-// Wave 3: 4 enemies
-// Wave 4+: add +2 each wave (6, 8, 10, ...)
-function getEnemyCountForWave(w){
-  if (w === 1) return 1;
-  if (w === 2) return 2;
-  if (w === 3) return 4;
-  return 4 + (w - 3) * 2;
-}
-const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
-
-  // v1.96: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
-  // Keep the "formation area" mostly in the top half.
-  const zoneW = canvas.width * 0.82;
-  const zoneH = canvas.height * 0.38;
-
-  // Choose columns/rows to fit the count into the zone with a roughly square-ish grid.
-  const idealCols = Math.ceil(Math.sqrt(count * (zoneW / Math.max(1, zoneH))));
-  formationCols = Math.max(1, Math.min(count, idealCols));
-  formationRows = Math.max(1, Math.ceil(count / formationCols));
-
-  // Compute a size that fits nicely in each cell.
-  const cellW = zoneW / formationCols;
-  const cellH = zoneH / formationRows;
-  const baseSize = Math.max(18, Math.min(56, Math.min(cellW, cellH) * 0.60));
-
-  for (let i = 0; i < count; i++){
-    const r = Math.floor(i / formationCols);
-    const c = i % formationCols;
-
-    const img = randEnemyImg();
-    const isFrog = (img && img.src && img.src.toLowerCase().includes("frog.gif"));
-
-    enemies.push({ row:r, col:c, baseY, img, isFrog, size:baseSize, hp:1, hitFlash:0, dying:false, fade:1, fadeRate:0, lockX:0, lockY:0, lockW:0, lockH:0, _killAwarded:false, x:0,y:0,w:0,h:0,
-      fx:0, fy:0, // formation-space position (computed each frame)
-      swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
-      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
-    });
-  }
-
-  if (wave > 11){ spawnBossWave11(true); }
+  resetMazeForWave(wave);
 }
 
 /* =======================
@@ -3260,16 +3393,16 @@ function update(dt){
         playDeathYell();
         stopMusic();
       } else {
-        // Respawn for next life (keep wave/enemies as-is)
+        // Respawn for next life (keep wave/maze as-is)
         isDead = false;
         deathGameOver = false;
   deathYellPlayed = false;
         deathParticles.length = 0;
         health = 1.0;
 
-  // Spawn player mid-screen, above hearts HUD
+  // Spawn player fixed in the center for maze traversal
   player.x = canvas.width / 2;
-  player.y = getPlayerAlignedY();
+  player.y = canvas.height / 2;
         player.invuln = 1.25;
       }
     }
@@ -3289,11 +3422,16 @@ function update(dt){
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
 
-  player.x += moveX * player.speed * (gpSpeedBoostHeld ? 1.75 : 1.0);
-  player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
+  const moveSpeedMul = (gpSpeedBoostHeld ? 1.75 : 1.0);
+  let moveY = 0;
+  if (keys["w"] || keys["arrowup"]) moveY -= 1;
+  if (keys["s"] || keys["arrowdown"]) moveY += 1;
+  const moveLen = Math.hypot(moveX, moveY) || 1;
+  moveMazePlayer((moveX / moveLen) * moveSpeedMul * dt, (moveY / moveLen) * moveSpeedMul * dt);
 
-  // Keep player vertically aligned to the hearts HUD
-  player.y = getPlayerAlignedY();
+  // Player remains fixed visually in the center while the maze scrolls underneath.
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
 
 
 // v1.96: right stick aim (only when the stick is actually being pushed)
@@ -3749,8 +3887,8 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
   }
 
 
-  // wave clear
-  if (enemies.length === 0){
+  // wave clear now depends on reaching the maze exit
+  if (mazeCompleted){
     // If player beat INSANITY WAVE: 10 (wave 21), show a win screen.
     if (wave === 21){
       showWinOverlay();
@@ -3827,6 +3965,7 @@ function drawShieldRing(){
 
 function draw(){
   drawStarfield();
+  drawMaze();
 
   // v1.96+: draw player death particles
   if (deathParticles.length){
@@ -3992,6 +4131,7 @@ if (isDragonEnemy(e)){
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
+    `Maze: ${maze ? (maze.cols + "x" + maze.rows) : "none"}${mazeCompleted ? " | EXIT" : ""}<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
     `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
@@ -4083,7 +4223,7 @@ draw();
    Boot
 ======================= */
 player.x = canvas.width / 2;
-player.y = getPlayerAlignedY();
+player.y = canvas.height / 2;
 
 // v1.96: default aim straight up until the player moves the pointer
 aimX = player.x;
@@ -4099,7 +4239,8 @@ uiRoot.style.display = "none";
 powerupSlot.style.display = "none";
 startGame();
 
-requestAnimationFrame(loop);</script>
+requestAnimationFrame(loop);
+</script>
 
 <div id="heartsHud" style="
 position:fixed;
@@ -4115,37 +4256,3 @@ z-index:9999;
 
 </html>
 
-<script>
-
-// ===== Mobile-aware resize (portrait + landscape)
-function resize(){
-  const vw = window.visualViewport ? visualViewport.width : window.innerWidth;
-  const vh = window.visualViewport ? visualViewport.height : window.innerHeight;
-
-  canvas.width  = Math.floor(vw * window.devicePixelRatio);
-  canvas.height = Math.floor(vh * window.devicePixelRatio);
-
-  canvas.style.width  = vw + "px";
-  canvas.style.height = vh + "px";
-
-  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
-
-  resizeFX();
-}
-
-window.addEventListener("resize", resize);
-window.addEventListener("orientationchange", resize);
-if (window.visualViewport){
-  visualViewport.addEventListener("resize", resize);
-}
-resize();
-
-function isPortrait(){
-  return canvas.height > canvas.width;
-}
-
-function getPlayerAlignedY(){
-  return isPortrait() ? canvas.height * 0.78 : canvas.height * 0.88;
-}
-
-</script>
