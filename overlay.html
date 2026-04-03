@@ -308,28 +308,19 @@ html, body {
 
 #overlay-root .sidebar-preview {
   width: 100%;
-  aspect-ratio: 16/9;
   overflow: hidden;
   max-height: 0;
   opacity: 0;
   transition: max-height .25s ease, opacity .25s ease;
-  background: var(--preview-bg);
+  background: transparent;
   margin-top: 10px;
-}
-
-#overlay-root .sidebar-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform .2s ease;
 }
 
 #overlay-root .sidebar-preview-links {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
+  padding: 0;
 }
 
 #overlay-root .sidebar-preview-links a {
@@ -354,13 +345,9 @@ html, body {
   outline: none;
 }
 
-#overlay-root .sidebar-item:hover img {
-  transform: scale(1.05);
-}
-
 #overlay-root .sidebar-item:hover .sidebar-preview,
 #overlay-root .sidebar-item:focus-within .sidebar-preview {
-  max-height: 200px;
+  max-height: 180px;
   opacity: 1;
 }
 
@@ -505,29 +492,25 @@ html, body {
 
     <div class="sidebar-menu">
       <div class="sidebar-item">
-        <a href="/experiments">
-          Experiments
-          <div class="sidebar-preview">
-            <div class="sidebar-preview-links">
-              <a href="/">+ Placeholder</a>
-              <a href="/">+ Placeholder</a>
-              <a href="/">+ Placeholder</a>
-            </div>
+        <a href="/experiments">Experiments</a>
+        <div class="sidebar-preview">
+          <div class="sidebar-preview-links">
+            <a href="/">+ Placeholder</a>
+            <a href="/">+ Placeholder</a>
+            <a href="/">+ Placeholder</a>
           </div>
-        </a>
+        </div>
       </div>
 
       <div class="sidebar-item">
-        <a href="/games">
-          Games
-          <div class="sidebar-preview">
-            <div class="sidebar-preview-links">
-              <a href="/">+ Placeholder</a>
-              <a href="/">+ Placeholder</a>
-              <a href="/">+ Placeholder</a>
-            </div>
+        <a href="/games">Games</a>
+        <div class="sidebar-preview">
+          <div class="sidebar-preview-links">
+            <a href="/">+ Placeholder</a>
+            <a href="/">+ Placeholder</a>
+            <a href="/">+ Placeholder</a>
           </div>
-        </a>
+        </div>
       </div>
     </div>
 
