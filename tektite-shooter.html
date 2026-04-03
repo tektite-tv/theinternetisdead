@@ -92,19 +92,47 @@
     const LEVEL2_SRC = '/games/shooter-game/shooter-game-level2.html?autostart=1';
     let hasSwitchedToLevel2 = false;
 
+    async function setIframeFullscreen(shouldEnter) {
+      if (!tektiteFrame) return;
+      try {
+        const fsElement = document.fullscreenElement;
+        if (shouldEnter) {
+          if (fsElement !== tektiteFrame && tektiteFrame.requestFullscreen) {
+            await tektiteFrame.requestFullscreen();
+          }
+        } else if (fsElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      } catch (error) {
+        console.warn('Fullscreen request failed.', error);
+      }
+    }
+
     function switchToLevel2() {
       if (!tektiteFrame || hasSwitchedToLevel2) return;
       hasSwitchedToLevel2 = true;
+      const keepFullscreen = document.fullscreenElement === tektiteFrame;
       tektiteFrame.src = LEVEL2_SRC;
+      if (keepFullscreen) {
+        tektiteFrame.addEventListener('load', () => {
+          setIframeFullscreen(true);
+        }, { once: true });
+      }
     }
 
     function switchToLevel1Reloaded() {
       if (!tektiteFrame) return;
       hasSwitchedToLevel2 = false;
+      const keepFullscreen = document.fullscreenElement === tektiteFrame;
       tektiteFrame.src = `${LEVEL1_SRC}?reload=${Date.now()}`;
+      if (keepFullscreen) {
+        tektiteFrame.addEventListener('load', () => {
+          setIframeFullscreen(true);
+        }, { once: true });
+      }
     }
 
-    window.addEventListener('message', (event) => {
+    window.addEventListener('message', async (event) => {
       const data = event.data;
       if (!data || typeof data !== 'object') return;
       if (data.type === 'tektite:continue-to-level2') {
@@ -112,6 +140,12 @@
       }
       if (data.type === 'tektite:return-to-level1') {
         switchToLevel1Reloaded();
+      }
+      if (data.type === 'tektite:fullscreen') {
+        const action = data.action || 'toggle';
+        if (action === 'enter') await setIframeFullscreen(true);
+        else if (action === 'exit') await setIframeFullscreen(false);
+        else await setIframeFullscreen(document.fullscreenElement !== tektiteFrame);
       }
     });
 
