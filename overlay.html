@@ -153,23 +153,27 @@ html, body {
   align-items: center;
   justify-content: flex-end;
   flex: 0 0 auto;
+  min-width: 0;
 }
 
 #overlay-root .clock-box {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   width: 340px;
   min-width: 340px;
+  max-width: 340px;
   height: 44px;
   overflow: hidden;
+  margin-left: auto;
 }
 
 #overlay-root .clock-text {
   display: inline-flex;
   align-items: baseline;
-  justify-content: center;
+  justify-content: flex-end;
   width: 100%;
+  text-align: right;
   color: var(--overlay-clock-filter, var(--overlay-text));
   font-family: 'Courier New', Courier, monospace !important;
   font-size: calc(34px * var(--overlay-font-scale, 1)) !important;
@@ -329,15 +333,17 @@ html, body {
 
   #overlay-root .clock {
     flex: 0 0 100%;
-    justify-content: center;
+    justify-content: flex-end;
     margin-top: 2px;
   }
 
   #overlay-root .clock-box {
     width: min(92vw, 340px);
     min-width: min(92vw, 340px);
+    max-width: min(92vw, 340px);
     height: 34px;
     overflow: hidden;
+    margin-left: auto;
   }
 
   #overlay-root .clock-text {
