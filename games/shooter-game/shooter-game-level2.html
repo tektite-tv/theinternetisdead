@@ -2669,28 +2669,27 @@ function getMazeSpecForWave(w){
   const clamped = Math.max(1, Math.min(21, w|0));
   const tier = Math.max(1, Math.min(10, clamped));
 
-  // v2.01: Larger, roomier mazes.
-  // We keep the tile count fairly broad so the world feels expansive,
-  // but use a bigger tile size so each corridor has more visual presence.
-  let cols = 17 + tier * 4;
-  let rows = 13 + tier * 3;
-  let cellSize = Math.max(34, Math.min(54, Math.floor(Math.min(canvas.width / 12, canvas.height / 8))));
-  let revealRadiusTiles = Math.max(3.9, 5.8 - tier * 0.22);
+  // v2.02: Maze tiles are intentionally huge now.
+  // Each tile is about 5x the player size so the maze feels like oversized rooms/corridors,
+  // not a dense little grid crawling all over the screen.
+  const cellSize = Math.max(320, Math.round(player.w * 5));
+  const revealRadiusPx = Math.round(player.w * 3);
+
+  let cols = 7 + tier * 2;
+  let rows = 5 + tier * 2;
 
   if (clamped === 11){
-    cols = 57; rows = 41; cellSize = Math.max(36, cellSize + 2); revealRadiusTiles = 4.1;
+    cols = 29; rows = 23;
   } else if (clamped > 11){
     const insanityTier = clamped - 11;
-    cols = 33 + insanityTier * 4;
-    rows = 25 + insanityTier * 3;
-    cellSize = Math.max(34, cellSize);
-    revealRadiusTiles = Math.max(3.5, 4.6 - insanityTier * 0.12);
+    cols = 15 + insanityTier * 2;
+    rows = 11 + insanityTier * 2;
   }
 
   if (cols % 2 === 0) cols += 1;
   if (rows % 2 === 0) rows += 1;
 
-  return { cols, rows, cellSize, revealRadiusTiles };
+  return { cols, rows, cellSize, revealRadiusPx };
 }
 
 function carveMazeGrid(cols, rows){
@@ -2862,7 +2861,7 @@ function drawMaze(){
   }
 
   // Soft spotlight / haze mask so only a circular region around the player is visible.
-  const revealRadius = maze.cellSize * (maze.revealRadiusTiles || 4.5);
+  const revealRadius = (maze.revealRadiusPx || Math.round(player.w * 3));
   const outerRadius = revealRadius * 1.65;
   const fog = ctx.createRadialGradient(player.x, player.y, revealRadius * 0.48, player.x, player.y, outerRadius);
   fog.addColorStop(0, 'rgba(0,0,0,0.00)');
@@ -4177,7 +4176,7 @@ if (isDragonEnemy(e)){
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
-    `Maze: ${maze ? (maze.cols + "x" + maze.rows + " @ " + maze.cellSize + "px") : "none"}${mazeCompleted ? " | EXIT" : ""}<br>` +
+    `Maze: ${maze ? (maze.cols + "x" + maze.rows + " @ " + maze.cellSize + "px tiles / light " + (maze.revealRadiusPx || 0) + "px") : "none"}${mazeCompleted ? " | EXIT" : ""}<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
     `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
