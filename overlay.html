@@ -65,6 +65,12 @@ html, body {
   line-height: 1;
   flex: 0 0 auto;
   -webkit-tap-highlight-color: transparent;
+  transition: filter .18s ease;
+}
+
+#overlay-root .hamburger:hover,
+#overlay-root .hamburger:focus-visible {
+  animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
 #overlay-root .logo {
@@ -85,6 +91,7 @@ html, body {
   line-height: 1;
   display: inline-flex;
   align-items: center;
+  transition: filter .18s ease;
 }
 
 #overlay-root .home-link:visited {
@@ -96,6 +103,7 @@ html, body {
   color: lime;
   text-decoration-thickness: 2px;
   outline: none;
+  animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
 #overlay-root .logo-link {
@@ -198,6 +206,11 @@ html, body {
   to { filter: hue-rotate(360deg); }
 }
 
+@keyframes overlay-ui-hueshift {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+
 #overlay-root .clock-time {
   font-family: inherit !important;
 }
@@ -268,6 +281,7 @@ html, body {
   white-space: nowrap;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  transition: filter .18s ease, box-shadow .18s ease;
 }
 
 #overlay-root .sidebar-item a::-webkit-scrollbar {
@@ -278,6 +292,7 @@ html, body {
 #overlay-root .sidebar-item a:hover,
 #overlay-root .sidebar-item a:focus-visible {
   box-shadow: 0 0 0 1px var(--overlay-text);
+  animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
 #overlay-root .sidebar-preview {
