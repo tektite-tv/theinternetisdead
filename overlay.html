@@ -473,15 +473,24 @@ html, body {
     return window.matchMedia('(max-width: 768px)').matches;
   }
 
-  function isInjectedIntoIndexOverlayContainer() {
+  function isInjectedIntoOverlayContainer() {
     const container = document.getElementById('overlay-container');
     return !!(container && overlayRoot && container.contains(overlayRoot));
   }
 
+  function isHostedOnIndexPage() {
+    const path = (window.location.pathname || '').replace(/\/+/g, '/');
+    return path === '/' || path === '/index.html';
+  }
+
+  function shouldUseIndexChatBehavior() {
+    return isInjectedIntoOverlayContainer() && isHostedOnIndexPage();
+  }
+
   function requestParentChatOpen(seedSlash = false) {
-    // MODIFIED: when overlay.html is injected into index.html, prefer the old direct hook
-    // if it exists, but fall back to postMessage because index.html already listens for it.
-    if (!isInjectedIntoIndexOverlayContainer()) {
+    // MODIFIED: only use the special chat-open behavior when overlay.html
+    // is hosted by index.html itself, not just any page with #overlay-container.
+    if (!shouldUseIndexChatBehavior()) {
       return false;
     }
 
@@ -544,7 +553,7 @@ html, body {
   });
 
   function handleLogoActivate(event) {
-    const shouldOpenChat = isInjectedIntoIndexOverlayContainer();
+    const shouldOpenChat = shouldUseIndexChatBehavior();
     const shouldGoHome = !!(event && event.shiftKey);
 
     if (shouldOpenChat && !shouldGoHome) {
