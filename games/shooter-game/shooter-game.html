@@ -292,6 +292,12 @@ body.invert-colors {
 </div>
 </div>
 
+<div id="winOverlay">
+  <div id="winPanel">
+    <div id="winTitle">You Win!</div>
+    <button id="btnContinue">Continue</button>
+  </div>
+</div>
 
 <div id="pauseOverlay">
   <div id="pausePanel">
@@ -755,6 +761,8 @@ const powerupHint = document.getElementById("powerupHint");
 ;
 const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
+const winOverlay = document.getElementById("winOverlay");
+const btnContinue = document.getElementById("btnContinue");
 
 let hudVisible = false;
 
@@ -2069,11 +2077,13 @@ function showMenu(){
   setPaused(false);
   deathYellPlayed = false;
   gameState = STATE.MENU;
+  gameWon = false;
   // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
   stopShield(false);
 
   deathOverlay.style.display = "none";
+  if (winOverlay) winOverlay.style.display = "none";
   // v1.96: HUD should not appear on the menu
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
@@ -2082,6 +2092,17 @@ function showMenu(){
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
   uiRoot.style.display = "flex";
+}
+
+function showWinOverlay(){
+  gameWon = true;
+  gameState = STATE.WIN;
+  if (winOverlay) winOverlay.style.display = "flex";
+  if (pauseOverlay) pauseOverlay.style.display = "none";
+  livesSlot.style.display = "none";
+  powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "none";
+  stopMusic();
 }
 
 function restartRun(){
@@ -2131,6 +2152,7 @@ function startGame(){
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
+  if (winOverlay) winOverlay.style.display = "none";
 
   // v1.96: show HUD only in-game
   livesSlot.style.display = "flex";
@@ -2226,6 +2248,13 @@ btnApply.addEventListener("click", () => {
 btnRestart.addEventListener("click", () => {
   restartRun();
 });
+
+if (btnContinue){
+  btnContinue.addEventListener("click", () => {
+    // Hook this up later. For now it simply closes the overlay.
+    if (winOverlay) winOverlay.style.display = "none";
+  });
+}
 
 
 function setAssetStatus(msg){ assetStatus.textContent = msg; }
@@ -3640,8 +3669,7 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
   if (enemies.length === 0){
     // If player beat INSANITY WAVE: 10 (wave 21), show a win screen.
     if (wave === 21){
-      gameWon = true;
-      gameState = STATE.WIN;
+      showWinOverlay();
       return;
     }
 
