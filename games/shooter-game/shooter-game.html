@@ -430,12 +430,32 @@ body.invert-colors {
       </div>
 
       
-      <div class="optRow" style="gap:10px;">
-        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
-          <input id="bossModeCheckbox" type="checkbox" style="transform:scale(1.2);" />
-          <span>Boss Mode (start on Wave 11)</span>
-        </label>
-        <div class="hint">Starts you on the Wave 11 boss fight for practice/testing.</div>
+      <div class="optRow">
+        <div class="optLabel"><span>Starting Level</span><span id="startWaveLabel">Wave 1</span></div>
+        <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
+          <option value="1">Wave 1</option>
+          <option value="2">Wave 2</option>
+          <option value="3">Wave 3</option>
+          <option value="4">Wave 4</option>
+          <option value="5">Wave 5</option>
+          <option value="6">Wave 6</option>
+          <option value="7">Wave 7</option>
+          <option value="8">Wave 8</option>
+          <option value="9">Wave 9</option>
+          <option value="10">Wave 10</option>
+          <option value="11">Boss Mode</option>
+          <option value="12">Insanity 1</option>
+          <option value="13">Insanity 2</option>
+          <option value="14">Insanity 3</option>
+          <option value="15">Insanity 4</option>
+          <option value="16">Insanity 5</option>
+          <option value="17">Insanity 6</option>
+          <option value="18">Insanity 7</option>
+          <option value="19">Insanity 8</option>
+          <option value="20">Insanity 9</option>
+          <option value="21">Insanity 10</option>
+        </select>
+        <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Boss Mode, or Insanity 1-10.</div>
       </div>
 
 </div>
@@ -2024,7 +2044,8 @@ const btnApply = document.getElementById("btnApply");
   const bombsSlider = document.getElementById("bombsSlider");
   const speedSlider = document.getElementById("speedSlider");
   const infiniteToggle = document.getElementById("infiniteToggle");
-  const bossModeCheckbox = document.getElementById("bossModeCheckbox");
+  const startWaveSelect = document.getElementById("startWaveSelect");
+  const startWaveLabel = document.getElementById("startWaveLabel");
 
   const livesVal = document.getElementById("livesVal");
   const heartsVal = document.getElementById("heartsVal");
@@ -2043,7 +2064,7 @@ const btnApply = document.getElementById("btnApply");
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   let INFINITE_MODE = false;
   
-let START_WAVE = 1; // 1 normally, 11 when Boss Mode is enabled
+let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-10
 
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
@@ -2060,17 +2081,26 @@ if (invertColorsCheckbox){
 }
 
 
+  function getStartWaveText(v){
+    const n = parseInt(v, 10) || 1;
+    if (n === 11) return "Boss Mode";
+    if (n >= 12 && n <= 21) return "Insanity " + (n - 11);
+    return "Wave " + n;
+  }
+
   function syncStartOptionsLabels(){
     livesVal.textContent = livesSlider.value;
     heartsVal.textContent = heartsSlider.value;
     shieldsVal.textContent = shieldsSlider.value;
     bombsVal.textContent = bombsSlider.value;
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
+    if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
 
   [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].forEach(s => {
     s.addEventListener("input", syncStartOptionsLabels);
   });
+  if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
   infiniteToggle.addEventListener("change", () => {});
   syncStartOptionsLabels();
 function showMenu(){
@@ -2127,7 +2157,7 @@ function showOptions(){
   bombsSlider.value = START_BOMBS;
   if (speedSlider) speedSlider.value = START_GAME_SPEED;
   infiniteToggle.checked = !!INFINITE_MODE;
-  if (bossModeCheckbox) bossModeCheckbox.checked = (START_WAVE === 11);
+  if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   if (invertColorsCheckbox) invertColorsCheckbox.checked = INVERT_COLORS;
   syncStartOptionsLabels();
 
@@ -2238,7 +2268,7 @@ btnApply.addEventListener("click", () => {
   INFINITE_MODE = !!infiniteToggle.checked;
   if (invertColorsCheckbox) INVERT_COLORS = invertColorsCheckbox.checked;
   applyInvertColors();
-  START_WAVE = (bossModeCheckbox && bossModeCheckbox.checked) ? 11 : 1;
+  START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
 
   // Keep the UI labels in sync and return to the main menu.
   syncStartOptionsLabels();
