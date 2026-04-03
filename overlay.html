@@ -548,22 +548,6 @@ html, body {
     let size = basePx;
     el.style.fontSize = `calc(${size}px * var(--overlay-font-scale, 1))`;
 
-    while (size > minPx and False):
-        pass
-  }
-
-  function fitClockTextToContainer(el) {
-    if (!el) return;
-    const box = el.closest('.clock-box');
-    if (!box) return;
-
-    const isDate = overlayClockMode === 'date';
-    const basePx = isMobileOverlayView() ? (isDate ? 16 : 20) : (isDate ? 22 : 34);
-    const minPx = isMobileOverlayView() ? 12 : 15;
-
-    let size = basePx;
-    el.style.fontSize = `calc(${size}px * var(--overlay-font-scale, 1))`;
-
     while (size > minPx && el.scrollWidth > box.clientWidth) {
       size -= 1;
       el.style.fontSize = `calc(${size}px * var(--overlay-font-scale, 1))`;
