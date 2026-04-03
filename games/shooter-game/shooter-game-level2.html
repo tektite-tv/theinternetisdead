@@ -2370,22 +2370,35 @@ let playerFacing = -1; // -1 = facing left/default, 1 = facing right
 let playerTurnT = 1;   // 0..1 progress through the current turn
 const PLAYER_TURN_DUR = 0.16;
 
-// v2.05: directional ghost trail that spawns behind the player and pulls inward.
+// v2.06: full-direction ghost trail. Up/down trail now works, and diagonal movement bends/warps.
 const playerGhosts = [];
 let playerGhostSpawnT = 0;
 const PLAYER_GHOST_MAX = 3;
-const PLAYER_GHOST_SPAWN_EVERY = 0.045;
-const PLAYER_GHOST_TTL = 0.20;
+const PLAYER_GHOST_SPAWN_EVERY = 0.040;
+const PLAYER_GHOST_TTL = 0.22;
 
-function spawnPlayerGhost(moveDir){
-  if (!moveDir) return;
+function spawnPlayerGhost(moveVX, moveVY){
+  const mag = Math.hypot(moveVX || 0, moveVY || 0);
+  if (mag < 0.08) return;
+
+  const nx = moveVX / mag;
+  const ny = moveVY / mag;
+  const diagonal = Math.abs(nx) > 0.2 && Math.abs(ny) > 0.2;
+  const behindDist = rand(player.w * 0.85, player.w * 1.45);
+  const sideWarp = diagonal ? rand(-player.w * 0.28, player.w * 0.28) : rand(-player.w * 0.08, player.w * 0.08);
+  const bend = diagonal ? rand(-1, 1) : 0;
+
   playerGhosts.push({
-    xOff: -moveDir * rand(player.w * 0.80, player.w * 1.20),
-    yOff: rand(-player.h * 0.08, player.h * 0.08),
+    xOff: (-nx * behindDist) + (-ny * sideWarp),
+    yOff: (-ny * behindDist) + ( nx * sideWarp),
+    vxPull: nx,
+    vyPull: ny,
+    bend,
+    bendAmp: diagonal ? rand(player.w * 0.12, player.w * 0.24) : rand(player.w * 0.02, player.w * 0.06),
     ttl: PLAYER_GHOST_TTL,
     life: PLAYER_GHOST_TTL,
-    scaleY: rand(0.96, 1.04),
-    widthScale: rand(0.80, 0.96)
+    scaleY: diagonal ? rand(0.86, 1.12) : rand(0.94, 1.06),
+    widthScale: diagonal ? rand(0.66, 0.94) : rand(0.78, 0.96)
   });
   while (playerGhosts.length > PLAYER_GHOST_MAX) playerGhosts.shift();
 }
@@ -2394,9 +2407,19 @@ function updatePlayerGhosts(dt){
   for (let i = playerGhosts.length - 1; i >= 0; i--){
     const g = playerGhosts[i];
     g.life -= dt;
-    g.xOff *= Math.max(0, 1 - dt * 9.5);
-    g.yOff *= Math.max(0, 1 - dt * 7.0);
+    const t = Math.max(0, g.life / g.ttl);
+    const pull = Math.min(1, dt * 10.5);
+    const bendPhase = (1 - t) * Math.PI;
+    const perpX = -g.vyPull;
+    const perpY =  g.vxPull;
+    const warp = Math.sin(bendPhase) * g.bendAmp * g.bend;
+
+    g.xOff += (0 - g.xOff) * pull;
+    g.yOff += (0 - g.yOff) * pull;
+    g.xOff += perpX * warp * dt * 5.5;
+    g.yOff += perpY * warp * dt * 5.5;
     g.widthScale += (1 - g.widthScale) * Math.min(1, dt * 7.5);
+    g.scaleY += (1 - g.scaleY) * Math.min(1, dt * 6.5);
     if (g.life <= 0) playerGhosts.splice(i, 1);
   }
 }
@@ -3516,22 +3539,23 @@ function update(dt){
     playerTurnT = Math.min(1, playerTurnT + dt / PLAYER_TURN_DUR);
   }
 
+  const moveSpeedMul = (gpSpeedBoostHeld ? 1.75 : 1.0);
+  let moveY = 0;
+  if (keys["w"] || keys["arrowup"]) moveY -= 1;
+  if (keys["s"] || keys["arrowdown"]) moveY += 1;
+  const moveLen = Math.hypot(moveX, moveY) || 1;
+
   updatePlayerGhosts(dt);
-  if (Math.abs(moveX) > 0.08){
+  if (Math.abs(moveX) > 0.08 || Math.abs(moveY) > 0.08){
     playerGhostSpawnT -= dt;
     if (playerGhostSpawnT <= 0){
-      spawnPlayerGhost(Math.sign(moveX));
+      spawnPlayerGhost(moveX / moveLen, moveY / moveLen);
       playerGhostSpawnT = PLAYER_GHOST_SPAWN_EVERY;
     }
   } else {
     playerGhostSpawnT = 0;
   }
 
-  const moveSpeedMul = (gpSpeedBoostHeld ? 1.75 : 1.0);
-  let moveY = 0;
-  if (keys["w"] || keys["arrowup"]) moveY -= 1;
-  if (keys["s"] || keys["arrowdown"]) moveY += 1;
-  const moveLen = Math.hypot(moveX, moveY) || 1;
   moveMazePlayer((moveX / moveLen) * moveSpeedMul * dt, (moveY / moveLen) * moveSpeedMul * dt);
 
   // Player remains fixed visually in the center while the maze scrolls underneath.
