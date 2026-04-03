@@ -518,7 +518,7 @@ body.invert-colors {
   Changed: Core loop converted from bottom-row shooter into center-locked procedural maze traversal.
   Kept: Player movement, aiming, shooting, bullet logic, timer, lives, health, and enemy damage systems.
   Disabled: Regular enemy wave spawning for now while maze progression is prototyped.
-  Renamed: Boss Mode -> Bonus Mode.
+  Renamed: Bonus Mode -> Bonus Mode.
 
 
 - 2025-12-24 | v1.96
@@ -1971,22 +1971,17 @@ function updateStarfield(dt, keys, playerSpeed){
 }
 
 function drawStarfield(){
-  // v1.96: Stage 2+ visual shift (wave >= 11)
-  const isStage2Plus = (gameState === STATE.PLAYING && wave >= 11);
-
-  // Background
-  ctx.fillStyle = (starfieldBgOverride ? starfieldBgOverride : (isStage2Plus ? "#300" : "#000"));
+  // v2.01: Maze mode uses a plain black void instead of the old starfield.
+  ctx.fillStyle = '#000';
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
+  if (gameState === STATE.PLAYING) return;
   if (!starfieldReady) return;
 
   for (let li = 0; li < starLayers.length; li++){
     const arr = stars[li];
-    const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
-
-    // v1.96: Keep stars white for maximum contrast (even in Stage 2+)
+    const alpha = li === 0 ? 0.20 : (li === 1 ? 0.32 : 0.48);
     ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-
     for (const st of arr){
       ctx.fillRect(st.x, st.y, st.s, st.s);
     }
@@ -2673,19 +2668,29 @@ let mazeExitPulse = 0;
 function getMazeSpecForWave(w){
   const clamped = Math.max(1, Math.min(21, w|0));
   const tier = Math.max(1, Math.min(10, clamped));
-  let cols = 8 + tier * 2;
-  let rows = 6 + tier * 2;
+
+  // v2.01: Larger, roomier mazes.
+  // We keep the tile count fairly broad so the world feels expansive,
+  // but use a bigger tile size so each corridor has more visual presence.
+  let cols = 17 + tier * 4;
+  let rows = 13 + tier * 3;
+  let cellSize = Math.max(34, Math.min(54, Math.floor(Math.min(canvas.width / 12, canvas.height / 8))));
+  let revealRadiusTiles = Math.max(3.9, 5.8 - tier * 0.22);
+
   if (clamped === 11){
-    cols = 30; rows = 22;
+    cols = 57; rows = 41; cellSize = Math.max(36, cellSize + 2); revealRadiusTiles = 4.1;
   } else if (clamped > 11){
     const insanityTier = clamped - 11;
-    cols = 18 + insanityTier * 2;
-    rows = 14 + insanityTier * 2;
+    cols = 33 + insanityTier * 4;
+    rows = 25 + insanityTier * 3;
+    cellSize = Math.max(34, cellSize);
+    revealRadiusTiles = Math.max(3.5, 4.6 - insanityTier * 0.12);
   }
+
   if (cols % 2 === 0) cols += 1;
   if (rows % 2 === 0) rows += 1;
-  const cellSize = Math.max(22, Math.min(42, Math.floor(Math.min(canvas.width / Math.max(8, cols), canvas.height / Math.max(6, rows)))));
-  return { cols, rows, cellSize };
+
+  return { cols, rows, cellSize, revealRadiusTiles };
 }
 
 function carveMazeGrid(cols, rows){
@@ -2740,13 +2745,21 @@ function openMazeLoops(grid, loops){
 function makeMazeForWave(w){
   const spec = getMazeSpecForWave(w);
   const grid = carveMazeGrid(spec.cols, spec.rows);
-  const loopCount = Math.max(0, Math.floor((Math.min(10, Math.max(1, w)) - 1) * 1.5));
+  const loopCount = Math.max(3, Math.floor((Math.min(10, Math.max(1, w)) - 1) * 2.2));
   openMazeLoops(grid, loopCount);
   const startCell = { x: 1, y: 1 };
   const exitCell = { x: spec.cols - 2, y: spec.rows - 2 };
   grid[startCell.y][startCell.x] = 0;
   grid[exitCell.y][exitCell.x] = 0;
-  return { ...spec, grid, startCell, exitCell, wallColor: w === 11 ? 'rgba(0,255,102,0.32)' : 'rgba(0,255,102,0.22)' };
+  return {
+    ...spec,
+    grid,
+    startCell,
+    exitCell,
+    wallColor: w === 11 ? 'rgba(0,255,102,0.30)' : 'rgba(0,255,102,0.18)',
+    floorColor: 'rgba(255,255,255,0.022)',
+    gridLineColor: 'rgba(255,255,255,0.028)'
+  };
 }
 
 function resetMazeForWave(w){
@@ -2803,6 +2816,8 @@ function drawMaze(){
   if (!(gameState === STATE.PLAYING && maze)) return;
   const camX = playerWorldX - canvas.width / 2;
   const camY = playerWorldY - canvas.height / 2;
+  const currentCol = Math.max(0, Math.min(maze.cols - 1, Math.floor(playerWorldX / maze.cellSize)));
+  const currentRow = Math.max(0, Math.min(maze.rows - 1, Math.floor(playerWorldY / maze.cellSize)));
   ctx.save();
 
   for (let r = 0; r < maze.rows; r++){
@@ -2811,28 +2826,59 @@ function drawMaze(){
       const sy = r * maze.cellSize - camY;
       if (sx > canvas.width || sy > canvas.height || sx + maze.cellSize < 0 || sy + maze.cellSize < 0) continue;
 
-      if (maze.grid[r][c] === 1){
+      const isCurrentTile = (r === currentRow && c === currentCol);
+      const isExitTile = (r === maze.exitCell.y && c === maze.exitCell.x);
+      const isWall = maze.grid[r][c] === 1;
+
+      if (!isWall){
+        ctx.fillStyle = isCurrentTile ? 'rgba(140,255,170,0.20)' : maze.floorColor;
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = isCurrentTile ? 'rgba(180,255,200,0.42)' : maze.gridLineColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, maze.cellSize - 1, maze.cellSize - 1);
+        if (isCurrentTile){
+          ctx.fillStyle = 'rgba(180,255,200,0.08)';
+          ctx.fillRect(sx + 4, sy + 4, maze.cellSize - 8, maze.cellSize - 8);
+        }
+      } else {
         ctx.fillStyle = maze.wallColor;
         ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
-        ctx.strokeStyle = 'rgba(0,255,102,0.10)';
+        ctx.strokeStyle = 'rgba(0,255,102,0.08)';
+        ctx.lineWidth = 1;
         ctx.strokeRect(sx + 0.5, sy + 0.5, maze.cellSize - 1, maze.cellSize - 1);
-      } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      }
+
+      if (isExitTile){
+        mazeExitPulse += 0.05;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,215,0,0.18)';
         ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = `rgba(255,215,0,${0.48 + 0.28 * Math.sin(mazeExitPulse)})`;
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(sx + 3, sy + 3, maze.cellSize - 6, maze.cellSize - 6);
+        ctx.restore();
       }
     }
   }
 
-  mazeExitPulse += 0.05;
-  const ex = maze.exitCell.x * maze.cellSize - camX;
-  const ey = maze.exitCell.y * maze.cellSize - camY;
-  ctx.save();
-  ctx.fillStyle = 'rgba(255,215,0,0.22)';
-  ctx.fillRect(ex, ey, maze.cellSize, maze.cellSize);
-  ctx.strokeStyle = `rgba(255,215,0,${0.55 + 0.35 * Math.sin(mazeExitPulse)})`;
-  ctx.lineWidth = 3;
-  ctx.strokeRect(ex + 2, ey + 2, maze.cellSize - 4, maze.cellSize - 4);
-  ctx.restore();
+  // Soft spotlight / haze mask so only a circular region around the player is visible.
+  const revealRadius = maze.cellSize * (maze.revealRadiusTiles || 4.5);
+  const outerRadius = revealRadius * 1.65;
+  const fog = ctx.createRadialGradient(player.x, player.y, revealRadius * 0.48, player.x, player.y, outerRadius);
+  fog.addColorStop(0, 'rgba(0,0,0,0.00)');
+  fog.addColorStop(0.42, 'rgba(0,0,0,0.10)');
+  fog.addColorStop(0.72, 'rgba(0,0,0,0.56)');
+  fog.addColorStop(1, 'rgba(0,0,0,0.96)');
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // A faint inner haze ring to make the spotlight feel softer and less geometric.
+  const glow = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, revealRadius * 1.05);
+  glow.addColorStop(0, 'rgba(255,255,255,0.025)');
+  glow.addColorStop(0.5, 'rgba(255,255,255,0.010)');
+  glow.addColorStop(1, 'rgba(255,255,255,0.00)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.restore();
 }
@@ -4131,7 +4177,7 @@ if (isDragonEnemy(e)){
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
-    `Maze: ${maze ? (maze.cols + "x" + maze.rows) : "none"}${mazeCompleted ? " | EXIT" : ""}<br>` +
+    `Maze: ${maze ? (maze.cols + "x" + maze.rows + " @ " + maze.cellSize + "px") : "none"}${mazeCompleted ? " | EXIT" : ""}<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
     `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
