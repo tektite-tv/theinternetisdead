@@ -2373,9 +2373,9 @@ const PLAYER_TURN_DUR = 0.16;
 // v2.06: full-direction ghost trail. Up/down trail now works, and diagonal movement bends/warps.
 const playerGhosts = [];
 let playerGhostSpawnT = 0;
-const PLAYER_GHOST_MAX = 3;
-const PLAYER_GHOST_SPAWN_EVERY = 0.040;
-const PLAYER_GHOST_TTL = 0.22;
+const PLAYER_GHOST_MAX = 2;
+const PLAYER_GHOST_SPAWN_EVERY = 0.072;
+const PLAYER_GHOST_TTL = 0.18;
 
 function spawnPlayerGhost(moveVX, moveVY){
   const mag = Math.hypot(moveVX || 0, moveVY || 0);
@@ -2384,9 +2384,9 @@ function spawnPlayerGhost(moveVX, moveVY){
   const nx = moveVX / mag;
   const ny = moveVY / mag;
   const diagonal = Math.abs(nx) > 0.2 && Math.abs(ny) > 0.2;
-  const behindDist = rand(player.w * 0.85, player.w * 1.45);
-  const sideWarp = diagonal ? rand(-player.w * 0.28, player.w * 0.28) : rand(-player.w * 0.08, player.w * 0.08);
-  const bend = diagonal ? rand(-1, 1) : 0;
+  const behindDist = rand(player.w * 0.62, player.w * 1.02);
+  const sideWarp = diagonal ? rand(-player.w * 0.14, player.w * 0.14) : rand(-player.w * 0.04, player.w * 0.04);
+  const bend = diagonal ? rand(-0.55, 0.55) : 0;
 
   playerGhosts.push({
     xOff: (-nx * behindDist) + (-ny * sideWarp),
@@ -2394,11 +2394,11 @@ function spawnPlayerGhost(moveVX, moveVY){
     vxPull: nx,
     vyPull: ny,
     bend,
-    bendAmp: diagonal ? rand(player.w * 0.12, player.w * 0.24) : rand(player.w * 0.02, player.w * 0.06),
+    bendAmp: diagonal ? rand(player.w * 0.05, player.w * 0.11) : rand(player.w * 0.01, player.w * 0.03),
     ttl: PLAYER_GHOST_TTL,
     life: PLAYER_GHOST_TTL,
-    scaleY: diagonal ? rand(0.86, 1.12) : rand(0.94, 1.06),
-    widthScale: diagonal ? rand(0.66, 0.94) : rand(0.78, 0.96)
+    scaleY: diagonal ? rand(0.94, 1.06) : rand(0.97, 1.03),
+    widthScale: diagonal ? rand(0.82, 0.96) : rand(0.88, 0.97)
   });
   while (playerGhosts.length > PLAYER_GHOST_MAX) playerGhosts.shift();
 }
@@ -2408,7 +2408,7 @@ function updatePlayerGhosts(dt){
     const g = playerGhosts[i];
     g.life -= dt;
     const t = Math.max(0, g.life / g.ttl);
-    const pull = Math.min(1, dt * 10.5);
+    const pull = Math.min(1, dt * 8.0);
     const bendPhase = (1 - t) * Math.PI;
     const perpX = -g.vyPull;
     const perpY =  g.vxPull;
@@ -2416,10 +2416,10 @@ function updatePlayerGhosts(dt){
 
     g.xOff += (0 - g.xOff) * pull;
     g.yOff += (0 - g.yOff) * pull;
-    g.xOff += perpX * warp * dt * 5.5;
-    g.yOff += perpY * warp * dt * 5.5;
-    g.widthScale += (1 - g.widthScale) * Math.min(1, dt * 7.5);
-    g.scaleY += (1 - g.scaleY) * Math.min(1, dt * 6.5);
+    g.xOff += perpX * warp * dt * 2.0;
+    g.yOff += perpY * warp * dt * 2.0;
+    g.widthScale += (1 - g.widthScale) * Math.min(1, dt * 4.2);
+    g.scaleY += (1 - g.scaleY) * Math.min(1, dt * 4.0);
     if (g.life <= 0) playerGhosts.splice(i, 1);
   }
 }
@@ -4178,7 +4178,7 @@ function draw(){
     if (!playerGhosts.length) return;
     for (const g of playerGhosts){
       const t = Math.max(0, g.life / g.ttl);
-      drawPlayerSprite(0.20 * t, g.xOff, g.yOff, g.widthScale, g.scaleY);
+      drawPlayerSprite(0.12 * t, g.xOff, g.yOff, g.widthScale, g.scaleY);
     }
   }
 
