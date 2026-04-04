@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tektite's Explorer</title>
+
+<style>
+html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    overflow:hidden;
+    background:#111;
+    font-family:"Courier New", monospace;
+}
+
+:root{
+    --overlay-height:60px;
+}
+
+#app-shell{
+    position:relative;
+    width:100%;
+    height:100%;
+}
+
+#overlay-container{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    min-height:60px;
+    border:none;
+    overflow:visible;
+    z-index:1000;
+}
+
+#scaled-content-shell{
+    position:absolute;
+    top:var(--overlay-height);
+    left:0;
+    width:125%;
+    height:calc((100vh - var(--overlay-height)) * 1.25);
+    transform:scale(0.8);
+    transform-origin:top left;
+}
+
+#explorer-mode-bar{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:56px;
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 16px;
+    background:rgba(102, 0, 204, 0.5);
+    border:none;
+    z-index:900;
+}
+
+#explorer-mode-select{
+    background:#1a1a1a;
+    color:#fff;
+    border:1px solid rgba(255,255,255,0.25);
+    padding:8px 12px;
+    font-family:"Courier New", monospace;
+    font-size:14px;
+    outline:none;
+}
+
+#frame-container{
+    position:absolute;
+    top:56px;
+    left:0;
+    width:100%;
+    height:calc(100% - 56px);
+}
+
+.mode-frame{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    border:none;
+    display:none;
+}
+
+.mode-frame.active{
+    display:block;
+}
+
+/* Stats panel */
+
+#nerd-stats{
+    position:fixed;
+    bottom:10px;
+    right:10px;
+    width:280px;
+    background:black;
+    color:lime;
+    font-size:12px;
+    padding:10px;
+    border:2px solid lime;
+    display:none;
+    z-index:999999;
+}
+</style>
+</head>
+
+<body>
+<div id="app-shell">
+
+    <div id="overlay-container"></div>
+
+    <div id="scaled-content-shell">
+        <div id="explorer-mode-bar">
+            <select id="explorer-mode-select" aria-label="Select File Explorer Mode">
+                <option value="file-browser" selected>File Browser</option>
+                <option value="music-player">Music Player</option>
+            </select>
+        </div>
+
+        <div id="frame-container">
+            <iframe
+                id="file-browser-frame"
+                class="mode-frame active"
+                src="/file-browser.html"
+                loading="lazy"
+                title="File Browser"
+            ></iframe>
+
+            <iframe
+                id="music-player-frame"
+                class="mode-frame"
+                src="/music-player.html"
+                loading="lazy"
+                title="Music Player"
+            ></iframe>
+        </div>
+    </div>
+
+    <div id="nerd-stats"></div>
+
+</div>
+
+<script>
+function updateLayoutOffset(){
+    const overlay = document.getElementById("overlay-container");
+    const h = Math.ceil(overlay.getBoundingClientRect().height || 60);
+    document.documentElement.style.setProperty("--overlay-height", h + "px");
+}
+
+/* load overlay */
+fetch("overlay.html")
+.then(res => res.text())
+.then(html => {
+    const overlay = document.getElementById("overlay-container");
+    overlay.innerHTML = html;
+
+    requestAnimationFrame(() => {
+        updateLayoutOffset();
+        requestAnimationFrame(updateLayoutOffset);
+    });
+
+    window.addEventListener("resize", updateLayoutOffset);
+
+    if(window.ResizeObserver){
+        const ro = new ResizeObserver(updateLayoutOffset);
+        ro.observe(overlay);
+    }
+});
+
+function toggleSidebar(){
+    const sidebar = document.getElementById("sidebar");
+    if(sidebar){
+        sidebar.classList.toggle("open");
+    }
+}
+
+/* listen for overlay messages */
+window.addEventListener("message", e => {
+    if(e.data && e.data.type === "openStats"){
+        toggleStatsPanel();
+    }
+});
+
+/* explorer mode switching */
+const explorerModeSelect = document.getElementById("explorer-mode-select");
+const fileBrowserFrame = document.getElementById("file-browser-frame");
+const musicPlayerFrame = document.getElementById("music-player-frame");
+
+function setExplorerMode(mode){
+    if(mode === "music-player"){
+        fileBrowserFrame.classList.remove("active");
+        musicPlayerFrame.classList.add("active");
+        explorerModeSelect.value = "music-player";
+        return;
+    }
+
+    fileBrowserFrame.classList.add("active");
+    musicPlayerFrame.classList.remove("active");
+    explorerModeSelect.value = "file-browser";
+}
+
+explorerModeSelect.addEventListener("change", e => {
+    setExplorerMode(e.target.value);
+});
+
+setExplorerMode("file-browser");
+
+/* stats panel */
+function toggleStatsPanel(){
+    const panel = document.getElementById("nerd-stats");
+
+    if(panel.style.display === "block"){
+        panel.style.display = "none";
+        return;
+    }
+
+    panel.style.display = "block";
+    updateStats();
+}
+
+function updateStats(){
+    const panel = document.getElementById("nerd-stats");
+
+    const domNodes = document.querySelectorAll("*").length;
+    const resources = performance.getEntriesByType("resource").length;
+
+    let memory = "N/A";
+    if(performance.memory){
+        memory = Math.round(performance.memory.usedJSHeapSize / 1048576) + " MB";
+    }
+
+    const runtime = Math.round(performance.now());
+
+    panel.innerHTML = `
+<b>Stats for Nerds</b><br><br>
+DOM Nodes: ${domNodes}<br>
+Resources Loaded: ${resources}<br>
+Heap Memory: ${memory}<br>
+Page Runtime: ${runtime} ms
+`;
+}
+</script>
+
+</body>
+</html>
