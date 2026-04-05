@@ -1398,6 +1398,7 @@ const focusSink = document.getElementById('focusSink');
     let dvdOverclockAliasIntervalId = null;
     let dvdOverclockAliasLine = null;
     let dvdUploadMode = 'dvd_image';
+    let dvdCommandAttemptCount = 0;
     const dvdOverclockNicknamePool = ['User', 'Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
     function getDvdActiveCap() {
       return dvdOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances;
@@ -1874,10 +1875,7 @@ const focusSink = document.getElementById('focusSink');
     }
 
     function getDvdCommandAttemptCount() {
-      const line = Array.from(messages.querySelectorAll('.message[data-role="system"]')).find((messageLine) => {
-        return getSystemBaseText(messageLine.dataset.rawContent || '').startsWith('/dvd executed by ');
-      });
-      return Number(line?.dataset.repeatCount || '0');
+      return Number(dvdCommandAttemptCount || 0);
     }
 
     function getDvdUploadCapRemaining() {
@@ -4449,6 +4447,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       cleanupDvdCustomObjectUrls();
       dvdSourcePool = [...dvdDefaultSources];
       dvdUploadMode = 'dvd_image';
+      dvdCommandAttemptCount = 0;
     }
 
     function addSpawnedDvdSources(sources) {
@@ -4546,8 +4545,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       if (command === '/dvd') {
         const currentAttempts = getDvdCommandAttemptCount();
-        if (currentAttempts >= 12 && !dvdOverclockMode) {
-          const overclockLine = addSystemMessage('/dvd command overclocked by User', { overclockAlias: true });
+        const nextAttempt = currentAttempts + 1;
+        dvdCommandAttemptCount = nextAttempt;
+
+        if (nextAttempt >= 13 && !dvdOverclockMode) {
+          const overclockLine = addSystemMessage('/dvd command overclocked by User', { overclockAlias: true, repeatLabel: 'INFINITE' });
           if (overclockLine) {
             overclockLine.dataset.repeatLabel = 'INFINITE';
             const messageText = overclockLine.querySelector('.messageText');
@@ -4555,11 +4557,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
               appendStyledSystemText(messageText, '/dvd command overclocked by User', 1, 'INFINITE');
             }
           }
-          const executionLine = addSystemMessage(formatCommandExecutionMessage('/dvd'), { repeatCount: 13, repeatLabel: 'INFINITE' });
+          const executionLine = addSystemMessage(formatCommandExecutionMessage('/dvd'), { repeatCount: dvdNormalMaxInstances, repeatLabel: 'INFINITE' });
           if (executionLine) {
             const messageText = executionLine.querySelector('.messageText');
             if (messageText) {
-              appendStyledSystemText(messageText, formatCommandExecutionMessage('/dvd'), 13, 'INFINITE');
+              appendStyledSystemText(messageText, formatCommandExecutionMessage('/dvd'), dvdNormalMaxInstances, 'INFINITE');
             }
           }
           startDvdOverclockMode();
@@ -4570,19 +4572,22 @@ function createHomepageCustomizeMessageNode(result = {}) {
           return true;
         }
 
-        if (currentAttempts === 11) {
-          addSystemMessage("Really, you don't want to see what happens if you spawn more than 10 of those... Fine, send it one more time, see what happens smartass.");
+        if (dvdOverclockMode) {
           return true;
         }
 
-        if (currentAttempts === 10) {
-          addSystemMessage('Why would you want more than 10 of those?');
+        if (nextAttempt === 12) {
+          addSystemMessage("Really, you don't want to see what happens if you spawn more than 10 of those... Fine, send it one more time, see what happens smartass.", { repeatCount: 1 });
           return true;
         }
 
-        const spawned = spawnDvdInstance();
-        const nextCount = currentAttempts + 1;
-        addSystemMessage(formatCommandExecutionMessage('/dvd'), { repeatCount: nextCount, repeatLabel: nextCount >= dvdNormalMaxInstances ? 'MAX' : '' });
+        if (nextAttempt === 11) {
+          addSystemMessage('Why would you want more than 10 of those?', { repeatCount: 1 });
+          return true;
+        }
+
+        spawnDvdInstance();
+        addSystemMessage(formatCommandExecutionMessage('/dvd'), { repeatCount: nextAttempt, repeatLabel: nextAttempt >= dvdNormalMaxInstances ? 'MAX' : '' });
         return true;
       }
 
