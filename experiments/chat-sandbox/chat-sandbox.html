@@ -4089,12 +4089,19 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return true;
     }
 
-    function setDvdEnabled(enabled) {
-      if (enabled) {
-        return startDvdAnimation();
+    function notifyParentDvdState() {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'chatSandboxDvdState',
+          active: !!dvdEnabled
+        }, '*');
       }
-      stopDvdAnimation();
-      return false;
+    }
+
+    function setDvdEnabled(enabled) {
+      const isEnabled = enabled ? startDvdAnimation() : (stopDvdAnimation(), false);
+      notifyParentDvdState();
+      return isEnabled;
     }
 
     async function handleCommand(raw) {
