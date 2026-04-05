@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tektite Drive Explorer Minimal</title>
+  <style>
+    :root {
+      --bg: #120018;
+      --bg2: #1a0025;
+      --panel: #1b0027;
+      --line: #00ff00;
+      --text: #00ff00;
+      --text-dim: #8cff8c;
+      --text-soft: #58c758;
+      --shadow: 0 0 0 1px rgba(0,255,0,0.28), 0 0 18px rgba(0,255,0,0.08);
+      --font-main: "Consolas", "Lucida Console", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: linear-gradient(180deg, #1d002a 0px, #14001d 120px, #120018 100%);
+      color: var(--text);
+      font-family: var(--font-main);
+      overflow: hidden;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    #app-scale-shell {
+      width: 125%;
+      height: 125%;
+      transform: scale(0.8);
+      transform-origin: top left;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button, input[type="text"] {
+      background: #000;
+      color: var(--text);
+      border: 2px solid var(--line);
+    }
+
+    button {
+      cursor: pointer;
+      padding: 10px 14px;
+      transition: background 0.15s ease, transform 0.08s ease;
+    }
+
+    button:hover { background: #0d0d0d; }
+    button:active { transform: translateY(1px); }
+    button.small { padding: 8px 12px; min-width: 44px; }
+    button.active { background: var(--line); color: #000; font-weight: bold; }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    input[type="text"]::placeholder { color: var(--text-soft); }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: auto auto auto auto auto 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 18px;
+      background: rgba(26, 0, 38, 0.96);
+      border-bottom: 1px solid rgba(0,255,0,0.2);
+    }
+
+    .pathbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+      padding: 10px 18px;
+      background: rgba(15, 0, 22, 0.92);
+      border-bottom: 1px solid rgba(0,255,0,0.15);
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    .pathtext {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status {
+      white-space: nowrap;
+      color: var(--text-soft);
+    }
+
+    .main {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px;
+    }
+
+    .empty {
+      padding: 28px;
+      color: var(--text-soft);
+      text-align: center;
+      border: 2px dashed rgba(0,255,0,0.25);
+      background: rgba(0,0,0,0.3);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+    }
+
+    .file-card {
+      background: rgba(0,0,0,0.68);
+      border: 2px solid rgba(0,255,0,0.28);
+      box-shadow: var(--shadow);
+      min-height: 148px;
+      display: grid;
+      grid-template-rows: 104px auto auto;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .file-card:hover {
+      border-color: var(--line);
+      background: rgba(0,255,0,0.05);
+    }
+
+    .thumb {
+      display: grid;
+      place-items: center;
+      font-size: 40px;
+      background: linear-gradient(135deg, rgba(0,255,0,0.06), rgba(0,255,0,0.01)), #050505;
+      border-bottom: 1px solid rgba(0,255,0,0.18);
+      overflow: hidden;
+    }
+
+    .thumb img, .thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .file-name {
+      padding: 10px 12px 6px;
+      word-break: break-word;
+      line-height: 1.25;
+    }
+
+    .file-meta {
+      padding: 0 12px 12px;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .list-row {
+      display: grid;
+      grid-template-columns: 44px minmax(0,1.6fr) 120px 150px minmax(0,1fr);
+      gap: 12px;
+      align-items: center;
+      background: rgba(0,0,0,0.68);
+      border: 1px solid rgba(0,255,0,0.24);
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    .list-row:hover {
+      border-color: var(--line);
+      background: rgba(0,255,0,0.05);
+    }
+
+    .list-head {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #130018;
+      border-color: rgba(0,255,0,0.35);
+      font-weight: bold;
+      color: var(--text);
+      cursor: default;
+    }
+
+    .list-row > div {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(3px);
+    }
+
+    .modal.open { display: flex; }
+
+    .modal-card {
+      width: min(960px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      background: rgba(12,0,18,0.98);
+      border: 2px solid var(--line);
+      box-shadow: 0 0 0 1px var(--line), 0 0 28px rgba(0,255,0,0.12);
+      padding: 16px;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .modal-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: bold;
+    }
+
+    .preview-box {
+      min-height: 260px;
+      border: 1px solid rgba(0,255,0,0.24);
+      background: #000;
+      display: grid;
+      place-items: center;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    .preview-box img,
+    .preview-box video {
+      width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .preview-box audio {
+      width: min(720px, 100%);
+      margin: 24px;
+    }
+
+    .preview-text {
+      margin: 0;
+      width: 100%;
+      padding: 16px;
+      color: var(--text-dim);
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: auto;
+    }
+
+    .meta {
+      color: var(--text-dim);
+      white-space: pre-wrap;
+      line-height: 1.45;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .actions a {
+      color: var(--text);
+      text-decoration: none;
+      border: 1px solid rgba(0,255,0,0.35);
+      background: #000;
+      padding: 8px 10px;
+      display: inline-block;
+    }
+
+    .actions a:hover { border-color: var(--line); }
+
+    .hidden-input { display: none; }
+
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+      background: #100014;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #1f4f1f;
+      border: 2px solid #100014;
+    }
+
+    @media (max-width: 980px) {
+      .toolbar {
+        grid-template-columns: auto auto auto auto auto;
+      }
+      #searchInput {
+        grid-column: 1 / -1;
+      }
+      .list-row {
+        grid-template-columns: 40px minmax(0,1fr) 110px 140px;
+      }
+      .list-row > div:last-child { display: none; }
+    }
+
+    @media (max-width: 700px) {
+      .toolbar {
+        grid-template-columns: repeat(5, auto);
+      }
+      .pathbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      }
+      .list-row {
+        grid-template-columns: 34px minmax(0,1fr) 90px;
+      }
+      .list-row > div:nth-child(4),
+      .list-row > div:nth-child(5) { display: none; }
+      .main {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app-scale-shell">
+  <section class="toolbar">
+    <button id="openBtn">OPEN FOLDER</button>
+    <button id="upBtn" class="small">↑</button>
+    <button id="refreshBtn" class="small">⟳</button>
+    <button id="gridBtn" class="active">GRID</button>
+    <button id="listBtn">LIST</button>
+    <input id="searchInput" type="text" placeholder="Search files..." />
+  </section>
+
+  <section class="pathbar">
+    <div class="pathtext" id="pathBox">No folder opened yet.</div>
+    <div class="status" id="statusText">Ready.</div>
+  </section>
+
+  <main class="main" id="fileview">
+    <div class="empty">Open a folder to begin. Revolutionary concept, I know.</div>
+  </main>
+
+  <div class="modal" id="previewModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title" id="modalTitle">Preview</div>
+        <button id="closePreviewBtn" class="small">✕</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <input class="hidden-input" id="fallbackPicker" type="file" webkitdirectory multiple />
+
+  <script>
+    const AUDIO_EXTS = ["mp3","wav","ogg","flac","m4a","aac","opus"];
+    const IMAGE_EXTS = ["png","jpg","jpeg","gif","webp","bmp","svg","avif"];
+    const VIDEO_EXTS = ["mp4","webm","mov","mkv","avi"];
+    const TEXT_EXTS = ["txt","md","json","js","html","css","py","xml","csv","log"];
+
+    const state = {
+      rootHandle: null,
+      rootName: "",
+      currentFolderPath: "",
+      view: "grid",
+      search: "",
+      fallbackMode: false,
+      fallbackFiles: [],
+      folderMap: new Map(),
+      objectUrls: new Map()
+    };
+
+    const el = {
+      openBtn: document.getElementById("openBtn"),
+      upBtn: document.getElementById("upBtn"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      gridBtn: document.getElementById("gridBtn"),
+      listBtn: document.getElementById("listBtn"),
+      searchInput: document.getElementById("searchInput"),
+      pathBox: document.getElementById("pathBox"),
+      statusText: document.getElementById("statusText"),
+      fileview: document.getElementById("fileview"),
+      fallbackPicker: document.getElementById("fallbackPicker"),
+      previewModal: document.getElementById("previewModal"),
+      modalTitle: document.getElementById("modalTitle"),
+      modalBody: document.getElementById("modalBody"),
+      closePreviewBtn: document.getElementById("closePreviewBtn")
+    };
+
+    function escapeHtml(str = "") {
+      return String(str).replace(/[&<>"']/g, m => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[m]));
+    }
+
+    function normalizePath(path) {
+      if (path == null) return "";
+      const s = String(path).replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+      return s === "." ? "" : s;
+    }
+
+    function splitPath(path) {
+      const p = normalizePath(path);
+      return p ? p.split("/") : [];
+    }
+
+    function joinPath(...parts) {
+      return parts.map(p => normalizePath(p)).filter(Boolean).join("/");
+    }
+
+    function getParentPath(path) {
+      const parts = splitPath(path);
+      parts.pop();
+      return parts.join("/");
+    }
+
+    function folderDisplayName(path) {
+      const p = normalizePath(path);
+      if (!p) return state.rootName || "ROOT";
+      const parts = p.split("/");
+      return parts[parts.length - 1];
+    }
+
+    function formatBytes(bytes = 0) {
+      if (!bytes && bytes !== 0) return "";
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      let i = 0;
+      let n = bytes;
+      while (n >= 1024 && i < units.length - 1) {
+        n /= 1024;
+        i++;
+      }
+      return `${n.toFixed(n >= 100 || i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+
+    function formatDate(d) {
+      if (!d) return "";
+      const date = d instanceof Date ? d : new Date(d);
+      if (isNaN(date)) return "";
+      return date.toLocaleString();
+    }
+
+    function getExt(name = "") {
+      const i = name.lastIndexOf(".");
+      return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
+    }
+
+    function getKindIcon(item) {
+      if (item.kind === "directory") return "📁";
+      const ext = getExt(item.name);
+      if (IMAGE_EXTS.includes(ext)) return "🖼";
+      if (VIDEO_EXTS.includes(ext)) return "🎬";
+      if (AUDIO_EXTS.includes(ext)) return "🎵";
+      if (TEXT_EXTS.includes(ext)) return "📄";
+      if (["zip","7z","rar","tar","gz"].includes(ext)) return "🗜";
+      return "◼";
+    }
+
+    function getMimeFromExt(ext) {
+      const map = {
+        png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
+        webp: "image/webp", bmp: "image/bmp", svg: "image/svg+xml", avif: "image/avif",
+        mp4: "video/mp4", webm: "video/webm", mp3: "audio/mpeg", wav: "audio/wav",
+        ogg: "audio/ogg", flac: "audio/flac", m4a: "audio/mp4", aac: "audio/aac",
+        opus: "audio/ogg", txt: "text/plain", md: "text/markdown", html: "text/html",
+        css: "text/css", js: "text/javascript", json: "application/json", py: "text/plain",
+        csv: "text/csv", log: "text/plain"
+      };
+      return map[ext] || "application/octet-stream";
+    }
+
+    function compareItems(a, b) {
+      if (a.kind !== b.kind) return a.kind === "directory" ? -1 : 1;
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+    }
+
+    function clearObjectUrls() {
+      for (const url of state.objectUrls.values()) {
+        try { URL.revokeObjectURL(url); } catch {}
+      }
+      state.objectUrls.clear();
+    }
+
+    function makeFolderRecord(path, handle = null, parentPath = "") {
+      const normalized = normalizePath(path);
+      return {
+        kind: "directory",
+        path: normalized,
+        name: normalized ? folderDisplayName(normalized) : (state.rootName || "ROOT"),
+        parentPath: normalizePath(parentPath),
+        handle,
+        directories: [],
+        files: [],
+        loaded: false,
+        loading: false,
+        error: null
+      };
+    }
+
+    function getFolder(path) {
+      return state.folderMap.get(normalizePath(path)) || null;
+    }
+
+    function ensureFolderRecord(path, handle = null, parentPath = "") {
+      const normalized = normalizePath(path);
+      if (!state.folderMap.has(normalized)) {
+        state.folderMap.set(normalized, makeFolderRecord(normalized, handle, parentPath));
+      }
+      const folder = state.folderMap.get(normalized);
+      if (handle && !folder.handle) folder.handle = handle;
+      folder.name = normalized ? folderDisplayName(normalized) : (state.rootName || "ROOT");
+      return folder;
+    }
+
+    async function loadFolder(path) {
+      const normalized = normalizePath(path);
+      const folder = getFolder(normalized);
+      if (!folder) return null;
+      if (folder.loaded || folder.loading) return folder;
+      if (state.fallbackMode) return folder;
+      if (!folder.handle) return folder;
+
+      folder.loading = true;
+      folder.error = null;
+
+      try {
+        const directories = [];
+        const files = [];
+
+        for await (const [name, handle] of folder.handle.entries()) {
+          if (handle.kind === "directory") {
+            const childPath = joinPath(normalized, name);
+            ensureFolderRecord(childPath, handle, normalized);
+            directories.push({
+              kind: "directory",
+              name,
+              path: childPath,
+              parentPath: normalized,
+              handle
+            });
+          } else {
+            let file;
+            try {
+              file = await handle.getFile();
+            } catch {
+              continue;
+            }
+
+            files.push({
+              kind: "file",
+              name,
+              path: joinPath(normalized, name),
+              parentPath: normalized,
+              handle,
+              size: file.size,
+              lastModified: file.lastModified,
+              type: file.type || getMimeFromExt(getExt(name))
+            });
+          }
+        }
+
+        directories.sort(compareItems);
+        files.sort(compareItems);
+
+        folder.directories = directories;
+        folder.files = files;
+        folder.loaded = true;
+        folder.loading = false;
+        folder.error = null;
+        return folder;
+      } catch (err) {
+        console.error(err);
+        folder.loading = false;
+        folder.loaded = true;
+        folder.error = err?.message || "Could not open folder";
+        folder.directories = [];
+        folder.files = [];
+        return folder;
+      }
+    }
+
+    function buildFallbackStructure(fileList) {
+      clearObjectUrls();
+      state.folderMap.clear();
+      state.fallbackMode = true;
+      state.fallbackFiles = Array.from(fileList);
+      state.currentFolderPath = "";
+
+      const root = ensureFolderRecord("", null, "");
+      root.loaded = true;
+
+      for (const file of state.fallbackFiles) {
+        const rel = (file.webkitRelativePath || file.name).replace(/\\/g, "/");
+        const parts = rel.split("/");
+        const name = parts.pop();
+        const parentPath = normalizePath(parts.join("/"));
+
+        let acc = "";
+        for (const seg of parts) {
+          const current = acc;
+          const next = joinPath(acc, seg);
+
+          const parentFolder = ensureFolderRecord(current, null, getParentPath(current));
+          const nextFolder = ensureFolderRecord(next, null, current);
+          parentFolder.loaded = true;
+
+          if (!parentFolder.directories.find(d => d.path === next)) {
+            parentFolder.directories.push({
+              kind: "directory",
+              name: seg,
+              path: next,
+              parentPath: current,
+              handle: null
+            });
+          }
+
+          acc = next;
+          nextFolder.loaded = true;
+        }
+
+        const folder = ensureFolderRecord(parentPath, null, getParentPath(parentPath));
+        folder.loaded = true;
+
+        folder.files.push({
+          kind: "file",
+          name,
+          path: normalizePath(rel),
+          parentPath,
+          handle: null,
+          file,
+          size: file.size,
+          lastModified: file.lastModified,
+          type: file.type || getMimeFromExt(getExt(name))
+        });
+      }
+
+      for (const folder of state.folderMap.values()) {
+        folder.directories.sort(compareItems);
+        folder.files.sort(compareItems);
+      }
+
+      setStatus(`Loaded ${state.fallbackFiles.length} files.`);
+      renderAll();
+    }
+
+    async function getFileFromItem(item) {
+      try {
+        if (item.file) return item.file;
+        if (item.handle && item.kind === "file") return await item.handle.getFile();
+      } catch (err) {
+        console.error(err);
+      }
+      return null;
+    }
+
+    async function getObjectUrl(item) {
+      if (state.objectUrls.has(item.path)) return state.objectUrls.get(item.path);
+      const file = await getFileFromItem(item);
+      if (!file) return null;
+      const url = URL.createObjectURL(file);
+      state.objectUrls.set(item.path, url);
+      return url;
+    }
+
+    function getCurrentFolder() {
+      return getFolder(state.currentFolderPath) || getFolder("") || null;
+    }
+
+    function getVisibleItems() {
+      const folder = getCurrentFolder();
+      if (!folder) return [];
+      const items = [...folder.directories, ...folder.files];
+      const q = state.search.trim().toLowerCase();
+      if (!q) return items;
+      return items.filter(item => item.name.toLowerCase().includes(q));
+    }
+
+    function findItemByPath(path) {
+      const normalized = normalizePath(path);
+      const folder = getFolder(normalized);
+      if (folder) {
+        return {
+          kind: "directory",
+          name: folder.name,
+          path: folder.path,
+          parentPath: folder.parentPath,
+          handle: folder.handle,
+          error: folder.error || null
+        };
+      }
+
+      for (const folder of state.folderMap.values()) {
+        const file = folder.files.find(x => x.path === normalized);
+        if (file) return file;
+      }
+      return null;
+    }
+
+    async function openFolder(path) {
+      const normalized = normalizePath(path);
+      const folder = getFolder(normalized);
+      if (!folder) return;
+      state.currentFolderPath = normalized;
+      await loadFolder(normalized);
+      renderAll();
+    }
+
+    function setStatus(text) {
+      el.statusText.textContent = text;
+    }
+
+    function updatePathBar() {
+      const current = state.currentFolderPath ? ` / ${state.currentFolderPath}` : "";
+      el.pathBox.textContent = `${state.rootName || "ROOT"}${current}`;
+      const folder = getCurrentFolder();
+      const count = folder ? folder.directories.length + folder.files.length : 0;
+      setStatus(`${count} items`);
+    }
+
+    function fileCardTemplate(item) {
+      const typeText = item.kind === "directory" ? "Folder" : (getExt(item.name).toUpperCase() || "FILE");
+      const meta = item.kind === "directory"
+        ? "Directory"
+        : `${formatBytes(item.size)} • ${formatDate(item.lastModified)}`;
+
+      return `
+        <div class="file-card" data-item-path="${escapeHtml(item.path)}">
+          <div class="thumb" data-thumb-path="${escapeHtml(item.path)}">${escapeHtml(getKindIcon(item))}</div>
+          <div class="file-name">${escapeHtml(item.name)}</div>
+          <div class="file-meta">${escapeHtml(typeText)}<br>${escapeHtml(meta)}</div>
+        </div>
+      `;
+    }
+
+    function fileRowTemplate(item, isHead = false) {
+      if (isHead) {
+        return `
+          <div class="list-row list-head">
+            <div>TYPE</div>
+            <div>NAME</div>
+            <div>SIZE</div>
+            <div>MODIFIED</div>
+            <div>PATH</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="list-row" data-item-path="${escapeHtml(item.path)}">
+          <div>${escapeHtml(getKindIcon(item))}</div>
+          <div>${escapeHtml(item.name)}</div>
+          <div>${item.kind === "directory" ? "—" : escapeHtml(formatBytes(item.size))}</div>
+          <div>${item.kind === "directory" ? "—" : escapeHtml(formatDate(item.lastModified))}</div>
+          <div>${escapeHtml(item.path || "\\")}</div>
+        </div>
+      `;
+    }
+
+    async function hydrateThumbs(items) {
+      for (const item of items) {
+        if (item.kind !== "file") continue;
+        const ext = getExt(item.name);
+        const escapedPath = CSS.escape(item.path);
+        const thumbEl = document.querySelector(`.thumb[data-thumb-path="${escapedPath}"]`);
+        if (!thumbEl) continue;
+
+        try {
+          if (IMAGE_EXTS.includes(ext)) {
+            const url = await getObjectUrl(item);
+            if (url && thumbEl.isConnected) {
+              thumbEl.innerHTML = `<img src="${url}" alt="${escapeHtml(item.name)}">`;
+            }
+          } else if (["mp4","webm"].includes(ext)) {
+            const url = await getObjectUrl(item);
+            if (url && thumbEl.isConnected) {
+              thumbEl.innerHTML = `<video src="${url}" muted playsinline></video>`;
+            }
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
+
+    function renderFileView() {
+      if (!state.rootHandle && !state.fallbackMode) {
+        el.fileview.innerHTML = `<div class="empty">Open a folder to begin. We have reduced the ceremony.</div>`;
+        updatePathBar();
+        return;
+      }
+
+      const items = getVisibleItems();
+      if (!items.length) {
+        el.fileview.innerHTML = `<div class="empty">Nothing here matching that search.</div>`;
+        updatePathBar();
+        return;
+      }
+
+      if (state.view === "grid") {
+        el.fileview.innerHTML = `<div class="grid">${items.map(fileCardTemplate).join("")}</div>`;
+        hydrateThumbs(items);
+      } else {
+        el.fileview.innerHTML = `<div class="list">${fileRowTemplate(null, true)}${items.map(item => fileRowTemplate(item)).join("")}</div>`;
+      }
+
+      updatePathBar();
+    }
+
+    async function previewFile(item) {
+      const file = await getFileFromItem(item);
+      const url = await getObjectUrl(item);
+      const ext = getExt(item.name);
+
+      let previewHtml = `<div class="preview-box">${escapeHtml(getKindIcon(item))}</div>`;
+
+      if (file && url) {
+        if (IMAGE_EXTS.includes(ext)) {
+          previewHtml = `<div class="preview-box"><img src="${url}" alt="${escapeHtml(item.name)}"></div>`;
+        } else if (["mp4","webm","mov"].includes(ext)) {
+          previewHtml = `<div class="preview-box"><video src="${url}" controls></video></div>`;
+        } else if (AUDIO_EXTS.includes(ext)) {
+          previewHtml = `<div class="preview-box"><audio src="${url}" controls></audio></div>`;
+        } else if (TEXT_EXTS.includes(ext)) {
+          try {
+            const text = await file.text();
+            previewHtml = `<div class="preview-box"><pre class="preview-text">${escapeHtml(text.slice(0, 30000))}</pre></div>`;
+          } catch (err) {
+            console.error(err);
+          }
+        }
+      }
+
+      el.modalTitle.textContent = item.name;
+      el.modalBody.innerHTML = `
+        ${previewHtml}
+        <div class="meta">Path: ${escapeHtml(item.path)}
+Type: ${escapeHtml(file?.type || item.type || "unknown")}
+Extension: ${escapeHtml(ext || "none")}
+Size: ${escapeHtml(formatBytes(file?.size ?? item.size ?? 0))}
+Modified: ${escapeHtml(formatDate(file?.lastModified ?? item.lastModified))}</div>
+        <div class="actions">
+          ${url ? `<a href="${url}" target="_blank" rel="noopener noreferrer">OPEN</a>` : ""}
+          ${url ? `<a href="${url}" download="${escapeHtml(item.name)}">DOWNLOAD</a>` : ""}
+        </div>
+      `;
+      el.previewModal.classList.add("open");
+    }
+
+    async function activateItem(path) {
+      const item = findItemByPath(path);
+      if (!item) return;
+
+      if (item.kind === "directory") {
+        await openFolder(item.path);
+        return;
+      }
+
+      await previewFile(item);
+    }
+
+    async function refreshCurrentFolder() {
+      const folder = getCurrentFolder();
+      if (!folder) return;
+      if (!state.fallbackMode) {
+        folder.loaded = false;
+        folder.loading = false;
+        folder.error = null;
+        await loadFolder(folder.path);
+      }
+      renderAll();
+    }
+
+    async function openRootFolder() {
+      try {
+        state.fallbackMode = false;
+        clearObjectUrls();
+        state.folderMap.clear();
+        state.currentFolderPath = "";
+        state.search = "";
+        el.searchInput.value = "";
+
+        if ("showDirectoryPicker" in window) {
+          const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+          state.rootHandle = dirHandle;
+          state.rootName = dirHandle.name || "ROOT";
+          ensureFolderRecord("", dirHandle, "");
+          await loadFolder("");
+          renderAll();
+          setStatus(`Loaded ${state.rootName}.`);
+          return;
+        }
+
+        el.fallbackPicker.click();
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          setStatus("Folder selection cancelled.");
+          return;
+        }
+        console.error(err);
+        setStatus("Could not open folder.");
+      }
+    }
+
+    function closePreview() {
+      el.previewModal.classList.remove("open");
+    }
+
+    async function renderAll() {
+      renderFileView();
+    }
+
+    el.openBtn.addEventListener("click", openRootFolder);
+
+    el.upBtn.addEventListener("click", async () => {
+      if (!state.currentFolderPath) return;
+      await openFolder(getParentPath(state.currentFolderPath));
+    });
+
+    el.refreshBtn.addEventListener("click", refreshCurrentFolder);
+
+    el.gridBtn.addEventListener("click", () => {
+      state.view = "grid";
+      el.gridBtn.classList.add("active");
+      el.listBtn.classList.remove("active");
+      renderFileView();
+    });
+
+    el.listBtn.addEventListener("click", () => {
+      state.view = "list";
+      el.listBtn.classList.add("active");
+      el.gridBtn.classList.remove("active");
+      renderFileView();
+    });
+
+    el.searchInput.addEventListener("input", () => {
+      state.search = el.searchInput.value || "";
+      renderFileView();
+    });
+
+    el.fileview.addEventListener("click", async (e) => {
+      const row = e.target.closest("[data-item-path]");
+      if (!row) return;
+      await activateItem(row.dataset.itemPath);
+    });
+
+    el.fallbackPicker.addEventListener("change", (e) => {
+      const files = e.target.files;
+      if (!files || !files.length) return;
+      const first = files[0];
+      const rel = first.webkitRelativePath || "";
+      state.rootName = rel ? rel.split("/")[0] : "ROOT";
+      buildFallbackStructure(files);
+      e.target.value = "";
+    });
+
+    el.closePreviewBtn.addEventListener("click", closePreview);
+
+    el.previewModal.addEventListener("click", (e) => {
+      if (e.target === el.previewModal) closePreview();
+    });
+
+    window.addEventListener("keydown", async (e) => {
+      if (e.target.matches("input, textarea")) {
+        if (e.key === "Escape") {
+          e.target.blur();
+        }
+        return;
+      }
+
+      if (e.key === "/") {
+        e.preventDefault();
+        el.searchInput.focus();
+        el.searchInput.select();
+        return;
+      }
+
+      if (e.key === "Escape") {
+        closePreview();
+        return;
+      }
+
+      if (e.key === "Backspace") {
+        e.preventDefault();
+        if (state.currentFolderPath) {
+          await openFolder(getParentPath(state.currentFolderPath));
+        }
+        return;
+      }
+
+      if (e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        await refreshCurrentFolder();
+        return;
+      }
+
+      if (e.key.toLowerCase() === "g") {
+        state.view = "grid";
+        el.gridBtn.classList.add("active");
+        el.listBtn.classList.remove("active");
+        renderFileView();
+        return;
+      }
+
+      if (e.key.toLowerCase() === "l") {
+        state.view = "list";
+        el.listBtn.classList.add("active");
+        el.gridBtn.classList.remove("active");
+        renderFileView();
+      }
+    });
+
+    renderAll();
+  </script>
+  </div>
+</body>
+</html>
