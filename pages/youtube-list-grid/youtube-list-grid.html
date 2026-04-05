@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>theinternetisdead.org</title>
+
+<style>
+:root{
+--page-bg:black;
+--page-background:var(--page-bg);
+--panel-bg:rgba(75,0,118,.5);
+--panel-background:var(--panel-bg);
+--page-text:#00ff00;
+--accent-color:var(--page-text);
+--header-bg:rgba(75,0,118,.5);
+--button-hover-bg:#001a00;
+--tektite-logo-filter: rgba(0, 255, 0, 0);
+--thumbnail-filter: rgba(0, 255, 0, 0);
+--page-font-family:"Courier New", monospace;
+--page-font-scale:1;
+}
+html,body{
+overflow-x:hidden;
+
+background:var(--page-background);
+color:var(--page-text);
+font-family:var(--page-font-family);
+margin:0;
+overflow:auto;
+scrollbar-width:none;
+-ms-overflow-style:none;
+font-size:calc(16px * var(--page-font-scale));
+}
+
+/* MODIFIED: page font scaling should affect text only.
+   It must ignore images, so do not zoom the full document. */
+html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;}
+
+header{
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:6px 20px;
+background:var(--header-bg);
+}
+
+.channelHeader{display:flex;align-items:center;gap:18px;}
+.channelHeader a{
+display:flex;
+align-items:center;
+text-decoration:none;
+color:inherit;
+}
+.channelHeader .logoLink{
+position:relative;
+display:inline-flex;
+align-items:center;
+isolation:isolate;
+}
+.channelLogo{height:90px;display:block;}
+.channelLogoTintLayer,
+.thumbTintLayer{
+position:absolute;
+inset:0;
+pointer-events:none;
+mix-blend-mode:color;
+-webkit-mask-image:var(--tint-mask);
+mask-image:var(--tint-mask);
+-webkit-mask-repeat:no-repeat;
+mask-repeat:no-repeat;
+-webkit-mask-position:center;
+mask-position:center;
+-webkit-mask-size:contain;
+mask-size:contain;
+}
+.channelLogoTintLayer{
+background:var(--tektite-logo-filter);
+}
+
+.thumbTintLayer{
+background:var(--thumbnail-filter);
+-webkit-mask-size:cover;
+mask-size:cover;
+}
+.channelTitle{font-size:calc(21px * var(--page-font-scale));font-weight:bold;}
+
+.controls{display:flex;align-items:center;gap:12px;position:relative;}
+
+#videoSearch{
+width:220px;height:40px;
+border:2px solid var(--accent-color);
+background:var(--panel-background);
+color:var(--page-text);
+padding:0 12px;
+font-family:var(--page-font-family);
+}
+
+#videoSearch::placeholder{
+color:var(--page-text);
+opacity:1;
+}
+
+button{
+height:40px;padding:0 16px;
+border:2px solid var(--accent-color);
+background:var(--panel-background);color:var(--page-text);
+cursor:pointer;
+font-family:var(--page-font-family);
+}
+
+button:hover{background:var(--button-hover-bg);}
+
+#gridMenu{
+position:absolute;
+top:50px;
+right:0;
+background:var(--panel-background);
+border:2px solid var(--accent-color);
+padding:25px;
+display:none;
+}
+
+#gridControl{
+width:220px;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+}
+
+#gridPreview{
+display:grid;
+grid-template-columns:repeat(10,16px);
+grid-template-rows:repeat(10,16px);
+gap:2px;
+}
+
+.gridCell{
+width:16px;
+height:16px;
+border:1px solid var(--accent-color);
+background:transparent;
+}
+
+.gridCell.active{background:var(--accent-color);}
+
+#sizeSlider{
+width:200px;
+margin-bottom:12px;
+}
+
+#posts{padding:20px;}
+
+.grid{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);gap:20px;}
+
+.list .post{
+display:flex;
+align-items:center;
+gap:16px;
+margin-bottom:16px;
+border:2px solid var(--accent-color);
+padding:10px;
+background:var(--panel-background);
+}
+
+.grid .post{
+border:2px solid var(--accent-color);
+padding:10px;
+cursor:pointer;
+background:var(--panel-background);
+}
+
+.thumb-grid{
+aspect-ratio:16/9;
+overflow:hidden;
+border:2px solid var(--accent-color);
+margin-bottom:10px;
+background:var(--panel-background);
+position:relative;
+isolation:isolate;
+}
+
+.thumb-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+
+.thumb-list{width:160px;border:2px solid var(--accent-color);background:var(--panel-background);position:relative;overflow:hidden;isolation:isolate;}
+.thumb-list img{width:100%;display:block;}
+
+.post-title{font-size:calc(16px * var(--page-font-scale));}
+.post-date{font-size:calc(12px * var(--page-font-scale));opacity:.7;}
+
+#loadMore{
+display:block;
+margin:40px auto 60px auto;
+padding:12px 30px;
+font-size:calc(18px * var(--page-font-scale));
+border:2px solid var(--accent-color);
+background:var(--panel-background);
+color:var(--page-text);
+cursor:pointer;
+}
+
+#lightbox{
+position:fixed;
+top:0;
+left:0;
+width:100vw;
+height:100vh;
+background:var(--panel-background);
+display:none;
+flex-direction:column;
+align-items:center;
+justify-content:flex-start;
+z-index:99999;
+padding-top:0;
+}
+
+#videoTitle{
+padding-top:5px;
+font-size:calc(22px * var(--page-font-scale));
+margin:0 0 16px 0;
+text-align:center;
+max-width:90vw;
+}
+
+#lightbox iframe{
+width:min(48vw,640px);
+aspect-ratio:16/9;
+height:auto;
+display:block;
+margin:0 auto;
+border:2px solid var(--accent-color);
+}
+
+
+#videoExcerpt{
+font-size:calc(22px * var(--page-font-scale));
+color:var(--page-text);
+text-align:center;
+max-width:80vw;
+margin-top:10px;
+}
+
+#videoExcerpt a{
+color:var(--page-text);
+text-decoration:none;
+cursor:pointer;
+}
+
+#videoFull{
+max-width:80vw;
+margin:10px auto;
+display:none;
+line-height:1.4;
+}
+
+
+#closeVideo{
+font-size:calc(22px * var(--page-font-scale));
+color:var(--page-text);
+text-align:center;
+cursor:pointer;
+margin:12px 0;
+}
+#closeVideo:hover{
+text-decoration:underline;
+}
+
+#videoMeta{
+margin-top:18px;
+font-size:calc(14px * var(--page-font-scale));
+opacity:.8;
+text-align:center;
+max-width:80vw;
+line-height:1.4;
+}
+
+#lightboxClose{
+position:absolute;
+top:20px;right:20px;
+font-size:calc(28px * var(--page-font-scale));
+cursor:pointer;
+}
+
+.status{text-align:center;padding:10px;}
+
+
+@media (max-width: 768px){
+header{
+padding:14px 12px 12px;
+flex-direction:column;
+align-items:stretch;
+gap:10px;
+}
+
+.channelHeader{
+gap:12px;
+flex-wrap:nowrap;
+align-items:center;
+}
+
+.channelHeader a{
+min-width:0;
+}
+
+.channelLogo{
+height:46.875px;
+flex:0 0 auto;
+}
+
+.channelTitle{
+font-size:calc(22px * var(--page-font-scale));
+line-height:1.05;
+white-space:normal;
+overflow:visible;
+text-overflow:clip;
+text-align:left;
+min-width:0;
+flex:1 1 auto;
+}
+
+.controls{
+width:100%;
+display:block;
+}
+
+#videoSearch{
+width:100%;
+height:46px;
+box-sizing:border-box;
+font-size:calc(16px * var(--page-font-scale));
+}
+
+#listBtn,
+#gridBtn,
+#modeBtn,
+#gridMenu{
+display:none !important;
+}
+
+#posts{
+padding:12px 8px 20px;
+}
+
+.grid{
+grid-template-columns:1fr;
+gap:14px;
+}
+
+.grid .post,
+.list .post{
+padding:8px;
+}
+
+.post-title{
+font-size:calc(15px * var(--page-font-scale));
+line-height:1.2;
+}
+
+#loadMore{
+margin:28px auto 40px;
+font-size:calc(16px * var(--page-font-scale));
+padding:10px 22px;
+}
+
+#lightbox iframe{
+width:92vw;
+}
+}
+
+
+</style>
+</head>
+
+<body>
+
+
+<header>
+
+<div class="channelHeader">
+<a href="https://youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="logoLink">
+<img src="/media/images/png/oldtube.png" class="channelLogo" alt="Honestly Thomas YouTube channel logo">
+<span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/media/images/png/oldtube.png');"></span>
+</a>
+<a href="https://youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer">
+<div class="channelTitle">Honestly Thomas<br> (Tektite)</div>
+</a>
+</div>
+
+<div class="controls">
+<input id="videoSearch" placeholder="Search Videos...">
+<button id="listBtn">LIST</button>
+<button id="gridBtn">GRID</button>
+<button id="modeBtn" disabled>2D</button>
+
+<div id="gridMenu">
+
+<div id="gridControl">
+
+<input type="range" min="3" max="10" value="3" id="sizeSlider">
+
+<div id="gridPreview"></div>
+
+</div>
+
+</div>
+
+</div>
+
+</header>
+
+<div id="posts" class="grid"></div>
+<div id="cubeContainer" style="display:none;width:100%;height:70vh;position:relative;"></div>
+<div id="status" class="status">LOADING VIDEO ARCHIVE...</div>
+
+<button id="loadMore">Load More</button>
+
+<div id="lightbox">
+<div id="videoTitle"></div>
+<iframe id="lightboxFrame" src="" allowfullscreen></iframe>
+<div id="closeVideo">[CLOSE VIDEO]</div>
+<div id="videoMeta"></div>
+<div id="videoFull"></div>
+</div>
+
+<script>
+
+const CHANNEL_ID="UCn3WLZT7k8nO24XimlJVJVQ";
+
+function updateTintFilters(){
+  // Tints are handled by mask-based overlay layers, matching overlay.html.
+  return true;
+}
+
+window.updateTintFilters = updateTintFilters;
+
+let posts=[];
+let filtered=[];
+let view="grid";
+
+let gridSize=3;
+let visible=9;
+
+function isMobile(){
+return window.matchMedia("(max-width: 768px)").matches;
+}
+
+const postsEl=document.getElementById("posts");
+const statusEl=document.getElementById("status");
+const searchInput=document.getElementById("videoSearch");
+const loadBtn=document.getElementById("loadMore");
+const gridMenu=document.getElementById("gridMenu");
+const gridBtn=document.getElementById("gridBtn");
+
+const preview=document.getElementById("gridPreview");
+const slider=document.getElementById("sizeSlider");
+
+const lightbox=document.getElementById("lightbox");
+const frame=document.getElementById("lightboxFrame");
+const channelLogoLinks = Array.from(document.querySelectorAll('.logoLink'));
+const defaultChannelLogoUrls = [
+"/media/images/png/oldtube.png",
+"/media/images/png/oldtube-alt-1.png",
+"/media/images/png/oldtube-alt-2.png"
+];
+let customChannelLogoUrls = [];
+let channelLogoHoverIntervalId = null;
+let channelLogoHoverIndex = 0;
+const channelLogoHoverIntervalMs = 2000;
+
+function getActiveChannelLogoUrls(){
+return customChannelLogoUrls.length ? [...customChannelLogoUrls] : [...defaultChannelLogoUrls];
+}
+
+function getPrimaryChannelLogoUrl(){
+return customChannelLogoUrls.length ? customChannelLogoUrls[0] : "/media/images/png/oldtube.png";
+}
+
+function applyChannelLogoAsset(logoSrc){
+channelLogoLinks.forEach((link)=>{
+const img = link.querySelector('.channelLogo');
+const layer = link.querySelector('.channelLogoTintLayer');
+if(img){
+img.src = logoSrc;
+img.style.objectFit = 'fill';
+}
+if(layer){
+const safeUrl = String(logoSrc).replace(/'/g, "\'");
+layer.style.setProperty('--tint-mask', `url('${safeUrl}')`);
+layer.style.webkitMaskSize = '100% 100%';
+layer.style.maskSize = '100% 100%';
+}
+});
+}
+
+function stopChannelLogoHoverCycle(resetToPrimary = true){
+if(channelLogoHoverIntervalId !== null){
+window.clearInterval(channelLogoHoverIntervalId);
+channelLogoHoverIntervalId = null;
+}
+channelLogoHoverIndex = 0;
+if(resetToPrimary){
+applyChannelLogoAsset(getPrimaryChannelLogoUrl());
+}
+}
+
+function startChannelLogoHoverCycle(){
+const urls = getActiveChannelLogoUrls();
+if(urls.length <= 1) return;
+stopChannelLogoHoverCycle(false);
+channelLogoHoverIndex = 1 % urls.length;
+applyChannelLogoAsset(urls[channelLogoHoverIndex]);
+channelLogoHoverIntervalId = window.setInterval(()=>{
+channelLogoHoverIndex = (channelLogoHoverIndex + 1) % urls.length;
+applyChannelLogoAsset(urls[channelLogoHoverIndex]);
+}, channelLogoHoverIntervalMs);
+}
+
+function bindChannelLogoHoverCycle(){
+channelLogoLinks.forEach((link)=>{
+if(link.dataset.hoverCycleBound === 'true') return;
+link.addEventListener('mouseenter', ()=>{
+if(getActiveChannelLogoUrls().length > 1){
+startChannelLogoHoverCycle();
+}
+});
+link.addEventListener('mouseleave', ()=>{
+stopChannelLogoHoverCycle(true);
+});
+link.dataset.hoverCycleBound = 'true';
+});
+}
+
+window.setTektiteLogoUrls = function setTektiteLogoUrls(urls){
+customChannelLogoUrls = Array.isArray(urls)
+? urls.map((url)=>String(url || '').trim()).filter(Boolean)
+: [];
+stopChannelLogoHoverCycle(false);
+applyChannelLogoAsset(getPrimaryChannelLogoUrl());
+updateTintFilters();
+return true;
+};
+
+window.resetTektiteLogoUrls = function resetTektiteLogoUrls(){
+customChannelLogoUrls = [];
+stopChannelLogoHoverCycle(false);
+applyChannelLogoAsset(getPrimaryChannelLogoUrl());
+updateTintFilters();
+return true;
+};
+
+for(let i=0;i<100;i++){
+let c=document.createElement("div");
+c.className="gridCell";
+preview.appendChild(c);
+}
+
+function updatePreview(){
+
+let cells=document.querySelectorAll(".gridCell");
+
+cells.forEach((c,i)=>{
+let x=i%10;
+let y=Math.floor(i/10);
+
+if(x<gridSize && y<gridSize) c.classList.add("active");
+else c.classList.remove("active");
+
+});
+
+}
+
+function updateSize(v){
+
+gridSize=parseInt(v);
+slider.value=v;
+
+visible=isMobile() ? 3 : gridSize*gridSize;
+
+visible = isMobile() ? 3 : gridSize*gridSize;
+
+updatePreview();
+render();
+
+}
+
+slider.oninput=()=>updateSize(slider.value);
+
+
+
+
+async function loadPosts(){
+
+try{
+
+const r = await fetch("/data/videos.json");
+if(!r.ok) throw new Error("videos.json failed");
+
+const data = await r.json();
+
+posts = (data.entries || []).map(v => ({
+
+id: v.id,
+title: v.title || "",
+description: v.description || "",
+date: "",
+duration: v.duration || 0,
+views: v.view_count || 0,
+thumb: (v.thumbnails && v.thumbnails[3] ? v.thumbnails[3].url : `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`)
+
+}));
+
+filtered = posts;
+
+statusEl.style.display="none";
+modeBtn.disabled=false;
+
+updatePreview();
+render();
+
+}catch(e){
+
+console.error(e);
+statusEl.textContent="FAILED TO LOAD /data/videos.json";
+
+}
+
+}
+
+
+
+function openVideo(id,title,date,description){
+
+frame.src="https://www.youtube.com/embed/"+id;
+
+document.getElementById("videoTitle").innerHTML =
+`<a href="https://youtube.com/watch?v=${id}" target="_blank" style="color:var(--page-text);text-decoration:none;">${title}</a>`;
+
+let clean=(description||"")
+.replace(/<br\s*\/?>/gi,"\n")
+.replace(/<[^>]*>/g,"")
+.trim();
+
+document.getElementById("videoMeta").innerHTML = "";
+
+document.getElementById("videoFull").textContent = clean;
+
+lightbox.style.display="flex";
+
+document.getElementById("closeVideo").onclick = ()=>{
+lightbox.style.display="none";
+frame.src="";
+};
+
+}
+
+function render(){
+updateTintFilters();
+postsEl.className=view;
+postsEl.style.gridTemplateColumns=isMobile() ? "1fr" : "repeat("+gridSize+",1fr)";
+
+postsEl.innerHTML="";
+
+const data=filtered.slice(0,visible);
+
+data.forEach(p=>{
+
+const el=document.createElement("div");
+el.className="post";
+
+if(view==="grid"){
+el.innerHTML=`
+<div class="thumb-grid">
+<img src="${p.thumb}">
+<span class="thumbTintLayer" aria-hidden="true" style="--tint-mask: url('${p.thumb}');"></span>
+</div>
+<div class="post-title">${p.title}</div>`;
+
+el.onclick=()=>openVideo(p.id,p.title,p.date,p.description);
+}
+else{
+el.innerHTML=`
+<div class="thumb-list">
+<img src="${p.thumb}">
+<span class="thumbTintLayer" aria-hidden="true" style="--tint-mask: url('${p.thumb}');"></span>
+</div>
+<div>
+<div class="post-title">${p.title}</div>
+
+</div>`;
+
+el.querySelector("img").onclick=()=>openVideo(p.id,p.title,p.date,p.description);
+el.querySelector(".post-title").onclick=()=>openVideo(p.id,p.title,p.date,p.description);
+}
+
+postsEl.appendChild(el);
+
+});
+
+if(visible>=filtered.length) loadBtn.style.display="none";
+else loadBtn.style.display="block";
+}
+
+document.getElementById("listBtn").onclick=()=>{
+view="list";
+visible=3;
+gridMenu.style.display="none";
+render();
+}
+
+gridBtn.onclick=()=>{
+if(view!=="grid"){
+view="grid";
+gridSize=3;
+slider.value=3;
+visible=isMobile() ? 3 : gridSize*gridSize;
+updatePreview();
+render();
+}else{
+gridMenu.style.display =
+gridMenu.style.display==="block" ? "none" : "block";
+}
+}
+
+loadBtn.onclick=()=>{
+if(isMobile()){
+visible+=3;
+}else if(view==="list"){
+visible+=3;
+}else{
+if(gridSize<10){
+gridSize++;
+slider.value=gridSize;
+visible=gridSize*gridSize;
+updatePreview();
+}
+}
+render();
+}
+
+searchInput.addEventListener("input",()=>{
+const q=searchInput.value.toLowerCase();
+filtered=posts.filter(p=>p.title.toLowerCase().includes(q));
+visible=isMobile() ? 3 : (view==="list"?3:gridSize*gridSize);
+render();
+});
+
+
+let mode="2d";
+const cubeContainer=document.getElementById("cubeContainer");
+const modeBtn=document.getElementById("modeBtn");
+
+function shuffle(arr){
+let a=[...arr];
+for(let i=a.length-1;i>0;i--){
+let j=Math.floor(Math.random()*(i+1));
+[a[i],a[j]]=[a[j],a[i]];
+}
+return a;
+}
+
+modeBtn.onclick=()=>{
+
+if(!filtered.length) return;
+
+if(mode==="2d"){
+mode="3d";
+modeBtn.textContent="3D";
+postsEl.style.display="none";
+cubeContainer.style.display="block";
+buildCube();
+}else{
+mode="2d";
+modeBtn.textContent="2D";
+cubeContainer.style.display="none";
+postsEl.style.display="";
+}
+
+}
+
+function buildCube(){
+
+cubeContainer.innerHTML="";
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x000000);
+
+const camera=new THREE.PerspectiveCamera(
+70,
+cubeContainer.clientWidth/cubeContainer.clientHeight,
+0.1,
+1000
+);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(cubeContainer.clientWidth,cubeContainer.clientHeight);
+cubeContainer.appendChild(renderer.domElement);
+
+camera.position.z=6;
+
+const light=new THREE.AmbientLight(0xffffff,1);
+scene.add(light);
+
+let shuffled=shuffle(filtered);
+
+const materials=[];
+
+function buildFaceTexture(face){
+
+let canvas=document.createElement("canvas");
+canvas.width=512;
+canvas.height=512;
+let ctx=canvas.getContext("2d");
+
+let texture=new THREE.CanvasTexture(canvas);
+
+let cell=canvas.width/gridSize;
+
+for(let y=0;y<gridSize;y++){
+for(let x=0;x<gridSize;x++){
+
+let i=face*(gridSize*gridSize)+y*gridSize+x;
+let v=shuffled[i];
+if(!v) continue;
+
+let img=new Image();
+img.crossOrigin="anonymous";
+img.src=v.thumb;
+
+img.onload=()=>{
+ctx.drawImage(img,x*cell,y*cell,cell,cell);
+texture.needsUpdate=true;
+};
+
+}
+}
+
+return texture;
+}
+
+for(let f=0;f<6;f++){
+materials.push(new THREE.MeshBasicMaterial({map:buildFaceTexture(f)}));
+}
+
+const cube=new THREE.Mesh(
+new THREE.BoxGeometry(4,4,4),
+materials
+);
+
+scene.add(cube);
+
+let dragging=false;
+let px=0,py=0;
+
+renderer.domElement.addEventListener("mousedown",e=>{
+dragging=true;
+px=e.clientX;
+py=e.clientY;
+});
+
+window.addEventListener("mouseup",()=>dragging=false);
+
+window.addEventListener("mousemove",e=>{
+
+if(!dragging) return;
+
+let dx=e.clientX-px;
+let dy=e.clientY-py;
+
+cube.rotation.y+=dx*0.01;
+cube.rotation.x+=dy*0.01;
+
+px=e.clientX;
+py=e.clientY;
+
+});
+
+renderer.domElement.addEventListener("click",e=>{
+
+const rect=renderer.domElement.getBoundingClientRect();
+
+const mouse=new THREE.Vector2(
+((e.clientX-rect.left)/rect.width)*2-1,
+-((e.clientY-rect.top)/rect.height)*2+1
+);
+
+const raycaster=new THREE.Raycaster();
+raycaster.setFromCamera(mouse,camera);
+
+const hits=raycaster.intersectObject(cube);
+
+if(hits.length){
+
+let face=Math.floor(hits[0].faceIndex/2);
+let uv=hits[0].uv;
+
+let cellX=Math.floor(uv.x*gridSize);
+let cellY=Math.floor((1-uv.y)*gridSize);
+
+let index=face*(gridSize*gridSize)+cellY*gridSize+cellX;
+
+let video=shuffled[index];
+
+if(video){
+openVideo(video.id,video.title,video.date,video.description);
+}
+
+}
+
+});
+
+window.addEventListener("resize",()=>{
+renderer.setSize(cubeContainer.clientWidth,cubeContainer.clientHeight);
+camera.aspect=cubeContainer.clientWidth/cubeContainer.clientHeight;
+camera.updateProjectionMatrix();
+});
+
+function animate(){
+requestAnimationFrame(animate);
+renderer.render(scene,camera);
+}
+
+animate();
+
+}
+
+
+window.addEventListener("resize",()=>{
+render();
+});
+
+window.tektiteChatApi = {
+  setView(nextView){
+    view = nextView === 'list' ? 'list' : 'grid';
+    if (view === 'list') {
+      visible = 3;
+      gridMenu.style.display = 'none';
+    } else {
+      visible = isMobile() ? 3 : gridSize * gridSize;
+    }
+    render();
+    return `View set to ${view}`;
+  },
+  setGridSize(nextSize){
+    const size = Math.max(3, Math.min(10, parseInt(nextSize, 10) || gridSize));
+    updateSize(size);
+    return `Grid size set to ${size}`;
+  },
+  search(term){
+    const query = String(term || '').trim().toLowerCase();
+    searchInput.value = term || '';
+    filtered = !query ? posts : posts.filter(post => `${post.title} ${post.description}`.toLowerCase().includes(query));
+    visible = isMobile() ? 3 : (view === 'list' ? 3 : gridSize * gridSize);
+    render();
+    return query ? `Showing ${filtered.length} result(s) for "${term}"` : 'Search cleared';
+  },
+  toggleMode(){
+    modeBtn.click();
+    return `Mode is now ${mode}`;
+  }
+};
+
+
+document.addEventListener("DOMContentLoaded",()=>{ applyChannelLogoAsset(getPrimaryChannelLogoUrl()); bindChannelLogoHoverCycle(); updateTintFilters(); loadPosts(); });
+
+</script>
+
+</body>
+</html>
