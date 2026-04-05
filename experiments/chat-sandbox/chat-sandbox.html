@@ -1476,7 +1476,6 @@ const focusSink = document.getElementById('focusSink');
     let dvdOverclockPrimed = false;
     let dvdUploadMode = 'dvd_image';
     let dvdCommandAttemptCount = 0;
-    let dvdSubscribeMode = false;
     const subscribeImageSource = '/media/images/png/subscribe.png';
     const subscribeClickHref = 'https://youtube.com/@Honestly_Thomas';
     const dvdOverclockNicknamePool = ['Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
@@ -1718,7 +1717,8 @@ const focusSink = document.getElementById('focusSink');
         target.closest('#chatBarWrap') ||
         target.closest('.message') ||
         target.closest('#iframeOverlay') ||
-        target.closest('#mediaOverlay')
+        target.closest('#mediaOverlay') ||
+        target.closest('#dvdOverlay')
       );
     }
 
@@ -1995,7 +1995,7 @@ const focusSink = document.getElementById('focusSink');
         refreshLink.textContent = 'press here';
         refreshLink.addEventListener('click', (event) => {
           event.preventDefault();
-          location.reload();
+          triggerIndexRefresh();
         });
         bodySpan.appendChild(refreshLink);
 
