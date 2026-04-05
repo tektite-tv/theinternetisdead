@@ -5,10 +5,16 @@
   const TARGET_TIMES = new Set(['04:20', '07:10', '16:20', '19:10']);
   const CHECK_INTERVAL_MS = 5000;
   const RETRY_INTERVAL_MS = 1500;
+  const COMMAND_DELAY_MS = 500;
+  const COMMAND_SEQUENCE = ['/color_party', '/subscribe', '/dvd_infinite'];
+
   let popupVisible = false;
   let pendingTriggerDate = null;
   let pendingCommandId = null;
   let retryIntervalId = null;
+  let sequenceIndex = -1;
+  let waitingForCommand = false;
+  let nextCommandTimeoutId = null;
 
   function getTimeKey(date = new Date()) {
     const hours = String(date.getHours()).padStart(2, '0');
@@ -104,6 +110,13 @@
     document.body.appendChild(overlay);
   }
 
+  function clearNextCommandTimeout() {
+    if (nextCommandTimeoutId !== null) {
+      window.clearTimeout(nextCommandTimeoutId);
+      nextCommandTimeoutId = null;
+    }
+  }
+
   function stopRetryLoop() {
     if (retryIntervalId !== null) {
       window.clearInterval(retryIntervalId);
@@ -111,17 +124,28 @@
     }
   }
 
+  function resetPendingSequence() {
+    clearNextCommandTimeout();
+    waitingForCommand = false;
+    sequenceIndex = -1;
+    pendingTriggerDate = null;
+    pendingCommandId = null;
+    stopRetryLoop();
+  }
+
   function getChatWindow() {
     const frame = document.getElementById('chat-sandbox-frame');
     return frame && frame.contentWindow ? frame.contentWindow : null;
   }
 
-  function sendColorPartyCommand() {
+  function sendCurrentCommand() {
     const chatWindow = getChatWindow();
-    if (!chatWindow || !pendingTriggerDate || !pendingCommandId) return false;
+    const command = COMMAND_SEQUENCE[sequenceIndex];
+    if (!chatWindow || !pendingTriggerDate || !pendingCommandId || !command) return false;
+    waitingForCommand = true;
     chatWindow.postMessage({
       type: 'chatSandboxExecuteCommand',
-      command: '/color_party',
+      command,
       commandId: pendingCommandId,
       openChat: false,
       focus: false
@@ -129,27 +153,51 @@
     return true;
   }
 
+  function queueNextCommand() {
+    clearNextCommandTimeout();
+    nextCommandTimeoutId = window.setTimeout(() => {
+      nextCommandTimeoutId = null;
+      sequenceIndex += 1;
+      if (sequenceIndex >= COMMAND_SEQUENCE.length) {
+        if (!pendingTriggerDate) {
+          resetPendingSequence();
+          return;
+        }
+        const storageKey = getMinuteStorageKey(pendingTriggerDate);
+        sessionStorage.setItem(storageKey, '1');
+        createPopup(formatDisplayTime(pendingTriggerDate));
+        resetPendingSequence();
+        return;
+      }
+      sendCurrentCommand();
+    }, sequenceIndex < 0 ? 0 : COMMAND_DELAY_MS);
+  }
+
   function ensureRetryLoop() {
     if (retryIntervalId !== null) return;
     retryIntervalId = window.setInterval(() => {
       if (!pendingTriggerDate || !pendingCommandId) {
-        stopRetryLoop();
+        resetPendingSequence();
         return;
       }
       if (getTimeKey(new Date()) !== getTimeKey(pendingTriggerDate)) {
-        pendingTriggerDate = null;
-        pendingCommandId = null;
-        stopRetryLoop();
+        resetPendingSequence();
         return;
       }
-      sendColorPartyCommand();
+      if (!waitingForCommand) {
+        queueNextCommand();
+        return;
+      }
+      sendCurrentCommand();
     }, RETRY_INTERVAL_MS);
   }
 
   function queueTrigger(date = new Date()) {
     pendingTriggerDate = new Date(date.getTime());
     pendingCommandId = `time-easter-egg-${date.getTime()}`;
-    sendColorPartyCommand();
+    sequenceIndex = -1;
+    waitingForCommand = false;
+    queueNextCommand();
     ensureRetryLoop();
   }
 
@@ -167,8 +215,8 @@
     if (!event.data) return;
 
     if (event.data.type === 'chatSandboxState') {
-      if (pendingTriggerDate && pendingCommandId) {
-        sendColorPartyCommand();
+      if (pendingTriggerDate && pendingCommandId && !waitingForCommand) {
+        queueNextCommand();
         ensureRetryLoop();
       }
       return;
@@ -176,15 +224,19 @@
 
     if (event.data.type !== 'chatSandboxCommandResult') return;
     if (!pendingCommandId || event.data.commandId !== pendingCommandId) return;
-    if (event.data.command !== '/color_party') return;
     if (!pendingTriggerDate) return;
 
-    const storageKey = getMinuteStorageKey(pendingTriggerDate);
-    sessionStorage.setItem(storageKey, '1');
-    createPopup(formatDisplayTime(pendingTriggerDate));
-    pendingTriggerDate = null;
-    pendingCommandId = null;
-    stopRetryLoop();
+    const expectedCommand = COMMAND_SEQUENCE[sequenceIndex];
+    if (!expectedCommand || event.data.command !== expectedCommand) return;
+
+    if (!event.data.ok) {
+      waitingForCommand = false;
+      ensureRetryLoop();
+      return;
+    }
+
+    waitingForCommand = false;
+    queueNextCommand();
   });
 
   if (document.readyState === 'loading') {
