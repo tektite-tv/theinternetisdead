@@ -461,12 +461,12 @@ html, body {
     <div class="hamburger" data-action="toggle-sidebar" aria-label="Open sidebar" role="button" tabindex="0">☰</div>
 
     <div class="logo">
-      <div class="logo-link" data-action="logo-chat" role="button" tabindex="0" aria-label="Open chat or go home">
+      <a class="logo-link" href="/" aria-label="Go to the main page">
         <img id="dead-logo" src="/media/images/png/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
         <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/media/images/png/deadlogo-green.png');"></span>
-      </div>
+      </a>
       <div class="top-links">
-        <a class="home-link" href="/">+ Home</a>
+        <a class="home-link" id="chat-link" href="/" hidden>/chat</a>
         <a class="home-link" href="/experiments">+ Experiments</a>
         <a class="home-link" href="/games">+ Games</a>
       </div>
@@ -490,10 +490,10 @@ html, body {
       <div class="hamburger" data-action="toggle-sidebar" aria-label="Close sidebar" role="button" tabindex="0">✕</div>
 
       <div class="logo">
-        <div class="logo-link" data-action="logo-chat" role="button" tabindex="0" aria-label="Open chat or go home">
+        <a class="logo-link" href="/" aria-label="Go to the main page">
           <img src="/media/images/png/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
           <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/media/images/png/deadlogo-green.png');"></span>
-        </div>
+        </a>
       </div>
     </div>
 
@@ -680,6 +680,7 @@ const sidebar = overlayRoot.querySelector('#sidebar');
   const backdrop = overlayRoot.querySelector('#sidebar-backdrop');
   const toggles = overlayRoot.querySelectorAll('[data-action="toggle-sidebar"]');
   const logoLinks = overlayRoot.querySelectorAll('.logo-link');
+  const chatLink = overlayRoot.querySelector('#chat-link');
 
   if (!sidebar || !backdrop) return;
 
@@ -765,34 +766,40 @@ const sidebar = overlayRoot.querySelector('#sidebar');
   window.addEventListener('resize', () => {
     refreshOverlayLogoHoverTint();
     updateTorontoClock();
+    syncChatLinkVisibility();
   });
 
   overlayRoot.querySelectorAll('#sidebar a').forEach((link) => {
     link.addEventListener('click', closeSidebar);
   });
 
-  function handleLogoActivate(event) {
-    const shouldOpenChat = shouldUseIndexChatBehavior();
-    const shouldGoHome = !!(event && event.shiftKey);
+  function syncChatLinkVisibility() {
+    if (!chatLink) return;
+    chatLink.hidden = !shouldUseIndexChatBehavior();
+  }
 
-    if (shouldOpenChat && !shouldGoHome) {
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      closeSidebar();
-      requestParentChatOpen(false);
-      return;
-    }
-
-    closeSidebar();
-
+  function handleChatActivate(event) {
+    if (!shouldUseIndexChatBehavior()) return;
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
+    closeSidebar();
+    requestParentChatOpen(false);
+  }
 
-    window.location.href = '/';
+  function handleLogoActivate() {
+    closeSidebar();
+  }
+
+  syncChatLinkVisibility();
+
+  if (chatLink) {
+    chatLink.addEventListener('click', handleChatActivate);
+    chatLink.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      handleChatActivate(event);
+    });
   }
 
   logoLinks.forEach((link) => {
@@ -800,8 +807,7 @@ const sidebar = overlayRoot.querySelector('#sidebar');
 
     link.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      handleLogoActivate(event);
+      closeSidebar();
     });
   });
 })();
