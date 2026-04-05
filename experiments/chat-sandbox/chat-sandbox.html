@@ -1775,11 +1775,11 @@ const focusSink = document.getElementById('focusSink');
     function appendStyledSystemText(messageText, rawContent, repeatCount = 1, repeatLabel = '') {
       messageText.innerHTML = '';
       const rendered = getRenderedSystemText(rawContent);
-      const executionMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+(executed|enabled|disabled|overclocked)\s+by\s+(.+)$/i);
+      const executionMatch = rendered.match(/^(System:\s+)?(\/\S+)(\s+command)?\s+(executed|enabled|disabled|overclocked)\s+by\s+(.+)$/i);
       const unknownCommandMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+is\s+not\s+a\s+known\s+command$/i);
 
       if (executionMatch) {
-        const [, prefix = '', commandToken, actionWord, nicknameText] = executionMatch;
+        const [, prefix = '', commandToken, commandQualifier = '', actionWord, nicknameText] = executionMatch;
 
         if (prefix) {
           messageText.appendChild(document.createTextNode(prefix));
@@ -1789,6 +1789,10 @@ const focusSink = document.getElementById('focusSink');
         commandSpan.className = 'systemCommandLabel';
         commandSpan.textContent = commandToken;
         messageText.appendChild(commandSpan);
+
+        if (commandQualifier) {
+          messageText.appendChild(document.createTextNode(commandQualifier));
+        }
 
         messageText.appendChild(document.createTextNode(` ${actionWord} by `));
 
