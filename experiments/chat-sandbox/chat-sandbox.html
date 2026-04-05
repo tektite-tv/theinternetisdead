@@ -646,50 +646,8 @@
       padding: 0;
     }
 
-    #chatBarInputWrap {
-      position: relative;
-      flex: 1 1 auto;
-      min-width: 0;
-      height: 100%;
-      display: flex;
-      align-items: center;
-    }
-
-    #chatBarGhost {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      pointer-events: none;
-      font-family: "Courier New", Courier, monospace;
-      font-size: calc(22px * var(--font-scale));
-      font-weight: 900;
-      font-synthesis-weight: none;
-      white-space: pre;
-      overflow: hidden;
-      z-index: 0;
-      opacity: 0;
-    }
-
-    #chatBarGhost.visible {
-      opacity: 1;
-    }
-
-    #chatBarGhostPrefix {
-      visibility: hidden;
-      flex: 0 0 auto;
-    }
-
-    #chatBarGhostSuffix {
-      color: rgba(255, 255, 255, 0.45);
-      -webkit-text-fill-color: rgba(255, 255, 255, 0.45);
-      flex: 0 0 auto;
-    }
-
     #chatBar {
       width: 100%;
-      position: relative;
-      z-index: 1;
       background: transparent;
       border: none;
       outline: none;
@@ -744,24 +702,6 @@
       -webkit-text-stroke: 1px #000;
       text-shadow: none;
       display: inline-block;
-    }
-
-    #chatBarWrap.commandMode #chatBarInputWrap {
-      background: #000 !important;
-      border-radius: 0 4px 4px 0;
-      min-height: calc(100% - 12px);
-      align-self: center;
-    }
-
-    #chatBarWrap.commandMode #chatBarGhost {
-      padding: 6px 6px 6px 2px !important;
-      color: #fff !important;
-      -webkit-text-fill-color: #fff !important;
-    }
-
-    #chatBarWrap.commandMode #chatBarGhostSuffix {
-      color: rgba(255, 255, 255, 0.35) !important;
-      -webkit-text-fill-color: rgba(255, 255, 255, 0.35) !important;
     }
 
     #chatBarWrap.commandMode {
@@ -856,6 +796,55 @@
       -webkit-text-fill-color: #000 !important;
       font-weight: 900 !important;
       opacity: 1 !important;
+    }
+
+
+    #commandSuggestionBox {
+      position: fixed;
+      left: 48px;
+      right: 52px;
+      bottom: 56px;
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 10px;
+      background: rgba(17, 0, 25, 0.92);
+      border: 1px solid rgba(0, 255, 0, 0.55);
+      color: #9dff9d;
+      font-family: "Courier New", Courier, monospace;
+      font-size: calc(14px * var(--font-scale));
+      line-height: 1.25;
+      pointer-events: none;
+      z-index: 32;
+      box-sizing: border-box;
+    }
+
+    #commandSuggestionBox.visible {
+      display: flex;
+    }
+
+    .commandSuggestionUsage {
+      color: #ffffff;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .commandSuggestionList {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .commandSuggestionChip {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border: 1px solid rgba(0, 255, 0, 0.45);
+      background: rgba(0, 0, 0, 0.45);
+      color: #9dff9d;
+      white-space: nowrap;
     }
 
 
@@ -1444,29 +1433,31 @@
 
   <div id="chatBarWrap">
     <div id="chatPrompt">&gt;</div>
-    <div id="chatBarInputWrap">
-      <div id="chatBarGhost" aria-hidden="true"><span id="chatBarGhostPrefix"></span><span id="chatBarGhostSuffix"></span></div>
-      <input
-        id="chatBar"
-        type="text"
-        placeholder="Press here to chat or / for commands..."
-        autocomplete="off"
-        spellcheck="false"
-      />
-    </div>
+    <input
+      id="chatBar"
+      type="text"
+      placeholder="Press here to chat or / for commands..."
+      autocomplete="off"
+      spellcheck="false"
+    />
     <button id="chatClose" type="button" aria-label="Close chat">x</button>
+  </div>
+
+  <div id="commandSuggestionBox" aria-hidden="true">
+    <div id="commandSuggestionUsage" class="commandSuggestionUsage"></div>
+    <div id="commandSuggestionList" class="commandSuggestionList"></div>
   </div>
 
   <script>
 const focusSink = document.getElementById('focusSink');
     const chatBar = document.getElementById('chatBar');
-    const chatBarGhost = document.getElementById('chatBarGhost');
-    const chatBarGhostPrefix = document.getElementById('chatBarGhostPrefix');
-    const chatBarGhostSuffix = document.getElementById('chatBarGhostSuffix');
     const messages = document.getElementById('messages');
     const messagesWrap = document.getElementById('messagesWrap');
     const chatBarWrap = document.getElementById('chatBarWrap');
     const chatClose = document.getElementById('chatClose');
+    const commandSuggestionBox = document.getElementById('commandSuggestionBox');
+    const commandSuggestionUsage = document.getElementById('commandSuggestionUsage');
+    const commandSuggestionList = document.getElementById('commandSuggestionList');
     const iframeOverlay = document.getElementById('iframeOverlay');
     const iframeOverlayFrame = document.getElementById('iframeOverlayFrame');
     const iframeOverlayTitle = document.getElementById('iframeOverlayTitle');
@@ -1572,15 +1563,15 @@ const focusSink = document.getElementById('focusSink');
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
       { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
-      { name: '/dvd_image', value: '/dvd_image', usage: '/dvd_image "https://example.com/image1.png, https://example.com/image2.png"', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode' },
+      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
-      { name: '/iframe', value: '/iframe https://example.com/', usage: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
+      { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
       { name: '/script_load', value: '/script_load', execute: true, desc: 'choose a .txt file and send each line into chat every 0.33 seconds' },
       { name: '/settings_load', value: '/settings_load', execute: true, desc: 'choose a settings.json file and load saved settings' },
-      { name: '/nickname', value: '/nickname ', usage: '/nickname your_name_here', execute: false, desc: 'set the displayed username used by system messages' },
+      { name: '/nickname', value: '/nickname ', execute: false, desc: 'set the displayed username used by system messages' },
       { name: '/color_randomize', value: '/color_randomize', execute: true, desc: 'toggle the automatic random color shuffle on or off' },
       { name: '/color_reset', value: '/color_reset', execute: true, desc: 'restore default appearance settings' },
       { name: '/settings_save', value: '/settings_save', execute: true, desc: 'download a settings.json with the current command-configurable state' },
@@ -1811,6 +1802,7 @@ const focusSink = document.getElementById('focusSink');
       chatBar.classList.toggle('commandMode', commandMode);
       chatPrompt.classList.toggle('commandMode', commandMode);
       chatBarWrap.classList.toggle('commandMode', commandMode);
+      updateCommandSuggestionBox();
     }
 
     function updateChatBarState() {
@@ -1873,6 +1865,7 @@ const focusSink = document.getElementById('focusSink');
     function showChatBar() {
       if (isScreenshotAnimationLocked()) return;
       chatBarWrap.classList.add('visible');
+      updateCommandSuggestionBox();
       document.body.classList.add('chat-open');
       disarmChatInput();
       ensureInitialWelcomeMessage();
@@ -1883,6 +1876,7 @@ const focusSink = document.getElementById('focusSink');
     function hideChatBar() {
       if (isScreenshotAnimationLocked()) return;
       chatBar.value = '';
+      hideCommandSuggestionBox();
       updateChatBarVisualState();
       historyIndex = -1;
       historyDraft = '';
@@ -3822,7 +3816,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
           name: entry.name.trim().toLowerCase(),
           desc: entry.desc ? String(entry.desc) : 'page command',
           usage: entry.usage ? String(entry.usage) : entry.name.trim(),
-          value: entry.value ? String(entry.value) : (entry.usage ? String(entry.usage) : entry.name.trim()),
           execute: entry.execute !== false,
           // ADDED: Parent pages can explicitly replace a built-in command instead of
           // relying on a hardcoded list inside chat-sandbox.html.
@@ -3851,98 +3844,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
         raw,
         args
       }, '*');
-    }
-
-    function getCommandDefinition(command) {
-      const normalized = String(command || '').trim().toLowerCase();
-      if (!normalized) return null;
-      const builtIn = builtInCommands.find((entry) => entry.name === normalized);
-      if (builtIn) return builtIn;
-      return getPageCommandDefinition(normalized);
-    }
-
-    function getCommandGhostExample(command) {
-      const definition = getCommandDefinition(command);
-      if (!definition) {
-        return '';
-      }
-
-      const suggestionList = Array.isArray(definition.suggestions)
-        ? definition.suggestions.map((entry) => String(entry || '').trim()).filter(Boolean)
-        : [];
-      const usage = typeof definition.usage === 'string' ? definition.usage.trim() : '';
-      const value = typeof definition.value === 'string' ? definition.value.trimEnd() : '';
-      const source = usage || value;
-      const normalizedCommand = String(command || '').trim();
-
-      if (source && source.toLowerCase().startsWith(`${normalizedCommand.toLowerCase()} `)) {
-        return source.slice(normalizedCommand.length + 1);
-      }
-
-      if (suggestionList.length) {
-        return suggestionList[0];
-      }
-
-      return '';
-    }
-
-    function getCommandGhostHintInfo() {
-      const value = chatBar.value;
-      const caret = chatBar.selectionStart ?? value.length;
-      const selectionEnd = chatBar.selectionEnd ?? caret;
-      if (caret !== selectionEnd || caret !== value.length) {
-        return null;
-      }
-
-      const trimmedLeft = value.trimStart();
-      if (!trimmedLeft.startsWith('/')) {
-        return null;
-      }
-
-      const slashIndex = value.indexOf('/');
-      const firstSpaceAfterSlash = value.indexOf(' ', slashIndex);
-      if (firstSpaceAfterSlash === -1) {
-        return null;
-      }
-
-      const commandToken = value.slice(slashIndex, firstSpaceAfterSlash).toLowerCase();
-      const example = getCommandGhostExample(commandToken);
-      if (!example) {
-        return null;
-      }
-
-      const typedArgument = value.slice(firstSpaceAfterSlash + 1);
-      if (typedArgument && !example.toLowerCase().startsWith(typedArgument.toLowerCase())) {
-        return null;
-      }
-
-      const remaining = example.slice(typedArgument.length);
-      if (!remaining) {
-        return null;
-      }
-
-      return {
-        prefix: value,
-        suffix: remaining
-      };
-    }
-
-    function updateGhostCommandHint() {
-      if (!chatBarGhost || !chatBarGhostPrefix || !chatBarGhostSuffix) {
-        return;
-      }
-
-      const hint = getCommandGhostHintInfo();
-      if (!chatInputArmed || !hint || document.activeElement !== chatBar) {
-        chatBarGhost.classList.remove('visible');
-        chatBarGhostPrefix.textContent = '';
-        chatBarGhostSuffix.textContent = '';
-        return;
-      }
-
-      chatBarGhostPrefix.textContent = hint.prefix;
-      chatBarGhostSuffix.textContent = hint.suffix;
-      chatBarGhost.classList.add('visible');
     }
 
     function getMergedHelpCommands() {
@@ -4609,6 +4510,82 @@ function createHomepageCustomizeMessageNode(result = {}) {
         suffix,
         suggestions
       };
+    }
+
+
+    function hideCommandSuggestionBox() {
+      if (commandSuggestionBox) {
+        commandSuggestionBox.classList.remove('visible');
+      }
+      if (commandSuggestionUsage) {
+        commandSuggestionUsage.textContent = '';
+      }
+      if (commandSuggestionList) {
+        commandSuggestionList.textContent = '';
+      }
+    }
+
+    function getCommandArgumentSuggestionMatches(info) {
+      if (!info || !Array.isArray(info.suggestions) || !info.suggestions.length) {
+        return [];
+      }
+      const normalizedPrefix = info.argumentText.trim().toLowerCase();
+      const exact = [];
+      const partial = [];
+      info.suggestions.forEach((entry) => {
+        const safeEntry = String(entry || '').trim();
+        if (!safeEntry) return;
+        const normalizedEntry = safeEntry.toLowerCase();
+        if (!normalizedPrefix) {
+          partial.push(safeEntry);
+          return;
+        }
+        if (normalizedEntry.startsWith(normalizedPrefix)) {
+          exact.push(safeEntry);
+          return;
+        }
+        if (normalizedEntry.includes(normalizedPrefix)) {
+          partial.push(safeEntry);
+        }
+      });
+      return [...new Set([...exact, ...partial])].slice(0, 10);
+    }
+
+    function updateCommandSuggestionBox() {
+      if (!chatBarWrap.classList.contains('visible') || !chatInputArmed) {
+        hideCommandSuggestionBox();
+        return;
+      }
+      const info = getCommandArgumentSuggestionInfo();
+      if (!info) {
+        hideCommandSuggestionBox();
+        return;
+      }
+
+      const pageCommand = getPageCommandDefinition(info.commandToken);
+      const usageText = pageCommand && pageCommand.usage ? String(pageCommand.usage).trim() : '';
+      const matches = getCommandArgumentSuggestionMatches(info);
+      const shouldShow = !!usageText || matches.length > 0;
+      if (!shouldShow) {
+        hideCommandSuggestionBox();
+        return;
+      }
+
+      if (commandSuggestionUsage) {
+        commandSuggestionUsage.textContent = usageText;
+      }
+      if (commandSuggestionList) {
+        commandSuggestionList.textContent = '';
+        matches.forEach((entry) => {
+          const chip = document.createElement('span');
+          chip.className = 'commandSuggestionChip';
+          chip.textContent = entry;
+          commandSuggestionList.appendChild(chip);
+        });
+      }
+      if (commandSuggestionBox) {
+        commandSuggestionBox.classList.add('visible');
+      }
     }
 
     function cycleCommandArgumentSuggestion(direction = 1) {
@@ -5546,7 +5523,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
       chatBar.value = '';
       updateChatBarVisualState();
       resetCommandCycle();
-      updateGhostCommandHint();
     }
 
     renderCommandHueShiftFrame();
@@ -5558,30 +5534,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
       updateChatBarVisualState();
       resetCommandCycle();
-      updateGhostCommandHint();
     });
 
     chatBar.addEventListener('keyup', () => {
       updateChatBarVisualState();
-      updateGhostCommandHint();
     });
 
     chatBar.addEventListener('focus', () => {
       updateChatBarVisualState();
-      updateGhostCommandHint();
-    });
-
-    chatBar.addEventListener('click', () => {
-      if (!chatInputArmed) {
-        armChatInput();
-        return;
-      }
-      chatBar.focus();
-      updateGhostCommandHint();
-    });
-
-    chatBar.addEventListener('blur', () => {
-      updateGhostCommandHint();
     });
 
     chatBar.addEventListener('keydown', (event) => {
@@ -5598,7 +5558,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
           return;
         }
         submitMessage();
-        updateGhostCommandHint();
         return;
       }
 
@@ -5607,19 +5566,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (event.key === 'Tab') {
         if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
           event.preventDefault();
-          updateGhostCommandHint();
           return;
         }
         if (commandInfo) {
           event.preventDefault();
           cycleCommandSuggestion(event.shiftKey ? -1 : 1);
-          updateGhostCommandHint();
         }
         return;
-      }
-
-      if (event.key === ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        window.requestAnimationFrame(updateGhostCommandHint);
       }
 
       if (event.key === 'ArrowUp') {
@@ -5650,8 +5603,15 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
     });
 
+    chatBar.addEventListener('click', () => {
+      if (!chatInputArmed) {
+        armChatInput();
+        return;
+      }
+      chatBar.focus();
+    });
+
     updateMessagesVisibility();
-    updateGhostCommandHint();
 
     chatBarWrap.addEventListener('click', (event) => {
       if (event.target !== chatClose) {
