@@ -1246,8 +1246,8 @@
       opacity: 0.96;
       user-select: none;
       -webkit-user-drag: none;
-      pointer-events: auto;
-      cursor: pointer;
+      pointer-events: none;
+      cursor: default;
       filter: hue-rotate(0deg) drop-shadow(0 0 10px rgba(255, 255, 255, 0.28));
       transform: translate3d(0, 0, 0);
       will-change: transform, filter;
@@ -1411,6 +1411,7 @@ const focusSink = document.getElementById('focusSink');
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
       { name: '/dvd', value: '/dvd', execute: true, desc: 'toggle a bouncing hue-shifting DVD logo overlay' },
+      { name: '/dvd_logo', value: '/dvd_logo', execute: true, desc: 'choose the image used by the bouncing DVD overlay' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
       { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
@@ -4108,6 +4109,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return isEnabled;
     }
 
+    function openDvdLogoPicker() {
+      if (!dvdImageUploadInput) return false;
+      dvdImageUploadInput.value = '';
+      dvdImageUploadInput.click();
+      return true;
+    }
+
     async function handleCommand(raw) {
       const trimmed = raw.trim();
       const parts = trimmed.split(/\s+/);
@@ -4157,6 +4165,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (command === '/dvd') {
         const enabled = setDvdEnabled(!dvdEnabled);
         addSystemMessage(formatCommandExecutionMessage('/dvd', enabled ? 'enabled' : 'disabled'));
+        return true;
+      }
+
+      if (command === '/dvd_logo') {
+        const opened = openDvdLogoPicker();
+        addSystemMessage(formatCommandExecutionMessage('/dvd_logo', opened ? 'executed' : 'failed'));
         return true;
       }
 
@@ -4612,14 +4626,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
     });
 
     if (dvdLogo && dvdImageUploadInput) {
-      dvdLogo.addEventListener('click', (event) => {
-        if (!dvdEnabled) return;
-        event.preventDefault();
-        event.stopPropagation();
-        dvdImageUploadInput.value = '';
-        dvdImageUploadInput.click();
-      });
-
       dvdImageUploadInput.addEventListener('change', () => {
         const file = dvdImageUploadInput.files && dvdImageUploadInput.files[0];
         if (!file) return;
