@@ -1594,8 +1594,19 @@ const focusSink = document.getElementById('focusSink');
       const existingWelcomeMessage = Array.from(messages.querySelectorAll('.message[data-role="user"]')).find((line) => {
         return (line.dataset.rawContent || '').trim() === INITIAL_WELCOME_MESSAGE;
       });
-      if (existingWelcomeMessage) return existingWelcomeMessage;
-      return addMessage(INITIAL_WELCOME_MESSAGE, 'user');
+
+      if (existingWelcomeMessage) {
+        if (messages.firstElementChild !== existingWelcomeMessage) {
+          messages.insertBefore(existingWelcomeMessage, messages.firstElementChild);
+        }
+        return existingWelcomeMessage;
+      }
+
+      const line = addMessage(INITIAL_WELCOME_MESSAGE, 'user');
+      if (line && messages.firstElementChild !== line) {
+        messages.insertBefore(line, messages.firstElementChild);
+      }
+      return line;
     }
 
     function showChatBar() {
