@@ -1399,7 +1399,7 @@ const focusSink = document.getElementById('focusSink');
     let dvdOverclockAliasLine = null;
     let dvdUploadMode = 'dvd_image';
     let dvdCommandAttemptCount = 0;
-    const dvdOverclockNicknamePool = ['User', 'Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
+    const dvdOverclockNicknamePool = ['Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
     function getDvdActiveCap() {
       return dvdOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances;
     }
@@ -1775,7 +1775,7 @@ const focusSink = document.getElementById('focusSink');
     function appendStyledSystemText(messageText, rawContent, repeatCount = 1, repeatLabel = '') {
       messageText.innerHTML = '';
       const rendered = getRenderedSystemText(rawContent);
-      const executionMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+(executed|enabled|disabled)\s+by\s+(.+)$/i);
+      const executionMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+(executed|enabled|disabled|overclocked)\s+by\s+(.+)$/i);
       const unknownCommandMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+is\s+not\s+a\s+known\s+command$/i);
 
       if (executionMatch) {
@@ -1843,11 +1843,19 @@ const focusSink = document.getElementById('focusSink');
       dvdOverclockAliasLine = null;
     }
 
+    function getDvdOverclockNicknameChoices() {
+      const baseNickname = String(currentNickname || 'User').trim() || 'User';
+      return [baseNickname, ...dvdOverclockNicknamePool].filter((value, index, array) => {
+        return value && array.indexOf(value) === index;
+      });
+    }
+
     function updateOverclockAliasLabel() {
       if (!dvdOverclockAliasLine) return;
       const nicknameSpan = dvdOverclockAliasLine.querySelector('.nicknameLabel');
       if (!nicknameSpan) return;
-      const nextLabel = dvdOverclockNicknamePool[Math.floor(Math.random() * dvdOverclockNicknamePool.length)] || 'User';
+      const nicknameChoices = getDvdOverclockNicknameChoices();
+      const nextLabel = nicknameChoices[Math.floor(Math.random() * nicknameChoices.length)] || 'User';
       nicknameSpan.textContent = nextLabel;
     }
 
@@ -4549,12 +4557,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
         dvdCommandAttemptCount = nextAttempt;
 
         if (nextAttempt >= 13 && !dvdOverclockMode) {
-          const overclockLine = addSystemMessage('/dvd command overclocked by User', { overclockAlias: true, repeatLabel: 'INFINITE' });
+          const overclockMessage = formatCommandExecutionMessage('/dvd command', 'overclocked', currentNickname);
+          const overclockLine = addSystemMessage(overclockMessage, { overclockAlias: true, repeatLabel: 'INFINITE' });
           if (overclockLine) {
             overclockLine.dataset.repeatLabel = 'INFINITE';
             const messageText = overclockLine.querySelector('.messageText');
             if (messageText) {
-              appendStyledSystemText(messageText, '/dvd command overclocked by User', 1, 'INFINITE');
+              appendStyledSystemText(messageText, overclockMessage, 1, 'INFINITE');
             }
           }
           startDvdOverclockMode();
