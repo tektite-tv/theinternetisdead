@@ -2393,6 +2393,14 @@ function startGame(){
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
   if (winOverlay) winOverlay.style.display = "none";
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  mazeSummaryActive = false;
+  mazePendingNextWave = null;
+
+  // v2.03: level 2 should always boot directly into the maze ruleset.
+  // The old startup path still leaned on leftover shooter setup and only reached
+  // maze mode indirectly through spawnEnemies(), which is fragile and frankly rude.
+  START_WAVE = 1;
 
   // v1.96: show HUD only in-game
   livesSlot.style.display = "flex";
@@ -2400,8 +2408,7 @@ function startGame(){
   if (timerHud) timerHud.style.display = "block";
   updateShieldRegenHUD();
 
-
-  // v1.96.x: Reset run timer at the start of each game
+  // Reset run state for a fresh level-2 maze start.
   runTimer = 0;
   updateTimerHUD();
   score = 0;
@@ -2409,35 +2416,26 @@ function startGame(){
   shotsFired = 0;
   hitsConnected = 0;
   damageDealt = 0;
-  // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
 
   lives = Math.max(0, parseInt(START_LIVES, 10) || 0);
   livesText.textContent = "x" + lives;
 
-  MAX_HEARTS = Math.max(1, parseInt(START_HEARTS, 10) || 4);
+  MAX_HEARTS = Math.max(1, parseInt(START_HEARTS, 10) || 1);
   HIT_DAMAGE = 1 / MAX_HEARTS;
-
   health = 1.0;
 
-  // Spawn player fixed in the center for maze traversal
+  // Player stays visually centered while the maze scrolls underneath.
   player.x = canvas.width / 2;
   player.y = canvas.height / 2;
 
   shieldPips = Math.max(0, parseInt(START_SHIELDS, 10) || 0);
-
   bombsCount = Math.max(0, parseInt(START_BOMBS, 10) || 0);
-  powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
   if (powerupHint){
     if (infiniteModeActive) powerupHint.textContent = "Press Q (∞)";
     else powerupHint.textContent = "Press Q" + (bombsCount > 1 ? (" x" + bombsCount) : "");
   }
 
-  health = 1.0;
-
-  // Spawn player fixed in the center for maze traversal
-  player.x = canvas.width / 2;
-  player.y = canvas.height / 2;
   bonusArmor = 0;
   bonusArmorBrokenT = 0;
   shieldHP = SHIELD_HP_MAX;
@@ -2451,21 +2449,21 @@ function startGame(){
   deathYellPlayed = false;
   deathParticles.length = 0;
 
-  wave = START_WAVE;
+  wave = 1;
   showWaveBanner(wave);
-bullets.length = 0;
+  bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
-
-  bombsCount = 0;
   bomb = null;
   ufo = null;
 
-  resetFormation();
+  // Explicit maze boot sequence so the player always spawns in the maze with the
+  // spotlight mask active, instead of depending on generic shooter leftovers.
+  resetMazeForWave(wave);
+  spawnMazeEnemiesForWave(wave);
   updateHearts();
-spawnEnemies();
-  trySpawnUFO();
 
+  powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
   window.focus();
 }
 
