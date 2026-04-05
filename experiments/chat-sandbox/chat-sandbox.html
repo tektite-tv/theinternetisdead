@@ -1405,7 +1405,7 @@ const focusSink = document.getElementById('focusSink');
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
       { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
-      { name: '/dvd_logo', value: '/dvd_logo ', execute: false, desc: 'choose one or more images for the bouncing DVD swarm, or pass one or more quoted comma-separated URLs' },
+      { name: '/dvd_image', value: '/dvd_image ', execute: false, desc: 'upload one or more images to add bouncing DVD images directly, or pass one or more quoted comma-separated URLs' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
@@ -1742,6 +1742,7 @@ const focusSink = document.getElementById('focusSink');
       debugMode = enabled;
       document.body.classList.toggle('debug', enabled);
       refreshSystemMessagePrefixes();
+      refreshAllCollapsedSystemGroups();
       refreshScriptStatusVisibility();
     }
 
@@ -1756,25 +1757,15 @@ const focusSink = document.getElementById('focusSink');
       return String(text || '').replace(/^System:\s*/i, '').trim();
     }
 
-    function getSystemRepeatSuffix(rawContent, repeatCount = 1) {
-      if (repeatCount <= 1) return '';
-      const normalized = String(rawContent || '').trim().toLowerCase();
-      if (normalized === '/dvd maxed by user') {
-        return ' (MAX)';
-      }
-      return ` (${repeatCount})`;
-    }
-
     function formatSystemDisplayText(rawContent, repeatCount = 1) {
       const rendered = getRenderedSystemText(rawContent);
-      return `${rendered}${getSystemRepeatSuffix(rawContent, repeatCount)}`;
+      return repeatCount > 1 ? `${rendered} (${repeatCount})` : rendered;
     }
 
-    function appendStyledSystemText(messageText, rawContent, repeatCount = 1) {
+    function appendStyledSystemText(messageText, rawContent, repeatCount = 1, repeatSuffixOverride = '') {
       messageText.innerHTML = '';
       const rendered = getRenderedSystemText(rawContent);
-      const repeatSuffix = getSystemRepeatSuffix(rawContent, repeatCount);
-      const executionMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+(executed|enabled|disabled|maxed|failed)\s+by\s+(.+)$/i);
+      const executionMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+(executed|enabled|disabled)\s+by\s+(.+)$/i);
       const unknownCommandMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+is\s+not\s+a\s+known\s+command$/i);
 
       if (executionMatch) {
@@ -1796,8 +1787,9 @@ const focusSink = document.getElementById('focusSink');
         nicknameSpan.textContent = nicknameText;
         messageText.appendChild(nicknameSpan);
 
-        if (repeatSuffix) {
-          messageText.appendChild(document.createTextNode(repeatSuffix));
+        const repeatSuffixText = repeatSuffixOverride ? String(repeatSuffixOverride) : (repeatCount > 1 ? String(repeatCount) : '');
+        if (repeatSuffixText) {
+          messageText.appendChild(document.createTextNode(` (${repeatSuffixText})`));
         }
         return;
       }
@@ -1816,17 +1808,71 @@ const focusSink = document.getElementById('focusSink');
 
         messageText.appendChild(document.createTextNode(' is not a known command'));
 
-        if (repeatSuffix) {
-          messageText.appendChild(document.createTextNode(repeatSuffix));
+        const repeatSuffixText = repeatSuffixOverride ? String(repeatSuffixOverride) : (repeatCount > 1 ? String(repeatCount) : '');
+        if (repeatSuffixText) {
+          messageText.appendChild(document.createTextNode(` (${repeatSuffixText})`));
         }
         return;
       }
 
-      messageText.textContent = `${rendered}${repeatSuffix}`;
+      const repeatSuffixText = repeatSuffixOverride ? String(repeatSuffixOverride) : (repeatCount > 1 ? String(repeatCount) : '');
+      messageText.textContent = repeatSuffixText ? `${rendered} (${repeatSuffixText})` : rendered;
     }
 
     function formatCommandExecutionMessage(commandToken, state = 'executed', nickname = currentNickname) {
       return `${commandToken} ${state} by ${nickname}`;
+    }
+
+    function addCommandExecutionSystemMessage(commandToken, state = 'executed', nickname = currentNickname, options = {}) {
+      const collapseKey = options.collapseKey || `cmd:${commandToken}:${state}:${nickname}`;
+      return addSystemMessage(formatCommandExecutionMessage(commandToken, state, nickname), {
+        ...options,
+        collapseKey
+      });
+    }
+
+    function getSystemCollapseGroupState(collapseKey) {
+      const lines = Array.from(messages.querySelectorAll(`.message[data-role="system"][data-collapse-key="${collapseKey}"]`));
+      return {
+        lines,
+        latestLine: lines.length ? lines[lines.length - 1] : null,
+        count: lines.length
+      };
+    }
+
+    function refreshSystemCollapseGroup(collapseKey) {
+      if (!collapseKey) return;
+      const { lines, latestLine, count } = getSystemCollapseGroupState(collapseKey);
+      if (!lines.length) return;
+
+      lines.forEach((line, index) => {
+        const isLatest = line === latestLine;
+        const messageText = line.querySelector('.messageText');
+        const rawContent = line.dataset.rawContent || '';
+        const maxLabelAt = Number(line.dataset.maxLabelAt || '0');
+        const effectiveRepeatCount = (!debugMode && isLatest) ? count : 1;
+        const suffixOverride = (!debugMode && isLatest && maxLabelAt > 0 && count >= maxLabelAt) ? 'MAX' : '';
+        line.dataset.repeatCount = String(effectiveRepeatCount);
+        if (suffixOverride) {
+          line.dataset.repeatSuffixOverride = suffixOverride;
+        } else {
+          delete line.dataset.repeatSuffixOverride;
+        }
+        line.style.display = (debugMode || isLatest) ? '' : 'none';
+        if (messageText && rawContent) {
+          appendStyledSystemText(messageText, rawContent, effectiveRepeatCount, suffixOverride);
+        }
+      });
+      updateMessagesVisibility();
+    }
+
+    function refreshAllCollapsedSystemGroups() {
+      const collapseKeys = Array.from(new Set(
+        Array.from(messages.querySelectorAll('.message[data-role="system"][data-collapse-key]'))
+          .map((line) => line.dataset.collapseKey)
+          .filter(Boolean)
+      ));
+      collapseKeys.forEach(refreshSystemCollapseGroup);
     }
 
 
@@ -2010,7 +2056,7 @@ const focusSink = document.getElementById('focusSink');
     }
 
     async function captureVisiblePageAnimation() {
-      addSystemMessage(formatCommandExecutionMessage('/screenshot_animation'));
+      addCommandExecutionSystemMessage('/screenshot_animation');
       await waitForNextPaint();
 
       if (isEmbeddedInIndex()) {
@@ -2029,7 +2075,7 @@ const focusSink = document.getElementById('focusSink');
     }
 
     async function captureVisiblePageScreenshot() {
-      addSystemMessage(formatCommandExecutionMessage('/screenshot'));
+      addCommandExecutionSystemMessage('/screenshot');
       await waitForNextPaint();
 
       if (isEmbeddedInIndex()) {
@@ -2051,7 +2097,7 @@ const focusSink = document.getElementById('focusSink');
         const messageText = line.querySelector('.messageText');
         if (!messageText) return;
         const repeatCount = Number(line.dataset.repeatCount || '1');
-        appendStyledSystemText(messageText, rawContent, repeatCount);
+        appendStyledSystemText(messageText, rawContent, repeatCount, line.dataset.repeatSuffixOverride || '');
       });
     }
 
@@ -2194,23 +2240,31 @@ const focusSink = document.getElementById('focusSink');
       return line;
     }
 
-    function addSystemMessage(text) {
+    function addSystemMessage(text, options = {}) {
+      const {
+        collapseKey = '',
+        maxLabelAt = 0
+      } = options || {};
       const baseText = getSystemBaseText(text);
-      const matchingMessages = Array.from(messages.querySelectorAll('.message[data-role="system"]')).filter((line) => {
-        return getSystemBaseText(line.dataset.rawContent || '') === baseText;
-      });
-      const repeatCount = matchingMessages.length + 1;
-      matchingMessages.forEach((line) => line.remove());
-
       const line = addMessage(baseText, 'system');
       if (line) {
         line.dataset.rawContent = baseText;
-        line.dataset.repeatCount = String(repeatCount);
+        line.dataset.repeatCount = '1';
+        if (collapseKey) {
+          line.dataset.collapseKey = collapseKey;
+        }
+        if (maxLabelAt) {
+          line.dataset.maxLabelAt = String(maxLabelAt);
+        }
         const messageText = line.querySelector('.messageText');
         if (messageText) {
-          appendStyledSystemText(messageText, baseText, repeatCount);
+          appendStyledSystemText(messageText, baseText, 1);
+        }
+        if (collapseKey) {
+          refreshSystemCollapseGroup(collapseKey);
         }
       }
+      return line;
     }
 
     function upsertNamedPanelMessage(panelType, panelNodeFactory) {
@@ -2229,6 +2283,37 @@ const focusSink = document.getElementById('focusSink');
         }
       }
       return addMessage(nextPanelNode, 'system');
+    }
+
+    function addOrRefreshNamedSystemNode(panelType, nodeFactory) {
+      const collapseKey = `panel:${panelType}`;
+      if (debugMode) {
+        const line = addMessage(nodeFactory(), 'system');
+        if (line) {
+          line.dataset.collapseKey = collapseKey;
+        }
+        return line;
+      }
+      const existingLine = Array.from(messages.querySelectorAll(`.message[data-role="system"][data-collapse-key="${collapseKey}"]`)).pop();
+      const nextNode = nodeFactory();
+      if (existingLine) {
+        const messageText = existingLine.querySelector('.messageText');
+        if (messageText) {
+          messageText.innerHTML = '';
+          messageText.appendChild(nextNode);
+        }
+        Array.from(messages.querySelectorAll(`.message[data-role="system"][data-collapse-key="${collapseKey}"]`)).forEach((line, index, arr) => {
+          line.style.display = line === arr[arr.length - 1] ? '' : 'none';
+        });
+        updateMessagesVisibility();
+        return existingLine;
+      }
+      const line = addMessage(nextNode, 'system');
+      if (line) {
+        line.dataset.collapseKey = collapseKey;
+      }
+      refreshSystemCollapseGroup(collapseKey);
+      return line;
     }
 
     function moveCursorToEnd() {
@@ -3867,7 +3952,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
-      addSystemMessage(formatCommandExecutionMessage('/upload_folder'));
+      addCommandExecutionSystemMessage('/upload_folder');
       addMessage(createMediaBrowserMessageNode(type, records), 'system');
       event.target.value = '';
     }
@@ -3891,7 +3976,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
-      addSystemMessage(formatCommandExecutionMessage('/upload_file'));
+      addCommandExecutionSystemMessage('/upload_file');
       addMessage(createMediaMessageNode(type, file), 'system');
       event.target.value = '';
     }
@@ -3904,7 +3989,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
-      addSystemMessage(formatCommandExecutionMessage('/upload_folder'));
+      addCommandExecutionSystemMessage('/upload_folder');
       addMessage(createMediaBrowserMessageNode('mixed', records), 'system');
       event.target.value = '';
     }
@@ -3927,7 +4012,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
 
-      addSystemMessage(formatCommandExecutionMessage(`/${type}`));
+      addCommandExecutionSystemMessage(`/${type}`);
       addMessage(createMediaMessageNode(type, file), 'system');
       event.target.value = '';
     }
@@ -4443,7 +4528,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const newNickname = trimmed.slice(parts[0].length).trim();
         if (newNickname) {
           currentNickname = newNickname;
-          addSystemMessage(formatCommandExecutionMessage('/nickname', 'executed', newNickname));
+          addCommandExecutionSystemMessage('/nickname', 'executed', newNickname);
         }
         return true;
       }
@@ -4452,48 +4537,53 @@ function createHomepageCustomizeMessageNode(result = {}) {
         if (debugMode) {
           showSystemPrefix = false;
           setDebugMode(false);
-          addSystemMessage(formatCommandExecutionMessage('/debug', 'disabled'));
+          addCommandExecutionSystemMessage('/debug', 'disabled');
         } else {
           showSystemPrefix = true;
           setDebugMode(true);
-          addSystemMessage(formatCommandExecutionMessage('/debug', 'enabled'));
+          addCommandExecutionSystemMessage('/debug', 'enabled');
         }
         return true;
       }
 
       if (command === '/help') {
-        addSystemMessage(formatCommandExecutionMessage('/help'));
-        addMessage(createHelpMessageNode(), 'system');
+        addCommandExecutionSystemMessage('/help');
+        addOrRefreshNamedSystemNode('help', createHelpMessageNode);
         return true;
       }
 
       if (command === '/dvd') {
         const spawned = spawnDvdInstance();
-        addSystemMessage(formatCommandExecutionMessage('/dvd', spawned ? 'executed' : 'maxed'));
+        if (spawned) {
+          addCommandExecutionSystemMessage('/dvd', 'executed', currentNickname, { maxLabelAt: dvdMaxInstances });
+        } else {
+          addSystemMessage('Why would you want more than 10 of those?');
+        }
         return true;
       }
 
-      if (command === '/dvd_logo') {
+      if (command === '/dvd_image' || command === '/dvd_logo') {
+        const commandToken = '/dvd_image';
         const urlArg = trimmed.slice(parts[0].length).trim();
         if (urlArg) {
           const sources = parseDvdLogoUrlList(urlArg);
           const applied = setDvdLogoSources(sources, true);
-          addSystemMessage(formatCommandExecutionMessage('/dvd_logo', applied ? 'executed' : 'failed'));
+          addCommandExecutionSystemMessage(commandToken, applied ? 'executed' : 'failed');
           return true;
         }
         const opened = openDvdLogoPicker();
-        addSystemMessage(formatCommandExecutionMessage('/dvd_logo', opened ? 'executed' : 'failed'));
+        addCommandExecutionSystemMessage(commandToken, opened ? 'executed' : 'failed');
         return true;
       }
 
       if (command === '/spawn') {
         const opened = await openSpawnPicker();
-        addSystemMessage(formatCommandExecutionMessage('/spawn', opened ? 'executed' : 'failed'));
+        addCommandExecutionSystemMessage('/spawn', opened ? 'executed' : 'failed');
         return true;
       }
 
       if (command === '/exit') {
-        addSystemMessage(formatCommandExecutionMessage('/exit'));
+        addCommandExecutionSystemMessage('/exit');
         if (isEmbeddedInIndex()) {
           postToParentPage({ type: 'pageExit' });
         } else {
@@ -4556,7 +4646,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const enabled = isEmbeddedInIndex()
           ? (postToParentPage({ type: 'pageGlobalColorInvertToggle' }), null)
           : toggleGlobalColorInvert();
-        addSystemMessage(formatCommandExecutionMessage('/color_invert', (enabled === null ? 'toggled' : (enabled ? 'enabled' : 'disabled'))));
+        addCommandExecutionSystemMessage('/color_invert', (enabled === null ? 'toggled' : (enabled ? 'enabled' : 'disabled')));
         return true;
       }
 
@@ -4567,18 +4657,18 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const enabled = isEmbeddedInIndex()
           ? (postToParentPage({ type: 'pageGlobalHueShiftToggle' }), null)
           : toggleGlobalHueShift();
-        addSystemMessage(formatCommandExecutionMessage('/color_hueshift', (enabled === null ? 'toggled' : (enabled ? 'enabled' : 'disabled'))));
+        addCommandExecutionSystemMessage('/color_hueshift', (enabled === null ? 'toggled' : (enabled ? 'enabled' : 'disabled')));
         return true;
       }
 
       if (command === '/color_party') {
         const enabled = setColorPartyEnabled(!colorPartyEnabled);
-        addSystemMessage(formatCommandExecutionMessage('/color_party', enabled ? 'enabled' : 'disabled'));
+        addCommandExecutionSystemMessage('/color_party', enabled ? 'enabled' : 'disabled');
         return true;
       }
 
       if (command === '/customize') {
-        addSystemMessage(formatCommandExecutionMessage('/customize'));
+        addCommandExecutionSystemMessage('/customize');
         addMessage(createCustomizeMessageNode(), 'system');
         return true;
       }
@@ -4606,7 +4696,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           activeScriptRun.cancelled = true;
         }
         if (wasShuffleRunning || wasScriptRunning || wasHueShiftEnabled || wasColorInvertEnabled || wasColorPartyEnabled) {
-          addSystemMessage(formatCommandExecutionMessage('/stop'));
+          addCommandExecutionSystemMessage('/stop');
         } else {
           addSystemMessage('No auto color or script effects are currently running');
         }
@@ -4624,7 +4714,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           if (isEmbeddedInIndex()) {
             postToParentPage({ type: 'pageCustomizeAutoShuffleSet', enabled: false });
           }
-          addSystemMessage(formatCommandExecutionMessage('/color_randomize', 'disabled'));
+          addCommandExecutionSystemMessage('/color_randomize', 'disabled');
         } else {
           startAutoShuffleColors();
           // ADDED: Trigger the parent page's Customize Page auto-shuffle on the same interval without changing UI.
@@ -4632,7 +4722,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
             postToParentPage({ type: 'pageCustomizeSetRandomizeTintOpacities' });
             postToParentPage({ type: 'pageCustomizeAutoShuffleSet', enabled: true });
           }
-          addSystemMessage(formatCommandExecutionMessage('/color_randomize', 'enabled'));
+          addCommandExecutionSystemMessage('/color_randomize', 'enabled');
         }
         return true;
       }
@@ -4643,13 +4733,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
         if (isEmbeddedInIndex()) {
           postToParentPage({ type: 'pageGlobalEffectsReset' });
         }
-        addSystemMessage(formatCommandExecutionMessage('/color_reset'));
+        addCommandExecutionSystemMessage('/color_reset');
         return true;
       }
 
       if (command === '/settings_save') {
         downloadSettingsFile();
-        addSystemMessage(formatCommandExecutionMessage('/settings_save'));
+        addCommandExecutionSystemMessage('/settings_save');
         return true;
       }
 
@@ -4687,13 +4777,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       if (command === '/settings_load') {
         triggerSettingsLoad();
-        addSystemMessage(formatCommandExecutionMessage('/settings_load'));
+        addCommandExecutionSystemMessage('/settings_load');
         return true;
       }
 
       if (command === '/script_load') {
         triggerScriptLoad();
-        addSystemMessage(formatCommandExecutionMessage('/script_load'));
+        addCommandExecutionSystemMessage('/script_load');
         return true;
       }
 
@@ -4704,7 +4794,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           addSystemMessage('Invalid iframe URL. Use /iframe https://example.com/');
           return true;
         }
-        addSystemMessage(formatCommandExecutionMessage('/iframe'));
+        addCommandExecutionSystemMessage('/iframe');
         addMessage(createIframeMessageNode(sanitizedUrl), 'system');
         return true;
       }
@@ -5063,7 +5153,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           const shouldAnnounce = event.data.announce !== false;
           if (shouldAnnounce) {
             homepageCustomizePanelVisible = true;
-            addSystemMessage(formatCommandExecutionMessage(event.data.command || '/customize'));
+            addCommandExecutionSystemMessage(event.data.command || '/customize');
             if (event.data.includeBaseCustomize) {
               const existingChatPanel = messages.querySelector('.message .customizePanel[data-panel-type="chatCustomize"]')?.closest('.message');
               if (!existingChatPanel) {
