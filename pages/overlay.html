@@ -711,6 +711,10 @@ const sidebar = overlayRoot.querySelector('#sidebar');
     return /(?:^|\/)overlay\.html$/i.test(path) && !isInjectedIntoOverlayContainer();
   }
 
+  function shouldShowHomeLink() {
+    return !shouldUseIndexChatBehavior();
+  }
+
   function pageContainsChatSandbox() {
     const frame = document.getElementById('chat-sandbox-frame');
     if (frame && frame.tagName === 'IFRAME') {
@@ -801,7 +805,7 @@ const sidebar = overlayRoot.querySelector('#sidebar');
 
   function syncTopLinkVisibility() {
     const shouldShowChat = !!chatLink && shouldUseIndexChatBehavior();
-    const shouldShowStandaloneHome = !!standaloneHomeLink && isStandaloneOverlayPage();
+    const shouldShowStandaloneHome = !!standaloneHomeLink && shouldShowHomeLink();
 
     if (chatLink) {
       chatLink.hidden = !shouldShowChat;
