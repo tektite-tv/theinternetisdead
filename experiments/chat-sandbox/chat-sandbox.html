@@ -196,6 +196,46 @@
       outline: none;
     }
 
+    .subscribePromoTag {
+      display: inline-block;
+      padding: 4px 10px;
+      margin: 0 auto 8px auto;
+      color: #00ff00;
+      font-weight: 700;
+      text-align: center;
+      background: rgba(59, 0, 102, 0.5);
+      border: 1px solid #00ff00;
+    }
+
+    .subscribePromoMessage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 2px;
+    }
+
+    .subscribePromoChannelLink,
+    .subscribePromoChannelLink:visited {
+      color: #00ffff;
+      text-decoration: underline;
+    }
+
+    .subscribePromoRefreshLink,
+    .subscribePromoRefreshLink:visited {
+      color: #ff3b3b;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .subscribePromoChannelLink:hover,
+    .subscribePromoChannelLink:focus,
+    .subscribePromoRefreshLink:hover,
+    .subscribePromoRefreshLink:focus {
+      outline: none;
+      text-decoration: underline;
+    }
+
     .messageDelete {
       display: none;
       flex: 0 0 auto;
@@ -1902,10 +1942,52 @@ const focusSink = document.getElementById('focusSink');
     function addDvdOverclockSystemMessage() {
       const line = addMessage('', 'user');
       if (!line) return null;
-      line.dataset.rawContent = `System: OH GEEZ ${currentNickname} you've really done it now. You overclocked the /dvd command to (INFINITE) may god have mercy on your GPU. Click here to refresh dummy...`;
       const messageText = line.querySelector('.messageText');
       if (!messageText) return line;
       messageText.innerHTML = '';
+
+      if (dvdSubscribeMode) {
+        line.dataset.rawContent = `Tektite: Yo ${currentNickname}, it would be really cool if you could check out my YouTube channel or if you just want to refresh press here.`;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'subscribePromoMessage';
+
+        const tagSpan = document.createElement('span');
+        tagSpan.className = 'subscribePromoTag';
+        tagSpan.textContent = 'Tektite:';
+        wrapper.appendChild(tagSpan);
+
+        const bodySpan = document.createElement('span');
+        bodySpan.appendChild(document.createTextNode(`Yo ${currentNickname}, it would be really cool if you could `));
+
+        const channelLink = document.createElement('a');
+        channelLink.href = subscribeClickHref;
+        channelLink.className = 'subscribePromoChannelLink';
+        channelLink.target = '_blank';
+        channelLink.rel = 'noopener noreferrer';
+        channelLink.textContent = 'check out my YouTube channel';
+        bodySpan.appendChild(channelLink);
+
+        bodySpan.appendChild(document.createTextNode(' or if you just want to refresh '));
+
+        const refreshLink = document.createElement('a');
+        refreshLink.href = '#';
+        refreshLink.className = 'subscribePromoRefreshLink';
+        refreshLink.textContent = 'press here';
+        refreshLink.addEventListener('click', (event) => {
+          event.preventDefault();
+          location.reload();
+        });
+        bodySpan.appendChild(refreshLink);
+
+        bodySpan.appendChild(document.createTextNode('.'));
+        wrapper.appendChild(bodySpan);
+        messageText.appendChild(wrapper);
+        dvdOverclockAliasLine = line;
+        return line;
+      }
+
+      line.dataset.rawContent = `System: OH GEEZ ${currentNickname} you've really done it now. You overclocked the /dvd command to (INFINITE) may god have mercy on your GPU. Click here to refresh dummy...`;
 
       const systemSpan = document.createElement('span');
       systemSpan.className = 'nicknameLabel';
