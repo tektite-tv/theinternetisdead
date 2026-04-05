@@ -799,55 +799,6 @@
     }
 
 
-    #commandSuggestionBox {
-      position: fixed;
-      left: 48px;
-      right: 52px;
-      bottom: 56px;
-      display: none;
-      flex-direction: column;
-      gap: 4px;
-      padding: 8px 10px;
-      background: rgba(17, 0, 25, 0.92);
-      border: 1px solid rgba(0, 255, 0, 0.55);
-      color: #9dff9d;
-      font-family: "Courier New", Courier, monospace;
-      font-size: calc(14px * var(--font-scale));
-      line-height: 1.25;
-      pointer-events: none;
-      z-index: 32;
-      box-sizing: border-box;
-    }
-
-    #commandSuggestionBox.visible {
-      display: flex;
-    }
-
-    .commandSuggestionUsage {
-      color: #ffffff;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .commandSuggestionList {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .commandSuggestionChip {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 6px;
-      border: 1px solid rgba(0, 255, 0, 0.45);
-      background: rgba(0, 0, 0, 0.45);
-      color: #9dff9d;
-      white-space: nowrap;
-    }
-
-
     #chatClose {
       flex: 0 0 auto;
       width: 28px;
@@ -1443,11 +1394,6 @@
     <button id="chatClose" type="button" aria-label="Close chat">x</button>
   </div>
 
-  <div id="commandSuggestionBox" aria-hidden="true">
-    <div id="commandSuggestionUsage" class="commandSuggestionUsage"></div>
-    <div id="commandSuggestionList" class="commandSuggestionList"></div>
-  </div>
-
   <script>
 const focusSink = document.getElementById('focusSink');
     const chatBar = document.getElementById('chatBar');
@@ -1455,9 +1401,6 @@ const focusSink = document.getElementById('focusSink');
     const messagesWrap = document.getElementById('messagesWrap');
     const chatBarWrap = document.getElementById('chatBarWrap');
     const chatClose = document.getElementById('chatClose');
-    const commandSuggestionBox = document.getElementById('commandSuggestionBox');
-    const commandSuggestionUsage = document.getElementById('commandSuggestionUsage');
-    const commandSuggestionList = document.getElementById('commandSuggestionList');
     const iframeOverlay = document.getElementById('iframeOverlay');
     const iframeOverlayFrame = document.getElementById('iframeOverlayFrame');
     const iframeOverlayTitle = document.getElementById('iframeOverlayTitle');
@@ -1563,15 +1506,15 @@ const focusSink = document.getElementById('focusSink');
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
       { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
-      { name: '/dvd_image', value: '/dvd_image "https://example.com/image1.png, https://example.com/image2.png"', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode', suggestions: ['"https://example.com/image1.png, https://example.com/image2.png"'] },
+      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
-      { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview', suggestions: ['https://example.com/', 'https://theinternetisdead.org/'] },
+      { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
       { name: '/script_load', value: '/script_load', execute: true, desc: 'choose a .txt file and send each line into chat every 0.33 seconds' },
       { name: '/settings_load', value: '/settings_load', execute: true, desc: 'choose a settings.json file and load saved settings' },
-      { name: '/nickname', value: '/nickname your_name_here', execute: false, desc: 'set the displayed username used by system messages', suggestions: ['your_name_here'] },
+      { name: '/nickname', value: '/nickname ', execute: false, desc: 'set the displayed username used by system messages' },
       { name: '/color_randomize', value: '/color_randomize', execute: true, desc: 'toggle the automatic random color shuffle on or off' },
       { name: '/color_reset', value: '/color_reset', execute: true, desc: 'restore default appearance settings' },
       { name: '/settings_save', value: '/settings_save', execute: true, desc: 'download a settings.json with the current command-configurable state' },
@@ -1582,10 +1525,6 @@ const focusSink = document.getElementById('focusSink');
       { name: '/clock', value: '/clock', execute: true, desc: 'show only the clock commands' }
     ];
     const builtInCommandList = builtInCommands.map((entry) => entry.name);
-    function getBuiltInCommandDefinition(command) {
-      const normalized = String(command || '').trim().toLowerCase();
-      return builtInCommands.find((entry) => entry.name === normalized) || null;
-    }
     let pageCommandRegistry = [];
     let pageCommandMeta = { pageOnly: false, pageId: '', title: '', sourceKey: '' };
     let pendingPageCommand = null;
@@ -1806,7 +1745,6 @@ const focusSink = document.getElementById('focusSink');
       chatBar.classList.toggle('commandMode', commandMode);
       chatPrompt.classList.toggle('commandMode', commandMode);
       chatBarWrap.classList.toggle('commandMode', commandMode);
-      updateCommandSuggestionBox();
     }
 
     function updateChatBarState() {
@@ -1869,7 +1807,6 @@ const focusSink = document.getElementById('focusSink');
     function showChatBar() {
       if (isScreenshotAnimationLocked()) return;
       chatBarWrap.classList.add('visible');
-      updateCommandSuggestionBox();
       document.body.classList.add('chat-open');
       disarmChatInput();
       ensureInitialWelcomeMessage();
@@ -1880,7 +1817,6 @@ const focusSink = document.getElementById('focusSink');
     function hideChatBar() {
       if (isScreenshotAnimationLocked()) return;
       chatBar.value = '';
-      hideCommandSuggestionBox();
       updateChatBarVisualState();
       historyIndex = -1;
       historyDraft = '';
@@ -3878,7 +3814,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
         normalized === '/color_invert' ||
         normalized === '/color_party' ||
         normalized === '/color_randomize' ||
-        normalized === '/color_reset';
+        normalized === '/color_reset' ||
+        normalized === '/color_element';
     }
 
     function createCommandListMessageNode(titleText, commandNames = [], options = {}) {
@@ -4480,24 +4417,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return true;
     }
 
-    function getCommandSuggestionDefinition(commandToken) {
-      const pageCommand = getPageCommandDefinition(commandToken);
-      if (pageCommand) {
-        return {
-          usage: pageCommand.usage ? String(pageCommand.usage).trim() : pageCommand.name,
-          suggestions: Array.isArray(pageCommand.suggestions) ? pageCommand.suggestions.slice() : []
-        };
-      }
-      const builtInCommand = getBuiltInCommandDefinition(commandToken);
-      if (builtInCommand) {
-        return {
-          usage: builtInCommand.value ? String(builtInCommand.value).trim() : builtInCommand.name,
-          suggestions: Array.isArray(builtInCommand.suggestions) ? builtInCommand.suggestions.slice() : []
-        };
-      }
-      return null;
-    }
-
     function getCommandArgumentSuggestionInfo() {
       const value = chatBar.value;
       const caret = chatBar.selectionStart ?? value.length;
@@ -4514,10 +4433,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       const commandToken = value.slice(slashIndex, firstSpaceAfterSlash).toLowerCase();
-      const definition = getCommandSuggestionDefinition(commandToken);
-      const usage = definition && definition.usage ? String(definition.usage).trim() : '';
-      const suggestions = definition && Array.isArray(definition.suggestions) ? definition.suggestions.slice() : [];
-      if (!usage && !suggestions.length) {
+      const pageCommand = getPageCommandDefinition(commandToken);
+      const suggestions = pageCommand && Array.isArray(pageCommand.suggestions) ? pageCommand.suggestions.slice() : [];
+      if (!suggestions.length) {
         return null;
       }
 
@@ -4531,84 +4449,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
         argumentEnd: caret,
         argumentText,
         suffix,
-        usage,
         suggestions
       };
-    }
-
-
-    function hideCommandSuggestionBox() {
-      if (commandSuggestionBox) {
-        commandSuggestionBox.classList.remove('visible');
-      }
-      if (commandSuggestionUsage) {
-        commandSuggestionUsage.textContent = '';
-      }
-      if (commandSuggestionList) {
-        commandSuggestionList.textContent = '';
-      }
-    }
-
-    function getCommandArgumentSuggestionMatches(info) {
-      if (!info || !Array.isArray(info.suggestions) || !info.suggestions.length) {
-        return [];
-      }
-      const normalizedPrefix = info.argumentText.trim().toLowerCase();
-      const exact = [];
-      const partial = [];
-      info.suggestions.forEach((entry) => {
-        const safeEntry = String(entry || '').trim();
-        if (!safeEntry) return;
-        const normalizedEntry = safeEntry.toLowerCase();
-        if (!normalizedPrefix) {
-          partial.push(safeEntry);
-          return;
-        }
-        if (normalizedEntry.startsWith(normalizedPrefix)) {
-          exact.push(safeEntry);
-          return;
-        }
-        if (normalizedEntry.includes(normalizedPrefix)) {
-          partial.push(safeEntry);
-        }
-      });
-      return [...new Set([...exact, ...partial])].slice(0, 10);
-    }
-
-    function updateCommandSuggestionBox() {
-      if (!chatBarWrap.classList.contains('visible') || !chatInputArmed) {
-        hideCommandSuggestionBox();
-        return;
-      }
-      const info = getCommandArgumentSuggestionInfo();
-      if (!info) {
-        hideCommandSuggestionBox();
-        return;
-      }
-
-      const usageText = info.usage ? String(info.usage).trim() : '';
-      const matches = getCommandArgumentSuggestionMatches(info);
-      const shouldShow = !!usageText || matches.length > 0;
-      if (!shouldShow) {
-        hideCommandSuggestionBox();
-        return;
-      }
-
-      if (commandSuggestionUsage) {
-        commandSuggestionUsage.textContent = usageText;
-      }
-      if (commandSuggestionList) {
-        commandSuggestionList.textContent = '';
-        matches.forEach((entry) => {
-          const chip = document.createElement('span');
-          chip.className = 'commandSuggestionChip';
-          chip.textContent = entry;
-          commandSuggestionList.appendChild(chip);
-        });
-      }
-      if (commandSuggestionBox) {
-        commandSuggestionBox.classList.add('visible');
-      }
     }
 
     function cycleCommandArgumentSuggestion(direction = 1) {
@@ -5177,7 +5019,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
           '/color_invert',
           '/color_party',
           '/color_randomize',
-          '/color_reset'
+          '/color_reset',
+          '/color_element'
         ], {
           panelType: 'color'
         }), 'system');
