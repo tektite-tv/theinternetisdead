@@ -1520,8 +1520,10 @@ const focusSink = document.getElementById('focusSink');
       { name: '/color_party', value: '/color_party', execute: true, desc: 'toggle hue shift plus auto-randomize and random invert flicker on or off' },
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
-      { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
-      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode' },
+      { name: '/dvd', value: '/dvd', execute: true, desc: 'show only the DVD commands' },
+      { name: '/dvd_spawn', value: '/dvd_spawn', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
+      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd_spawn swarm, including future spawns and infinite mode' },
+      { name: '/dvd_logo', value: '/dvd_logo', execute: true, desc: 'alias for /dvd_image' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode' },
       { name: '/dvd_slideshow', value: '/dvd_slideshow', execute: true, desc: 'spawn every GIF from /media/images/gifs as its own bouncing slideshow swarm' },
@@ -2012,7 +2014,7 @@ const focusSink = document.getElementById('focusSink');
       if (!messageText) return line;
       messageText.innerHTML = '';
 
-      line.dataset.rawContent = `System: OH GEEZ ${currentNickname} you've really done it now. You overclocked the /dvd command to (INFINITE) may god have mercy on your GPU. Click here to refresh dummy...`;
+      line.dataset.rawContent = `System: OH GEEZ ${currentNickname} you've really done it now. You overclocked the /dvd_spawn command to (INFINITE) may god have mercy on your GPU. Click here to refresh dummy...`;
 
       const refreshLink = document.createElement('a');
       refreshLink.href = '#';
@@ -2031,7 +2033,7 @@ const focusSink = document.getElementById('focusSink');
 
       const commandSpan = document.createElement('span');
       commandSpan.className = 'systemCommandLabel';
-      commandSpan.textContent = '/dvd';
+      commandSpan.textContent = '/dvd_spawn';
       refreshLink.appendChild(commandSpan);
 
       refreshLink.appendChild(document.createTextNode(' command to ('));
@@ -3828,6 +3830,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
         normalized === '/clock_date' ||
         normalized === '/clock_reset' ||
         normalized === '/clock_zone' ||
+        normalized === '/dvd_spawn' ||
+        normalized === '/dvd_image' ||
+        normalized === '/dvd_logo' ||
+        normalized === '/dvd_slideshow' ||
         normalized === '/color_hueshift' ||
         normalized === '/color_invert' ||
         normalized === '/color_party' ||
@@ -5077,6 +5083,19 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       if (command === '/dvd') {
+        addSystemMessage(formatCommandExecutionMessage('/dvd'));
+        addMessage(createCommandListMessageNode('DVD commands...', [
+          '/dvd_spawn',
+          '/dvd_image',
+          '/dvd_logo',
+          '/dvd_slideshow'
+        ], {
+          panelType: 'dvd'
+        }), 'system');
+        return true;
+      }
+
+      if (command === '/dvd_spawn') {
         const currentAttempts = getDvdCommandAttemptCount();
         const nextAttempt = currentAttempts + 1;
         dvdCommandAttemptCount = nextAttempt;
@@ -5110,7 +5129,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
 
         spawnDvdInstance();
-        addSystemMessage(formatCommandExecutionMessage('/dvd'), { repeatCount: nextAttempt, repeatLabel: nextAttempt >= dvdNormalMaxInstances ? 'MAX' : '' });
+        addSystemMessage(formatCommandExecutionMessage('/dvd_spawn'), { repeatCount: nextAttempt, repeatLabel: nextAttempt >= dvdNormalMaxInstances ? 'MAX' : '' });
         return true;
       }
 
