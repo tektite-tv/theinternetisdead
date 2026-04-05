@@ -194,6 +194,17 @@
       display: flex;
     }
 
+    body.debug .timestamp {
+      color: #000;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    body.debug .timestamp:hover {
+      text-decoration: underline;
+    }
+
     body.debug .messageDelete {
       display: flex;
     }
@@ -1989,6 +2000,36 @@ const focusSink = document.getElementById('focusSink');
       });
     }
 
+    async function copyMessageWithTimestamp(line) {
+      if (!line) return;
+      const timestampText = (line.querySelector('.timestamp')?.textContent || '').trim();
+      const rawContent = (line.dataset.rawContent || '').trim();
+      let messageText = rawContent;
+
+      if (!messageText) {
+        const messageTextEl = line.querySelector('.messageText');
+        messageText = (messageTextEl?.textContent || '').trim();
+      }
+
+      const combinedText = timestampText ? `${timestampText} ${messageText}` : messageText;
+      if (!combinedText) return;
+
+      try {
+        await navigator.clipboard.writeText(combinedText);
+      } catch (error) {
+        const fallbackTextArea = document.createElement('textarea');
+        fallbackTextArea.value = combinedText;
+        fallbackTextArea.setAttribute('readonly', '');
+        fallbackTextArea.style.position = 'fixed';
+        fallbackTextArea.style.top = '-9999px';
+        fallbackTextArea.style.opacity = '0';
+        document.body.appendChild(fallbackTextArea);
+        fallbackTextArea.select();
+        document.execCommand('copy');
+        fallbackTextArea.remove();
+      }
+    }
+
     function addMessage(content, role = 'user', isHtml = false) {
       const line = document.createElement('div');
       line.className = 'message';
@@ -2000,6 +2041,12 @@ const focusSink = document.getElementById('focusSink');
       const timestamp = document.createElement('div');
       timestamp.className = 'timestamp';
       timestamp.textContent = formatTimestamp();
+      timestamp.title = 'Click to copy message with timestamp';
+      timestamp.addEventListener('click', async (event) => {
+        if (!document.body.classList.contains('debug')) return;
+        event.stopPropagation();
+        await copyMessageWithTimestamp(line);
+      });
 
       meta.appendChild(timestamp);
 
