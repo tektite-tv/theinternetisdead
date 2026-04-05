@@ -1859,7 +1859,11 @@ const focusSink = document.getElementById('focusSink');
       const nicknameSpan = dvdOverclockAliasLine.querySelector('.nicknameLabel');
       if (!nicknameSpan) return;
       const nicknameChoices = getDvdOverclockNicknameChoices();
-      const nextLabel = nicknameChoices[Math.floor(Math.random() * nicknameChoices.length)] || 'User';
+      if (!nicknameChoices.length) return;
+      const currentLabel = String(nicknameSpan.textContent || '').trim();
+      const alternateChoices = nicknameChoices.filter((choice) => choice !== currentLabel);
+      const sourceChoices = alternateChoices.length ? alternateChoices : nicknameChoices;
+      const nextLabel = sourceChoices[Math.floor(Math.random() * sourceChoices.length)] || 'User';
       nicknameSpan.textContent = nextLabel;
     }
 
