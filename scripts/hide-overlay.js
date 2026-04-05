@@ -1,113 +1,84 @@
-(function(){
-    if(window.__hideOverlayShortcutInitialized) return;
-    window.__hideOverlayShortcutInitialized = true;
+(function () {
+  const PARAM_NAME = 'overlay';
+  const HOTKEY_KEY = 'o';
+  const FALSE_VALUES = new Set(['0', 'false', 'off', 'no']);
 
-    const boundWindows = new WeakSet();
-    const observedIframes = new WeakSet();
-    const overlayState = new WeakMap();
+  function getOverlayContainer() {
+    return document.getElementById('overlay-container');
+  }
 
-    function shouldIgnoreShortcut(event){
-        const view = event.view || window;
-        const doc = view.document || document;
-        const activeElement = doc.activeElement;
-        if(!activeElement) return false;
-        const tag = activeElement.tagName ? activeElement.tagName.toUpperCase() : '';
-        return (
-            tag === 'INPUT' ||
-            tag === 'TEXTAREA' ||
-            tag === 'SELECT' ||
-            activeElement.isContentEditable
-        );
+  function getUrl() {
+    return new URL(window.location.href);
+  }
+
+  function isOverlayDisabledInUrl() {
+    const value = getUrl().searchParams.get(PARAM_NAME);
+    return value !== null && FALSE_VALUES.has(String(value).trim().toLowerCase());
+  }
+
+  function updateUrl(disabled) {
+    const url = getUrl();
+    if (disabled) {
+      url.searchParams.set(PARAM_NAME, 'false');
+    } else {
+      url.searchParams.delete(PARAM_NAME);
     }
+    history.replaceState(null, '', url.toString());
+  }
 
-    function getOverlayElement(doc){
-        if(!doc) return null;
-        return doc.getElementById('overlay-container');
+  function measureOverlayHeight(container) {
+    if (!container) return 0;
+    if (container.style.display === 'none' || container.hidden) return 0;
+    return Math.ceil(container.getBoundingClientRect().height || container.offsetHeight || 0);
+  }
+
+  function refreshLayout(container) {
+    const overlayHeight = measureOverlayHeight(container || getOverlayContainer());
+    document.body.style.setProperty('--overlay-height', `${overlayHeight}px`);
+    if (typeof window.syncOverlayLayout === 'function') {
+      try {
+        window.syncOverlayLayout();
+      } catch (error) {
+        console.error('syncOverlayLayout failed:', error);
+      }
     }
+    window.dispatchEvent(new CustomEvent('overlaytoggle', {
+      detail: {
+        hidden: overlayHeight === 0,
+        overlayHeight
+      }
+    }));
+  }
 
-    function notifyLayoutChange(targetWindow){
-        try{
-            targetWindow.dispatchEvent(new Event('resize'));
-            targetWindow.dispatchEvent(new Event('orientationchange'));
-        }catch(error){
-            console.warn('Unable to notify layout change after overlay toggle:', error);
-        }
-    }
+  function applyOverlayState(disabled) {
+    const container = getOverlayContainer();
+    if (!container) return;
+    container.style.display = disabled ? 'none' : '';
+    container.setAttribute('aria-hidden', disabled ? 'true' : 'false');
+    document.documentElement.classList.toggle('overlay-hidden', disabled);
+    document.body.classList.toggle('overlay-hidden', disabled);
+    requestAnimationFrame(() => refreshLayout(container));
+  }
 
-    function toggleOverlay(targetWindow){
-        const doc = targetWindow.document;
-        const overlay = getOverlayElement(doc);
-        if(!overlay) return;
+  function toggleOverlay() {
+    const disabled = !document.body.classList.contains('overlay-hidden');
+    updateUrl(disabled);
+    applyOverlayState(disabled);
+  }
 
-        const currentlyHidden = overlay.dataset.overlayHidden === 'true';
-        if(currentlyHidden){
-            const previousDisplay = overlayState.get(overlay);
-            overlay.style.display = typeof previousDisplay === 'string' ? previousDisplay : '';
-        }else{
-            overlayState.set(overlay, overlay.style.display);
-            overlay.style.display = 'none';
-        }
+  function onKeydown(event) {
+    if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return;
+    if (event.repeat) return;
+    if (String(event.key || '').toLowerCase() !== HOTKEY_KEY) return;
+    event.preventDefault();
+    toggleOverlay();
+  }
 
-        overlay.dataset.overlayHidden = currentlyHidden ? 'false' : 'true';
-        doc.documentElement.classList.toggle('overlay-hidden', !currentlyHidden);
-        if(doc.body){
-            doc.body.classList.toggle('overlay-hidden', !currentlyHidden);
-        }
-        notifyLayoutChange(targetWindow);
-    }
+  window.applyOverlayStateFromUrl = function () {
+    applyOverlayState(isOverlayDisabledInUrl());
+  };
 
-    function handleShortcut(event){
-        const key = (event.key || '').toLowerCase();
-        if(!(event.ctrlKey && event.shiftKey && key === 'o')) return;
-        if(event.metaKey || event.altKey) return;
-        if(shouldIgnoreShortcut(event)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        toggleOverlay(window.top || window);
-    }
-
-    function bindWindow(targetWindow){
-        if(!targetWindow || boundWindows.has(targetWindow)) return;
-        try{
-            targetWindow.addEventListener('keydown', handleShortcut, true);
-            boundWindows.add(targetWindow);
-            bindIframeDescendants(targetWindow.document);
-        }catch(error){
-            console.warn('Unable to bind overlay shortcut to window:', error);
-        }
-    }
-
-    function watchIframe(iframe){
-        if(!iframe || observedIframes.has(iframe)) return;
-        observedIframes.add(iframe);
-        iframe.addEventListener('load', () => {
-            try{
-                bindWindow(iframe.contentWindow);
-            }catch(error){
-                console.warn('Unable to bind overlay shortcut to iframe:', error);
-            }
-        });
-        try{
-            if(iframe.contentWindow && iframe.contentDocument && iframe.contentDocument.readyState !== 'loading'){
-                bindWindow(iframe.contentWindow);
-            }
-        }catch(error){
-            console.warn('Unable to inspect iframe for overlay shortcut:', error);
-        }
-    }
-
-    function bindIframeDescendants(rootDocument){
-        if(!rootDocument) return;
-        rootDocument.querySelectorAll('iframe').forEach(watchIframe);
-    }
-
-    const mutationObserver = new MutationObserver(() => bindIframeDescendants(document));
-    mutationObserver.observe(document.documentElement || document.body, { childList: true, subtree: true });
-
-    bindWindow(window);
-    if(document.readyState === 'loading'){
-        document.addEventListener('DOMContentLoaded', () => bindIframeDescendants(document), { once: true });
-    }else{
-        bindIframeDescendants(document);
-    }
+  document.addEventListener('DOMContentLoaded', window.applyOverlayStateFromUrl);
+  window.addEventListener('load', window.applyOverlayStateFromUrl);
+  window.addEventListener('keydown', onKeydown, true);
 })();

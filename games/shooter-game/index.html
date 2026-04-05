@@ -122,6 +122,8 @@ function syncLayout(){
     frame.style.height = "calc(100dvh - " + overlayHeight + "px)";
 }
 
+window.syncOverlayLayout = syncLayout;
+
 loadOverlay();
 
 window.addEventListener("resize", syncLayout);
@@ -132,7 +134,7 @@ const resizeObserver = new ResizeObserver(syncLayout);
 resizeObserver.observe(document.getElementById("overlay-container"));
 </script>
 
-<script src="/scripts/screenshot-shortcut.js"></script>
-<script src="/scripts/hide-overlay.js"></script>
+  <script src="/scripts/screenshot-shortcut.js"></script>
+  <script src="/scripts/hide-overlay.js"></script>
 </body>
 </html>
