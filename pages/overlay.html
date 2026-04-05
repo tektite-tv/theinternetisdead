@@ -117,7 +117,8 @@ html, body {
   animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
-#overlay-root #chat-link {
+#overlay-root #chat-link,
+#overlay-root #standalone-home-link {
   font-size: 1.25em;
   padding: 4px 8px;
 }
@@ -472,6 +473,7 @@ html, body {
       </a>
       <div class="top-links">
         <a class="home-link" id="chat-link" href="/" hidden>/chat</a>
+        <a class="home-link" id="standalone-home-link" href="/" hidden>+ Home</a>
         <a class="home-link" href="/experiments">+ Experiments</a>
         <a class="home-link" href="/games">+ Games</a>
       </div>
@@ -686,6 +688,7 @@ const sidebar = overlayRoot.querySelector('#sidebar');
   const toggles = overlayRoot.querySelectorAll('[data-action="toggle-sidebar"]');
   const logoLinks = overlayRoot.querySelectorAll('.logo-link');
   const chatLink = overlayRoot.querySelector('#chat-link');
+  const standaloneHomeLink = overlayRoot.querySelector('#standalone-home-link');
 
   if (!sidebar || !backdrop) return;
 
@@ -701,6 +704,11 @@ const sidebar = overlayRoot.querySelector('#sidebar');
   function isHostedOnIndexPage() {
     const path = (window.location.pathname || '').replace(/\/+/g, '/');
     return path === '/' || path === '/index.html';
+  }
+
+  function isStandaloneOverlayPage() {
+    const path = (window.location.pathname || '').replace(/\/+/g, '/');
+    return /(?:^|\/)overlay\.html$/i.test(path) && !isInjectedIntoOverlayContainer();
   }
 
   function pageContainsChatSandbox() {
@@ -784,26 +792,41 @@ const sidebar = overlayRoot.querySelector('#sidebar');
   window.addEventListener('resize', () => {
     refreshOverlayLogoHoverTint();
     updateTorontoClock();
-    syncChatLinkVisibility();
+    syncTopLinkVisibility();
   });
 
   overlayRoot.querySelectorAll('#sidebar a').forEach((link) => {
     link.addEventListener('click', closeSidebar);
   });
 
-  function syncChatLinkVisibility() {
-    if (!chatLink) return;
+  function syncTopLinkVisibility() {
+    const shouldShowChat = !!chatLink && shouldUseIndexChatBehavior();
+    const shouldShowStandaloneHome = !!standaloneHomeLink && isStandaloneOverlayPage();
 
-    const shouldShow = shouldUseIndexChatBehavior();
-    chatLink.hidden = !shouldShow;
-    chatLink.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
-    chatLink.tabIndex = shouldShow ? 0 : -1;
-    chatLink.style.display = shouldShow ? '' : 'none';
+    if (chatLink) {
+      chatLink.hidden = !shouldShowChat;
+      chatLink.setAttribute('aria-hidden', shouldShowChat ? 'false' : 'true');
+      chatLink.tabIndex = shouldShowChat ? 0 : -1;
+      chatLink.style.display = shouldShowChat ? '' : 'none';
 
-    if (shouldShow) {
-      chatLink.setAttribute('href', '#');
-    } else {
-      chatLink.removeAttribute('href');
+      if (shouldShowChat) {
+        chatLink.setAttribute('href', '#');
+      } else {
+        chatLink.removeAttribute('href');
+      }
+    }
+
+    if (standaloneHomeLink) {
+      standaloneHomeLink.hidden = !shouldShowStandaloneHome;
+      standaloneHomeLink.setAttribute('aria-hidden', shouldShowStandaloneHome ? 'false' : 'true');
+      standaloneHomeLink.tabIndex = shouldShowStandaloneHome ? 0 : -1;
+      standaloneHomeLink.style.display = shouldShowStandaloneHome ? '' : 'none';
+
+      if (shouldShowStandaloneHome) {
+        standaloneHomeLink.setAttribute('href', '/');
+      } else {
+        standaloneHomeLink.removeAttribute('href');
+      }
     }
   }
 
@@ -821,7 +844,7 @@ const sidebar = overlayRoot.querySelector('#sidebar');
     closeSidebar();
   }
 
-  syncChatLinkVisibility();
+  syncTopLinkVisibility();
 
   if (chatLink) {
     chatLink.addEventListener('click', handleChatActivate);
