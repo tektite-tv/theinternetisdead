@@ -376,8 +376,6 @@ body.invert-colors {
   <div id="livesText" class="subtxt">x3</div>
 </div>
 
-<div id="shieldRegenHud" style="position:absolute; left:14px; bottom:108px; font-family:'Courier New', monospace; font-size:18px; font-weight:800; color:#7fefff; text-shadow:0 0 8px rgba(0,0,0,0.7), 0 0 10px rgba(0,255,255,0.25); pointer-events:none; z-index:60; user-select:none; white-space:nowrap; display:none;">Shield Regen: 1:00</div>
-
 <div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
   <div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
   <div id="powerupHint" class="subtxt">Press Q</div>
@@ -393,7 +391,7 @@ body.invert-colors {
 <div id="winOverlay">
   <div id="winPanel">
     <div id="winTitle">You Win!</div>
-    <button id="btnContinue">Continue to Level 2</button>
+    <button id="btnContinue">Continue</button>
   </div>
 </div>
 
@@ -893,7 +891,6 @@ function applyChromaticAberration(beat){
 const overlay = document.getElementById("overlay");
 const livesSlot = document.getElementById("livesSlot");
 const livesText = document.getElementById("livesText");
-const shieldRegenHud = document.getElementById("shieldRegenHud");
 const powerupSlot = document.getElementById("powerupSlot");
 const powerupHint = document.getElementById("powerupHint");
 ;
@@ -907,9 +904,6 @@ const mazeSummaryMissed = document.getElementById("mazeSummaryMissed");
 const mazeSummaryBonus = document.getElementById("mazeSummaryBonus");
 const btnNextMaze = document.getElementById("btnNextMaze");
 const AUTO_START_LEVEL = new URLSearchParams(window.location.search).get("autostart") === "1";
-const STANDALONE_LEVEL2 = (window.self === window.top);
-const SHOULD_AUTO_BOOT_LEVEL2 = AUTO_START_LEVEL || STANDALONE_LEVEL2;
-let level2Booted = false;
 
 let hudVisible = false;
 
@@ -1081,18 +1075,8 @@ const PAUSE_COMMANDS = {
 };
 
 // v1.96: Fullscreen toggle (real browser fullscreen)
-function requestHostFullscreen(action="toggle"){
-  if (window.parent && window.parent !== window){
-    try{
-      window.parent.postMessage({ type: "tektite:fullscreen", action }, "*");
-      return true;
-    }catch(e){}
-  }
-  return false;
-}
 function toggleFullscreen(){
   try{
-    if (requestHostFullscreen("toggle")) return;
     if (!document.fullscreenElement){
       (document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : null);
     } else {
@@ -1404,120 +1388,57 @@ function togglePause(){
 
 
 // =======================
-// Right-Click Shield (Level 2 bubble rebuild)
-// - Hold RIGHT MOUSE to raise a thicker rainbow bubble around the player.
-// - Enemies cannot walk through it; they press against it and slowly bite chunks out of it.
-// - Shield durability is bite-based: 12 bites total, 2 bites per HUD square.
-// - Cooldown only starts when the shield is fully chewed through.
+// Right-Click Shield (v1.96)
+// - Hold RIGHT MOUSE to raise a neon rainbow shield ring.
+// - Shield blocks/bounces enemy contact + enemy bullets.
+// - Uses "shield HP" so bullets don't erase it instantly.
+// - Shield persists while held; only drops on release or when HP is depleted.
+// - 30s cooldown after releasing or after shield breaks.
 // =======================
 let shieldActive = false;
 let mouseShieldHolding = false;
-let mouseFireHolding = false;
+let mouseFireHolding = false; // v1.96: allow holding LMB to keep firing (even while shielding)
 let gamepadShieldHolding = false;
-let shieldHolding = false;
-let shieldHP = 12;
-const SHIELD_HP_MAX = 12;
-const SHIELD_BULLET_DMG = 1;
-const SHIELD_COLLISION_DMG = 1;
-let shieldCooldown = 0;
-const SHIELD_COOLDOWN_SECS = 60;
-const SHIELD_RADIUS_MULT = 1.18;
-const SHIELD_INNER_RADIUS_MULT = 0.72;
-const SHIELD_BITE_INTERVAL = 0.18;
+let shieldHolding = false; // combined (mouse OR gamepad)
+// HP model (more sane than "3 hits" when bullets are flying)
+let shieldHP = 0;
+const SHIELD_HP_MAX = 120;             // "reasonable amount" of damage before it breaks
+const SHIELD_BULLET_DMG = 6;           // bullets nibble, they don't annihilate
+const SHIELD_COLLISION_DMG = 18;       // ramming the shield costs more
+let shieldCooldown = 0;                // seconds remaining
+const SHIELD_COOLDOWN_SECS = 30;
+const SHIELD_RADIUS_MULT = 0.78;       // relative to player size
+
+// If focus/pointer events get weird, don't insta-drop the shield.
+// Give a short grace period before forcing it off.
 let shieldHoldGrace = 0;
 const SHIELD_HOLD_GRACE_SECS = 0.25;
-let shieldBurstT = 0;
-let shieldBurstHue = 0;
-const shieldEnemyBiteTimers = new WeakMap();
-let shieldReverseBuffer = null;
-let shieldReverseBufferLoading = false;
 
 function canActivateShield(){
   return (gameState === STATE.PLAYING && !isDead && shieldCooldown <= 0 && !shieldActive);
 }
 function startShield(){
   shieldActive = true;
-  if (shieldHP <= 0 && shieldCooldown <= 0) shieldHP = SHIELD_HP_MAX;
+  // v1.96: If you let go earlier, keep remaining HP for next time.
+  // Only refill to full when it was fully broken (shieldHP == 0) and cooldown has expired.
+  if (shieldHP <= 0) shieldHP = SHIELD_HP_MAX;
   shieldHoldGrace = SHIELD_HOLD_GRACE_SECS;
-  updateShieldRegenHUD();
 }
 function stopShield(startCooldown=false){
+  // v1.96: Releasing shield should NOT trigger cooldown and should NOT erase remaining HP.
   if (shieldActive){
     shieldActive = false;
     shieldHoldGrace = 0;
     if (startCooldown) shieldCooldown = SHIELD_COOLDOWN_SECS;
-    updateShieldRegenHUD();
   }
 }
-function updateShieldRegenHUD(){
-  if (!shieldRegenHud) return;
-  const t = Math.max(0, Math.ceil(shieldCooldown));
-  const mins = Math.floor(t / 60);
-  const secs = t % 60;
-  shieldRegenHud.textContent = `Shield Regen: ${mins}:${String(secs).padStart(2,'0')}`;
-  shieldRegenHud.style.display = (gameState === STATE.PLAYING && shieldCooldown > 0) ? 'block' : 'none';
-}
-function restoreShieldIfReady(){
-  if (!shieldActive && shieldCooldown <= 0 && shieldHP <= 0){
-    shieldHP = SHIELD_HP_MAX;
-  }
-}
-function shieldApplyDamage(dmg, impactHue = 0){
+function shieldApplyDamage(dmg){
   if (!shieldActive) return;
-  const oldHP = shieldHP;
   shieldHP = Math.max(0, shieldHP - Math.max(0, dmg));
-  if (shieldHP < oldHP){
-    shieldBurstT = 0.14;
-    shieldBurstHue = impactHue;
-    playShieldBiteReverse();
-  }
   if (shieldHP <= 0){
-    shieldHP = 0;
-    stopShield(true);
+    // v1.96: Cooldown ONLY when the shield breaks.
+    stopShield(false);
   }
-}
-function loadReverseShieldBite(){
-  if (shieldReverseBuffer || shieldReverseBufferLoading || !window.AudioContext && !window.webkitAudioContext) return;
-  shieldReverseBufferLoading = true;
-  try{
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!audioCtx) audioCtx = new Ctx();
-    fetch(AUDIO_HIT).then(r => r.arrayBuffer()).then(buf => audioCtx.decodeAudioData(buf)).then(decoded => {
-      const reversed = audioCtx.createBuffer(decoded.numberOfChannels, decoded.length, decoded.sampleRate);
-      for (let ch = 0; ch < decoded.numberOfChannels; ch++){
-        const src = decoded.getChannelData(ch);
-        const dst = reversed.getChannelData(ch);
-        for (let i = 0, j = src.length - 1; i < src.length; i++, j--) dst[i] = src[j];
-      }
-      shieldReverseBuffer = reversed;
-    }).catch(()=>{}).finally(()=>{ shieldReverseBufferLoading = false; });
-  }catch(e){
-    shieldReverseBufferLoading = false;
-  }
-}
-function playShieldBiteReverse(){
-  if (audioMuted) return;
-  loadReverseShieldBite();
-  try{
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-    if (shieldReverseBuffer && audioCtx){
-      const src = audioCtx.createBufferSource();
-      const gain = audioCtx.createGain();
-      src.buffer = shieldReverseBuffer;
-      gain.gain.value = 0.42;
-      src.connect(gain);
-      gain.connect(audioCtx.destination);
-      src.start(0);
-      return;
-    }
-  }catch(e){}
-  try{
-    const c = sfxHit.cloneNode();
-    c.volume = Math.max(0.08, (sfxHit.volume || 0.7) * 0.35);
-    c.muted = !!audioMuted;
-    c.playbackRate = 0.65;
-    c.play().catch(()=>{});
-  }catch(e){}
 }
  // v1.96: HUD hidden by default; toggle with / (Slash)
 
@@ -2212,7 +2133,6 @@ function unlockAudioOnce(){
   }catch(e){}
 
   applyMuteState();
-  loadReverseShieldBite();
   ensureMusicPlaying();
 }
 function playSfx(a){
@@ -2327,7 +2247,6 @@ function showMenu(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  if (shieldRegenHud) shieldRegenHud.style.display = "none";
 
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
@@ -2343,7 +2262,6 @@ function showWinOverlay(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  if (shieldRegenHud) shieldRegenHud.style.display = "none";
   // keep music playing through the win/score screen
 }
 
@@ -2381,7 +2299,6 @@ function showOptions(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  if (shieldRegenHud) shieldRegenHud.style.display = "none";
 
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
@@ -2401,7 +2318,6 @@ function startGame(){
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "block";
-  updateShieldRegenHUD();
 
 
   // v1.96.x: Reset run timer at the start of each game
@@ -2443,11 +2359,6 @@ function startGame(){
   player.y = canvas.height / 2;
   bonusArmor = 0;
   bonusArmorBrokenT = 0;
-  shieldHP = SHIELD_HP_MAX;
-  shieldCooldown = 0;
-  shieldBurstT = 0;
-  shieldEnemyBiteTimers = new WeakMap();
-  updateShieldRegenHUD();
   isDead = false;
   deathTimer = 0;
   deathGameOver = false;
@@ -2456,32 +2367,26 @@ function startGame(){
 
   wave = START_WAVE;
   showWaveBanner(wave);
-  bullets.length = 0;
+bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
 
+  bombsCount = 0;
   bomb = null;
   ufo = null;
 
   resetFormation();
   updateHearts();
-  spawnEnemies();
+spawnEnemies();
   trySpawnUFO();
 
   window.focus();
 }
 
-function bootLevel2(){
-  if (level2Booted) return;
-  level2Booted = true;
-  if (startMenu) startMenu.style.display = "none";
-  if (optionsMenu) optionsMenu.style.display = "none";
-  if (uiRoot) uiRoot.style.display = "none";
-  requestAnimationFrame(() => startGame());
-}
-
-if (SHOULD_AUTO_BOOT_LEVEL2){
-  window.addEventListener("load", bootLevel2, { once: true });
+if (AUTO_START_LEVEL){
+  window.addEventListener("load", () => {
+    requestAnimationFrame(() => startGame());
+  }, { once: true });
 }
 
 btnStart.addEventListener("click", startGame);
@@ -3753,7 +3658,6 @@ window.addEventListener("contextmenu", (e) => {
 
 
 function toggleFullscreen(){
-  if (requestHostFullscreen("toggle")) return;
   const elem = document.documentElement;
   if (!document.fullscreenElement){
     if (elem.requestFullscreen) elem.requestFullscreen();
@@ -3856,11 +3760,8 @@ function update(dt){
   // Run timer (seconds since Start Game)
   runTimer += dt;
 
-  // Shield cooldown + regeneration HUD
+  // v1.96: shield cooldown + hold logic
   if (shieldCooldown > 0) shieldCooldown = Math.max(0, shieldCooldown - dt);
-  if (shieldBurstT > 0) shieldBurstT = Math.max(0, shieldBurstT - dt);
-  restoreShieldIfReady();
-  updateShieldRegenHUD();
 
   if (shieldActive){
     if (shieldHolding){
@@ -4354,7 +4255,7 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
       const rr = (shieldR + b.r);
       if (dx*dx + dy*dy <= rr*rr){
         enemyBullets.splice(i, 1);
-        shieldApplyDamage(SHIELD_BULLET_DMG, 205);
+        shieldApplyDamage(SHIELD_BULLET_DMG);
         continue;
       }
     }
@@ -4367,12 +4268,13 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
 
   // enemy contact damage
 
-  // Bubble shield: enemies press against it, get nudged outward, and slowly chew through it.
+  // v1.96: shield makes enemies bounce off the player (and consumes shield hits on impact)
   if (shieldActive){
     const shieldR = player.w * SHIELD_RADIUS_MULT;
     for (const e of enemies){
       const dx = e.x - player.x;
       const dy = e.y - player.y;
+      // approximate enemy radius from its sprite size
       const er = Math.max(e.w, e.h) * 0.45;
       const rr = shieldR + er;
       const d2 = dx*dx + dy*dy;
@@ -4381,11 +4283,10 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         const d = Math.max(1, Math.sqrt(d2));
         const nx = dx / d;
         const ny = dy / d;
-        const targetDist = rr + 6;
 
-        // Push them just outside the bubble so they cannot walk through it.
-        e.x += (player.x + nx * targetDist - e.x) * 0.42;
-        e.y += (player.y + ny * targetDist - e.y) * 0.42;
+        // Push enemy out to the ring boundary
+        e.x = player.x + nx * (rr + 2);
+        e.y = player.y + ny * (rr + 2);
         if (e.mazeMob){
           const camX = playerWorldX - canvas.width / 2;
           const camY = playerWorldY - canvas.height / 2;
@@ -4393,24 +4294,18 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
           e.worldY = e.y + camY;
         }
 
-        if (typeof e.vx === 'number') e.vx *= 0.72;
-        if (typeof e.vy === 'number') e.vy *= 0.72;
-        if (e.swoop) e.swoop = null;
-        e.col += nx * 0.18;
-        e.row += ny * 0.12;
-
-        const biteClock = Math.max(0, shieldEnemyBiteTimers.get(e) || 0) - dt;
-        if (biteClock <= 0){
-          const hue = ((Math.atan2(ny, nx) * 180 / Math.PI) + 360) % 360;
-          shieldApplyDamage(SHIELD_COLLISION_DMG, hue);
-          shieldEnemyBiteTimers.set(e, SHIELD_BITE_INTERVAL);
-        } else {
-          shieldEnemyBiteTimers.set(e, biteClock);
+        // If it's swooping, cancel its swoop so it doesn't keep clipping the shield.
+        if (e.swoop){
+          e.swoop = null;
         }
 
+        // Nudge its formation slot slightly away so it doesn't immediately re-collide
+        e.col += nx * 0.35;
+        e.row += ny * 0.25;
+
+        shieldApplyDamage(SHIELD_BULLET_DMG);
+        // If shield died from this hit, stop bouncing for this frame.
         if (!shieldActive) break;
-      } else if (shieldEnemyBiteTimers.has(e)) {
-        shieldEnemyBiteTimers.delete(e);
       }
     }
   }
@@ -4482,88 +4377,49 @@ function healPlayer(amount){
 function drawShieldRing(){
   if (!(gameState === STATE.PLAYING && shieldActive)) return;
 
-  const outerR = player.w * SHIELD_RADIUS_MULT;
-  const innerR = player.w * SHIELD_INNER_RADIUS_MULT;
-  const baseHue = (time * 180) % 360;
-  const burst = shieldBurstT > 0 ? (shieldBurstT / 0.14) : 0;
-
+  const r = player.w * SHIELD_RADIUS_MULT;
+  const segments = 72;
+  const baseHue = (time * 180) % 360; // shifting rainbow
   ctx.save();
   ctx.translate(player.x, player.y);
 
-  // Big soft bubble body
-  const glow = ctx.createRadialGradient(0, 0, innerR * 0.2, 0, 0, outerR * 1.28);
-  glow.addColorStop(0, 'rgba(180,255,255,0.02)');
-  glow.addColorStop(0.42, 'rgba(120,220,255,0.08)');
-  glow.addColorStop(0.72, 'rgba(80,200,255,0.16)');
-  glow.addColorStop(1, 'rgba(0,180,255,0.0)');
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(0, 0, outerR * 1.18, 0, Math.PI * 2);
-  ctx.fill();
+  // Outer glow
+  ctx.lineWidth = 6;
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "rgba(0,255,255,0.35)";
 
-  // Radial gaussian-ish blur shell
-  ctx.save();
-  ctx.filter = 'blur(12px)';
-  const blurGrad = ctx.createRadialGradient(0, 0, innerR * 0.85, 0, 0, outerR * 1.02);
-  blurGrad.addColorStop(0, 'rgba(255,255,255,0.00)');
-  blurGrad.addColorStop(0.50, 'rgba(80,220,255,0.10)');
-  blurGrad.addColorStop(0.78, 'rgba(0,255,220,0.22)');
-  blurGrad.addColorStop(0.95, 'rgba(255,120,255,0.18)');
-  blurGrad.addColorStop(1, 'rgba(255,255,255,0.00)');
-  ctx.fillStyle = blurGrad;
-  ctx.beginPath();
-  ctx.arc(0, 0, outerR * 1.06, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // Transparent interior overlay showing it is a true bubble around the player
-  const interior = ctx.createRadialGradient(0, 0, 0, 0, 0, outerR * 0.92);
-  interior.addColorStop(0, 'rgba(255,255,255,0.01)');
-  interior.addColorStop(0.65, 'rgba(120,200,255,0.05)');
-  interior.addColorStop(1, 'rgba(0,255,255,0.02)');
-  ctx.fillStyle = interior;
-  ctx.beginPath();
-  ctx.arc(0, 0, outerR * 0.92, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Thick rainbow shell
-  ctx.lineWidth = Math.max(14, player.w * 0.20);
-  ctx.shadowBlur = 28 + burst * 18;
-  ctx.shadowColor = burst ? `hsla(${shieldBurstHue},100%,65%,0.55)` : 'rgba(0,255,255,0.35)';
-  const segments = 96;
   for (let i = 0; i < segments; i++){
     const a0 = (i / segments) * Math.PI * 2;
     const a1 = ((i + 1) / segments) * Math.PI * 2;
-    const hue = burst ? (shieldBurstHue + i * 1.2) % 360 : (baseHue + i * (360 / segments)) % 360;
-    ctx.strokeStyle = `hsla(${hue}, 100%, ${burst ? 70 : 64}%, ${burst ? 0.95 : 0.82})`;
+    const hue = (baseHue + i * (360 / segments)) % 360;
+    ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.95)`;
     ctx.beginPath();
-    ctx.arc(0, 0, outerR, a0, a1);
+    ctx.arc(0, 0, r, a0, a1);
     ctx.stroke();
   }
 
-  // Inner rim
-  ctx.shadowBlur = 12;
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+  // Small inner ring to make it feel "contained"
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
   ctx.beginPath();
-  ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+  ctx.arc(0, 0, r - 6, 0, Math.PI*2);
   ctx.stroke();
 
-  // 6 shield squares, every 2 bites drains one square.
+  // Shield HP pips (more pips = more remaining shield)
   const PIPS = 6;
-  const filled = Math.max(0, Math.min(PIPS, Math.ceil(shieldHP / 2)));
-  const square = 8;
-  const gap = 5;
-  const totalW = PIPS * square + (PIPS - 1) * gap;
-  const startX = -totalW / 2;
-  const py = -outerR - 22;
-  ctx.shadowBlur = 8;
+  const pipR = 3.2;
+  const hpPerPip = SHIELD_HP_MAX / PIPS;
+  const filled = Math.max(0, Math.min(PIPS, Math.ceil(shieldHP / hpPerPip)));
+
   for (let i = 0; i < PIPS; i++){
-    ctx.fillStyle = i < filled ? 'rgba(120,255,255,0.95)' : 'rgba(120,255,255,0.18)';
-    ctx.strokeStyle = i < filled ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.14)';
-    const x = startX + i * (square + gap);
-    ctx.fillRect(x, py, square, square);
-    ctx.strokeRect(x, py, square, square);
+    const on = (i < filled);
+    const px = (i - (PIPS-1)/2) * 10;
+    const py = -r - 12;
+    ctx.fillStyle = on ? "rgba(0,255,255,0.9)" : "rgba(0,255,255,0.18)";
+    ctx.beginPath();
+    ctx.arc(px, py, pipR, 0, Math.PI*2);
+    ctx.fill();
   }
 
   ctx.restore();
@@ -4886,4 +4742,3 @@ z-index:9999;
 </body>
 
 </html>
-
