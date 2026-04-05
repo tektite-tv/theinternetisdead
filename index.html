@@ -1,288 +1,1595 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tektite's Explorer</title>
-
-<style>
-html,body{
-    margin:0;
-    padding:0;
-    height:100%;
-    overflow:hidden;
-    background:#111;
-    font-family:"Courier New", monospace;
-}
-
-:root{
-    --overlay-height:60px;
-}
-
-#app-shell{
-    position:relative;
-    width:100%;
-    height:100dvh;
-    min-height:100svh;
-    overflow:hidden;
-    background:#000;
-}
-
-#overlay-container{
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    min-height:60px;
-    border:none;
-    overflow:visible;
-    z-index:1000;
-}
-
-#scaled-content-shell{
-    position:absolute;
-    top:var(--overlay-height);
-    left:0;
-    width:125%;
-    height:calc((100dvh - var(--overlay-height)) * 1.25);
-    transform:scale(0.8);
-    transform-origin:top left;
-}
-
-#explorer-mode-bar{
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:56px;
-    box-sizing:border-box;
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:10px 16px;
-    background:rgba(102, 0, 204, 0.5);
-    border:none;
-    z-index:900;
-}
-
-#explorer-mode-select{
-    background:#1a1a1a;
-    color:#fff;
-    border:1px solid rgba(255,255,255,0.25);
-    padding:8px 12px;
-    font-family:"Courier New", monospace;
-    font-size:14px;
-    outline:none;
-}
-
-#frame-container{
-    position:absolute;
-    top:56px;
-    left:0;
-    width:100%;
-    height:calc(100% - 56px);
-}
-
-.mode-frame{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    border:none;
-    display:none;
-    background:#000;
-}
-
-.mode-frame.active{
-    display:block;
-}
-
-#nerd-stats{
-    position:fixed;
-    bottom:10px;
-    right:10px;
-    width:280px;
-    background:black;
-    color:lime;
-    font-size:12px;
-    padding:10px;
-    border:2px solid lime;
-    display:none;
-    z-index:999999;
-}
-
-@media (max-width: 700px){
-    body{
-        overscroll-behavior-y:none;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Internet Is Dead</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
     }
 
-    #app-shell{
-        height:100dvh;
-        min-height:100dvh;
+    body {
+      position: relative;
+      --overlay-height: 76px;
     }
-}
-</style>
+
+    /* ADDED: scale the actual site layer to 75% so the page appears zoomed out by 25%
+       without shrinking the separate chat overlay iframe. */
+    #site-shell {
+      position: fixed;
+      left: 0;
+      top: var(--overlay-height, 76px);
+      width: 133.333333%;
+      height: calc((100vh - var(--overlay-height, 76px)) / 0.75);
+      transform: scale(0.75);
+      transform-origin: top left;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #overlay-container {
+      width: 100%;
+      flex: 0 0 auto;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    #main-content {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    #tektite-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #000;
+    }
+
+    #chat-sandbox-frame {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      z-index: 9999;
+      display: block;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    #chat-sandbox-frame.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .overlay-error {
+      padding: 12px 16px;
+      background: #111;
+      color: #ff6666;
+      border-bottom: 1px solid #333;
+      font-family: monospace;
+    }
+
+    body.page-exited > *:not(#page-exit-overlay) {
+      display: none !important;
+    }
+
+    #page-exit-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      padding: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 0, 80, 0.28), transparent 28%),
+        radial-gradient(circle at 80% 25%, rgba(0, 255, 120, 0.24), transparent 26%),
+        radial-gradient(circle at 50% 80%, rgba(0, 140, 255, 0.24), transparent 30%),
+        #000;
+      color: #00ff66;
+      z-index: 2147483647;
+      font-family: "Courier New", Courier, monospace;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    body.page-exited #page-exit-overlay {
+      display: block;
+    }
+
+    .page-exit-overlay-bg {
+      position: absolute;
+      inset: -12%;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(255, 0, 64, 0.24), transparent 22%),
+        radial-gradient(circle at 82% 24%, rgba(0, 255, 102, 0.22), transparent 24%),
+        radial-gradient(circle at 48% 78%, rgba(0, 110, 255, 0.24), transparent 26%),
+        linear-gradient(135deg, rgba(255, 0, 0, 0.09), rgba(0, 255, 0, 0.09), rgba(0, 90, 255, 0.09));
+      filter: blur(28px) saturate(170%);
+      transform: translate3d(0, 0, 0) scale(1.08);
+      pointer-events: none;
+      animation: pageExitRgbPulse 2.3s ease-in-out infinite alternate;
+    }
+
+    .page-exit-overlay-inner {
+      position: absolute;
+      left: 24px;
+      top: 24px;
+      width: max-content;
+      max-width: min(calc(100vw - 48px), 72ch);
+      padding: 18px 20px;
+      white-space: pre;
+      font-size: clamp(10px, 1.35vw, 16px);
+      line-height: 1.1;
+      color: #00ff66;
+      text-shadow: 0 0 8px rgba(0, 255, 102, 0.35);
+      background: rgba(0, 0, 0, 0.38);
+      box-shadow: 0 0 0 1px rgba(0, 255, 102, 0.18), inset 0 0 24px rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+      will-change: transform;
+      animation: pageExitWave 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pageExitWave {
+      0% { filter: hue-rotate(0deg); }
+      25% { filter: hue-rotate(12deg); }
+      50% { filter: hue-rotate(-10deg); }
+      75% { filter: hue-rotate(8deg); }
+      100% { filter: hue-rotate(0deg); }
+    }
+
+    @keyframes pageExitRgbPulse {
+      0% { opacity: 0.68; transform: translate3d(-1.5%, -1%, 0) scale(1.04); }
+      100% { opacity: 1; transform: translate3d(1.5%, 1%, 0) scale(1.12); }
+    }
+  </style>
 </head>
-
 <body>
-<div id="app-shell">
-    <div id="overlay-container"></div>
+  <div id="overlay-container"></div>
 
-    <div id="scaled-content-shell">
-        <div id="explorer-mode-bar">
-            <select id="explorer-mode-select" aria-label="Select File Explorer Mode">
-                <option value="file-browser" selected>File Browser</option>
-                <option value="music-player">Music Player</option>
-            </select>
-        </div>
-
-        <div id="frame-container">
-            <iframe
-                id="file-browser-frame"
-                class="mode-frame active"
-                src="/file-browser.html"
-                loading="lazy"
-                title="File Browser"
-            ></iframe>
-
-            <iframe
-                id="music-player-frame"
-                class="mode-frame"
-                src="/music-player.html"
-                loading="lazy"
-                title="Music Player"
-            ></iframe>
-        </div>
+  <div id="site-shell">
+    <div id="main-content">
+      <iframe
+        id="tektite-frame"
+        src="/tektite-index.html"
+        title="Tektite Index"
+        loading="eager"
+        allowfullscreen
+      ></iframe>
     </div>
+  </div>
 
-    <div id="nerd-stats"></div>
-</div>
+  <iframe
+    id="chat-sandbox-frame"
+    src="/chat-sandbox.html"
+    title="Chat Sandbox Overlay"
+    loading="eager"
+    allow="clipboard-read; clipboard-write"
+  ></iframe>
 
-<script>
-function updateLayoutOffset(){
-    const overlay = document.getElementById("overlay-container");
-    const h = Math.ceil(overlay.getBoundingClientRect().height || 60);
-    document.documentElement.style.setProperty("--overlay-height", h + "px");
-}
+  <input id="overlay-logo-upload-input" type="file" accept="image/*" hidden />
+  <input id="tektite-logo-upload-input" type="file" accept="image/*" multiple hidden />
 
-async function loadOverlay(){
-    try{
-        const res = await fetch("/overlay.html", { cache: "no-store" });
-        if(!res.ok) throw new Error("Failed to load overlay.html");
-        const html = await res.text();
-        const container = document.getElementById("overlay-container");
-        const temp = document.createElement("div");
+  <script>
+    const overlayContainer = document.getElementById('overlay-container');
+    const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
+    const tektiteFrame = document.getElementById('tektite-frame');
+    const overlayLogoUploadInput = document.getElementById('overlay-logo-upload-input');
+    const tektiteLogoUploadInput = document.getElementById('tektite-logo-upload-input');
+    let chatSandboxVisible = false;
+    let chatSandboxReady = false;
+
+    const pageCustomizeDefaults = {
+      fontFamily: '"Courier New", Courier, monospace',
+      fontScalePercent: 100,
+      colors: {
+        pageBg: { label: 'Page Background', hex: '#000000', alpha: 1 },
+        pageText: { label: 'Page Text Color', hex: '#00ff00', alpha: 1 },
+        overlayTopBarBg: { label: 'Overlay Top Bar', hex: '#4b0076', alpha: 1 },
+        headerBg: { label: 'Page Header', hex: '#4b0076', alpha: 0.5 },
+        accent: { label: 'Buttons / Borders', hex: '#00ff00', alpha: 1 },
+        panelBg: { label: 'Panels / Inputs', hex: '#000000', alpha: 1 },
+        sidebarBg: { label: 'Sidebar Background', hex: '#110019', alpha: 1 },
+        overlayLogoTint: { label: 'Overlay Logo Tint', hex: '#00ff00', alpha: 0 },
+        overlayClockTint: { label: 'Overlay Clock Font', hex: '#00ff00', alpha: 1 },
+        tektiteLogoTint: { label: 'OldTube Logo Tint', hex: '#00ff00', alpha: 0 },
+        thumbnailTint: { label: 'Thumbnail Tint', hex: '#00ff00', alpha: 0 }
+      }
+    };
+    let pageCustomizeState = createDefaultPageCustomizeState();
+    let customOverlayLogoUrl = '';
+    let customTektiteLogoUrls = [];
+    let lastCustomOverlayLogoObjectUrl = '';
+    let lastCustomTektiteLogoObjectUrls = [];
+    let pageAutoShuffleIntervalId = null;
+    const pageAutoShuffleIntervalMs = 1000;
+    const pageControlShuffleIntervals = new Map();
+    const pageFontOptions = [
+      '"Courier New", Courier, monospace',
+      'Arial, Helvetica, sans-serif',
+      '"Times New Roman", Times, serif',
+      'Verdana, Geneva, sans-serif',
+      'Georgia, serif',
+      '"Trebuchet MS", sans-serif',
+      '"Lucida Console", Monaco, monospace'
+    ];
+    let pageGlobalColorInvertEnabled = false;
+    let pageGlobalHueShiftEnabled = false;
+    let pageGlobalHueShiftFrameId = null;
+    let pageGlobalHueShiftStartTime = 0;
+    let pageGlobalHueShiftFrozenAngle = null;
+    const pageGlobalHueShiftDurationMs = 4000;
+    let pageScreenshotAnimationActive = false;
+
+    function cloneState(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function createDefaultPageCustomizeState() {
+      const state = {
+        fontFamily: pageCustomizeDefaults.fontFamily,
+        fontScalePercent: pageCustomizeDefaults.fontScalePercent,
+        colors: {}
+      };
+      Object.entries(pageCustomizeDefaults.colors).forEach(([key, value]) => {
+        state.colors[key] = { hex: value.hex, alpha: value.alpha };
+      });
+      return state;
+    }
+
+    function clampAlpha(value, fallback = 1) {
+      const num = Number(value);
+      return Number.isFinite(num) ? Math.max(0, Math.min(1, num)) : fallback;
+    }
+
+    function clampScale(value) {
+      const num = Number(value);
+      return Number.isFinite(num) ? Math.max(10, Math.min(500, Math.round(num))) : pageCustomizeDefaults.fontScalePercent;
+    }
+
+    function hexToRgba(hex, alpha = 1) {
+      const safe = typeof hex === 'string' && /^#?[0-9a-fA-F]{6}$/.test(hex.trim()) ? hex.trim().replace('#', '') : '000000';
+      const r = parseInt(safe.slice(0, 2), 16);
+      const g = parseInt(safe.slice(2, 4), 16);
+      const b = parseInt(safe.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${clampAlpha(alpha)})`;
+    }
+
+    function randomHex() {
+      return `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+    }
+
+    function getChatWindow() {
+      return chatSandboxFrame && chatSandboxFrame.contentWindow ? chatSandboxFrame.contentWindow : null;
+    }
+
+    async function loadOverlay() {
+      try {
+        const response = await fetch('/overlay.html', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to load /overlay.html');
+        const html = await response.text();
+        const temp = document.createElement('div');
         temp.innerHTML = html;
-
         const fragment = document.createDocumentFragment();
         const scripts = [];
-
         Array.from(temp.childNodes).forEach((node) => {
-            if (node.nodeName && node.nodeName.toLowerCase() === "script") {
-                scripts.push(node);
-            } else {
-                fragment.appendChild(node.cloneNode(true));
-            }
+          if (node.nodeName.toLowerCase() === 'script') scripts.push(node);
+          else fragment.appendChild(node.cloneNode(true));
         });
-
-        container.innerHTML = "";
-        container.appendChild(fragment);
-
+        overlayContainer.innerHTML = '';
+        overlayContainer.appendChild(fragment);
         scripts.forEach((oldScript) => {
-            const newScript = document.createElement("script");
-            Array.from(oldScript.attributes).forEach((attr) => {
-                newScript.setAttribute(attr.name, attr.value);
-            });
-            newScript.textContent = oldScript.textContent;
-            container.appendChild(newScript);
+          const newScript = document.createElement('script');
+          Array.from(oldScript.attributes).forEach((attr) => newScript.setAttribute(attr.name, attr.value));
+          newScript.textContent = oldScript.textContent;
+          overlayContainer.appendChild(newScript);
         });
-
         requestAnimationFrame(() => {
-            updateLayoutOffset();
-            requestAnimationFrame(updateLayoutOffset);
+          syncOverlayLayoutHeight();
+          requestAnimationFrame(syncOverlayLayoutHeight);
         });
-    }catch(error){
-        console.error("Error loading overlay:", error);
+        applyPageCustomizeState();
+      } catch (error) {
+        console.error(error);
+        overlayContainer.innerHTML = '<div class="overlay-error">Error loading /overlay.html</div>';
+      }
     }
-}
 
-function toggleSidebar(){
-    const sidebar = document.getElementById("sidebar");
-    if(sidebar){
-        sidebar.classList.toggle("open");
+    function syncOverlayLayoutHeight() {
+      const overlayRoot = overlayContainer.querySelector('#overlay-root');
+      const overlayHeight = overlayRoot ? Math.ceil(overlayRoot.getBoundingClientRect().height) : 76;
+      document.body.style.setProperty('--overlay-height', `${Math.max(overlayHeight, 1)}px`);
     }
-}
 
-window.addEventListener("message", e => {
-    if(e.data && e.data.type === "openStats"){
-        toggleStatsPanel();
+    window.addEventListener('resize', () => {
+      syncOverlayLayoutHeight();
+    });
+
+    function setChatFrameVisible(visible) {
+      chatSandboxVisible = !!visible;
+      chatSandboxFrame.classList.toggle('visible', chatSandboxVisible);
     }
-});
 
-const explorerModeSelect = document.getElementById("explorer-mode-select");
-const fileBrowserFrame = document.getElementById("file-browser-frame");
-const musicPlayerFrame = document.getElementById("music-player-frame");
+    function postToChatSandbox(message) {
+      const chatWindow = getChatWindow();
+      if (!chatWindow) return false;
+      chatWindow.postMessage(message, '*');
+      return true;
+    }
 
-function setExplorerMode(mode){
-    if(mode === "music-player"){
-        fileBrowserFrame.classList.remove("active");
-        musicPlayerFrame.classList.add("active");
-        explorerModeSelect.value = "music-player";
+
+    async function loadHtml2CanvasInto(doc, win) {
+      if (!doc || !win) {
+        throw new Error('Screenshot target is not ready.');
+      }
+      if (typeof win.html2canvas === 'function') {
+        return win.html2canvas;
+      }
+      const existing = doc.querySelector('script[data-html2canvas-loader="true"]');
+      if (existing) {
+        await new Promise((resolve, reject) => {
+          if (typeof win.html2canvas === 'function') {
+            resolve();
+            return;
+          }
+          existing.addEventListener('load', () => resolve(), { once: true });
+          existing.addEventListener('error', () => reject(new Error('Unable to load screenshot renderer.')), { once: true });
+        });
+        if (typeof win.html2canvas === 'function') {
+          return win.html2canvas;
+        }
+      }
+      await new Promise((resolve, reject) => {
+        const script = doc.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        script.async = true;
+        script.dataset.html2canvasLoader = 'true';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Unable to load screenshot renderer.'));
+        (doc.head || doc.documentElement || doc.body).appendChild(script);
+      });
+      if (typeof win.html2canvas !== 'function') {
+        throw new Error('Screenshot renderer did not initialize.');
+      }
+      return win.html2canvas;
+    }
+
+    function waitForImagesInDocument(doc) {
+      if (!doc) return Promise.resolve();
+      const images = Array.from(doc.images || []);
+      return Promise.all(images.map((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+          return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+          const done = () => resolve();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        });
+      }));
+    }
+
+    async function renderOverlayCanvas() {
+      const overlayRoot = overlayContainer.querySelector('#overlay-root') || overlayContainer;
+      const overlayRect = overlayContainer.getBoundingClientRect();
+      if (!overlayRoot || overlayRect.width <= 0 || overlayRect.height <= 0) {
+        throw new Error('Overlay is not ready yet.');
+      }
+      const html2canvas = await loadHtml2CanvasInto(document, window);
+      await waitForImagesInDocument(document);
+      const canvas = await html2canvas(overlayRoot, {
+        backgroundColor: null,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        scale: 1,
+        width: Math.round(overlayRect.width),
+        height: Math.round(overlayRect.height),
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: document.documentElement.clientWidth,
+        windowHeight: document.documentElement.clientHeight,
+      });
+      return { canvas, rect: overlayRect };
+    }
+
+    async function renderTektiteCanvas() {
+      const tektiteDoc = tektiteFrame.contentDocument || (tektiteFrame.contentWindow && tektiteFrame.contentWindow.document);
+      const tektiteWindow = tektiteFrame.contentWindow;
+      const frameRect = tektiteFrame.getBoundingClientRect();
+      if (!tektiteDoc || !tektiteWindow || !tektiteDoc.documentElement) {
+        throw new Error('The tektite frame is not ready yet.');
+      }
+      if (frameRect.width <= 0 || frameRect.height <= 0) {
+        throw new Error('The tektite frame has no visible size.');
+      }
+      const html2canvas = await loadHtml2CanvasInto(tektiteDoc, tektiteWindow);
+      await waitForImagesInDocument(tektiteDoc);
+      const rawFrameWidth = Math.max(1, tektiteFrame.clientWidth || Math.round(frameRect.width));
+      const rawFrameHeight = Math.max(1, tektiteFrame.clientHeight || Math.round(frameRect.height));
+      const canvas = await html2canvas(tektiteDoc.documentElement, {
+        backgroundColor: tektiteWindow.getComputedStyle(tektiteDoc.body).backgroundColor || null,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        scale: 1,
+        x: Math.max(0, Math.round(tektiteWindow.scrollX || 0)),
+        y: Math.max(0, Math.round(tektiteWindow.scrollY || 0)),
+        width: rawFrameWidth,
+        height: rawFrameHeight,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: Math.max(rawFrameWidth, tektiteDoc.documentElement.scrollWidth || rawFrameWidth),
+        windowHeight: Math.max(rawFrameHeight, tektiteDoc.documentElement.scrollHeight || rawFrameHeight),
+      });
+      return { canvas, rect: frameRect };
+    }
+
+    function sleep(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    function canvasToBlob(canvas, type = 'image/png', quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error(`Unable to encode ${type} blob.`));
+        }, type, quality);
+      });
+    }
+
+    function downloadBlob(blob, filename) {
+      const blobUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      return blobUrl;
+    }
+
+
+    async function renderSiteCompositeCanvas() {
+      const [{ canvas: overlayCanvas, rect: overlayRect }, { canvas: tektiteCanvas, rect: frameRect }] = await Promise.all([
+        renderOverlayCanvas(),
+        renderTektiteCanvas()
+      ]);
+
+      const width = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1));
+      const height = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1));
+      const outputCanvas = document.createElement('canvas');
+      outputCanvas.width = width;
+      outputCanvas.height = height;
+      const context = outputCanvas.getContext('2d');
+      if (!context) {
+        throw new Error('Unable to create screenshot canvas.');
+      }
+
+      const rootFilter = (window.getComputedStyle(document.documentElement).filter || 'none').trim();
+      context.fillStyle = window.getComputedStyle(document.body).backgroundColor || '#000';
+      context.fillRect(0, 0, width, height);
+      context.filter = rootFilter && rootFilter !== 'none' ? rootFilter : 'none';
+      context.drawImage(
+        tektiteCanvas,
+        0, 0, tektiteCanvas.width, tektiteCanvas.height,
+        Math.round(frameRect.left), Math.round(frameRect.top), Math.round(frameRect.width), Math.round(frameRect.height)
+      );
+      context.drawImage(
+        overlayCanvas,
+        0, 0, overlayCanvas.width, overlayCanvas.height,
+        Math.round(overlayRect.left), Math.round(overlayRect.top), Math.round(overlayRect.width), Math.round(overlayRect.height)
+      );
+      context.filter = 'none';
+      return outputCanvas;
+    }
+
+    const zipCrc32Table = (() => {
+      const table = new Uint32Array(256);
+      for (let n = 0; n < 256; n += 1) {
+        let c = n;
+        for (let k = 0; k < 8; k += 1) {
+          c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[n] = c >>> 0;
+      }
+      return table;
+    })();
+
+    function getUtf8Bytes(text) {
+      return new TextEncoder().encode(String(text));
+    }
+
+    function crc32ForBytes(bytes) {
+      let crc = 0xFFFFFFFF;
+      for (let i = 0; i < bytes.length; i += 1) {
+        crc = zipCrc32Table[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+      }
+      return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    function uint16Bytes(value) {
+      const safe = value & 0xFFFF;
+      return Uint8Array.from([safe & 0xFF, (safe >>> 8) & 0xFF]);
+    }
+
+    function uint32Bytes(value) {
+      const safe = value >>> 0;
+      return Uint8Array.from([
+        safe & 0xFF,
+        (safe >>> 8) & 0xFF,
+        (safe >>> 16) & 0xFF,
+        (safe >>> 24) & 0xFF
+      ]);
+    }
+
+    function createStoredZipBlob(entries) {
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+
+      entries.forEach((entry) => {
+        const nameBytes = getUtf8Bytes(entry.name);
+        const size = (entry.size >>> 0);
+        const crc = (entry.crc >>> 0);
+        const dataPart = entry.blob || entry.bytes || new Uint8Array();
+
+        const localHeader = new Uint8Array([
+          ...uint32Bytes(0x04034b50),
+          ...uint16Bytes(20),
+          ...uint16Bytes(0x0800),
+          ...uint16Bytes(0),
+          ...uint16Bytes(0),
+          ...uint16Bytes(0),
+          ...uint32Bytes(crc),
+          ...uint32Bytes(size),
+          ...uint32Bytes(size),
+          ...uint16Bytes(nameBytes.length),
+          ...uint16Bytes(0)
+        ]);
+        localParts.push(localHeader, nameBytes, dataPart);
+
+        const centralHeader = new Uint8Array([
+          ...uint32Bytes(0x02014b50),
+          ...uint16Bytes(20),
+          ...uint16Bytes(20),
+          ...uint16Bytes(0x0800),
+          ...uint16Bytes(0),
+          ...uint16Bytes(0),
+          ...uint16Bytes(0),
+          ...uint32Bytes(crc),
+          ...uint32Bytes(size),
+          ...uint32Bytes(size),
+          ...uint16Bytes(nameBytes.length),
+          ...uint16Bytes(0),
+          ...uint16Bytes(0),
+          ...uint16Bytes(0),
+          ...uint16Bytes(0),
+          ...uint32Bytes(0),
+          ...uint32Bytes(offset)
+        ]);
+        centralParts.push(centralHeader, nameBytes);
+
+        offset += localHeader.length + nameBytes.length + size;
+      });
+
+      const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+      const centralOffset = offset;
+      const endRecord = new Uint8Array([
+        ...uint32Bytes(0x06054b50),
+        ...uint16Bytes(0),
+        ...uint16Bytes(0),
+        ...uint16Bytes(entries.length),
+        ...uint16Bytes(entries.length),
+        ...uint32Bytes(centralSize),
+        ...uint32Bytes(centralOffset),
+        ...uint16Bytes(0)
+      ]);
+
+      return new Blob([...localParts, ...centralParts, endRecord], { type: 'application/zip' });
+    }
+
+    async function readBlobAsUint8Array(blob) {
+      if (blob && typeof blob.arrayBuffer === 'function') {
+        return new Uint8Array(await blob.arrayBuffer());
+      }
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(new Uint8Array(reader.result));
+        reader.onerror = () => reject(new Error('Unable to read blob bytes.'));
+        reader.readAsArrayBuffer(blob);
+      });
+    }
+
+    async function createZipEntryFromBlob(name, blob) {
+      const bytes = await readBlobAsUint8Array(blob);
+      return {
+        name,
+        blob,
+        size: blob.size >>> 0,
+        crc: crc32ForBytes(bytes)
+      };
+    }
+
+
+    async function captureSiteScreenshot() {
+      const previousVisibility = chatSandboxFrame.style.visibility;
+      const previousPointerEvents = chatSandboxFrame.style.pointerEvents;
+      const previousOpacity = chatSandboxFrame.style.opacity;
+      const previousDisplay = chatSandboxFrame.style.display;
+
+      chatSandboxFrame.style.visibility = 'hidden';
+      chatSandboxFrame.style.pointerEvents = 'none';
+      chatSandboxFrame.style.opacity = '0';
+      chatSandboxFrame.style.display = 'none';
+
+      try {
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const [{ canvas: overlayCanvas, rect: overlayRect }, { canvas: tektiteCanvas, rect: frameRect }] = await Promise.all([
+          renderOverlayCanvas(),
+          renderTektiteCanvas()
+        ]);
+
+        const width = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1));
+        const height = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1));
+        const outputCanvas = document.createElement('canvas');
+        outputCanvas.width = width;
+        outputCanvas.height = height;
+        const context = outputCanvas.getContext('2d');
+        if (!context) {
+          throw new Error('Unable to create screenshot canvas.');
+        }
+
+        context.fillStyle = window.getComputedStyle(document.body).backgroundColor || '#000';
+        context.fillRect(0, 0, width, height);
+        context.drawImage(tektiteCanvas, 0, 0, tektiteCanvas.width, tektiteCanvas.height, Math.round(frameRect.left), Math.round(frameRect.top), Math.round(frameRect.width), Math.round(frameRect.height));
+        context.drawImage(overlayCanvas, 0, 0, overlayCanvas.width, overlayCanvas.height, Math.round(overlayRect.left), Math.round(overlayRect.top), Math.round(overlayRect.width), Math.round(overlayRect.height));
+
+        const pngBlob = await new Promise((resolve, reject) => {
+          outputCanvas.toBlob((blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('Unable to encode screenshot PNG.'));
+          }, 'image/png');
+        });
+        const filename = `site-screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+        downloadBlob(pngBlob, filename);
+        postToChatSandbox({ type: 'pageScreenshotStatus', ok: true });
+      } catch (error) {
+        console.error(error);
+        postToChatSandbox({ type: 'pageScreenshotStatus', ok: false, message: 'Unable to save page screenshot' });
+      } finally {
+        chatSandboxFrame.style.visibility = previousVisibility;
+        chatSandboxFrame.style.pointerEvents = previousPointerEvents;
+        chatSandboxFrame.style.opacity = previousOpacity;
+        chatSandboxFrame.style.display = previousDisplay;
+      }
+    }
+
+
+    async function captureSiteAnimationFrames(options = {}) {
+      if (pageScreenshotAnimationActive) {
+        postToChatSandbox({ type: 'pageScreenshotAnimationStatus', ok: false, message: 'Animation capture already running' });
         return;
+      }
+
+      const frameCount = Math.max(1, Math.min(60, Number(options.frameCount) || 15));
+      const frameDelay = Math.max(50, Number(options.frameDelay) || 2000);
+      pageScreenshotAnimationActive = true;
+
+      const previousVisibility = chatSandboxFrame.style.visibility;
+      const previousPointerEvents = chatSandboxFrame.style.pointerEvents;
+      const previousOpacity = chatSandboxFrame.style.opacity;
+      const previousDisplay = chatSandboxFrame.style.display;
+
+      chatSandboxFrame.style.visibility = 'hidden';
+      chatSandboxFrame.style.pointerEvents = 'none';
+      chatSandboxFrame.style.opacity = '0';
+      chatSandboxFrame.style.display = 'none';
+
+      try {
+        const entries = [];
+        for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const outputCanvas = await renderSiteCompositeCanvas();
+          const pngBlob = await canvasToBlob(outputCanvas, 'image/png');
+          const frameNumber = String(frameIndex + 1).padStart(2, '0');
+          entries.push(await createZipEntryFromBlob(`screenshot-animation/frame-${frameNumber}.png`, pngBlob));
+          if (frameIndex < frameCount - 1) {
+            await sleep(frameDelay);
+          }
+        }
+        const metadata = {
+          createdAt: new Date().toISOString(),
+          frameCount,
+          frameDelayMs: frameDelay,
+          source: 'overlay.html + tektite-index.html composite'
+        };
+        const manifestBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+        entries.push(await createZipEntryFromBlob('screenshot-animation/manifest.json', manifestBlob));
+
+        const zipBlob = createStoredZipBlob(entries);
+        const filename = `site-screenshot-animation-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+        downloadBlob(zipBlob, filename);
+        postToChatSandbox({ type: 'pageScreenshotAnimationStatus', ok: true });
+      } catch (error) {
+        console.error(error);
+        postToChatSandbox({ type: 'pageScreenshotAnimationStatus', ok: false, message: `Unable to save page animation frames${error && error.message ? `: ${error.message}` : ''}` });
+      } finally {
+        pageScreenshotAnimationActive = false;
+        chatSandboxFrame.style.visibility = previousVisibility;
+        chatSandboxFrame.style.pointerEvents = previousPointerEvents;
+        chatSandboxFrame.style.opacity = previousOpacity;
+        chatSandboxFrame.style.display = previousDisplay;
+      }
     }
 
-    fileBrowserFrame.classList.add("active");
-    musicPlayerFrame.classList.remove("active");
-    explorerModeSelect.value = "file-browser";
-}
+    function registerPageCommands() {
+      postToChatSandbox({
+        type: 'pageChatRegister',
+        pageOnly: false,
+        pageId: 'index-home',
+        title: 'The Internet Is Dead',
+        sourceKey: 'index-home',
+        commands: [
+          {
+            // MODIFIED: chat-sandbox.html owns the command itself; index.html only declares
+            // that the embedded page should replace the built-in /customize behavior with the
+            // parent-enhanced version while embedded.
+            name: '/customize',
+            usage: '/customize',
+            desc: 'open chat customize plus a matching Customize Page panel for overlay and page colors',
+            execute: true,
+            replaceBuiltIn: true,
+            passthroughBuiltIn: false
+          }
+        ]
+      });
+    }
 
-explorerModeSelect.addEventListener("change", e => {
-    setExplorerMode(e.target.value);
-});
+    function getPageCustomizePayload() {
+      return {
+        panel: 'homepageCustomize',
+        includeBaseCustomize: true,
+        command: '/customize',
+        message: '/customize executed by User',
+        fontOptions: [...pageFontOptions],
+        controls: Object.entries(pageCustomizeDefaults.colors).map(([key, value]) => ({
+          key,
+          label: key === 'overlayLogoTint' ? 'Overlay Logo' : key === 'tektiteLogoTint' ? 'OldTube Logo' : value.label,
+          actionType: key === 'overlayLogoTint' ? 'uploadOverlayLogo' : key === 'tektiteLogoTint' ? 'uploadTektiteLogo' : ''
+        })),
+        autoShuffleActive: pageAutoShuffleIntervalId !== null,
+        state: {
+          fontFamily: pageCustomizeState.fontFamily,
+          fontScalePercent: pageCustomizeState.fontScalePercent,
+          ...cloneState(pageCustomizeState.colors)
+        }
+      };
+    }
 
-setExplorerMode("file-browser");
+    function sendPageCustomizePanel(options = {}) {
+      const payload = getPageCustomizePayload();
+      payload.includeBaseCustomize = options.includeBaseCustomize !== undefined ? !!options.includeBaseCustomize : payload.includeBaseCustomize;
+      payload.announce = options.announce !== undefined ? !!options.announce : true;
+      postToChatSandbox({ type: 'pageChatResult', ...payload });
+    }
 
-function toggleStatsPanel(){
-    const panel = document.getElementById("nerd-stats");
+    function setPageColor(key, value = {}) {
+      if (!pageCustomizeState.colors[key]) return;
+      const defaults = pageCustomizeDefaults.colors[key];
+      const hex = typeof value.hex === 'string' && /^#?[0-9a-fA-F]{6}$/.test(value.hex.trim())
+        ? (value.hex.trim().startsWith('#') ? value.hex.trim() : `#${value.hex.trim()}`)
+        : defaults.hex;
+      pageCustomizeState.colors[key] = {
+        hex,
+        alpha: clampAlpha(value.alpha, defaults.alpha)
+      };
+      applyPageCustomizeState();
+    }
 
-    if(panel.style.display === "block"){
-        panel.style.display = "none";
+    function randomizePageCustomizeKey(key) {
+      if (!pageCustomizeState.colors[key]) return;
+      const currentAlpha = pageCustomizeState.colors[key] && Number.isFinite(Number(pageCustomizeState.colors[key].alpha))
+        ? Math.max(0, Math.min(1, Number(pageCustomizeState.colors[key].alpha)))
+        : pageCustomizeDefaults.colors[key].alpha;
+      pageCustomizeState.colors[key] = { hex: randomHex(), alpha: currentAlpha };
+    }
+
+    function randomizePageFontFamily() {
+      const current = pageCustomizeState.fontFamily;
+      const choices = pageFontOptions.filter((font) => font !== current);
+      const source = choices.length ? choices : pageFontOptions;
+      const next = source[Math.floor(Math.random() * source.length)];
+      if (next) {
+        pageCustomizeState.fontFamily = next;
+        applyPageCustomizeState();
+      }
+    }
+
+    function setPageControlAutoShuffleEnabled(key, enabled) {
+      if (pageControlShuffleIntervals.has(key)) {
+        window.clearInterval(pageControlShuffleIntervals.get(key));
+        pageControlShuffleIntervals.delete(key);
+      }
+      if (!enabled) return;
+      if (key === '__pageFontFamily') {
+        randomizePageFontFamily();
+        const intervalId = window.setInterval(() => {
+          randomizePageFontFamily();
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+        }, pageAutoShuffleIntervalMs);
+        pageControlShuffleIntervals.set(key, intervalId);
         return;
+      }
+      randomizePageCustomizeKey(key);
+      applyPageCustomizeState();
+      sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+      const intervalId = window.setInterval(() => {
+        randomizePageCustomizeKey(key);
+        applyPageCustomizeState();
+        sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+      }, pageAutoShuffleIntervalMs);
+      pageControlShuffleIntervals.set(key, intervalId);
     }
 
-    panel.style.display = "block";
-    updateStats();
-}
-
-function updateStats(){
-    const panel = document.getElementById("nerd-stats");
-
-    const domNodes = document.querySelectorAll("*").length;
-    const resources = performance.getEntriesByType("resource").length;
-
-    let memory = "N/A";
-    if(performance.memory){
-        memory = Math.round(performance.memory.usedJSHeapSize / 1048576) + " MB";
+    function togglePageControlAutoShuffle(key) {
+      setPageControlAutoShuffleEnabled(key, !pageControlShuffleIntervals.has(key));
     }
 
-    const runtime = Math.round(performance.now());
+    function randomizePageCustomizeState() {
+      Object.keys(pageCustomizeState.colors).forEach((key) => {
+        randomizePageCustomizeKey(key);
+      });
+      applyPageCustomizeState();
+    }
 
-    panel.innerHTML = `
-<b>Stats for Nerds</b><br><br>
-DOM Nodes: ${domNodes}<br>
-Resources Loaded: ${resources}<br>
-Heap Memory: ${memory}<br>
-Page Runtime: ${runtime} ms
-`;
-}
+    function stopPageAutoShuffle() {
+      if (pageAutoShuffleIntervalId !== null) {
+        window.clearInterval(pageAutoShuffleIntervalId);
+        pageAutoShuffleIntervalId = null;
+      }
+    }
 
-loadOverlay();
-window.addEventListener("resize", updateLayoutOffset);
-window.addEventListener("orientationchange", updateLayoutOffset);
-window.addEventListener("load", updateLayoutOffset);
+    function setPageAutoShuffleEnabled(enabled) {
+      if (enabled) {
+        randomizePageCustomizeState();
+        stopPageAutoShuffle();
+        pageAutoShuffleIntervalId = window.setInterval(() => {
+          randomizePageCustomizeState();
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+        }, pageAutoShuffleIntervalMs);
+        return;
+      }
+      stopPageAutoShuffle();
+    }
 
-const resizeObserver = new ResizeObserver(updateLayoutOffset);
-resizeObserver.observe(document.getElementById("overlay-container"));
-</script>
+    function startPageAutoShuffle() {
+      setPageAutoShuffleEnabled(true);
+    }
+
+    function setRandomizeTintOpacitiesFull() {
+      ['overlayLogoTint', 'overlayClockTint', 'tektiteLogoTint', 'thumbnailTint'].forEach((key) => {
+        if (pageCustomizeState.colors[key]) {
+          pageCustomizeState.colors[key].alpha = 1;
+        }
+      });
+      applyPageCustomizeState();
+    }
+
+    function updateOverlayLogoAssets() {
+      const overlayRoot = overlayContainer.querySelector('#overlay-root') || overlayContainer;
+      if (!overlayRoot) return;
+      const logoSrc = customOverlayLogoUrl || '/images/deadlogo-green.png';
+      overlayRoot.querySelectorAll('.logo img').forEach((img) => {
+        img.src = logoSrc;
+      });
+      overlayRoot.querySelectorAll('.logo-tint-layer').forEach((layer) => {
+        layer.style.setProperty('--tint-mask', `url('${logoSrc.replace(/'/g, "\'")}')`);
+      });
+    }
+
+    const tektiteLogoHoverIntervalMs = 2000;
+
+    function clearManagedTektiteLogoHoverState(doc) {
+      if (!doc) return;
+      doc.querySelectorAll('.channelLogo').forEach((img) => {
+        if (img.__managedHoverIntervalId) {
+          window.clearInterval(img.__managedHoverIntervalId);
+          img.__managedHoverIntervalId = null;
+        }
+        if (img.__managedHoverLeaveHandler) {
+          img.removeEventListener('mouseleave', img.__managedHoverLeaveHandler);
+          img.__managedHoverLeaveHandler = null;
+        }
+        if (img.__managedHoverEnterHandler) {
+          img.removeEventListener('mouseenter', img.__managedHoverEnterHandler);
+          img.__managedHoverEnterHandler = null;
+        }
+        img.__managedHoverSequence = null;
+        img.__managedHoverIndex = 0;
+      });
+    }
+
+    function setTektiteLogoTintMask(doc, logoSrc) {
+      if (!doc) return;
+      doc.querySelectorAll('.channelLogoTintLayer').forEach((layer) => {
+        layer.style.setProperty('--tint-mask', `url('${logoSrc.replace(/'/g, "\'")}')`);
+      });
+    }
+
+    function attachManagedTektiteLogoHover(doc, logoUrls) {
+      if (!doc) return;
+      const sequence = Array.isArray(logoUrls) ? logoUrls.filter((url) => typeof url === 'string' && url.trim()) : [];
+      if (sequence.length < 2) return;
+
+      doc.querySelectorAll('.channelLogo').forEach((img) => {
+        if (!(img instanceof Element)) return;
+
+        const stopHoverCycle = () => {
+          if (img.__managedHoverIntervalId) {
+            window.clearInterval(img.__managedHoverIntervalId);
+            img.__managedHoverIntervalId = null;
+          }
+          img.__managedHoverIndex = 0;
+          img.src = sequence[0];
+          setTektiteLogoTintMask(doc, sequence[0]);
+        };
+
+        const startHoverCycle = () => {
+          if (img.__managedHoverIntervalId || sequence.length < 2) return;
+          img.__managedHoverIndex = 1;
+          img.src = sequence[img.__managedHoverIndex];
+          setTektiteLogoTintMask(doc, sequence[img.__managedHoverIndex]);
+          img.__managedHoverIntervalId = window.setInterval(() => {
+            img.__managedHoverIndex = (img.__managedHoverIndex + 1) % sequence.length;
+            img.src = sequence[img.__managedHoverIndex];
+            setTektiteLogoTintMask(doc, sequence[img.__managedHoverIndex]);
+          }, tektiteLogoHoverIntervalMs);
+        };
+
+        if (img.__managedHoverIntervalId) {
+          window.clearInterval(img.__managedHoverIntervalId);
+        }
+        if (img.__managedHoverLeaveHandler) {
+          img.removeEventListener('mouseleave', img.__managedHoverLeaveHandler);
+        }
+        if (img.__managedHoverEnterHandler) {
+          img.removeEventListener('mouseenter', img.__managedHoverEnterHandler);
+        }
+
+        img.__managedHoverSequence = sequence.slice();
+        img.__managedHoverIndex = 0;
+        img.__managedHoverEnterHandler = startHoverCycle;
+        img.__managedHoverLeaveHandler = stopHoverCycle;
+        img.addEventListener('mouseenter', startHoverCycle);
+        img.addEventListener('mouseleave', stopHoverCycle);
+      });
+    }
+
+    function updateTektiteLogoAssets(doc) {
+      if (!doc) return;
+      const tektiteWindow = doc.defaultView || (tektiteFrame && tektiteFrame.contentWindow) || null;
+      const logoUrls = customTektiteLogoUrls.length ? customTektiteLogoUrls.slice() : ['/images/oldtube.png', '/images/oldtube-alt-1.png', '/images/oldtube-alt-2.png'];
+      const logoSrc = logoUrls[0] || '/images/oldtube.png';
+
+      clearManagedTektiteLogoHoverState(doc);
+
+      if (tektiteWindow && typeof tektiteWindow.setTektiteLogoUrls === 'function' && typeof tektiteWindow.resetTektiteLogoUrls === 'function') {
+        if (customTektiteLogoUrls.length) {
+          tektiteWindow.setTektiteLogoUrls(customTektiteLogoUrls.slice());
+        } else {
+          tektiteWindow.resetTektiteLogoUrls();
+        }
+      }
+
+      doc.querySelectorAll('.channelLogo').forEach((img) => {
+        img.src = logoSrc;
+      });
+      setTektiteLogoTintMask(doc, logoSrc);
+      attachManagedTektiteLogoHover(doc, logoUrls);
+    }
+
+    function applyCustomLogoAssets() {
+      updateOverlayLogoAssets();
+      try {
+        const doc = tektiteFrame.contentDocument || (tektiteFrame.contentWindow && tektiteFrame.contentWindow.document);
+        updateTektiteLogoAssets(doc);
+      } catch (error) {
+        console.warn('Unable to apply custom logos to tektite iframe', error);
+      }
+    }
+
+    function replaceCustomLogo(target, files) {
+      const fileList = Array.from(files || []).filter((file) => file instanceof File);
+      if (!fileList.length) return;
+      if (target === 'overlay') {
+        const objectUrl = URL.createObjectURL(fileList[0]);
+        if (lastCustomOverlayLogoObjectUrl) {
+          URL.revokeObjectURL(lastCustomOverlayLogoObjectUrl);
+        }
+        customOverlayLogoUrl = objectUrl;
+        lastCustomOverlayLogoObjectUrl = objectUrl;
+      } else if (target === 'tektite') {
+        lastCustomTektiteLogoObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+        customTektiteLogoUrls = fileList.map((file) => URL.createObjectURL(file));
+        lastCustomTektiteLogoObjectUrls = customTektiteLogoUrls.slice();
+      }
+      applyCustomLogoAssets();
+      sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+    }
+
+    function triggerCustomLogoUpload(target) {
+      const input = target === 'overlay' ? overlayLogoUploadInput : tektiteLogoUploadInput;
+      if (!input) return;
+      input.value = '';
+      input.click();
+    }
+
+    function applyOverlayVars(target) {
+      if (!target) return;
+      // Keep Page Background scoped to tektite-index.html itself, not the outer index/overlay shell.
+      target.style.setProperty('--page-bg', 'transparent');
+      target.style.setProperty('--overlay-text', hexToRgba(pageCustomizeState.colors.pageText.hex, pageCustomizeState.colors.pageText.alpha));
+      target.style.setProperty('--overlay-bg', hexToRgba(pageCustomizeState.colors.overlayTopBarBg.hex, pageCustomizeState.colors.overlayTopBarBg.alpha));
+      target.style.setProperty('--border-color', hexToRgba(pageCustomizeState.colors.accent.hex, pageCustomizeState.colors.accent.alpha));
+      target.style.setProperty('--preview-bg', hexToRgba(pageCustomizeState.colors.panelBg.hex, pageCustomizeState.colors.panelBg.alpha));
+      target.style.setProperty('--sidebar-bg', hexToRgba(pageCustomizeState.colors.sidebarBg.hex, pageCustomizeState.colors.sidebarBg.alpha));
+      target.style.setProperty('--overlay-logo-filter', hexToRgba(pageCustomizeState.colors.overlayLogoTint.hex, pageCustomizeState.colors.overlayLogoTint.alpha));
+      target.style.setProperty('--overlay-clock-filter', hexToRgba(pageCustomizeState.colors.overlayClockTint.hex, pageCustomizeState.colors.overlayClockTint.alpha));
+      target.style.setProperty('--backdrop-bg', 'rgba(0,0,0,.45)');
+      target.style.setProperty('--overlay-font-family', pageCustomizeState.fontFamily);
+      target.style.setProperty('--overlay-font-scale', String(pageCustomizeState.fontScalePercent / 100));
+    }
+
+    function applyTektiteVars(doc) {
+      if (!doc || !doc.documentElement || !doc.body) return;
+      const root = doc.documentElement;
+      root.style.setProperty('--page-bg', hexToRgba(pageCustomizeState.colors.pageBg.hex, pageCustomizeState.colors.pageBg.alpha));
+      root.style.setProperty('--page-text', hexToRgba(pageCustomizeState.colors.pageText.hex, pageCustomizeState.colors.pageText.alpha));
+      root.style.setProperty('--header-bg', hexToRgba(pageCustomizeState.colors.headerBg.hex, pageCustomizeState.colors.headerBg.alpha));
+      root.style.setProperty('--accent-color', hexToRgba(pageCustomizeState.colors.accent.hex, pageCustomizeState.colors.accent.alpha));
+      root.style.setProperty('--panel-bg', hexToRgba(pageCustomizeState.colors.panelBg.hex, pageCustomizeState.colors.panelBg.alpha));
+      root.style.setProperty('--page-background', hexToRgba(pageCustomizeState.colors.pageBg.hex, pageCustomizeState.colors.pageBg.alpha));
+      root.style.setProperty('--panel-background', hexToRgba(pageCustomizeState.colors.panelBg.hex, pageCustomizeState.colors.panelBg.alpha));
+      root.style.setProperty('--button-hover-bg', hexToRgba(pageCustomizeState.colors.sidebarBg.hex, pageCustomizeState.colors.sidebarBg.alpha));
+      root.style.setProperty('--tektite-logo-filter', hexToRgba(pageCustomizeState.colors.tektiteLogoTint.hex, pageCustomizeState.colors.tektiteLogoTint.alpha));
+      root.style.setProperty('--thumbnail-filter', hexToRgba(pageCustomizeState.colors.thumbnailTint.hex, pageCustomizeState.colors.thumbnailTint.alpha));
+      root.style.setProperty('--page-font-family', pageCustomizeState.fontFamily);
+      root.style.setProperty('--page-font-scale', String(pageCustomizeState.fontScalePercent / 100));
+    }
+
+    function applyPageCustomizeState() {
+      const overlayRoot = overlayContainer.querySelector('#overlay-root') || overlayContainer;
+      applyOverlayVars(overlayRoot);
+      updateOverlayLogoAssets();
+      try {
+        const doc = tektiteFrame.contentDocument || (tektiteFrame.contentWindow && tektiteFrame.contentWindow.document);
+        applyTektiteVars(doc);
+        updateTektiteLogoAssets(doc);
+        if (doc.defaultView && typeof doc.defaultView.updateTintFilters === "function") {
+          doc.defaultView.updateTintFilters();
+        }
+      } catch (error) {
+        console.warn('Unable to apply page customization to tektite iframe', error);
+      }
+    }
+
+    function getPageGlobalHueShiftAngle(now = performance.now()) {
+      if (pageGlobalHueShiftEnabled) {
+        return (((now - pageGlobalHueShiftStartTime) % pageGlobalHueShiftDurationMs) / pageGlobalHueShiftDurationMs) * 360;
+      }
+      return pageGlobalHueShiftFrozenAngle;
+    }
+
+    function renderPageGlobalColorEffects() {
+      const hueAngle = getPageGlobalHueShiftAngle();
+      const filterParts = [];
+      if (pageGlobalColorInvertEnabled) {
+        filterParts.push('invert(1)');
+      }
+      if (typeof hueAngle === 'number') {
+        filterParts.push(`hue-rotate(${hueAngle}deg)`);
+      }
+      document.documentElement.style.filter = filterParts.length ? filterParts.join(' ') : 'none';
+    }
+
+    function stopPageGlobalHueShiftLoop() {
+      if (pageGlobalHueShiftFrameId !== null) {
+        cancelAnimationFrame(pageGlobalHueShiftFrameId);
+        pageGlobalHueShiftFrameId = null;
+      }
+    }
+
+    function runPageGlobalHueShiftLoop() {
+      renderPageGlobalColorEffects();
+      if (!pageGlobalHueShiftEnabled) {
+        stopPageGlobalHueShiftLoop();
+        return;
+      }
+      pageGlobalHueShiftFrameId = requestAnimationFrame(runPageGlobalHueShiftLoop);
+    }
+
+    function setPageGlobalColorInvert(enabled) {
+      pageGlobalColorInvertEnabled = !!enabled;
+      renderPageGlobalColorEffects();
+      return pageGlobalColorInvertEnabled;
+    }
+
+    function togglePageGlobalColorInvert() {
+      return setPageGlobalColorInvert(!pageGlobalColorInvertEnabled);
+    }
+
+    function setPageGlobalHueShift(enabled) {
+      const shouldEnable = !!enabled;
+      if (shouldEnable === pageGlobalHueShiftEnabled && !(shouldEnable && pageGlobalHueShiftFrozenAngle !== null)) {
+        if (!shouldEnable) {
+          pageGlobalHueShiftFrozenAngle = null;
+        }
+        renderPageGlobalColorEffects();
+        return pageGlobalHueShiftEnabled;
+      }
+      pageGlobalHueShiftEnabled = shouldEnable;
+      if (pageGlobalHueShiftEnabled) {
+        const startingAngle = pageGlobalHueShiftFrozenAngle;
+        pageGlobalHueShiftFrozenAngle = null;
+        pageGlobalHueShiftStartTime = performance.now() - (((startingAngle ?? 0) / 360) * pageGlobalHueShiftDurationMs);
+        stopPageGlobalHueShiftLoop();
+        runPageGlobalHueShiftLoop();
+      } else {
+        pageGlobalHueShiftFrozenAngle = null;
+        stopPageGlobalHueShiftLoop();
+        renderPageGlobalColorEffects();
+      }
+      return pageGlobalHueShiftEnabled;
+    }
+
+    function togglePageGlobalHueShift() {
+      return setPageGlobalHueShift(!pageGlobalHueShiftEnabled);
+    }
+
+    function resetPageGlobalEffects() {
+      setPageGlobalColorInvert(false);
+      setPageGlobalHueShift(false);
+    }
+
+    function openChatFromParent(options = {}) {
+      if (pageScreenshotAnimationActive) return;
+      setChatFrameVisible(true);
+      postToChatSandbox({ type: 'chatSandboxOpen', focus: options.focus !== false, seedSlash: !!options.seedSlash });
+    }
+
+    function closeChatFromParent() {
+      if (pageScreenshotAnimationActive) return;
+      postToChatSandbox({ type: 'chatSandboxClose' });
+      setChatFrameVisible(false);
+    }
+
+
+    function renderPageExitScreen() {
+      closeChatFromParent();
+      setChatFrameVisible(false);
+      chatSandboxFrame.style.display = 'none';
+      stopPageAutoShuffle();
+      Array.from(pageControlShuffleIntervals.values()).forEach((intervalId) => window.clearInterval(intervalId));
+      pageControlShuffleIntervals.clear();
+      resetPageGlobalEffects();
+
+      let overlay = document.getElementById('page-exit-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'page-exit-overlay';
+
+        const bg = document.createElement('div');
+        bg.className = 'page-exit-overlay-bg';
+        overlay.appendChild(bg);
+
+        const inner = document.createElement('div');
+        inner.className = 'page-exit-overlay-inner';
+        overlay.appendChild(inner);
+
+        document.body.appendChild(overlay);
+      }
+
+      const inner = overlay.querySelector('.page-exit-overlay-inner') || overlay;
+      inner.textContent = [
+        '            .ed"""" """$$$$be.',
+        '          -"           ^""**$$$e.',
+        '        ."                   \'$$$c',
+        '       /                      "4$$b',
+        '      d  3                      $$$$',
+        '      $  *                   .$$$$$$',
+        '     .$  ^c           $$$$$e$$$$$$$$.',
+        '     d$L  4.         4$$$$$$$$$$$$$$b',
+        '     $$$$b ^ceeeee.  4$$ECL.F*$$$$$$$',
+        '     $$$$P d$$$$F $ $$$$$$$$$- $$$$$$',
+        '     3$$$F "$$$$b   $"$$$$$$$  $$$$*"',
+        '      $$P"  "$$b   .$ $$$$$...e$$',
+        '       *c    ..    $$ 3$$$$$$$$$$eF',
+        '         %ce"    $$$  $$$$$$$$$$*',
+        '          *$e.    "$  $$$$$$$$$P',
+        '           $$$      4J$$$$$$$"',
+        '          $"$   $"*$$$$$$$$$B',
+        '          $  "F"   ^*$$$$$$$*',
+        '           $"     .d$$$$$$$',
+        '           ^%ceeed$$$$$$$$$*',
+        '              """*$$$$$$$$$*',
+        '                   ^"""""',
+        '',
+        'BOOT STATUS: PAGE FATALITY',
+        'CAUSE: USER EXECUTED /exit',
+        'RESULT: you killed the page',
+        '',
+        'Manual reboot required.',
+        'Refresh the page like a peasant.'
+      ].join('\n');
+
+      const bg = overlay.querySelector('.page-exit-overlay-bg');
+      const state = {
+        x: 48,
+        y: 48,
+        vx: 8.2,
+        vy: 6.9,
+        mouseX: window.innerWidth * 0.5,
+        mouseY: window.innerHeight * 0.5,
+        mouseActive: false
+      };
+
+      function stopLoop() {
+        if (overlay._exitAnimationFrame) {
+          cancelAnimationFrame(overlay._exitAnimationFrame);
+          overlay._exitAnimationFrame = null;
+        }
+        if (overlay._exitPointerMove) {
+          overlay.removeEventListener('pointermove', overlay._exitPointerMove);
+        }
+        if (overlay._exitPointerLeave) {
+          overlay.removeEventListener('pointerleave', overlay._exitPointerLeave);
+        }
+      }
+
+      stopLoop();
+
+      const handlePointerMove = (event) => {
+        state.mouseX = event.clientX;
+        state.mouseY = event.clientY;
+        state.mouseActive = true;
+      };
+      const handlePointerLeave = () => {
+        state.mouseActive = false;
+      };
+
+      overlay._exitPointerMove = handlePointerMove;
+      overlay._exitPointerLeave = handlePointerLeave;
+      overlay.addEventListener('pointermove', handlePointerMove);
+      overlay.addEventListener('pointerleave', handlePointerLeave);
+
+      function animate() {
+        const overlayWidth = overlay.clientWidth || window.innerWidth;
+        const overlayHeight = overlay.clientHeight || window.innerHeight;
+        const measuredWidth = inner.offsetWidth || 520;
+        const measuredHeight = inner.offsetHeight || 520;
+        const maxX = Math.max(24, overlayWidth - measuredWidth - 24);
+        const maxY = Math.max(24, overlayHeight - measuredHeight - 24);
+
+        const centerX = state.x + measuredWidth * 0.5;
+        const centerY = state.y + measuredHeight * 0.5;
+
+        if (state.mouseActive) {
+          const dx = centerX - state.mouseX;
+          const dy = centerY - state.mouseY;
+          const distance = Math.hypot(dx, dy) || 1;
+          const panicRadius = Math.max(180, Math.min(overlayWidth, overlayHeight) * 0.24);
+          if (distance < panicRadius) {
+            const force = ((panicRadius - distance) / panicRadius) * 5.2;
+            state.vx += (dx / distance) * force;
+            state.vy += (dy / distance) * force;
+          }
+        }
+
+        state.vx = Math.max(-18, Math.min(18, state.vx * 0.996));
+        state.vy = Math.max(-18, Math.min(18, state.vy * 0.996));
+        state.x += state.vx;
+        state.y += state.vy;
+
+        if (state.x <= 24) {
+          state.x = 24;
+          state.vx = Math.abs(state.vx);
+        } else if (state.x >= maxX) {
+          state.x = maxX;
+          state.vx = -Math.abs(state.vx);
+        }
+
+        if (state.y <= 24) {
+          state.y = 24;
+          state.vy = Math.abs(state.vy);
+        } else if (state.y >= maxY) {
+          state.y = maxY;
+          state.vy = -Math.abs(state.vy);
+        }
+
+        const time = performance.now() * 0.0065;
+        const rippleX = Math.sin(time + state.y * 0.018) * 10;
+        const rippleY = Math.cos(time * 1.17 + state.x * 0.012) * 8;
+        inner.style.transform = `translate3d(${Math.round(state.x + rippleX)}px, ${Math.round(state.y + rippleY)}px, 0) skewX(${Math.sin(time * 0.7) * 1.9}deg) skewY(${Math.cos(time * 0.85) * 1.3}deg)`;
+
+        if (bg) {
+          bg.style.transform = `translate3d(${Math.sin(time * 0.37) * 28}px, ${Math.cos(time * 0.31) * 24}px, 0) scale(${1.08 + Math.sin(time * 0.9) * 0.05})`;
+          bg.style.filter = `blur(28px) saturate(170%) hue-rotate(${Math.sin(time * 0.55) * 32}deg)`;
+        }
+
+        overlay._exitAnimationFrame = requestAnimationFrame(animate);
+      }
+
+      overlay.style.display = 'block';
+      document.documentElement.style.background = '#000';
+      document.body.style.background = '#000';
+      document.body.classList.add('page-exited');
+      overlay._exitAnimationFrame = requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('message', (event) => {
+      if (!event.data) return;
+
+      if (event.source === getChatWindow()) {
+        if (event.data.type === 'chatSandboxState') {
+          chatSandboxReady = true;
+          setChatFrameVisible(!!event.data.visible);
+          registerPageCommands();
+          return;
+        }
+
+        if (event.data.type === 'pageChatExecute') {
+          if ((event.data.command || '').toLowerCase() === '/customize') {
+            sendPageCustomizePanel({ includeBaseCustomize: true, announce: true });
+          }
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeSet') {
+          setPageColor(event.data.key, event.data.value || {});
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeAction') {
+          if (event.data.action === 'uploadOverlayLogo') {
+            triggerCustomLogoUpload('overlay');
+          } else if (event.data.action === 'uploadTektiteLogo') {
+            triggerCustomLogoUpload('tektite');
+          }
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeReset') {
+          stopPageAutoShuffle();
+          Array.from(pageControlShuffleIntervals.values()).forEach((intervalId) => window.clearInterval(intervalId));
+          pageControlShuffleIntervals.clear();
+          pageCustomizeState = createDefaultPageCustomizeState();
+          applyPageCustomizeState();
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeRandomize') {
+          randomizePageCustomizeState();
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeRandomizeKey') {
+          if (typeof event.data.key === 'string') {
+            randomizePageCustomizeKey(event.data.key);
+            applyPageCustomizeState();
+            sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          }
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeControlAutoShuffleToggle') {
+          if (typeof event.data.key === 'string') {
+            togglePageControlAutoShuffle(event.data.key);
+            sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          }
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeFontRandomize') {
+          randomizePageFontFamily();
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeFontAutoShuffleToggle') {
+          togglePageControlAutoShuffle('__pageFontFamily');
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeAutoShuffleToggle') {
+          setPageAutoShuffleEnabled(pageAutoShuffleIntervalId === null);
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeSetRandomizeTintOpacities') {
+          setRandomizeTintOpacitiesFull();
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeAutoShuffleSet') {
+          // ADDED: Lets /randomize in embedded chat keep page-color shuffling locked to the same toggle state.
+          setPageAutoShuffleEnabled(!!event.data.enabled);
+          sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+          return;
+        }
+
+        if (event.data.type === 'pageGlobalColorInvertToggle') {
+          togglePageGlobalColorInvert();
+          return;
+        }
+
+        if (event.data.type === 'pageGlobalColorInvertSet') {
+          setPageGlobalColorInvert(!!event.data.enabled);
+          return;
+        }
+
+        if (event.data.type === 'pageGlobalHueShiftToggle') {
+          togglePageGlobalHueShift();
+          return;
+        }
+
+        if (event.data.type === 'pageGlobalHueShiftSet') {
+          setPageGlobalHueShift(!!event.data.enabled);
+          return;
+        }
+
+        if (event.data.type === 'pageGlobalEffectsReset') {
+          resetPageGlobalEffects();
+          setPageAutoShuffleEnabled(false);
+          pageCustomizeState = createDefaultPageCustomizeState();
+          applyPageCustomizeState();
+          return;
+        }
+
+        if (event.data.type === 'pageExit') {
+          renderPageExitScreen();
+          return;
+        }
+
+        if (event.data.type === 'pageRefresh') {
+          window.location.reload();
+          return;
+        }
+
+        if (event.data.type === 'pageScreenshotCapture') {
+          captureSiteScreenshot();
+          return;
+        }
+
+        if (event.data.type === 'pageScreenshotAnimationCapture') {
+          captureSiteAnimationFrames({
+            frameCount: event.data.frameCount,
+            frameDelay: event.data.frameDelay
+          });
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeFontFamily') {
+          if (typeof event.data.value === 'string' && event.data.value.trim()) {
+            pageCustomizeState.fontFamily = event.data.value.trim();
+            applyPageCustomizeState();
+          }
+          return;
+        }
+
+        if (event.data.type === 'pageCustomizeFontScale') {
+          pageCustomizeState.fontScalePercent = clampScale(event.data.value);
+          applyPageCustomizeState();
+          return;
+        }
+      }
+
+      if (event.data.type === 'openChatFromChild') {
+        openChatFromParent({ focus: true, seedSlash: !!event.data.seedSlash });
+        return;
+      }
+    });
+
+    function shouldIgnoreChatShortcutFromEvent(event) {
+      const view = event.view || window;
+      const doc = view.document || document;
+      const activeElement = doc.activeElement;
+      const activeTag = activeElement && activeElement.tagName ? activeElement.tagName.toUpperCase() : '';
+      return !!(activeElement && (
+        activeTag === 'INPUT' ||
+        activeTag === 'TEXTAREA' ||
+        activeTag === 'SELECT' ||
+        activeElement.isContentEditable
+      ));
+    }
+
+    function handleChatShortcutKeydown(event) {
+      if (pageScreenshotAnimationActive) {
+        if (event.key === '/' || event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        return;
+      }
+      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (shouldIgnoreChatShortcutFromEvent(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openChatFromParent({ focus: true, seedSlash: true });
+        return;
+      }
+
+      if (event.key === 'Escape' && chatSandboxVisible) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeChatFromParent();
+      }
+    }
+
+    function bindChatShortcutToFrame(frame) {
+      try {
+        const frameWindow = frame && frame.contentWindow;
+        const frameDoc = frameWindow && frameWindow.document;
+        if (!frameWindow || !frameDoc || frameWindow.__indexChatShortcutBound) return;
+        frameWindow.addEventListener('keydown', handleChatShortcutKeydown, true);
+        frameDoc.addEventListener('keydown', handleChatShortcutKeydown, true);
+        frameWindow.__indexChatShortcutBound = true;
+      } catch (error) {
+        console.warn('Unable to bind chat shortcut to frame', error);
+      }
+    }
+
+
+    overlayLogoUploadInput.addEventListener('change', (event) => {
+      const files = Array.from(event.target.files || []);
+      event.target.value = '';
+      if (!files.length) return;
+      replaceCustomLogo('overlay', files);
+    });
+
+    tektiteLogoUploadInput.addEventListener('change', (event) => {
+      const files = Array.from(event.target.files || []);
+      event.target.value = '';
+      if (!files.length) return;
+      replaceCustomLogo('tektite', files);
+    });
+
+    window.addEventListener('keydown', handleChatShortcutKeydown, true);
+
+    chatSandboxFrame.addEventListener('load', () => {
+      chatSandboxReady = true;
+      registerPageCommands();
+      bindChatShortcutToFrame(chatSandboxFrame);
+    });
+
+    tektiteFrame.addEventListener('load', () => {
+      applyPageCustomizeState();
+      bindChatShortcutToFrame(tektiteFrame);
+    });
+
+    loadOverlay();
+  </script>
 </body>
 </html>
