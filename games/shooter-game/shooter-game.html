@@ -151,8 +151,8 @@
 
     async function loadOverlay() {
       try {
-        const response = await fetch('/overlay.html', { cache: 'no-store' });
-        if (!response.ok) throw new Error('Failed to load /overlay.html');
+        const response = await fetch('/pages/overlay.html', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to load /pages/overlay.html');
         const html = await response.text();
         const temp = document.createElement('div');
         temp.innerHTML = html;
@@ -185,7 +185,7 @@
         });
       } catch (error) {
         console.error(error);
-        overlayContainer.innerHTML = '<div class="overlay-error">Error loading /overlay.html</div>';
+        overlayContainer.innerHTML = '<div class="overlay-error">Error loading /pages/overlay.html</div>';
       }
     }
 

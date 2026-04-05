@@ -593,7 +593,7 @@ async function loadPosts(){
 
 try{
 
-const r = await fetch("/data/videos.json");
+const r = await fetch("/pages/youtube-list-grid/videos.json");
 if(!r.ok) throw new Error("videos.json failed");
 
 const data = await r.json();
@@ -621,7 +621,7 @@ render();
 }catch(e){
 
 console.error(e);
-statusEl.textContent="FAILED TO LOAD /data/videos.json";
+statusEl.textContent="FAILED TO LOAD /pages/youtube-list-grid/videos.json";
 
 }
 

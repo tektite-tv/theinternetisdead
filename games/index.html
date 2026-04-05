@@ -77,8 +77,8 @@ body::-webkit-scrollbar{
 <script>
 async function loadOverlay(){
     try{
-        const res = await fetch("/overlay.html", { cache: "no-store" });
-        if(!res.ok) throw new Error("Failed to load overlay.html");
+        const res = await fetch("/pages/overlay.html", { cache: "no-store" });
+        if(!res.ok) throw new Error("Failed to load /pages/overlay.html");
         const html = await res.text();
         const container = document.getElementById("overlay-container");
         const temp = document.createElement("div");
