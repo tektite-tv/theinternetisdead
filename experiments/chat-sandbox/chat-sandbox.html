@@ -1875,21 +1875,58 @@ const focusSink = document.getElementById('focusSink');
     }
 
     function updateOverclockAliasLabel() {
-      if (!dvdOverclockAliasLine) return;
-      let nicknameSpan = dvdOverclockAliasLine.querySelector('.overclockNicknameLabel, .nicknameLabel[data-overclock-nickname="true"]');
-      if (!nicknameSpan) {
-        const messageText = dvdOverclockAliasLine.querySelector('.messageText');
-        const rawContent = dvdOverclockAliasLine.dataset.rawContent || formatCommandExecutionMessage('/dvd command', 'overclocked', currentNickname);
-        if (messageText) {
-          appendStyledSystemText(messageText, rawContent, 1, 'INFINITE');
-          nicknameSpan = dvdOverclockAliasLine.querySelector('.overclockNicknameLabel, .nicknameLabel[data-overclock-nickname="true"]');
-        }
-      }
-      if (!nicknameSpan) return;
-      const nicknameChoices = getDvdOverclockNicknameChoices();
-      if (!nicknameChoices.length) return;
-      dvdOverclockNicknameCycleIndex = (dvdOverclockNicknameCycleIndex + 1) % nicknameChoices.length;
-      nicknameSpan.textContent = nicknameChoices[dvdOverclockNicknameCycleIndex] || 'User';
+      return;
+    }
+
+    function addDvdOverclockSystemMessage() {
+      const line = addMessage('', 'user');
+      if (!line) return null;
+      line.dataset.rawContent = `System: OH GEEZ ${currentNickname} you've really done it now. You overclocked the /dvd command to (INFINITE) may god have mercy on your GPU. Click here to refresh dummy...`;
+      const messageText = line.querySelector('.messageText');
+      if (!messageText) return line;
+      messageText.innerHTML = '';
+
+      const systemSpan = document.createElement('span');
+      systemSpan.className = 'nicknameLabel';
+      systemSpan.textContent = 'System:';
+      messageText.appendChild(systemSpan);
+      messageText.appendChild(document.createTextNode(' OH GEEZ '));
+
+      const nicknameSpan = document.createElement('span');
+      nicknameSpan.className = 'nicknameLabel';
+      nicknameSpan.textContent = currentNickname;
+      messageText.appendChild(nicknameSpan);
+
+      messageText.appendChild(document.createTextNode(" you've really done it now. You overclocked the "));
+
+      const commandSpan = document.createElement('span');
+      commandSpan.className = 'systemCommandLabel';
+      commandSpan.textContent = '/dvd';
+      messageText.appendChild(commandSpan);
+
+      messageText.appendChild(document.createTextNode(' command to ('));
+
+      const infiniteSpan = document.createElement('span');
+      infiniteSpan.className = 'commandStyledText infiniteRepeatLabel';
+      infiniteSpan.textContent = 'INFINITE';
+      messageText.appendChild(infiniteSpan);
+
+      messageText.appendChild(document.createTextNode(') may god have mercy on your GPU. '));
+
+      const refreshLink = document.createElement('a');
+      refreshLink.href = '#';
+      refreshLink.className = 'helpItem';
+      refreshLink.style.display = 'inline';
+      refreshLink.style.margin = '0';
+      refreshLink.textContent = 'Click here to refresh dummy...';
+      refreshLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        location.reload();
+      });
+      messageText.appendChild(refreshLink);
+
+      dvdOverclockAliasLine = line;
+      return line;
     }
 
     function primeDvdOverclockCycle() {
@@ -1897,10 +1934,8 @@ const focusSink = document.getElementById('focusSink');
     }
 
     function startDvdOverclockMode() {
-      const wasPrimed = dvdOverclockPrimed;
       dvdOverclockMode = true;
       document.body.classList.add('dvd-overclock-mode');
-      dvdOverclockNicknameCycleIndex = wasPrimed ? dvdOverclockNicknameCycleIndex : -1;
       clearDvdOverclockIntervals();
       dvdOverclockIntervalId = window.setInterval(() => {
         if (dvdInstances.length < getDvdActiveCap()) {
@@ -1911,8 +1946,6 @@ const focusSink = document.getElementById('focusSink');
           }
         }
       }, 1000);
-      dvdOverclockAliasIntervalId = window.setInterval(updateOverclockAliasLabel, 1000);
-      updateOverclockAliasLabel();
       dvdOverclockPrimed = false;
     }
 
@@ -4619,15 +4652,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         dvdCommandAttemptCount = nextAttempt;
 
         if (nextAttempt >= 13 && !dvdOverclockMode) {
-          const overclockMessage = formatCommandExecutionMessage('/dvd command', 'overclocked', currentNickname);
-          const overclockLine = addSystemMessage(overclockMessage, { overclockAlias: true, repeatLabel: 'INFINITE' });
-          if (overclockLine) {
-            overclockLine.dataset.repeatLabel = 'INFINITE';
-            const messageText = overclockLine.querySelector('.messageText');
-            if (messageText) {
-              appendStyledSystemText(messageText, overclockMessage, 1, 'INFINITE');
-            }
-          }
+          addDvdOverclockSystemMessage();
           startDvdOverclockMode();
           if (dvdInstances.length < dvdNormalMaxInstances) {
             ensureDvdInstanceCount(dvdNormalMaxInstances);
