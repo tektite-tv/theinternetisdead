@@ -249,22 +249,6 @@
       '"Trebuchet MS", sans-serif',
       '"Lucida Console", Monaco, monospace'
     ];
-
-    const pageColorElementDefinitions = Object.freeze({
-      'page-background': { key: 'pageBg', label: 'Page Background', aliases: ['pagebg', 'background'] },
-      'page-text': { key: 'pageText', label: 'Page Text Color', aliases: ['pagetext', 'text'] },
-      'overlay-top-bar': { key: 'overlayTopBarBg', label: 'Overlay Top Bar', aliases: ['overlaytopbar', 'topbar'] },
-      'page-header': { key: 'headerBg', label: 'Page Header', aliases: ['header', 'headerbg'] },
-      'buttons-borders': { key: 'accent', label: 'Buttons / Borders', aliases: ['accent', 'buttons', 'borders'] },
-      'panels-inputs': { key: 'panelBg', label: 'Panels / Inputs', aliases: ['panelbg', 'panels', 'inputs'] },
-      'sidebar-background': { key: 'sidebarBg', label: 'Sidebar Background', aliases: ['sidebar', 'sidebarbg'] },
-      'overlay-logo': { key: 'overlayLogoTint', label: 'Overlay Logo Tint', aliases: ['overlaylogotint', 'logo'] },
-      'overlay-clock': { key: 'overlayClockTint', label: 'Overlay Clock Font', aliases: ['overlayclocktint', 'clock'] },
-      'oldtube-logo': { key: 'tektiteLogoTint', label: 'OldTube Logo Tint', aliases: ['tektitelogotint', 'oldtubelogo', 'tektitelogo'] },
-      'thumbnail-tint': { key: 'thumbnailTint', label: 'Thumbnail Tint', aliases: ['thumbnail', 'thumbnails'] }
-    });
-    const pageColorElementSuggestions = Object.keys(pageColorElementDefinitions);
-
     let pageGlobalColorInvertEnabled = false;
     let pageGlobalHueShiftEnabled = false;
     let pageGlobalHueShiftFrameId = null;
@@ -272,6 +256,12 @@
     let pageGlobalHueShiftFrozenAngle = null;
     const pageGlobalHueShiftDurationMs = 4000;
     let pageScreenshotAnimationActive = false;
+    let colorElementModeEnabled = false;
+    let colorElementHotspotRefreshId = null;
+    let colorElementOverlay = null;
+    let colorElementPickerInput = null;
+    let colorElementModeLabel = null;
+    let pendingColorElementHotspotKey = '';
 
     function cloneState(obj) {
       return JSON.parse(JSON.stringify(obj));
@@ -305,99 +295,6 @@
       const g = parseInt(safe.slice(2, 4), 16);
       const b = parseInt(safe.slice(4, 6), 16);
       return `rgba(${r}, ${g}, ${b}, ${clampAlpha(alpha)})`;
-    }
-
-
-    function normalizePageColorElementName(value) {
-      const normalized = String(value || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
-      if (!normalized) return '';
-      const direct = pageColorElementDefinitions[normalized];
-      if (direct) return normalized;
-      const compact = normalized.replace(/-/g, '');
-      const foundEntry = Object.entries(pageColorElementDefinitions).find(([, entry]) => Array.isArray(entry.aliases) && entry.aliases.includes(compact));
-      return foundEntry ? foundEntry[0] : '';
-    }
-
-    function parseCssColorInput(input) {
-      const safeInput = typeof input === 'string' ? input.trim() : '';
-      if (!safeInput) return null;
-      const probe = document.createElement('span');
-      probe.style.color = '';
-      probe.style.color = safeInput;
-      if (!probe.style.color) return null;
-      document.body.appendChild(probe);
-      const computed = window.getComputedStyle(probe).color || '';
-      probe.remove();
-      const match = computed.match(/^rgba?\(([^)]+)\)$/i);
-      if (!match) return null;
-      const rawParts = match[1].split(',').map((part) => part.trim());
-      const numericParts = rawParts.map((part) => Number(part));
-      if (numericParts.length < 3 || numericParts.slice(0, 3).some((value) => !Number.isFinite(value))) {
-        return null;
-      }
-      const r = Math.max(0, Math.min(255, Math.round(numericParts[0])));
-      const g = Math.max(0, Math.min(255, Math.round(numericParts[1])));
-      const b = Math.max(0, Math.min(255, Math.round(numericParts[2])));
-      const a = numericParts.length > 3 && Number.isFinite(numericParts[3]) ? clampAlpha(numericParts[3], 1) : 1;
-      return {
-        hex: `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`,
-        alpha: a
-      };
-    }
-
-    function parsePageColorElementCommand(value) {
-      const safeValue = typeof value === 'string' ? value.trim() : '';
-      if (!safeValue) {
-        return null;
-      }
-      const parts = safeValue.split(/\s+/);
-      if (parts.length < 2) {
-        return null;
-      }
-
-      const elementName = normalizePageColorElementName(parts[0]);
-      if (!elementName) {
-        return { error: 'Unknown element name.' };
-      }
-      const element = pageColorElementDefinitions[elementName];
-      if (!element) {
-        return { error: 'Unknown element name.' };
-      }
-
-      let opacityToken = '';
-      const lastToken = parts[parts.length - 1];
-      if (/^(?:0(?:\.\d+)?|1(?:\.0+)?)$/.test(lastToken)) {
-        opacityToken = lastToken;
-        parts.pop();
-      }
-
-      const colorToken = parts.slice(1).join(' ').trim();
-      if (!colorToken) {
-        return null;
-      }
-
-      if (colorToken.toLowerCase() === 'randomize') {
-        return {
-          elementName,
-          key: element.key,
-          label: element.label,
-          randomize: true,
-          alpha: opacityToken ? clampAlpha(opacityToken, pageCustomizeDefaults.colors[element.key].alpha) : null
-        };
-      }
-
-      const parsedColor = parseCssColorInput(colorToken);
-      if (!parsedColor) {
-        return { error: 'Color must be hex, rgba(), or a valid CSS color name.' };
-      }
-
-      return {
-        elementName,
-        key: element.key,
-        label: element.label,
-        hex: parsedColor.hex,
-        alpha: opacityToken ? clampAlpha(opacityToken, parsedColor.alpha) : parsedColor.alpha
-      };
     }
 
     function randomHex() {
@@ -941,13 +838,6 @@
             passthroughBuiltIn: false
           },
           {
-            name: '/color_element',
-            usage: '/color_element [element-name] [hex or rgba or name color or randomize] [0-1 for opacity]',
-            desc: 'set one customize-page color target directly from chat',
-            execute: false,
-            suggestions: pageColorElementSuggestions
-          },
-          {
             name: '/clock_time',
             usage: '/clock_time ',
             desc: 'set the overlay clock to a manual time string',
@@ -971,6 +861,12 @@
             desc: 'sync the overlay clock to a named timezone',
             execute: false,
             suggestions: allClockZones
+          },
+          {
+            name: '/color_element',
+            usage: '/color_element',
+            desc: 'toggle click-to-pick color mode for page customize elements',
+            execute: true
           }
         ]
       });
@@ -1015,6 +911,223 @@
         alpha: clampAlpha(value.alpha, defaults.alpha)
       };
       applyPageCustomizeState();
+    }
+
+    function ensureColorElementUi() {
+      if (!colorElementOverlay) {
+        colorElementOverlay = document.createElement('div');
+        colorElementOverlay.id = 'color-element-overlay';
+        Object.assign(colorElementOverlay.style, {
+          position: 'fixed',
+          inset: '0',
+          zIndex: '9000',
+          pointerEvents: 'none',
+          display: 'none'
+        });
+        document.body.appendChild(colorElementOverlay);
+      }
+      if (!colorElementModeLabel) {
+        colorElementModeLabel = document.createElement('div');
+        colorElementModeLabel.id = 'color-element-mode-label';
+        colorElementModeLabel.textContent = 'COLOR PICK MODE ENABLED  •  CLICK A HIGHLIGHTED ELEMENT  •  /color_element TO DISABLE';
+        Object.assign(colorElementModeLabel.style, {
+          position: 'fixed',
+          left: '50%',
+          top: '14px',
+          transform: 'translateX(-50%)',
+          padding: '8px 12px',
+          fontFamily: 'Courier New, Courier, monospace',
+          fontSize: '12px',
+          lineHeight: '1.2',
+          color: '#00ff66',
+          background: 'rgba(17, 0, 25, 0.92)',
+          border: '1px solid rgba(0,255,102,0.8)',
+          boxShadow: '0 0 20px rgba(0,255,102,0.18)',
+          borderRadius: '8px',
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+          display: 'none'
+        });
+        document.body.appendChild(colorElementModeLabel);
+      }
+      if (!colorElementPickerInput) {
+        colorElementPickerInput = document.createElement('input');
+        colorElementPickerInput.type = 'color';
+        colorElementPickerInput.id = 'color-element-hidden-picker';
+        Object.assign(colorElementPickerInput.style, {
+          position: 'fixed',
+          left: '0',
+          top: '0',
+          width: '1px',
+          height: '1px',
+          opacity: '0',
+          pointerEvents: 'none'
+        });
+        colorElementPickerInput.addEventListener('input', () => {
+          const key = pendingColorElementHotspotKey;
+          if (!key || !pageCustomizeState.colors[key]) return;
+          setPageColor(key, {
+            hex: colorElementPickerInput.value,
+            alpha: pageCustomizeState.colors[key].alpha
+          });
+          refreshColorElementHotspots();
+        });
+        document.body.appendChild(colorElementPickerInput);
+      }
+    }
+
+    function getAbsoluteRectFromNode(node, frameRect = null) {
+      if (!node || typeof node.getBoundingClientRect !== 'function') return null;
+      const rect = node.getBoundingClientRect();
+      if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+      return frameRect
+        ? { left: frameRect.left + rect.left, top: frameRect.top + rect.top, width: rect.width, height: rect.height }
+        : { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    }
+
+    function getColorElementHotspots() {
+      const spots = [];
+      const overlayRoot = overlayContainer.querySelector('#overlay-root') || overlayContainer;
+      const overlayTopBar = overlayRoot ? overlayRoot.querySelector('.topbar') : null;
+      const overlayLogo = overlayRoot ? overlayRoot.querySelector('#dead-logo') : null;
+      const overlayClock = overlayRoot ? overlayRoot.querySelector('#native-clock') : null;
+      const overlaySidebar = overlayRoot ? overlayRoot.querySelector('#sidebar') : null;
+      const overlaySidebarVisible = !!(overlaySidebar && overlaySidebar.getAttribute('aria-hidden') === 'false');
+
+      const overlayTopBarRect = getAbsoluteRectFromNode(overlayTopBar);
+      if (overlayTopBarRect) spots.push({ key: 'overlayTopBarBg', label: pageCustomizeDefaults.colors.overlayTopBarBg.label, rect: overlayTopBarRect });
+      const overlayLogoRect = getAbsoluteRectFromNode(overlayLogo);
+      if (overlayLogoRect) spots.push({ key: 'overlayLogoTint', label: pageCustomizeDefaults.colors.overlayLogoTint.label, rect: overlayLogoRect });
+      const overlayClockRect = getAbsoluteRectFromNode(overlayClock);
+      if (overlayClockRect) spots.push({ key: 'overlayClockTint', label: pageCustomizeDefaults.colors.overlayClockTint.label, rect: overlayClockRect });
+      const sidebarRect = overlaySidebarVisible ? getAbsoluteRectFromNode(overlaySidebar) : null;
+      if (sidebarRect) {
+        spots.push({ key: 'sidebarBg', label: pageCustomizeDefaults.colors.sidebarBg.label, rect: sidebarRect });
+      } else if (overlayTopBarRect) {
+        spots.push({ key: 'sidebarBg', label: pageCustomizeDefaults.colors.sidebarBg.label, rect: { left: overlayTopBarRect.left + 10, top: overlayTopBarRect.top + overlayTopBarRect.height + 10, width: 160, height: 42 } });
+      }
+
+      const frameRect = tektiteFrame.getBoundingClientRect();
+      if (frameRect && frameRect.width > 0 && frameRect.height > 0) {
+        spots.push({ key: 'pageBg', label: pageCustomizeDefaults.colors.pageBg.label, rect: { left: frameRect.left + 8, top: frameRect.top + 8, width: Math.max(120, frameRect.width - 16), height: Math.max(80, frameRect.height - 16) } });
+      }
+
+      try {
+        const tektiteDoc = tektiteFrame.contentDocument || (tektiteFrame.contentWindow && tektiteFrame.contentWindow.document);
+        if (tektiteDoc) {
+          const channelHeader = tektiteDoc.querySelector('.channelHeader');
+          const channelTitle = tektiteDoc.querySelector('.channelTitle');
+          const channelLogo = tektiteDoc.querySelector('.channelLogo');
+          const searchInput = tektiteDoc.querySelector('#videoSearch');
+          const accentTarget = tektiteDoc.querySelector('#listBtn') || tektiteDoc.querySelector('#gridBtn') || tektiteDoc.querySelector('#loadMore');
+          const firstThumb = tektiteDoc.querySelector('.thumb-grid, .thumb-list');
+
+          const headerRect = getAbsoluteRectFromNode(channelHeader, frameRect);
+          if (headerRect) spots.push({ key: 'headerBg', label: pageCustomizeDefaults.colors.headerBg.label, rect: headerRect });
+          const textRect = getAbsoluteRectFromNode(channelTitle, frameRect);
+          if (textRect) spots.push({ key: 'pageText', label: pageCustomizeDefaults.colors.pageText.label, rect: textRect });
+          const tektiteLogoRect = getAbsoluteRectFromNode(channelLogo, frameRect);
+          if (tektiteLogoRect) spots.push({ key: 'tektiteLogoTint', label: pageCustomizeDefaults.colors.tektiteLogoTint.label, rect: tektiteLogoRect });
+          const panelRect = getAbsoluteRectFromNode(searchInput, frameRect);
+          if (panelRect) spots.push({ key: 'panelBg', label: pageCustomizeDefaults.colors.panelBg.label, rect: panelRect });
+          const accentRect = getAbsoluteRectFromNode(accentTarget, frameRect);
+          if (accentRect) spots.push({ key: 'accent', label: pageCustomizeDefaults.colors.accent.label, rect: accentRect });
+          const thumbRect = getAbsoluteRectFromNode(firstThumb, frameRect);
+          if (thumbRect) spots.push({ key: 'thumbnailTint', label: pageCustomizeDefaults.colors.thumbnailTint.label, rect: thumbRect });
+        }
+      } catch (error) {
+        console.warn('Unable to inspect tektite frame for color element mode', error);
+      }
+      return spots;
+    }
+
+    function refreshColorElementHotspots() {
+      if (!colorElementModeEnabled) return;
+      ensureColorElementUi();
+      if (!colorElementOverlay) return;
+      colorElementOverlay.innerHTML = '';
+      const spots = getColorElementHotspots();
+      const fallbackColor = hexToRgba(pageCustomizeState.colors.accent.hex, 0.95);
+      spots.forEach((spot) => {
+        if (!spot || !spot.rect || !spot.key) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'color-element-hotspot';
+        button.dataset.colorKey = spot.key;
+        button.title = `${spot.label}`;
+        button.setAttribute('aria-label', `${spot.label}`);
+        Object.assign(button.style, {
+          position: 'fixed',
+          left: `${Math.round(spot.rect.left)}px`,
+          top: `${Math.round(spot.rect.top)}px`,
+          width: `${Math.max(18, Math.round(spot.rect.width))}px`,
+          height: `${Math.max(18, Math.round(spot.rect.height))}px`,
+          boxSizing: 'border-box',
+          border: `2px dashed ${fallbackColor}`,
+          background: 'rgba(0, 0, 0, 0.06)',
+          boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.3)',
+          cursor: 'pointer',
+          pointerEvents: 'auto',
+          borderRadius: '8px',
+          backdropFilter: 'blur(1px)'
+        });
+        const label = document.createElement('span');
+        label.textContent = spot.label;
+        Object.assign(label.style, {
+          position: 'absolute',
+          left: '0',
+          top: '-24px',
+          maxWidth: '240px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          padding: '3px 6px',
+          color: '#00ff66',
+          background: 'rgba(17,0,25,0.95)',
+          border: '1px solid rgba(0,255,102,0.7)',
+          borderRadius: '6px',
+          font: '11px Courier New, Courier, monospace',
+          pointerEvents: 'none'
+        });
+        button.appendChild(label);
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          pendingColorElementHotspotKey = spot.key;
+          colorElementPickerInput.value = pageCustomizeState.colors[spot.key]?.hex || pageCustomizeDefaults.colors[spot.key]?.hex || '#00ff00';
+          colorElementPickerInput.style.left = `${Math.max(0, Math.round(event.clientX))}px`;
+          colorElementPickerInput.style.top = `${Math.max(0, Math.round(event.clientY))}px`;
+          if (typeof colorElementPickerInput.showPicker === 'function') {
+            colorElementPickerInput.showPicker();
+          } else {
+            colorElementPickerInput.click();
+          }
+        });
+        colorElementOverlay.appendChild(button);
+      });
+    }
+
+    function setColorElementModeEnabled(enabled) {
+      const shouldEnable = !!enabled;
+      colorElementModeEnabled = shouldEnable;
+      ensureColorElementUi();
+      if (colorElementOverlay) colorElementOverlay.style.display = shouldEnable ? 'block' : 'none';
+      if (colorElementModeLabel) colorElementModeLabel.style.display = shouldEnable ? 'block' : 'none';
+      if (colorElementHotspotRefreshId !== null) {
+        window.clearInterval(colorElementHotspotRefreshId);
+        colorElementHotspotRefreshId = null;
+      }
+      if (shouldEnable) {
+        refreshColorElementHotspots();
+        colorElementHotspotRefreshId = window.setInterval(refreshColorElementHotspots, 700);
+      } else if (colorElementOverlay) {
+        colorElementOverlay.innerHTML = '';
+      }
+      return colorElementModeEnabled;
+    }
+
+    function toggleColorElementMode() {
+      return setColorElementModeEnabled(!colorElementModeEnabled);
     }
 
     function randomizePageCustomizeKey(key) {
@@ -1409,6 +1522,7 @@
       setChatFrameVisible(false);
       chatSandboxFrame.style.display = 'none';
       stopPageAutoShuffle();
+      setColorElementModeEnabled(false);
       Array.from(pageControlShuffleIntervals.values()).forEach((intervalId) => window.clearInterval(intervalId));
       pageControlShuffleIntervals.clear();
       resetPageGlobalEffects();
@@ -1596,52 +1710,6 @@
             return;
           }
 
-          if (commandName === '/color_element') {
-            const parsed = parsePageColorElementCommand(commandValue);
-            if (!parsed) {
-              postToChatSandbox({
-                type: 'pageChatResult',
-                command: '/color_element',
-                message: 'Usage: /color_element [element-name] [hex or rgba or name color or randomize] [0-1 for opacity]',
-                announce: true
-              });
-              return;
-            }
-            if (parsed.error) {
-              postToChatSandbox({
-                type: 'pageChatResult',
-                command: '/color_element',
-                message: `${parsed.error} Usage: /color_element [element-name] [hex or rgba or name color or randomize] [0-1 for opacity]`,
-                announce: true
-              });
-              return;
-            }
-            if (parsed.randomize) {
-              randomizePageCustomizeKey(parsed.key);
-              if (parsed.alpha != null && pageCustomizeState.colors[parsed.key]) {
-                pageCustomizeState.colors[parsed.key].alpha = clampAlpha(parsed.alpha, pageCustomizeDefaults.colors[parsed.key].alpha);
-              }
-              applyPageCustomizeState();
-              sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
-              postToChatSandbox({
-                type: 'pageChatResult',
-                command: '/color_element',
-                message: `/color_element executed: ${parsed.elementName} -> randomize @ ${pageCustomizeState.colors[parsed.key].alpha}`,
-                announce: true
-              });
-              return;
-            }
-            setPageColor(parsed.key, { hex: parsed.hex, alpha: parsed.alpha });
-            sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
-            postToChatSandbox({
-              type: 'pageChatResult',
-              command: '/color_element',
-              message: `/color_element executed: ${parsed.elementName} -> ${parsed.hex} @ ${clampAlpha(parsed.alpha)}`,
-              announce: true
-            });
-            return;
-          }
-
           if (commandName === '/clock_time') {
             if (!commandValue) {
               postToChatSandbox({
@@ -1684,6 +1752,18 @@
               command: '/clock_date',
               message: `/clock_date executed: ${commandValue}`,
               announce: true
+            });
+            return;
+          }
+
+          if (commandName === '/color_element') {
+            const enabled = toggleColorElementMode();
+            closeChatFromParent();
+            postToChatSandbox({
+              type: 'pageChatResult',
+              command: '/color_element',
+              message: enabled ? '/color_element click mode enabled' : '/color_element click mode disabled',
+              announce: false
             });
             return;
           }
@@ -1956,6 +2036,8 @@
     });
 
     window.addEventListener('keydown', handleChatShortcutKeydown, true);
+    window.addEventListener('resize', () => { if (colorElementModeEnabled) refreshColorElementHotspots(); });
+    window.addEventListener('scroll', () => { if (colorElementModeEnabled) refreshColorElementHotspots(); }, true);
 
     chatSandboxFrame.addEventListener('load', () => {
       chatSandboxReady = true;
@@ -1967,9 +2049,13 @@
     tektiteFrame.addEventListener('load', () => {
       applyPageCustomizeState();
       bindChatShortcutToFrame(tektiteFrame);
+      if (colorElementModeEnabled) {
+        window.setTimeout(refreshColorElementHotspots, 150);
+      }
     });
 
     loadOverlay();
+    ensureColorElementUi();
   </script>
   <script src="/scripts/screenshot-shortcut.js"></script>
   <script src="/scripts/hide-overlay.js"></script>
