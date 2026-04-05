@@ -1494,6 +1494,7 @@ const focusSink = document.getElementById('focusSink');
       { name: '/upload_file', value: '/upload_file', execute: true, desc: 'open a file picker to embed one file into chat' },
       { name: '/upload_folder', value: '/upload_folder', execute: true, desc: 'open a folder picker to browse and embed local files' },
       { name: '/clear', value: '/clear', execute: true, desc: 'clear the visible chat messages' },
+      { name: '/color', value: '/color', execute: true, desc: 'show only the color commands' },
       { name: '/color_hueshift', value: '/color_hueshift', execute: true, desc: 'toggle a global hue shift and override local hue-shift effects while active' },
       { name: '/color_invert', value: '/color_invert', execute: true, desc: 'toggle a global full-color invert on or off' },
       { name: '/color_party', value: '/color_party', execute: true, desc: 'toggle hue shift plus auto-randomize and random invert flicker on or off' },
@@ -1515,7 +1516,8 @@ const focusSink = document.getElementById('focusSink');
       { name: '/screenshot', value: '/screenshot', execute: true, desc: 'save a PNG of save a PNG of overlay.html plus /pages/youtube-list-grid/youtube-list-grid.html exactly as visible, ignoring chat' },
       { name: '/screenshot_animation', value: '/screenshot_animation', execute: true, desc: 'save 15 full-page PNG frames in a ZIP using the same timing as /color_randomize and /color_party' },
       { name: '/refresh', value: '/refresh', execute: true, desc: 'refresh the current page' },
-      { name: '/stop', value: '/stop', execute: true, desc: 'stop auto color shuffle, script playback, hue shift, and invert effects' }
+      { name: '/stop', value: '/stop', execute: true, desc: 'stop auto color shuffle, script playback, hue shift, and invert effects' },
+      { name: '/clock', value: '/clock', execute: true, desc: 'show only the clock commands' }
     ];
     const builtInCommandList = builtInCommands.map((entry) => entry.name);
     let pageCommandRegistry = [];
@@ -3756,18 +3758,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }, '*');
     }
 
-    function createHelpMessageNode() {
-      const wrapper = document.createElement('div');
-
-      const title = document.createElement('div');
-      const titleStrong = document.createElement('strong');
-      titleStrong.textContent = 'Help with commands...';
-      title.appendChild(titleStrong);
-      wrapper.appendChild(title);
-
-      const helpList = document.createElement('div');
-      helpList.className = 'helpList';
-
+    function getMergedHelpCommands() {
       const showPageOnlyHelp = document.body.classList.contains('embedded') && pageCommandMeta.pageOnly && pageCommandRegistry.length > 0;
       const pageCommands = pageCommandRegistry.map((entry) => ({
         fromPage: true,
@@ -3777,12 +3768,28 @@ function createHomepageCustomizeMessageNode(result = {}) {
         desc: entry.desc || 'page command'
       }));
       const mergedCommands = showPageOnlyHelp ? pageCommands : [...builtInCommands, ...pageCommands];
-      const commands = Array.from(mergedCommands.reduce((map, entry) => {
+      return Array.from(mergedCommands.reduce((map, entry) => {
         const key = String(entry.name || '').toLowerCase();
         if (!key) return map;
         if (!map.has(key) || entry.fromPage) map.set(key, entry);
         return map;
       }, new Map()).values()).sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function createCommandListMessageNode(titleText, commandNames = []) {
+      const wrapper = document.createElement('div');
+
+      const title = document.createElement('div');
+      const titleStrong = document.createElement('strong');
+      titleStrong.textContent = titleText;
+      title.appendChild(titleStrong);
+      wrapper.appendChild(title);
+
+      const helpList = document.createElement('div');
+      helpList.className = 'helpList';
+
+      const allowed = new Set((Array.isArray(commandNames) ? commandNames : []).map((name) => String(name || '').toLowerCase()));
+      const commands = getMergedHelpCommands().filter((command) => allowed.size ? allowed.has(String(command.name || '').toLowerCase()) : true);
 
       commands.forEach((command) => {
         const item = document.createElement('a');
@@ -3818,6 +3825,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       wrapper.appendChild(helpList);
       return wrapper;
+    }
+
+    function createHelpMessageNode() {
+      return createCommandListMessageNode('Help with commands...');
     }
 
 
@@ -4913,6 +4924,29 @@ function createHomepageCustomizeMessageNode(result = {}) {
           setDebugMode(true);
           addSystemMessage(formatCommandExecutionMessage('/debug', 'enabled'));
         }
+        return true;
+      }
+
+      if (command === '/clock') {
+        addSystemMessage(formatCommandExecutionMessage('/clock'));
+        addMessage(createCommandListMessageNode('Clock commands...', [
+          '/clock_time',
+          '/clock_date',
+          '/clock_reset',
+          '/clock_zone'
+        ]), 'system');
+        return true;
+      }
+
+      if (command === '/color') {
+        addSystemMessage(formatCommandExecutionMessage('/color'));
+        addMessage(createCommandListMessageNode('Color commands...', [
+          '/color_hueshift',
+          '/color_invert',
+          '/color_party',
+          '/color_randomize',
+          '/color_reset'
+        ]), 'system');
         return true;
       }
 
