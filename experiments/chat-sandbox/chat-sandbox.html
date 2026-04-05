@@ -2572,6 +2572,15 @@ const focusSink = document.getElementById('focusSink');
     }
 
 
+    function triggerIndexRefresh() {
+      if (isEmbeddedInIndex()) {
+        const posted = postToParentPage({ type: 'refreshParentPage' });
+        if (posted) return;
+      }
+      window.location.reload();
+    }
+
+
     function clampFontScalePercent(value) {
       if (!Number.isFinite(value)) return null;
       return Math.min(500, Math.max(10, value));
@@ -5127,10 +5136,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
           } else if (window.top && window.top !== window) {
             window.top.location.reload();
           } else {
-            window.location.reload();
+            triggerIndexRefresh();
           }
         } catch (error) {
-          window.location.reload();
+          triggerIndexRefresh();
         }
         return true;
       }
