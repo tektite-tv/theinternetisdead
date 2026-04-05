@@ -1398,6 +1398,7 @@ const focusSink = document.getElementById('focusSink');
     let dvdOverclockAliasIntervalId = null;
     let dvdOverclockAliasLine = null;
     let dvdOverclockNicknameCycleIndex = -1;
+    let dvdOverclockPrimed = false;
     let dvdUploadMode = 'dvd_image';
     let dvdCommandAttemptCount = 0;
     const dvdOverclockNicknamePool = ['Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
@@ -1776,6 +1777,19 @@ const focusSink = document.getElementById('focusSink');
     function appendStyledSystemText(messageText, rawContent, repeatCount = 1, repeatLabel = '') {
       messageText.innerHTML = '';
       const rendered = getRenderedSystemText(rawContent);
+      const appendRepeatSuffix = (parentNode, label) => {
+        if (!label) return;
+        parentNode.appendChild(document.createTextNode(' ('));
+        if (label === 'INFINITE') {
+          const infiniteSpan = document.createElement('span');
+          infiniteSpan.className = 'commandStyledText infiniteRepeatLabel';
+          infiniteSpan.textContent = label;
+          parentNode.appendChild(infiniteSpan);
+        } else {
+          parentNode.appendChild(document.createTextNode(label));
+        }
+        parentNode.appendChild(document.createTextNode(')'));
+      };
       const executionMatch = rendered.match(/^(System:\s+)?(\/\S+)(\s+command)?\s+(executed|enabled|disabled|overclocked)\s+by\s+(.+)$/i);
       const unknownCommandMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+is\s+not\s+a\s+known\s+command$/i);
 
@@ -1803,7 +1817,7 @@ const focusSink = document.getElementById('focusSink');
         messageText.appendChild(nicknameSpan);
 
         if (repeatCount > 1 || repeatLabel) {
-          messageText.appendChild(document.createTextNode(` (${repeatLabel || repeatCount})`));
+          appendRepeatSuffix(messageText, repeatLabel || String(repeatCount));
         }
         return;
       }
@@ -1823,7 +1837,7 @@ const focusSink = document.getElementById('focusSink');
         messageText.appendChild(document.createTextNode(' is not a known command'));
 
         if (repeatCount > 1 || repeatLabel) {
-          messageText.appendChild(document.createTextNode(` (${repeatLabel || repeatCount})`));
+          appendRepeatSuffix(messageText, repeatLabel || String(repeatCount));
         }
         return;
       }
@@ -1866,10 +1880,15 @@ const focusSink = document.getElementById('focusSink');
       nicknameSpan.textContent = nicknameChoices[dvdOverclockNicknameCycleIndex] || 'User';
     }
 
+    function primeDvdOverclockCycle() {
+      dvdOverclockPrimed = true;
+    }
+
     function startDvdOverclockMode() {
+      const wasPrimed = dvdOverclockPrimed;
       dvdOverclockMode = true;
       document.body.classList.add('dvd-overclock-mode');
-      dvdOverclockNicknameCycleIndex = -1;
+      dvdOverclockNicknameCycleIndex = wasPrimed ? dvdOverclockNicknameCycleIndex : -1;
       clearDvdOverclockIntervals();
       dvdOverclockIntervalId = window.setInterval(() => {
         if (dvdInstances.length < getDvdActiveCap()) {
@@ -1882,6 +1901,7 @@ const focusSink = document.getElementById('focusSink');
       }, 1000);
       dvdOverclockAliasIntervalId = window.setInterval(updateOverclockAliasLabel, 1000);
       updateOverclockAliasLabel();
+      dvdOverclockPrimed = false;
     }
 
     function stopDvdOverclockMode() {
@@ -4587,6 +4607,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
 
         if (nextAttempt === 12) {
+          primeDvdOverclockCycle();
           addSystemMessage("Really, you don't want to see what happens if you spawn more than 10 of those... Fine, send it one more time, see what happens smartass.", { repeatCount: 1 });
           return true;
         }
