@@ -699,13 +699,16 @@ const sidebar = overlayRoot.querySelector('#sidebar');
   }
 
   function pageContainsChatSandbox() {
-    const chatFrame = document.getElementById('chat-sandbox-frame');
-    if (chatFrame) return true;
+    const frame = document.getElementById('chat-sandbox-frame');
+    if (frame && frame.tagName === 'IFRAME') {
+      const src = (frame.getAttribute('src') || '').trim();
+      if (src.includes('/experiments/chat-sandbox/chat-sandbox.html')) {
+        return true;
+      }
+    }
 
-    const chatIframe = document.querySelector('iframe[src*="chat-sandbox"]');
-    if (chatIframe) return true;
-
-    return typeof window.__indexOpenChatOverlay === 'function';
+    const sandboxIframe = document.querySelector('iframe[src*="/experiments/chat-sandbox/chat-sandbox.html"]');
+    return !!sandboxIframe;
   }
 
   function shouldUseIndexChatBehavior() {
@@ -785,7 +788,18 @@ const sidebar = overlayRoot.querySelector('#sidebar');
 
   function syncChatLinkVisibility() {
     if (!chatLink) return;
-    chatLink.hidden = !shouldUseIndexChatBehavior();
+
+    const shouldShow = shouldUseIndexChatBehavior();
+    chatLink.hidden = !shouldShow;
+    chatLink.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+    chatLink.tabIndex = shouldShow ? 0 : -1;
+    chatLink.style.display = shouldShow ? '' : 'none';
+
+    if (shouldShow) {
+      chatLink.setAttribute('href', '#');
+    } else {
+      chatLink.removeAttribute('href');
+    }
   }
 
   function handleChatActivate(event) {
