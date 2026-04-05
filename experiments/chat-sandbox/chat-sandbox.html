@@ -1563,15 +1563,15 @@ const focusSink = document.getElementById('focusSink');
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
       { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
-      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode' },
+      { name: '/dvd_image', value: '/dvd_image "https://example.com/image1.png, https://example.com/image2.png"', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode', suggestions: ['"https://example.com/image1.png, https://example.com/image2.png"'] },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
-      { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
+      { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview', suggestions: ['https://example.com/', 'https://theinternetisdead.org/'] },
       { name: '/script_load', value: '/script_load', execute: true, desc: 'choose a .txt file and send each line into chat every 0.33 seconds' },
       { name: '/settings_load', value: '/settings_load', execute: true, desc: 'choose a settings.json file and load saved settings' },
-      { name: '/nickname', value: '/nickname ', execute: false, desc: 'set the displayed username used by system messages' },
+      { name: '/nickname', value: '/nickname your_name_here', execute: false, desc: 'set the displayed username used by system messages', suggestions: ['your_name_here'] },
       { name: '/color_randomize', value: '/color_randomize', execute: true, desc: 'toggle the automatic random color shuffle on or off' },
       { name: '/color_reset', value: '/color_reset', execute: true, desc: 'restore default appearance settings' },
       { name: '/settings_save', value: '/settings_save', execute: true, desc: 'download a settings.json with the current command-configurable state' },
@@ -1582,6 +1582,10 @@ const focusSink = document.getElementById('focusSink');
       { name: '/clock', value: '/clock', execute: true, desc: 'show only the clock commands' }
     ];
     const builtInCommandList = builtInCommands.map((entry) => entry.name);
+    function getBuiltInCommandDefinition(command) {
+      const normalized = String(command || '').trim().toLowerCase();
+      return builtInCommands.find((entry) => entry.name === normalized) || null;
+    }
     let pageCommandRegistry = [];
     let pageCommandMeta = { pageOnly: false, pageId: '', title: '', sourceKey: '' };
     let pendingPageCommand = null;
@@ -4476,6 +4480,24 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return true;
     }
 
+    function getCommandSuggestionDefinition(commandToken) {
+      const pageCommand = getPageCommandDefinition(commandToken);
+      if (pageCommand) {
+        return {
+          usage: pageCommand.usage ? String(pageCommand.usage).trim() : pageCommand.name,
+          suggestions: Array.isArray(pageCommand.suggestions) ? pageCommand.suggestions.slice() : []
+        };
+      }
+      const builtInCommand = getBuiltInCommandDefinition(commandToken);
+      if (builtInCommand) {
+        return {
+          usage: builtInCommand.value ? String(builtInCommand.value).trim() : builtInCommand.name,
+          suggestions: Array.isArray(builtInCommand.suggestions) ? builtInCommand.suggestions.slice() : []
+        };
+      }
+      return null;
+    }
+
     function getCommandArgumentSuggestionInfo() {
       const value = chatBar.value;
       const caret = chatBar.selectionStart ?? value.length;
@@ -4492,9 +4514,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       const commandToken = value.slice(slashIndex, firstSpaceAfterSlash).toLowerCase();
-      const pageCommand = getPageCommandDefinition(commandToken);
-      const suggestions = pageCommand && Array.isArray(pageCommand.suggestions) ? pageCommand.suggestions.slice() : [];
-      if (!suggestions.length) {
+      const definition = getCommandSuggestionDefinition(commandToken);
+      const usage = definition && definition.usage ? String(definition.usage).trim() : '';
+      const suggestions = definition && Array.isArray(definition.suggestions) ? definition.suggestions.slice() : [];
+      if (!usage && !suggestions.length) {
         return null;
       }
 
@@ -4508,6 +4531,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         argumentEnd: caret,
         argumentText,
         suffix,
+        usage,
         suggestions
       };
     }
@@ -4562,8 +4586,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
-      const pageCommand = getPageCommandDefinition(info.commandToken);
-      const usageText = pageCommand && pageCommand.usage ? String(pageCommand.usage).trim() : '';
+      const usageText = info.usage ? String(info.usage).trim() : '';
       const matches = getCommandArgumentSuggestionMatches(info);
       const shouldShow = !!usageText || matches.length > 0;
       if (!shouldShow) {
