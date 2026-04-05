@@ -198,11 +198,17 @@
 
     .subscribePromoTag {
       display: inline-block;
+      align-self: center;
+      width: fit-content;
+      max-width: 100%;
       padding: 4px 10px;
       margin: 0 auto 8px auto;
       color: #00ff00;
       font-weight: 700;
+      font-size: inherit;
+      line-height: inherit;
       text-align: center;
+      white-space: nowrap;
       background: rgba(59, 0, 102, 0.5);
       border: 1px solid #00ff00;
     }
@@ -211,8 +217,22 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 100%;
       text-align: center;
       gap: 2px;
+      font-size: inherit;
+      line-height: inherit;
+    }
+
+    .subscribePromoBody {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      font-size: inherit;
+      line-height: inherit;
+      text-align: center;
     }
 
     .subscribePromoChannelLink,
@@ -1958,6 +1978,7 @@ const focusSink = document.getElementById('focusSink');
         wrapper.appendChild(tagSpan);
 
         const bodySpan = document.createElement('span');
+        bodySpan.className = 'subscribePromoBody';
         bodySpan.appendChild(document.createTextNode(`Yo ${currentNickname}, it would be really cool if you could `));
 
         const channelLink = document.createElement('a');
