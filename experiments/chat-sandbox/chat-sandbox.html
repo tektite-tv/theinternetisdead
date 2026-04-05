@@ -4557,13 +4557,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
               appendStyledSystemText(messageText, '/dvd command overclocked by User', 1, 'INFINITE');
             }
           }
-          const executionLine = addSystemMessage(formatCommandExecutionMessage('/dvd'), { repeatCount: dvdNormalMaxInstances, repeatLabel: 'INFINITE' });
-          if (executionLine) {
-            const messageText = executionLine.querySelector('.messageText');
-            if (messageText) {
-              appendStyledSystemText(messageText, formatCommandExecutionMessage('/dvd'), dvdNormalMaxInstances, 'INFINITE');
-            }
-          }
           startDvdOverclockMode();
           if (dvdInstances.length < dvdNormalMaxInstances) {
             ensureDvdInstanceCount(dvdNormalMaxInstances);
