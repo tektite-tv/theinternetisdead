@@ -3776,7 +3776,20 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }, new Map()).values()).sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    function createCommandListMessageNode(titleText, commandNames = []) {
+    function shouldHideHelpCommandByDefault(commandName) {
+      const normalized = String(commandName || '').toLowerCase();
+      return normalized === '/clock_time' ||
+        normalized === '/clock_date' ||
+        normalized === '/clock_reset' ||
+        normalized === '/clock_zone' ||
+        normalized === '/color_hueshift' ||
+        normalized === '/color_invert' ||
+        normalized === '/color_party' ||
+        normalized === '/color_randomize' ||
+        normalized === '/color_reset';
+    }
+
+    function createCommandListMessageNode(titleText, commandNames = [], options = {}) {
       const wrapper = document.createElement('div');
 
       const title = document.createElement('div');
@@ -3789,7 +3802,17 @@ function createHomepageCustomizeMessageNode(result = {}) {
       helpList.className = 'helpList';
 
       const allowed = new Set((Array.isArray(commandNames) ? commandNames : []).map((name) => String(name || '').toLowerCase()));
-      const commands = getMergedHelpCommands().filter((command) => allowed.size ? allowed.has(String(command.name || '').toLowerCase()) : true);
+      const showHiddenCommands = options.showHiddenCommands === true;
+      const commands = getMergedHelpCommands().filter((command) => {
+        const normalized = String(command.name || '').toLowerCase();
+        if (allowed.size && !allowed.has(normalized)) {
+          return false;
+        }
+        if (!allowed.size && !showHiddenCommands && shouldHideHelpCommandByDefault(normalized)) {
+          return false;
+        }
+        return true;
+      });
 
       commands.forEach((command) => {
         const item = document.createElement('a');
@@ -3828,7 +3851,17 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function createHelpMessageNode() {
-      return createCommandListMessageNode('Help with commands...');
+      return createCommandListMessageNode('Help with commands...', [], { showHiddenCommands: debugMode });
+    }
+
+    function refreshVisibleHelpMessages() {
+      const helpMessages = Array.from(messages.querySelectorAll('.message[data-role="system"] .helpList')).map((node) => node.closest('.message')).filter(Boolean);
+      helpMessages.forEach((messageNode) => {
+        const messageText = messageNode.querySelector('.messageText');
+        if (!messageText) return;
+        messageText.innerHTML = '';
+        messageText.appendChild(createHelpMessageNode());
+      });
     }
 
 
@@ -4918,10 +4951,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
         if (debugMode) {
           showSystemPrefix = false;
           setDebugMode(false);
+          refreshVisibleHelpMessages();
           addSystemMessage(formatCommandExecutionMessage('/debug', 'disabled'));
         } else {
           showSystemPrefix = true;
           setDebugMode(true);
+          refreshVisibleHelpMessages();
           addSystemMessage(formatCommandExecutionMessage('/debug', 'enabled'));
         }
         return true;
