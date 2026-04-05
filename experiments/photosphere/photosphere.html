@@ -152,7 +152,7 @@ button, select, input { min-height: 42px; font-size: 16px; }
 <select id="themeSelect">
     <option value="" selected>-- Select Theme --</option>
     <option value="custom">Custom</option>
-    <!-- EDIT THESE to match your /themes/ subfolders -->
+    <!-- EDIT THESE to match your /experiments/photosphere/themes/ subfolders -->
     <option value="zentangle">zentangle</option>
   </select>
   
@@ -825,7 +825,7 @@ function applyTheme(themeName){
   loader.setCrossOrigin("anonymous");
 
   // Try theme.json first; fallback to default filenames if missing.
-  fetch(`./themes/${themeName}/theme.json`)
+  fetch(`./experiments/photosphere/themes/${themeName}/theme.json`)
     .then(res => {
       if(!res.ok) throw new Error("no theme.json");
       return res.json();
@@ -842,8 +842,8 @@ function applyTheme(themeName){
 }
 
 function loadTextures(themeName, sphereFile, skyFile, loader){
-  const sphereURL = `./themes/${themeName}/${sphereFile}`;
-  const skyURL    = `./themes/${themeName}/${skyFile}`;
+  const sphereURL = `./experiments/photosphere/themes/${themeName}/${sphereFile}`;
+  const skyURL    = `./experiments/photosphere/themes/${themeName}/${skyFile}`;
 
   let okSphere = false;
   let okSky = false;
