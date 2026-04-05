@@ -1264,7 +1264,7 @@
       opacity: 0.96;
       user-select: none;
       -webkit-user-drag: none;
-      pointer-events: none;
+      pointer-events: auto;
       cursor: default;
       filter: hue-rotate(0deg) drop-shadow(0 0 10px rgba(255, 255, 255, 0.28));
       transform: translate3d(0, 0, 0);
@@ -1419,6 +1419,8 @@ const focusSink = document.getElementById('focusSink');
     let dvdOverclockPrimed = false;
     let dvdUploadMode = 'dvd_image';
     let dvdCommandAttemptCount = 0;
+    const subscribeImageSource = '/media/images/png/subscribe.png';
+    const subscribeClickHref = 'https://youtube.com/@Honestly_Thomas';
     const dvdOverclockNicknamePool = ['Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
     function getDvdActiveCap() {
       return dvdOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances;
@@ -1438,6 +1440,7 @@ const focusSink = document.getElementById('focusSink');
       { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
       { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
+      { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
       { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
@@ -1959,6 +1962,13 @@ const focusSink = document.getElementById('focusSink');
         if (dvdInstances.length < getDvdActiveCap()) {
           const instance = createDvdInstance();
           if (instance) {
+            if (Array.isArray(dvdSourcePool) && dvdSourcePool.length === 1 && dvdSourcePool[0] === subscribeImageSource) {
+              instance.clickHref = subscribeClickHref;
+              if (instance.el) {
+                instance.el.style.cursor = 'pointer';
+                instance.el.title = 'Open link';
+              }
+            }
             setDvdEnabled(true);
             positionDvdInstance(instance, true);
           }
@@ -4325,6 +4335,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function getDvdSourceForIndex(index) {
+      if (dvdSubscribeMode) {
+        return subscribeImageSource;
+      }
       const pool = Array.isArray(dvdSourcePool) && dvdSourcePool.length ? dvdSourcePool : dvdDefaultSources;
       return pool[index % pool.length];
     }
@@ -4348,8 +4361,17 @@ function createHomepageCustomizeMessageNode(result = {}) {
         vx: (instanceIndex % 2 === 0 ? 1 : -1) * (0.065 + (instanceIndex * 0.009)),
         vy: (instanceIndex % 3 === 0 ? -1 : 1) * (0.055 + (instanceIndex * 0.008)),
         hue: (instanceIndex * 36) % 360,
-        initialized: false
+        initialized: false,
+        clickHref: dvdSubscribeMode ? subscribeClickHref : ''
       };
+
+      img.addEventListener('click', (event) => {
+        const href = String(instance.clickHref || '').trim();
+        if (!href) return;
+        event.preventDefault();
+        event.stopPropagation();
+        window.open(href, '_blank', 'noopener,noreferrer');
+      });
 
       img.src = getDvdSourceForIndex(instanceIndex);
       img.onload = () => {
@@ -4381,6 +4403,33 @@ function createHomepageCustomizeMessageNode(result = {}) {
           };
         }
       });
+    }
+
+    function setDvdInstanceClickHref(href) {
+      const nextHref = String(href || '').trim();
+      dvdInstances.forEach((instance) => {
+        instance.clickHref = nextHref;
+        if (instance.el) {
+          instance.el.style.cursor = nextHref ? 'pointer' : 'default';
+          instance.el.title = nextHref ? 'Open link' : '';
+        }
+      });
+    }
+
+    function applySubscribeMode() {
+      cleanupDvdCustomObjectUrls();
+      stopDvdOverclockMode();
+      dvdCommandAttemptCount = 13;
+      dvdSubscribeMode = true;
+      ensureDvdInstanceCount(dvdNormalMaxInstances);
+      syncDvdInstanceSources();
+      setDvdInstanceClickHref('');
+      setDvdInstanceClickHref(subscribeClickHref);
+      addDvdOverclockSystemMessage();
+      startDvdOverclockMode();
+      setDvdEnabled(true);
+      positionAllDvdInstances(true);
+      return true;
     }
 
     function positionDvdInstance(instance, force = false) {
@@ -4540,7 +4589,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (spawnToMatch) {
         ensureDvdInstanceCount(normalized.length);
       }
-      syncDvdInstanceSources();
+      if (!dvdSubscribeMode) {
+        syncDvdInstanceSources();
+        setDvdInstanceClickHref('');
+      }
       if ((dvdEnabled || dvdInstances.length) && normalized.length) {
         setDvdEnabled(true);
         positionAllDvdInstances(true);
@@ -4566,7 +4618,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
       stopDvdOverclockMode();
       removeAllDvdInstances();
       cleanupDvdCustomObjectUrls();
+      dvdSubscribeMode = false;
       dvdSourcePool = [...dvdDefaultSources];
+      setDvdInstanceClickHref('');
       dvdUploadMode = 'dvd_image';
       dvdCommandAttemptCount = 0;
     }
@@ -4588,6 +4642,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       const finalCount = ensureDvdInstanceCount(Math.min(getDvdActiveCap(), dvdInstances.length + sourcesToAdd.length));
       syncDvdInstanceSources();
+      setDvdInstanceClickHref('');
 
       for (let i = 0; i < sourcesToAdd.length; i += 1) {
         const instanceIndex = finalCount - sourcesToAdd.length + i;
@@ -4713,6 +4768,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
         const opened = openDvdLogoPicker();
         addSystemMessage(formatCommandExecutionMessage('/dvd_image', opened ? 'executed' : 'failed'));
+        return true;
+      }
+
+      if (command === '/subscribe') {
+        const applied = applySubscribeMode();
+        addSystemMessage(formatCommandExecutionMessage('/subscribe', applied ? 'executed' : 'failed'), { repeatLabel: applied ? 'INFINITE' : '' });
         return true;
       }
 
