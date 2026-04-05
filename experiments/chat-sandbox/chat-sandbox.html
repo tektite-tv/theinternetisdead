@@ -19,10 +19,6 @@
       --document-bg: rgba(0, 0, 0, 1);
     }
 
-    html:not(.embedded), body:not(.embedded) {
-      background: var(--document-bg, #000);
-    }
-
     body {
       display: flex;
       flex-direction: column;
@@ -1258,14 +1254,6 @@
     }
 
   </style>
-  <script>
-    if (window.parent && window.parent !== window) {
-      document.documentElement.classList.add('embedded');
-      document.addEventListener('DOMContentLoaded', () => {
-        document.body.classList.add('embedded');
-      }, { once: true });
-    }
-  </script>
 </head>
 <body>
   <div id="messagesWrap">

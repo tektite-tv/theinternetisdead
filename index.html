@@ -1188,21 +1188,17 @@
     }
 
     function flushPendingChatOpen() {
-      if (!chatSandboxReady || !pendingChatOpenOptions) return;
+      if (!pendingChatOpenOptions || !chatSandboxReady) return;
       const options = pendingChatOpenOptions;
       pendingChatOpenOptions = null;
-      setChatFrameVisible(true);
       postToChatSandbox({ type: 'chatSandboxOpen', focus: options.focus !== false, seedSlash: !!options.seedSlash });
     }
 
     function openChatFromParent(options = {}) {
       if (pageScreenshotAnimationActive) return;
-      if (!chatSandboxReady) {
-        pendingChatOpenOptions = { focus: options.focus !== false, seedSlash: !!options.seedSlash };
-        return;
-      }
       setChatFrameVisible(true);
-      postToChatSandbox({ type: 'chatSandboxOpen', focus: options.focus !== false, seedSlash: !!options.seedSlash });
+      pendingChatOpenOptions = { focus: options.focus !== false, seedSlash: !!options.seedSlash };
+      flushPendingChatOpen();
     }
 
     function closeChatFromParent() {
@@ -1381,17 +1377,17 @@
       if (event.source === getChatWindow()) {
         if (event.data.type === 'chatSandboxState') {
           chatSandboxReady = true;
+          flushPendingChatOpen();
           setChatFrameVisible(!!event.data.visible);
           registerPageCommands();
-          flushPendingChatOpen();
           return;
         }
 
         if (event.data.type === 'chatSandboxDvdState') {
           chatSandboxReady = true;
+          flushPendingChatOpen();
           setChatSandboxDvdActive(!!event.data.active);
           registerPageCommands();
-          flushPendingChatOpen();
           return;
         }
 
@@ -1620,9 +1616,9 @@
 
     chatSandboxFrame.addEventListener('load', () => {
       chatSandboxReady = true;
+      flushPendingChatOpen();
       registerPageCommands();
       bindChatShortcutToFrame(chatSandboxFrame);
-      flushPendingChatOpen();
     });
 
     tektiteFrame.addEventListener('load', () => {
