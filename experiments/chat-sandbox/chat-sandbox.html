@@ -1237,7 +1237,7 @@
       display: block;
     }
 
-    #dvdLogo {
+    .dvdLogo {
       position: absolute;
       left: 0;
       top: 0;
@@ -1283,17 +1283,9 @@
   </div>
 
 
-  <div id="dvdOverlay" aria-hidden="true">
-    <img
-      id="dvdLogo"
-      src="https://upload.wikimedia.org/wikipedia/commons/8/85/Dvd_logo.svg"
-      alt="DVD logo"
-      referrerpolicy="no-referrer"
-      crossorigin="anonymous"
-    />
-  </div>
+  <div id="dvdOverlay" aria-hidden="true"></div>
 
-  <input id="dvdImageUploadInput" type="file" accept="image/*" hidden />
+  <input id="dvdImageUploadInput" type="file" accept="image/*" multiple hidden />
 
   <input id="imageUploadInput" type="file" accept="image/*" hidden />
   <input id="videoUploadInput" type="file" accept="video/*" hidden />
@@ -1339,7 +1331,6 @@ const focusSink = document.getElementById('focusSink');
     const mediaOverlayOpen = document.getElementById('mediaOverlayOpen');
     const mediaOverlayClose = document.getElementById('mediaOverlayClose');
     const dvdOverlay = document.getElementById('dvdOverlay');
-    const dvdLogo = document.getElementById('dvdLogo');
     const dvdImageUploadInput = document.getElementById('dvdImageUploadInput');
     const imageUploadInput = document.getElementById('imageUploadInput');
     const videoUploadInput = document.getElementById('videoUploadInput');
@@ -1394,9 +1385,12 @@ const focusSink = document.getElementById('focusSink');
     let dvdAnimationFrameId = null;
     let dvdEnabled = false;
     let dvdLastTime = 0;
-    let dvdHue = 0;
-    let dvdCustomObjectUrl = '';
-    const dvdState = { x: 24, y: 24, vx: 0.09, vy: 0.07, initialized: false };
+    let dvdLogoCounter = 0;
+    let dvdCustomObjectUrls = [];
+    const dvdInstances = [];
+    const dvdDefaultSources = ['https://upload.wikimedia.org/wikipedia/commons/8/85/Dvd_logo.svg'];
+    let dvdSourcePool = [...dvdDefaultSources];
+    const dvdMaxInstances = 10;
     const dvdHueShiftSpeedDegPerSecond = 45;
 
     // ADDED: Single canonical built-in command registry so command execution, help output,
@@ -1410,8 +1404,8 @@ const focusSink = document.getElementById('focusSink');
       { name: '/color_party', value: '/color_party', execute: true, desc: 'toggle hue shift plus auto-randomize and random invert flicker on or off' },
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
-      { name: '/dvd', value: '/dvd', execute: true, desc: 'toggle a bouncing hue-shifting DVD logo overlay' },
-      { name: '/dvd_logo', value: '/dvd_logo ', execute: false, desc: 'choose the image used by the bouncing DVD overlay, or pass an image URL' },
+      { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
+      { name: '/dvd_logo', value: '/dvd_logo ', execute: false, desc: 'choose one or more images for the bouncing DVD swarm, or pass one or more quoted comma-separated URLs' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
       { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
@@ -4116,20 +4110,245 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return true;
     }
 
-    function cleanupDvdCustomObjectUrl() {
-      if (dvdCustomObjectUrl) {
-        URL.revokeObjectURL(dvdCustomObjectUrl);
-        dvdCustomObjectUrl = '';
+    function cleanupDvdCustomObjectUrls() {
+      dvdCustomObjectUrls.forEach((url) => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (error) {
+        }
+      });
+      dvdCustomObjectUrls = [];
+    }
+
+    function normalizeDvdSourceList(sources) {
+      const cleaned = (Array.isArray(sources) ? sources : [])
+        .map((src) => String(src || '').trim())
+        .filter(Boolean)
+        .slice(0, dvdMaxInstances);
+      return cleaned.length ? cleaned : [...dvdDefaultSources];
+    }
+
+    function getDvdSourceForIndex(index) {
+      const pool = Array.isArray(dvdSourcePool) && dvdSourcePool.length ? dvdSourcePool : dvdDefaultSources;
+      return pool[index % pool.length];
+    }
+
+    function createDvdInstance() {
+      if (!dvdOverlay || dvdInstances.length >= dvdMaxInstances) return null;
+
+      const img = document.createElement('img');
+      img.className = 'dvdLogo';
+      img.alt = 'DVD logo';
+      img.referrerPolicy = 'no-referrer';
+      img.crossOrigin = 'anonymous';
+      img.dataset.dvdId = `dvd-${++dvdLogoCounter}`;
+
+      const instanceIndex = dvdInstances.length;
+      const instance = {
+        id: img.dataset.dvdId,
+        el: img,
+        x: 24 + ((instanceIndex * 37) % 320),
+        y: 24 + ((instanceIndex * 29) % 220),
+        vx: (instanceIndex % 2 === 0 ? 1 : -1) * (0.065 + (instanceIndex * 0.009)),
+        vy: (instanceIndex % 3 === 0 ? -1 : 1) * (0.055 + (instanceIndex * 0.008)),
+        hue: (instanceIndex * 36) % 360,
+        initialized: false
+      };
+
+      img.src = getDvdSourceForIndex(instanceIndex);
+      img.onload = () => {
+        positionDvdInstance(instance, true);
+      };
+
+      dvdInstances.push(instance);
+      dvdOverlay.appendChild(img);
+      positionDvdInstance(instance, true);
+      return instance;
+    }
+
+    function ensureDvdInstanceCount(count) {
+      const target = Math.max(0, Math.min(dvdMaxInstances, Number(count) || 0));
+      while (dvdInstances.length < target) {
+        const instance = createDvdInstance();
+        if (!instance) break;
+      }
+      return dvdInstances.length;
+    }
+
+    function syncDvdInstanceSources() {
+      dvdInstances.forEach((instance, index) => {
+        const nextSrc = getDvdSourceForIndex(index);
+        if (instance.el && instance.el.src !== nextSrc) {
+          instance.el.src = nextSrc;
+          instance.el.onload = () => {
+            positionDvdInstance(instance, true);
+          };
+        }
+      });
+    }
+
+    function positionDvdInstance(instance, force = false) {
+      if (!instance || !instance.el || !dvdOverlay) return;
+      const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0, 1);
+      const viewportHeight = Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0, 1);
+      const logoRect = instance.el.getBoundingClientRect();
+      const logoWidth = Math.max(logoRect.width || instance.el.offsetWidth || 180, 1);
+      const logoHeight = Math.max(logoRect.height || instance.el.offsetHeight || Math.round(logoWidth * 0.45), 1);
+      const maxX = Math.max(0, viewportWidth - logoWidth);
+      const maxY = Math.max(0, viewportHeight - logoHeight);
+
+      if (!instance.initialized || force) {
+        instance.x = Math.min(Math.max(instance.x, 0), maxX);
+        instance.y = Math.min(Math.max(instance.y, 0), maxY);
+        instance.initialized = true;
+      } else {
+        instance.x = Math.min(Math.max(instance.x, 0), maxX);
+        instance.y = Math.min(Math.max(instance.y, 0), maxY);
+      }
+
+      instance.el.style.transform = `translate3d(${instance.x}px, ${instance.y}px, 0)`;
+      instance.el.style.filter = `hue-rotate(${instance.hue}deg) drop-shadow(0 0 10px rgba(255, 255, 255, 0.28))`;
+    }
+
+    function positionAllDvdInstances(force = false) {
+      dvdInstances.forEach((instance) => positionDvdInstance(instance, force));
+    }
+
+    function stopDvdAnimation() {
+      dvdEnabled = false;
+      dvdLastTime = 0;
+      if (dvdAnimationFrameId !== null) {
+        cancelAnimationFrame(dvdAnimationFrameId);
+        dvdAnimationFrameId = null;
+      }
+      if (dvdOverlay) {
+        dvdOverlay.classList.remove('active');
       }
     }
 
-    function setDvdLogoSource(src) {
-      if (!dvdLogo || !src) return false;
-      cleanupDvdCustomObjectUrl();
-      dvdLogo.src = src;
-      dvdLogo.onload = () => {
-        positionDvdLogo(true);
-      };
+    function stepDvdAnimation(now) {
+      if (!dvdEnabled || !dvdOverlay || !dvdInstances.length) {
+        dvdAnimationFrameId = null;
+        return;
+      }
+
+      if (!dvdLastTime) {
+        dvdLastTime = now;
+      }
+
+      const deltaMs = Math.min(32, Math.max(0, now - dvdLastTime));
+      dvdLastTime = now;
+
+      const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0, 1);
+      const viewportHeight = Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0, 1);
+
+      dvdInstances.forEach((instance) => {
+        const logoRect = instance.el.getBoundingClientRect();
+        const logoWidth = Math.max(logoRect.width || instance.el.offsetWidth || 180, 1);
+        const logoHeight = Math.max(logoRect.height || instance.el.offsetHeight || Math.round(logoWidth * 0.45), 1);
+        const maxX = Math.max(0, viewportWidth - logoWidth);
+        const maxY = Math.max(0, viewportHeight - logoHeight);
+
+        instance.x += instance.vx * deltaMs;
+        instance.y += instance.vy * deltaMs;
+
+        if (instance.x <= 0) {
+          instance.x = 0;
+          instance.vx = Math.abs(instance.vx);
+        } else if (instance.x >= maxX) {
+          instance.x = maxX;
+          instance.vx = -Math.abs(instance.vx);
+        }
+
+        if (instance.y <= 0) {
+          instance.y = 0;
+          instance.vy = Math.abs(instance.vy);
+        } else if (instance.y >= maxY) {
+          instance.y = maxY;
+          instance.vy = -Math.abs(instance.vy);
+        }
+
+        instance.hue = (instance.hue + ((dvdHueShiftSpeedDegPerSecond * deltaMs) / 1000)) % 360;
+        positionDvdInstance(instance);
+      });
+
+      dvdAnimationFrameId = requestAnimationFrame(stepDvdAnimation);
+    }
+
+    function startDvdAnimation() {
+      if (!dvdOverlay) return false;
+      if (!dvdInstances.length) {
+        createDvdInstance();
+      }
+      dvdEnabled = dvdInstances.length > 0;
+      if (!dvdEnabled) return false;
+      dvdOverlay.classList.add('active');
+      dvdLastTime = 0;
+      positionAllDvdInstances(true);
+      if (dvdAnimationFrameId === null) {
+        dvdAnimationFrameId = requestAnimationFrame(stepDvdAnimation);
+      }
+      return true;
+    }
+
+    function notifyParentDvdState() {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'chatSandboxDvdState',
+          active: !!dvdEnabled
+        }, '*');
+      }
+    }
+
+    function setDvdEnabled(enabled) {
+      const isEnabled = enabled ? startDvdAnimation() : (stopDvdAnimation(), false);
+      notifyParentDvdState();
+      return isEnabled;
+    }
+
+    function spawnDvdInstance() {
+      if (dvdInstances.length >= dvdMaxInstances) {
+        if (!dvdEnabled && dvdInstances.length) {
+          setDvdEnabled(true);
+        }
+        return false;
+      }
+      const instance = createDvdInstance();
+      if (!instance) return false;
+      setDvdEnabled(true);
+      return true;
+    }
+
+    function openDvdLogoPicker() {
+      if (!dvdImageUploadInput) return false;
+      dvdImageUploadInput.value = '';
+      dvdImageUploadInput.click();
+      return true;
+    }
+
+    function parseDvdLogoUrlList(rawValue) {
+      const value = String(rawValue || '').trim();
+      if (!value) return [];
+      const quotedMatch = value.match(/^"(.*)"$/s);
+      const inner = quotedMatch ? quotedMatch[1] : value;
+      return inner
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .slice(0, dvdMaxInstances);
+    }
+
+    function setDvdLogoSources(sources, spawnToMatch = false) {
+      const normalized = normalizeDvdSourceList(sources);
+      dvdSourcePool = normalized;
+      if (spawnToMatch) {
+        ensureDvdInstanceCount(normalized.length);
+      }
+      syncDvdInstanceSources();
+      if ((dvdEnabled || dvdInstances.length) && normalized.length) {
+        setDvdEnabled(true);
+        positionAllDvdInstances(true);
+      }
       return true;
     }
 
@@ -4180,15 +4399,16 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       if (command === '/dvd') {
-        const enabled = setDvdEnabled(!dvdEnabled);
-        addSystemMessage(formatCommandExecutionMessage('/dvd', enabled ? 'enabled' : 'disabled'));
+        const spawned = spawnDvdInstance();
+        addSystemMessage(formatCommandExecutionMessage('/dvd', spawned ? 'executed' : 'maxed'));
         return true;
       }
 
       if (command === '/dvd_logo') {
         const urlArg = trimmed.slice(parts[0].length).trim();
         if (urlArg) {
-          const applied = setDvdLogoSource(urlArg);
+          const sources = parseDvdLogoUrlList(urlArg);
+          const applied = setDvdLogoSources(sources, true);
           addSystemMessage(formatCommandExecutionMessage('/dvd_logo', applied ? 'executed' : 'failed'));
           return true;
         }
@@ -4643,21 +4863,22 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }, true);
 
     window.addEventListener('resize', () => {
-      if (dvdEnabled) {
-        positionDvdLogo(true);
+      if (dvdEnabled || dvdInstances.length) {
+        positionAllDvdInstances(true);
       }
     });
 
     if (dvdLogo && dvdImageUploadInput) {
       dvdImageUploadInput.addEventListener('change', () => {
-        const file = dvdImageUploadInput.files && dvdImageUploadInput.files[0];
-        if (!file) return;
-        cleanupDvdCustomObjectUrl();
-        dvdCustomObjectUrl = URL.createObjectURL(file);
-        dvdLogo.src = dvdCustomObjectUrl;
-        dvdLogo.onload = () => {
-          positionDvdLogo(true);
-        };
+        const files = Array.from(dvdImageUploadInput.files || []).slice(0, dvdMaxInstances);
+        if (!files.length) return;
+        cleanupDvdCustomObjectUrls();
+        const sources = files.map((file) => {
+          const objectUrl = URL.createObjectURL(file);
+          dvdCustomObjectUrls.push(objectUrl);
+          return objectUrl;
+        });
+        setDvdLogoSources(sources, true);
       });
     }
 
