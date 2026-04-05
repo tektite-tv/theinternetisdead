@@ -167,7 +167,7 @@
     <div id="main-content">
       <iframe
         id="tektite-frame"
-        src="/tektite-index.html"
+        src="/pages/youtube-list-grid/youtube-list-grid.html"
         title="Tektite Index"
         loading="eager"
         allowfullscreen
@@ -719,7 +719,7 @@
           createdAt: new Date().toISOString(),
           frameCount,
           frameDelayMs: frameDelay,
-          source: 'overlay.html + tektite-index.html composite'
+          source: 'overlay.html + /pages/youtube-list-grid/youtube-list-grid.html composite'
         };
         const manifestBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
         entries.push(await createZipEntryFromBlob('screenshot-animation/manifest.json', manifestBlob));
@@ -1044,7 +1044,7 @@
 
     function applyOverlayVars(target) {
       if (!target) return;
-      // Keep Page Background scoped to tektite-index.html itself, not the outer index/overlay shell.
+      // Keep Page Background scoped to /pages/youtube-list-grid/youtube-list-grid.html itself, not the outer index/overlay shell.
       target.style.setProperty('--page-bg', 'transparent');
       target.style.setProperty('--overlay-text', hexToRgba(pageCustomizeState.colors.pageText.hex, pageCustomizeState.colors.pageText.alpha));
       target.style.setProperty('--overlay-bg', hexToRgba(pageCustomizeState.colors.overlayTopBarBg.hex, pageCustomizeState.colors.overlayTopBarBg.alpha));
