@@ -5079,6 +5079,19 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return true;
       }
 
+      if (command === '/dvd_infinite') {
+        dvdCommandAttemptCount = Math.max(dvdCommandAttemptCount, 13);
+        if (!dvdOverclockMode) {
+          addDvdOverclockSystemMessage();
+          startDvdOverclockMode();
+        }
+        if (dvdInstances.length < dvdNormalMaxInstances) {
+          ensureDvdInstanceCount(dvdNormalMaxInstances);
+        }
+        setDvdEnabled(true);
+        return true;
+      }
+
       if (command === '/dvd_image' || command === '/dvd_logo') {
         dvdUploadMode = 'dvd_image';
         const urlArg = trimmed.slice(parts[0].length).trim();
