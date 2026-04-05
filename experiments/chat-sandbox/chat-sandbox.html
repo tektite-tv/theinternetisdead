@@ -1588,11 +1588,22 @@ const focusSink = document.getElementById('focusSink');
       }
     }
 
+    const INITIAL_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it. K thanks bye.';
+
+    function ensureInitialWelcomeMessage() {
+      const existingWelcomeMessage = Array.from(messages.querySelectorAll('.message[data-role="user"]')).find((line) => {
+        return (line.dataset.rawContent || '').trim() === INITIAL_WELCOME_MESSAGE;
+      });
+      if (existingWelcomeMessage) return existingWelcomeMessage;
+      return addMessage(INITIAL_WELCOME_MESSAGE, 'user');
+    }
+
     function showChatBar() {
       if (isScreenshotAnimationLocked()) return;
       chatBarWrap.classList.add('visible');
       document.body.classList.add('chat-open');
       disarmChatInput();
+      ensureInitialWelcomeMessage();
       requestAnimationFrame(scrollToBottom);
       notifyParentChatSandboxState();
     }
