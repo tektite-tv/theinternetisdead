@@ -1485,6 +1485,21 @@ const focusSink = document.getElementById('focusSink');
     const subscribeImageSource = '/media/images/png/subscribe.png';
     const subscribeClickHref = 'https://youtube.com/@Honestly_Thomas';
     const subscribeInstances = [];
+    const dvdSlideshowInstances = [];
+    const dvdSlideshowSources = [
+      '/media/images/gifs/180px-NO_U_cycle.gif',
+      '/media/images/gifs/bananarama.gif',
+      '/media/images/gifs/dancing-guy.gif',
+      '/media/images/gifs/dancingzoidberg.gif',
+      '/media/images/gifs/dragon.gif',
+      '/media/images/gifs/eyes.gif',
+      '/media/images/gifs/fatspiderman.gif',
+      '/media/images/gifs/firework.gif',
+      '/media/images/gifs/frog.gif',
+      '/media/images/gifs/gif.gif',
+      '/media/images/gifs/keyboard_smash.gif',
+      '/media/images/gifs/skeleton.gif'
+    ];
     let subscribeOverclockMode = false;
     let subscribeOverclockIntervalId = null;
     let subscribePromoLine = null;
@@ -1509,6 +1524,7 @@ const focusSink = document.getElementById('focusSink');
       { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode' },
+      { name: '/dvd_slideshow', value: '/dvd_slideshow', execute: true, desc: 'spawn every GIF from /media/images/gifs as its own bouncing slideshow swarm' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
       { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
@@ -2134,7 +2150,9 @@ const focusSink = document.getElementById('focusSink');
     }
 
     function getGroupInstances(group = 'dvd') {
-      return group === 'subscribe' ? subscribeInstances : dvdInstances;
+      if (group === 'subscribe') return subscribeInstances;
+      if (group === 'dvd_slideshow') return dvdSlideshowInstances;
+      return dvdInstances;
     }
 
     function waitForNextPaint() {
@@ -4626,6 +4644,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (group === 'subscribe') {
         return subscribeImageSource;
       }
+      if (group === 'dvd_slideshow') {
+        return dvdSlideshowSources[index % dvdSlideshowSources.length];
+      }
       const pool = Array.isArray(dvdSourcePool) && dvdSourcePool.length ? dvdSourcePool : dvdDefaultSources;
       return pool[index % pool.length];
     }
@@ -4634,12 +4655,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const groupInstances = getGroupInstances(group);
       const groupCap = group === 'subscribe'
         ? (subscribeOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances)
-        : getDvdActiveCap();
+        : (group === 'dvd_slideshow' ? dvdSlideshowSources.length : getDvdActiveCap());
       if (!dvdOverlay || groupInstances.length >= groupCap) return null;
 
       const img = document.createElement('img');
       img.className = 'dvdLogo';
-      img.alt = group === 'subscribe' ? 'Subscribe logo' : 'DVD logo';
+      img.alt = group === 'subscribe' ? 'Subscribe logo' : (group === 'dvd_slideshow' ? 'GIF slideshow image' : 'DVD logo');
       img.referrerPolicy = 'no-referrer';
       img.crossOrigin = 'anonymous';
       img.dataset.dvdId = `dvd-${++dvdLogoCounter}`;
@@ -4682,7 +4703,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const groupInstances = getGroupInstances(group);
       const groupCap = group === 'subscribe'
         ? (subscribeOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances)
-        : getDvdActiveCap();
+        : (group === 'dvd_slideshow' ? dvdSlideshowSources.length : getDvdActiveCap());
       const target = Math.max(0, Math.min(groupCap, Number(count) || 0));
       while (groupInstances.length < target) {
         const instance = createDvdInstance(group);
@@ -4725,6 +4746,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return true;
     }
 
+    function applyDvdSlideshowMode() {
+      ensureDvdInstanceCount(dvdSlideshowSources.length, 'dvd_slideshow');
+      setDvdInstanceClickHref('', 'dvd_slideshow');
+      setDvdEnabled(true);
+      positionAllDvdInstances(true);
+      return true;
+    }
+
     function positionDvdInstance(instance, force = false) {
       if (!instance || !instance.el || !dvdOverlay) return;
       const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0, 1);
@@ -4749,7 +4778,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function positionAllDvdInstances(force = false) {
-      [...dvdInstances, ...subscribeInstances].forEach((instance) => positionDvdInstance(instance, force));
+      [...dvdInstances, ...subscribeInstances, ...dvdSlideshowInstances].forEach((instance) => positionDvdInstance(instance, force));
     }
 
     function stopDvdAnimation() {
@@ -4765,7 +4794,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function stepDvdAnimation(now) {
-      const allInstances = [...dvdInstances, ...subscribeInstances];
+      const allInstances = [...dvdInstances, ...subscribeInstances, ...dvdSlideshowInstances];
       if (!dvdEnabled || !dvdOverlay || !allInstances.length) {
         dvdAnimationFrameId = null;
         return;
@@ -4816,10 +4845,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     function startDvdAnimation() {
       if (!dvdOverlay) return false;
-      if (!dvdInstances.length && !subscribeInstances.length) {
+      if (!dvdInstances.length && !subscribeInstances.length && !dvdSlideshowInstances.length) {
         createDvdInstance('dvd');
       }
-      dvdEnabled = (dvdInstances.length + subscribeInstances.length) > 0;
+      dvdEnabled = (dvdInstances.length + subscribeInstances.length + dvdSlideshowInstances.length) > 0;
       if (!dvdEnabled) return false;
       dvdOverlay.classList.add('active');
       dvdLastTime = 0;
@@ -4894,6 +4923,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
 
     function removeAllDvdInstances() {
+      const allInstances = [...dvdInstances, ...subscribeInstances, ...dvdSlideshowInstances];
       allInstances.forEach((instance) => {
         try {
           instance.el?.remove();
@@ -4901,6 +4931,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
       });
       dvdInstances.length = 0;
+      subscribeInstances.length = 0;
+      dvdSlideshowInstances.length = 0;
       dvdLogoCounter = 0;
       stopDvdAnimation();
       notifyParentDvdState();
@@ -4914,6 +4946,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       dvdSourcePool = [...dvdDefaultSources];
       setDvdInstanceClickHref('', 'dvd');
       setDvdInstanceClickHref('', 'subscribe');
+      setDvdInstanceClickHref('', 'dvd_slideshow');
       dvdUploadMode = 'dvd_image';
       dvdCommandAttemptCount = 0;
     }
@@ -5098,6 +5131,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (command === '/subscribe') {
         const applied = applySubscribeMode();
         addSystemMessage(formatCommandExecutionMessage('/subscribe', applied ? 'executed' : 'failed'), { repeatLabel: applied ? 'INFINITE' : '' });
+        return true;
+      }
+
+      if (command === '/dvd_slideshow') {
+        const applied = applyDvdSlideshowMode();
+        addSystemMessage(formatCommandExecutionMessage('/dvd_slideshow', applied ? 'executed' : 'failed'), { repeatCount: dvdSlideshowSources.length });
         return true;
       }
 
@@ -5555,7 +5594,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }, true);
 
     window.addEventListener('resize', () => {
-      if (dvdEnabled || dvdInstances.length || subscribeInstances.length) {
+      if (dvdEnabled || dvdInstances.length || subscribeInstances.length || dvdSlideshowInstances.length) {
         positionAllDvdInstances(true);
       }
     });
