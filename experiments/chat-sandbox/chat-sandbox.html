@@ -1436,7 +1436,7 @@ const focusSink = document.getElementById('focusSink');
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
       { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
-      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and add them to the bouncing DVD layer, up to 10 total before overclock' },
+      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd swarm, including future spawns and infinite mode' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
@@ -4707,7 +4707,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const urlArg = trimmed.slice(parts[0].length).trim();
         if (urlArg) {
           const sources = parseDvdLogoUrlList(urlArg);
-          const applied = addSpawnedDvdSources(sources);
+          const applied = setDvdLogoSources(sources, false);
           addSystemMessage(formatCommandExecutionMessage('/dvd_image', applied ? 'executed' : 'failed'));
           return true;
         }
@@ -5176,20 +5176,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const files = Array.from(dvdImageUploadInput.files || []).slice(0, getDvdActiveCap());
         if (!files.length) return;
 
-        const availableSlots = getDvdUploadCapRemaining();
-        if (availableSlots <= 0) {
-          dvdImageUploadInput.value = '';
-          return;
-        }
-
-        const filesToUse = files.slice(0, availableSlots);
-        const sources = filesToUse.map((file) => {
+        const sources = files.map((file) => {
           const objectUrl = URL.createObjectURL(file);
           dvdCustomObjectUrls.push(objectUrl);
           return objectUrl;
         });
 
-        addSpawnedDvdSources(sources);
+        setDvdLogoSources(sources, false);
         dvdUploadMode = 'dvd_image';
         dvdImageUploadInput.value = '';
       });
