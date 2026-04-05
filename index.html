@@ -80,6 +80,12 @@
       pointer-events: auto;
     }
 
+    #chat-sandbox-frame.dvd-active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: none;
+    }
+
     .overlay-error {
       padding: 12px 16px;
       background: #111;
@@ -193,6 +199,7 @@
     const overlayLogoUploadInput = document.getElementById('overlay-logo-upload-input');
     const tektiteLogoUploadInput = document.getElementById('tektite-logo-upload-input');
     let chatSandboxVisible = false;
+    let chatSandboxDvdActive = false;
     let chatSandboxReady = false;
 
     const pageCustomizeDefaults = {
@@ -321,9 +328,19 @@
       syncOverlayLayoutHeight();
     });
 
+    function updateChatFramePresentation() {
+      chatSandboxFrame.classList.toggle('visible', !!chatSandboxVisible);
+      chatSandboxFrame.classList.toggle('dvd-active', !chatSandboxVisible && !!chatSandboxDvdActive);
+    }
+
     function setChatFrameVisible(visible) {
       chatSandboxVisible = !!visible;
-      chatSandboxFrame.classList.toggle('visible', chatSandboxVisible);
+      updateChatFramePresentation();
+    }
+
+    function setChatSandboxDvdActive(active) {
+      chatSandboxDvdActive = !!active;
+      updateChatFramePresentation();
     }
 
     function postToChatSandbox(message) {
@@ -1184,6 +1201,7 @@
 
     function renderPageExitScreen() {
       closeChatFromParent();
+      setChatSandboxDvdActive(false);
       setChatFrameVisible(false);
       chatSandboxFrame.style.display = 'none';
       stopPageAutoShuffle();
@@ -1351,6 +1369,13 @@
         if (event.data.type === 'chatSandboxState') {
           chatSandboxReady = true;
           setChatFrameVisible(!!event.data.visible);
+          registerPageCommands();
+          return;
+        }
+
+        if (event.data.type === 'chatSandboxDvdState') {
+          chatSandboxReady = true;
+          setChatSandboxDvdActive(!!event.data.active);
           registerPageCommands();
           return;
         }
