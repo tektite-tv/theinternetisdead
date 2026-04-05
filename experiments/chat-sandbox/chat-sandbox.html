@@ -1478,6 +1478,10 @@ const focusSink = document.getElementById('focusSink');
     let dvdCommandAttemptCount = 0;
     const subscribeImageSource = '/media/images/png/subscribe.png';
     const subscribeClickHref = 'https://youtube.com/@Honestly_Thomas';
+    const subscribeInstances = [];
+    let subscribeOverclockMode = false;
+    let subscribeOverclockIntervalId = null;
+    let subscribePromoLine = null;
     const dvdOverclockNicknamePool = ['Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
     function getDvdActiveCap() {
       return dvdOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances;
@@ -1717,8 +1721,7 @@ const focusSink = document.getElementById('focusSink');
         target.closest('#chatBarWrap') ||
         target.closest('.message') ||
         target.closest('#iframeOverlay') ||
-        target.closest('#mediaOverlay') ||
-        target.closest('#dvdOverlay')
+        target.closest('#mediaOverlay')
       );
     }
 
@@ -1946,6 +1949,14 @@ const focusSink = document.getElementById('focusSink');
       dvdOverclockNicknameCycleIndex = -1;
     }
 
+    function clearSubscribeOverclockInterval() {
+      if (subscribeOverclockIntervalId !== null) {
+        clearInterval(subscribeOverclockIntervalId);
+        subscribeOverclockIntervalId = null;
+      }
+      subscribePromoLine = null;
+    }
+
     function getDvdOverclockNicknameChoices() {
       const baseNickname = String(currentNickname || 'User').trim() || 'User';
       return [baseNickname, ...dvdOverclockNicknamePool].filter((value, index, array) => {
@@ -1963,48 +1974,6 @@ const focusSink = document.getElementById('focusSink');
       const messageText = line.querySelector('.messageText');
       if (!messageText) return line;
       messageText.innerHTML = '';
-
-      if (dvdSubscribeMode) {
-        line.dataset.rawContent = `Tektite: Yo ${currentNickname}, it would be really cool if you could check out my YouTube channel or if you just want to refresh press here.`;
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'subscribePromoMessage';
-
-        const tagSpan = document.createElement('span');
-        tagSpan.className = 'subscribePromoTag';
-        tagSpan.textContent = 'Tektite:';
-        wrapper.appendChild(tagSpan);
-
-        const bodySpan = document.createElement('span');
-        bodySpan.className = 'subscribePromoBody';
-        bodySpan.appendChild(document.createTextNode(`Yo ${currentNickname}, it would be really cool if you could `));
-
-        const channelLink = document.createElement('a');
-        channelLink.href = subscribeClickHref;
-        channelLink.className = 'subscribePromoChannelLink';
-        channelLink.target = '_blank';
-        channelLink.rel = 'noopener noreferrer';
-        channelLink.textContent = 'check out my YouTube channel';
-        bodySpan.appendChild(channelLink);
-
-        bodySpan.appendChild(document.createTextNode(' or if you just want to refresh '));
-
-        const refreshLink = document.createElement('a');
-        refreshLink.href = '#';
-        refreshLink.className = 'subscribePromoRefreshLink';
-        refreshLink.textContent = 'press here';
-        refreshLink.addEventListener('click', (event) => {
-          event.preventDefault();
-          triggerIndexRefresh();
-        });
-        bodySpan.appendChild(refreshLink);
-
-        bodySpan.appendChild(document.createTextNode('.'));
-        wrapper.appendChild(bodySpan);
-        messageText.appendChild(wrapper);
-        dvdOverclockAliasLine = line;
-        return line;
-      }
 
       line.dataset.rawContent = `System: OH GEEZ ${currentNickname} you've really done it now. You overclocked the /dvd command to (INFINITE) may god have mercy on your GPU. Click here to refresh dummy...`;
 
@@ -2043,11 +2012,58 @@ const focusSink = document.getElementById('focusSink');
       refreshLink.textContent = 'Click here to refresh dummy...';
       refreshLink.addEventListener('click', (event) => {
         event.preventDefault();
-        location.reload();
+        (window.parent && window.parent !== window ? window.parent.location.reload() : window.location.reload());
       });
       messageText.appendChild(refreshLink);
 
       dvdOverclockAliasLine = line;
+      return line;
+    }
+
+    function addSubscribePromoMessage() {
+      const line = addMessage('', 'user');
+      if (!line) return null;
+      const messageText = line.querySelector('.messageText');
+      if (!messageText) return line;
+      messageText.innerHTML = '';
+      line.dataset.rawContent = `Tektite: Yo ${currentNickname}, it would be really cool if you could check out my YouTube channel or if you just want to refresh press here.`;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'subscribePromoMessage';
+
+      const tagSpan = document.createElement('span');
+      tagSpan.className = 'subscribePromoTag';
+      tagSpan.textContent = 'Tektite:';
+      wrapper.appendChild(tagSpan);
+
+      const bodySpan = document.createElement('span');
+      bodySpan.className = 'subscribePromoBody';
+      bodySpan.appendChild(document.createTextNode(`Yo ${currentNickname}, it would be really cool if you could `));
+
+      const channelLink = document.createElement('a');
+      channelLink.href = subscribeClickHref;
+      channelLink.className = 'subscribePromoChannelLink';
+      channelLink.target = '_blank';
+      channelLink.rel = 'noopener noreferrer';
+      channelLink.textContent = 'check out my YouTube channel';
+      bodySpan.appendChild(channelLink);
+
+      bodySpan.appendChild(document.createTextNode(' or if you just want to refresh '));
+
+      const refreshLink = document.createElement('a');
+      refreshLink.href = '#';
+      refreshLink.className = 'subscribePromoRefreshLink';
+      refreshLink.textContent = 'press here';
+      refreshLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        (window.parent && window.parent !== window ? window.parent.location.reload() : window.location.reload());
+      });
+      bodySpan.appendChild(refreshLink);
+
+      bodySpan.appendChild(document.createTextNode('.'));
+      wrapper.appendChild(bodySpan);
+      messageText.appendChild(wrapper);
+      subscribePromoLine = line;
       return line;
     }
 
@@ -2061,15 +2077,8 @@ const focusSink = document.getElementById('focusSink');
       clearDvdOverclockIntervals();
       dvdOverclockIntervalId = window.setInterval(() => {
         if (dvdInstances.length < getDvdActiveCap()) {
-          const instance = createDvdInstance();
+          const instance = createDvdInstance('dvd');
           if (instance) {
-            if (Array.isArray(dvdSourcePool) && dvdSourcePool.length === 1 && dvdSourcePool[0] === subscribeImageSource) {
-              instance.clickHref = subscribeClickHref;
-              if (instance.el) {
-                instance.el.style.cursor = 'pointer';
-                instance.el.title = 'Open link';
-              }
-            }
             setDvdEnabled(true);
             positionDvdInstance(instance, true);
           }
@@ -2084,12 +2093,35 @@ const focusSink = document.getElementById('focusSink');
       clearDvdOverclockIntervals();
     }
 
+    function startSubscribeOverclockMode() {
+      subscribeOverclockMode = true;
+      clearSubscribeOverclockInterval();
+      subscribeOverclockIntervalId = window.setInterval(() => {
+        if (subscribeInstances.length < (subscribeOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances)) {
+          const instance = createDvdInstance('subscribe');
+          if (instance) {
+            setDvdEnabled(true);
+            positionDvdInstance(instance, true);
+          }
+        }
+      }, 1000);
+    }
+
+    function stopSubscribeOverclockMode() {
+      subscribeOverclockMode = false;
+      clearSubscribeOverclockInterval();
+    }
+
     function getDvdCommandAttemptCount() {
       return Number(dvdCommandAttemptCount || 0);
     }
 
     function getDvdUploadCapRemaining() {
       return Math.max(0, getDvdActiveCap() - dvdInstances.length);
+    }
+
+    function getGroupInstances(group = 'dvd') {
+      return group === 'subscribe' ? subscribeInstances : dvdInstances;
     }
 
     function waitForNextPaint() {
@@ -2578,7 +2610,7 @@ const focusSink = document.getElementById('focusSink');
         const posted = postToParentPage({ type: 'refreshParentPage' });
         if (posted) return;
       }
-      window.location.reload();
+      (window.parent && window.parent !== window ? window.parent.location.reload() : window.location.reload());
     }
 
 
@@ -4444,27 +4476,33 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return cleaned.length ? cleaned : [...dvdDefaultSources];
     }
 
-    function getDvdSourceForIndex(index) {
-      if (dvdSubscribeMode) {
+    function getDvdSourceForIndex(index, group = 'dvd') {
+      if (group === 'subscribe') {
         return subscribeImageSource;
       }
       const pool = Array.isArray(dvdSourcePool) && dvdSourcePool.length ? dvdSourcePool : dvdDefaultSources;
       return pool[index % pool.length];
     }
 
-    function createDvdInstance() {
-      if (!dvdOverlay || dvdInstances.length >= getDvdActiveCap()) return null;
+    function createDvdInstance(group = 'dvd') {
+      const groupInstances = getGroupInstances(group);
+      const groupCap = group === 'subscribe'
+        ? (subscribeOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances)
+        : getDvdActiveCap();
+      if (!dvdOverlay || groupInstances.length >= groupCap) return null;
 
       const img = document.createElement('img');
       img.className = 'dvdLogo';
-      img.alt = 'DVD logo';
+      img.alt = group === 'subscribe' ? 'Subscribe logo' : 'DVD logo';
       img.referrerPolicy = 'no-referrer';
       img.crossOrigin = 'anonymous';
       img.dataset.dvdId = `dvd-${++dvdLogoCounter}`;
+      img.dataset.dvdGroup = group;
 
-      const instanceIndex = dvdInstances.length;
+      const instanceIndex = groupInstances.length;
       const instance = {
         id: img.dataset.dvdId,
+        group,
         el: img,
         x: 24 + ((instanceIndex * 37) % 320),
         y: 24 + ((instanceIndex * 29) % 220),
@@ -4472,7 +4510,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         vy: (instanceIndex % 3 === 0 ? -1 : 1) * (0.055 + (instanceIndex * 0.008)),
         hue: (instanceIndex * 36) % 360,
         initialized: false,
-        clickHref: dvdSubscribeMode ? subscribeClickHref : ''
+        clickHref: group === 'subscribe' ? subscribeClickHref : ''
       };
 
       img.addEventListener('click', (event) => {
@@ -4483,29 +4521,33 @@ function createHomepageCustomizeMessageNode(result = {}) {
         window.open(href, '_blank', 'noopener,noreferrer');
       });
 
-      img.src = getDvdSourceForIndex(instanceIndex);
+      img.src = getDvdSourceForIndex(instanceIndex, group);
       img.onload = () => {
         positionDvdInstance(instance, true);
       };
 
-      dvdInstances.push(instance);
+      groupInstances.push(instance);
       dvdOverlay.appendChild(img);
       positionDvdInstance(instance, true);
       return instance;
     }
 
-    function ensureDvdInstanceCount(count) {
-      const target = Math.max(0, Math.min(getDvdActiveCap(), Number(count) || 0));
-      while (dvdInstances.length < target) {
-        const instance = createDvdInstance();
+    function ensureDvdInstanceCount(count, group = 'dvd') {
+      const groupInstances = getGroupInstances(group);
+      const groupCap = group === 'subscribe'
+        ? (subscribeOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances)
+        : getDvdActiveCap();
+      const target = Math.max(0, Math.min(groupCap, Number(count) || 0));
+      while (groupInstances.length < target) {
+        const instance = createDvdInstance(group);
         if (!instance) break;
       }
-      return dvdInstances.length;
+      return groupInstances.length;
     }
 
     function syncDvdInstanceSources() {
       dvdInstances.forEach((instance, index) => {
-        const nextSrc = getDvdSourceForIndex(index);
+        const nextSrc = getDvdSourceForIndex(index, 'dvd');
         if (instance.el && instance.el.src !== nextSrc) {
           instance.el.src = nextSrc;
           instance.el.onload = () => {
@@ -4515,9 +4557,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
       });
     }
 
-    function setDvdInstanceClickHref(href) {
+    function setDvdInstanceClickHref(href, group = 'dvd') {
       const nextHref = String(href || '').trim();
-      dvdInstances.forEach((instance) => {
+      getGroupInstances(group).forEach((instance) => {
         instance.clickHref = nextHref;
         if (instance.el) {
           instance.el.style.cursor = nextHref ? 'pointer' : 'default';
@@ -4527,16 +4569,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function applySubscribeMode() {
-      cleanupDvdCustomObjectUrls();
-      stopDvdOverclockMode();
-      dvdCommandAttemptCount = 13;
-      dvdSubscribeMode = true;
-      ensureDvdInstanceCount(dvdNormalMaxInstances);
-      syncDvdInstanceSources();
-      setDvdInstanceClickHref('');
-      setDvdInstanceClickHref(subscribeClickHref);
-      addDvdOverclockSystemMessage();
-      startDvdOverclockMode();
+      stopSubscribeOverclockMode();
+      ensureDvdInstanceCount(dvdNormalMaxInstances, 'subscribe');
+      setDvdInstanceClickHref(subscribeClickHref, 'subscribe');
+      addSubscribePromoMessage();
+      startSubscribeOverclockMode();
       setDvdEnabled(true);
       positionAllDvdInstances(true);
       return true;
@@ -4566,7 +4603,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function positionAllDvdInstances(force = false) {
-      dvdInstances.forEach((instance) => positionDvdInstance(instance, force));
+      [...dvdInstances, ...subscribeInstances].forEach((instance) => positionDvdInstance(instance, force));
     }
 
     function stopDvdAnimation() {
@@ -4582,7 +4619,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function stepDvdAnimation(now) {
-      if (!dvdEnabled || !dvdOverlay || !dvdInstances.length) {
+      const allInstances = [...dvdInstances, ...subscribeInstances];
+      if (!dvdEnabled || !dvdOverlay || !allInstances.length) {
         dvdAnimationFrameId = null;
         return;
       }
@@ -4597,7 +4635,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0, 1);
       const viewportHeight = Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0, 1);
 
-      dvdInstances.forEach((instance) => {
+      allInstances.forEach((instance) => {
         const logoRect = instance.el.getBoundingClientRect();
         const logoWidth = Math.max(logoRect.width || instance.el.offsetWidth || 180, 1);
         const logoHeight = Math.max(logoRect.height || instance.el.offsetHeight || Math.round(logoWidth * 0.45), 1);
@@ -4632,10 +4670,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     function startDvdAnimation() {
       if (!dvdOverlay) return false;
-      if (!dvdInstances.length) {
-        createDvdInstance();
+      if (!dvdInstances.length && !subscribeInstances.length) {
+        createDvdInstance('dvd');
       }
-      dvdEnabled = dvdInstances.length > 0;
+      dvdEnabled = (dvdInstances.length + subscribeInstances.length) > 0;
       if (!dvdEnabled) return false;
       dvdOverlay.classList.add('active');
       dvdLastTime = 0;
@@ -4668,7 +4706,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
         return false;
       }
-      const instance = createDvdInstance();
+      const instance = createDvdInstance('dvd');
       if (!instance) return false;
       setDvdEnabled(true);
       return true;
@@ -4699,10 +4737,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (spawnToMatch) {
         ensureDvdInstanceCount(normalized.length);
       }
-      if (!dvdSubscribeMode) {
-        syncDvdInstanceSources();
-        setDvdInstanceClickHref('');
-      }
+      syncDvdInstanceSources();
+      setDvdInstanceClickHref('', 'dvd');
       if ((dvdEnabled || dvdInstances.length) && normalized.length) {
         setDvdEnabled(true);
         positionAllDvdInstances(true);
@@ -4712,7 +4748,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
 
     function removeAllDvdInstances() {
-      dvdInstances.forEach((instance) => {
+      allInstances.forEach((instance) => {
         try {
           instance.el?.remove();
         } catch (error) {
@@ -4726,11 +4762,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     function clearAllDvdMedia() {
       stopDvdOverclockMode();
+      stopSubscribeOverclockMode();
       removeAllDvdInstances();
       cleanupDvdCustomObjectUrls();
-      dvdSubscribeMode = false;
       dvdSourcePool = [...dvdDefaultSources];
-      setDvdInstanceClickHref('');
+      setDvdInstanceClickHref('', 'dvd');
+      setDvdInstanceClickHref('', 'subscribe');
       dvdUploadMode = 'dvd_image';
       dvdCommandAttemptCount = 0;
     }
@@ -5337,7 +5374,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }, true);
 
     window.addEventListener('resize', () => {
-      if (dvdEnabled || dvdInstances.length) {
+      if (dvdEnabled || dvdInstances.length || subscribeInstances.length) {
         positionAllDvdInstances(true);
       }
     });
