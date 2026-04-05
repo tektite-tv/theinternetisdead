@@ -108,12 +108,6 @@
       color: #000;
     }
 
-    body.debug .helpItem,
-    body.debug .helpCommandName,
-    body.debug .helpCommandDesc {
-      color: #000;
-    }
-
     body.debug .message:nth-child(even) {
       background: rgba(95, 95, 95, 1);
     }
@@ -327,6 +321,11 @@
     .nicknameLabel {
       color: var(--nickname-color);
       font-weight: 700;
+    }
+
+    .speakerPrefixLabel {
+      font-weight: 700;
+      color: inherit;
     }
 
     .systemCommandLabel {
@@ -1888,7 +1887,8 @@ const focusSink = document.getElementById('focusSink');
         const [, prefix = '', commandToken, commandQualifier = '', actionWord, nicknameText] = executionMatch;
 
         if (prefix) {
-          messageText.appendChild(document.createTextNode(prefix));
+          appendSpeakerPrefix(messageText, prefix.trimEnd(), 'speakerPrefixLabel');
+          messageText.appendChild(document.createTextNode(' '));
         }
 
         const commandSpan = document.createElement('span');
@@ -1921,7 +1921,8 @@ const focusSink = document.getElementById('focusSink');
         const [, prefix = '', commandToken] = unknownCommandMatch;
 
         if (prefix) {
-          messageText.appendChild(document.createTextNode(prefix));
+          appendSpeakerPrefix(messageText, prefix.trimEnd(), 'speakerPrefixLabel');
+          messageText.appendChild(document.createTextNode(' '));
         }
 
         const commandSpan = document.createElement('span');
@@ -1938,7 +1939,18 @@ const focusSink = document.getElementById('focusSink');
       }
 
       const suffix = repeatLabel || (repeatCount > 1 ? String(repeatCount) : '');
-      messageText.textContent = suffix ? `${rendered} (${suffix})` : rendered;
+      const finalText = suffix ? `${rendered} (${suffix})` : rendered;
+      const genericPrefixMatch = finalText.match(/^([^:]+:)(\s*)(.*)$/);
+      if (genericPrefixMatch) {
+        const [, prefixText, prefixSpace = '', remainder = ''] = genericPrefixMatch;
+        messageText.innerHTML = '';
+        appendSpeakerPrefix(messageText, prefixText, 'speakerPrefixLabel');
+        if (prefixSpace || remainder) {
+          messageText.appendChild(document.createTextNode(`${prefixSpace}${remainder}`));
+        }
+        return;
+      }
+      messageText.textContent = finalText;
     }
 
     function formatCommandExecutionMessage(commandToken, state = 'executed', nickname = currentNickname) {
@@ -1991,7 +2003,8 @@ const focusSink = document.getElementById('focusSink');
       refreshLink.className = 'overclockRefreshLink';
       refreshLink.style.display = 'inline';
       refreshLink.style.margin = '0';
-      refreshLink.appendChild(document.createTextNode('System: OH GEEZ '));
+      appendSpeakerPrefix(refreshLink, 'System:', 'speakerPrefixLabel');
+      refreshLink.appendChild(document.createTextNode(' OH GEEZ '));
 
       const nicknameSpan = document.createElement('span');
       nicknameSpan.className = 'nicknameLabel';
@@ -2350,6 +2363,15 @@ const focusSink = document.getElementById('focusSink');
     }
 
 
+    function appendSpeakerPrefix(parentNode, prefixText, className = 'speakerPrefixLabel') {
+      if (!parentNode || !prefixText) return null;
+      const prefixSpan = document.createElement('span');
+      prefixSpan.className = className;
+      prefixSpan.textContent = prefixText;
+      parentNode.appendChild(prefixSpan);
+      return prefixSpan;
+    }
+
     function renderUserMessage(line, messageTextEl = null) {
       const rawContent = line.dataset.rawContent || '';
       const separatorIndex = rawContent.indexOf(':');
@@ -2362,10 +2384,7 @@ const focusSink = document.getElementById('focusSink');
       const nickname = rawContent.slice(0, separatorIndex).trim();
       const bodyText = rawContent.slice(separatorIndex + 1).replace(/^\s*/, '');
       messageText.innerHTML = '';
-      const nickSpan = document.createElement('span');
-      nickSpan.className = 'nicknameLabel';
-      nickSpan.textContent = `${nickname}:`;
-      messageText.appendChild(nickSpan);
+      appendSpeakerPrefix(messageText, `${nickname}:`, 'nicknameLabel');
       messageText.appendChild(document.createTextNode(bodyText ? ` ${bodyText}` : ''));
     }
 
