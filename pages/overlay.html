@@ -698,8 +698,18 @@ const sidebar = overlayRoot.querySelector('#sidebar');
     return path === '/' || path === '/index.html';
   }
 
+  function pageContainsChatSandbox() {
+    const chatFrame = document.getElementById('chat-sandbox-frame');
+    if (chatFrame) return true;
+
+    const chatIframe = document.querySelector('iframe[src*="chat-sandbox"]');
+    if (chatIframe) return true;
+
+    return typeof window.__indexOpenChatOverlay === 'function';
+  }
+
   function shouldUseIndexChatBehavior() {
-    return isInjectedIntoOverlayContainer() && isHostedOnIndexPage();
+    return isInjectedIntoOverlayContainer() && isHostedOnIndexPage() && pageContainsChatSandbox();
   }
 
   function requestParentChatOpen(seedSlash = false) {
