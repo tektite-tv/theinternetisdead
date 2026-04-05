@@ -1387,7 +1387,7 @@ const focusSink = document.getElementById('focusSink');
     let dvdLastTime = 0;
     let dvdLogoCounter = 0;
     let dvdCustomObjectUrls = [];
-    let dvdUploadMode = 'dvd_logo';
+    let dvdUploadMode = 'dvd_image';
     const dvdInstances = [];
     const dvdDefaultSources = ['https://upload.wikimedia.org/wikipedia/commons/8/85/Dvd_logo.svg'];
     let dvdSourcePool = [...dvdDefaultSources];
@@ -1405,8 +1405,8 @@ const focusSink = document.getElementById('focusSink');
       { name: '/color_party', value: '/color_party', execute: true, desc: 'toggle hue shift plus auto-randomize and random invert flicker on or off' },
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
-      { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another default bouncing DVD logo, up to 10 total' },
-      { name: '/dvd_logo', value: '/dvd_logo ', execute: false, desc: 'set the source list used by /dvd only, via uploads or quoted comma-separated URLs' },
+      { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn one default bouncing DVD logo per run, up to 10 total' },
+      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload and add one or more custom bouncing images, up to 10 total' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more extra bouncing images without changing /dvd logos' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
@@ -4107,7 +4107,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     function openDvdLogoPicker() {
       if (!dvdImageUploadInput) return false;
-      dvdUploadMode = 'dvd_logo';
+      dvdUploadMode = 'dvd_image';
       dvdImageUploadInput.value = '';
       dvdImageUploadInput.click();
       return true;
@@ -4151,8 +4151,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
       img.dataset.dvdId = `dvd-${++dvdLogoCounter}`;
 
       const instanceIndex = dvdInstances.length;
-      const mode = options.mode === 'spawn' ? 'spawn' : 'dvd';
-      const managedIndex = mode === 'spawn' ? -1 : getManagedDvdInstances().length;
+      const mode = options.mode === 'spawn' ? 'spawn' : (options.mode === 'dvd_image' ? 'dvd_image' : 'dvd');
+      const managedIndex = mode === 'dvd' ? getManagedDvdInstances().length : -1;
       const instance = {
         id: img.dataset.dvdId,
         el: img,
@@ -4166,9 +4166,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
         initialized: false
       };
 
-      const initialSrc = instance.mode === 'spawn'
-        ? instance.source
-        : (instance.source || getDvdSourceForIndex(managedIndex));
+      const initialSrc = instance.mode === 'dvd'
+        ? (instance.source || getDvdSourceForIndex(managedIndex) || dvdDefaultSources[0])
+        : instance.source;
       img.src = initialSrc;
       img.onload = () => {
         positionDvdInstance(instance, true);
@@ -4328,7 +4328,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
         return false;
       }
-      const instance = createDvdInstance();
+      const instance = createDvdInstance({ mode: 'dvd', src: dvdDefaultSources[0] });
       if (!instance) return false;
       setDvdEnabled(true);
       return true;
@@ -4336,7 +4336,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     function openDvdLogoPicker() {
       if (!dvdImageUploadInput) return false;
-      dvdUploadMode = 'dvd_logo';
+      dvdUploadMode = 'dvd_image';
       dvdImageUploadInput.value = '';
       dvdImageUploadInput.click();
       return true;
@@ -4354,17 +4354,32 @@ function createHomepageCustomizeMessageNode(result = {}) {
         .slice(0, dvdMaxInstances);
     }
 
-    function setDvdLogoSources(sources, spawnToMatch = false) {
+    function addDvdLogoInstances(sources) {
       const normalized = normalizeDvdSourceList(sources);
-      dvdSourcePool = normalized;
-      if (spawnToMatch) {
-        ensureDvdInstanceCount(normalized.length);
-      }
-      syncDvdInstanceSources();
-      if ((dvdEnabled || dvdInstances.length) && normalized.length) {
+      if (!normalized.length) return false;
+
+      const availableSlots = Math.max(0, dvdMaxInstances - dvdInstances.length);
+      if (availableSlots <= 0) {
         setDvdEnabled(true);
-        positionAllDvdInstances(true);
+        return false;
       }
+
+      const sourcesToAdd = normalized.slice(0, availableSlots);
+      let spawnedAny = false;
+
+      sourcesToAdd.forEach((src) => {
+        const instance = createDvdInstance({ mode: 'dvd_image', src });
+        if (instance) {
+          spawnedAny = true;
+        }
+      });
+
+      if (!spawnedAny) {
+        return false;
+      }
+
+      setDvdEnabled(true);
+      positionAllDvdInstances(true);
       return true;
     }
 
@@ -4477,16 +4492,16 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return true;
       }
 
-      if (command === '/dvd_logo') {
+      if (command === '/dvd_image') {
         const urlArg = trimmed.slice(parts[0].length).trim();
         if (urlArg) {
           const sources = parseDvdLogoUrlList(urlArg);
-          const applied = setDvdLogoSources(sources, true);
-          addSystemMessage(formatCommandExecutionMessage('/dvd_logo', applied ? 'executed' : 'failed'));
+          const applied = addDvdLogoInstances(sources);
+          addSystemMessage(formatCommandExecutionMessage('/dvd_image', applied ? 'executed' : 'failed'));
           return true;
         }
         const opened = openDvdLogoPicker();
-        addSystemMessage(formatCommandExecutionMessage('/dvd_logo', opened ? 'executed' : 'failed'));
+        addSystemMessage(formatCommandExecutionMessage('/dvd_image', opened ? 'executed' : 'failed'));
         return true;
       }
 
@@ -4966,7 +4981,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         if (dvdUploadMode === 'spawn') {
           addSpawnedDvdSources(sources);
         } else {
-          setDvdLogoSources(sources, true);
+          addDvdLogoInstances(sources);
         }
         dvdImageUploadInput.value = '';
       });
