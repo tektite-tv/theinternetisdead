@@ -896,7 +896,7 @@
     function updateOverlayLogoAssets() {
       const overlayRoot = overlayContainer.querySelector('#overlay-root') || overlayContainer;
       if (!overlayRoot) return;
-      const logoSrc = customOverlayLogoUrl || '/images/deadlogo-green.png';
+      const logoSrc = customOverlayLogoUrl || '/media/images/png/deadlogo-green.png';
       overlayRoot.querySelectorAll('.logo img').forEach((img) => {
         img.src = logoSrc;
       });
@@ -986,8 +986,8 @@
     function updateTektiteLogoAssets(doc) {
       if (!doc) return;
       const tektiteWindow = doc.defaultView || (tektiteFrame && tektiteFrame.contentWindow) || null;
-      const logoUrls = customTektiteLogoUrls.length ? customTektiteLogoUrls.slice() : ['/images/oldtube.png', '/images/oldtube-alt-1.png', '/images/oldtube-alt-2.png'];
-      const logoSrc = logoUrls[0] || '/images/oldtube.png';
+      const logoUrls = customTektiteLogoUrls.length ? customTektiteLogoUrls.slice() : ['/media/images/png/oldtube.png', '/media/images/png/oldtube-alt-1.png', '/media/images/png/oldtube-alt-2.png'];
+      const logoSrc = logoUrls[0] || '/media/images/png/oldtube.png';
 
       clearManagedTektiteLogoHoverState(doc);
 
