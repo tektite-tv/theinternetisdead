@@ -1,150 +1,199 @@
 (function () {
-  const CHECK_INTERVAL_MS = 1000;
-  const TARGET_TIMES = new Set(['04:20', '16:20', '07:10', '19:10']);
-  const STORAGE_KEY = 'time-easter-egg-last-trigger';
-  const POPUP_ID = 'time-easter-egg-popup';
+  const TARGET_PATHS = new Set(['/', '/index.html']);
+  if (!TARGET_PATHS.has(window.location.pathname)) return;
 
-  function isIndexPage() {
-    const path = String(window.location.pathname || '').toLowerCase();
-    return path === '/' || path === '/index.html' || path.endsWith('/index.html');
+  const TARGET_TIMES = new Set(['04:20', '07:10', '16:20', '19:10']);
+  const CHECK_INTERVAL_MS = 5000;
+  const RETRY_INTERVAL_MS = 1500;
+  let popupVisible = false;
+  let pendingTriggerDate = null;
+  let pendingCommandId = null;
+  let retryIntervalId = null;
+
+  function getTimeKey(date = new Date()) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
-  function pad(value) {
-    return String(value).padStart(2, '0');
+  function formatDisplayTime(date = new Date()) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  function getMinuteKey(date) {
-    return [
-      date.getFullYear(),
-      pad(date.getMonth() + 1),
-      pad(date.getDate()),
-      pad(date.getHours()),
-      pad(date.getMinutes())
-    ].join('-');
+  function getMinuteStorageKey(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const timeKey = getTimeKey(date);
+    return `timeEasterEgg:${year}-${month}-${day}:${timeKey}`;
   }
 
-  function formatDisplayTime(date) {
-    let hours = date.getHours();
-    const minutes = pad(date.getMinutes());
-    const period = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    return `${hours}:${minutes} ${period}`;
-  }
+  function createPopup(timeLabel) {
+    if (popupVisible) return;
+    popupVisible = true;
 
-  function removePopup() {
-    const existing = document.getElementById(POPUP_ID);
+    const existing = document.getElementById('time-easter-egg-popup');
     if (existing) existing.remove();
-  }
 
-  function showPopup(displayTime) {
-    removePopup();
-
-    const popup = document.createElement('div');
-    popup.id = POPUP_ID;
-    popup.setAttribute('role', 'dialog');
-    popup.setAttribute('aria-modal', 'true');
-    popup.innerHTML = `
+    const overlay = document.createElement('div');
+    overlay.id = 'time-easter-egg-popup';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML = `
       <div class="time-easter-egg-backdrop"></div>
       <div class="time-easter-egg-panel">
-        <div class="time-easter-egg-title">Congratulations! You just happened to be on my site at ${displayTime}</div>
+        <div class="time-easter-egg-message">Congratulations! You just happened to be on my site at ${timeLabel}</div>
         <button type="button" class="time-easter-egg-button">Click Here To Do Nothing</button>
       </div>
     `;
 
     const style = document.createElement('style');
     style.textContent = `
-      #${POPUP_ID} {
+      #time-easter-egg-popup {
         position: fixed;
         inset: 0;
         z-index: 2147483646;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-family: "Courier New", Courier, monospace;
       }
-      #${POPUP_ID} .time-easter-egg-backdrop {
+      #time-easter-egg-popup .time-easter-egg-backdrop {
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.68);
         backdrop-filter: blur(4px);
       }
-      #${POPUP_ID} .time-easter-egg-panel {
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
+      #time-easter-egg-popup .time-easter-egg-panel {
+        position: relative;
         width: min(92vw, 560px);
-        background: rgba(20, 0, 34, 0.96);
+        background: rgba(0, 0, 0, 0.92);
         color: #00ff66;
-        border: 2px solid currentColor;
-        box-shadow: 0 0 28px rgba(0, 255, 102, 0.28);
-        padding: 22px 20px 18px;
+        border: 2px solid #00ff66;
+        box-shadow: 0 0 24px rgba(0, 255, 102, 0.35);
+        padding: 24px;
         text-align: center;
       }
-      #${POPUP_ID} .time-easter-egg-title {
+      #time-easter-egg-popup .time-easter-egg-message {
         font-size: clamp(18px, 2.2vw, 28px);
         line-height: 1.35;
-        margin-bottom: 16px;
-        text-shadow: 0 0 8px rgba(0, 255, 102, 0.3);
+        margin-bottom: 18px;
       }
-      #${POPUP_ID} .time-easter-egg-button {
-        border: 2px solid currentColor;
-        background: #000;
-        color: #00ff66;
+      #time-easter-egg-popup .time-easter-egg-button {
         font: inherit;
-        padding: 10px 14px;
+        color: #00ff66;
+        background: rgba(0, 255, 102, 0.08);
+        border: 1px solid #00ff66;
+        padding: 10px 18px;
         cursor: pointer;
       }
-      #${POPUP_ID} .time-easter-egg-button:hover,
-      #${POPUP_ID} .time-easter-egg-button:focus-visible {
-        filter: hue-rotate(120deg);
+      #time-easter-egg-popup .time-easter-egg-button:hover,
+      #time-easter-egg-popup .time-easter-egg-button:focus-visible {
+        background: rgba(0, 255, 102, 0.16);
         outline: none;
       }
     `;
-    popup.appendChild(style);
+    overlay.appendChild(style);
 
-    popup.querySelector('.time-easter-egg-button').addEventListener('click', removePopup);
-    popup.querySelector('.time-easter-egg-backdrop').addEventListener('click', removePopup);
-    document.body.appendChild(popup);
+    const close = () => {
+      popupVisible = false;
+      overlay.remove();
+    };
+
+    overlay.querySelector('.time-easter-egg-button')?.addEventListener('click', close);
+    document.body.appendChild(overlay);
   }
 
-  function triggerColorParty() {
-    try {
-      if (typeof window.setRandomizeTintOpacitiesFull === 'function') {
-        window.setRandomizeTintOpacitiesFull();
-      }
-      if (typeof window.setPageAutoShuffleEnabled === 'function') {
-        window.setPageAutoShuffleEnabled(true);
-      }
-      if (typeof window.setPageGlobalHueShift === 'function') {
-        window.setPageGlobalHueShift(true);
-      }
-      if (typeof window.sendPageCustomizePanel === 'function') {
-        window.sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
-      }
-    } catch (error) {
-      console.error('Time easter egg could not enable color party mode:', error);
+  function stopRetryLoop() {
+    if (retryIntervalId !== null) {
+      window.clearInterval(retryIntervalId);
+      retryIntervalId = null;
     }
   }
 
-  function maybeTrigger() {
-    if (!isIndexPage() || document.hidden) return;
-
-    const now = new Date();
-    const timeKey = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    if (!TARGET_TIMES.has(timeKey)) return;
-
-    const minuteKey = getMinuteKey(now);
-    if (sessionStorage.getItem(STORAGE_KEY) === minuteKey) return;
-    sessionStorage.setItem(STORAGE_KEY, minuteKey);
-
-    triggerColorParty();
-    showPopup(formatDisplayTime(now));
+  function getChatWindow() {
+    const frame = document.getElementById('chat-sandbox-frame');
+    return frame && frame.contentWindow ? frame.contentWindow : null;
   }
 
-  window.addEventListener('visibilitychange', () => {
-    if (!document.hidden) maybeTrigger();
+  function sendColorPartyCommand() {
+    const chatWindow = getChatWindow();
+    if (!chatWindow || !pendingTriggerDate || !pendingCommandId) return false;
+    chatWindow.postMessage({
+      type: 'chatSandboxExecuteCommand',
+      command: '/color_party',
+      commandId: pendingCommandId,
+      openChat: false,
+      focus: false
+    }, '*');
+    return true;
+  }
+
+  function ensureRetryLoop() {
+    if (retryIntervalId !== null) return;
+    retryIntervalId = window.setInterval(() => {
+      if (!pendingTriggerDate || !pendingCommandId) {
+        stopRetryLoop();
+        return;
+      }
+      if (getTimeKey(new Date()) !== getTimeKey(pendingTriggerDate)) {
+        pendingTriggerDate = null;
+        pendingCommandId = null;
+        stopRetryLoop();
+        return;
+      }
+      sendColorPartyCommand();
+    }, RETRY_INTERVAL_MS);
+  }
+
+  function queueTrigger(date = new Date()) {
+    pendingTriggerDate = new Date(date.getTime());
+    pendingCommandId = `time-easter-egg-${date.getTime()}`;
+    sendColorPartyCommand();
+    ensureRetryLoop();
+  }
+
+  function attemptTrigger(date = new Date()) {
+    const storageKey = getMinuteStorageKey(date);
+    if (sessionStorage.getItem(storageKey) === '1') return;
+    if (pendingTriggerDate && getTimeKey(pendingTriggerDate) === getTimeKey(date)) return;
+
+    const timeKey = getTimeKey(date);
+    if (!TARGET_TIMES.has(timeKey)) return;
+    queueTrigger(date);
+  }
+
+  window.addEventListener('message', (event) => {
+    if (!event.data) return;
+
+    if (event.data.type === 'chatSandboxState') {
+      if (pendingTriggerDate && pendingCommandId) {
+        sendColorPartyCommand();
+        ensureRetryLoop();
+      }
+      return;
+    }
+
+    if (event.data.type !== 'chatSandboxCommandResult') return;
+    if (!pendingCommandId || event.data.commandId !== pendingCommandId) return;
+    if (event.data.command !== '/color_party') return;
+    if (!pendingTriggerDate) return;
+
+    const storageKey = getMinuteStorageKey(pendingTriggerDate);
+    sessionStorage.setItem(storageKey, '1');
+    createPopup(formatDisplayTime(pendingTriggerDate));
+    pendingTriggerDate = null;
+    pendingCommandId = null;
+    stopRetryLoop();
   });
 
-  window.addEventListener('load', () => {
-    maybeTrigger();
-    window.setInterval(maybeTrigger, CHECK_INTERVAL_MS);
-  });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      attemptTrigger();
+      window.setInterval(attemptTrigger, CHECK_INTERVAL_MS);
+    }, { once: true });
+  } else {
+    attemptTrigger();
+    window.setInterval(attemptTrigger, CHECK_INTERVAL_MS);
+  }
 })();

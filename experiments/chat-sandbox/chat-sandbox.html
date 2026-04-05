@@ -4360,6 +4360,45 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
+      if (event.data.type === 'chatSandboxExecuteCommand') {
+        const rawCommand = typeof event.data.command === 'string' ? event.data.command.trim() : '';
+        const commandId = typeof event.data.commandId === 'string' ? event.data.commandId : '';
+        if (!rawCommand) return;
+        if (event.data.openChat) {
+          showChatBar();
+          if (event.data.focus !== false) {
+            armChatInput();
+          }
+        }
+        handleCommand(rawCommand).then((handled) => {
+          if (!handled && rawCommand.startsWith('/')) {
+            const commandToken = rawCommand.split(/\s+/)[0];
+            addSystemMessage(`${commandToken} is not a known command`);
+          }
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({
+              type: 'chatSandboxCommandResult',
+              ok: !!handled,
+              command: rawCommand,
+              commandId
+            }, '*');
+          }
+        }).catch((error) => {
+          console.error('Unable to execute external chat command:', error);
+          addSystemMessage('Unable to execute requested chat command');
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({
+              type: 'chatSandboxCommandResult',
+              ok: false,
+              command: rawCommand,
+              commandId,
+              message: 'Unable to execute requested chat command'
+            }, '*');
+          }
+        });
+        return;
+      }
+
       if (event.data.type === 'pageScreenshotStatus') {
         if (!event.data.ok) {
           addSystemMessage(event.data.message || 'Unable to save page screenshot');
