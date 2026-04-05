@@ -178,6 +178,24 @@
       text-decoration-thickness: 2px;
     }
 
+
+    .overclockRefreshLink {
+      color: #00ffff;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .overclockRefreshLink:visited {
+      color: #00ffff;
+    }
+
+    .overclockRefreshLink:hover,
+    .overclockRefreshLink:focus {
+      color: #00ffff;
+      text-decoration: underline;
+      outline: none;
+    }
+
     .messageDelete {
       display: none;
       flex: 0 0 auto;
@@ -1915,7 +1933,7 @@ const focusSink = document.getElementById('focusSink');
 
       const refreshLink = document.createElement('a');
       refreshLink.href = '#';
-      refreshLink.className = 'helpItem';
+      refreshLink.className = 'overclockRefreshLink';
       refreshLink.style.display = 'inline';
       refreshLink.style.margin = '0';
       refreshLink.textContent = 'Click here to refresh dummy...';
