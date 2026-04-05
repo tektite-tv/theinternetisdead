@@ -1397,6 +1397,7 @@ const focusSink = document.getElementById('focusSink');
     let dvdOverclockIntervalId = null;
     let dvdOverclockAliasIntervalId = null;
     let dvdOverclockAliasLine = null;
+    let dvdOverclockNicknameCycleIndex = -1;
     let dvdUploadMode = 'dvd_image';
     let dvdCommandAttemptCount = 0;
     const dvdOverclockNicknamePool = ['Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
@@ -1845,6 +1846,7 @@ const focusSink = document.getElementById('focusSink');
         dvdOverclockAliasIntervalId = null;
       }
       dvdOverclockAliasLine = null;
+      dvdOverclockNicknameCycleIndex = -1;
     }
 
     function getDvdOverclockNicknameChoices() {
@@ -1860,16 +1862,14 @@ const focusSink = document.getElementById('focusSink');
       if (!nicknameSpan) return;
       const nicknameChoices = getDvdOverclockNicknameChoices();
       if (!nicknameChoices.length) return;
-      const currentLabel = String(nicknameSpan.textContent || '').trim();
-      const alternateChoices = nicknameChoices.filter((choice) => choice !== currentLabel);
-      const sourceChoices = alternateChoices.length ? alternateChoices : nicknameChoices;
-      const nextLabel = sourceChoices[Math.floor(Math.random() * sourceChoices.length)] || 'User';
-      nicknameSpan.textContent = nextLabel;
+      dvdOverclockNicknameCycleIndex = (dvdOverclockNicknameCycleIndex + 1) % nicknameChoices.length;
+      nicknameSpan.textContent = nicknameChoices[dvdOverclockNicknameCycleIndex] || 'User';
     }
 
     function startDvdOverclockMode() {
       dvdOverclockMode = true;
       document.body.classList.add('dvd-overclock-mode');
+      dvdOverclockNicknameCycleIndex = -1;
       clearDvdOverclockIntervals();
       dvdOverclockIntervalId = window.setInterval(() => {
         if (dvdInstances.length < getDvdActiveCap()) {
