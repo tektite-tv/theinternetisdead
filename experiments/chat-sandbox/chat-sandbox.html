@@ -4620,12 +4620,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
         if (nextAttempt === 12) {
           primeDvdOverclockCycle();
-          addSystemMessage("Really, you don't want to see what happens if you spawn more than 10 of those... Fine, send it one more time, see what happens smartass.", { repeatCount: 1 });
+          addMessage(`System: Really ${currentNickname}, you don't want to see what happens if you spawn more than 10 of those... Fine, send it one more time, see what happens smartass.`, 'user');
           return true;
         }
 
         if (nextAttempt === 11) {
-          addSystemMessage('Why would you want more than 10 of those?', { repeatCount: 1 });
+          addMessage('System: Why would you want more than 10 of those?', 'user');
           return true;
         }
 
