@@ -82,6 +82,7 @@
 
     #messagesWrap {
       position: relative;
+      z-index: 30;
     }
 
     .message {
@@ -613,7 +614,7 @@
       flex: 0 0 auto;
       pointer-events: none;
       visibility: hidden;
-      z-index: 30;
+      z-index: 31;
     }
 
     #chatBarWrap.visible {
@@ -1305,7 +1306,7 @@
       overflow: hidden;
       pointer-events: none;
       display: none;
-      z-index: 25;
+      z-index: 24;
     }
 
     #dvdOverlay.active {
@@ -1977,41 +1978,36 @@ const focusSink = document.getElementById('focusSink');
 
       line.dataset.rawContent = `System: OH GEEZ ${currentNickname} you've really done it now. You overclocked the /dvd command to (INFINITE) may god have mercy on your GPU. Click here to refresh dummy...`;
 
-      const systemSpan = document.createElement('span');
-      systemSpan.className = 'nicknameLabel';
-      systemSpan.textContent = 'System:';
-      messageText.appendChild(systemSpan);
-      messageText.appendChild(document.createTextNode(' OH GEEZ '));
-
-      const nicknameSpan = document.createElement('span');
-      nicknameSpan.className = 'nicknameLabel';
-      nicknameSpan.textContent = currentNickname;
-      messageText.appendChild(nicknameSpan);
-
-      messageText.appendChild(document.createTextNode(" you've really done it now. You overclocked the "));
-
-      const commandSpan = document.createElement('span');
-      commandSpan.className = 'systemCommandLabel';
-      commandSpan.textContent = '/dvd';
-      messageText.appendChild(commandSpan);
-
-      messageText.appendChild(document.createTextNode(' command to ('));
-
-      const infiniteSpan = document.createElement('span');
-      infiniteSpan.className = 'commandStyledText infiniteRepeatLabel';
-      infiniteSpan.textContent = 'INFINITE';
-      messageText.appendChild(infiniteSpan);
-
-      messageText.appendChild(document.createTextNode(') may god have mercy on your GPU. '));
-
       const refreshLink = document.createElement('a');
       refreshLink.href = '#';
       refreshLink.className = 'overclockRefreshLink';
       refreshLink.style.display = 'inline';
       refreshLink.style.margin = '0';
-      refreshLink.textContent = 'Click here to refresh dummy...';
+      refreshLink.appendChild(document.createTextNode('System: OH GEEZ '));
+
+      const nicknameSpan = document.createElement('span');
+      nicknameSpan.className = 'nicknameLabel';
+      nicknameSpan.textContent = currentNickname;
+      refreshLink.appendChild(nicknameSpan);
+
+      refreshLink.appendChild(document.createTextNode(" you've really done it now. You overclocked the "));
+
+      const commandSpan = document.createElement('span');
+      commandSpan.className = 'systemCommandLabel';
+      commandSpan.textContent = '/dvd';
+      refreshLink.appendChild(commandSpan);
+
+      refreshLink.appendChild(document.createTextNode(' command to ('));
+
+      const infiniteSpan = document.createElement('span');
+      infiniteSpan.className = 'commandStyledText infiniteRepeatLabel';
+      infiniteSpan.textContent = 'INFINITE';
+      refreshLink.appendChild(infiniteSpan);
+
+      refreshLink.appendChild(document.createTextNode(') may god have mercy on your GPU. Click here to refresh dummy...'));
       refreshLink.addEventListener('click', (event) => {
         event.preventDefault();
+        event.stopPropagation();
         (window.parent && window.parent !== window ? window.parent.location.reload() : window.location.reload());
       });
       messageText.appendChild(refreshLink);
@@ -2030,6 +2026,12 @@ const focusSink = document.getElementById('focusSink');
 
       const wrapper = document.createElement('div');
       wrapper.className = 'subscribePromoMessage';
+      wrapper.style.cursor = 'pointer';
+      wrapper.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        (window.parent && window.parent !== window ? window.parent.location.reload() : window.location.reload());
+      });
 
       const tagSpan = document.createElement('span');
       tagSpan.className = 'subscribePromoTag';
@@ -2046,24 +2048,14 @@ const focusSink = document.getElementById('focusSink');
       channelLink.target = '_blank';
       channelLink.rel = 'noopener noreferrer';
       channelLink.textContent = 'check out my YouTube channel';
+      channelLink.addEventListener('click', (event) => {
+        event.stopPropagation();
+      });
       bodySpan.appendChild(channelLink);
 
-      bodySpan.appendChild(document.createTextNode(' or if you just want to refresh '));
-
-      const refreshLink = document.createElement('a');
-      refreshLink.href = '#';
-      refreshLink.className = 'subscribePromoRefreshLink';
-      refreshLink.textContent = 'press here';
-      refreshLink.addEventListener('click', (event) => {
-        event.preventDefault();
-        (window.parent && window.parent !== window ? window.parent.location.reload() : window.location.reload());
-      });
-      bodySpan.appendChild(refreshLink);
-
-      bodySpan.appendChild(document.createTextNode('.'));
+      bodySpan.appendChild(document.createTextNode(' or if you just want to refresh press here.'));
       wrapper.appendChild(bodySpan);
       messageText.appendChild(wrapper);
-      subscribePromoLine = line;
       return line;
     }
 
