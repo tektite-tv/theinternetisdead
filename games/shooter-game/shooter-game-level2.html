@@ -907,16 +907,9 @@ const mazeSummaryMissed = document.getElementById("mazeSummaryMissed");
 const mazeSummaryBonus = document.getElementById("mazeSummaryBonus");
 const btnNextMaze = document.getElementById("btnNextMaze");
 const AUTO_START_LEVEL = new URLSearchParams(window.location.search).get("autostart") === "1";
+const STANDALONE_LEVEL2 = (window.self === window.top);
+const SHOULD_AUTO_BOOT_LEVEL2 = AUTO_START_LEVEL || STANDALONE_LEVEL2;
 let level2Booted = false;
-function bootLevel2(){
-  if (level2Booted) return;
-  level2Booted = true;
-  startMenu.style.display = "none";
-  optionsMenu.style.display = "none";
-  uiRoot.style.display = "none";
-  powerupSlot.style.display = "none";
-  startGame();
-}
 
 let hudVisible = false;
 
@@ -2360,6 +2353,7 @@ function restartRun(){
   ensureMusicPlaying(true);
   // v1.96: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
+  bombsCount = 0;
   bomb = null;
   ufo = null;
   powerupSlot.style.display = "none";
@@ -2462,26 +2456,32 @@ function startGame(){
 
   wave = START_WAVE;
   showWaveBanner(wave);
-bullets.length = 0;
+  bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
 
-  bombsCount = 0;
   bomb = null;
   ufo = null;
 
   resetFormation();
   updateHearts();
-spawnEnemies();
+  spawnEnemies();
   trySpawnUFO();
 
   window.focus();
 }
 
-if (AUTO_START_LEVEL){
-  window.addEventListener("load", () => {
-    requestAnimationFrame(() => bootLevel2());
-  }, { once: true });
+function bootLevel2(){
+  if (level2Booted) return;
+  level2Booted = true;
+  if (startMenu) startMenu.style.display = "none";
+  if (optionsMenu) optionsMenu.style.display = "none";
+  if (uiRoot) uiRoot.style.display = "none";
+  requestAnimationFrame(() => startGame());
+}
+
+if (SHOULD_AUTO_BOOT_LEVEL2){
+  window.addEventListener("load", bootLevel2, { once: true });
 }
 
 btnStart.addEventListener("click", startGame);
@@ -4864,7 +4864,11 @@ aimAngleSmoothed = -Math.PI/2;
 
 resetStarfield();
 resize(); // also resets starfield + anchors player
-bootLevel2();
+startMenu.style.display = "none";
+optionsMenu.style.display = "none";
+uiRoot.style.display = "none";
+powerupSlot.style.display = "none";
+startGame();
 
 requestAnimationFrame(loop);
 </script>
