@@ -3816,6 +3816,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     function createCommandListMessageNode(titleText, commandNames = [], options = {}) {
       const wrapper = document.createElement('div');
+      if (options && typeof options.panelType === 'string' && options.panelType.trim()) {
+        wrapper.dataset.commandPanelType = options.panelType.trim();
+      }
 
       const title = document.createElement('div');
       const titleStrong = document.createElement('strong');
@@ -3876,11 +3879,17 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function createHelpMessageNode() {
-      return createCommandListMessageNode('Help with commands...', [], { showHiddenCommands: debugMode });
+      return createCommandListMessageNode('Help with commands...', [], {
+        showHiddenCommands: debugMode,
+        panelType: 'help'
+      });
     }
 
     function refreshVisibleHelpMessages() {
-      const helpMessages = Array.from(messages.querySelectorAll('.message[data-role="system"] .helpList')).map((node) => node.closest('.message')).filter(Boolean);
+      const helpMessages = Array.from(messages.querySelectorAll('.message[data-role="system"] [data-command-panel-type="help"]'))
+        .map((node) => node.closest('.message'))
+        .filter(Boolean);
+
       helpMessages.forEach((messageNode) => {
         const messageText = messageNode.querySelector('.messageText');
         if (!messageText) return;
@@ -4994,7 +5003,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
           '/clock_date',
           '/clock_reset',
           '/clock_zone'
-        ]), 'system');
+        ], {
+          panelType: 'clock'
+        }), 'system');
         return true;
       }
 
@@ -5006,7 +5017,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
           '/color_party',
           '/color_randomize',
           '/color_reset'
-        ]), 'system');
+        ], {
+          panelType: 'color'
+        }), 'system');
         return true;
       }
 
