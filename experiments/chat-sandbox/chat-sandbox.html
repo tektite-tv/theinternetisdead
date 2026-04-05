@@ -197,11 +197,14 @@
     body.debug .timestamp {
       color: #000;
       font-weight: 700;
-      cursor: pointer;
       user-select: none;
     }
 
-    body.debug .timestamp:hover {
+    body.debug .message {
+      cursor: pointer;
+    }
+
+    body.debug .message:hover .messageText {
       text-decoration: underline;
     }
 
@@ -213,8 +216,15 @@
       color: #ff2a2a;
     }
 
-    body.debug .message[data-role="user"] .messageText {
-      color: #00e5ff;
+    body.debug #chatBar {
+      background: #000;
+      color: #fff;
+      opacity: 1;
+    }
+
+    body.debug #chatBar::placeholder {
+      color: #fff;
+      opacity: 1;
     }
 
 
@@ -2034,6 +2044,11 @@ const focusSink = document.getElementById('focusSink');
       const line = document.createElement('div');
       line.className = 'message';
       line.dataset.role = role;
+      line.addEventListener('click', async (event) => {
+        if (!document.body.classList.contains('debug')) return;
+        if (event.target.closest('.messageDelete')) return;
+        await copyMessageWithTimestamp(line);
+      });
 
       const meta = document.createElement('div');
       meta.className = 'messageMeta';
@@ -2041,12 +2056,6 @@ const focusSink = document.getElementById('focusSink');
       const timestamp = document.createElement('div');
       timestamp.className = 'timestamp';
       timestamp.textContent = formatTimestamp();
-      timestamp.title = 'Click to copy message with timestamp';
-      timestamp.addEventListener('click', async (event) => {
-        if (!document.body.classList.contains('debug')) return;
-        event.stopPropagation();
-        await copyMessageWithTimestamp(line);
-      });
 
       meta.appendChild(timestamp);
 
