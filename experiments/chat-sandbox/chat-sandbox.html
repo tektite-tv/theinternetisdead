@@ -1813,6 +1813,10 @@ const focusSink = document.getElementById('focusSink');
 
         const nicknameSpan = document.createElement('span');
         nicknameSpan.className = 'nicknameLabel';
+        if (actionWord.toLowerCase() === 'overclocked' && repeatLabel === 'INFINITE') {
+          nicknameSpan.classList.add('overclockNicknameLabel');
+          nicknameSpan.dataset.overclockNickname = 'true';
+        }
         nicknameSpan.textContent = nicknameText;
         messageText.appendChild(nicknameSpan);
 
@@ -1872,7 +1876,15 @@ const focusSink = document.getElementById('focusSink');
 
     function updateOverclockAliasLabel() {
       if (!dvdOverclockAliasLine) return;
-      const nicknameSpan = dvdOverclockAliasLine.querySelector('.nicknameLabel');
+      let nicknameSpan = dvdOverclockAliasLine.querySelector('.overclockNicknameLabel, .nicknameLabel[data-overclock-nickname="true"]');
+      if (!nicknameSpan) {
+        const messageText = dvdOverclockAliasLine.querySelector('.messageText');
+        const rawContent = dvdOverclockAliasLine.dataset.rawContent || formatCommandExecutionMessage('/dvd command', 'overclocked', currentNickname);
+        if (messageText) {
+          appendStyledSystemText(messageText, rawContent, 1, 'INFINITE');
+          nicknameSpan = dvdOverclockAliasLine.querySelector('.overclockNicknameLabel, .nicknameLabel[data-overclock-nickname="true"]');
+        }
+      }
       if (!nicknameSpan) return;
       const nicknameChoices = getDvdOverclockNicknameChoices();
       if (!nicknameChoices.length) return;
