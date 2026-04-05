@@ -1390,8 +1390,18 @@ const focusSink = document.getElementById('focusSink');
     const dvdInstances = [];
     const dvdDefaultSources = ['https://upload.wikimedia.org/wikipedia/commons/8/85/Dvd_logo.svg'];
     let dvdSourcePool = [...dvdDefaultSources];
-    const dvdMaxInstances = 10;
+    const dvdNormalMaxInstances = 10;
+    const dvdOverclockMaxInstances = 50;
     const dvdHueShiftSpeedDegPerSecond = 45;
+    let dvdOverclockMode = false;
+    let dvdOverclockIntervalId = null;
+    let dvdOverclockAliasIntervalId = null;
+    let dvdOverclockAliasLine = null;
+    let dvdUploadMode = 'dvd_image';
+    const dvdOverclockNicknamePool = ['User', 'Smartass', 'Hacker', 'Demon', 'God', 'Daddy'];
+    function getDvdActiveCap() {
+      return dvdOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances;
+    }
 
     // ADDED: Single canonical built-in command registry so command execution, help output,
     // and tab-complete all point at the same source instead of drifting apart.
@@ -1405,7 +1415,7 @@ const focusSink = document.getElementById('focusSink');
       { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
       { name: '/dvd', value: '/dvd', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
-      { name: '/dvd_image', value: '/dvd_image ', execute: false, desc: 'upload one or more images to add bouncing DVD images directly, or pass one or more quoted comma-separated URLs' },
+      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and add them to the bouncing DVD layer, up to 10 total before overclock' },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
@@ -1742,7 +1752,6 @@ const focusSink = document.getElementById('focusSink');
       debugMode = enabled;
       document.body.classList.toggle('debug', enabled);
       refreshSystemMessagePrefixes();
-      refreshAllCollapsedSystemGroups();
       refreshScriptStatusVisibility();
     }
 
@@ -1762,7 +1771,7 @@ const focusSink = document.getElementById('focusSink');
       return repeatCount > 1 ? `${rendered} (${repeatCount})` : rendered;
     }
 
-    function appendStyledSystemText(messageText, rawContent, repeatCount = 1, repeatSuffixOverride = '') {
+    function appendStyledSystemText(messageText, rawContent, repeatCount = 1, repeatLabel = '') {
       messageText.innerHTML = '';
       const rendered = getRenderedSystemText(rawContent);
       const executionMatch = rendered.match(/^(System:\s+)?(\/\S+)\s+(executed|enabled|disabled)\s+by\s+(.+)$/i);
@@ -1787,9 +1796,8 @@ const focusSink = document.getElementById('focusSink');
         nicknameSpan.textContent = nicknameText;
         messageText.appendChild(nicknameSpan);
 
-        const repeatSuffixText = repeatSuffixOverride ? String(repeatSuffixOverride) : (repeatCount > 1 ? String(repeatCount) : '');
-        if (repeatSuffixText) {
-          messageText.appendChild(document.createTextNode(` (${repeatSuffixText})`));
+        if (repeatCount > 1 || repeatLabel) {
+          messageText.appendChild(document.createTextNode(` (${repeatLabel || repeatCount})`));
         }
         return;
       }
@@ -1808,73 +1816,73 @@ const focusSink = document.getElementById('focusSink');
 
         messageText.appendChild(document.createTextNode(' is not a known command'));
 
-        const repeatSuffixText = repeatSuffixOverride ? String(repeatSuffixOverride) : (repeatCount > 1 ? String(repeatCount) : '');
-        if (repeatSuffixText) {
-          messageText.appendChild(document.createTextNode(` (${repeatSuffixText})`));
+        if (repeatCount > 1 || repeatLabel) {
+          messageText.appendChild(document.createTextNode(` (${repeatLabel || repeatCount})`));
         }
         return;
       }
 
-      const repeatSuffixText = repeatSuffixOverride ? String(repeatSuffixOverride) : (repeatCount > 1 ? String(repeatCount) : '');
-      messageText.textContent = repeatSuffixText ? `${rendered} (${repeatSuffixText})` : rendered;
+      const suffix = repeatLabel || (repeatCount > 1 ? String(repeatCount) : '');
+      messageText.textContent = suffix ? `${rendered} (${suffix})` : rendered;
     }
 
     function formatCommandExecutionMessage(commandToken, state = 'executed', nickname = currentNickname) {
       return `${commandToken} ${state} by ${nickname}`;
     }
 
-    function addCommandExecutionSystemMessage(commandToken, state = 'executed', nickname = currentNickname, options = {}) {
-      const collapseKey = options.collapseKey || `cmd:${commandToken}:${state}:${nickname}`;
-      return addSystemMessage(formatCommandExecutionMessage(commandToken, state, nickname), {
-        ...options,
-        collapseKey
-      });
+    function clearDvdOverclockIntervals() {
+      if (dvdOverclockIntervalId !== null) {
+        clearInterval(dvdOverclockIntervalId);
+        dvdOverclockIntervalId = null;
+      }
+      if (dvdOverclockAliasIntervalId !== null) {
+        clearInterval(dvdOverclockAliasIntervalId);
+        dvdOverclockAliasIntervalId = null;
+      }
+      dvdOverclockAliasLine = null;
     }
 
-    function getSystemCollapseGroupState(collapseKey) {
-      const lines = Array.from(messages.querySelectorAll(`.message[data-role="system"][data-collapse-key="${collapseKey}"]`));
-      return {
-        lines,
-        latestLine: lines.length ? lines[lines.length - 1] : null,
-        count: lines.length
-      };
+    function updateOverclockAliasLabel() {
+      if (!dvdOverclockAliasLine) return;
+      const nicknameSpan = dvdOverclockAliasLine.querySelector('.nicknameLabel');
+      if (!nicknameSpan) return;
+      const nextLabel = dvdOverclockNicknamePool[Math.floor(Math.random() * dvdOverclockNicknamePool.length)] || 'User';
+      nicknameSpan.textContent = nextLabel;
     }
 
-    function refreshSystemCollapseGroup(collapseKey) {
-      if (!collapseKey) return;
-      const { lines, latestLine, count } = getSystemCollapseGroupState(collapseKey);
-      if (!lines.length) return;
-
-      lines.forEach((line, index) => {
-        const isLatest = line === latestLine;
-        const messageText = line.querySelector('.messageText');
-        const rawContent = line.dataset.rawContent || '';
-        const maxLabelAt = Number(line.dataset.maxLabelAt || '0');
-        const effectiveRepeatCount = (!debugMode && isLatest) ? count : 1;
-        const suffixOverride = (!debugMode && isLatest && maxLabelAt > 0 && count >= maxLabelAt) ? 'MAX' : '';
-        line.dataset.repeatCount = String(effectiveRepeatCount);
-        if (suffixOverride) {
-          line.dataset.repeatSuffixOverride = suffixOverride;
-        } else {
-          delete line.dataset.repeatSuffixOverride;
+    function startDvdOverclockMode() {
+      dvdOverclockMode = true;
+      document.body.classList.add('dvd-overclock-mode');
+      clearDvdOverclockIntervals();
+      dvdOverclockIntervalId = window.setInterval(() => {
+        if (dvdInstances.length < getDvdActiveCap()) {
+          const instance = createDvdInstance();
+          if (instance) {
+            setDvdEnabled(true);
+            positionDvdInstance(instance, true);
+          }
         }
-        line.style.display = (debugMode || isLatest) ? '' : 'none';
-        if (messageText && rawContent) {
-          appendStyledSystemText(messageText, rawContent, effectiveRepeatCount, suffixOverride);
-        }
+      }, 1000);
+      dvdOverclockAliasIntervalId = window.setInterval(updateOverclockAliasLabel, 1000);
+      updateOverclockAliasLabel();
+    }
+
+    function stopDvdOverclockMode() {
+      dvdOverclockMode = false;
+      document.body.classList.remove('dvd-overclock-mode');
+      clearDvdOverclockIntervals();
+    }
+
+    function getDvdCommandAttemptCount() {
+      const line = Array.from(messages.querySelectorAll('.message[data-role="system"]')).find((messageLine) => {
+        return getSystemBaseText(messageLine.dataset.rawContent || '').startsWith('/dvd executed by ');
       });
-      updateMessagesVisibility();
+      return Number(line?.dataset.repeatCount || '0');
     }
 
-    function refreshAllCollapsedSystemGroups() {
-      const collapseKeys = Array.from(new Set(
-        Array.from(messages.querySelectorAll('.message[data-role="system"][data-collapse-key]'))
-          .map((line) => line.dataset.collapseKey)
-          .filter(Boolean)
-      ));
-      collapseKeys.forEach(refreshSystemCollapseGroup);
+    function getDvdUploadCapRemaining() {
+      return Math.max(0, getDvdActiveCap() - dvdInstances.length);
     }
-
 
     function waitForNextPaint() {
       return new Promise((resolve) => {
@@ -2056,7 +2064,7 @@ const focusSink = document.getElementById('focusSink');
     }
 
     async function captureVisiblePageAnimation() {
-      addCommandExecutionSystemMessage('/screenshot_animation');
+      addSystemMessage(formatCommandExecutionMessage('/screenshot_animation'));
       await waitForNextPaint();
 
       if (isEmbeddedInIndex()) {
@@ -2075,7 +2083,7 @@ const focusSink = document.getElementById('focusSink');
     }
 
     async function captureVisiblePageScreenshot() {
-      addCommandExecutionSystemMessage('/screenshot');
+      addSystemMessage(formatCommandExecutionMessage('/screenshot'));
       await waitForNextPaint();
 
       if (isEmbeddedInIndex()) {
@@ -2097,7 +2105,7 @@ const focusSink = document.getElementById('focusSink');
         const messageText = line.querySelector('.messageText');
         if (!messageText) return;
         const repeatCount = Number(line.dataset.repeatCount || '1');
-        appendStyledSystemText(messageText, rawContent, repeatCount, line.dataset.repeatSuffixOverride || '');
+        appendStyledSystemText(messageText, rawContent, repeatCount, line.dataset.repeatLabel || '');
       });
     }
 
@@ -2194,7 +2202,7 @@ const focusSink = document.getElementById('focusSink');
           line.dataset.rawContent = displayContent;
         }
         if (role === 'system' && typeof displayContent === 'string') {
-          appendStyledSystemText(messageText, displayContent, Number(line.dataset.repeatCount || '1'));
+          appendStyledSystemText(messageText, displayContent, Number(line.dataset.repeatCount || '1'), line.dataset.repeatLabel || '');
         } else if (role === 'user' && typeof displayContent === 'string') {
           renderUserMessage(line, messageText);
         } else {
@@ -2241,27 +2249,31 @@ const focusSink = document.getElementById('focusSink');
     }
 
     function addSystemMessage(text, options = {}) {
-      const {
-        collapseKey = '',
-        maxLabelAt = 0
-      } = options || {};
       const baseText = getSystemBaseText(text);
+      const matchingMessages = Array.from(messages.querySelectorAll('.message[data-role="system"]')).filter((line) => {
+        return getSystemBaseText(line.dataset.rawContent || '') === baseText;
+      });
+      const priorRepeatCount = matchingMessages.reduce((maxCount, line) => Math.max(maxCount, Number(line.dataset.repeatCount || '1')), 0);
+      const repeatCount = Number(options.repeatCount || (priorRepeatCount ? (priorRepeatCount + 1) : 1));
+      const repeatLabel = typeof options.repeatLabel === 'string' ? options.repeatLabel : '';
+      matchingMessages.forEach((line) => line.remove());
+
       const line = addMessage(baseText, 'system');
       if (line) {
         line.dataset.rawContent = baseText;
-        line.dataset.repeatCount = '1';
-        if (collapseKey) {
-          line.dataset.collapseKey = collapseKey;
+        line.dataset.repeatCount = String(repeatCount);
+        if (repeatLabel) {
+          line.dataset.repeatLabel = repeatLabel;
+        } else {
+          delete line.dataset.repeatLabel;
         }
-        if (maxLabelAt) {
-          line.dataset.maxLabelAt = String(maxLabelAt);
+        if (options.overclockAlias) {
+          line.dataset.overclockAlias = 'true';
+          dvdOverclockAliasLine = line;
         }
         const messageText = line.querySelector('.messageText');
         if (messageText) {
-          appendStyledSystemText(messageText, baseText, 1);
-        }
-        if (collapseKey) {
-          refreshSystemCollapseGroup(collapseKey);
+          appendStyledSystemText(messageText, baseText, repeatCount, repeatLabel);
         }
       }
       return line;
@@ -2283,37 +2295,6 @@ const focusSink = document.getElementById('focusSink');
         }
       }
       return addMessage(nextPanelNode, 'system');
-    }
-
-    function addOrRefreshNamedSystemNode(panelType, nodeFactory) {
-      const collapseKey = `panel:${panelType}`;
-      if (debugMode) {
-        const line = addMessage(nodeFactory(), 'system');
-        if (line) {
-          line.dataset.collapseKey = collapseKey;
-        }
-        return line;
-      }
-      const existingLine = Array.from(messages.querySelectorAll(`.message[data-role="system"][data-collapse-key="${collapseKey}"]`)).pop();
-      const nextNode = nodeFactory();
-      if (existingLine) {
-        const messageText = existingLine.querySelector('.messageText');
-        if (messageText) {
-          messageText.innerHTML = '';
-          messageText.appendChild(nextNode);
-        }
-        Array.from(messages.querySelectorAll(`.message[data-role="system"][data-collapse-key="${collapseKey}"]`)).forEach((line, index, arr) => {
-          line.style.display = line === arr[arr.length - 1] ? '' : 'none';
-        });
-        updateMessagesVisibility();
-        return existingLine;
-      }
-      const line = addMessage(nextNode, 'system');
-      if (line) {
-        line.dataset.collapseKey = collapseKey;
-      }
-      refreshSystemCollapseGroup(collapseKey);
-      return line;
     }
 
     function moveCursorToEnd() {
@@ -3952,7 +3933,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
-      addCommandExecutionSystemMessage('/upload_folder');
+      addSystemMessage(formatCommandExecutionMessage('/upload_folder'));
       addMessage(createMediaBrowserMessageNode(type, records), 'system');
       event.target.value = '';
     }
@@ -3976,7 +3957,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
-      addCommandExecutionSystemMessage('/upload_file');
+      addSystemMessage(formatCommandExecutionMessage('/upload_file'));
       addMessage(createMediaMessageNode(type, file), 'system');
       event.target.value = '';
     }
@@ -3989,7 +3970,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
-      addCommandExecutionSystemMessage('/upload_folder');
+      addSystemMessage(formatCommandExecutionMessage('/upload_folder'));
       addMessage(createMediaBrowserMessageNode('mixed', records), 'system');
       event.target.value = '';
     }
@@ -4012,7 +3993,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
 
-      addCommandExecutionSystemMessage(`/${type}`);
+      addSystemMessage(formatCommandExecutionMessage(`/${type}`));
       addMessage(createMediaMessageNode(type, file), 'system');
       event.target.value = '';
     }
@@ -4220,7 +4201,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const cleaned = (Array.isArray(sources) ? sources : [])
         .map((src) => String(src || '').trim())
         .filter(Boolean)
-        .slice(0, dvdMaxInstances);
+        .slice(0, getDvdActiveCap());
       return cleaned.length ? cleaned : [...dvdDefaultSources];
     }
 
@@ -4230,7 +4211,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function createDvdInstance() {
-      if (!dvdOverlay || dvdInstances.length >= dvdMaxInstances) return null;
+      if (!dvdOverlay || dvdInstances.length >= getDvdActiveCap()) return null;
 
       const img = document.createElement('img');
       img.className = 'dvdLogo';
@@ -4263,7 +4244,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function ensureDvdInstanceCount(count) {
-      const target = Math.max(0, Math.min(dvdMaxInstances, Number(count) || 0));
+      const target = Math.max(0, Math.min(getDvdActiveCap(), Number(count) || 0));
       while (dvdInstances.length < target) {
         const instance = createDvdInstance();
         if (!instance) break;
@@ -4403,7 +4384,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function spawnDvdInstance() {
-      if (dvdInstances.length >= dvdMaxInstances) {
+      if (dvdInstances.length >= getDvdActiveCap()) {
         if (!dvdEnabled && dvdInstances.length) {
           setDvdEnabled(true);
         }
@@ -4431,7 +4412,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         .split(',')
         .map((part) => part.trim())
         .filter(Boolean)
-        .slice(0, dvdMaxInstances);
+        .slice(0, getDvdActiveCap());
     }
 
     function setDvdLogoSources(sources, spawnToMatch = false) {
@@ -4463,16 +4444,18 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function clearAllDvdMedia() {
+      stopDvdOverclockMode();
       removeAllDvdInstances();
       cleanupDvdCustomObjectUrls();
       dvdSourcePool = [...dvdDefaultSources];
+      dvdUploadMode = 'dvd_image';
     }
 
     function addSpawnedDvdSources(sources) {
       const normalized = normalizeDvdSourceList(sources);
       if (!normalized.length) return false;
 
-      const availableSlots = Math.max(0, dvdMaxInstances - dvdInstances.length);
+      const availableSlots = Math.max(0, getDvdActiveCap() - dvdInstances.length);
       if (availableSlots <= 0) {
         setDvdEnabled(true);
         return false;
@@ -4483,7 +4466,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const startIndex = existingPool.length;
       dvdSourcePool = [...existingPool, ...sourcesToAdd];
 
-      const finalCount = ensureDvdInstanceCount(Math.min(dvdMaxInstances, dvdInstances.length + sourcesToAdd.length));
+      const finalCount = ensureDvdInstanceCount(Math.min(getDvdActiveCap(), dvdInstances.length + sourcesToAdd.length));
       syncDvdInstanceSources();
 
       for (let i = 0; i < sourcesToAdd.length; i += 1) {
@@ -4528,7 +4511,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const newNickname = trimmed.slice(parts[0].length).trim();
         if (newNickname) {
           currentNickname = newNickname;
-          addCommandExecutionSystemMessage('/nickname', 'executed', newNickname);
+          addSystemMessage(formatCommandExecutionMessage('/nickname', 'executed', newNickname));
         }
         return true;
       }
@@ -4537,53 +4520,94 @@ function createHomepageCustomizeMessageNode(result = {}) {
         if (debugMode) {
           showSystemPrefix = false;
           setDebugMode(false);
-          addCommandExecutionSystemMessage('/debug', 'disabled');
+          addSystemMessage(formatCommandExecutionMessage('/debug', 'disabled'));
         } else {
           showSystemPrefix = true;
           setDebugMode(true);
-          addCommandExecutionSystemMessage('/debug', 'enabled');
+          addSystemMessage(formatCommandExecutionMessage('/debug', 'enabled'));
         }
         return true;
       }
 
       if (command === '/help') {
-        addCommandExecutionSystemMessage('/help');
-        addOrRefreshNamedSystemNode('help', createHelpMessageNode);
+        addSystemMessage(formatCommandExecutionMessage('/help'));
+        const existingHelpMessage = Array.from(messages.querySelectorAll('.message[data-role="system"] .helpList')).at(-1)?.closest('.message');
+        if (existingHelpMessage && !debugMode) {
+          const messageText = existingHelpMessage.querySelector('.messageText');
+          if (messageText) {
+            messageText.innerHTML = '';
+            messageText.appendChild(createHelpMessageNode());
+          }
+        } else {
+          addMessage(createHelpMessageNode(), 'system');
+        }
         return true;
       }
 
       if (command === '/dvd') {
-        const spawned = spawnDvdInstance();
-        if (spawned) {
-          addCommandExecutionSystemMessage('/dvd', 'executed', currentNickname, { maxLabelAt: dvdMaxInstances });
-        } else {
-          addSystemMessage('Why would you want more than 10 of those?');
+        const currentAttempts = getDvdCommandAttemptCount();
+        if (currentAttempts >= 12 && !dvdOverclockMode) {
+          const overclockLine = addSystemMessage('/dvd command overclocked by User', { overclockAlias: true });
+          if (overclockLine) {
+            overclockLine.dataset.repeatLabel = 'INFINITE';
+            const messageText = overclockLine.querySelector('.messageText');
+            if (messageText) {
+              appendStyledSystemText(messageText, '/dvd command overclocked by User', 1, 'INFINITE');
+            }
+          }
+          const executionLine = addSystemMessage(formatCommandExecutionMessage('/dvd'), { repeatCount: 13, repeatLabel: 'INFINITE' });
+          if (executionLine) {
+            const messageText = executionLine.querySelector('.messageText');
+            if (messageText) {
+              appendStyledSystemText(messageText, formatCommandExecutionMessage('/dvd'), 13, 'INFINITE');
+            }
+          }
+          startDvdOverclockMode();
+          if (dvdInstances.length < dvdNormalMaxInstances) {
+            ensureDvdInstanceCount(dvdNormalMaxInstances);
+          }
+          setDvdEnabled(true);
+          return true;
         }
+
+        if (currentAttempts === 11) {
+          addSystemMessage("Really, you don't want to see what happens if you spawn more than 10 of those... Fine, send it one more time, see what happens smartass.");
+          return true;
+        }
+
+        if (currentAttempts === 10) {
+          addSystemMessage('Why would you want more than 10 of those?');
+          return true;
+        }
+
+        const spawned = spawnDvdInstance();
+        const nextCount = currentAttempts + 1;
+        addSystemMessage(formatCommandExecutionMessage('/dvd'), { repeatCount: nextCount, repeatLabel: nextCount >= dvdNormalMaxInstances ? 'MAX' : '' });
         return true;
       }
 
       if (command === '/dvd_image' || command === '/dvd_logo') {
-        const commandToken = '/dvd_image';
+        dvdUploadMode = 'dvd_image';
         const urlArg = trimmed.slice(parts[0].length).trim();
         if (urlArg) {
           const sources = parseDvdLogoUrlList(urlArg);
-          const applied = setDvdLogoSources(sources, true);
-          addCommandExecutionSystemMessage(commandToken, applied ? 'executed' : 'failed');
+          const applied = addSpawnedDvdSources(sources);
+          addSystemMessage(formatCommandExecutionMessage('/dvd_image', applied ? 'executed' : 'failed'));
           return true;
         }
         const opened = openDvdLogoPicker();
-        addCommandExecutionSystemMessage(commandToken, opened ? 'executed' : 'failed');
+        addSystemMessage(formatCommandExecutionMessage('/dvd_image', opened ? 'executed' : 'failed'));
         return true;
       }
 
       if (command === '/spawn') {
         const opened = await openSpawnPicker();
-        addCommandExecutionSystemMessage('/spawn', opened ? 'executed' : 'failed');
+        addSystemMessage(formatCommandExecutionMessage('/spawn', opened ? 'executed' : 'failed'));
         return true;
       }
 
       if (command === '/exit') {
-        addCommandExecutionSystemMessage('/exit');
+        addSystemMessage(formatCommandExecutionMessage('/exit'));
         if (isEmbeddedInIndex()) {
           postToParentPage({ type: 'pageExit' });
         } else {
@@ -4646,7 +4670,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const enabled = isEmbeddedInIndex()
           ? (postToParentPage({ type: 'pageGlobalColorInvertToggle' }), null)
           : toggleGlobalColorInvert();
-        addCommandExecutionSystemMessage('/color_invert', (enabled === null ? 'toggled' : (enabled ? 'enabled' : 'disabled')));
+        addSystemMessage(formatCommandExecutionMessage('/color_invert', (enabled === null ? 'toggled' : (enabled ? 'enabled' : 'disabled'))));
         return true;
       }
 
@@ -4657,18 +4681,18 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const enabled = isEmbeddedInIndex()
           ? (postToParentPage({ type: 'pageGlobalHueShiftToggle' }), null)
           : toggleGlobalHueShift();
-        addCommandExecutionSystemMessage('/color_hueshift', (enabled === null ? 'toggled' : (enabled ? 'enabled' : 'disabled')));
+        addSystemMessage(formatCommandExecutionMessage('/color_hueshift', (enabled === null ? 'toggled' : (enabled ? 'enabled' : 'disabled'))));
         return true;
       }
 
       if (command === '/color_party') {
         const enabled = setColorPartyEnabled(!colorPartyEnabled);
-        addCommandExecutionSystemMessage('/color_party', enabled ? 'enabled' : 'disabled');
+        addSystemMessage(formatCommandExecutionMessage('/color_party', enabled ? 'enabled' : 'disabled'));
         return true;
       }
 
       if (command === '/customize') {
-        addCommandExecutionSystemMessage('/customize');
+        addSystemMessage(formatCommandExecutionMessage('/customize'));
         addMessage(createCustomizeMessageNode(), 'system');
         return true;
       }
@@ -4696,7 +4720,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           activeScriptRun.cancelled = true;
         }
         if (wasShuffleRunning || wasScriptRunning || wasHueShiftEnabled || wasColorInvertEnabled || wasColorPartyEnabled) {
-          addCommandExecutionSystemMessage('/stop');
+          addSystemMessage(formatCommandExecutionMessage('/stop'));
         } else {
           addSystemMessage('No auto color or script effects are currently running');
         }
@@ -4714,7 +4738,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           if (isEmbeddedInIndex()) {
             postToParentPage({ type: 'pageCustomizeAutoShuffleSet', enabled: false });
           }
-          addCommandExecutionSystemMessage('/color_randomize', 'disabled');
+          addSystemMessage(formatCommandExecutionMessage('/color_randomize', 'disabled'));
         } else {
           startAutoShuffleColors();
           // ADDED: Trigger the parent page's Customize Page auto-shuffle on the same interval without changing UI.
@@ -4722,7 +4746,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
             postToParentPage({ type: 'pageCustomizeSetRandomizeTintOpacities' });
             postToParentPage({ type: 'pageCustomizeAutoShuffleSet', enabled: true });
           }
-          addCommandExecutionSystemMessage('/color_randomize', 'enabled');
+          addSystemMessage(formatCommandExecutionMessage('/color_randomize', 'enabled'));
         }
         return true;
       }
@@ -4733,13 +4757,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
         if (isEmbeddedInIndex()) {
           postToParentPage({ type: 'pageGlobalEffectsReset' });
         }
-        addCommandExecutionSystemMessage('/color_reset');
+        addSystemMessage(formatCommandExecutionMessage('/color_reset'));
         return true;
       }
 
       if (command === '/settings_save') {
         downloadSettingsFile();
-        addCommandExecutionSystemMessage('/settings_save');
+        addSystemMessage(formatCommandExecutionMessage('/settings_save'));
         return true;
       }
 
@@ -4777,13 +4801,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       if (command === '/settings_load') {
         triggerSettingsLoad();
-        addCommandExecutionSystemMessage('/settings_load');
+        addSystemMessage(formatCommandExecutionMessage('/settings_load'));
         return true;
       }
 
       if (command === '/script_load') {
         triggerScriptLoad();
-        addCommandExecutionSystemMessage('/script_load');
+        addSystemMessage(formatCommandExecutionMessage('/script_load'));
         return true;
       }
 
@@ -4794,7 +4818,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           addSystemMessage('Invalid iframe URL. Use /iframe https://example.com/');
           return true;
         }
-        addCommandExecutionSystemMessage('/iframe');
+        addSystemMessage(formatCommandExecutionMessage('/iframe'));
         addMessage(createIframeMessageNode(sanitizedUrl), 'system');
         return true;
       }
@@ -5033,10 +5057,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     if (dvdImageUploadInput) {
       dvdImageUploadInput.addEventListener('change', () => {
-        const files = Array.from(dvdImageUploadInput.files || []).slice(0, dvdMaxInstances);
+        const files = Array.from(dvdImageUploadInput.files || []).slice(0, getDvdActiveCap());
         if (!files.length) return;
 
-        const availableSlots = Math.max(0, dvdMaxInstances - dvdInstances.length);
+        const availableSlots = getDvdUploadCapRemaining();
         if (availableSlots <= 0) {
           dvdImageUploadInput.value = '';
           return;
@@ -5050,6 +5074,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         });
 
         addSpawnedDvdSources(sources);
+        dvdUploadMode = 'dvd_image';
         dvdImageUploadInput.value = '';
       });
     }
@@ -5153,7 +5178,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           const shouldAnnounce = event.data.announce !== false;
           if (shouldAnnounce) {
             homepageCustomizePanelVisible = true;
-            addCommandExecutionSystemMessage(event.data.command || '/customize');
+            addSystemMessage(formatCommandExecutionMessage(event.data.command || '/customize'));
             if (event.data.includeBaseCustomize) {
               const existingChatPanel = messages.querySelector('.message .customizePanel[data-panel-type="chatCustomize"]')?.closest('.message');
               if (!existingChatPanel) {
