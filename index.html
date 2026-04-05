@@ -249,6 +249,22 @@
       '"Trebuchet MS", sans-serif',
       '"Lucida Console", Monaco, monospace'
     ];
+
+    const pageColorElementDefinitions = Object.freeze({
+      'page-background': { key: 'pageBg', label: 'Page Background', aliases: ['pagebg', 'background'] },
+      'page-text': { key: 'pageText', label: 'Page Text Color', aliases: ['pagetext', 'text'] },
+      'overlay-top-bar': { key: 'overlayTopBarBg', label: 'Overlay Top Bar', aliases: ['overlaytopbar', 'topbar'] },
+      'page-header': { key: 'headerBg', label: 'Page Header', aliases: ['header', 'headerbg'] },
+      'buttons-borders': { key: 'accent', label: 'Buttons / Borders', aliases: ['accent', 'buttons', 'borders'] },
+      'panels-inputs': { key: 'panelBg', label: 'Panels / Inputs', aliases: ['panelbg', 'panels', 'inputs'] },
+      'sidebar-background': { key: 'sidebarBg', label: 'Sidebar Background', aliases: ['sidebar', 'sidebarbg'] },
+      'overlay-logo': { key: 'overlayLogoTint', label: 'Overlay Logo Tint', aliases: ['overlaylogotint', 'logo'] },
+      'overlay-clock': { key: 'overlayClockTint', label: 'Overlay Clock Font', aliases: ['overlayclocktint', 'clock'] },
+      'oldtube-logo': { key: 'tektiteLogoTint', label: 'OldTube Logo Tint', aliases: ['tektitelogotint', 'oldtubelogo', 'tektitelogo'] },
+      'thumbnail-tint': { key: 'thumbnailTint', label: 'Thumbnail Tint', aliases: ['thumbnail', 'thumbnails'] }
+    });
+    const pageColorElementSuggestions = Object.keys(pageColorElementDefinitions);
+
     let pageGlobalColorInvertEnabled = false;
     let pageGlobalHueShiftEnabled = false;
     let pageGlobalHueShiftFrameId = null;
@@ -289,6 +305,99 @@
       const g = parseInt(safe.slice(2, 4), 16);
       const b = parseInt(safe.slice(4, 6), 16);
       return `rgba(${r}, ${g}, ${b}, ${clampAlpha(alpha)})`;
+    }
+
+
+    function normalizePageColorElementName(value) {
+      const normalized = String(value || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+      if (!normalized) return '';
+      const direct = pageColorElementDefinitions[normalized];
+      if (direct) return normalized;
+      const compact = normalized.replace(/-/g, '');
+      const foundEntry = Object.entries(pageColorElementDefinitions).find(([, entry]) => Array.isArray(entry.aliases) && entry.aliases.includes(compact));
+      return foundEntry ? foundEntry[0] : '';
+    }
+
+    function parseCssColorInput(input) {
+      const safeInput = typeof input === 'string' ? input.trim() : '';
+      if (!safeInput) return null;
+      const probe = document.createElement('span');
+      probe.style.color = '';
+      probe.style.color = safeInput;
+      if (!probe.style.color) return null;
+      document.body.appendChild(probe);
+      const computed = window.getComputedStyle(probe).color || '';
+      probe.remove();
+      const match = computed.match(/^rgba?\(([^)]+)\)$/i);
+      if (!match) return null;
+      const rawParts = match[1].split(',').map((part) => part.trim());
+      const numericParts = rawParts.map((part) => Number(part));
+      if (numericParts.length < 3 || numericParts.slice(0, 3).some((value) => !Number.isFinite(value))) {
+        return null;
+      }
+      const r = Math.max(0, Math.min(255, Math.round(numericParts[0])));
+      const g = Math.max(0, Math.min(255, Math.round(numericParts[1])));
+      const b = Math.max(0, Math.min(255, Math.round(numericParts[2])));
+      const a = numericParts.length > 3 && Number.isFinite(numericParts[3]) ? clampAlpha(numericParts[3], 1) : 1;
+      return {
+        hex: `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`,
+        alpha: a
+      };
+    }
+
+    function parsePageColorElementCommand(value) {
+      const safeValue = typeof value === 'string' ? value.trim() : '';
+      if (!safeValue) {
+        return null;
+      }
+      const parts = safeValue.split(/\s+/);
+      if (parts.length < 2) {
+        return null;
+      }
+
+      const elementName = normalizePageColorElementName(parts[0]);
+      if (!elementName) {
+        return { error: 'Unknown element name.' };
+      }
+      const element = pageColorElementDefinitions[elementName];
+      if (!element) {
+        return { error: 'Unknown element name.' };
+      }
+
+      let opacityToken = '';
+      const lastToken = parts[parts.length - 1];
+      if (/^(?:0(?:\.\d+)?|1(?:\.0+)?)$/.test(lastToken)) {
+        opacityToken = lastToken;
+        parts.pop();
+      }
+
+      const colorToken = parts.slice(1).join(' ').trim();
+      if (!colorToken) {
+        return null;
+      }
+
+      if (colorToken.toLowerCase() === 'randomize') {
+        return {
+          elementName,
+          key: element.key,
+          label: element.label,
+          randomize: true,
+          alpha: opacityToken ? clampAlpha(opacityToken, pageCustomizeDefaults.colors[element.key].alpha) : null
+        };
+      }
+
+      const parsedColor = parseCssColorInput(colorToken);
+      if (!parsedColor) {
+        return { error: 'Color must be hex, rgba(), or a valid CSS color name.' };
+      }
+
+      return {
+        elementName,
+        key: element.key,
+        label: element.label,
+        hex: parsedColor.hex,
+        alpha: opacityToken ? clampAlpha(opacityToken, parsedColor.alpha) : parsedColor.alpha
+      };
     }
 
     function randomHex() {
@@ -830,6 +939,13 @@
             execute: true,
             replaceBuiltIn: true,
             passthroughBuiltIn: false
+          },
+          {
+            name: '/color_element',
+            usage: '/color_element [element-name] [hex or rgba or name color or randomize] [0-1 for opacity]',
+            desc: 'set one customize-page color target directly from chat',
+            execute: false,
+            suggestions: pageColorElementSuggestions
           },
           {
             name: '/clock_time',
@@ -1477,6 +1593,52 @@
 
           if (commandName === '/customize') {
             sendPageCustomizePanel({ includeBaseCustomize: true, announce: true });
+            return;
+          }
+
+          if (commandName === '/color_element') {
+            const parsed = parsePageColorElementCommand(commandValue);
+            if (!parsed) {
+              postToChatSandbox({
+                type: 'pageChatResult',
+                command: '/color_element',
+                message: 'Usage: /color_element [element-name] [hex or rgba or name color or randomize] [0-1 for opacity]',
+                announce: true
+              });
+              return;
+            }
+            if (parsed.error) {
+              postToChatSandbox({
+                type: 'pageChatResult',
+                command: '/color_element',
+                message: `${parsed.error} Usage: /color_element [element-name] [hex or rgba or name color or randomize] [0-1 for opacity]`,
+                announce: true
+              });
+              return;
+            }
+            if (parsed.randomize) {
+              randomizePageCustomizeKey(parsed.key);
+              if (parsed.alpha != null && pageCustomizeState.colors[parsed.key]) {
+                pageCustomizeState.colors[parsed.key].alpha = clampAlpha(parsed.alpha, pageCustomizeDefaults.colors[parsed.key].alpha);
+              }
+              applyPageCustomizeState();
+              sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+              postToChatSandbox({
+                type: 'pageChatResult',
+                command: '/color_element',
+                message: `/color_element executed: ${parsed.elementName} -> randomize @ ${pageCustomizeState.colors[parsed.key].alpha}`,
+                announce: true
+              });
+              return;
+            }
+            setPageColor(parsed.key, { hex: parsed.hex, alpha: parsed.alpha });
+            sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+            postToChatSandbox({
+              type: 'pageChatResult',
+              command: '/color_element',
+              message: `/color_element executed: ${parsed.elementName} -> ${parsed.hex} @ ${clampAlpha(parsed.alpha)}`,
+              announce: true
+            });
             return;
           }
 
