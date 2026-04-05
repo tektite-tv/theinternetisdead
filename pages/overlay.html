@@ -579,26 +579,81 @@ html, body {
     overlayRoot.style.setProperty('--overlay-logo-filter-hover', hoverTint);
   }
 
-  let overlayClockMode = 'time';
+  const DEFAULT_OVERLAY_CLOCK_STATE = {
+    mode: 'time',
+    zone: 'America/Toronto',
+    manualTime: '',
+    manualDate: ''
+  };
 
-  function formatTorontoDate(now = new Date()) {
+  function sanitizeOverlayClockMode(value) {
+    return value === 'date' ? 'date' : 'time';
+  }
+
+  function sanitizeOverlayClockZone(value) {
+    const fallback = DEFAULT_OVERLAY_CLOCK_STATE.zone;
+    const supportedZones = getOverlaySupportedTimeZones();
+    const safeValue = typeof value === 'string' ? value.trim() : '';
+    return supportedZones.includes(safeValue) ? safeValue : fallback;
+  }
+
+  function getOverlaySupportedTimeZones() {
+    if (Array.isArray(window.__overlaySupportedTimeZones) && window.__overlaySupportedTimeZones.length) {
+      return window.__overlaySupportedTimeZones.slice();
+    }
+    const zones = typeof Intl.supportedValuesOf === 'function'
+      ? Intl.supportedValuesOf('timeZone')
+      : ['America/Toronto', 'UTC'];
+    window.__overlaySupportedTimeZones = Array.from(new Set(['America/Toronto', ...zones])).sort((a, b) => a.localeCompare(b));
+    return window.__overlaySupportedTimeZones.slice();
+  }
+
+  function getOverlayClockState() {
+    const source = window.__overlayClockState && typeof window.__overlayClockState === 'object'
+      ? window.__overlayClockState
+      : DEFAULT_OVERLAY_CLOCK_STATE;
+    return {
+      mode: sanitizeOverlayClockMode(source.mode),
+      zone: sanitizeOverlayClockZone(source.zone),
+      manualTime: typeof source.manualTime === 'string' ? source.manualTime : '',
+      manualDate: typeof source.manualDate === 'string' ? source.manualDate : ''
+    };
+  }
+
+  function setOverlayClockState(nextState = {}) {
+    const current = getOverlayClockState();
+    window.__overlayClockState = {
+      mode: sanitizeOverlayClockMode(nextState.mode !== undefined ? nextState.mode : current.mode),
+      zone: sanitizeOverlayClockZone(nextState.zone !== undefined ? nextState.zone : current.zone),
+      manualTime: typeof nextState.manualTime === 'string' ? nextState.manualTime : current.manualTime,
+      manualDate: typeof nextState.manualDate === 'string' ? nextState.manualDate : current.manualDate
+    };
+    updateOverlayClock();
+    return getOverlayClockState();
+  }
+
+  window.getOverlaySupportedTimeZones = getOverlaySupportedTimeZones;
+  window.getOverlayClockState = getOverlayClockState;
+  window.setOverlayClockState = setOverlayClockState;
+
+  function formatOverlayDate(now = new Date(), timeZone = DEFAULT_OVERLAY_CLOCK_STATE.zone) {
     const weekday = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
+      timeZone,
       weekday: 'long'
     }).format(now);
 
     const month = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
+      timeZone,
       month: 'long'
     }).format(now);
 
     const day = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
+      timeZone,
       day: 'numeric'
     }).format(now);
 
     const year = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
+      timeZone,
       year: 'numeric'
     }).format(now);
 
@@ -610,7 +665,7 @@ html, body {
     const box = el.closest('.clock-box');
     if (!box) return;
 
-    const isDate = overlayClockMode === 'date';
+    const isDate = getOverlayClockState().mode === 'date';
     const basePx = isMobileOverlayView() ? (isDate ? 16 : 20) : (isDate ? 22 : 34);
     const minPx = isMobileOverlayView() ? 12 : 15;
 
@@ -623,22 +678,33 @@ html, body {
     }
   }
 
-  function updateTorontoClock() {
+  function updateOverlayClock() {
     const el = overlayRoot.querySelector('#native-clock');
     if (!el) return;
 
     const timeEl = el.querySelector('.clock-time');
     const periodEl = el.querySelector('.clock-period');
+    const state = getOverlayClockState();
 
-    if (overlayClockMode === 'date') {
-      if (timeEl) timeEl.textContent = formatTorontoDate();
+    if (state.mode === 'date') {
+      const dateText = state.manualDate || formatOverlayDate(new Date(), state.zone);
+      if (timeEl) timeEl.textContent = dateText;
       if (periodEl) periodEl.textContent = '';
+      el.setAttribute('aria-label', `Toggle ${state.zone} time and date`);
+      fitClockTextToContainer(el);
+      return;
+    }
+
+    if (state.manualTime) {
+      if (timeEl) timeEl.textContent = state.manualTime;
+      if (periodEl) periodEl.textContent = '';
+      el.setAttribute('aria-label', `Toggle ${state.zone} time and date`);
       fitClockTextToContainer(el);
       return;
     }
 
     const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Toronto',
+      timeZone: state.zone,
       hour: 'numeric',
       minute: '2-digit',
       second: '2-digit',
@@ -651,10 +717,13 @@ html, body {
       .join('')
       .trim();
 
-    const dayPeriod = (parts.find((part) => part.type === 'dayPeriod')?.value || '').toLowerCase();
+    const dayPeriod = (parts.find((part) => part.type === 'dayPeriod')?.value || '')
+      .toLowerCase()
+      .replace(/\./g, '');
 
     if (timeEl) timeEl.textContent = timeText;
     if (periodEl) periodEl.textContent = dayPeriod;
+    el.setAttribute('aria-label', `Toggle ${state.zone} time and date`);
     fitClockTextToContainer(el);
   }
 
@@ -663,13 +732,13 @@ html, body {
       event.preventDefault();
       event.stopPropagation();
     }
-    overlayClockMode = overlayClockMode === 'time' ? 'date' : 'time';
-    updateTorontoClock();
+    const current = getOverlayClockState();
+    setOverlayClockState({ mode: current.mode === 'time' ? 'date' : 'time' });
   }
 
   refreshOverlayLogoHoverTint();
-  updateTorontoClock();
-  setInterval(updateTorontoClock, 1000);
+  setOverlayClockState(getOverlayClockState());
+  setInterval(updateOverlayClock, 1000);
 
   const nativeClock = overlayRoot.querySelector('#native-clock');
   if (nativeClock) {
