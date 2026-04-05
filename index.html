@@ -16,7 +16,6 @@
 
     body {
       position: relative;
-      isolation: isolate;
       --overlay-height: 76px;
     }
 
@@ -68,7 +67,7 @@
       height: 100%;
       border: none;
       background: transparent;
-      z-index: 2147483000;
+      z-index: 9999;
       display: block;
       opacity: 0;
       visibility: hidden;
@@ -202,6 +201,7 @@
     let chatSandboxVisible = false;
     let chatSandboxDvdActive = false;
     let chatSandboxReady = false;
+    let pendingChatOpenOptions = null;
 
     const pageCustomizeDefaults = {
       fontFamily: '"Courier New", Courier, monospace',
@@ -1187,10 +1187,18 @@
       setPageGlobalHueShift(false);
     }
 
+    function flushPendingChatOpen() {
+      if (!pendingChatOpenOptions || !chatSandboxReady) return;
+      const options = pendingChatOpenOptions;
+      pendingChatOpenOptions = null;
+      postToChatSandbox({ type: 'chatSandboxOpen', focus: options.focus !== false, seedSlash: !!options.seedSlash });
+    }
+
     function openChatFromParent(options = {}) {
       if (pageScreenshotAnimationActive) return;
       setChatFrameVisible(true);
-      postToChatSandbox({ type: 'chatSandboxOpen', focus: options.focus !== false, seedSlash: !!options.seedSlash });
+      pendingChatOpenOptions = { focus: options.focus !== false, seedSlash: !!options.seedSlash };
+      flushPendingChatOpen();
     }
 
     function closeChatFromParent() {
@@ -1369,6 +1377,7 @@
       if (event.source === getChatWindow()) {
         if (event.data.type === 'chatSandboxState') {
           chatSandboxReady = true;
+          flushPendingChatOpen();
           setChatFrameVisible(!!event.data.visible);
           registerPageCommands();
           return;
@@ -1376,6 +1385,7 @@
 
         if (event.data.type === 'chatSandboxDvdState') {
           chatSandboxReady = true;
+          flushPendingChatOpen();
           setChatSandboxDvdActive(!!event.data.active);
           registerPageCommands();
           return;
@@ -1606,6 +1616,7 @@
 
     chatSandboxFrame.addEventListener('load', () => {
       chatSandboxReady = true;
+      flushPendingChatOpen();
       registerPageCommands();
       bindChatShortcutToFrame(chatSandboxFrame);
     });
