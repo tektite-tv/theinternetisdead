@@ -2452,6 +2452,9 @@ const focusSink = document.getElementById('focusSink');
       messageText.className = 'messageText';
 
       if (content instanceof Node) {
+        if (content && content.dataset && content.dataset.commandPanelType) {
+          line.dataset.commandPanelType = content.dataset.commandPanelType;
+        }
         messageText.appendChild(content);
       } else if (isHtml) {
         messageText.innerHTML = content;
@@ -3886,13 +3889,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function refreshVisibleHelpMessages() {
-      const helpMessages = Array.from(messages.querySelectorAll('.message[data-role="system"] [data-command-panel-type="help"]'))
-        .map((node) => node.closest('.message'))
-        .filter(Boolean);
+      const helpMessages = Array.from(messages.querySelectorAll('.message[data-role="system"][data-command-panel-type="help"]'));
 
       helpMessages.forEach((messageNode) => {
         const messageText = messageNode.querySelector('.messageText');
         if (!messageText) return;
+        messageNode.dataset.commandPanelType = 'help';
         messageText.innerHTML = '';
         messageText.appendChild(createHelpMessageNode());
       });
@@ -5025,10 +5027,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       if (command === '/help') {
         addSystemMessage(formatCommandExecutionMessage('/help'));
-        const existingHelpMessage = Array.from(messages.querySelectorAll('.message[data-role="system"] .helpList')).at(-1)?.closest('.message');
+        const existingHelpMessage = Array.from(messages.querySelectorAll('.message[data-role="system"][data-command-panel-type="help"]')).at(-1) || null;
         if (existingHelpMessage && !debugMode) {
           const messageText = existingHelpMessage.querySelector('.messageText');
           if (messageText) {
+            existingHelpMessage.dataset.commandPanelType = 'help';
             messageText.innerHTML = '';
             messageText.appendChild(createHelpMessageNode());
           }
