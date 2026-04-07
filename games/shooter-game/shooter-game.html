@@ -45,15 +45,9 @@
     ></iframe>
   </div>
 
-  <script src="/games/shooter-game/scripts/tektite-host-bridge.js"></script>
   <script>
+    const overlayContainer = document.getElementById('overlay-container');
     const tektiteFrame = document.getElementById('tektite-frame');
-    const hostBridge = window.TektiteHostBridge || null;
-    const MESSAGE_TYPES = hostBridge ? hostBridge.MESSAGE_TYPES : {
-      CONTINUE_TO_LEVEL2: 'tektite:continue-to-level2',
-      RETURN_TO_LEVEL1: 'tektite:return-to-level1',
-      FULLSCREEN: 'tektite:fullscreen'
-    };
     const LEVEL1_SRC = '/games/shooter-game/shooter-game-level1.html';
     const LEVEL2_SRC = '/games/shooter-game/shooter-game-level2.html?autostart=1';
     let hasSwitchedToLevel2 = false;
@@ -101,13 +95,13 @@
     window.addEventListener('message', async (event) => {
       const data = event.data;
       if (!data || typeof data !== 'object') return;
-      if (data.type === MESSAGE_TYPES.CONTINUE_TO_LEVEL2) {
+      if (data.type === 'tektite:continue-to-level2') {
         switchToLevel2();
       }
-      if (data.type === MESSAGE_TYPES.RETURN_TO_LEVEL1) {
+      if (data.type === 'tektite:return-to-level1') {
         switchToLevel1Reloaded();
       }
-      if (data.type === MESSAGE_TYPES.FULLSCREEN) {
+      if (data.type === 'tektite:fullscreen') {
         const action = data.action || 'toggle';
         if (action === 'enter') await setIframeFullscreen(true);
         else if (action === 'exit') await setIframeFullscreen(false);
