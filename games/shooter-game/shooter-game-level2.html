@@ -576,6 +576,7 @@ body.invert-colors {
   </div>
 </div>
 
+<script src="/games/shooter-game/scripts/tektite-host-bridge.js"></script>
 <script>
 /* ======================================================================
   PROJECT CHANGELOG / REMOVAL LOG
@@ -930,6 +931,9 @@ if (btnPauseQuit){
     // Unpause and return to the parent shell's reloaded level 1 when embedded.
     setPaused(false);
     stopMusic();
+    if (window.TektiteHostBridge && typeof window.TektiteHostBridge.notifyReturnToLevel1 === "function"){
+      if (window.TektiteHostBridge.notifyReturnToLevel1()) return;
+    }
     if (window.parent && window.parent !== window){
       try {
         window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");

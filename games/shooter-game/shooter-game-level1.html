@@ -508,6 +508,7 @@ body.invert-colors {
   </div>
 </div>
 
+<script src="/games/shooter-game/scripts/tektite-host-bridge.js"></script>
 <script>
 /* ======================================================================
   PROJECT CHANGELOG / REMOVAL LOG
@@ -988,6 +989,9 @@ const PAUSE_COMMANDS = {
 
 // v1.96: Fullscreen toggle (real browser fullscreen)
 function requestHostFullscreen(action="toggle"){
+  if (window.TektiteHostBridge && typeof window.TektiteHostBridge.requestFullscreen === "function"){
+    return window.TektiteHostBridge.requestFullscreen(action);
+  }
   if (window.parent && window.parent !== window){
     try{
       window.parent.postMessage({ type: "tektite:fullscreen", action }, "*");
@@ -2331,6 +2335,9 @@ btnRestart.addEventListener("click", () => {
 
 if (btnContinue){
   btnContinue.addEventListener("click", () => {
+    if (window.TektiteHostBridge && typeof window.TektiteHostBridge.notifyContinueToLevel2 === "function"){
+      if (window.TektiteHostBridge.notifyContinueToLevel2()) return;
+    }
     if (window.parent && window.parent !== window){
       try{
         window.parent.postMessage({ type: "tektite:continue-to-level2" }, "*");

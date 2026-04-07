@@ -1,0 +1,45 @@
+Shooter modularization plan - Phase 1
+
+Completed in this pass:
+- Created /games/shooter-game/scripts/
+- Extracted wrapper/iframe host messaging into tektite-host-bridge.js
+- Updated shooter-game.html, shooter-game-level1.html, and shooter-game-level2.html to use the shared host bridge
+
+Why this goes first:
+- It is already a separate concern from gameplay logic.
+- It is shared by both level files and the wrapper.
+- It reduces duplicated postMessage/fullscreen glue without touching enemy, player, rendering, or audio systems.
+
+Recommended order for the next extractions:
+1. Shared host + shell helpers
+   - fullscreen
+   - parent-shell navigation
+   - query param helpers
+2. Shared command helpers
+   - /help registry
+   - resource count parsers
+   - background color autocomplete helpers
+3. Shared UI overlays
+   - pause menu wiring
+   - win/death overlay helpers
+   - HUD update helpers
+4. Shared systems with moderate risk
+   - audio bootstrapping + mute/music helpers
+   - floating text
+   - starfield/background FX
+   - input/gamepad helpers
+5. High-risk gameplay systems last
+   - player state + shooting
+   - enemy spawning/formation
+   - collision + damage
+   - wave progression
+6. Level-2-only systems kept separate until the shared base is stable
+   - maze generation
+   - maze enemy logic
+   - maze summary/advance flow
+
+Rule for each pass:
+- Extract one subsystem only.
+- Preserve public function names when possible.
+- Do not rewrite architecture and gameplay in the same pass.
+- Verify standalone level files still work before touching the next subsystem.
