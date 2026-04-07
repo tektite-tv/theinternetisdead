@@ -1700,26 +1700,71 @@ function shouldForceUFOForWave(w){
   return (w === 21);
 }
 
+function getRandomMazeUfoSpawnWorld(){
+  if (maze){
+    const walkable = getMazeWalkableCells();
+    if (walkable && walkable.length){
+      const farEnough = walkable.filter(cell => {
+        const wx = (cell.x + 0.5) * maze.cellSize;
+        const wy = (cell.y + 0.5) * maze.cellSize;
+        return Math.hypot(wx - playerWorldX, wy - playerWorldY) >= maze.cellSize * 2.2;
+      });
+      const pool = farEnough.length ? farEnough : walkable;
+      const cell = pool[Math.floor(Math.random() * pool.length)];
+      return {
+        x: (cell.x + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18),
+        y: (cell.y + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18)
+      };
+    }
+  }
+  return { x: playerWorldX + rand(-220, 220), y: playerWorldY + rand(-220, 220) };
+}
+
+function canUfoSeePlayer(worldX, worldY){
+  if (!maze) return true;
+  const dx = playerWorldX - worldX;
+  const dy = playerWorldY - worldY;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= 0.0001) return true;
+  const step = Math.max(10, maze.cellSize * 0.18);
+  const steps = Math.max(1, Math.ceil(dist / step));
+  for (let i = 1; i <= steps; i++){
+    const t = i / steps;
+    const sx = worldX + dx * t;
+    const sy = worldY + dy * t;
+    if (isWallAtWorld(sx, sy)) return false;
+  }
+  return true;
+}
+
 function trySpawnUFO(force=false){
   if (ufo) return; // only one at a time
   // v1.96: Force-spawn on wave 11 and 21 (or when explicitly forced).
   if (!force && !shouldForceUFOForWave(wave) && Math.random() > 0.25) return;
 
-  // Spawn near top area, tiny and fast.
+  const spawn = getRandomMazeUfoSpawnWorld();
+  const startAngle = rand(0, Math.PI * 2);
+  const startSpeed = rand(38, 72);
+
   ufo = {
-    x: rand(30, canvas.width - 30),
-    y: rand(40, 110),
-    vx: rand(-420, 420) / 60, // px/frame-ish
-    vy: rand(260, 520) / 60,
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    worldX: spawn.x,
+    worldY: spawn.y,
+    vx: Math.cos(startAngle) * startSpeed,
+    vy: Math.sin(startAngle) * startSpeed,
+    desiredVx: Math.cos(startAngle) * startSpeed,
+    desiredVy: Math.sin(startAngle) * startSpeed,
+    roamAngle: rand(0, Math.PI * 2),
+    roamTurnTimer: rand(0.35, 1.1),
+    seenPlayerLag: 0,
+    seesPlayer: false,
     r: 10,
     hits: 0,
     stage: 0, // 0 none, 1 red, 2 green, 3 blue
     fade: 0,
     strobeT: 0
   };
-
-  // Ensure it's actually moving.
-  if (Math.abs(ufo.vx) < 2) ufo.vx = (ufo.vx < 0 ? -2.5 : 2.5);
 }
 
 function ufoColorForStage(stage){
@@ -1735,6 +1780,10 @@ function updateUFO(dt){
   // If fading, just fade out and then grant powerup.
   if (ufo.fade > 0){
     ufo.fade += dt;
+    const camX = playerWorldX - canvas.width / 2;
+    const camY = playerWorldY - canvas.height / 2;
+    ufo.x = ufo.worldX - camX;
+    ufo.y = ufo.worldY - camY;
     if (ufo.fade >= 0.55){
       ufo = null;
       bombsCount += 1;
@@ -1743,30 +1792,86 @@ function updateUFO(dt){
     return;
   }
 
-  // Move + bounce around the top half.
-  ufo.x += ufo.vx;
-  ufo.y += ufo.vy;
-
-  const left = 16, right = canvas.width - 16, top = 30, bottom = canvas.height * 0.48;
-  if (ufo.x < left){ ufo.x = left; ufo.vx *= -1; }
-  if (ufo.x > right){ ufo.x = right; ufo.vx *= -1; }
-  if (ufo.y < top){ ufo.y = top; ufo.vy *= -1; }
-  if (ufo.y > bottom){ ufo.y = bottom; ufo.vy *= -1; }
-
-  // "Avoid the player's movement toward it": if player is moving toward UFO, add a shove away.
-  const movingLeft  = (keys["a"] || keys["arrowleft"]);
-  const movingRight = (keys["d"] || keys["arrowright"]);
-  const toward =
-    (movingLeft  && player.x > ufo.x) ||
-    (movingRight && player.x < ufo.x);
-
-  if (toward){
-    const away = Math.sign(ufo.x - player.x) || (Math.random() < 0.5 ? -1 : 1);
-    ufo.vx += away * (0.65 + 0.35 * FUNK);
-    // clamp
-    ufo.vx = Math.max(-9.5, Math.min(9.5, ufo.vx));
+  if (!maze){
+    ufo.x += ufo.vx * dt;
+    ufo.y += ufo.vy * dt;
+    ufo.strobeT += dt;
+    return;
   }
 
+  const radius = Math.max(10, ufo.r + 4);
+  const seesPlayer = canUfoSeePlayer(ufo.worldX, ufo.worldY);
+  ufo.seesPlayer = seesPlayer;
+
+  ufo.roamTurnTimer -= dt;
+  if (ufo.roamTurnTimer <= 0){
+    ufo.roamTurnTimer = rand(0.45, 1.35);
+    ufo.roamAngle += rand(-1.25, 1.25);
+  }
+
+  const roamSpeed = 54;
+  let targetVx = Math.cos(ufo.roamAngle) * roamSpeed;
+  let targetVy = Math.sin(ufo.roamAngle) * roamSpeed;
+
+  if (seesPlayer){
+    ufo.seenPlayerLag = Math.min(0.22, ufo.seenPlayerLag + dt);
+  } else {
+    ufo.seenPlayerLag = Math.max(0, ufo.seenPlayerLag - dt * 1.6);
+  }
+
+  if (ufo.seenPlayerLag >= 0.14){
+    const awayX = ufo.worldX - playerWorldX;
+    const awayY = ufo.worldY - playerWorldY;
+    const awayD = Math.hypot(awayX, awayY) || 0.0001;
+    const fleeSpeed = 78;
+    targetVx = (awayX / awayD) * fleeSpeed;
+    targetVy = (awayY / awayD) * fleeSpeed;
+  }
+
+  ufo.desiredVx += (targetVx - ufo.desiredVx) * Math.min(1, dt * 2.2);
+  ufo.desiredVy += (targetVy - ufo.desiredVy) * Math.min(1, dt * 2.2);
+  ufo.vx += (ufo.desiredVx - ufo.vx) * Math.min(1, dt * 4.6);
+  ufo.vy += (ufo.desiredVy - ufo.vy) * Math.min(1, dt * 4.6);
+
+  const maxSpeed = seesPlayer ? 88 : 72;
+  const speed = Math.hypot(ufo.vx, ufo.vy) || 0.0001;
+  if (speed > maxSpeed){
+    ufo.vx = (ufo.vx / speed) * maxSpeed;
+    ufo.vy = (ufo.vy / speed) * maxSpeed;
+  }
+
+  let bouncedX = false;
+  let bouncedY = false;
+  const nextX = ufo.worldX + ufo.vx * dt;
+  const nextY = ufo.worldY + ufo.vy * dt;
+
+  if (canOccupyWorld(nextX, ufo.worldY, radius)){
+    ufo.worldX = nextX;
+  } else {
+    bouncedX = true;
+    ufo.vx *= -0.72;
+    ufo.desiredVx *= -0.58;
+    ufo.roamAngle = Math.atan2(ufo.desiredVy || ufo.vy || 0, ufo.desiredVx || ufo.vx || 1) + rand(-0.75, 0.75);
+  }
+
+  if (canOccupyWorld(ufo.worldX, nextY, radius)){
+    ufo.worldY = nextY;
+  } else {
+    bouncedY = true;
+    ufo.vy *= -0.72;
+    ufo.desiredVy *= -0.58;
+    ufo.roamAngle = Math.atan2(ufo.desiredVy || ufo.vy || 1, ufo.desiredVx || ufo.vx || 0) + rand(-0.75, 0.75);
+  }
+
+  if (bouncedX || bouncedY){
+    ufo.worldX += ufo.vx * dt * 0.35;
+    ufo.worldY += ufo.vy * dt * 0.35;
+  }
+
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+  ufo.x = ufo.worldX - camX;
+  ufo.y = ufo.worldY - camY;
   ufo.strobeT += dt;
 }
 
