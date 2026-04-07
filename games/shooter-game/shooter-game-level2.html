@@ -577,6 +577,7 @@ body.invert-colors {
 </div>
 
 <script src="/games/shooter-game/scripts/tektite-host-bridge.js"></script>
+<script src="/games/shooter-game/scripts/tektite-game-utils.js"></script>
 <script>
 /* ======================================================================
   PROJECT CHANGELOG / REMOVAL LOG
@@ -1078,15 +1079,12 @@ const PAUSE_COMMANDS = {
   "/video_fx": "Enable/disable chromatic aberration + hue shifting"
 };
 
-// v1.96: Fullscreen toggle (real browser fullscreen)
-function toggleFullscreen(){
-  try{
-    if (!document.fullscreenElement){
-      (document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : null);
-    } else {
-      (document.exitFullscreen ? document.exitFullscreen() : null);
-    }
-  }catch(e){}
+// v1.96 modularization pass 2: shared fullscreen helpers live in tektite-game-utils.js
+function requestHostFullscreen(action="toggle") {
+  return window.TektiteGameUtils.requestHostFullscreen(action);
+}
+function toggleFullscreen() {
+  return window.TektiteGameUtils.toggleFullscreen();
 }
 
 // v1.96: Help UI (lists commands in the pause suggestion panel)
@@ -1106,12 +1104,7 @@ function showHelp(){
 
 // v1.96: Resource commands: /lives, /hearts, /shields, /bombs
 function _parseCountOrInfinite(arg){
-  const a = String(arg||"").trim().toLowerCase();
-  if (!a) return null;
-  if (a === "infinite" || a === "inf" || a === "∞" || a === "forever") return { infinite:true, value: 999999 };
-  const n = parseInt(a, 10);
-  if (isNaN(n)) return null;
-  return { infinite:false, value: Math.max(0, n) };
+  return window.TektiteGameUtils.parseCountOrInfinite(arg);
 }
 
 function _applyLives(n){
@@ -1154,7 +1147,7 @@ let bgSuggestList = [];
 
 function bgPrefix(v){ return String(v||"").startsWith(BG_CMD + " "); }
 function bgTyped(v){ return bgPrefix(v) ? String(v||"").slice((BG_CMD + " ").length) : ""; }
-function norm(s){ return String(s||"").trim().toLowerCase(); }
+function norm(s){ return window.TektiteGameUtils.norm(s); }
 
 function buildBgList(typed){
   const t = norm(typed);
@@ -1576,7 +1569,7 @@ function updateTimerHUD(){
   timerHud.textContent = runTimer.toFixed(1) + "s";
 }
 
-function rand(min, max){ return min + Math.random() * (max - min); }
+function rand(min, max){ return window.TektiteGameUtils.rand(min, max); }
 
 function drawInvertedTriangle(x, y, r){
   // Upside-down equilateral triangle around (x,y)
@@ -3662,12 +3655,7 @@ window.addEventListener("contextmenu", (e) => {
 
 
 function toggleFullscreen(){
-  const elem = document.documentElement;
-  if (!document.fullscreenElement){
-    if (elem.requestFullscreen) elem.requestFullscreen();
-  } else {
-    if (document.exitFullscreen) document.exitFullscreen();
-  }
+  return window.TektiteGameUtils.toggleFullscreen();
 }
 
 window.addEventListener("keydown", (e) => {
