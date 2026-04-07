@@ -16,17 +16,21 @@
   let waitingForCommand = false;
   let nextCommandTimeoutId = null;
 
-  function getTimeKey(date = new Date()) {
+  function getSiteNow() {
+    return typeof window.getSiteNow === 'function' ? window.getSiteNow() : new Date();
+  }
+
+  function getTimeKey(date = getSiteNow()) {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
   }
 
-  function formatDisplayTime(date = new Date()) {
+  function formatDisplayTime(date = getSiteNow()) {
     return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  function getMinuteStorageKey(date = new Date()) {
+  function getMinuteStorageKey(date = getSiteNow()) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -180,7 +184,7 @@
         resetPendingSequence();
         return;
       }
-      if (getTimeKey(new Date()) !== getTimeKey(pendingTriggerDate)) {
+      if (getTimeKey(getSiteNow()) !== getTimeKey(pendingTriggerDate)) {
         resetPendingSequence();
         return;
       }
@@ -192,7 +196,7 @@
     }, RETRY_INTERVAL_MS);
   }
 
-  function queueTrigger(date = new Date()) {
+  function queueTrigger(date = getSiteNow()) {
     pendingTriggerDate = new Date(date.getTime());
     pendingCommandId = `time-easter-egg-${date.getTime()}`;
     sequenceIndex = -1;
@@ -201,7 +205,7 @@
     ensureRetryLoop();
   }
 
-  function attemptTrigger(date = new Date()) {
+  function attemptTrigger(date = getSiteNow()) {
     const storageKey = getMinuteStorageKey(date);
     if (sessionStorage.getItem(storageKey) === '1') return;
     if (pendingTriggerDate && getTimeKey(pendingTriggerDate) === getTimeKey(date)) return;
