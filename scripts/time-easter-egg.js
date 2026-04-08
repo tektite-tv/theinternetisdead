@@ -16,21 +16,30 @@
   let waitingForCommand = false;
   let nextCommandTimeoutId = null;
 
-  function getSiteNow() {
-    return typeof window.getSiteNow === 'function' ? window.getSiteNow() : new Date();
-  }
-
-  function getTimeKey(date = getSiteNow()) {
+  function getTimeKey(date = new Date()) {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
   }
 
-  function formatDisplayTime(date = getSiteNow()) {
+  function formatDisplayTime(date = new Date()) {
     return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  function getMinuteStorageKey(date = getSiteNow()) {
+  function getCurrentSiteDate() {
+    if (typeof window.getOverlayNow === 'function') {
+      try {
+        const value = window.getOverlayNow();
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+          return value;
+        }
+      } catch (error) {
+      }
+    }
+    return new Date();
+  }
+
+  function getMinuteStorageKey(date = new Date()) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -184,7 +193,7 @@
         resetPendingSequence();
         return;
       }
-      if (getTimeKey(getSiteNow()) !== getTimeKey(pendingTriggerDate)) {
+      if (getTimeKey(getCurrentSiteDate()) !== getTimeKey(pendingTriggerDate)) {
         resetPendingSequence();
         return;
       }
@@ -196,7 +205,7 @@
     }, RETRY_INTERVAL_MS);
   }
 
-  function queueTrigger(date = getSiteNow()) {
+  function queueTrigger(date = getCurrentSiteDate()) {
     pendingTriggerDate = new Date(date.getTime());
     pendingCommandId = `time-easter-egg-${date.getTime()}`;
     sequenceIndex = -1;
@@ -205,7 +214,7 @@
     ensureRetryLoop();
   }
 
-  function attemptTrigger(date = getSiteNow()) {
+  function attemptTrigger(date = getCurrentSiteDate()) {
     const storageKey = getMinuteStorageKey(date);
     if (sessionStorage.getItem(storageKey) === '1') return;
     if (pendingTriggerDate && getTimeKey(pendingTriggerDate) === getTimeKey(date)) return;

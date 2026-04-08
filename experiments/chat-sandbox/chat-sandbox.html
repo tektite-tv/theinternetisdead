@@ -4477,59 +4477,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
       };
     }
 
-    function getFilteredArgumentSuggestionMatches(info) {
-      if (!info || !Array.isArray(info.suggestions)) {
-        return [];
-      }
-      const normalizedPrefix = info.argumentText.trim().toLowerCase();
-      return info.suggestions
-        .filter((entry) => entry.toLowerCase().startsWith(normalizedPrefix))
-        .sort((a, b) => a.localeCompare(b));
-    }
-
-    function seedCommandArgumentSuggestionFromSpace() {
-      const value = chatBar.value;
-      const caret = chatBar.selectionStart ?? value.length;
-      if (caret !== value.length) {
-        return false;
-      }
-
-      const trimmedLeft = value.trimStart();
-      if (!trimmedLeft.startsWith('/')) {
-        return false;
-      }
-
-      const slashIndex = value.indexOf('/');
-      const firstSpaceAfterSlash = value.indexOf(' ', slashIndex);
-      if (firstSpaceAfterSlash === -1 || caret !== firstSpaceAfterSlash + 1) {
-        return false;
-      }
-
-      const commandToken = value.slice(slashIndex, firstSpaceAfterSlash).toLowerCase();
-      const pageCommand = getPageCommandDefinition(commandToken);
-      const suggestions = pageCommand && Array.isArray(pageCommand.suggestions) ? pageCommand.suggestions.slice() : [];
-      if (!suggestions.length) {
-        return false;
-      }
-
-      const selected = suggestions.slice().sort((a, b) => a.localeCompare(b))[0];
-      if (!selected) {
-        return false;
-      }
-
-      commandCyclePrefix = `${commandToken} `;
-      commandCycleIndex = suggestions.slice().sort((a, b) => a.localeCompare(b)).findIndex((entry) => entry === selected);
-      chatBar.value = `${value}${selected}`;
-      moveCursorToEnd();
-      return true;
-    }
-
     function cycleCommandArgumentSuggestion(direction = 1) {
       const info = getCommandArgumentSuggestionInfo();
       if (!info) return false;
 
       const normalizedPrefix = info.argumentText.trim().toLowerCase();
-      const matches = getFilteredArgumentSuggestionMatches(info);
+      const matches = info.suggestions
+        .filter((entry) => entry.toLowerCase().startsWith(normalizedPrefix))
+        .sort((a, b) => a.localeCompare(b));
 
       if (!matches.length) {
         return false;
@@ -5532,29 +5487,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       const commandInfo = getCommandTokenInfo();
 
-      if (event.key === ' ' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        const value = chatBar.value;
-        const caret = chatBar.selectionStart ?? value.length;
-        const tokenInfo = getCommandTokenInfo();
-        const shouldSeedArgumentSuggestion = !!(
-          tokenInfo &&
-          caret === value.length &&
-          tokenInfo.tokenEnd === value.length &&
-          value.trimStart().startsWith('/')
-        );
-
-        if (shouldSeedArgumentSuggestion) {
-          event.preventDefault();
-          chatBar.value = `${value} `;
-          moveCursorToEnd();
-          if (!seedCommandArgumentSuggestionFromSpace()) {
-            resetCommandCycle();
-          }
-          updateChatBarVisualState();
-          return;
-        }
-      }
-
       if (event.key === 'Tab') {
         if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
           event.preventDefault();
@@ -5565,6 +5497,18 @@ function createHomepageCustomizeMessageNode(result = {}) {
           cycleCommandSuggestion(event.shiftKey ? -1 : 1);
         }
         return;
+      }
+
+      if (event.key === ' ') {
+        const pageCommand = commandInfo ? getPageCommandDefinition(commandInfo.command.toLowerCase()) : null;
+        const hasSeedSuggestions = !!(pageCommand && Array.isArray(pageCommand.suggestions) && pageCommand.suggestions.length);
+        const isCommandOnly = !!(commandInfo && chatBar.value.trim() === commandInfo.command);
+        if (hasSeedSuggestions && isCommandOnly) {
+          event.preventDefault();
+          chatBar.value = `${commandInfo.command} ${pageCommand.suggestions[0]}`;
+          moveCursorToEnd();
+          return;
+        }
       }
 
       if (event.key === 'ArrowUp') {

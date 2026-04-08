@@ -114,204 +114,68 @@ async function loadOverlay(){
 }
 
 const frame = document.getElementById("chat-sandbox-frame");
-
-const DEFAULT_CLOCK_ZONE = "America/Toronto";
-const getSupportedClockZones = (() => {
-    let cache = null;
-    return () => {
-        if (Array.isArray(cache) && cache.length) return cache.slice();
-        const zones = typeof Intl.supportedValuesOf === "function"
-            ? Intl.supportedValuesOf("timeZone")
-            : [DEFAULT_CLOCK_ZONE, "UTC"];
-        cache = Array.from(new Set([DEFAULT_CLOCK_ZONE, ...zones])).sort((a, b) => a.localeCompare(b));
-        return cache.slice();
-    };
-})();
-
-function sanitizeClockZone(zone){
-    const safeZone = typeof zone === "string" ? zone.trim() : "";
-    return getSupportedClockZones().includes(safeZone) ? safeZone : DEFAULT_CLOCK_ZONE;
-}
-
+const defaultClockZone = "America/Toronto";
+const supportedClockZones = (typeof Intl.supportedValuesOf === "function"
+    ? Intl.supportedValuesOf("timeZone")
+    : [defaultClockZone, "UTC"]);
+const allClockZones = Array.from(new Set([defaultClockZone, ...supportedClockZones])).sort((a, b) => a.localeCompare(b));
 let overlayClockState = {
     mode: "time",
-    zone: DEFAULT_CLOCK_ZONE,
+    zone: defaultClockZone,
     manualTime: "",
     manualDate: ""
 };
 
-let siteClockState = {
-    zone: DEFAULT_CLOCK_ZONE,
-    overrideTimestampMs: null,
-    overrideStartedRealMs: null
-};
-
-function getTimeZoneFormatter(zone){
-    const safeZone = sanitizeClockZone(zone);
-    window.__siteClockFormatters = window.__siteClockFormatters || {};
-    if (!window.__siteClockFormatters[safeZone]) {
-        window.__siteClockFormatters[safeZone] = new Intl.DateTimeFormat("en-CA", {
-            timeZone: safeZone,
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hourCycle: "h23"
-        });
-    }
-    return window.__siteClockFormatters[safeZone];
+function getChatWindow(){
+    return frame && frame.contentWindow ? frame.contentWindow : null;
 }
 
-function getTimeZoneParts(date = new Date(), zone = DEFAULT_CLOCK_ZONE){
-    const parts = getTimeZoneFormatter(zone).formatToParts(date instanceof Date ? date : new Date(date));
-    const read = (type) => Number(parts.find((part) => part.type === type)?.value || 0);
-    return {
-        year: read("year"),
-        month: read("month"),
-        day: read("day"),
-        hour: read("hour"),
-        minute: read("minute"),
-        second: read("second")
+function postToChatSandbox(message){
+    const chatWindow = getChatWindow();
+    if (!chatWindow) return;
+    chatWindow.postMessage(message, "*");
+}
+
+function sanitizeClockZone(zone){
+    const safeZone = typeof zone === "string" ? zone.trim() : "";
+    return allClockZones.includes(safeZone) ? safeZone : defaultClockZone;
+}
+
+function syncOverlayClockState(){
+    const snapshot = {
+        mode: overlayClockState.mode === "date" ? "date" : "time",
+        zone: sanitizeClockZone(overlayClockState.zone),
+        manualTime: typeof overlayClockState.manualTime === "string" ? overlayClockState.manualTime.trim() : "",
+        manualDate: typeof overlayClockState.manualDate === "string" ? overlayClockState.manualDate.trim() : ""
     };
-}
-
-function getTimeZoneOffsetMs(date = new Date(), zone = DEFAULT_CLOCK_ZONE){
-    const parts = getTimeZoneParts(date, zone);
-    return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second, 0) - date.getTime();
-}
-
-function zonedDateTimeToUtc(parts = {}, zone = DEFAULT_CLOCK_ZONE){
-    let guess = Date.UTC(parts.year || 1970, (parts.month || 1) - 1, parts.day || 1, parts.hour || 0, parts.minute || 0, parts.second || 0, 0);
-    for(let i = 0; i < 4; i += 1){
-        const offset = getTimeZoneOffsetMs(new Date(guess), zone);
-        const nextGuess = Date.UTC(parts.year || 1970, (parts.month || 1) - 1, parts.day || 1, parts.hour || 0, parts.minute || 0, parts.second || 0, 0) - offset;
-        if(Math.abs(nextGuess - guess) < 1000){
-            guess = nextGuess;
-            break;
-        }
-        guess = nextGuess;
+    overlayClockState = snapshot;
+    if (typeof window.setOverlayClockState === "function") {
+        window.setOverlayClockState(snapshot);
+    } else {
+        window.__overlayClockState = { ...(window.__overlayClockState || {}), ...snapshot };
     }
-    return guess;
 }
 
-function parseClockTimeInput(input = ""){
-    const normalized = String(input || "").trim().toLowerCase();
-    const match = normalized.match(/^(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?\s*([ap]m)?$/i);
-    if(!match) return null;
-    let hour = Number(match[1]);
-    const minute = Number(match[2] || "0");
-    const second = Number(match[3] || "0");
-    const meridiem = match[4] || "";
-    if(minute > 59 || second > 59) return null;
-    if(meridiem){
-        if(hour < 1 || hour > 12) return null;
-        if(meridiem === "am"){
-            if(hour === 12) hour = 0;
-        }else if(hour !== 12){
-            hour += 12;
-        }
-    }else if(hour > 23){
-        return null;
-    }
-    return { hour, minute, second };
+function setOverlayClockStateFromPage(nextState = {}){
+    overlayClockState = { ...overlayClockState, ...(nextState && typeof nextState === "object" ? nextState : {}) };
+    syncOverlayClockState();
 }
 
-function parseClockDateInput(input = ""){
-    const normalized = String(input || "").trim().replace(/\//g, " ");
-    if(!normalized) return null;
-    const parsed = new Date(normalized);
-    if(Number.isNaN(parsed.getTime())) return null;
-    return {
-        year: parsed.getFullYear(),
-        month: parsed.getMonth() + 1,
-        day: parsed.getDate()
-    };
+function registerPageCommands(){
+    postToChatSandbox({
+        type: "pageChatRegister",
+        pageOnly: false,
+        pageId: "chat-sandbox-overlay",
+        title: "Chat Sandbox",
+        sourceKey: "chat-sandbox-overlay",
+        commands: [
+            { name: "/clock_time", usage: "/clock_time ", desc: "set the overlay clock to a manual time string", execute: false },
+            { name: "/clock_date", usage: "/clock_date ", desc: "set the overlay clock to a manual date string", execute: false },
+            { name: "/clock_reset", usage: "/clock_reset", desc: "reset the overlay clock to live Toronto time", execute: true },
+            { name: "/clock_zone", usage: "/clock_zone ", desc: "sync the overlay clock to a named timezone", execute: false, suggestions: allClockZones }
+        ]
+    });
 }
-
-function getSiteClockState(){
-    return {
-        zone: sanitizeClockZone(siteClockState.zone),
-        overrideTimestampMs: Number.isFinite(siteClockState.overrideTimestampMs) ? siteClockState.overrideTimestampMs : null,
-        overrideStartedRealMs: Number.isFinite(siteClockState.overrideStartedRealMs) ? siteClockState.overrideStartedRealMs : null
-    };
-}
-
-function setSiteClockState(nextState = {}){
-    const current = getSiteClockState();
-    siteClockState = {
-        zone: sanitizeClockZone(nextState.zone !== undefined ? nextState.zone : current.zone),
-        overrideTimestampMs: nextState.overrideTimestampMs === null ? null : (Number.isFinite(nextState.overrideTimestampMs) ? Number(nextState.overrideTimestampMs) : current.overrideTimestampMs),
-        overrideStartedRealMs: nextState.overrideStartedRealMs === null ? null : (Number.isFinite(nextState.overrideStartedRealMs) ? Number(nextState.overrideStartedRealMs) : current.overrideStartedRealMs)
-    };
-    window.__siteClockState = { ...getSiteClockState() };
-    return getSiteClockState();
-}
-
-function getSiteNow(){
-    const state = getSiteClockState();
-    if(state.overrideTimestampMs !== null && state.overrideStartedRealMs !== null){
-        return new Date(state.overrideTimestampMs + (Date.now() - state.overrideStartedRealMs));
-    }
-    return new Date();
-}
-
-function getSiteNowParts(zone = sanitizeClockZone(siteClockState.zone)){
-    return getTimeZoneParts(getSiteNow(), zone);
-}
-
-function setOverlayClockState(nextState = {}){
-    overlayClockState = {
-        ...overlayClockState,
-        ...(nextState && typeof nextState === "object" ? nextState : {})
-    };
-    overlayClockState.mode = overlayClockState.mode === "date" ? "date" : "time";
-    overlayClockState.zone = sanitizeClockZone(overlayClockState.zone);
-    overlayClockState.manualTime = typeof overlayClockState.manualTime === "string" ? overlayClockState.manualTime.trim() : "";
-    overlayClockState.manualDate = typeof overlayClockState.manualDate === "string" ? overlayClockState.manualDate.trim() : "";
-    setSiteClockState({ zone: overlayClockState.zone });
-    if(typeof window.setOverlayClockState === "function"){
-        window.setOverlayClockState(overlayClockState);
-    }else{
-        window.__overlayClockState = { ...overlayClockState };
-    }
-    return { ...overlayClockState };
-}
-
-function setSiteTimeFromInput(input = "", zone = sanitizeClockZone(siteClockState.zone)){
-    const parsed = parseClockTimeInput(input);
-    if(!parsed) return null;
-    const currentParts = getSiteNowParts(zone);
-    const timestamp = zonedDateTimeToUtc({
-        year: currentParts.year,
-        month: currentParts.month,
-        day: currentParts.day,
-        hour: parsed.hour,
-        minute: parsed.minute,
-        second: parsed.second
-    }, zone);
-    return setSiteClockState({ zone, overrideTimestampMs: timestamp, overrideStartedRealMs: Date.now() });
-}
-
-function setSiteDateFromInput(input = "", zone = sanitizeClockZone(siteClockState.zone)){
-    const parsed = parseClockDateInput(input);
-    if(!parsed) return null;
-    const currentParts = getSiteNowParts(zone);
-    const timestamp = zonedDateTimeToUtc({
-        year: parsed.year,
-        month: parsed.month,
-        day: parsed.day,
-        hour: currentParts.hour,
-        minute: currentParts.minute,
-        second: currentParts.second
-    }, zone);
-    return setSiteClockState({ zone, overrideTimestampMs: timestamp, overrideStartedRealMs: Date.now() });
-}
-
-window.getSiteNow = getSiteNow;
-window.getSiteClockState = getSiteClockState;
-window.setSiteClockState = setSiteClockState;
 
 function syncLayout(){
     const overlayContainer = document.getElementById("overlay-container");
@@ -325,113 +189,61 @@ window.syncOverlayLayout = syncLayout;
 loadOverlay();
 
 
-function postToChatSandbox(message = {}){
-    if(frame && frame.contentWindow){
-        frame.contentWindow.postMessage(message, "*");
-    }
-}
-
-function registerPageCommands(){
-    postToChatSandbox({
-        type: "pageChatRegister",
-        pageOnly: false,
-        pageId: "experiment-chat-sandbox",
-        title: "Chat Sandbox",
-        sourceKey: "experiment-chat-sandbox",
-        commands: [
-            {
-                name: "/clock_time",
-                usage: "/clock_time ",
-                desc: "set the overlay clock to a starting time that keeps running",
-                execute: false
-            },
-            {
-                name: "/clock_date",
-                usage: "/clock_date ",
-                desc: "set the overlay clock to a starting date that keeps running",
-                execute: false
-            },
-            {
-                name: "/clock_reset",
-                usage: "/clock_reset",
-                desc: "reset the overlay clock to live Toronto time",
-                execute: true
-            },
-            {
-                name: "/clock_zone",
-                usage: "/clock_zone ",
-                desc: "sync the overlay clock to a named timezone",
-                execute: false,
-                suggestions: getSupportedClockZones()
-            }
-        ]
-    });
-}
-
 window.addEventListener("message", (event) => {
-    if(!event.data) return;
+    if (!event.data) return;
 
-    if(event.data.type === "chatSandboxReady" || event.data.type === "chatSandboxState" || event.data.type === "chatSandboxDvdState"){
-        registerPageCommands();
-        return;
-    }
-
-    if(event.data.type !== "pageChatExecute") return;
-
-    const commandName = String(event.data.command || "").toLowerCase();
-    const rawCommand = typeof event.data.raw === "string" ? event.data.raw.trim() : "";
-    const commandValue = rawCommand ? rawCommand.slice(commandName.length).trim() : "";
-
-    if(commandName === "/clock_time"){
-        if(!commandValue){
-            postToChatSandbox({ type: "pageChatResult", command: "/clock_time", message: "Usage: /clock_time [time]", announce: true });
+    if (event.source === getChatWindow()) {
+        if (event.data.type === "chatSandboxState") {
+            registerPageCommands();
             return;
         }
-        const result = setSiteTimeFromInput(commandValue, sanitizeClockZone(overlayClockState.zone));
-        if(!result){
-            postToChatSandbox({ type: "pageChatResult", command: "/clock_time", message: "Invalid time. Use h:mm, h:mm:ss, or add am/pm.", announce: true });
-            return;
-        }
-        setOverlayClockState({ mode: "time", manualTime: "", manualDate: "" });
-        postToChatSandbox({ type: "pageChatResult", command: "/clock_time", message: `/clock_time executed: ${commandValue}`, announce: true });
-        return;
-    }
 
-    if(commandName === "/clock_date"){
-        if(!commandValue){
-            postToChatSandbox({ type: "pageChatResult", command: "/clock_date", message: "Usage: /clock_date [date]", announce: true });
-            return;
-        }
-        const result = setSiteDateFromInput(commandValue, sanitizeClockZone(overlayClockState.zone));
-        if(!result){
-            postToChatSandbox({ type: "pageChatResult", command: "/clock_date", message: "Invalid date. Try YYYY-MM-DD or a readable month/day/year.", announce: true });
-            return;
-        }
-        setOverlayClockState({ mode: "date", manualTime: "", manualDate: "" });
-        postToChatSandbox({ type: "pageChatResult", command: "/clock_date", message: `/clock_date executed: ${commandValue}`, announce: true });
-        return;
-    }
+        if (event.data.type === "pageChatExecute") {
+            const commandName = String(event.data.command || "").toLowerCase();
+            const rawCommand = typeof event.data.raw === "string" ? event.data.raw.trim() : "";
+            const commandValue = rawCommand ? rawCommand.slice(commandName.length).trim() : "";
 
-    if(commandName === "/clock_reset"){
-        setSiteClockState({ zone: DEFAULT_CLOCK_ZONE, overrideTimestampMs: null, overrideStartedRealMs: null });
-        setOverlayClockState({ mode: "time", zone: DEFAULT_CLOCK_ZONE, manualTime: "", manualDate: "" });
-        postToChatSandbox({ type: "pageChatResult", command: "/clock_reset", message: "/clock_reset executed: synced to America/Toronto", announce: true });
-        return;
-    }
+            if (commandName === "/clock_time") {
+                if (!commandValue) {
+                    postToChatSandbox({ type: "pageChatResult", command: "/clock_time", message: "Usage: /clock_time [time]", announce: true });
+                    return;
+                }
+                setOverlayClockStateFromPage({ mode: "time", manualTime: commandValue });
+                postToChatSandbox({ type: "pageChatResult", command: "/clock_time", message: `/clock_time executed: ${commandValue}`, announce: true });
+                return;
+            }
 
-    if(commandName === "/clock_zone"){
-        if(!commandValue){
-            postToChatSandbox({ type: "pageChatResult", command: "/clock_zone", message: "Usage: /clock_zone [timezone]", announce: true });
-            return;
+            if (commandName === "/clock_date") {
+                if (!commandValue) {
+                    postToChatSandbox({ type: "pageChatResult", command: "/clock_date", message: "Usage: /clock_date [date]", announce: true });
+                    return;
+                }
+                setOverlayClockStateFromPage({ mode: "date", manualDate: commandValue });
+                postToChatSandbox({ type: "pageChatResult", command: "/clock_date", message: `/clock_date executed: ${commandValue}`, announce: true });
+                return;
+            }
+
+            if (commandName === "/clock_reset") {
+                setOverlayClockStateFromPage({ mode: "time", zone: defaultClockZone, manualTime: "", manualDate: "" });
+                postToChatSandbox({ type: "pageChatResult", command: "/clock_reset", message: "/clock_reset executed: synced to America/Toronto", announce: true });
+                return;
+            }
+
+            if (commandName === "/clock_zone") {
+                if (!commandValue) {
+                    postToChatSandbox({ type: "pageChatResult", command: "/clock_zone", message: "Usage: /clock_zone [timezone]", announce: true });
+                    return;
+                }
+                const nextZone = sanitizeClockZone(commandValue);
+                if (nextZone !== commandValue.trim()) {
+                    postToChatSandbox({ type: "pageChatResult", command: "/clock_zone", message: `Unknown timezone: ${commandValue}`, announce: true });
+                    return;
+                }
+                setOverlayClockStateFromPage({ zone: nextZone, manualTime: "", manualDate: "" });
+                postToChatSandbox({ type: "pageChatResult", command: "/clock_zone", message: `/clock_zone executed: synced to ${nextZone}`, announce: true });
+                return;
+            }
         }
-        const nextZone = sanitizeClockZone(commandValue);
-        if(nextZone !== commandValue.trim()){
-            postToChatSandbox({ type: "pageChatResult", command: "/clock_zone", message: `Unknown timezone: ${commandValue}`, announce: true });
-            return;
-        }
-        setSiteClockState({ zone: nextZone });
-        setOverlayClockState({ zone: nextZone, manualTime: "", manualDate: "" });
-        postToChatSandbox({ type: "pageChatResult", command: "/clock_zone", message: `/clock_zone executed: synced to ${nextZone}`, announce: true });
     }
 });
 
