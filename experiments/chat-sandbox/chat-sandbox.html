@@ -646,6 +646,50 @@
       padding: 0;
     }
 
+    #chatInputStack {
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+    #chatGhost {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+      white-space: pre;
+      overflow: hidden;
+      font-family: "Courier New", Courier, monospace;
+      font-size: calc(22px * var(--font-scale));
+      font-weight: 900;
+      font-synthesis-weight: none;
+      padding: 0;
+      color: rgba(255, 255, 255, 0.28);
+      -webkit-text-fill-color: rgba(255, 255, 255, 0.28);
+      opacity: 0;
+      transition: opacity 80ms linear;
+    }
+
+    #chatGhost.visible {
+      opacity: 1;
+    }
+
+    #chatGhost .ghostTyped {
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      user-select: none;
+    }
+
+    #chatGhost .ghostCompletion {
+      color: rgba(255, 255, 255, 0.28);
+      -webkit-text-fill-color: rgba(255, 255, 255, 0.28);
+      user-select: none;
+    }
+
     #chatBar {
       width: 100%;
       background: transparent;
@@ -664,6 +708,8 @@
       min-width: 0;
       caret-color: transparent;
       cursor: default;
+      position: relative;
+      z-index: 1;
     }
 
     #chatBar,
@@ -1384,19 +1430,23 @@
 
   <div id="chatBarWrap">
     <div id="chatPrompt">&gt;</div>
-    <input
-      id="chatBar"
-      type="text"
-      placeholder="Press here to chat or / for commands..."
-      autocomplete="off"
-      spellcheck="false"
-    />
+    <div id="chatInputStack">
+      <div id="chatGhost" aria-hidden="true"><span class="ghostTyped"></span><span class="ghostCompletion"></span></div>
+      <input
+        id="chatBar"
+        type="text"
+        placeholder="Press here to chat or / for commands..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </div>
     <button id="chatClose" type="button" aria-label="Close chat">x</button>
   </div>
 
   <script>
 const focusSink = document.getElementById('focusSink');
     const chatBar = document.getElementById('chatBar');
+    const chatGhost = document.getElementById('chatGhost');
     const messages = document.getElementById('messages');
     const messagesWrap = document.getElementById('messagesWrap');
     const chatBarWrap = document.getElementById('chatBarWrap');
@@ -1763,6 +1813,7 @@ const focusSink = document.getElementById('focusSink');
       chatBar.classList.toggle('commandMode', commandMode);
       chatPrompt.classList.toggle('commandMode', commandMode);
       chatBarWrap.classList.toggle('commandMode', commandMode);
+      updateInlineAutocompleteGhost();
     }
 
     function updateChatBarState() {
@@ -4407,6 +4458,128 @@ function createHomepageCustomizeMessageNode(result = {}) {
         .sort((a, b) => a.localeCompare(b));
     }
 
+
+    function getBuiltInCommandDefinition(command) {
+      const normalized = String(command || '').trim().toLowerCase();
+      return builtInCommands.find((entry) => entry.name === normalized) || null;
+    }
+
+    function getUnifiedCommandDefinition(command) {
+      return getPageCommandDefinition(command) || getBuiltInCommandDefinition(command);
+    }
+
+    function getCurrentCommandCycleSelection(matches, prefix) {
+      if (!Array.isArray(matches) || !matches.length) return '';
+      if (commandCycleIndex === -1) return matches[0];
+      if (!commandCyclePrefix || commandCyclePrefix.toLowerCase() !== String(prefix || '').toLowerCase()) {
+        return matches[0];
+      }
+      const safeIndex = Math.max(0, Math.min(matches.length - 1, commandCycleIndex));
+      return matches[safeIndex] || matches[0];
+    }
+
+    function getInlineAutocompleteState() {
+      const value = chatBar.value;
+      const caret = chatBar.selectionStart ?? value.length;
+      const selectionEnd = chatBar.selectionEnd ?? caret;
+      if (caret !== selectionEnd || caret !== value.length) {
+        return null;
+      }
+
+      const commandInfo = getCommandTokenInfo();
+      if (commandInfo) {
+        const token = commandInfo.token || '/';
+        const matches = getMatchingCommands(token || '/');
+        if (matches.length) {
+          const selected = getCurrentCommandCycleSelection(matches, commandCyclePrefix || token || '/');
+          if (selected && selected.toLowerCase() !== token.toLowerCase()) {
+            return {
+              typedText: value,
+              completionText: selected.slice(token.length),
+              replacementStart: commandInfo.slashIndex,
+              replacementEnd: commandInfo.tokenEnd,
+              acceptedValue: selected,
+              kind: 'command'
+            };
+          }
+        }
+
+        const definition = getUnifiedCommandDefinition(token);
+        const usageValue = definition ? String(definition.usage || definition.value || definition.name || '') : '';
+        if (definition && usageValue.toLowerCase().startsWith(token.toLowerCase()) && usageValue.length > token.length) {
+          const completionText = usageValue.slice(token.length);
+          if (completionText) {
+            return {
+              typedText: value,
+              completionText,
+              replacementStart: commandInfo.slashIndex,
+              replacementEnd: commandInfo.tokenEnd,
+              acceptedValue: usageValue,
+              kind: 'commandSyntax'
+            };
+          }
+        }
+        return null;
+      }
+
+      const argumentInfo = getCommandArgumentSuggestionInfo();
+      if (!argumentInfo) {
+        return null;
+      }
+
+      const normalizedPrefix = argumentInfo.argumentText.trim().toLowerCase();
+      const matches = argumentInfo.suggestions
+        .filter((entry) => entry.toLowerCase().startsWith(normalizedPrefix))
+        .sort((a, b) => a.localeCompare(b));
+      if (!matches.length) {
+        return null;
+      }
+
+      const selected = getCurrentCommandCycleSelection(matches, `${argumentInfo.commandToken} ${argumentInfo.argumentText}`);
+      if (!selected) {
+        return null;
+      }
+
+      const completionText = selected.slice(argumentInfo.argumentText.length);
+      if (!completionText) {
+        return null;
+      }
+
+      return {
+        typedText: value,
+        completionText,
+        replacementStart: argumentInfo.argumentStart,
+        replacementEnd: argumentInfo.argumentEnd,
+        acceptedValue: selected,
+        kind: 'argument'
+      };
+    }
+
+    function applyInlineAutocomplete(state) {
+      if (!state || !state.completionText) return false;
+      const value = chatBar.value;
+      chatBar.value = `${value.slice(0, state.replacementStart)}${state.acceptedValue}${value.slice(state.replacementEnd)}`;
+      moveCursorToEnd();
+      updateChatBarVisualState();
+      return true;
+    }
+
+    function updateInlineAutocompleteGhost() {
+      if (!chatGhost) return;
+      const state = getInlineAutocompleteState();
+      const typedSpan = chatGhost.querySelector('.ghostTyped');
+      const completionSpan = chatGhost.querySelector('.ghostCompletion');
+      if (!typedSpan || !completionSpan || !state || !state.completionText || !chatInputArmed) {
+        if (typedSpan) typedSpan.textContent = '';
+        if (completionSpan) completionSpan.textContent = '';
+        chatGhost.classList.remove('visible');
+        return;
+      }
+      typedSpan.textContent = state.typedText;
+      completionSpan.textContent = state.completionText;
+      chatGhost.classList.add('visible');
+    }
+
     function cycleCommandSuggestion(direction = 1) {
       const info = getCommandTokenInfo();
       if (!info) return false;
@@ -5451,6 +5624,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     renderCommandHueShiftFrame();
     updateChatBarState();
+    updateInlineAutocompleteGhost();
 
     chatBar.addEventListener('input', () => {
       if (historyIndex !== -1) {
@@ -5458,14 +5632,17 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
       updateChatBarVisualState();
       resetCommandCycle();
+      updateInlineAutocompleteGhost();
     });
 
     chatBar.addEventListener('keyup', () => {
       updateChatBarVisualState();
+      updateInlineAutocompleteGhost();
     });
 
     chatBar.addEventListener('focus', () => {
       updateChatBarVisualState();
+      updateInlineAutocompleteGhost();
     });
 
     chatBar.addEventListener('keydown', (event) => {
@@ -5487,30 +5664,22 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       const commandInfo = getCommandTokenInfo();
 
-      if (event.key === ' ' && commandInfo) {
-        const valueBeforeSpace = chatBar.value;
-        const caretBeforeSpace = chatBar.selectionStart ?? valueBeforeSpace.length;
-        const firstSpaceAfterSlash = valueBeforeSpace.indexOf(' ', commandInfo.slashIndex);
-        const commandToken = valueBeforeSpace.slice(commandInfo.slashIndex, firstSpaceAfterSlash === -1 ? valueBeforeSpace.length : firstSpaceAfterSlash).toLowerCase();
-        const pageCommand = getPageCommandDefinition(commandToken);
-        if (pageCommand && Array.isArray(pageCommand.suggestions) && pageCommand.suggestions.length && firstSpaceAfterSlash === -1 && caretBeforeSpace >= commandInfo.tokenEnd) {
-          event.preventDefault();
-          chatBar.value = `${valueBeforeSpace.slice(0, commandInfo.tokenEnd)} `;
-          moveCursorToEnd();
-          resetCommandCycle();
-          cycleCommandArgumentSuggestion(1);
-          return;
-        }
-      }
-
       if (event.key === 'Tab') {
+        event.preventDefault();
+        if (!event.shiftKey) {
+          const inlineState = getInlineAutocompleteState();
+          if (applyInlineAutocomplete(inlineState)) {
+            resetCommandCycle();
+            return;
+          }
+        }
         if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
-          event.preventDefault();
+          updateInlineAutocompleteGhost();
           return;
         }
         if (commandInfo) {
-          event.preventDefault();
           cycleCommandSuggestion(event.shiftKey ? -1 : 1);
+          updateInlineAutocompleteGhost();
         }
         return;
       }
@@ -5519,6 +5688,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         if (commandInfo) {
           event.preventDefault();
           cycleCommandSuggestion(-1);
+          updateInlineAutocompleteGhost();
         } else {
           event.preventDefault();
           recallOlderHistory();
@@ -5530,6 +5700,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         if (commandInfo) {
           event.preventDefault();
           cycleCommandSuggestion(1);
+          updateInlineAutocompleteGhost();
         } else {
           event.preventDefault();
           recallNewerHistory();
