@@ -5487,6 +5487,22 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       const commandInfo = getCommandTokenInfo();
 
+      if (event.key === ' ' && commandInfo) {
+        const valueBeforeSpace = chatBar.value;
+        const caretBeforeSpace = chatBar.selectionStart ?? valueBeforeSpace.length;
+        const firstSpaceAfterSlash = valueBeforeSpace.indexOf(' ', commandInfo.slashIndex);
+        const commandToken = valueBeforeSpace.slice(commandInfo.slashIndex, firstSpaceAfterSlash === -1 ? valueBeforeSpace.length : firstSpaceAfterSlash).toLowerCase();
+        const pageCommand = getPageCommandDefinition(commandToken);
+        if (pageCommand && Array.isArray(pageCommand.suggestions) && pageCommand.suggestions.length && firstSpaceAfterSlash === -1 && caretBeforeSpace >= commandInfo.tokenEnd) {
+          event.preventDefault();
+          chatBar.value = `${valueBeforeSpace.slice(0, commandInfo.tokenEnd)} `;
+          moveCursorToEnd();
+          resetCommandCycle();
+          cycleCommandArgumentSuggestion(1);
+          return;
+        }
+      }
+
       if (event.key === 'Tab') {
         if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
           event.preventDefault();
@@ -5497,18 +5513,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
           cycleCommandSuggestion(event.shiftKey ? -1 : 1);
         }
         return;
-      }
-
-      if (event.key === ' ') {
-        const pageCommand = commandInfo ? getPageCommandDefinition(commandInfo.command.toLowerCase()) : null;
-        const hasSeedSuggestions = !!(pageCommand && Array.isArray(pageCommand.suggestions) && pageCommand.suggestions.length);
-        const isCommandOnly = !!(commandInfo && chatBar.value.trim() === commandInfo.command);
-        if (hasSeedSuggestions && isCommandOnly) {
-          event.preventDefault();
-          chatBar.value = `${commandInfo.command} ${pageCommand.suggestions[0]}`;
-          moveCursorToEnd();
-          return;
-        }
       }
 
       if (event.key === 'ArrowUp') {

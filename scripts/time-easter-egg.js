@@ -1,5 +1,5 @@
 (function () {
-  const TARGET_PATHS = new Set(['/', '/index.html']);
+  const TARGET_PATHS = new Set(['/', '/index.html', '/experiments/chat-sandbox/index.html']);
   if (!TARGET_PATHS.has(window.location.pathname)) return;
 
   const TARGET_TIMES = new Set(['04:20', '07:10', '16:20', '19:10']);
@@ -16,30 +16,31 @@
   let waitingForCommand = false;
   let nextCommandTimeoutId = null;
 
-  function getTimeKey(date = new Date()) {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-  }
-
-  function formatDisplayTime(date = new Date()) {
-    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  }
-
   function getCurrentSiteDate() {
-    if (typeof window.getOverlayNow === 'function') {
+    if (typeof window.getSiteNow === 'function') {
       try {
-        const value = window.getOverlayNow();
-        if (value instanceof Date && !Number.isNaN(value.getTime())) {
-          return value;
+        const simulated = window.getSiteNow();
+        if (simulated instanceof Date && !Number.isNaN(simulated.getTime())) {
+          return simulated;
         }
       } catch (error) {
+        console.warn('Unable to read site clock for easter egg', error);
       }
     }
     return new Date();
   }
 
-  function getMinuteStorageKey(date = new Date()) {
+  function getTimeKey(date = getCurrentSiteDate()) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+  function formatDisplayTime(date = getCurrentSiteDate()) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function getMinuteStorageKey(date = getCurrentSiteDate()) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -255,10 +256,16 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       attemptTrigger();
-      window.setInterval(attemptTrigger, CHECK_INTERVAL_MS);
+      window.setInterval(() => attemptTrigger(getCurrentSiteDate()), CHECK_INTERVAL_MS);
+      window.addEventListener('siteclockchange', (event) => {
+        attemptTrigger(event.detail instanceof Date ? event.detail : getCurrentSiteDate());
+      });
     }, { once: true });
   } else {
     attemptTrigger();
-    window.setInterval(attemptTrigger, CHECK_INTERVAL_MS);
+    window.setInterval(() => attemptTrigger(getCurrentSiteDate()), CHECK_INTERVAL_MS);
+    window.addEventListener('siteclockchange', (event) => {
+      attemptTrigger(event.detail instanceof Date ? event.detail : getCurrentSiteDate());
+    });
   }
 })();

@@ -636,7 +636,21 @@ html, body {
   window.getOverlayClockState = getOverlayClockState;
   window.setOverlayClockState = setOverlayClockState;
 
-  function formatOverlayDate(now = new Date(), timeZone = DEFAULT_OVERLAY_CLOCK_STATE.zone) {
+  function getOverlayNow() {
+    if (typeof window.getSiteNow === 'function') {
+      try {
+        const simulated = window.getSiteNow();
+        if (simulated instanceof Date && !Number.isNaN(simulated.getTime())) {
+          return simulated;
+        }
+      } catch (error) {
+        console.warn('Unable to read site clock', error);
+      }
+    }
+    return new Date();
+  }
+
+  function formatOverlayDate(now = getOverlayNow(), timeZone = DEFAULT_OVERLAY_CLOCK_STATE.zone) {
     const weekday = new Intl.DateTimeFormat('en-CA', {
       timeZone,
       weekday: 'long'
@@ -685,10 +699,9 @@ html, body {
     const timeEl = el.querySelector('.clock-time');
     const periodEl = el.querySelector('.clock-period');
     const state = getOverlayClockState();
-    const siteNow = typeof window.getSiteNow === 'function' ? window.getSiteNow() : new Date();
 
     if (state.mode === 'date') {
-      const dateText = formatOverlayDate(siteNow, state.zone);
+      const dateText = state.manualDate || formatOverlayDate(getOverlayNow(), state.zone);
       if (timeEl) timeEl.textContent = dateText;
       if (periodEl) periodEl.textContent = '';
       el.setAttribute('aria-label', `Toggle ${state.zone} time and date`);
@@ -696,13 +709,22 @@ html, body {
       return;
     }
 
+    if (state.manualTime) {
+      if (timeEl) timeEl.textContent = state.manualTime;
+      if (periodEl) periodEl.textContent = '';
+      el.setAttribute('aria-label', `Toggle ${state.zone} time and date`);
+      fitClockTextToContainer(el);
+      return;
+    }
+
+    const now = getOverlayNow();
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: state.zone,
       hour: 'numeric',
       minute: '2-digit',
       second: '2-digit',
       hour12: true
-    }).formatToParts(siteNow);
+    }).formatToParts(now);
 
     const timeText = parts
       .filter((part) => part.type !== 'dayPeriod')
