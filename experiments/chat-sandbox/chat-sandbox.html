@@ -1566,17 +1566,17 @@ const focusSink = document.getElementById('focusSink');
       { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
       { name: '/dvd', value: '/dvd', execute: true, desc: 'show only the DVD commands' },
       { name: '/dvd_spawn', value: '/dvd_spawn', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total' },
-      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd_spawn swarm, including future spawns and infinite mode' },
-      { name: '/dvd_logo', value: '/dvd_logo', execute: true, desc: 'alias for /dvd_image' },
+      { name: '/dvd_image', value: '/dvd_image "https://example.com/image.png, https://example.com/another-image.png"', usage: '/dvd_image "https://example.com/image.png, https://example.com/another-image.png"', execute: true, desc: 'upload one or more images and apply them to the entire /dvd_spawn swarm, including future spawns and infinite mode', suggestions: ['"https://example.com/image.png"', '"https://example.com/image.png, https://example.com/another-image.png"'] },
+      { name: '/dvd_logo', value: '/dvd_logo "https://example.com/image.png"', usage: '/dvd_logo "https://example.com/image.png"', execute: true, desc: 'alias for /dvd_image', suggestions: ['"https://example.com/image.png"'] },
       { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm' },
       { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode' },
       { name: '/dvd_slideshow', value: '/dvd_slideshow', execute: true, desc: 'spawn every GIF from /media/images/gifs as its own bouncing slideshow swarm' },
       { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
       { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
-      { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview' },
+      { name: '/iframe', value: '/iframe https://example.com/', usage: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview', suggestions: ['https://example.com/'] },
       { name: '/script_load', value: '/script_load', execute: true, desc: 'choose a .txt file and send each line into chat every 0.33 seconds' },
       { name: '/settings_load', value: '/settings_load', execute: true, desc: 'choose a settings.json file and load saved settings' },
-      { name: '/nickname', value: '/nickname ', execute: false, desc: 'set the displayed username used by system messages' },
+      { name: '/nickname', value: '/nickname User', usage: '/nickname User', execute: false, desc: 'set the displayed username used by system messages', suggestions: ['User'] },
       { name: '/color_randomize', value: '/color_randomize', execute: true, desc: 'toggle the automatic random color shuffle on or off' },
       { name: '/color_reset', value: '/color_reset', execute: true, desc: 'restore default appearance settings' },
       { name: '/settings_save', value: '/settings_save', execute: true, desc: 'download a settings.json with the current command-configurable state' },
@@ -3820,6 +3820,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           name: entry.name.trim().toLowerCase(),
           desc: entry.desc ? String(entry.desc) : 'page command',
           usage: entry.usage ? String(entry.usage) : entry.name.trim(),
+          value: entry.value ? String(entry.value) : (entry.usage ? String(entry.usage) : entry.name.trim()),
           execute: entry.execute !== false,
           // ADDED: Parent pages can explicitly replace a built-in command instead of
           // relying on a hardcoded list inside chat-sandbox.html.
@@ -3838,6 +3839,46 @@ function createHomepageCustomizeMessageNode(result = {}) {
     function getPageCommandDefinition(command) {
       const normalized = String(command || '').trim().toLowerCase();
       return pageCommandRegistry.find((entry) => entry.name === normalized) || null;
+    }
+
+    function getBuiltInCommandDefinition(command) {
+      const normalized = String(command || '').trim().toLowerCase();
+      return builtInCommands.find((entry) => entry.name === normalized) || null;
+    }
+
+    function getCommandDefinition(command) {
+      const pageDefinition = getPageCommandDefinition(command);
+      if (pageDefinition) {
+        return pageDefinition;
+      }
+      return getBuiltInCommandDefinition(command);
+    }
+
+    function getCommandArgumentTemplates(command) {
+      const definition = getCommandDefinition(command);
+      if (!definition) {
+        return [];
+      }
+
+      const templates = [];
+      if (Array.isArray(definition.suggestions)) {
+        definition.suggestions.forEach((value) => {
+          const normalized = String(value || '').trim();
+          if (normalized) {
+            templates.push(normalized);
+          }
+        });
+      }
+
+      const usageSource = typeof definition.usage === 'string' && definition.usage.trim() ? definition.usage : (typeof definition.value === 'string' ? definition.value : '');
+      if (usageSource) {
+        const usageRemainder = usageSource.slice(definition.name.length).trim();
+        if (usageRemainder) {
+          templates.push(usageRemainder);
+        }
+      }
+
+      return Array.from(new Set(templates.map((value) => value.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
     }
 
     function dispatchPageCommand(command, raw, args) {
@@ -4501,8 +4542,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       const commandToken = value.slice(slashIndex, firstSpaceAfterSlash).toLowerCase();
-      const pageCommand = getPageCommandDefinition(commandToken);
-      const suggestions = pageCommand && Array.isArray(pageCommand.suggestions) ? pageCommand.suggestions.slice() : [];
+      const suggestions = getCommandArgumentTemplates(commandToken);
       if (!suggestions.length) {
         return null;
       }
@@ -4607,12 +4647,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
           };
         }
 
-        const pageCommand = getPageCommandDefinition(match);
-        if (pageCommand && Array.isArray(pageCommand.suggestions) && pageCommand.suggestions.length && !commandInfo.value.includes(' ')) {
+        const argumentTemplates = getCommandArgumentTemplates(match);
+        if (argumentTemplates.length && !commandInfo.value.includes(' ')) {
           return {
-            fullSuggestion: `${match} ${pageCommand.suggestions[0]}`,
+            fullSuggestion: `${match} ${argumentTemplates[0]}`,
             typedText: token,
-            remainder: ` ${pageCommand.suggestions[0]}`
+            remainder: ` ${argumentTemplates[0]}`
           };
         }
       }
@@ -4639,8 +4679,34 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (!suggestionState || !suggestionState.remainder) {
         return false;
       }
+
+      const previousValue = chatBar.value;
+      const previousCommandInfo = getCommandTokenInfo();
+      const previousArgumentInfo = getCommandArgumentSuggestionInfo();
+
       chatBar.value = suggestionState.fullSuggestion;
       moveCursorToEnd();
+
+      const nextCommandInfo = getCommandTokenInfo();
+      if (previousArgumentInfo && nextCommandInfo) {
+        const argumentMatches = getCommandArgumentTemplates(previousArgumentInfo.commandToken)
+          .filter((entry) => entry.toLowerCase().startsWith(previousArgumentInfo.argumentText.trim().toLowerCase()))
+          .sort((a, b) => a.localeCompare(b));
+        const acceptedArgument = chatBar.value.slice(previousArgumentInfo.argumentStart).trim();
+        const acceptedIndex = argumentMatches.findIndex((entry) => entry.toLowerCase() === acceptedArgument.toLowerCase());
+        commandCyclePrefix = `${previousArgumentInfo.commandToken} ${previousArgumentInfo.argumentText}`;
+        commandCycleIndex = acceptedIndex;
+      } else if (previousCommandInfo && nextCommandInfo) {
+        const previousToken = previousCommandInfo.token || '/';
+        const acceptedToken = nextCommandInfo.token || '/';
+        const matches = getMatchingCommands(previousToken);
+        const acceptedIndex = matches.findIndex((entry) => entry.toLowerCase() === acceptedToken.toLowerCase());
+        commandCyclePrefix = previousToken;
+        commandCycleIndex = acceptedIndex;
+      } else if (previousValue !== chatBar.value) {
+        resetCommandCycle();
+      }
+
       updateChatBarVisualState();
       renderInlineSuggestion();
       return true;
@@ -5625,17 +5691,22 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const commandInfo = getCommandTokenInfo();
 
       if (event.key === 'Tab') {
-        if (acceptInlineSuggestion()) {
-          event.preventDefault();
-          return;
+        event.preventDefault();
+
+        const beforeTabValue = chatBar.value;
+        const inlineAccepted = acceptInlineSuggestion();
+        if (inlineAccepted) {
+          const afterAcceptInfo = getCommandArgumentSuggestionInfo();
+          if (!afterAcceptInfo || beforeTabValue !== chatBar.value) {
+            return;
+          }
         }
+
         if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
-          event.preventDefault();
           renderInlineSuggestion();
           return;
         }
         if (commandInfo) {
-          event.preventDefault();
           cycleCommandSuggestion(event.shiftKey ? -1 : 1);
           renderInlineSuggestion();
         }

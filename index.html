@@ -1023,15 +1023,17 @@
           },
           {
             name: '/clock_time',
-            usage: '/clock_time ',
+            usage: '/clock_time 4:20pm',
             desc: 'set the overlay clock to a manual time string',
-            execute: false
+            execute: false,
+            suggestions: ['4:20pm', '07:10am', '23:59:59']
           },
           {
             name: '/clock_date',
-            usage: '/clock_date ',
+            usage: '/clock_date Saturday / March 28 / 2026',
             desc: 'set the overlay clock to a manual date string',
-            execute: false
+            execute: false,
+            suggestions: ['Saturday / March 28 / 2026', 'Thursday / April 9 / 2026']
           },
           {
             name: '/clock_reset',
@@ -1041,7 +1043,7 @@
           },
           {
             name: '/clock_zone',
-            usage: '/clock_zone ',
+            usage: '/clock_zone America/Toronto',
             desc: 'sync the overlay clock to a named timezone',
             execute: false,
             suggestions: allClockZones
