@@ -16,31 +16,27 @@
   let waitingForCommand = false;
   let nextCommandTimeoutId = null;
 
-  function getCurrentSiteDate() {
-    if (typeof window.getSiteNow === 'function') {
-      try {
-        const simulated = window.getSiteNow();
-        if (simulated instanceof Date && !Number.isNaN(simulated.getTime())) {
-          return simulated;
-        }
-      } catch (error) {
-        console.warn('Unable to read site clock for easter egg', error);
+  function getCurrentSiteTime() {
+    try {
+      if (typeof window.__getSiteNow === 'function') {
+        const value = window.__getSiteNow();
+        if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
       }
-    }
+    } catch (error) {}
     return new Date();
   }
 
-  function getTimeKey(date = getCurrentSiteDate()) {
+  function getTimeKey(date = getCurrentSiteTime()) {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
   }
 
-  function formatDisplayTime(date = getCurrentSiteDate()) {
+  function formatDisplayTime(date = getCurrentSiteTime()) {
     return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  function getMinuteStorageKey(date = getCurrentSiteDate()) {
+  function getMinuteStorageKey(date = getCurrentSiteTime()) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -194,7 +190,7 @@
         resetPendingSequence();
         return;
       }
-      if (getTimeKey(getCurrentSiteDate()) !== getTimeKey(pendingTriggerDate)) {
+      if (getTimeKey(getCurrentSiteTime()) !== getTimeKey(pendingTriggerDate)) {
         resetPendingSequence();
         return;
       }
@@ -206,7 +202,7 @@
     }, RETRY_INTERVAL_MS);
   }
 
-  function queueTrigger(date = getCurrentSiteDate()) {
+  function queueTrigger(date = getCurrentSiteTime()) {
     pendingTriggerDate = new Date(date.getTime());
     pendingCommandId = `time-easter-egg-${date.getTime()}`;
     sequenceIndex = -1;
@@ -215,7 +211,7 @@
     ensureRetryLoop();
   }
 
-  function attemptTrigger(date = getCurrentSiteDate()) {
+  function attemptTrigger(date = getCurrentSiteTime()) {
     const storageKey = getMinuteStorageKey(date);
     if (sessionStorage.getItem(storageKey) === '1') return;
     if (pendingTriggerDate && getTimeKey(pendingTriggerDate) === getTimeKey(date)) return;
@@ -256,16 +252,10 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       attemptTrigger();
-      window.setInterval(() => attemptTrigger(getCurrentSiteDate()), CHECK_INTERVAL_MS);
-      window.addEventListener('siteclockchange', (event) => {
-        attemptTrigger(event.detail instanceof Date ? event.detail : getCurrentSiteDate());
-      });
+      window.setInterval(attemptTrigger, CHECK_INTERVAL_MS);
     }, { once: true });
   } else {
     attemptTrigger();
-    window.setInterval(() => attemptTrigger(getCurrentSiteDate()), CHECK_INTERVAL_MS);
-    window.addEventListener('siteclockchange', (event) => {
-      attemptTrigger(event.detail instanceof Date ? event.detail : getCurrentSiteDate());
-    });
+    window.setInterval(attemptTrigger, CHECK_INTERVAL_MS);
   }
 })();
