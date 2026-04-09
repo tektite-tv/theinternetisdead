@@ -636,21 +636,7 @@ html, body {
   window.getOverlayClockState = getOverlayClockState;
   window.setOverlayClockState = setOverlayClockState;
 
-  function getOverlayNow() {
-    if (typeof window.getSiteNow === 'function') {
-      try {
-        const simulated = window.getSiteNow();
-        if (simulated instanceof Date && !Number.isNaN(simulated.getTime())) {
-          return simulated;
-        }
-      } catch (error) {
-        console.warn('Unable to read site clock', error);
-      }
-    }
-    return new Date();
-  }
-
-  function formatOverlayDate(now = getOverlayNow(), timeZone = DEFAULT_OVERLAY_CLOCK_STATE.zone) {
+  function formatOverlayDate(now = new Date(), timeZone = DEFAULT_OVERLAY_CLOCK_STATE.zone) {
     const weekday = new Intl.DateTimeFormat('en-CA', {
       timeZone,
       weekday: 'long'
@@ -699,9 +685,12 @@ html, body {
     const timeEl = el.querySelector('.clock-time');
     const periodEl = el.querySelector('.clock-period');
     const state = getOverlayClockState();
+    const currentNow = typeof window.__getSiteNow === 'function' ? window.__getSiteNow() : new Date();
 
     if (state.mode === 'date') {
-      const dateText = state.manualDate || formatOverlayDate(getOverlayNow(), state.zone);
+      const dateText = state.manualDate && typeof window.__getSiteNow !== 'function'
+        ? state.manualDate
+        : formatOverlayDate(currentNow, state.zone);
       if (timeEl) timeEl.textContent = dateText;
       if (periodEl) periodEl.textContent = '';
       el.setAttribute('aria-label', `Toggle ${state.zone} time and date`);
@@ -709,7 +698,7 @@ html, body {
       return;
     }
 
-    if (state.manualTime) {
+    if (state.manualTime && typeof window.__getSiteNow !== 'function') {
       if (timeEl) timeEl.textContent = state.manualTime;
       if (periodEl) periodEl.textContent = '';
       el.setAttribute('aria-label', `Toggle ${state.zone} time and date`);
@@ -717,14 +706,13 @@ html, body {
       return;
     }
 
-    const now = getOverlayNow();
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: state.zone,
       hour: 'numeric',
       minute: '2-digit',
       second: '2-digit',
       hour12: true
-    }).formatToParts(now);
+    }).formatToParts(currentNow);
 
     const timeText = parts
       .filter((part) => part.type !== 'dayPeriod')
