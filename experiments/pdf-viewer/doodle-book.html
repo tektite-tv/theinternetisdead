@@ -338,13 +338,21 @@
         metalness: 0.02,
         clearcoat: 0.08
       });
-      const frontMat = new THREE.MeshPhongMaterial({
+      const coverTexMat = new THREE.MeshPhongMaterial({
         map: texture,
         shininess: 8,
         specular: new THREE.Color(0x1c1c1c)
       });
-      // BoxGeometry order: +x,-x,+y,-y,+z,-z
-      return [sideMat.clone(), sideMat.clone(), sideMat.clone(), sideMat.clone(), frontMat, sideMat.clone()];
+      // BoxGeometry order: +x, -x, +y, -y, +z, -z
+      // Put the PDF page on the visible outside "top" face when the book is lying flat.
+      return [
+        sideMat.clone(),
+        sideMat.clone(),
+        coverTexMat,
+        sideMat.clone(),
+        sideMat.clone(),
+        sideMat.clone()
+      ];
     }
 
     function createPageMaterials(texture) {
