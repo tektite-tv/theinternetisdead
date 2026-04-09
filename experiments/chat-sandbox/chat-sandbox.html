@@ -1555,45 +1555,37 @@ const focusSink = document.getElementById('focusSink');
     // ADDED: Single canonical built-in command registry so command execution, help output,
     // and tab-complete all point at the same source instead of drifting apart.
     const builtInCommands = [
-      { name: '/upload_file', value: '/upload_file', execute: true, desc: 'open a file picker to embed one file into chat', suggestions: [] },
-      { name: '/upload_folder', value: '/upload_folder', execute: true, desc: 'open a folder picker to browse and embed local files', suggestions: [] },
-      { name: '/clear', value: '/clear', execute: true, desc: 'clear the visible chat messages', suggestions: [] },
-      { name: '/color', value: '/color', execute: true, desc: 'show only the color commands', suggestions: [] },
-      { name: '/color_hueshift', value: '/color_hueshift', execute: true, desc: 'toggle a global hue shift and override local hue-shift effects while active', suggestions: [] },
-      { name: '/color_invert', value: '/color_invert', execute: true, desc: 'toggle a global full-color invert on or off', suggestions: [] },
-      { name: '/color_party', value: '/color_party', execute: true, desc: 'toggle hue shift plus auto-randomize and random invert flicker on or off', suggestions: [] },
-      { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale', suggestions: [] },
-      { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility', suggestions: [] },
-      { name: '/dvd', value: '/dvd', execute: true, desc: 'show only the DVD commands', suggestions: [] },
-      { name: '/dvd_spawn', value: '/dvd_spawn', execute: true, desc: 'spawn another bouncing hue-shifting DVD image, up to 10 total', suggestions: [] },
-      { name: '/dvd_image', value: '/dvd_image', execute: true, desc: 'upload one or more images and apply them to the entire /dvd_spawn swarm, including future spawns and infinite mode', suggestions: ['"https://example.com/image.png"', '"https://example.com/image1.png, https://example.com/image2.png"'] },
-      { name: '/dvd_logo', value: '/dvd_logo', execute: true, desc: 'alias for /dvd_image', suggestions: ['"https://example.com/logo.png"', '"https://example.com/logo1.png, https://example.com/logo2.png"'] },
-      { name: '/spawn', value: '/spawn', execute: true, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm', suggestions: [] },
-      { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode', suggestions: [] },
-      { name: '/dvd_slideshow', value: '/dvd_slideshow', execute: true, desc: 'spawn every GIF from /media/images/gifs as its own bouncing slideshow swarm', suggestions: [] },
-      { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen', suggestions: [] },
-      { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links', suggestions: [] },
-      { name: '/iframe', value: '/iframe https://example.com/', execute: false, desc: 'paste a URL after it to embed a webpage preview', suggestions: ['https://example.com/', 'https://theinternetisdead.org/'] },
-      { name: '/script_load', value: '/script_load', execute: true, desc: 'choose a .txt file and send each line into chat every 0.33 seconds', suggestions: [] },
-      { name: '/settings_load', value: '/settings_load', execute: true, desc: 'choose a settings.json file and load saved settings', suggestions: [] },
-      { name: '/nickname', value: '/nickname ', execute: false, desc: 'set the displayed username used by system messages', suggestions: ['Tektite', 'Honestly Thomas', 'User'] },
-      { name: '/color_randomize', value: '/color_randomize', execute: true, desc: 'toggle the automatic random color shuffle on or off', suggestions: [] },
-      { name: '/color_reset', value: '/color_reset', execute: true, desc: 'restore default appearance settings', suggestions: [] },
-      { name: '/settings_save', value: '/settings_save', execute: true, desc: 'download a settings.json with the current command-configurable state', suggestions: [] },
-      { name: '/screenshot', value: '/screenshot', execute: true, desc: 'save a PNG of save a PNG of overlay.html plus /pages/youtube-list-grid/youtube-list-grid.html exactly as visible, ignoring chat', suggestions: [] },
-      { name: '/screenshot_animation', value: '/screenshot_animation', execute: true, desc: 'save 15 full-page PNG frames in a ZIP using the same timing as /color_randomize and /color_party', suggestions: [] },
-      { name: '/refresh', value: '/refresh', execute: true, desc: 'refresh the current page', suggestions: [] },
-      { name: '/stop', value: '/stop', execute: true, desc: 'stop auto color shuffle, script playback, hue shift, and invert effects', suggestions: [] },
-      { name: '/clock', value: '/clock', execute: true, desc: 'show only the clock commands', suggestions: [] }
+      { name: '/upload_file', value: '/upload_file', execute: true, desc: 'open a file picker to embed one file into chat' },
+      { name: '/upload_folder', value: '/upload_folder', execute: true, desc: 'open a folder picker to browse and embed local files' },
+      { name: '/clear', value: '/clear', execute: true, desc: 'clear the visible chat messages' },
+      { name: '/color', value: '/color', execute: true, desc: 'show only the color commands' },
+      { name: '/color_hueshift', value: '/color_hueshift', execute: true, desc: 'toggle a global hue shift and override local hue-shift effects while active' },
+      { name: '/color_invert', value: '/color_invert', execute: true, desc: 'toggle a global full-color invert on or off' },
+      { name: '/color_party', value: '/color_party', execute: true, desc: 'toggle hue shift plus auto-randomize and random invert flicker on or off' },
+      { name: '/customize', value: '/customize', execute: true, desc: 'open the customize panel for colors, opacity, font, and scale' },
+      { name: '/debug', value: '/debug', execute: true, desc: 'toggle debug mode and system label visibility' },
+      { name: '/dvd', value: '/dvd', execute: true, desc: 'show only the DVD commands' },
+      { name: '/dvd_spawn', value: '/dvd_spawn', execute: true, desc: 'spawn another bouncing hue-shifting DVD logo from the default SVG, up to 10 total' },
+      { name: '/dvd_image', value: '/dvd_image ', execute: false, desc: 'upload one or more images and immediately spawn them as bouncing images, or paste quoted image URLs', suggestions: ['"https://example.com/image.png"', '"https://example.com/image1.png, https://example.com/image2.png"'] },
+      { name: '/spawn', value: '/spawn ', execute: false, desc: 'upload and spawn one or more bouncing images, adding them to the active swarm', suggestions: ['"https://example.com/image.png"', '"https://example.com/image1.png, https://example.com/image2.png"'] },
+      { name: '/subscribe', value: '/subscribe', execute: true, desc: 'spawn a subscribe swarm linked to YouTube and immediately overclock it to infinite mode' },
+      { name: '/dvd_slideshow', value: '/dvd_slideshow', execute: true, desc: 'spawn every GIF from /media/images/gifs as its own bouncing slideshow swarm' },
+      { name: '/exit', value: '/exit', execute: true, desc: 'kill the page and trigger the fatal exit screen' },
+      { name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' },
+      { name: '/iframe', value: '/iframe ', execute: false, desc: 'paste a URL after it to embed a webpage preview', suggestions: ['https://example.com/'] },
+      { name: '/script_load', value: '/script_load', execute: true, desc: 'choose a .txt file and send each line into chat every 0.33 seconds' },
+      { name: '/settings_load', value: '/settings_load', execute: true, desc: 'choose a settings.json file and load saved settings' },
+      { name: '/nickname', value: '/nickname ', execute: false, desc: 'set the displayed username used by system messages', suggestions: ['Tektite', 'Guest', 'User'] },
+      { name: '/color_randomize', value: '/color_randomize', execute: true, desc: 'toggle the automatic random color shuffle on or off' },
+      { name: '/color_reset', value: '/color_reset', execute: true, desc: 'restore default appearance settings' },
+      { name: '/settings_save', value: '/settings_save', execute: true, desc: 'download a settings.json with the current command-configurable state' },
+      { name: '/screenshot', value: '/screenshot', execute: true, desc: 'save a PNG of save a PNG of overlay.html plus /pages/youtube-list-grid/youtube-list-grid.html exactly as visible, ignoring chat' },
+      { name: '/screenshot_animation', value: '/screenshot_animation', execute: true, desc: 'save 15 full-page PNG frames in a ZIP using the same timing as /color_randomize and /color_party' },
+      { name: '/refresh', value: '/refresh', execute: true, desc: 'refresh the current page' },
+      { name: '/stop', value: '/stop', execute: true, desc: 'stop auto color shuffle, script playback, hue shift, and invert effects' },
+      { name: '/clock', value: '/clock', execute: true, desc: 'show only the clock commands' }
     ];
     const builtInCommandList = builtInCommands.map((entry) => entry.name);
-    const builtInCommandRegistry = builtInCommands.reduce((map, entry) => {
-      map.set(String(entry.name || '').trim().toLowerCase(), {
-        ...entry,
-        suggestions: Array.isArray(entry.suggestions) ? entry.suggestions.map((value) => String(value || '').trim()).filter(Boolean) : []
-      });
-      return map;
-    }, new Map());
     let pageCommandRegistry = [];
     let pageCommandMeta = { pageOnly: false, pageId: '', title: '', sourceKey: '' };
     let pendingPageCommand = null;
@@ -3842,11 +3834,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
       };
     }
 
-    function getBuiltInCommandDefinition(command) {
-      const normalized = String(command || '').trim().toLowerCase();
-      return builtInCommandRegistry.get(normalized) || null;
-    }
-
     function getPageCommandDefinition(command) {
       const normalized = String(command || '').trim().toLowerCase();
       return pageCommandRegistry.find((entry) => entry.name === normalized) || null;
@@ -3888,7 +3875,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
         normalized === '/clock_zone' ||
         normalized === '/dvd_spawn' ||
         normalized === '/dvd_image' ||
-        normalized === '/dvd_logo' ||
         normalized === '/dvd_slideshow' ||
         normalized === '/color_hueshift' ||
         normalized === '/color_invert' ||
@@ -4513,10 +4499,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       const commandToken = value.slice(slashIndex, firstSpaceAfterSlash).toLowerCase();
-      const builtInCommand = getBuiltInCommandDefinition(commandToken);
       const pageCommand = getPageCommandDefinition(commandToken);
-      const commandDefinition = pageCommand || builtInCommand;
-      const suggestions = commandDefinition && Array.isArray(commandDefinition.suggestions) ? commandDefinition.suggestions.slice() : [];
+      const builtInCommand = builtInCommands.find((entry) => entry.name === commandToken) || null;
+      const suggestions = [
+        ...(pageCommand && Array.isArray(pageCommand.suggestions) ? pageCommand.suggestions : []),
+        ...(builtInCommand && Array.isArray(builtInCommand.suggestions) ? builtInCommand.suggestions : [])
+      ].map((value) => String(value || '').trim()).filter(Boolean);
       if (!suggestions.length) {
         return null;
       }
@@ -4796,7 +4784,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return pool[index % pool.length];
     }
 
-    function createDvdInstance(group = 'dvd') {
+    function createDvdInstance(group = 'dvd', sourceOverride = '') {
       const groupInstances = getGroupInstances(group);
       const groupCap = group === 'subscribe'
         ? (subscribeOverclockMode ? dvdOverclockMaxInstances : dvdNormalMaxInstances)
@@ -4833,7 +4821,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
         window.open(href, '_blank', 'noopener,noreferrer');
       });
 
-      img.src = getDvdSourceForIndex(instanceIndex, group);
+      img.src = String(sourceOverride || '').trim() || getDvdSourceForIndex(instanceIndex, group);
+      instance.customSource = String(sourceOverride || '').trim();
       img.onload = () => {
         positionDvdInstance(instance, true);
       };
@@ -4859,7 +4848,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     function syncDvdInstanceSources() {
       dvdInstances.forEach((instance, index) => {
-        const nextSrc = getDvdSourceForIndex(index, 'dvd');
+        const nextSrc = String(instance.customSource || '').trim() || getDvdSourceForIndex(index, 'dvd');
         if (instance.el && instance.el.src !== nextSrc) {
           instance.el.src = nextSrc;
           instance.el.onload = () => {
@@ -5097,7 +5086,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function addSpawnedDvdSources(sources) {
-      const normalized = normalizeDvdSourceList(sources);
+      const normalized = (Array.isArray(sources) ? sources : [])
+        .map((src) => String(src || '').trim())
+        .filter(Boolean)
+        .slice(0, getDvdActiveCap());
       if (!normalized.length) return false;
 
       const availableSlots = Math.max(0, getDvdActiveCap() - dvdInstances.length);
@@ -5107,25 +5099,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       const sourcesToAdd = normalized.slice(0, availableSlots);
-      const existingPool = Array.isArray(dvdSourcePool) && dvdSourcePool.length ? [...dvdSourcePool] : [...dvdDefaultSources];
-      const startIndex = existingPool.length;
-      dvdSourcePool = [...existingPool, ...sourcesToAdd];
+      sourcesToAdd.forEach((src) => {
+        createDvdInstance('dvd', src);
+      });
 
-      const finalCount = ensureDvdInstanceCount(Math.min(getDvdActiveCap(), dvdInstances.length + sourcesToAdd.length));
-      syncDvdInstanceSources();
       setDvdInstanceClickHref('');
-
-      for (let i = 0; i < sourcesToAdd.length; i += 1) {
-        const instanceIndex = finalCount - sourcesToAdd.length + i;
-        const instance = dvdInstances[instanceIndex];
-        if (instance && instance.el) {
-          instance.el.src = sourcesToAdd[i];
-          instance.el.onload = () => {
-            positionDvdInstance(instance, true);
-          };
-        }
-      }
-
       setDvdEnabled(true);
       positionAllDvdInstances(true);
       return true;
@@ -5226,7 +5204,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
         addMessage(createCommandListMessageNode('DVD commands...', [
           '/dvd_spawn',
           '/dvd_image',
-          '/dvd_logo',
           '/dvd_slideshow'
         ], {
           panelType: 'dvd'
@@ -5272,12 +5249,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return true;
       }
 
-      if (command === '/dvd_image' || command === '/dvd_logo') {
+      if (command === '/dvd_image') {
         dvdUploadMode = 'dvd_image';
         const urlArg = trimmed.slice(parts[0].length).trim();
         if (urlArg) {
           const sources = parseDvdLogoUrlList(urlArg);
-          const applied = setDvdLogoSources(sources, false);
+          const applied = addSpawnedDvdSources(sources);
           addSystemMessage(formatCommandExecutionMessage('/dvd_image', applied ? 'executed' : 'failed'));
           return true;
         }
@@ -5631,17 +5608,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const commandInfo = getCommandTokenInfo();
 
       if (event.key === 'Tab') {
-        const argumentInfo = getCommandArgumentSuggestionInfo();
-        if (argumentInfo) {
-          if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
-            event.preventDefault();
-            renderInlineSuggestion();
-            return;
-          }
-          if (acceptInlineSuggestion()) {
-            event.preventDefault();
-            return;
-          }
+        if (acceptInlineSuggestion()) {
+          event.preventDefault();
+          return;
+        }
+        if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
+          event.preventDefault();
+          renderInlineSuggestion();
+          return;
         }
         if (commandInfo) {
           event.preventDefault();
@@ -5774,7 +5748,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     if (dvdImageUploadInput) {
       dvdImageUploadInput.addEventListener('change', () => {
-        const files = Array.from(dvdImageUploadInput.files || []).slice(0, getDvdActiveCap());
+        const availableSlots = Math.max(0, getDvdActiveCap() - dvdInstances.length);
+        const files = Array.from(dvdImageUploadInput.files || []).slice(0, availableSlots || getDvdActiveCap());
         if (!files.length) return;
 
         const sources = files.map((file) => {
@@ -5783,7 +5758,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
           return objectUrl;
         });
 
-        setDvdLogoSources(sources, false);
+        addSpawnedDvdSources(sources);
         dvdUploadMode = 'dvd_image';
         dvdImageUploadInput.value = '';
       });
