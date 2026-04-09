@@ -57,8 +57,9 @@
   <input id="pdfInput" type="file" accept="application/pdf" />
   <div id="loading">Loading PDF…</div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
+  <!-- Fixed library URLs -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
 
   <script>
     const input = document.getElementById('pdfInput');
@@ -66,12 +67,14 @@
 
     if (!window.pdfjsLib) {
       alert('PDF.js failed to load.');
+      throw new Error('PDF.js failed to load.');
     }
     if (!window.THREE) {
       alert('Three.js failed to load.');
+      throw new Error('Three.js failed to load.');
     }
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
 
     let renderer, scene, camera;
     let bookGroup = null;
@@ -108,6 +111,7 @@
     });
 
     window.addEventListener('pointerdown', (e) => {
+      if (e.target === input || e.target === document.getElementById('uploadBtn')) return;
       isDragging = true;
       lastX = e.clientX;
       lastY = e.clientY;
