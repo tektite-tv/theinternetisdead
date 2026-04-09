@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>doodle-book</title>
+  <title>doodle-book-simple-topdown-v2</title>
   <style>
     html, body {
       margin: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #07070c;
+      background: #0a0a10;
     }
     canvas {
       display: block;
@@ -22,8 +22,8 @@
       top: 12px;
       left: 12px;
       z-index: 20;
-      border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(0,0,0,0.48);
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.45);
       color: #fff;
       border-radius: 999px;
       padding: 10px 14px;
@@ -58,100 +58,39 @@
     const input = document.getElementById('pdfInput');
     const loading = document.getElementById('loading');
 
-    if (!window.THREE) {
-      alert('Three.js failed to load.');
-      throw new Error('Three.js failed to load.');
-    }
-    if (!window.pdfjsLib) {
-      alert('PDF.js failed to load.');
-      throw new Error('PDF.js failed to load.');
-    }
-
+    if (!window.THREE) throw new Error('Three.js failed to load.');
+    if (!window.pdfjsLib) throw new Error('PDF.js failed to load.');
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
 
     let renderer, scene, camera;
-    let bookRoot = null;
-    let leftCoverPivot = null;
-    let leftCoverMesh = null;
-    let rightCoverPivot = null;
-    let rightCoverMesh = null;
-    let spineMesh = null;
-    let pageStackMesh = null;
-    let turningPages = [];
-    let textureList = [];
-    let frontCoverTexture = null;
-    let backCoverTexture = null;
-
-    let totalPdfPages = 0;
-    let totalInteriorPages = 0;
-    let currentIndex = 0; // 0 = fully closed
-    let activeFlip = null;
+    let pedestal, shadow;
+    let coverPivot, coverMesh;
+    let underPageMesh;
+    let textures = [];
 
     let pageWidth = 1.45;
     let pageHeight = 2.0;
-    let coverThickness = 0.035;
-    let pageThickness = 0.003;
-    let stackThickness = 0.12;
+    let currentTopIndex = 0;
+    let isOpen = false;
+    let activeFlip = null;
 
-    let isDragging = false;
-    let lastX = 0;
-    let lastY = 0;
-    let yaw = 0.55;
-    let pitch = -0.34;
-    let targetYaw = yaw;
-    let targetPitch = pitch;
-    let cameraDistance = 4.9;
-
-    initScene();
-    rebuildBook();
+    init();
+    buildSceneObjects();
     animate();
 
     input.addEventListener('change', async (e) => {
-      const file = e.target.files && e.target.files[0];
+      const file = e.target.files?.[0];
       if (file) await loadPdf(file);
     });
 
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowLeft') openForward();
-      if (e.key === 'ArrowRight') closeBackward();
-    });
-
-    window.addEventListener('pointerdown', (e) => {
-      if (e.target === input || e.target === document.getElementById('uploadBtn')) return;
-      isDragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-    });
-
-    window.addEventListener('pointermove', (e) => {
-      if (!isDragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      targetYaw += dx * 0.006;
-      targetPitch += dy * 0.004;
-      targetPitch = Math.max(-1.15, Math.min(0.1, targetPitch));
-    });
-
-    window.addEventListener('pointerup', () => isDragging = false);
-    window.addEventListener('pointercancel', () => isDragging = false);
-
-    window.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      cameraDistance += e.deltaY * 0.003;
-      cameraDistance = Math.max(2.8, Math.min(9, cameraDistance));
-    }, { passive: false });
-
-    window.addEventListener('dblclick', () => {
-      targetYaw = 0.55;
-      targetPitch = -0.34;
-      cameraDistance = 4.9;
+      if (e.key === 'ArrowLeft') turnForward();
+      if (e.key === 'ArrowRight') turnBackward();
     });
 
     window.addEventListener('resize', onResize);
 
-    function initScene() {
+    function init() {
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -160,51 +99,25 @@
       document.body.appendChild(renderer.domElement);
 
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x07070c);
-      scene.fog = new THREE.Fog(0x07070c, 7, 15);
+      scene.background = new THREE.Color(0x0a0a10);
 
-      camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.01, 100);
-      updateCamera();
+      camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.01, 100);
+      camera.position.set(0.0, 5.6, 0.01);
+      camera.lookAt(0, 0, 0);
 
-      const hemi = new THREE.HemisphereLight(0xe7eaff, 0x161822, 1.25);
+      const hemi = new THREE.HemisphereLight(0xe8ecff, 0x1b1d28, 1.15);
       scene.add(hemi);
 
-      const key = new THREE.DirectionalLight(0xffffff, 2.0);
-      key.position.set(3.5, 5.5, 4.0);
+      const key = new THREE.DirectionalLight(0xffffff, 1.7);
+      key.position.set(1.8, 4.8, 1.2);
       key.castShadow = true;
       key.shadow.mapSize.width = 2048;
       key.shadow.mapSize.height = 2048;
       scene.add(key);
 
-      const fill = new THREE.DirectionalLight(0x9aafff, 0.35);
-      fill.position.set(-4, 2, -3);
+      const fill = new THREE.DirectionalLight(0x9db0ff, 0.35);
+      fill.position.set(-2.5, 2.0, -1.5);
       scene.add(fill);
-
-      const table = new THREE.Mesh(
-        new THREE.CylinderGeometry(3.3, 3.55, 0.22, 72),
-        new THREE.MeshPhysicalMaterial({
-          color: 0x2c3148,
-          roughness: 0.88,
-          metalness: 0.03,
-          clearcoat: 0.1
-        })
-      );
-      table.position.set(0, -0.48, 0);
-      table.receiveShadow = true;
-      scene.add(table);
-
-      const tableTop = new THREE.Mesh(
-        new THREE.CylinderGeometry(3.36, 3.36, 0.03, 72),
-        new THREE.MeshPhysicalMaterial({
-          color: 0x3d4563,
-          roughness: 0.55,
-          metalness: 0.04,
-          clearcoat: 0.18
-        })
-      );
-      tableTop.position.set(0, -0.34, 0);
-      tableTop.receiveShadow = true;
-      scene.add(tableTop);
     }
 
     function onResize() {
@@ -213,16 +126,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    function updateCamera() {
-      camera.position.set(
-        Math.sin(yaw) * cameraDistance,
-        1.0 + (-pitch * 1.2),
-        Math.cos(yaw) * cameraDistance
-      );
-      camera.lookAt(0, 0.16, 0);
-    }
-
-    function makeBlankTexture(color = '#6f5a86', w = 512, h = 768) {
+    function makeColorTexture(color, w = 768, h = 1024) {
       const canvas = document.createElement('canvas');
       canvas.width = w;
       canvas.height = h;
@@ -234,205 +138,128 @@
       return tex;
     }
 
-    function rebuildBook() {
-      if (bookRoot) {
-        disposeBook();
-        scene.remove(bookRoot);
-      }
-
-      bookRoot = new THREE.Group();
-      bookRoot.position.set(0, 0.02, 0);
-      scene.add(bookRoot);
-
-      turningPages = [];
-
-      const coverMatBase = new THREE.MeshPhysicalMaterial({
-        color: 0x6f5a86,
-        roughness: 0.9,
-        metalness: 0.02,
-        clearcoat: 0.08
-      });
-
-      const spineMat = new THREE.MeshPhysicalMaterial({
-        color: 0x4f4162,
-        roughness: 0.92
-      });
-
-      const paperEdgeMat = new THREE.MeshPhysicalMaterial({
-        color: 0xf0ece4,
-        roughness: 0.95
-      });
-
-      const closedWidth = pageWidth + 0.08;
-      const closedHeight = pageHeight + 0.08;
-
-      spineMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.08, coverThickness + stackThickness + 0.02, closedHeight),
-        spineMat
-      );
-      spineMesh.position.set(0, 0.0, 0);
-      spineMesh.castShadow = true;
-      spineMesh.receiveShadow = true;
-      bookRoot.add(spineMesh);
-
-      // Bottom stack / page block
-      pageStackMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(pageWidth, stackThickness, pageHeight),
-        paperEdgeMat
-      );
-      pageStackMesh.position.set(pageWidth * 0.5, (stackThickness - coverThickness) * 0.5, 0);
-      pageStackMesh.castShadow = true;
-      pageStackMesh.receiveShadow = true;
-      bookRoot.add(pageStackMesh);
-
-      // Front cover pivot at spine
-      leftCoverPivot = new THREE.Group();
-      leftCoverPivot.position.set(0, 0, 0);
-      bookRoot.add(leftCoverPivot);
-
-      const frontMaterials = createCoverMaterials(frontCoverTexture || makeBlankTexture('#6f5a86'));
-      leftCoverMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(closedWidth, coverThickness, closedHeight),
-        frontMaterials
-      );
-      leftCoverMesh.position.set(pageWidth * 0.5, -stackThickness * 0.5 - coverThickness * 0.5, 0);
-      leftCoverMesh.castShadow = true;
-      leftCoverMesh.receiveShadow = true;
-      leftCoverPivot.add(leftCoverMesh);
-
-      // Back cover fixed under stack
-      const backMaterials = createCoverMaterials(backCoverTexture || makeBlankTexture('#6f5a86'));
-      rightCoverPivot = new THREE.Group();
-      rightCoverPivot.position.set(0, 0, 0);
-      bookRoot.add(rightCoverPivot);
-
-      rightCoverMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(closedWidth, coverThickness, closedHeight),
-        backMaterials
-      );
-      rightCoverMesh.position.set(pageWidth * 0.5, stackThickness * 0.5 + coverThickness * 0.5, 0);
-      rightCoverMesh.castShadow = true;
-      rightCoverMesh.receiveShadow = true;
-      rightCoverPivot.add(rightCoverMesh);
-
-      buildInteriorPageMeshes();
-
-      const centerShadow = new THREE.Mesh(
-        new THREE.PlaneGeometry(pageWidth * 2.6, pageHeight * 1.7),
-        new THREE.ShadowMaterial({ opacity: 0.22 })
-      );
-      centerShadow.rotation.x = -Math.PI / 2;
-      centerShadow.position.set(pageWidth * 0.45, -0.33, 0);
-      centerShadow.receiveShadow = true;
-      bookRoot.add(centerShadow);
-
-      currentIndex = 0;
-      activeFlip = null;
-      layoutInstant();
-    }
-
-    function createCoverMaterials(texture) {
-      const sideMat = new THREE.MeshPhysicalMaterial({
-        color: 0x6f5a86,
-        roughness: 0.9,
-        metalness: 0.02,
-        clearcoat: 0.08
-      });
-      const coverTexMat = new THREE.MeshPhongMaterial({
-        map: texture,
-        shininess: 8,
-        specular: new THREE.Color(0x1c1c1c)
-      });
-      // BoxGeometry order: +x, -x, +y, -y, +z, -z
-      // Put the PDF page on the visible outside "top" face when the book is lying flat.
-      return [
-        sideMat.clone(),
-        sideMat.clone(),
-        coverTexMat,
-        sideMat.clone(),
-        sideMat.clone(),
-        sideMat.clone()
-      ];
-    }
-
-    function createPageMaterials(texture) {
-      const front = new THREE.MeshPhongMaterial({
-        map: texture,
-        side: THREE.DoubleSide,
-        shininess: 8,
-        specular: new THREE.Color(0x1c1c1c)
-      });
-
-      const backCanvas = document.createElement('canvas');
-      backCanvas.width = 64;
-      backCanvas.height = 64;
-      const ctx = backCanvas.getContext('2d');
-      ctx.fillStyle = '#f5f2eb';
-      ctx.fillRect(0, 0, 64, 64);
-      const backTex = new THREE.CanvasTexture(backCanvas);
-      backTex.colorSpace = THREE.SRGBColorSpace;
-
-      const back = new THREE.MeshPhongMaterial({
-        map: backTex,
+    function makePaperMaterial() {
+      return new THREE.MeshPhongMaterial({
+        color: 0xf6f4ee,
         side: THREE.DoubleSide,
         shininess: 2
       });
-
-      return [front, back];
     }
 
-    function buildInteriorPageMeshes() {
-      for (const page of turningPages) {
-        page.pivot.remove(page.mesh);
-        page.mesh.geometry.dispose();
-        if (Array.isArray(page.mesh.material)) {
-          page.mesh.material.forEach(m => m.dispose && m.dispose());
-        }
-        bookRoot.remove(page.pivot);
-      }
-      turningPages = [];
+    function buildSceneObjects() {
+      pedestal = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.15, 2.3, 0.24, 72),
+        new THREE.MeshPhysicalMaterial({
+          color: 0x30374f,
+          roughness: 0.84,
+          metalness: 0.04,
+          clearcoat: 0.1
+        })
+      );
+      pedestal.position.set(0, -0.28, 0);
+      pedestal.receiveShadow = true;
+      scene.add(pedestal);
 
-      for (let i = 0; i < totalInteriorPages; i++) {
-        const tex = textureList[i + 1];
-        const geometry = new THREE.PlaneGeometry(pageWidth, pageHeight, 28, 18);
-        const materials = createPageMaterials(tex);
-        const mesh = new THREE.Mesh(geometry, materials);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+      const pedestalTop = new THREE.Mesh(
+        new THREE.CylinderGeometry(2.2, 2.2, 0.03, 72),
+        new THREE.MeshPhysicalMaterial({
+          color: 0x434d6a,
+          roughness: 0.56,
+          metalness: 0.04,
+          clearcoat: 0.18
+        })
+      );
+      pedestalTop.position.set(0, -0.14, 0);
+      pedestalTop.receiveShadow = true;
+      scene.add(pedestalTop);
 
-        const pivot = new THREE.Group();
-        pivot.position.set(0, 0, 0);
-        bookRoot.add(pivot);
-        pivot.add(mesh);
+      shadow = new THREE.Mesh(
+        new THREE.CircleGeometry(1.45, 48),
+        new THREE.ShadowMaterial({ opacity: 0.22 })
+      );
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.set(0.05, -0.125, 0);
+      shadow.receiveShadow = true;
+      scene.add(shadow);
 
-        turningPages.push({
-          pivot,
-          mesh,
-          progress: 0,
-          index: i
+      underPageMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(pageWidth, pageHeight),
+        makePaperMaterial()
+      );
+      underPageMesh.rotation.x = -Math.PI / 2;
+      underPageMesh.position.set(0.02, -0.040, 0);
+      underPageMesh.receiveShadow = true;
+      scene.add(underPageMesh);
+
+      coverPivot = new THREE.Group();
+      coverPivot.position.set(-pageWidth * 0.5, -0.035, 0);
+      scene.add(coverPivot);
+
+      const coverMat = new THREE.MeshPhongMaterial({
+        map: makeColorTexture('#6f5a86'),
+        side: THREE.DoubleSide,
+        shininess: 8,
+        specular: new THREE.Color(0x1c1c1c)
+      });
+
+      coverMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(pageWidth, pageHeight, 24, 12),
+        coverMat
+      );
+      coverMesh.rotation.x = -Math.PI / 2;
+      coverMesh.position.set(pageWidth * 0.5, 0, 0);
+      coverMesh.castShadow = true;
+      coverMesh.receiveShadow = true;
+      coverPivot.add(coverMesh);
+
+      applyTextures();
+    }
+
+    function applyTextures() {
+      const topTex = textures[currentTopIndex] || makeColorTexture('#6f5a86');
+      const underTex = textures[currentTopIndex + 1] || null;
+
+      coverMesh.material.map = topTex;
+      coverMesh.material.needsUpdate = true;
+
+      if (underTex) {
+        const oldMat = underPageMesh.material;
+        underPageMesh.material = new THREE.MeshPhongMaterial({
+          map: underTex,
+          side: THREE.DoubleSide,
+          shininess: 2,
+          specular: new THREE.Color(0x111111)
         });
+        oldMat.dispose?.();
+      } else {
+        const oldMat = underPageMesh.material;
+        underPageMesh.material = makePaperMaterial();
+        oldMat.dispose?.();
       }
+
+      isOpen = false;
+      coverPivot.rotation.z = 0;
+      resetCoverGeometry();
     }
 
     async function loadPdf(file) {
       loading.style.display = 'grid';
-
       try {
         const bytes = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-        totalPdfPages = pdf.numPages;
+        const count = pdf.numPages;
+        if (count < 1) throw new Error('PDF has no pages.');
 
-        const firstPage = await pdf.getPage(1);
-        const probe = firstPage.getViewport({ scale: 1 });
-        const aspect = probe.width / probe.height;
+        const probePage = await pdf.getPage(1);
+        const probeViewport = probePage.getViewport({ scale: 1 });
         pageHeight = 2.0;
-        pageWidth = pageHeight * aspect;
+        pageWidth = pageHeight * (probeViewport.width / probeViewport.height);
 
-        const renderScale = chooseScale(probe.width, probe.height, totalPdfPages);
+        const renderScale = chooseScale(probeViewport.width, probeViewport.height, count);
         const newTextures = [];
 
-        for (let i = 1; i <= totalPdfPages; i++) {
-          loading.textContent = 'Loading PDF… ' + i + ' / ' + totalPdfPages;
+        for (let i = 1; i <= count; i++) {
+          loading.textContent = 'Loading PDF… ' + i + ' / ' + count;
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: renderScale });
 
@@ -452,21 +279,15 @@
         }
 
         disposeTextures();
-        textureList = newTextures;
+        textures = newTextures;
+        currentTopIndex = 0;
 
-        frontCoverTexture = textureList[0] || null;
-        backCoverTexture = textureList[textureList.length - 1] || null;
-        totalInteriorPages = Math.max(0, textureList.length - 2);
-
-        pageThickness = totalInteriorPages > 0 ? 0.003 : 0.0;
-        stackThickness = Math.max(0.08, Math.min(0.22, 0.08 + totalInteriorPages * 0.0045));
-
-        rebuildBook();
+        rebuildGeometry();
+        applyTextures();
       } catch (err) {
         console.error(err);
         alert('Failed to load PDF: ' + err.message);
       }
-
       loading.style.display = 'none';
       loading.textContent = 'Loading PDF…';
     }
@@ -480,151 +301,121 @@
     }
 
     function disposeTextures() {
-      for (const tex of textureList) {
-        if (tex && tex.dispose) tex.dispose();
-      }
-      textureList = [];
+      for (const tex of textures) tex?.dispose?.();
+      textures = [];
     }
 
-    function disposeBook() {
-      if (!bookRoot) return;
-      bookRoot.traverse((obj) => {
-        if (obj.isMesh) {
-          if (obj.geometry) obj.geometry.dispose();
-          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose && m.dispose());
-          else if (obj.material) obj.material.dispose();
-        }
-      });
+    function rebuildGeometry() {
+      coverMesh.geometry.dispose();
+      coverMesh.geometry = new THREE.PlaneGeometry(pageWidth, pageHeight, 24, 12);
+      coverMesh.position.set(pageWidth * 0.5, 0, 0);
+      coverPivot.position.set(-pageWidth * 0.5, -0.035, 0);
+
+      underPageMesh.geometry.dispose();
+      underPageMesh.geometry = new THREE.PlaneGeometry(pageWidth, pageHeight);
+      underPageMesh.position.set(0.02, -0.040, 0);
+
+      shadow.geometry.dispose();
+      shadow.geometry = new THREE.CircleGeometry(Math.max(pageWidth, pageHeight) * 0.75, 48);
+      shadow.position.set(0.05, -0.125, 0);
+
+      resetCoverGeometry();
     }
 
-    function openForward() {
-      const maxTurns = totalInteriorPages + 1; // front cover + interior pages
-      if (activeFlip || currentIndex >= maxTurns) return;
+    function turnForward() {
+      if (activeFlip || isOpen || currentTopIndex >= textures.length - 1) return;
       activeFlip = {
-        index: currentIndex,
-        from: currentIndex,
-        to: currentIndex + 1,
+        direction: 1,
         start: performance.now(),
-        duration: 900
+        duration: 800
       };
     }
 
-    function closeBackward() {
-      if (activeFlip || currentIndex <= 0) return;
+    function turnBackward() {
+      if (activeFlip || !isOpen || currentTopIndex <= 0) return;
       activeFlip = {
-        index: currentIndex - 1,
-        from: currentIndex,
-        to: currentIndex - 1,
+        direction: -1,
         start: performance.now(),
-        duration: 900
+        duration: 800
       };
-    }
-
-    function layoutInstant() {
-      applyState(currentIndex);
     }
 
     function updateFlip() {
       if (!activeFlip) return;
       const t = Math.min(1, (performance.now() - activeFlip.start) / activeFlip.duration);
       const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-      const v = activeFlip.from + (activeFlip.to - activeFlip.from) * eased;
-      applyState(v);
+
+      let progress;
+      if (activeFlip.direction === 1) {
+        progress = eased;
+      } else {
+        progress = 1 - eased;
+      }
+
+      coverPivot.rotation.z = Math.PI * progress;
+      deformCover(progress);
 
       if (t >= 1) {
-        currentIndex = activeFlip.to;
+        if (activeFlip.direction === 1) {
+          isOpen = true;
+        } else {
+          currentTopIndex -= 1;
+          applyTextures();
+        }
+
+        if (activeFlip.direction === 1 && isOpen) {
+          // keep geometry flat at fully opened state
+          resetCoverGeometry();
+        }
+
         activeFlip = null;
-        applyState(currentIndex);
       }
     }
 
-    function applyState(openAmount) {
-      // Front cover: 0 closed, 1 fully opened left
-      const frontProgress = Math.max(0, Math.min(1, openAmount));
-      leftCoverPivot.rotation.z = -frontProgress * Math.PI;
-
-      // Back cover stays fixed on bottom
-      rightCoverPivot.rotation.z = 0;
-
-      // Page block shifts visually as book opens a bit
-      pageStackMesh.position.set(
-        pageWidth * 0.5,
-        (stackThickness - coverThickness) * 0.5,
-        0
-      );
-
-      for (let i = 0; i < turningPages.length; i++) {
-        const p = turningPages[i];
-        const local = Math.max(0, Math.min(1, openAmount - (i + 1))); // starts after cover opens
-        p.progress = local;
-        applyInteriorPageState(p, local, i, openAmount);
-      }
-    }
-
-    function applyInteriorPageState(pageObj, progress, i, openAmount) {
-      const turned = progress >= 0.5;
-      const pivot = pageObj.pivot;
-      const mesh = pageObj.mesh;
-
-      // Pivot is spine
-      pivot.position.set(0, 0, 0);
-      pivot.rotation.z = -Math.PI * progress;
-
-      const unturnedIndex = i;
-      const turnedIndex = i;
-
-      const yClosed = -stackThickness * 0.5 + coverThickness + Math.min(unturnedIndex * pageThickness, stackThickness - 0.01);
-      const yOpenLeft = -stackThickness * 0.25 + Math.min(turnedIndex * pageThickness * 0.6, stackThickness * 0.3);
-      const yCurrent = yClosed * (1 - progress) + yOpenLeft * progress;
-
-      mesh.position.set(
-        pageWidth * 0.5,
-        yCurrent,
-        (turned ? -1 : 1) * i * 0.0004
-      );
-      mesh.rotation.set(-Math.PI / 2, 0, 0);
-
-      deformPage(mesh.geometry, progress, turned);
-      mesh.renderOrder = turned ? 200 + i : 400 + (turningPages.length - i);
-    }
-
-    function deformPage(geometry, progress, turned) {
-      const pos = geometry.attributes.position;
-      const halfW = pageWidth * 0.5;
-      const halfH = pageHeight * 0.5;
-      const curl = Math.sin(progress * Math.PI);
-      const flipDir = turned ? -1 : 1;
-
+    function resetCoverGeometry() {
+      const geom = coverMesh.geometry;
+      const pos = geom.attributes.position;
       for (let i = 0; i < pos.count; i++) {
         const x0 = pos.getX(i);
         const y0 = pos.getY(i);
-        const xNorm = (x0 + halfW) / pageWidth;
-        const yNorm = y0 / halfH;
+        pos.setZ(i, 0);
+        pos.setX(i, x0);
+        pos.setY(i, y0);
+      }
+      pos.needsUpdate = true;
+      geom.computeVertexNormals();
+    }
 
-        let bendZ = Math.sin(xNorm * Math.PI) * curl * 0.15;
-        bendZ += Math.sin(xNorm * Math.PI * 0.5) * curl * 0.07;
-        bendZ *= 0.62 + (1 - Math.abs(yNorm)) * 0.38;
+    function deformCover(progress) {
+      resetCoverGeometry();
 
-        let sweepY = Math.sin(xNorm * Math.PI) * curl * 0.11 * flipDir;
-        sweepY *= 0.28 + (1 - Math.abs(yNorm)) * 0.72;
+      const pos = coverMesh.geometry.attributes.position;
+      const halfW = pageWidth * 0.5;
+      const halfH = pageHeight * 0.5;
+      const curl = Math.sin(progress * Math.PI);
 
-        const spinePull = Math.pow(1 - xNorm, 2.5) * curl * 0.12;
-        const wrinkle = Math.sin((yNorm + 1) * Math.PI) * curl * 0.010;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
 
-        pos.setX(i, x0 - spinePull);
-        pos.setY(i, y0 + sweepY);
-        pos.setZ(i, bendZ + wrinkle);
+        const xNorm = (x + halfW) / pageWidth;
+        const yNorm = y / halfH;
+
+        const spinePull = Math.pow(1 - xNorm, 2.5) * curl * 0.06;
+        const sweepY = Math.sin(xNorm * Math.PI) * curl * 0.06 * (0.3 + (1 - Math.abs(yNorm)) * 0.7);
+        const bendZ = Math.sin(xNorm * Math.PI) * curl * 0.08;
+
+        pos.setX(i, x - spinePull);
+        pos.setY(i, y + sweepY);
+        pos.setZ(i, bendZ);
       }
 
       pos.needsUpdate = true;
-      geometry.computeVertexNormals();
+      coverMesh.geometry.computeVertexNormals();
     }
 
     function animate() {
       requestAnimationFrame(animate);
-      yaw += (targetYaw - yaw) * 0.08;
-      pitch += (targetPitch - pitch) * 0.08;
-      updateCamera();
       updateFlip();
       renderer.render(scene, camera);
     }
