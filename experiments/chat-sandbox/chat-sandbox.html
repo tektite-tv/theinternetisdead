@@ -4606,6 +4606,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
             remainder: match.slice(token.length)
           };
         }
+
       }
 
       return null;
@@ -5616,14 +5617,17 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const commandInfo = getCommandTokenInfo();
 
       if (event.key === 'Tab') {
-        if (acceptInlineSuggestion()) {
-          event.preventDefault();
-          return;
-        }
-        if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
-          event.preventDefault();
-          renderInlineSuggestion();
-          return;
+        const argumentInfo = getCommandArgumentSuggestionInfo();
+        if (argumentInfo) {
+          if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
+            event.preventDefault();
+            renderInlineSuggestion();
+            return;
+          }
+          if (acceptInlineSuggestion()) {
+            event.preventDefault();
+            return;
+          }
         }
         if (commandInfo) {
           event.preventDefault();
