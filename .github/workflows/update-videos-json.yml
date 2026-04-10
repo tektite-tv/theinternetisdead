@@ -1,0 +1,72 @@
+name: Update videos.json
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-videos-json
+  cancel-in-progress: false
+
+jobs:
+  update-videos-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Eastern schedule window
+        id: schedule_gate
+        shell: bash
+        run: |
+          eastern_hour="$(TZ=America/New_York date +%H)"
+          case "$eastern_hour" in
+            00|06|12|18)
+              echo "should_run=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "should_run=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Skip outside 6-hour Eastern window
+        if: steps.schedule_gate.outputs.should_run != 'true'
+        run: echo "Outside 00:00, 06:00, 12:00, 18:00 America/New_York. Skipping."
+
+      - name: Check out repository
+        if: steps.schedule_gate.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: steps.schedule_gate.outputs.should_run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install yt-dlp
+        if: steps.schedule_gate.outputs.should_run == 'true'
+        run: python -m pip install --upgrade yt-dlp
+
+      - name: Refresh videos.json from YouTube
+        if: steps.schedule_gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          mkdir -p pages/youtube-list-grid
+          yt-dlp -J "https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ/videos" > pages/youtube-list-grid/videos.json
+
+      - name: Commit updated videos.json
+        if: steps.schedule_gate.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          if git diff --quiet -- pages/youtube-list-grid/videos.json; then
+            echo "videos.json is already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pages/youtube-list-grid/videos.json
+          git commit -m "Update videos.json"
+          git push
