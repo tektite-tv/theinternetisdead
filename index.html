@@ -2260,11 +2260,26 @@
       bindChatShortcutToFrame(chatSandboxFrame);
     });
 
-    const initialRootPath = window.location.pathname;
+    const initialRootPath = '/';
+
+    function normalizeInitialRootVideoRoute() {
+      const params = new URLSearchParams(window.location.search);
+      const videoId = params.get('v');
+      if (!videoId) return;
+
+      const canonicalPath = '/watch/';
+      if (window.location.pathname === canonicalPath) return;
+
+      window.history.replaceState(
+        { videoId },
+        '',
+        `${canonicalPath}?v=${encodeURIComponent(videoId)}`
+      );
+    }
 
     function updateRootVideoRoute(action, videoId) {
       const nextUrl = action === 'open' && videoId
-        ? `/watch?v=${encodeURIComponent(videoId)}`
+        ? `/watch/?v=${encodeURIComponent(videoId)}`
         : initialRootPath;
       window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
     }
@@ -2282,6 +2297,8 @@
         updateRootVideoRoute(data.action, String(data.videoId || ''));
       }
     });
+
+    normalizeInitialRootVideoRoute();
 
     tektiteFrame.addEventListener('load', () => {
       applyPageCustomizeState();

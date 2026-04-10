@@ -135,13 +135,28 @@ resizeObserver.observe(document.getElementById("overlay-container"));
 </script>
 
   <script src="/scripts/screenshot-shortcut.js"></script>
-  <script src="/scripts/hide-overlay.js">
-const initialWrapperPath = window.location.pathname;
+  <script>
+const wrapperHomePath = "/pages/youtube-list-grid/";
+
+function normalizeInitialWrapperVideoRoute() {
+    const params = new URLSearchParams(window.location.search);
+    const videoId = params.get("v");
+    if (!videoId) return;
+
+    const canonicalPath = "/pages/youtube-list-grid/watch/";
+    if (window.location.pathname === canonicalPath) return;
+
+    window.history.replaceState(
+        { videoId },
+        "",
+        `${canonicalPath}?v=${encodeURIComponent(videoId)}`
+    );
+}
 
 function updateWrapperVideoRoute(action, videoId) {
     const nextUrl = action === "open" && videoId
-        ? `/pages/youtube-list-grid/watch?v=${encodeURIComponent(videoId)}`
-        : initialWrapperPath;
+        ? `/pages/youtube-list-grid/watch/?v=${encodeURIComponent(videoId)}`
+        : wrapperHomePath;
     window.history.replaceState({ videoId: videoId || null }, "", nextUrl);
 }
 
@@ -158,7 +173,11 @@ window.addEventListener("message", (event) => {
     updateWrapperVideoRoute(data.action, String(data.videoId || ""));
 });
 
+normalizeInitialWrapperVideoRoute();
+
 frame.addEventListener("load", sendInitialWrapperVideoToFrame);
 </script>
+
+<script src="/scripts/hide-overlay.js"></script>
 </body>
 </html>

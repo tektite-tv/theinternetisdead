@@ -149,6 +149,19 @@ body::-webkit-scrollbar{
 </div>
 
 <script>
+function redirectKnownWatchRoutes(){
+    const redirects = {
+        "/watch": "/watch/",
+        "/pages/youtube-list-grid/watch": "/pages/youtube-list-grid/watch/"
+    };
+
+    const nextPath = redirects[window.location.pathname];
+    if(!nextPath) return false;
+
+    window.location.replace(nextPath + (window.location.search || "") + (window.location.hash || ""));
+    return true;
+}
+
 function renderMissingPath(){
     const missingPath = document.getElementById("missing-path");
     const query = window.location.search || "";
@@ -202,6 +215,10 @@ function syncLayout(){
 }
 
 window.syncOverlayLayout = syncLayout;
+
+if(redirectKnownWatchRoutes()){
+    document.documentElement.style.visibility = "hidden";
+}
 
 renderMissingPath();
 loadOverlay();

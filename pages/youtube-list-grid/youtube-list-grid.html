@@ -646,7 +646,7 @@ console.warn("Unable to notify parent about YouTube route change", e);
 }
 
 const nextUrl = action === "open" && id
- ? `/watch?v=${encodeURIComponent(id)}`
+ ? `/watch/?v=${encodeURIComponent(id)}`
  : initialStandalonePath;
 window.history.replaceState({ videoId: id || null }, "", nextUrl);
 }
