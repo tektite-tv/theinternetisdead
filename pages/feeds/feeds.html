@@ -252,6 +252,8 @@ max-width:80vw;
 margin:10px auto;
 display:none;
 line-height:1.4;
+white-space:pre-wrap;
+text-align:center;
 }
 
 
@@ -416,9 +418,9 @@ width:92vw;
 <div id="lightbox">
 <div id="videoTitle"></div>
 <iframe id="lightboxFrame" src="" allowfullscreen></iframe>
-<div id="closeVideo">[CLOSE VIDEO]</div>
-<div id="videoMeta"></div>
 <div id="videoFull"></div>
+<div id="videoMeta"></div>
+<div id="closeVideo">[CLOSE VIDEO]</div>
 </div>
 
 <script>
@@ -754,8 +756,9 @@ let clean=(description||"")
 .trim();
 
 document.getElementById("videoMeta").textContent = buildPostMeta(post);
-
-document.getElementById("videoFull").textContent = clean;
+const videoFullEl = document.getElementById("videoFull");
+videoFullEl.textContent = clean;
+videoFullEl.style.display = clean ? "block" : "none";
 
 lightbox.style.display="flex";
 
