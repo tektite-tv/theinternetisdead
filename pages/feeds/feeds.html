@@ -152,30 +152,24 @@ display:none;
 #gridControl{
 width:220px;
 display:flex;
-flex-direction:column;
 align-items:center;
-justify-content:center;
+justify-content:space-between;
+gap:12px;
 }
 
-#gridPreview{
-display:grid;
-grid-template-columns:repeat(10,16px);
-grid-template-rows:repeat(10,16px);
-gap:2px;
+.gridMenuLabel{
+font-size:calc(14px * var(--page-font-scale));
+white-space:nowrap;
 }
 
-.gridCell{
-width:16px;
-height:16px;
-border:1px solid var(--accent-color);
-background:transparent;
-}
-
-.gridCell.active{background:var(--accent-color);}
-
-#sizeSlider{
-width:200px;
-margin-bottom:12px;
+#gridPageSelect{
+height:40px;
+min-width:108px;
+border:2px solid var(--accent-color);
+background:var(--panel-background);
+color:var(--page-text);
+padding:0 12px;
+font-family:var(--page-font-family);
 }
 
 #posts{padding:20px;}
@@ -424,10 +418,8 @@ width:92vw;
 <div id="gridMenu">
 
 <div id="gridControl">
-
-<input type="range" min="3" max="10" value="3" id="sizeSlider">
-
-<div id="gridPreview"></div>
+<label for="gridPageSelect" class="gridMenuLabel">Grid Pages</label>
+<select id="gridPageSelect"></select>
 
 </div>
 
@@ -474,6 +466,7 @@ const sortModes=["newest","oldest","most-viewed","least-viewed"];
 let sortModeIndex=0;
 
 let gridSize=3;
+let gridPageCount=1;
 let visible=9;
 
 function isMobile(){
@@ -489,8 +482,7 @@ const gridBtn=document.getElementById("gridBtn");
 const channelHomeLink=document.getElementById("channelHomeLink");
 const channelTitleEl=document.getElementById("channelTitle");
 
-const preview=document.getElementById("gridPreview");
-const slider=document.getElementById("sizeSlider");
+const gridPageSelect=document.getElementById("gridPageSelect");
 
 const lightbox=document.getElementById("lightbox");
 const frame=document.getElementById("lightboxFrame");
@@ -587,42 +579,47 @@ updateTintFilters();
 return true;
 };
 
-for(let i=0;i<100;i++){
-let c=document.createElement("div");
-c.className="gridCell";
-preview.appendChild(c);
+function getGridVisibleCount(){
+return isMobile()
+? gridPageCount * gridSize
+: gridSize * (gridSize + gridPageCount - 1);
 }
 
-function updatePreview(){
-
-let cells=document.querySelectorAll(".gridCell");
-
-cells.forEach((c,i)=>{
-let x=i%10;
-let y=Math.floor(i/10);
-
-if(x<gridSize && y<gridSize) c.classList.add("active");
-else c.classList.remove("active");
-
-});
-
+function getMaxGridPages(){
+if(isMobile()){
+return Math.max(1, Math.ceil(filtered.length / gridSize));
+}
+const baseVisible = gridSize * gridSize;
+return Math.max(1, Math.ceil(Math.max(filtered.length - baseVisible, 0) / gridSize) + 1);
 }
 
-function updateSize(v){
+function updateGridPageOptions(){
+const maxPages = getMaxGridPages();
+gridPageCount = Math.max(1, Math.min(gridPageCount, maxPages));
+gridPageSelect.innerHTML = "";
 
-gridSize=parseInt(v);
-slider.value=v;
+for(let page=1; page<=maxPages; page++){
+const option=document.createElement("option");
+option.value=String(page);
+option.textContent=`Page ${page}`;
+gridPageSelect.appendChild(option);
+}
 
-visible=isMobile() ? 3 : gridSize*gridSize;
+gridPageSelect.value=String(gridPageCount);
+}
 
-visible = isMobile() ? 3 : gridSize*gridSize;
+function syncGridPaging(){
+updateGridPageOptions();
+visible = view==="list" ? 3 : getGridVisibleCount();
+}
 
-updatePreview();
+gridPageSelect.addEventListener("change",()=>{
+gridPageCount=Math.max(1, parseInt(gridPageSelect.value, 10) || 1);
+if(view==="grid"){
+visible=getGridVisibleCount();
 render();
-
 }
-
-slider.oninput=()=>updateSize(slider.value);
+});
 
 function escapeHtml(value){
 return String(value ?? "")
@@ -850,7 +847,7 @@ statusEl.style.display="none";
 modeBtn.disabled=false;
 
 updateSortButton();
-updatePreview();
+syncGridPaging();
 render();
 
 }catch(e){
@@ -980,10 +977,8 @@ render();
 gridBtn.onclick=()=>{
 if(view!=="grid"){
 view="grid";
-gridSize=3;
-slider.value=3;
-visible=isMobile() ? 3 : gridSize*gridSize;
-updatePreview();
+gridPageCount=1;
+syncGridPaging();
 render();
 }else{
 gridMenu.style.display =
@@ -992,16 +987,14 @@ gridMenu.style.display==="block" ? "none" : "block";
 }
 
 loadBtn.onclick=()=>{
-if(isMobile()){
-visible+=3;
-}else if(view==="list"){
+if(view==="list"){
 visible+=3;
 }else{
-if(gridSize<10){
-gridSize++;
-slider.value=gridSize;
-visible=gridSize*gridSize;
-updatePreview();
+const maxPages=getMaxGridPages();
+if(gridPageCount<maxPages){
+gridPageCount++;
+updateGridPageOptions();
+visible=getGridVisibleCount();
 }
 }
 render();
@@ -1009,7 +1002,7 @@ render();
 
 searchInput.addEventListener("input",()=>{
 refreshFilteredPosts();
-visible=isMobile() ? 3 : (view==="list"?3:gridSize*gridSize);
+syncGridPaging();
 render();
 });
 
@@ -1184,6 +1177,9 @@ animate();
 
 
 window.addEventListener("resize",()=>{
+if(view==="grid"){
+syncGridPaging();
+}
 render();
 });
 
@@ -1204,21 +1200,25 @@ window.tektiteChatApi = {
       visible = 3;
       gridMenu.style.display = 'none';
     } else {
-      visible = isMobile() ? 3 : gridSize * gridSize;
+      syncGridPaging();
     }
     render();
     return `View set to ${view}`;
   },
+  setGridPage(nextPage){
+    gridPageCount = Math.max(1, Math.min(getMaxGridPages(), parseInt(nextPage, 10) || 1));
+    syncGridPaging();
+    render();
+    return `Grid page set to ${gridPageCount}`;
+  },
   setGridSize(nextSize){
-    const size = Math.max(3, Math.min(10, parseInt(nextSize, 10) || gridSize));
-    updateSize(size);
-    return `Grid size set to ${size}`;
+    return this.setGridPage(nextSize);
   },
   search(term){
     const query = String(term || '').trim().toLowerCase();
     searchInput.value = term || '';
     refreshFilteredPosts();
-    visible = isMobile() ? 3 : (view === 'list' ? 3 : gridSize * gridSize);
+    syncGridPaging();
     render();
     return query ? `Showing ${filtered.length} result(s) for "${term}"` : 'Search cleared';
   },
