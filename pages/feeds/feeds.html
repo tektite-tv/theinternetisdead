@@ -419,7 +419,7 @@ width:92vw;
 <input id="videoSearch" placeholder="Search Feed...">
 <button id="listBtn">LIST</button>
 <button id="gridBtn">GRID</button>
-<button id="modeBtn" disabled>2D</button>
+<button id="modeBtn" disabled>NEWEST ↓</button>
 
 <div id="gridMenu">
 
@@ -470,6 +470,7 @@ window.updateTintFilters = updateTintFilters;
 let posts=[];
 let filtered=[];
 let view="grid";
+let sortOrder="desc";
 
 let gridSize=3;
 let visible=9;
@@ -492,6 +493,7 @@ const slider=document.getElementById("sizeSlider");
 
 const lightbox=document.getElementById("lightbox");
 const frame=document.getElementById("lightboxFrame");
+const modeBtn=document.getElementById("modeBtn");
 const channelLogoLinks = Array.from(document.querySelectorAll('.logoLink'));
 const defaultChannelLogoUrls = [
 "/media/images/png/oldtube.png",
@@ -685,6 +687,34 @@ function getRandomChannelUrl(){
 return Math.random() < 0.5 ? HONESTLY_THOMAS_URL : CRYPTID_MEMES_URL;
 }
 
+function getFilteredPosts(query){
+const normalizedQuery = String(query || "").trim().toLowerCase();
+const matches = normalizedQuery
+? posts.filter((post)=>`${post.title} ${post.description} ${post.channel} ${post.uploader}`.toLowerCase().includes(normalizedQuery))
+: [...posts];
+return matches.sort((a,b)=>{
+const aTimestamp = Number(a.sortTimestamp || 0);
+const bTimestamp = Number(b.sortTimestamp || 0);
+if(aTimestamp !== bTimestamp){
+return sortOrder === "desc" ? bTimestamp - aTimestamp : aTimestamp - bTimestamp;
+}
+return sortOrder === "desc"
+? a.sourceIndex - b.sourceIndex
+: b.sourceIndex - a.sourceIndex;
+});
+}
+
+function refreshFilteredPosts(){
+filtered = getFilteredPosts(searchInput.value);
+}
+
+function updateSortButton(){
+const isNewestFirst = sortOrder === "desc";
+modeBtn.textContent = isNewestFirst ? "NEWEST ↓" : "OLDEST ↑";
+modeBtn.title = isNewestFirst ? "Sorting newest to oldest" : "Sorting oldest to newest";
+modeBtn.setAttribute("aria-label", modeBtn.title);
+}
+
 function applyFeedMetadata(data){
 channelTitleEl.innerHTML = `<a href="${HONESTLY_THOMAS_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${HONESTLY_THOMAS_AVATAR}" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><span class="channelHandleSeparator">+</span><a href="${CRYPTID_MEMES_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${CRYPTID_MEMES_AVATAR}" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a>`;
 }
@@ -763,7 +793,7 @@ try{
 const data = await loadFeedData();
 applyFeedMetadata(data);
 
-posts = (data.entries || []).map(v => ({
+posts = (data.entries || []).map((v, index) => ({
 
 id: v.id,
 title: v.title || "",
@@ -775,11 +805,11 @@ thumb: pickThumbnailUrl(v),
 channel: v.channel || v.uploader || data.channel || data.uploader || "",
 uploader: v.uploader || v.channel || data.uploader || data.channel || "",
 channelUrl: v.channel_url || v.uploader_url || data.channel_url || data.uploader_url || "",
+sourceIndex: index,
 sortTimestamp: getSortableTimestamp(v)
+}));
 
-})).sort((a,b)=>b.sortTimestamp-a.sortTimestamp);
-
-filtered = posts;
+refreshFilteredPosts();
 
 if(!posts.length){
 statusEl.textContent="NO FEED ITEMS FOUND";
@@ -793,6 +823,7 @@ return;
 statusEl.style.display="none";
 modeBtn.disabled=false;
 
+updateSortButton();
 updatePreview();
 render();
 
@@ -951,16 +982,13 @@ render();
 }
 
 searchInput.addEventListener("input",()=>{
-const q=searchInput.value.toLowerCase();
-filtered=posts.filter(p=>`${p.title} ${p.description} ${p.channel} ${p.uploader}`.toLowerCase().includes(q));
+refreshFilteredPosts();
 visible=isMobile() ? 3 : (view==="list"?3:gridSize*gridSize);
 render();
 });
 
 
-let mode="2d";
 const cubeContainer=document.getElementById("cubeContainer");
-const modeBtn=document.getElementById("modeBtn");
 
 function shuffle(arr){
 let a=[...arr];
@@ -973,20 +1001,12 @@ return a;
 
 modeBtn.onclick=()=>{
 
-if(!filtered.length) return;
+if(!posts.length) return;
 
-if(mode==="2d"){
-mode="3d";
-modeBtn.textContent="3D";
-postsEl.style.display="none";
-cubeContainer.style.display="block";
-buildCube();
-}else{
-mode="2d";
-modeBtn.textContent="2D";
-cubeContainer.style.display="none";
-postsEl.style.display="";
-}
+sortOrder = sortOrder === "desc" ? "asc" : "desc";
+updateSortButton();
+refreshFilteredPosts();
+render();
 
 }
 
@@ -1171,14 +1191,17 @@ window.tektiteChatApi = {
   search(term){
     const query = String(term || '').trim().toLowerCase();
     searchInput.value = term || '';
-    filtered = !query ? posts : posts.filter(post => `${post.title} ${post.description} ${post.channel} ${post.uploader}`.toLowerCase().includes(query));
+    refreshFilteredPosts();
     visible = isMobile() ? 3 : (view === 'list' ? 3 : gridSize * gridSize);
     render();
     return query ? `Showing ${filtered.length} result(s) for "${term}"` : 'Search cleared';
   },
-  toggleMode(){
+  toggleSort(){
     modeBtn.click();
-    return `Mode is now ${mode}`;
+    return `Sort is now ${sortOrder === "desc" ? "newest to oldest" : "oldest to newest"}`;
+  },
+  toggleMode(){
+    return this.toggleSort();
   }
 };
 

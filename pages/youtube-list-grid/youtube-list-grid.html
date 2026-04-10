@@ -391,7 +391,7 @@ width:92vw;
 <input id="videoSearch" placeholder="Search Videos...">
 <button id="listBtn">LIST</button>
 <button id="gridBtn">GRID</button>
-<button id="modeBtn" disabled>2D</button>
+<button id="modeBtn" disabled>NEWEST ↓</button>
 
 <div id="gridMenu">
 
@@ -437,6 +437,7 @@ window.updateTintFilters = updateTintFilters;
 let posts=[];
 let filtered=[];
 let view="grid";
+let sortOrder="desc";
 
 let gridSize=3;
 let visible=9;
@@ -457,6 +458,7 @@ const slider=document.getElementById("sizeSlider");
 
 const lightbox=document.getElementById("lightbox");
 const frame=document.getElementById("lightboxFrame");
+const modeBtn=document.getElementById("modeBtn");
 const channelLogoLinks = Array.from(document.querySelectorAll('.logoLink'));
 const defaultChannelLogoUrls = [
 "/media/images/png/oldtube.png",
@@ -586,6 +588,50 @@ render();
 
 slider.oninput=()=>updateSize(slider.value);
 
+function parseUploadDate(value){
+const raw = String(value || "").trim();
+if(!/^\d{8}$/.test(raw)) return 0;
+const year = Number(raw.slice(0,4));
+const month = Number(raw.slice(4,6)) - 1;
+const day = Number(raw.slice(6,8));
+return Date.UTC(year, month, day) / 1000;
+}
+
+function getSortableTimestamp(video){
+if(Number.isFinite(video.release_timestamp)) return video.release_timestamp;
+if(Number.isFinite(video.timestamp)) return video.timestamp;
+const parsedUploadDate = parseUploadDate(video.upload_date);
+if(parsedUploadDate) return parsedUploadDate;
+return 0;
+}
+
+function getFilteredPosts(query){
+const normalizedQuery = String(query || "").trim().toLowerCase();
+const matches = normalizedQuery
+? posts.filter((post)=>`${post.title} ${post.description}`.toLowerCase().includes(normalizedQuery))
+: [...posts];
+return matches.sort((a,b)=>{
+const aTimestamp = Number(a.sortTimestamp || 0);
+const bTimestamp = Number(b.sortTimestamp || 0);
+if(aTimestamp !== bTimestamp){
+return sortOrder === "desc" ? bTimestamp - aTimestamp : aTimestamp - bTimestamp;
+}
+return sortOrder === "desc"
+? a.sourceIndex - b.sourceIndex
+: b.sourceIndex - a.sourceIndex;
+});
+}
+
+function refreshFilteredPosts(){
+filtered = getFilteredPosts(searchInput.value);
+}
+
+function updateSortButton(){
+const isNewestFirst = sortOrder === "desc";
+modeBtn.textContent = isNewestFirst ? "NEWEST ↓" : "OLDEST ↑";
+modeBtn.title = isNewestFirst ? "Sorting newest to oldest" : "Sorting oldest to newest";
+modeBtn.setAttribute("aria-label", modeBtn.title);
+}
 
 
 
@@ -598,7 +644,7 @@ if(!r.ok) throw new Error("videos.json failed");
 
 const data = await r.json();
 
-posts = (data.entries || []).map(v => ({
+posts = (data.entries || []).map((v, index) => ({
 
 id: v.id,
 title: v.title || "",
@@ -606,15 +652,18 @@ description: v.description || "",
 date: "",
 duration: v.duration || 0,
 views: v.view_count || 0,
-thumb: (v.thumbnails && v.thumbnails[3] ? v.thumbnails[3].url : `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`)
+sourceIndex: index,
+thumb: (v.thumbnails && v.thumbnails[3] ? v.thumbnails[3].url : `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`),
+sortTimestamp: getSortableTimestamp(v)
 
 }));
 
-filtered = posts;
+refreshFilteredPosts();
 
 statusEl.style.display="none";
 modeBtn.disabled=false;
 
+updateSortButton();
 updatePreview();
 render();
 
@@ -765,16 +814,13 @@ render();
 }
 
 searchInput.addEventListener("input",()=>{
-const q=searchInput.value.toLowerCase();
-filtered=posts.filter(p=>p.title.toLowerCase().includes(q));
+refreshFilteredPosts();
 visible=isMobile() ? 3 : (view==="list"?3:gridSize*gridSize);
 render();
 });
 
 
-let mode="2d";
 const cubeContainer=document.getElementById("cubeContainer");
-const modeBtn=document.getElementById("modeBtn");
 
 function shuffle(arr){
 let a=[...arr];
@@ -787,20 +833,12 @@ return a;
 
 modeBtn.onclick=()=>{
 
-if(!filtered.length) return;
+if(!posts.length) return;
 
-if(mode==="2d"){
-mode="3d";
-modeBtn.textContent="3D";
-postsEl.style.display="none";
-cubeContainer.style.display="block";
-buildCube();
-}else{
-mode="2d";
-modeBtn.textContent="2D";
-cubeContainer.style.display="none";
-postsEl.style.display="";
-}
+sortOrder = sortOrder === "desc" ? "asc" : "desc";
+updateSortButton();
+refreshFilteredPosts();
+render();
 
 }
 
@@ -985,14 +1023,17 @@ window.tektiteChatApi = {
   search(term){
     const query = String(term || '').trim().toLowerCase();
     searchInput.value = term || '';
-    filtered = !query ? posts : posts.filter(post => `${post.title} ${post.description}`.toLowerCase().includes(query));
+    refreshFilteredPosts();
     visible = isMobile() ? 3 : (view === 'list' ? 3 : gridSize * gridSize);
     render();
     return query ? `Showing ${filtered.length} result(s) for "${term}"` : 'Search cleared';
   },
-  toggleMode(){
+  toggleSort(){
     modeBtn.click();
-    return `Mode is now ${mode}`;
+    return `Sort is now ${sortOrder === "desc" ? "newest to oldest" : "oldest to newest"}`;
+  },
+  toggleMode(){
+    return this.toggleSort();
   }
 };
 
