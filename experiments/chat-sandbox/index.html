@@ -116,6 +116,18 @@ async function loadOverlay(){
 
 const frame = document.getElementById("chat-sandbox-frame");
 
+
+function openEmbeddedChatWithWelcome(){
+    postToChatSandbox({ type: 'chatSandboxOpen', focus: false });
+}
+
+if (frame) {
+    frame.addEventListener('load', () => {
+        openEmbeddedChatWithWelcome();
+        registerPageCommands();
+    });
+}
+
 const defaultClockZone = 'America/Toronto';
 const allClockZones = typeof Intl.supportedValuesOf === 'function'
     ? Array.from(new Set(['America/Toronto', ...Intl.supportedValuesOf('timeZone')])).sort((a, b) => a.localeCompare(b))
