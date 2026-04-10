@@ -120,6 +120,8 @@ html, body {
   margin-left: 14px;
   display: flex;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   min-width: 0;
 }
 
@@ -503,6 +505,7 @@ html, body {
 
       <div class="sidebar-header-link">
         <a class="home-link" id="sidebar-context-link" href="/" hidden>+ Home</a>
+        <a class="home-link" id="sidebar-command-link" href="/" hidden>/command</a>
       </div>
     </div>
 
@@ -762,6 +765,7 @@ html, body {
   const toggles = overlayRoot.querySelectorAll('[data-action="toggle-sidebar"]');
   const logoLinks = overlayRoot.querySelectorAll('.logo-link');
   const sidebarContextLink = overlayRoot.querySelector('#sidebar-context-link');
+  const sidebarCommandLink = overlayRoot.querySelector('#sidebar-command-link');
 
   if (!sidebar || !backdrop) return;
 
@@ -879,6 +883,7 @@ html, body {
   function syncTopLinkVisibility() {
     const shouldShowChat = !!sidebarContextLink && shouldUseIndexChatBehavior();
     const shouldShowStandaloneHome = !!sidebarContextLink && shouldShowHomeLink();
+    const shouldShowCommand = !!sidebarCommandLink && shouldUseIndexChatBehavior();
 
     if (sidebarContextLink) {
       const shouldShow = shouldShowChat || shouldShowStandaloneHome;
@@ -900,6 +905,21 @@ html, body {
         sidebarContextLink.removeAttribute('aria-label');
       }
     }
+
+    if (sidebarCommandLink) {
+      sidebarCommandLink.hidden = !shouldShowCommand;
+      sidebarCommandLink.setAttribute('aria-hidden', shouldShowCommand ? 'false' : 'true');
+      sidebarCommandLink.tabIndex = shouldShowCommand ? 0 : -1;
+      sidebarCommandLink.style.display = shouldShowCommand ? '' : 'none';
+
+      if (shouldShowCommand) {
+        sidebarCommandLink.setAttribute('href', '#');
+        sidebarCommandLink.setAttribute('aria-label', 'Open chat command input');
+      } else {
+        sidebarCommandLink.removeAttribute('href');
+        sidebarCommandLink.removeAttribute('aria-label');
+      }
+    }
   }
 
   function handleChatActivate(event) {
@@ -914,6 +934,16 @@ html, body {
 
   function handleLogoActivate() {
     closeSidebar();
+  }
+
+  function handleCommandActivate(event) {
+    if (!shouldUseIndexChatBehavior()) return;
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    closeSidebar();
+    requestParentChatOpen(true);
   }
 
   syncTopLinkVisibility();
@@ -933,6 +963,14 @@ html, body {
         return;
       }
       closeSidebar();
+    });
+  }
+
+  if (sidebarCommandLink) {
+    sidebarCommandLink.addEventListener('click', handleCommandActivate);
+    sidebarCommandLink.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      handleCommandActivate(event);
     });
   }
 
