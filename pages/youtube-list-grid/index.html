@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>theinternetisdead.org/pages/youtube-list-grid/</title>
+<title>theinternetisdead.com/pages/youtube-list-grid/</title>
 
 <style>
 html,
@@ -132,6 +132,43 @@ window.addEventListener("load", syncLayout);
 
 const resizeObserver = new ResizeObserver(syncLayout);
 resizeObserver.observe(document.getElementById("overlay-container"));
+
+const initialWrapperPath = "/pages/youtube-list-grid/index.html";
+
+function getRequestedVideoIdFromWrapperLocation(){
+    try{
+        const params = new URLSearchParams(window.location.search || "");
+        return params.get("v") || "";
+    }catch(_){
+        return "";
+    }
+}
+
+function updateWrapperWatchRoute(videoId){
+    const nextUrl = videoId ? `/watch?v=${encodeURIComponent(videoId)}` : initialWrapperPath;
+    try{
+        window.history.replaceState({}, "", nextUrl);
+    }catch(_){ }
+}
+
+function syncRequestedVideoToFrame(){
+    const requestedVideoId = getRequestedVideoIdFromWrapperLocation();
+    if(!requestedVideoId) return;
+    try{
+        frame.contentWindow?.postMessage({
+            type: "tidOpenVideoById",
+            videoId: requestedVideoId
+        }, "*");
+    }catch(_){ }
+}
+
+frame.addEventListener("load", syncRequestedVideoToFrame);
+window.addEventListener("message", (event) => {
+    const data = event.data || {};
+    if(data.type !== "tidVideoRouteChange") return;
+    updateWrapperWatchRoute(data.videoId || "");
+});
+
 </script>
 
   <script src="/scripts/screenshot-shortcut.js"></script>

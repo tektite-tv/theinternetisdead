@@ -203,6 +203,35 @@
     let chatSandboxReady = false;
     let pendingChatOpenOptions = null;
 
+    const initialWrapperPath = '/';
+
+    function getRequestedVideoIdFromWrapperLocation() {
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        return params.get('v') || '';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function updateWrapperWatchRoute(videoId) {
+      const nextUrl = videoId ? `/watch?v=${encodeURIComponent(videoId)}` : initialWrapperPath;
+      try {
+        window.history.replaceState({}, '', nextUrl);
+      } catch (_) {}
+    }
+
+    function syncRequestedVideoToFrame() {
+      const requestedVideoId = getRequestedVideoIdFromWrapperLocation();
+      if (!requestedVideoId) return;
+      try {
+        tektiteFrame.contentWindow?.postMessage({
+          type: 'tidOpenVideoById',
+          videoId: requestedVideoId
+        }, '*');
+      } catch (_) {}
+    }
+
     const defaultClockZone = 'America/Toronto';
     const supportedClockZones = (typeof Intl.supportedValuesOf === 'function'
       ? Intl.supportedValuesOf('timeZone')
@@ -1866,8 +1895,16 @@
       overlay._exitAnimationFrame = requestAnimationFrame(animate);
     }
 
+
+    tektiteFrame.addEventListener('load', syncRequestedVideoToFrame);
+
     window.addEventListener('message', (event) => {
       if (!event.data) return;
+
+      if (event.data.type === 'tidVideoRouteChange') {
+        updateWrapperWatchRoute(event.data.videoId || '');
+        return;
+      }
 
       if (event.source === getChatWindow()) {
         if (event.data.type === 'chatSandboxState') {

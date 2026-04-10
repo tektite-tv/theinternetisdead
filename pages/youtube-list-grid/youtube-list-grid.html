@@ -589,29 +589,45 @@ slider.oninput=()=>updateSize(slider.value);
 
 
 
-function openVideoFromUrl(){
-const params = new URLSearchParams(window.location.search);
-const videoId = params.get("v");
-if(!videoId) return;
-const match = posts.find(post => post.id === videoId);
-if(match){
-openVideo(match.id, match.title, match.date, match.description, false);
+function getRequestedVideoIdFromLocation(){
+try{
+const params = new URLSearchParams(window.location.search || "");
+return params.get("v") || "";
+}catch(_){
+return "";
 }
 }
 
-window.addEventListener("popstate", ()=>{
-const params = new URLSearchParams(window.location.search);
-const videoId = params.get("v");
-if(videoId){
-const match = posts.find(post => post.id === videoId);
-if(match){
-openVideo(match.id, match.title, match.date, match.description, false);
-return;
+function postWatchRouteToParents(videoId){
+const payload = {
+source: "youtube-list-grid",
+type: "tidVideoRouteChange",
+videoId: videoId || ""
+};
+
+try{ if(window.parent && window.parent !== window) window.parent.postMessage(payload, "*"); }catch(_){ }
+try{ if(window.top && window.top !== window.parent && window.top !== window) window.top.postMessage(payload, "*"); }catch(_){ }
 }
+
+function setStandaloneWatchRoute(videoId){
+if(window.top !== window.self) return;
+const basePath = "/pages/youtube-list-grid/youtube-list-grid.html";
+const nextUrl = videoId ? `/watch?v=${encodeURIComponent(videoId)}` : basePath;
+try{
+window.history.replaceState({}, "", nextUrl);
+}catch(_){ }
 }
-lightbox.style.display="none";
-frame.src="";
-});
+
+function findPostById(id){
+return posts.find(p => p.id === id) || null;
+}
+
+function openVideoById(id){
+const post = findPostById(id);
+if(!post) return false;
+openVideo(post.id, post.title, post.date, post.description, { syncRoute: false });
+return true;
+}
 
 async function loadPosts(){
 
@@ -641,7 +657,11 @@ modeBtn.disabled=false;
 
 updatePreview();
 render();
-openVideoFromUrl();
+
+const requestedVideoId = getRequestedVideoIdFromLocation();
+if(requestedVideoId){
+openVideoById(requestedVideoId);
+}
 
 }catch(e){
 
@@ -654,23 +674,9 @@ statusEl.textContent="FAILED TO LOAD /pages/youtube-list-grid/videos.json";
 
 
 
-function updateWatchUrl(videoId){
-const nextUrl = `${window.location.origin}/watch?v=${encodeURIComponent(videoId)}`;
-window.history.pushState({ videoId }, "", nextUrl);
-}
-
-function resetWatchUrl(){
-const basePath = window.location.pathname;
-window.history.pushState({}, "", basePath);
-}
-
-function openVideo(id,title,date,description,pushUrl=true){
+function openVideo(id,title,date,description){
 
 frame.src="https://www.youtube.com/embed/"+id;
-
-if(pushUrl){
-updateWatchUrl(id);
-}
 
 document.getElementById("videoTitle").innerHTML =
 `<a href="https://youtube.com/watch?v=${id}" target="_blank" style="color:var(--page-text);text-decoration:none;">${title}</a>`;
@@ -689,7 +695,6 @@ lightbox.style.display="flex";
 document.getElementById("closeVideo").onclick = ()=>{
 lightbox.style.display="none";
 frame.src="";
-resetWatchUrl();
 };
 
 }
@@ -783,6 +788,13 @@ const q=searchInput.value.toLowerCase();
 filtered=posts.filter(p=>p.title.toLowerCase().includes(q));
 visible=isMobile() ? 3 : (view==="list"?3:gridSize*gridSize);
 render();
+});
+
+window.addEventListener("message", (event) => {
+const data = event.data || {};
+if(data.type !== "tidOpenVideoById") return;
+if(!data.videoId) return;
+openVideoById(String(data.videoId));
 });
 
 
