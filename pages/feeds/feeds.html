@@ -84,6 +84,21 @@ background:var(--thumbnail-filter);
 mask-size:cover;
 }
 .channelTitle{font-size:calc(21px * var(--page-font-scale));font-weight:bold;}
+.channelHandleLink{
+display:inline-flex !important;
+align-items:center;
+gap:8px;
+color:inherit;
+text-decoration:none;
+}
+.channelHandleAvatar{
+width:24px;
+height:24px;
+border-radius:50%;
+object-fit:cover;
+display:block;
+border:1px solid var(--accent-color);
+}
 
 .controls{display:flex;align-items:center;gap:12px;position:relative;}
 
@@ -384,7 +399,7 @@ width:92vw;
 <img src="/media/images/png/oldtube.png" class="channelLogo" alt="Channel feed logo">
 <span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/media/images/png/oldtube.png');"></span>
 </a>
-<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" style="display:inline;color:inherit;text-decoration:none;">@Honestly_Thomas</a> + <a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" style="display:inline;color:inherit;text-decoration:none;">@Cryptid_Memes</a></div>
+<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/media/images/png/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar">@Honestly_Thomas</a> + <a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/media/images/png/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar">@Cryptid_Memes</a></div>
 </div>
 
 <div class="controls">
@@ -428,6 +443,8 @@ width:92vw;
 const FEED_DATA_PATH="/pages/feeds/feed-videos.json";
 const HONESTLY_THOMAS_URL="https://www.youtube.com/@Honestly_Thomas";
 const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
+const HONESTLY_THOMAS_AVATAR="/media/images/png/honestly-thomas.png";
+const CRYPTID_MEMES_AVATAR="/media/images/png/cryptid-memes.png";
 
 function updateTintFilters(){
   // Tints are handled by mask-based overlay layers, matching overlay.html.
@@ -650,7 +667,7 @@ return `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
 }
 
 function applyFeedMetadata(data){
-channelTitleEl.innerHTML = `<a href="${HONESTLY_THOMAS_URL}" target="_blank" rel="noopener noreferrer" style="display:inline;color:inherit;text-decoration:none;">@Honestly_Thomas</a> + <a href="${CRYPTID_MEMES_URL}" target="_blank" rel="noopener noreferrer" style="display:inline;color:inherit;text-decoration:none;">@Cryptid_Memes</a>`;
+channelTitleEl.innerHTML = `<a href="${HONESTLY_THOMAS_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${HONESTLY_THOMAS_AVATAR}" class="channelHandleAvatar" alt="Honestly Thomas avatar">@Honestly_Thomas</a> + <a href="${CRYPTID_MEMES_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${CRYPTID_MEMES_AVATAR}" class="channelHandleAvatar" alt="Cryptid Memes avatar">@Cryptid_Memes</a>`;
 }
 
 
