@@ -408,7 +408,7 @@ width:92vw;
 <header>
 
 <div class="channelHeader">
-<a href="/pages/feeds/" class="logoLink" id="channelHomeLink">
+<a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="logoLink" id="channelHomeLink">
 <img src="/media/images/png/oldtube.png" class="channelLogo" alt="Channel feed logo">
 <span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/media/images/png/oldtube.png');"></span>
 </a>
@@ -483,6 +483,7 @@ const searchInput=document.getElementById("videoSearch");
 const loadBtn=document.getElementById("loadMore");
 const gridMenu=document.getElementById("gridMenu");
 const gridBtn=document.getElementById("gridBtn");
+const channelHomeLink=document.getElementById("channelHomeLink");
 const channelTitleEl=document.getElementById("channelTitle");
 
 const preview=document.getElementById("gridPreview");
@@ -677,6 +678,10 @@ const thumbs = Array.isArray(video.thumbnails) ? video.thumbnails.filter(Boolean
 const preferred = thumbs[3] || thumbs[thumbs.length - 1];
 if(preferred && preferred.url) return preferred.url;
 return `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+}
+
+function getRandomChannelUrl(){
+return Math.random() < 0.5 ? HONESTLY_THOMAS_URL : CRYPTID_MEMES_URL;
 }
 
 function applyFeedMetadata(data){
@@ -1117,6 +1122,9 @@ window.tektiteChatApi = {
 
 
 document.addEventListener("DOMContentLoaded",()=>{
+  channelHomeLink.addEventListener("click", ()=>{
+    channelHomeLink.href = getRandomChannelUrl();
+  });
   applyChannelLogoAsset(getPrimaryChannelLogoUrl());
   bindChannelLogoHoverCycle();
   updateTintFilters();
