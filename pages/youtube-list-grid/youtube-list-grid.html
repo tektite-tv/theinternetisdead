@@ -589,6 +589,30 @@ slider.oninput=()=>updateSize(slider.value);
 
 
 
+function openVideoFromUrl(){
+const params = new URLSearchParams(window.location.search);
+const videoId = params.get("v");
+if(!videoId) return;
+const match = posts.find(post => post.id === videoId);
+if(match){
+openVideo(match.id, match.title, match.date, match.description, false);
+}
+}
+
+window.addEventListener("popstate", ()=>{
+const params = new URLSearchParams(window.location.search);
+const videoId = params.get("v");
+if(videoId){
+const match = posts.find(post => post.id === videoId);
+if(match){
+openVideo(match.id, match.title, match.date, match.description, false);
+return;
+}
+}
+lightbox.style.display="none";
+frame.src="";
+});
+
 async function loadPosts(){
 
 try{
@@ -617,6 +641,7 @@ modeBtn.disabled=false;
 
 updatePreview();
 render();
+openVideoFromUrl();
 
 }catch(e){
 
@@ -629,9 +654,23 @@ statusEl.textContent="FAILED TO LOAD /pages/youtube-list-grid/videos.json";
 
 
 
-function openVideo(id,title,date,description){
+function updateWatchUrl(videoId){
+const nextUrl = `${window.location.origin}/watch?v=${encodeURIComponent(videoId)}`;
+window.history.pushState({ videoId }, "", nextUrl);
+}
+
+function resetWatchUrl(){
+const basePath = window.location.pathname;
+window.history.pushState({}, "", basePath);
+}
+
+function openVideo(id,title,date,description,pushUrl=true){
 
 frame.src="https://www.youtube.com/embed/"+id;
+
+if(pushUrl){
+updateWatchUrl(id);
+}
 
 document.getElementById("videoTitle").innerHTML =
 `<a href="https://youtube.com/watch?v=${id}" target="_blank" style="color:var(--page-text);text-decoration:none;">${title}</a>`;
@@ -650,6 +689,7 @@ lightbox.style.display="flex";
 document.getElementById("closeVideo").onclick = ()=>{
 lightbox.style.display="none";
 frame.src="";
+resetWatchUrl();
 };
 
 }
