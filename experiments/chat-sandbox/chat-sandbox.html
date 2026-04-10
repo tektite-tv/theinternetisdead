@@ -5888,6 +5888,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     notifyParentChatSandboxState();
 
+    if (!isEmbeddedInIndex()) {
+      showChatBar();
+    }
+
     window.addEventListener('keydown', (event) => {
       if (isScreenshotAnimationLocked()) {
         if (event.key === '/' || event.key === 'Escape' || event.key === 'Enter') {
