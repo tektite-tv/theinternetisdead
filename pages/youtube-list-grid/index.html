@@ -132,46 +132,33 @@ window.addEventListener("load", syncLayout);
 
 const resizeObserver = new ResizeObserver(syncLayout);
 resizeObserver.observe(document.getElementById("overlay-container"));
-
-const initialWrapperPath = "/pages/youtube-list-grid/index.html";
-
-function getRequestedVideoIdFromWrapperLocation(){
-    try{
-        const params = new URLSearchParams(window.location.search || "");
-        return params.get("v") || "";
-    }catch(_){
-        return "";
-    }
-}
-
-function updateWrapperWatchRoute(videoId){
-    const nextUrl = videoId ? `/watch?v=${encodeURIComponent(videoId)}` : initialWrapperPath;
-    try{
-        window.history.replaceState({}, "", nextUrl);
-    }catch(_){ }
-}
-
-function syncRequestedVideoToFrame(){
-    const requestedVideoId = getRequestedVideoIdFromWrapperLocation();
-    if(!requestedVideoId) return;
-    try{
-        frame.contentWindow?.postMessage({
-            type: "tidOpenVideoById",
-            videoId: requestedVideoId
-        }, "*");
-    }catch(_){ }
-}
-
-frame.addEventListener("load", syncRequestedVideoToFrame);
-window.addEventListener("message", (event) => {
-    const data = event.data || {};
-    if(data.type !== "tidVideoRouteChange") return;
-    updateWrapperWatchRoute(data.videoId || "");
-});
-
 </script>
 
   <script src="/scripts/screenshot-shortcut.js"></script>
-  <script src="/scripts/hide-overlay.js"></script>
+  <script src="/scripts/hide-overlay.js">
+const initialWrapperPath = window.location.pathname;
+
+function updateWrapperVideoRoute(action, videoId) {
+    const nextUrl = action === "open" && videoId
+        ? `/pages/youtube-list-grid/watch?v=${encodeURIComponent(videoId)}`
+        : initialWrapperPath;
+    window.history.replaceState({ videoId: videoId || null }, "", nextUrl);
+}
+
+function sendInitialWrapperVideoToFrame() {
+    const params = new URLSearchParams(window.location.search);
+    const videoId = params.get("v");
+    if (!videoId || !frame.contentWindow) return;
+    frame.contentWindow.postMessage({ type: "youtubeGridOpenVideo", videoId }, "*");
+}
+
+window.addEventListener("message", (event) => {
+    const data = event.data || {};
+    if (event.source !== frame.contentWindow || data.type !== "youtubeGridVideoState") return;
+    updateWrapperVideoRoute(data.action, String(data.videoId || ""));
+});
+
+frame.addEventListener("load", sendInitialWrapperVideoToFrame);
+</script>
 </body>
 </html>

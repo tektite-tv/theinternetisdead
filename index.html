@@ -203,35 +203,6 @@
     let chatSandboxReady = false;
     let pendingChatOpenOptions = null;
 
-    const initialWrapperPath = '/';
-
-    function getRequestedVideoIdFromWrapperLocation() {
-      try {
-        const params = new URLSearchParams(window.location.search || '');
-        return params.get('v') || '';
-      } catch (_) {
-        return '';
-      }
-    }
-
-    function updateWrapperWatchRoute(videoId) {
-      const nextUrl = videoId ? `/watch?v=${encodeURIComponent(videoId)}` : initialWrapperPath;
-      try {
-        window.history.replaceState({}, '', nextUrl);
-      } catch (_) {}
-    }
-
-    function syncRequestedVideoToFrame() {
-      const requestedVideoId = getRequestedVideoIdFromWrapperLocation();
-      if (!requestedVideoId) return;
-      try {
-        tektiteFrame.contentWindow?.postMessage({
-          type: 'tidOpenVideoById',
-          videoId: requestedVideoId
-        }, '*');
-      } catch (_) {}
-    }
-
     const defaultClockZone = 'America/Toronto';
     const supportedClockZones = (typeof Intl.supportedValuesOf === 'function'
       ? Intl.supportedValuesOf('timeZone')
@@ -1895,16 +1866,8 @@
       overlay._exitAnimationFrame = requestAnimationFrame(animate);
     }
 
-
-    tektiteFrame.addEventListener('load', syncRequestedVideoToFrame);
-
     window.addEventListener('message', (event) => {
       if (!event.data) return;
-
-      if (event.data.type === 'tidVideoRouteChange') {
-        updateWrapperWatchRoute(event.data.videoId || '');
-        return;
-      }
 
       if (event.source === getChatWindow()) {
         if (event.data.type === 'chatSandboxState') {
@@ -2297,9 +2260,33 @@
       bindChatShortcutToFrame(chatSandboxFrame);
     });
 
+    const initialRootPath = window.location.pathname;
+
+    function updateRootVideoRoute(action, videoId) {
+      const nextUrl = action === 'open' && videoId
+        ? `/watch?v=${encodeURIComponent(videoId)}`
+        : initialRootPath;
+      window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
+    }
+
+    function sendInitialRootVideoToFrame() {
+      const params = new URLSearchParams(window.location.search);
+      const videoId = params.get('v');
+      if (!videoId || !tektiteFrame.contentWindow) return;
+      tektiteFrame.contentWindow.postMessage({ type: 'youtubeGridOpenVideo', videoId }, '*');
+    }
+
+    window.addEventListener('message', (event) => {
+      const data = event.data || {};
+      if (event.source === tektiteFrame.contentWindow && data.type === 'youtubeGridVideoState') {
+        updateRootVideoRoute(data.action, String(data.videoId || ''));
+      }
+    });
+
     tektiteFrame.addEventListener('load', () => {
       applyPageCustomizeState();
       bindChatShortcutToFrame(tektiteFrame);
+      sendInitialRootVideoToFrame();
       if (colorElementModeEnabled) {
         window.setTimeout(refreshColorElementHotspots, 150);
       }
