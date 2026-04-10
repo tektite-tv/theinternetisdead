@@ -99,11 +99,6 @@
     animate();
     loadDefaultPdf();
 
-    input.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (file) await loadPdf(file);
-    });
-
     window.addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
       if (e.repeat) return;
