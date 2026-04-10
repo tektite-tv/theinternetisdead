@@ -173,7 +173,7 @@
     <div id="main-content">
       <iframe
         id="tektite-frame"
-        src="/pages/youtube-list-grid/youtube-list-grid.html"
+        src="/pages/feeds/feeds.html"
         title="Tektite Index"
         loading="eager"
         allowfullscreen
@@ -981,7 +981,7 @@
           createdAt: new Date().toISOString(),
           frameCount,
           frameDelayMs: frameDelay,
-          source: '/pages/overlay.html + /pages/youtube-list-grid/youtube-list-grid.html composite'
+          source: '/pages/overlay.html + /pages/feeds/feeds.html composite'
         };
         const manifestBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
         entries.push(await createZipEntryFromBlob('screenshot-animation/manifest.json', manifestBlob));
@@ -1556,7 +1556,7 @@
 
     function applyOverlayVars(target) {
       if (!target) return;
-      // Keep Page Background scoped to /pages/youtube-list-grid/youtube-list-grid.html itself, not the outer index/overlay shell.
+    // Keep Page Background scoped to /pages/feeds/feeds.html itself, not the outer index/overlay shell.
       target.style.setProperty('--page-bg', 'transparent');
       target.style.setProperty('--overlay-text', hexToRgba(pageCustomizeState.colors.pageText.hex, pageCustomizeState.colors.pageText.alpha));
       target.style.setProperty('--overlay-bg', hexToRgba(pageCustomizeState.colors.overlayTopBarBg.hex, pageCustomizeState.colors.overlayTopBarBg.alpha));
@@ -2288,12 +2288,12 @@
       const params = new URLSearchParams(window.location.search);
       const videoId = params.get('v');
       if (!videoId || !tektiteFrame.contentWindow) return;
-      tektiteFrame.contentWindow.postMessage({ type: 'youtubeGridOpenVideo', videoId }, '*');
+      tektiteFrame.contentWindow.postMessage({ type: 'feedGridOpenVideo', videoId }, '*');
     }
 
     window.addEventListener('message', (event) => {
       const data = event.data || {};
-      if (event.source === tektiteFrame.contentWindow && data.type === 'youtubeGridVideoState') {
+      if (event.source === tektiteFrame.contentWindow && data.type === 'feedGridVideoState') {
         updateRootVideoRoute(data.action, String(data.videoId || ''));
       }
     });
