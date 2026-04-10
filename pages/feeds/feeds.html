@@ -470,7 +470,8 @@ window.updateTintFilters = updateTintFilters;
 let posts=[];
 let filtered=[];
 let view="grid";
-let sortOrder="desc";
+const sortModes=["newest","oldest","most-viewed","least-viewed"];
+let sortModeIndex=0;
 
 let gridSize=3;
 let visible=9;
@@ -695,12 +696,26 @@ const matches = normalizedQuery
 return matches.sort((a,b)=>{
 const aTimestamp = Number(a.sortTimestamp || 0);
 const bTimestamp = Number(b.sortTimestamp || 0);
+const aViews = Number(a.views || 0);
+const bViews = Number(b.views || 0);
+const sortMode = sortModes[sortModeIndex];
+
+if(sortMode === "newest" || sortMode === "oldest"){
 if(aTimestamp !== bTimestamp){
-return sortOrder === "desc" ? bTimestamp - aTimestamp : aTimestamp - bTimestamp;
+return sortMode === "newest" ? bTimestamp - aTimestamp : aTimestamp - bTimestamp;
 }
-return sortOrder === "desc"
-? a.sourceIndex - b.sourceIndex
-: b.sourceIndex - a.sourceIndex;
+if(aViews !== bViews){
+return bViews - aViews;
+}
+}else{
+if(aViews !== bViews){
+return sortMode === "most-viewed" ? bViews - aViews : aViews - bViews;
+}
+if(aTimestamp !== bTimestamp){
+return bTimestamp - aTimestamp;
+}
+}
+return a.sourceIndex - b.sourceIndex;
 });
 }
 
@@ -709,9 +724,20 @@ filtered = getFilteredPosts(searchInput.value);
 }
 
 function updateSortButton(){
-const isNewestFirst = sortOrder === "desc";
-modeBtn.textContent = isNewestFirst ? "NEWEST ↓" : "OLDEST ↑";
-modeBtn.title = isNewestFirst ? "Sorting newest to oldest" : "Sorting oldest to newest";
+const sortMode = sortModes[sortModeIndex];
+if(sortMode === "newest"){
+modeBtn.textContent = "NEWEST ↓";
+modeBtn.title = "Sorting newest to oldest";
+}else if(sortMode === "oldest"){
+modeBtn.textContent = "OLDEST ↑";
+modeBtn.title = "Sorting oldest to newest";
+}else if(sortMode === "most-viewed"){
+modeBtn.textContent = "VIEWS ↓";
+modeBtn.title = "Sorting highest views to lowest";
+}else{
+modeBtn.textContent = "VIEWS ↑";
+modeBtn.title = "Sorting lowest views to highest";
+}
 modeBtn.setAttribute("aria-label", modeBtn.title);
 }
 
@@ -1003,7 +1029,7 @@ modeBtn.onclick=()=>{
 
 if(!posts.length) return;
 
-sortOrder = sortOrder === "desc" ? "asc" : "desc";
+sortModeIndex = (sortModeIndex + 1) % sortModes.length;
 updateSortButton();
 refreshFilteredPosts();
 render();
@@ -1198,7 +1224,7 @@ window.tektiteChatApi = {
   },
   toggleSort(){
     modeBtn.click();
-    return `Sort is now ${sortOrder === "desc" ? "newest to oldest" : "oldest to newest"}`;
+    return `Sort is now ${modeBtn.title.toLowerCase()}`;
   },
   toggleMode(){
     return this.toggleSort();
