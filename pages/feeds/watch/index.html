@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redirecting | theinternetisdead.org</title>
+<script>
+(function redirectToFeedGrid(){
+    const params = new URLSearchParams(window.location.search);
+    const videoId = params.get("v");
+    const target = videoId
+        ? `/pages/feeds/?v=${encodeURIComponent(videoId)}${window.location.hash || ""}`
+        : `/pages/feeds/${window.location.hash || ""}`;
+    window.location.replace(target);
+})();
+</script>
+</head>
+<body></body>
+</html>
