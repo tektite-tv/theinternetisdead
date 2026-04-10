@@ -102,12 +102,6 @@ body::-webkit-scrollbar{
     padding:24px 22px;
 }
 
-.status-line{
-    margin:0 0 14px;
-    opacity:.86;
-    font-size:14px;
-}
-
 .code-404{
     margin:0;
     font-size:clamp(60px, 14vw, 144px);
@@ -119,14 +113,6 @@ body::-webkit-scrollbar{
     margin:14px 0 0;
     font-size:clamp(22px, 3.4vw, 34px);
     line-height:1.15;
-}
-
-.blink{
-    animation:blink 1s steps(1, end) infinite;
-}
-
-@keyframes blink{
-    50%{opacity:0;}
 }
 
 @media (max-width: 560px){
@@ -150,15 +136,21 @@ body::-webkit-scrollbar{
         <article class="panel">
             <div class="panel-header">Link Rot Detected</div>
             <div class="panel-body">
-                <p class="status-line">SYSTEM MESSAGE: requested page was not found <span class="blink">_</span></p>
                 <h1 class="code-404">404</h1>
-                <h2 class="headline" id="missing-page-title">That signal doesn't exist on this part of the web.</h2>
+                <h2 class="headline" id="missing-page-title"><span id="missing-path">/butts</span> is a dead link you killed it X_X</h2>
             </div>
         </article>
     </main>
 </div>
 
 <script>
+function renderMissingPath(){
+    const missingPath = document.getElementById("missing-path");
+    const query = window.location.search || "";
+    const hash = window.location.hash || "";
+    missingPath.textContent = window.location.pathname + query + hash;
+}
+
 async function loadOverlay(){
     try{
         const res = await fetch("/pages/overlay.html", { cache: "no-store" });
@@ -206,6 +198,7 @@ function syncLayout(){
 
 window.syncOverlayLayout = syncLayout;
 
+renderMissingPath();
 loadOverlay();
 
 window.addEventListener("resize", syncLayout);
