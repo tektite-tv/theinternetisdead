@@ -82,13 +82,6 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
-#overlay-root .top-links {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
 #overlay-root .home-link {
   color: lime;
   background: #000;
@@ -117,11 +110,22 @@ html, body {
   animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
-#overlay-root #chat-link,
-#overlay-root #standalone-home-link,
+#overlay-root #sidebar-context-link,
 #overlay-root .top-links a[href="/games"] {
   font-size: 1.25em;
   padding: 4px 8px;
+}
+
+#overlay-root .sidebar-header-link {
+  margin-left: 14px;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+#overlay-root .sidebar-header-link .home-link {
+  font-size: calc(22px * var(--overlay-font-scale, 1));
+  padding: 8px 12px;
 }
 
 #overlay-root .logo-link {
@@ -440,9 +444,15 @@ html, body {
     justify-content: flex-start;
   }
 
-  #overlay-root .sidebar .logo img {
-    height: 42px;
-    max-width: 70vw;
+  #overlay-root .sidebar-header-link {
+    flex: 1 1 calc(100% - 58px);
+    justify-content: center;
+    margin-left: 10px;
+  }
+
+  #overlay-root .sidebar-header-link .home-link {
+    font-size: calc(18px * var(--overlay-font-scale, 1));
+    padding: 10px 12px;
   }
 
   #overlay-root .sidebar-menu {
@@ -472,10 +482,6 @@ html, body {
         <img id="dead-logo" src="/media/images/png/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
         <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/media/images/png/deadlogo-green.png');"></span>
       </a>
-      <div class="top-links">
-        <a class="home-link" id="chat-link" href="/" hidden>/chat</a>
-        <a class="home-link" id="standalone-home-link" href="/" hidden>+ Home</a>
-      </div>
     </div>
 
     <div class="spacer"></div>
@@ -495,11 +501,8 @@ html, body {
     <div class="topbar">
       <div class="hamburger" data-action="toggle-sidebar" aria-label="Close sidebar" role="button" tabindex="0">✕</div>
 
-      <div class="logo">
-        <a class="logo-link" href="/" aria-label="Go to the main page">
-          <img src="/media/images/png/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
-          <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/media/images/png/deadlogo-green.png');"></span>
-        </a>
+      <div class="sidebar-header-link">
+        <a class="home-link" id="sidebar-context-link" href="/" hidden>+ Home</a>
       </div>
     </div>
 
@@ -754,12 +757,11 @@ html, body {
     });
   }
 
-const sidebar = overlayRoot.querySelector('#sidebar');
+  const sidebar = overlayRoot.querySelector('#sidebar');
   const backdrop = overlayRoot.querySelector('#sidebar-backdrop');
   const toggles = overlayRoot.querySelectorAll('[data-action="toggle-sidebar"]');
   const logoLinks = overlayRoot.querySelectorAll('.logo-link');
-  const chatLink = overlayRoot.querySelector('#chat-link');
-  const standaloneHomeLink = overlayRoot.querySelector('#standalone-home-link');
+  const sidebarContextLink = overlayRoot.querySelector('#sidebar-context-link');
 
   if (!sidebar || !backdrop) return;
 
@@ -875,32 +877,27 @@ const sidebar = overlayRoot.querySelector('#sidebar');
   });
 
   function syncTopLinkVisibility() {
-    const shouldShowChat = !!chatLink && shouldUseIndexChatBehavior();
-    const shouldShowStandaloneHome = !!standaloneHomeLink && shouldShowHomeLink();
+    const shouldShowChat = !!sidebarContextLink && shouldUseIndexChatBehavior();
+    const shouldShowStandaloneHome = !!sidebarContextLink && shouldShowHomeLink();
 
-    if (chatLink) {
-      chatLink.hidden = !shouldShowChat;
-      chatLink.setAttribute('aria-hidden', shouldShowChat ? 'false' : 'true');
-      chatLink.tabIndex = shouldShowChat ? 0 : -1;
-      chatLink.style.display = shouldShowChat ? '' : 'none';
+    if (sidebarContextLink) {
+      const shouldShow = shouldShowChat || shouldShowStandaloneHome;
+      sidebarContextLink.hidden = !shouldShow;
+      sidebarContextLink.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+      sidebarContextLink.tabIndex = shouldShow ? 0 : -1;
+      sidebarContextLink.style.display = shouldShow ? '' : 'none';
 
       if (shouldShowChat) {
-        chatLink.setAttribute('href', '#');
+        sidebarContextLink.textContent = '+ Chat';
+        sidebarContextLink.setAttribute('href', '#');
+        sidebarContextLink.setAttribute('aria-label', 'Open chat');
+      } else if (shouldShowStandaloneHome) {
+        sidebarContextLink.textContent = '+ Home';
+        sidebarContextLink.setAttribute('href', '/');
+        sidebarContextLink.setAttribute('aria-label', 'Go to the home page');
       } else {
-        chatLink.removeAttribute('href');
-      }
-    }
-
-    if (standaloneHomeLink) {
-      standaloneHomeLink.hidden = !shouldShowStandaloneHome;
-      standaloneHomeLink.setAttribute('aria-hidden', shouldShowStandaloneHome ? 'false' : 'true');
-      standaloneHomeLink.tabIndex = shouldShowStandaloneHome ? 0 : -1;
-      standaloneHomeLink.style.display = shouldShowStandaloneHome ? '' : 'none';
-
-      if (shouldShowStandaloneHome) {
-        standaloneHomeLink.setAttribute('href', '/');
-      } else {
-        standaloneHomeLink.removeAttribute('href');
+        sidebarContextLink.removeAttribute('href');
+        sidebarContextLink.removeAttribute('aria-label');
       }
     }
   }
@@ -921,11 +918,21 @@ const sidebar = overlayRoot.querySelector('#sidebar');
 
   syncTopLinkVisibility();
 
-  if (chatLink) {
-    chatLink.addEventListener('click', handleChatActivate);
-    chatLink.addEventListener('keydown', (event) => {
+  if (sidebarContextLink) {
+    sidebarContextLink.addEventListener('click', (event) => {
+      if (shouldUseIndexChatBehavior()) {
+        handleChatActivate(event);
+        return;
+      }
+      closeSidebar();
+    });
+    sidebarContextLink.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
-      handleChatActivate(event);
+      if (shouldUseIndexChatBehavior()) {
+        handleChatActivate(event);
+        return;
+      }
+      closeSidebar();
     });
   }
 
