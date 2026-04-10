@@ -121,15 +121,16 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
 }
 
 #overlay-root .sidebar-header-link .home-link {
   font-size: calc(22px * var(--overlay-font-scale, 1));
   padding: 8px 12px;
-  min-width: 132px;
+  min-width: 0;
   justify-content: center;
+  flex: 1 1 0;
 }
 
 #overlay-root .logo-link {
@@ -457,7 +458,6 @@ html, body {
   #overlay-root .sidebar-header-link .home-link {
     font-size: calc(18px * var(--overlay-font-scale, 1));
     padding: 10px 12px;
-    min-width: 120px;
   }
 
   #overlay-root .sidebar-menu {
