@@ -18,19 +18,6 @@
       height: 100%;
     }
     #pdfInput { display: none; }
-    #coverHint {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, calc(-50% + 120px));
-      z-index: 20;
-      color: rgba(255,255,255,0.92);
-      font: 700 18px/1 Arial, sans-serif;
-      letter-spacing: 0.04em;
-      pointer-events: none;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.45);
-      user-select: none;
-    }
     #loading {
       position: fixed;
       inset: 0;
@@ -42,20 +29,45 @@
       background: rgba(0,0,0,0.22);
       pointer-events: none;
     }
+    .hud-nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 25;
+      width: 56px;
+      height: 56px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 999px;
+      background: rgba(0,0,0,0.42);
+      color: rgba(255,255,255,0.95);
+      font: 700 28px/1 Arial, sans-serif;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .hud-nav:active {
+      transform: translateY(-50%) scale(0.98);
+    }
+    #hudPrev { left: 16px; }
+    #hudNext { right: 16px; }
   </style>
 </head>
 <body>
-  <input id="pdfInput" type="file" accept="application/pdf" />
-  <div id="coverHint">UPLOAD PDF</div>
+  <button id="hudPrev" class="hud-nav" aria-label="Previous page">←</button>
+  <button id="hudNext" class="hud-nav" aria-label="Next page">→</button>
   <div id="loading">Loading PDF…</div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
 
   <script>
-    const input = document.getElementById('pdfInput');
     const loading = document.getElementById('loading');
-    const coverHint = document.getElementById('coverHint');
+    const hudPrev = document.getElementById('hudPrev');
+    const hudNext = document.getElementById('hudNext');
 
     if (!window.THREE) throw new Error('Three.js failed to load.');
     if (!window.pdfjsLib) throw new Error('PDF.js failed to load.');
@@ -77,10 +89,14 @@
     let activeFlip = null;
     let lastKeyTime = 0;
 
+    let camYaw = 0;
+    let camPitch = -1.08;
+    let camDistance = 5.6;
+
     init();
     buildScene();
-    setupPointerUpload();
     animate();
+    loadDefaultPdf();
 
     input.addEventListener('change', async (e) => {
       const file = e.target.files?.[0];
@@ -98,6 +114,16 @@
       if (e.key === 'ArrowLeft') stepBackward();
     });
 
+    hudNext.addEventListener('click', () => stepForward());
+    hudPrev.addEventListener('click', () => stepBackward());
+
+    renderer.domElement.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      camDistance += e.deltaY * 0.005;
+      camDistance = Math.max(3.0, Math.min(9.5, camDistance));
+      updateCamera();
+    }, { passive: false });
+
     window.addEventListener('resize', onResize);
 
     function init() {
@@ -112,8 +138,7 @@
       scene.background = new THREE.Color(0x0a0a10);
 
       camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.01, 100);
-      camera.position.set(0.0, 5.6, 0.01);
-      camera.lookAt(0, 0, 0);
+      updateCamera();
 
       const hemi = new THREE.HemisphereLight(0xe8ecff, 0x1b1d28, 1.15);
       scene.add(hemi);
@@ -133,35 +158,24 @@
     }
 
 
-    function setupPointerUpload() {
-      renderer.domElement.style.cursor = 'pointer';
+    function updateCamera() {
+      const targetX = 0;
+      const targetY = 0;
+      const targetZ = 0;
 
-      renderer.domElement.addEventListener('click', (event) => {
-        if (activeFlip) return;
+      const x = Math.sin(camYaw) * Math.cos(camPitch) * camDistance;
+      const y = Math.sin(-camPitch) * camDistance;
+      const z = Math.cos(camYaw) * Math.cos(camPitch) * camDistance * 0.12;
 
-        const rect = renderer.domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, camera);
-
-        const clickable = [];
-        if (textures.length === 0) {
-          if (rightBaseMesh) clickable.push(rightBaseMesh);
-        } else {
-          clickable.push(rightBaseMesh, leftTopMesh, turnFrontMesh, turnBackMesh);
-        }
-
-        const hits = raycaster.intersectObjects(clickable.filter(Boolean), false);
-        if (hits.length > 0) {
-          input.click();
-        }
-      });
+      camera.position.set(x, y, z);
+      camera.lookAt(targetX, targetY, targetZ);
     }
 
     function onResize() {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      updateCamera();
     }
 
     function makeSolidTexture(color, w = 768, h = 1024) {
@@ -315,7 +329,6 @@
 
     function renderRest() {
       turnPivot.visible = false;
-      coverHint.style.display = textures.length === 0 ? 'block' : 'none';
       turnPivot.rotation.z = 0;
       turnFrontMesh.visible = true;
       turnBackMesh.visible = true;
@@ -372,48 +385,69 @@
       rightBaseMesh.visible = false;
     }
 
+    async function loadDefaultPdf() {
+      loading.style.display = 'grid';
+      try {
+        const response = await fetch('/experiments/pdf-viewer/pdfs/doodle-book.pdf');
+        if (!response.ok) {
+          throw new Error('Failed to load /experiments/pdf-viewer/pdfs/doodle-book.pdf');
+        }
+        const bytes = await response.arrayBuffer();
+        await loadPdfBytes(bytes);
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load default PDF: ' + err.message);
+      }
+      loading.style.display = 'none';
+      loading.textContent = 'Loading PDF…';
+    }
+
+    async function loadPdfBytes(bytes) {
+      const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+      const count = pdf.numPages;
+      if (count < 1) throw new Error('PDF has no pages.');
+
+      const probePage = await pdf.getPage(1);
+      const probeViewport = probePage.getViewport({ scale: 1 });
+      pageHeight = 2.0;
+      pageWidth = pageHeight * (probeViewport.width / probeViewport.height);
+
+      const renderScale = chooseScale(probeViewport.width, probeViewport.height, count);
+      const newTextures = [];
+
+      for (let i = 1; i <= count; i++) {
+        loading.textContent = 'Loading PDF… ' + i + ' / ' + count;
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: renderScale });
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+        tex.needsUpdate = true;
+        newTextures.push(tex);
+      }
+
+      for (const tex of textures) tex?.dispose?.();
+      textures = newTextures;
+      currentIndex = 0;
+      activeFlip = null;
+      rebuildGeometry();
+      renderRest();
+    }
+
     async function loadPdf(file) {
       loading.style.display = 'grid';
       try {
         const bytes = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-        const count = pdf.numPages;
-        if (count < 1) throw new Error('PDF has no pages.');
-
-        const probePage = await pdf.getPage(1);
-        const probeViewport = probePage.getViewport({ scale: 1 });
-        pageHeight = 2.0;
-        pageWidth = pageHeight * (probeViewport.width / probeViewport.height);
-
-        const renderScale = chooseScale(probeViewport.width, probeViewport.height, count);
-        const newTextures = [];
-
-        for (let i = 1; i <= count; i++) {
-          loading.textContent = 'Loading PDF… ' + i + ' / ' + count;
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: renderScale });
-
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d', { alpha: false });
-          canvas.width = Math.floor(viewport.width);
-          canvas.height = Math.floor(viewport.height);
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          await page.render({ canvasContext: ctx, viewport }).promise;
-
-          const tex = new THREE.CanvasTexture(canvas);
-          tex.colorSpace = THREE.SRGBColorSpace;
-          tex.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
-          tex.needsUpdate = true;
-          newTextures.push(tex);
-        }
-
-        for (const tex of textures) tex?.dispose?.();
-        textures = newTextures;
-        currentIndex = 0;
-        activeFlip = null;
-        rebuildGeometry();
-        renderRest();
+        await loadPdfBytes(bytes);
       } catch (err) {
         console.error(err);
         alert('Failed to load PDF: ' + err.message);
