@@ -454,6 +454,7 @@ width:92vw;
 <script>
 
 const FEED_DATA_PATH="/pages/feeds/feed-videos.json";
+const FALLBACK_FEED_DATA_PATH="/pages/youtube-list-grid/videos.json";
 const HONESTLY_THOMAS_URL="https://www.youtube.com/@Honestly_Thomas";
 const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
 const HONESTLY_THOMAS_AVATAR="/media/images/png/honestly-thomas.png";
@@ -688,17 +689,78 @@ function applyFeedMetadata(data){
 channelTitleEl.innerHTML = `<a href="${HONESTLY_THOMAS_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${HONESTLY_THOMAS_AVATAR}" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><span class="channelHandleSeparator">+</span><a href="${CRYPTID_MEMES_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${CRYPTID_MEMES_AVATAR}" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a>`;
 }
 
+async function fetchJson(path){
+const response = await fetch(path, { cache: "no-store" });
+if(!response.ok) throw new Error(`${path} failed`);
+return response.json();
+}
+
+function normalizeLegacyFeedData(data){
+const channelMeta = {
+channel: data.channel || data.uploader || "",
+channel_id: data.channel_id || data.id || "",
+channel_url: data.channel_url || data.uploader_url || "",
+uploader: data.uploader || data.channel || "",
+uploader_url: data.uploader_url || data.channel_url || ""
+};
+
+const entries = Array.isArray(data.entries)
+? data.entries.map((entry)=>({
+...entry,
+channel: entry?.channel || channelMeta.channel,
+channel_id: entry?.channel_id || channelMeta.channel_id,
+channel_url: entry?.channel_url || channelMeta.channel_url,
+uploader: entry?.uploader || channelMeta.uploader,
+uploader_url: entry?.uploader_url || channelMeta.uploader_url
+}))
+: [];
+
+return {
+title: data.title || "Channel Feed",
+channels: channelMeta.channel || channelMeta.uploader ? [channelMeta] : [],
+entries
+};
+}
+
+async function loadFeedData(){
+let primaryData = null;
+let primaryError = null;
+
+try{
+primaryData = await fetchJson(FEED_DATA_PATH);
+const primaryEntries = Array.isArray(primaryData.entries) ? primaryData.entries : [];
+if(primaryEntries.length){
+return primaryData;
+}
+console.warn(`Primary feed at ${FEED_DATA_PATH} is empty; falling back to ${FALLBACK_FEED_DATA_PATH}.`);
+}catch(error){
+primaryError = error;
+console.warn(`Unable to load ${FEED_DATA_PATH}; falling back to ${FALLBACK_FEED_DATA_PATH}.`, error);
+}
+
+try{
+const fallbackData = normalizeLegacyFeedData(await fetchJson(FALLBACK_FEED_DATA_PATH));
+if(Array.isArray(fallbackData.entries) && fallbackData.entries.length){
+return fallbackData;
+}
+}catch(fallbackError){
+console.error(`Unable to load fallback feed from ${FALLBACK_FEED_DATA_PATH}.`, fallbackError);
+if(primaryError){
+throw primaryError;
+}
+throw fallbackError;
+}
+
+return primaryData || { title: "Channel Feed", channels: [], entries: [] };
+}
+
 
 
 
 async function loadPosts(){
 
 try{
-
-const r = await fetch(FEED_DATA_PATH);
-if(!r.ok) throw new Error("feed-videos.json failed");
-
-const data = await r.json();
+const data = await loadFeedData();
 applyFeedMetadata(data);
 
 posts = (data.entries || []).map(v => ({
@@ -737,7 +799,7 @@ render();
 }catch(e){
 
 console.error(e);
-statusEl.textContent="FAILED TO LOAD /pages/feeds/feed-videos.json";
+statusEl.textContent="FAILED TO LOAD FEED DATA";
 
 }
 

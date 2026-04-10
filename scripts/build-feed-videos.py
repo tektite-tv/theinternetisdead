@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CHANNELS_PATH = ROOT / "pages" / "feeds" / "channels.json"
 OUTPUT_PATH = ROOT / "pages" / "feeds" / "feed-videos.json"
+LEGACY_FALLBACK_PATH = ROOT / "pages" / "youtube-list-grid" / "videos.json"
 
 
 def load_channels_config():
@@ -145,6 +146,43 @@ def slim_video(video, channel_meta):
     }
 
 
+def load_legacy_fallback_feed():
+    if not LEGACY_FALLBACK_PATH.exists():
+        return {"channels": [], "entries": []}
+
+    data = json.loads(LEGACY_FALLBACK_PATH.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return {"channels": [], "entries": []}
+
+    channel_meta = {
+        "url": data.get("webpage_url") or data.get("original_url") or data.get("channel_url") or data.get("uploader_url") or "",
+        "channel": data.get("channel") or data.get("uploader") or "",
+        "channel_id": data.get("channel_id") or data.get("id"),
+        "channel_url": data.get("channel_url") or data.get("uploader_url") or "",
+        "uploader": data.get("uploader") or data.get("channel") or "",
+        "uploader_url": data.get("uploader_url") or data.get("channel_url") or "",
+    }
+
+    entries = []
+    seen_video_ids = set()
+    for entry in data.get("entries") or []:
+        if not isinstance(entry, dict):
+            continue
+        video_id = str(entry.get("id") or "").strip()
+        if not video_id or video_id in seen_video_ids:
+            continue
+        seen_video_ids.add(video_id)
+        entries.append(slim_video(entry, channel_meta))
+
+    entries.sort(
+        key=lambda video: (get_sort_timestamp(video), str(video.get("id") or "")),
+        reverse=True,
+    )
+
+    channels = [channel_meta] if any(channel_meta.values()) else []
+    return {"channels": channels, "entries": entries}
+
+
 def main():
     config = load_channels_config()
     discovered_channels = []
@@ -153,9 +191,14 @@ def main():
 
     for channel_config in config["channels"]:
         channel_url = channel_config["url"]
-        channel_data = run_yt_dlp_json(channel_url)
+        try:
+            channel_data = run_yt_dlp_json(channel_url)
+        except Exception as exc:  # noqa: BLE001 - keep building from remaining sources.
+            print(f"Warning: failed to load {channel_url}: {exc}", file=sys.stderr)
+            continue
         if not isinstance(channel_data, dict):
-            raise RuntimeError(f"Unable to read channel feed for {channel_url}")
+            print(f"Warning: unable to read channel feed for {channel_url}", file=sys.stderr)
+            continue
 
         channel_meta = {
             "url": channel_url,
@@ -175,6 +218,13 @@ def main():
                 continue
             seen_video_ids.add(video_id)
             merged_entries.append(slim_video(entry, channel_meta))
+
+    if not merged_entries:
+        fallback_feed = load_legacy_fallback_feed()
+        if fallback_feed["entries"]:
+            merged_entries = fallback_feed["entries"]
+            if not discovered_channels:
+                discovered_channels = fallback_feed["channels"]
 
     merged_entries.sort(
         key=lambda video: (get_sort_timestamp(video), str(video.get("id") or "")),
