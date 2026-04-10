@@ -309,6 +309,11 @@ border-top:1px solid var(--accent-color);
 padding-top:16px;
 }
 
+#videoFull.is-empty{
+opacity:.72;
+font-style:italic;
+}
+
 
 #closeVideo{
 font-size:calc(22px * var(--page-font-scale));
@@ -501,8 +506,8 @@ width:92vw;
 <div id="lightbox">
 <div id="videoTitle"></div>
 <iframe id="lightboxFrame" src="" allowfullscreen></iframe>
-<div id="videoFull"></div>
 <div id="videoMeta"></div>
+<div id="videoFull"></div>
 <div id="closeVideo">[CLOSE VIDEO]</div>
 </div>
 
@@ -866,10 +871,15 @@ const bTimestamp = Number(b.sortTimestamp || 0);
 const aViews = Number(a.views || 0);
 const bViews = Number(b.views || 0);
 const sortMode = sortModes[sortModeIndex];
+const aHasTimestamp = aTimestamp > 0;
+const bHasTimestamp = bTimestamp > 0;
 
 if(sortMode === "newest" || sortMode === "oldest"){
-if(aTimestamp !== bTimestamp){
+if(aHasTimestamp && bHasTimestamp && aTimestamp !== bTimestamp){
 return sortMode === "newest" ? bTimestamp - aTimestamp : aTimestamp - bTimestamp;
+}
+if(a.sourceIndex !== b.sourceIndex){
+return sortMode === "newest" ? a.sourceIndex - b.sourceIndex : b.sourceIndex - a.sourceIndex;
 }
 if(aViews !== bViews){
 return bViews - aViews;
@@ -878,8 +888,11 @@ return bViews - aViews;
 if(aViews !== bViews){
 return sortMode === "most-viewed" ? bViews - aViews : aViews - bViews;
 }
-if(aTimestamp !== bTimestamp){
+if(aHasTimestamp && bHasTimestamp && aTimestamp !== bTimestamp){
 return bTimestamp - aTimestamp;
+}
+if(a.sourceIndex !== b.sourceIndex){
+return a.sourceIndex - b.sourceIndex;
 }
 }
 return a.sourceIndex - b.sourceIndex;
@@ -893,16 +906,16 @@ filtered = getFilteredPosts(searchInput.value);
 function updateSortButton(){
 const sortMode = sortModes[sortModeIndex];
 if(sortMode === "newest"){
-modeBtn.textContent = "NEWEST ↓";
+modeBtn.textContent = "NEWEST \u2193";
 modeBtn.title = "Sorting newest to oldest";
 }else if(sortMode === "oldest"){
-modeBtn.textContent = "OLDEST ↑";
+modeBtn.textContent = "OLDEST \u2191";
 modeBtn.title = "Sorting oldest to newest";
 }else if(sortMode === "most-viewed"){
-modeBtn.textContent = "VIEWS ↓";
+modeBtn.textContent = "VIEWS \u2193";
 modeBtn.title = "Sorting highest views to lowest";
 }else{
-modeBtn.textContent = "VIEWS ↑";
+modeBtn.textContent = "VIEWS \u2191";
 modeBtn.title = "Sorting lowest views to highest";
 }
 modeBtn.setAttribute("aria-label", modeBtn.title);
@@ -1082,8 +1095,10 @@ let clean=(description||"")
 
 document.getElementById("videoMeta").innerHTML = buildVideoMetaHtml(post);
 const videoFullEl = document.getElementById("videoFull");
-videoFullEl.textContent = clean;
-videoFullEl.style.display = clean ? "block" : "none";
+const hasDescription = Boolean(clean);
+videoFullEl.textContent = hasDescription ? clean : "No description available.";
+videoFullEl.classList.toggle("is-empty", !hasDescription);
+videoFullEl.style.display = "block";
 
 lightbox.style.display="flex";
 
