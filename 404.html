@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>404 | theinternetisdead.org</title>
+
+<style>
+:root{
+    --page-bg:#000;
+    --page-text:#00ff00;
+    --panel-bg:rgba(75,0,118,.5);
+    --panel-bg-solid:#110019;
+    --header-bg:rgba(75,0,118,.7);
+    --accent:var(--page-text);
+    --button-hover:#001a00;
+    --shadow:0 0 0 2px rgba(0,255,0,.5), 0 0 28px rgba(0,255,0,.18);
+}
+
+html,
+body{
+    margin:0;
+    width:100%;
+    min-height:100%;
+    background:var(--page-bg);
+    color:var(--page-text);
+    font-family:"Courier New", Courier, monospace;
+    overflow-x:hidden;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar{
+    display:none;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+a{
+    color:inherit;
+}
+
+button,
+.action-link{
+    min-height:46px;
+    padding:0 18px;
+    border:2px solid var(--accent);
+    background:var(--panel-bg);
+    color:var(--page-text);
+    font:inherit;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:background .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+button:hover,
+button:focus-visible,
+.action-link:hover,
+.action-link:focus-visible{
+    background:var(--button-hover);
+    transform:translateY(-1px);
+    box-shadow:0 0 0 1px var(--accent);
+    outline:none;
+}
+
+#app-shell{
+    position:relative;
+    width:100%;
+    min-height:100dvh;
+    background:
+        radial-gradient(circle at top left, rgba(0,255,0,.12), transparent 24%),
+        radial-gradient(circle at top right, rgba(128,0,255,.2), transparent 30%),
+        linear-gradient(180deg, rgba(75,0,118,.12), transparent 24%),
+        #000;
+}
+
+#overlay-container{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:1000;
+    width:100%;
+}
+
+#not-found{
+    position:relative;
+    width:min(1180px, calc(100% - 32px));
+    margin:0 auto;
+    padding:120px 0 40px;
+}
+
+#not-found::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background:
+        repeating-linear-gradient(
+            180deg,
+            rgba(255,255,255,.04) 0,
+            rgba(255,255,255,.04) 1px,
+            transparent 1px,
+            transparent 4px
+        );
+    opacity:.18;
+    pointer-events:none;
+    mix-blend-mode:screen;
+}
+
+.hero{
+    position:relative;
+    display:grid;
+    grid-template-columns:minmax(0, 1.15fr) minmax(280px, .85fr);
+    gap:24px;
+    align-items:stretch;
+}
+
+.panel{
+    position:relative;
+    border:2px solid var(--accent);
+    background:var(--panel-bg);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+}
+
+.panel-header{
+    padding:10px 14px;
+    background:var(--header-bg);
+    border-bottom:2px solid var(--accent);
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+
+.panel-body{
+    padding:20px;
+}
+
+.status-line{
+    margin:0 0 14px;
+    opacity:.86;
+    font-size:14px;
+}
+
+.code-404{
+    margin:0;
+    font-size:clamp(60px, 14vw, 144px);
+    line-height:.92;
+    text-shadow:0 0 14px rgba(0,255,0,.4);
+}
+
+.headline{
+    margin:14px 0 10px;
+    font-size:clamp(20px, 3.5vw, 36px);
+    line-height:1.1;
+}
+
+.copy{
+    margin:0;
+    max-width:48ch;
+    line-height:1.55;
+}
+
+.path-box{
+    margin-top:18px;
+    padding:12px 14px;
+    border:2px solid var(--accent);
+    background:rgba(0,0,0,.58);
+    word-break:break-word;
+    font-size:15px;
+}
+
+.actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-top:20px;
+}
+
+.sidebar-card{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    background:
+        linear-gradient(180deg, rgba(75,0,118,.6), rgba(17,0,25,.92)),
+        var(--panel-bg-solid);
+}
+
+.logo-wrap{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:28px 20px 12px;
+}
+
+.logo-wrap img{
+    width:min(100%, 260px);
+    height:auto;
+    display:block;
+    filter:drop-shadow(0 0 16px rgba(0,255,0,.35));
+}
+
+.tip-list{
+    margin:0;
+    padding:0 20px 24px;
+    list-style:none;
+    display:grid;
+    gap:12px;
+}
+
+.tip-list li{
+    padding:12px 14px;
+    border:1px solid rgba(0,255,0,.65);
+    background:rgba(0,0,0,.38);
+    line-height:1.45;
+}
+
+.tip-list strong{
+    display:block;
+    margin-bottom:4px;
+}
+
+.footer-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:18px;
+    margin-top:24px;
+}
+
+.mini-card h2{
+    margin:0 0 10px;
+    font-size:18px;
+}
+
+.mini-card p{
+    margin:0;
+    line-height:1.5;
+}
+
+.mini-card .action-link{
+    margin-top:14px;
+    width:100%;
+}
+
+.blink{
+    animation:blink 1s steps(1, end) infinite;
+}
+
+@keyframes blink{
+    50%{opacity:0;}
+}
+
+@media (max-width: 900px){
+    #not-found{
+        width:min(100% - 20px, 1180px);
+        padding:104px 0 24px;
+    }
+
+    .hero,
+    .footer-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+@media (max-width: 560px){
+    #not-found{
+        padding-top:92px;
+    }
+
+    .panel-body{
+        padding:16px;
+    }
+
+    .actions{
+        flex-direction:column;
+    }
+
+    button,
+    .action-link{
+        width:100%;
+    }
+}
+</style>
+</head>
+<body>
+
+<div id="app-shell">
+    <div id="overlay-container"></div>
+
+    <main id="not-found" aria-labelledby="missing-page-title">
+        <section class="hero">
+            <article class="panel">
+                <div class="panel-header">Link Rot Detected</div>
+                <div class="panel-body">
+                    <p class="status-line">SYSTEM MESSAGE: requested page was not found <span class="blink">_</span></p>
+                    <h1 class="code-404">404</h1>
+                    <h2 class="headline" id="missing-page-title">That signal doesn't exist on this part of the web.</h2>
+                    <p class="copy">The page you asked for is missing, moved, or maybe never survived the upload. The rest of the site is still online, so you can jump back into the main feed or browse one of the side zones.</p>
+                    <div class="path-box">
+                        <strong>Missing path:</strong>
+                        <div id="missing-path">/</div>
+                    </div>
+                    <div class="actions">
+                        <a class="action-link" href="/">Return To Home</a>
+                        <a class="action-link" href="/experiments/">Open Experiments</a>
+                        <a class="action-link" href="/games/">Open Games</a>
+                        <button type="button" id="back-button">Go Back</button>
+                    </div>
+                </div>
+            </article>
+
+            <aside class="panel sidebar-card" aria-label="Recovery tips">
+                <div class="panel-header">Recovery Console</div>
+                <div class="logo-wrap">
+                    <img src="/media/images/png/deadlogo-green.png" alt="The Internet Is Dead logo">
+                </div>
+                <ul class="tip-list">
+                    <li>
+                        <strong>Check the URL</strong>
+                        A stray slash, filename, or old bookmark can land you here.
+                    </li>
+                    <li>
+                        <strong>Use the main shell</strong>
+                        The homepage is still the best launcher for the rest of the site.
+                    </li>
+                    <li>
+                        <strong>Try the back button</strong>
+                        If this came from an internal link, stepping back is usually fastest.
+                    </li>
+                </ul>
+            </aside>
+        </section>
+
+        <section class="footer-grid" aria-label="Suggested destinations">
+            <article class="panel mini-card">
+                <div class="panel-header">Main Feed</div>
+                <div class="panel-body">
+                    <h2>Launch the site shell</h2>
+                    <p>Open the homepage and drop back into the main interface with the overlay, frame, and current navigation.</p>
+                    <a class="action-link" href="/">Open Home</a>
+                </div>
+            </article>
+
+            <article class="panel mini-card">
+                <div class="panel-header">Experiments</div>
+                <div class="panel-body">
+                    <h2>Browse side projects</h2>
+                    <p>Jump straight into the experiments section if you were looking for one of the standalone tools or demos.</p>
+                    <a class="action-link" href="/experiments/">Open Experiments</a>
+                </div>
+            </article>
+
+            <article class="panel mini-card">
+                <div class="panel-header">Games</div>
+                <div class="panel-body">
+                    <h2>Warp to the arcade</h2>
+                    <p>Head to the games area if the broken link was supposed to take you somewhere more interactive.</p>
+                    <a class="action-link" href="/games/">Open Games</a>
+                </div>
+            </article>
+        </section>
+    </main>
+</div>
+
+<script>
+async function loadOverlay(){
+    try{
+        const res = await fetch("/pages/overlay.html", { cache: "no-store" });
+        if(!res.ok) throw new Error("Failed to load /pages/overlay.html");
+        const html = await res.text();
+        const container = document.getElementById("overlay-container");
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+
+        const fragment = document.createDocumentFragment();
+        const scripts = [];
+
+        Array.from(temp.childNodes).forEach((node) => {
+            if(node.nodeName && node.nodeName.toLowerCase() === "script"){
+                scripts.push(node);
+            }else{
+                fragment.appendChild(node.cloneNode(true));
+            }
+        });
+
+        container.innerHTML = "";
+        container.appendChild(fragment);
+
+        scripts.forEach((oldScript) => {
+            const newScript = document.createElement("script");
+            Array.from(oldScript.attributes).forEach((attr) => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            newScript.textContent = oldScript.textContent;
+            container.appendChild(newScript);
+        });
+
+        syncLayout();
+    }catch(error){
+        console.error("Error loading overlay:", error);
+    }
+}
+
+function syncLayout(){
+    const overlayContainer = document.getElementById("overlay-container");
+    const notFound = document.getElementById("not-found");
+    const overlayHeight = overlayContainer ? overlayContainer.offsetHeight : 0;
+    notFound.style.paddingTop = (overlayHeight + 24) + "px";
+}
+
+function renderMissingPath(){
+    const target = document.getElementById("missing-path");
+    const query = window.location.search || "";
+    const hash = window.location.hash || "";
+    target.textContent = window.location.pathname + query + hash;
+}
+
+function handleBackNavigation(){
+    if(window.history.length > 1){
+        window.history.back();
+        return;
+    }
+
+    window.location.href = "/";
+}
+
+window.syncOverlayLayout = syncLayout;
+
+renderMissingPath();
+loadOverlay();
+
+window.addEventListener("resize", syncLayout);
+window.addEventListener("orientationchange", syncLayout);
+window.addEventListener("load", syncLayout);
+
+const backButton = document.getElementById("back-button");
+backButton.addEventListener("click", handleBackNavigation);
+
+const resizeObserver = new ResizeObserver(syncLayout);
+resizeObserver.observe(document.getElementById("overlay-container"));
+</script>
+
+<script src="/scripts/screenshot-shortcut.js"></script>
+<script src="/scripts/hide-overlay.js"></script>
+</body>
+</html>
