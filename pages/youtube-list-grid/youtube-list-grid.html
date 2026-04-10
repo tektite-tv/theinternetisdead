@@ -246,9 +246,11 @@ cursor:pointer;
 
 #videoFull{
 max-width:80vw;
-margin:10px auto;
+margin:16px auto 10px;
 display:none;
 line-height:1.4;
+border-top:1px solid var(--accent-color);
+padding-top:16px;
 }
 
 
@@ -265,11 +267,42 @@ text-decoration:underline;
 
 #videoMeta{
 margin-top:18px;
-font-size:calc(14px * var(--page-font-scale));
-opacity:.8;
+font-size:calc(20px * var(--page-font-scale));
+font-weight:700;
+opacity:1;
+color:var(--accent-color);
 text-align:center;
 max-width:80vw;
 line-height:1.4;
+}
+
+#videoMeta .videoMetaLine{
+display:flex;
+flex-wrap:wrap;
+align-items:center;
+justify-content:center;
+gap:10px;
+}
+
+#videoMeta .videoMetaChannelLink{
+display:inline-flex;
+align-items:center;
+gap:10px;
+color:inherit;
+text-decoration:none;
+}
+
+#videoMeta .videoMetaAvatar{
+width:32px;
+height:32px;
+border-radius:50%;
+object-fit:cover;
+display:block;
+border:1px solid var(--accent-color);
+}
+
+#videoMeta .videoMetaDivider{
+opacity:.85;
 }
 
 #lightboxClose{
@@ -421,6 +454,10 @@ width:92vw;
 <script>
 
 const CHANNEL_ID="UCn3WLZT7k8nO24XimlJVJVQ";
+const HONESTLY_THOMAS_URL="https://www.youtube.com/@Honestly_Thomas";
+const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
+const HONESTLY_THOMAS_AVATAR="/media/images/png/honestly-thomas.png";
+const CRYPTID_MEMES_AVATAR="/media/images/png/cryptid-memes.png";
 
 function updateTintFilters(){
   // Tints are handled by mask-based overlay layers, matching overlay.html.
@@ -606,6 +643,64 @@ if(parsedUploadDate) return parsedUploadDate;
 return 0;
 }
 
+function escapeHtml(value){
+return String(value ?? "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/"/g,"&quot;")
+.replace(/'/g,"&#39;");
+}
+
+function formatVideoDate(post){
+const timestamp = Number(post.sortTimestamp || 0);
+if(!timestamp) return "";
+return new Date(timestamp * 1000).toLocaleDateString(undefined, {
+year: "numeric",
+month: "short",
+day: "numeric"
+});
+}
+
+function formatViewCount(value){
+const count = Number(value || 0);
+if(!Number.isFinite(count) || count <= 0) return "";
+return `${count.toLocaleString()} view${count === 1 ? "" : "s"}`;
+}
+
+function getChannelAvatarUrl(post){
+const sourceLabel = `${post.channel || post.uploader || ""}`.toLowerCase();
+return sourceLabel.includes("cryptid") ? CRYPTID_MEMES_AVATAR : HONESTLY_THOMAS_AVATAR;
+}
+
+function buildVideoMetaHtml(post){
+const items = [];
+const sourceLabel = post.channel || post.uploader || "";
+const formattedDate = formatVideoDate(post);
+const formattedViews = formatViewCount(post.views);
+
+if(sourceLabel){
+const avatarSrc = escapeHtml(getChannelAvatarUrl(post));
+const safeLabel = escapeHtml(sourceLabel);
+const safeUrl = escapeHtml(post.channelUrl || post.uploaderUrl || "");
+const channelInner = `<img src="${avatarSrc}" class="videoMetaAvatar" alt="${safeLabel} avatar"><span>${safeLabel}</span>`;
+items.push(safeUrl
+? `<a class="videoMetaChannelLink" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${channelInner}</a>`
+: `<span class="videoMetaChannelLink">${channelInner}</span>`);
+}
+
+if(formattedDate){
+items.push(`<span>${escapeHtml(formattedDate)}</span>`);
+}
+
+if(formattedViews){
+items.push(`<span>${escapeHtml(formattedViews)}</span>`);
+}
+
+const content = items.flatMap((item, index)=>index ? [`<span class="videoMetaDivider" aria-hidden="true">|</span>`, item] : [item]).join("");
+return `<div class="videoMetaLine">${content}</div>`;
+}
+
 function getFilteredPosts(query){
 const normalizedQuery = String(query || "").trim().toLowerCase();
 const matches = normalizedQuery
@@ -678,6 +773,10 @@ description: v.description || "",
 date: "",
 duration: v.duration || 0,
 views: v.view_count || 0,
+channel: v.channel || v.uploader || data.channel || data.uploader || "",
+uploader: v.uploader || v.channel || data.uploader || data.channel || "",
+channelUrl: v.channel_url || v.uploader_url || data.channel_url || data.uploader_url || HONESTLY_THOMAS_URL,
+uploaderUrl: v.uploader_url || v.channel_url || data.uploader_url || data.channel_url || HONESTLY_THOMAS_URL,
 sourceIndex: index,
 thumb: (v.thumbnails && v.thumbnails[3] ? v.thumbnails[3].url : `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`),
 sortTimestamp: getSortableTimestamp(v)
@@ -732,7 +831,11 @@ frame.src="";
 notifyVideoRouteChange("close","");
 }
 
-function openVideo(id,title,date,description){
+function openVideo(post){
+if(!post || !post.id) return;
+const id = post.id;
+const title = post.title || "";
+const description = post.description || "";
 
 frame.src="https://www.youtube.com/embed/"+id;
 notifyVideoRouteChange("open",id);
@@ -745,9 +848,11 @@ let clean=(description||"")
 .replace(/<[^>]*>/g,"")
 .trim();
 
-document.getElementById("videoMeta").innerHTML = "";
+document.getElementById("videoMeta").innerHTML = buildVideoMetaHtml(post);
 
-document.getElementById("videoFull").textContent = clean;
+const videoFullEl = document.getElementById("videoFull");
+videoFullEl.textContent = clean;
+videoFullEl.style.display = clean ? "block" : "none";
 
 lightbox.style.display="flex";
 
@@ -777,7 +882,7 @@ el.innerHTML=`
 </div>
 <div class="post-title">${p.title}</div>`;
 
-el.onclick=()=>openVideo(p.id,p.title,p.date,p.description);
+el.onclick=()=>openVideo(p);
 }
 else{
 el.innerHTML=`
@@ -790,8 +895,8 @@ el.innerHTML=`
 
 </div>`;
 
-el.querySelector("img").onclick=()=>openVideo(p.id,p.title,p.date,p.description);
-el.querySelector(".post-title").onclick=()=>openVideo(p.id,p.title,p.date,p.description);
+el.querySelector("img").onclick=()=>openVideo(p);
+el.querySelector(".post-title").onclick=()=>openVideo(p);
 }
 
 postsEl.appendChild(el);
@@ -988,7 +1093,7 @@ let index=face*(gridSize*gridSize)+cellY*gridSize+cellX;
 let video=shuffled[index];
 
 if(video){
-openVideo(video.id,video.title,video.date,video.description);
+openVideo(video);
 }
 
 }
@@ -1025,7 +1130,7 @@ const requestedId = String(data.videoId || "").trim();
 if (!requestedId) return;
 const video = posts.find((post) => post.id === requestedId);
 if (!video) return;
-openVideo(video.id, video.title, video.date, video.description);
+openVideo(video);
 });
 
 window.tektiteChatApi = {
@@ -1077,7 +1182,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     if (!requestedId) return;
     const video = posts.find((post) => post.id === requestedId);
     if (!video) return;
-    openVideo(video.id, video.title, video.date, video.description);
+    openVideo(video);
   });
 });
 
