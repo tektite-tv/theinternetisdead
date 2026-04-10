@@ -770,8 +770,9 @@ const content = items.flatMap((item, index)=>index ? [`<span class="videoMetaDiv
 return `<div class="videoMetaLine">${content}</div>`;
 }
 
-function pickThumbnailUrl(video){
+function buildThumbnailCandidates(video){
 const thumbs = Array.isArray(video.thumbnails) ? video.thumbnails.filter(Boolean) : [];
+const thumbUrls = thumbs.map((thumb)=>String(thumb && thumb.url || "")).filter(Boolean);
 const rankedPatterns = [
 /maxresdefault\.(jpg|webp)/i,
 /sddefault\.(jpg|webp)/i,
@@ -779,15 +780,61 @@ const rankedPatterns = [
 /mqdefault\.(jpg|webp)/i,
 /default\.(jpg|webp)/i
 ];
+const candidates = [];
 
-for(const pattern of rankedPatterns){
-const match = thumbs.find((thumb)=>thumb && pattern.test(String(thumb.url || "")));
-if(match && match.url) return match.url;
+function addCandidate(url){
+if(url && !candidates.includes(url)) candidates.push(url);
 }
 
-const preferred = thumbs.find((thumb)=>thumb && thumb.url) || thumbs[thumbs.length - 1];
-if(preferred && preferred.url) return preferred.url;
-return `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+for(const pattern of rankedPatterns){
+const match = thumbUrls.find((url)=>pattern.test(url));
+addCandidate(match);
+}
+
+thumbUrls.forEach(addCandidate);
+[
+`https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`,
+`https://i.ytimg.com/vi/${video.id}/sddefault.jpg`,
+`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
+`https://i.ytimg.com/vi/${video.id}/mqdefault.jpg`,
+`https://i.ytimg.com/vi/${video.id}/default.jpg`
+].forEach(addCandidate);
+
+return candidates;
+}
+
+function pickThumbnailUrl(video){
+return buildThumbnailCandidates(video)[0] || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+}
+
+function applyThumbnailSource(img, layer, url){
+img.src = url;
+if(layer){
+const safeUrl = String(url).replace(/'/g, "\\'");
+layer.style.setProperty("--tint-mask", `url('${safeUrl}')`);
+}
+}
+
+function attachThumbnailFallback(post, card){
+const img = card.querySelector("img");
+const layer = card.querySelector(".thumbTintLayer");
+const candidates = Array.isArray(post.thumbCandidates) && post.thumbCandidates.length
+? post.thumbCandidates
+: [post.thumb].filter(Boolean);
+
+if(!img || !candidates.length) return;
+
+let thumbIndex = 0;
+img.onerror = ()=>{
+thumbIndex += 1;
+if(thumbIndex >= candidates.length){
+img.onerror = null;
+return;
+}
+applyThumbnailSource(img, layer, candidates[thumbIndex]);
+};
+
+applyThumbnailSource(img, layer, candidates[thumbIndex]);
 }
 
 function getRandomChannelUrl(){
@@ -925,7 +972,9 @@ try{
 const data = await loadFeedData();
 applyFeedMetadata(data);
 
-posts = (data.entries || []).map((v, index) => ({
+posts = (data.entries || []).map((v, index) => {
+const thumbCandidates = buildThumbnailCandidates(v);
+return ({
 
 id: v.id,
 title: v.title || "",
@@ -933,13 +982,15 @@ description: v.description || "",
 date: "",
 duration: v.duration || 0,
 views: v.view_count || 0,
-thumb: pickThumbnailUrl(v),
+thumb: thumbCandidates[0] || pickThumbnailUrl(v),
+thumbCandidates,
 channel: v.channel || v.uploader || data.channel || data.uploader || "",
 uploader: v.uploader || v.channel || data.uploader || data.channel || "",
 channelUrl: v.channel_url || v.uploader_url || data.channel_url || data.uploader_url || "",
 sourceIndex: index,
 sortTimestamp: getSortableTimestamp(v)
-}));
+});
+});
 
 refreshFilteredPosts();
 
@@ -1043,8 +1094,8 @@ el.className="post";
 if(view==="grid"){
 el.innerHTML=`
 <div class="thumb-grid">
-<img src="${p.thumb}">
-<span class="thumbTintLayer" aria-hidden="true" style="--tint-mask: url('${p.thumb}');"></span>
+<img alt="${escapeHtml(p.title)} thumbnail">
+<span class="thumbTintLayer" aria-hidden="true"></span>
 </div>
 <div class="post-title">${escapeHtml(p.title)}</div>
 <div class="post-date">${escapeHtml(buildPostMeta(p))}</div>`;
@@ -1054,8 +1105,8 @@ el.onclick=()=>openVideo(p);
 else{
 el.innerHTML=`
 <div class="thumb-list">
-<img src="${p.thumb}">
-<span class="thumbTintLayer" aria-hidden="true" style="--tint-mask: url('${p.thumb}');"></span>
+<img alt="${escapeHtml(p.title)} thumbnail">
+<span class="thumbTintLayer" aria-hidden="true"></span>
 </div>
 <div>
 <div class="post-title">${escapeHtml(p.title)}</div>
@@ -1068,6 +1119,7 @@ el.querySelector(".post-title").onclick=()=>openVideo(p);
 el.querySelector(".post-date").onclick=()=>openVideo(p);
 }
 
+attachThumbnailFallback(p, el);
 postsEl.appendChild(el);
 
 });
