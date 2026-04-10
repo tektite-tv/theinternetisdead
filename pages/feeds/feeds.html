@@ -772,7 +772,20 @@ return `<div class="videoMetaLine">${content}</div>`;
 
 function pickThumbnailUrl(video){
 const thumbs = Array.isArray(video.thumbnails) ? video.thumbnails.filter(Boolean) : [];
-const preferred = thumbs[3] || thumbs[thumbs.length - 1];
+const rankedPatterns = [
+/maxresdefault\.(jpg|webp)/i,
+/sddefault\.(jpg|webp)/i,
+/hqdefault\.(jpg|webp)/i,
+/mqdefault\.(jpg|webp)/i,
+/default\.(jpg|webp)/i
+];
+
+for(const pattern of rankedPatterns){
+const match = thumbs.find((thumb)=>thumb && pattern.test(String(thumb.url || "")));
+if(match && match.url) return match.url;
+}
+
+const preferred = thumbs.find((thumb)=>thumb && thumb.url) || thumbs[thumbs.length - 1];
 if(preferred && preferred.url) return preferred.url;
 return `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
 }
