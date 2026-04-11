@@ -27,26 +27,37 @@ body{
 }
 
 .header{
-  margin-bottom:20px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  margin-bottom:24px;
+}
+
+.header-copy{
+  flex:1 1 auto;
+  min-width:0;
 }
 
 .title{
-  font-size:28px;
+  font-size:24px;
   font-weight:bold;
-  margin:0 0 8px 0;
+  margin:0 0 6px 0;
 }
 
 .subtitle{
   margin:0;
   opacity:.8;
+  font-size:14px;
 }
 
 .controls{
   display:flex;
   gap:12px;
   align-items:center;
-  flex-wrap:wrap;
-  margin:18px 0 24px;
+  flex-wrap:nowrap;
+  margin:0;
+  flex:0 0 auto;
 }
 
 #searchInput{
@@ -154,9 +165,19 @@ code{
   color:var(--text);
 }
 
+@media (max-width: 900px){
+  .header{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .controls{
+    flex-wrap:wrap;
+  }
+}
+
 @media (max-width: 768px){
   body{padding:12px;}
-  .title{font-size:22px;}
+  .title{font-size:20px;}
   #links,
   #links.grid-view{
     grid-template-columns:1fr;
@@ -168,6 +189,9 @@ code{
     width:100%;
     margin-bottom:10px;
   }
+  .controls{
+    width:100%;
+  }
   #searchInput{
     width:100%;
   }
@@ -177,14 +201,16 @@ code{
 <body>
 
 <div class="header">
-  <h1 class="title">Dead Internet Games by @Honestly_Thomas (Tektite)</h1>
-  <p class="subtitle">Play with my website it feels good!</p>
-</div>
+  <div class="header-copy">
+    <h1 class="title">Dead Internet Games by @Honestly_Thomas (Tektite)</h1>
+    <p class="subtitle">Play with my website it feels good!</p>
+  </div>
 
-<div class="controls">
-  <input id="searchInput" type="text" placeholder="Search links...">
-  <button id="gridBtn" type="button">GRID</button>
-  <button id="listBtn" type="button">LIST</button>
+  <div class="controls">
+    <input id="searchInput" type="text" placeholder="Search links...">
+    <button id="gridBtn" type="button">GRID</button>
+    <button id="listBtn" type="button">LIST</button>
+  </div>
 </div>
 
 <div id="links" class="grid-view"></div>
