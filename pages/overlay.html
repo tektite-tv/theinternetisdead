@@ -508,7 +508,7 @@ html, body {
       <div class="hamburger" data-action="toggle-sidebar" aria-label="Close sidebar" role="button" tabindex="0">✕</div>
 
       <div class="logo">
-        <a class="logo-link sidebar-logo-link" id="sidebar-logo-link" href="#" aria-label="Open chat">
+        <a class="logo-link sidebar-logo-link" id="sidebar-logo-link" href="/" aria-label="Go to the main page">
           <img src="/media/images/pngs/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
           <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/media/images/pngs/deadlogo-green.png');"></span>
         </a>
@@ -1033,12 +1033,23 @@ html, body {
   }
 
   if (sidebarLogoLink) {
+    function syncSidebarLogoBehavior() {
+      if (shouldUseIndexChatBehavior()) {
+        sidebarLogoLink.setAttribute('href', '#');
+        sidebarLogoLink.setAttribute('aria-label', 'Open chat');
+      } else {
+        sidebarLogoLink.setAttribute('href', '/');
+        sidebarLogoLink.setAttribute('aria-label', 'Go to the main page');
+      }
+    }
+
+    syncSidebarLogoBehavior();
+
     sidebarLogoLink.addEventListener('click', (event) => {
       if (shouldUseIndexChatBehavior()) {
         handleChatActivate(event);
         return;
       }
-      event.preventDefault();
       closeSidebar();
     });
 
@@ -1048,9 +1059,11 @@ html, body {
         handleChatActivate(event);
         return;
       }
-      event.preventDefault();
       closeSidebar();
     });
+
+    window.addEventListener('resize', syncSidebarLogoBehavior);
+    window.addEventListener('pageshow', syncSidebarLogoBehavior);
   }
 
   logoLinks.forEach((link) => {
