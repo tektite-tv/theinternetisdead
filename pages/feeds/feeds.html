@@ -14,6 +14,7 @@
 --page-text:#00ff00;
 --accent-color:var(--page-text);
 --header-bg:rgba(75,0,118,.5);
+--header-control-height:40px;
 --button-hover-bg:#001a00;
 --tektite-logo-filter: rgba(0, 255, 0, 0);
 --thumbnail-filter: rgba(0, 255, 0, 0);
@@ -58,12 +59,15 @@ color:inherit;
 position:relative;
 display:inline-flex;
 align-items:center;
+justify-content:center;
 isolation:isolate;
 background:#000;
 border:1px solid var(--accent-color);
-padding:6px 8px;
+height:var(--header-control-height);
+box-sizing:border-box;
+padding:4px 8px;
 }
-.channelLogo{height:50px;width:auto;display:block;}
+.channelLogo{height:100%;width:auto;display:block;}
 .channelLogoTintLayer,
 .thumbTintLayer{
 position:absolute;
@@ -105,11 +109,13 @@ text-decoration:none;
 line-height:1;
 background:#000;
 border:1px solid var(--accent-color);
-padding:6px 10px;
+height:var(--header-control-height);
+box-sizing:border-box;
+padding:0 10px;
 }
 .channelHandleAvatar{
-width:50px;
-height:50px;
+width:28px;
+height:28px;
 border-radius:50%;
 object-fit:cover;
 display:block;
@@ -144,7 +150,7 @@ padding:6px 10px;
 }
 
 #videoSearch{
-width:220px;height:40px;
+width:220px;height:var(--header-control-height);
 border:1px solid var(--accent-color);
 background:#000;
 color:var(--page-text);
@@ -165,7 +171,7 @@ outline:none;
 }
 
 button{
-height:40px;padding:0 16px;
+height:var(--header-control-height);padding:0 16px;
 border:1px solid var(--accent-color);
 background:#000;color:var(--page-text);
 cursor:pointer;
