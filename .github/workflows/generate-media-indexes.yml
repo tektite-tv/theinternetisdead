@@ -28,7 +28,8 @@ jobs:
               path.write_text(content, encoding="utf-8")
               print(f"Wrote {path}")
 
-          def oldschool_page(title: str, body_html: str) -> str:
+          def oldschool_page(title: str, body_html: str, extra_head: str = "", extra_script: str = "") -> str:
+              footer_html = '<p><a href="/" class="return-link">Return to theinternetisdead.org</a></p>'
               return f"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
           <html>
            <head>
@@ -41,23 +42,53 @@ jobs:
               a:link, a:visited, a:active {{
                 color: #ff0000;
               }}
+              a.return-link:link, a.return-link:visited, a.return-link:active {{
+                color: #00ffff;
+              }}
               hr {{
                 border: 0;
                 border-top: 1px solid #ffffff;
               }}
               table {{
                 color: #ffffff;
+                border-collapse: collapse;
               }}
               th, td {{
                 color: #ffffff;
-                padding-right: 12px;
+                padding: 8px 12px 8px 0;
                 vertical-align: middle;
               }}
+              tr.item-row td {{
+                border-bottom: 1px solid #ffffff;
+              }}
+              tr.header-row th {{
+                border-bottom: 1px solid #ffffff;
+                padding-bottom: 8px;
+              }}
+              #image-preview {{
+                position: fixed;
+                display: none;
+                pointer-events: none;
+                z-index: 9999;
+                background: #000000;
+                border: 1px solid #ffffff;
+                padding: 6px;
+              }}
+              #image-preview img {{
+                display: block;
+                max-width: 320px;
+                max-height: 320px;
+                width: auto;
+                height: auto;
+              }}
             </style>
+          {extra_head}
            </head>
            <body>
           <h1>{title}</h1>
           {body_html}
+          {footer_html}
+          {extra_script}
            </body>
           </html>
           """
@@ -95,20 +126,19 @@ jobs:
           # /media/index.html
           # --------------------------------------------------
           media_rows = []
-          media_rows.append('<tr><th align="left">Name</th></tr>')
-          media_rows.append('<tr><th><hr></th></tr>')
+          media_rows.append('<tr class="header-row"><th align="left">Name</th></tr>')
 
+          found_media_rows = 0
           for folder_name in ["audio", "images"]:
               folder_path = media_dir / folder_name
               if folder_path.is_dir():
                   href = html.escape(folder_name) + "/"
                   name = "/media/" + html.escape(folder_name) + "/"
-                  media_rows.append(f'<tr><td><a href="{href}">{name}</a></td></tr>')
+                  media_rows.append(f'<tr class="item-row"><td><a href="{href}">{name}</a></td></tr>')
+                  found_media_rows += 1
 
-          if len(media_rows) == 2:
-              media_rows.append('<tr><td>No folders found.</td></tr>')
-
-          media_rows.append('<tr><th><hr></th></tr>')
+          if found_media_rows == 0:
+              media_rows.append('<tr class="item-row"><td>No folders found.</td></tr>')
 
           media_body = f"""<table>
           {chr(10).join(media_rows)}
@@ -134,8 +164,7 @@ jobs:
               )
 
               audio_rows = []
-              audio_rows.append('<tr><th align="left">Name</th><th align="left">Player</th><th align="right">Size</th></tr>')
-              audio_rows.append('<tr><th colspan="3"><hr></th></tr>')
+              audio_rows.append('<tr class="header-row"><th align="left">Name</th><th align="left">Player</th><th align="right">Size</th></tr>')
 
               for f in audio_files:
                   href = html.escape(f.name)
@@ -150,7 +179,7 @@ jobs:
                   )
 
                   audio_rows.append(
-                      f'<tr>'
+                      f'<tr class="item-row">'
                       f'<td><a href="{href}">{name}</a></td>'
                       f'<td>{player}</td>'
                       f'<td align="right">{size} KB</td>'
@@ -158,9 +187,7 @@ jobs:
                   )
 
               if not audio_files:
-                  audio_rows.append('<tr><td colspan="3">No audio files found.</td></tr>')
-
-              audio_rows.append('<tr><th colspan="3"><hr></th></tr>')
+                  audio_rows.append('<tr class="item-row"><td colspan="3">No audio files found.</td></tr>')
 
               audio_body = f"""<table>
           {chr(10).join(audio_rows)}
@@ -187,18 +214,15 @@ jobs:
               )
 
               images_rows = []
-              images_rows.append('<tr><th align="left">Name</th></tr>')
-              images_rows.append('<tr><th><hr></th></tr>')
+              images_rows.append('<tr class="header-row"><th align="left">Name</th></tr>')
 
               for folder in image_subfolders:
                   href = html.escape(folder.name) + "/"
                   name = "/media/images/" + html.escape(folder.name) + "/"
-                  images_rows.append(f'<tr><td><a href="{href}">{name}</a></td></tr>')
+                  images_rows.append(f'<tr class="item-row"><td><a href="{href}">{name}</a></td></tr>')
 
               if not image_subfolders:
-                  images_rows.append('<tr><td>No folders found.</td></tr>')
-
-              images_rows.append('<tr><th><hr></th></tr>')
+                  images_rows.append('<tr class="item-row"><td>No folders found.</td></tr>')
 
               images_body = f"""<table>
           {chr(10).join(images_rows)}
@@ -211,8 +235,52 @@ jobs:
 
           # --------------------------------------------------
           # /media/images/<subfolder>/index.html
-          # lists actual image files
+          # lists actual image files with hover preview
           # --------------------------------------------------
+          preview_script = """
+          <div id="image-preview"><img id="image-preview-img" src="" alt=""></div>
+          <script>
+          (function () {
+            var preview = document.getElementById('image-preview');
+            var previewImg = document.getElementById('image-preview-img');
+            var links = document.querySelectorAll('a[data-preview-src]');
+
+            function movePreview(e) {
+              var offsetX = 20;
+              var offsetY = 20;
+              var left = e.clientX + offsetX;
+              var top = e.clientY + offsetY;
+
+              var maxLeft = window.innerWidth - preview.offsetWidth - 12;
+              var maxTop = window.innerHeight - preview.offsetHeight - 12;
+
+              if (left > maxLeft) left = Math.max(12, e.clientX - preview.offsetWidth - 20);
+              if (top > maxTop) top = Math.max(12, e.clientY - preview.offsetHeight - 20);
+
+              preview.style.left = left + 'px';
+              preview.style.top = top + 'px';
+            }
+
+            for (var i = 0; i < links.length; i++) {
+              links[i].addEventListener('mouseenter', function (e) {
+                previewImg.src = this.getAttribute('data-preview-src');
+                preview.style.display = 'block';
+                movePreview(e);
+              });
+
+              links[i].addEventListener('mousemove', function (e) {
+                movePreview(e);
+              });
+
+              links[i].addEventListener('mouseleave', function () {
+                preview.style.display = 'none';
+                previewImg.src = '';
+              });
+            }
+          })();
+          </script>
+          """
+
           for subfolder in image_subfolders:
               image_files = sorted(
                   [
@@ -228,21 +296,21 @@ jobs:
               web_path = "/" + "/".join(rel_parts)
 
               rows = []
-              rows.append('<tr><th align="left">Name</th><th align="right">Size</th></tr>')
-              rows.append('<tr><th colspan="2"><hr></th></tr>')
+              rows.append('<tr class="header-row"><th align="left">Name</th><th align="right">Size</th></tr>')
 
               for f in image_files:
                   href = html.escape(f.name)
                   name = web_path + "/" + html.escape(f.name)
                   size = kb_size(f)
                   rows.append(
-                      f'<tr><td><a href="{href}">{name}</a></td><td align="right">{size} KB</td></tr>'
+                      f'<tr class="item-row">'
+                      f'<td><a href="{href}" data-preview-src="{href}">{name}</a></td>'
+                      f'<td align="right">{size} KB</td>'
+                      f'</tr>'
                   )
 
               if not image_files:
-                  rows.append('<tr><td colspan="2">No image files found.</td></tr>')
-
-              rows.append('<tr><th colspan="2"><hr></th></tr>')
+                  rows.append('<tr class="item-row"><td colspan="2">No image files found.</td></tr>')
 
               body = f"""<table>
           {chr(10).join(rows)}
@@ -250,7 +318,7 @@ jobs:
 
               write_text_file(
                   subfolder / "index.html",
-                  oldschool_page(f"Index of {web_path}", body)
+                  oldschool_page(f"Index of {web_path}", body, extra_script=preview_script)
               )
           PY
 
@@ -264,5 +332,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add media/index.html media/audio/index.html media/images/index.html media/images/*/index.html
-          git commit -m "Auto-generate styled media index pages"
+          git commit -m "Auto-generate styled media index pages with dividers"
           git push
