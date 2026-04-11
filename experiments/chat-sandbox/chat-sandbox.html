@@ -1473,7 +1473,7 @@ const focusSink = document.getElementById('focusSink');
     const scriptLoadInput = document.getElementById('scriptLoadInput');
 
     let currentNickname = 'User';
-    let showSystemPrefix = false;
+    let showSystemPrefix = true;
     let debugMode = false;
     let scriptRunCounter = 0;
     let activeScriptRun = null;
@@ -1848,21 +1848,56 @@ const focusSink = document.getElementById('focusSink');
       }
     }
 
-    const INITIAL_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it.';
+    const DEFAULT_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it.';
+    let initialWelcomeMessage = DEFAULT_WELCOME_MESSAGE;
+
+    function normalizeWelcomeMessage(text) {
+      const trimmed = String(text || '').trim();
+      if (!trimmed) return DEFAULT_WELCOME_MESSAGE;
+      return trimmed.startsWith('System: ') ? trimmed : `System: ${trimmed}`;
+    }
 
     function ensureInitialWelcomeMessage() {
-      const existingWelcomeMessage = Array.from(messages.querySelectorAll('.message[data-role="system"]')).find((line) => {
-        return (line.dataset.rawContent || '').trim() === INITIAL_WELCOME_MESSAGE;
+      const normalizedWelcome = normalizeWelcomeMessage(initialWelcomeMessage);
+      initialWelcomeMessage = normalizedWelcome;
+      const systemMessages = Array.from(messages.querySelectorAll('.message[data-role="system"]'));
+      const welcomeMessages = systemMessages.filter((line) => {
+        if (line.dataset.welcomeMessage === 'true') return true;
+        const raw = (line.dataset.rawContent || '').trim();
+        return raw === DEFAULT_WELCOME_MESSAGE || raw === normalizedWelcome;
+      });
+      const existingWelcomeMessage = welcomeMessages.find((line) => {
+        return (line.dataset.rawContent || '').trim() === normalizedWelcome;
+      });
+
+      welcomeMessages.forEach((line) => {
+        if (line !== existingWelcomeMessage) {
+          line.remove();
+        }
       });
 
       if (existingWelcomeMessage) {
+        existingWelcomeMessage.dataset.welcomeMessage = 'true';
+        existingWelcomeMessage.dataset.rawContent = normalizedWelcome;
+        const messageText = existingWelcomeMessage.querySelector('.messageText');
+        if (messageText) {
+          appendStyledSystemText(messageText, normalizedWelcome);
+        }
         if (messages.firstElementChild !== existingWelcomeMessage) {
           messages.insertBefore(existingWelcomeMessage, messages.firstElementChild);
         }
         return existingWelcomeMessage;
       }
 
-      const line = addMessage(INITIAL_WELCOME_MESSAGE, 'system');
+      const line = addMessage(normalizedWelcome, 'system');
+      if (line) {
+        line.dataset.welcomeMessage = 'true';
+        line.dataset.rawContent = normalizedWelcome;
+        const messageText = line.querySelector('.messageText');
+        if (messageText) {
+          appendStyledSystemText(messageText, normalizedWelcome);
+        }
+      }
       if (line && messages.firstElementChild !== line) {
         messages.insertBefore(line, messages.firstElementChild);
       }
@@ -1914,10 +1949,9 @@ const focusSink = document.getElementById('focusSink');
     }
 
     function getRenderedSystemText(text) {
-      if (showSystemPrefix) {
-        return text.startsWith('System: ') ? text : `System: ${text}`;
-      }
-      return text.replace(/^System:\s*/i, '');
+      const normalized = String(text || '').trim();
+      if (!normalized) return 'System:';
+      return normalized.startsWith('System: ') ? normalized : `System: ${normalized}`;
     }
 
     function getSystemBaseText(text) {
@@ -5146,7 +5180,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       if (command === '/debug') {
         if (debugMode) {
-          showSystemPrefix = false;
+          showSystemPrefix = true;
           setDebugMode(false);
           refreshVisibleHelpMessages();
           addSystemMessage(formatCommandExecutionMessage('/debug', 'disabled'));
@@ -5853,11 +5887,21 @@ function createHomepageCustomizeMessageNode(result = {}) {
           title: event.data.title || '',
           sourceKey: event.data.sourceKey || ''
         });
+        initialWelcomeMessage = normalizeWelcomeMessage(event.data.welcomeMessage || DEFAULT_WELCOME_MESSAGE);
+        if (chatBarWrap.classList.contains('visible')) {
+          ensureInitialWelcomeMessage();
+          requestAnimationFrame(scrollToBottom);
+        }
         return;
       }
 
       if (event.data.type === 'pageChatClear') {
         setPageCommands({ commands: [], pageOnly: false, pageId: '', title: '', sourceKey: '' });
+        initialWelcomeMessage = DEFAULT_WELCOME_MESSAGE;
+        if (chatBarWrap.classList.contains('visible')) {
+          ensureInitialWelcomeMessage();
+          requestAnimationFrame(scrollToBottom);
+        }
         return;
       }
 
