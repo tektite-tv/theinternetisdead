@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Bananaman Shooter v1.96</title>
+<title>Bananaman Shooter</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -410,7 +410,7 @@ body.invert-colors {
 
 <div id="uiRoot">
   <div id="startMenu" class="panel">
-    <div class="title">Bananaman Shooter</div>
+    <div class="title">Bananaman Shooter <span style="font-size:14px; opacity:0.75;">(v1.96)</span></div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="hint">Move: A/D or ⬅➡ (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Bomb: Q (or X/RB) · Shield: RMB (or LB/LT) · Pause: ESC (or Start) · HUD: / (or View)</div>
     <div class="btnRow">
@@ -2603,7 +2603,6 @@ function preloadImages(urls){
 
 async function loadEnemyImagesFromIndex(){
   try{
-    setAssetStatus("Fetching index.json...");
     const res = await fetch(GIF_BASE + "index.json", { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
 
@@ -2623,13 +2622,13 @@ async function loadEnemyImagesFromIndex(){
 
     enemyImages = imgs;
     assetsReady = true;
-    setAssetStatus(`Loaded ${enemyImages.length} enemy images ✅`);
+    setAssetStatus("");
   }catch(err){
     console.warn("Failed to load index.json enemy list:", err);
-    // removed outdated index.json fallback status message
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     assetsReady = true;
+    setAssetStatus("");
   }
 }
 loadEnemyImagesFromIndex();
@@ -3992,7 +3991,7 @@ if (isDragonEnemy(e)){
   ENEMY_COLS = formationCols;
 
   overlay.innerHTML =
-    `Bananaman Shooter v1.96<br>` +
+    `Bananaman Shooter<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
@@ -4103,7 +4102,8 @@ powerupSlot.style.display = "none";
 spawnEnemies();
 updateHearts();
 
-requestAnimationFrame(loop);</script>
+requestAnimationFrame(loop);
+</script>
 
 <div id="heartsHud" style="
 position:fixed;
@@ -4118,38 +4118,3 @@ z-index:9999;
 </body>
 
 </html>
-
-<script>
-
-// ===== Mobile-aware resize (portrait + landscape)
-function resize(){
-  const vw = window.visualViewport ? visualViewport.width : window.innerWidth;
-  const vh = window.visualViewport ? visualViewport.height : window.innerHeight;
-
-  canvas.width  = Math.floor(vw * window.devicePixelRatio);
-  canvas.height = Math.floor(vh * window.devicePixelRatio);
-
-  canvas.style.width  = vw + "px";
-  canvas.style.height = vh + "px";
-
-  ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
-
-  resizeFX();
-}
-
-window.addEventListener("resize", resize);
-window.addEventListener("orientationchange", resize);
-if (window.visualViewport){
-  visualViewport.addEventListener("resize", resize);
-}
-resize();
-
-function isPortrait(){
-  return canvas.height > canvas.width;
-}
-
-function getPlayerAlignedY(){
-  return isPortrait() ? canvas.height * 0.78 : canvas.height * 0.88;
-}
-
-</script>
