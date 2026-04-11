@@ -10,33 +10,103 @@
     a:link, a:visited, a:active {
       color: #ff0000;
     }
+    a.return-link:link, a.return-link:visited, a.return-link:active {
+      color: #00ffff;
+    }
     hr {
       border: 0;
       border-top: 1px solid #ffffff;
     }
     table {
       color: #ffffff;
+      border-collapse: collapse;
     }
     th, td {
       color: #ffffff;
-      padding-right: 12px;
+      padding: 8px 12px 8px 0;
       vertical-align: middle;
     }
+    tr.item-row td {
+      border-bottom: 1px solid #ffffff;
+    }
+    tr.header-row th {
+      border-bottom: 1px solid #ffffff;
+      padding-bottom: 8px;
+    }
+    #image-preview {
+      position: fixed;
+      display: none;
+      pointer-events: none;
+      z-index: 9999;
+      background: #000000;
+      border: 1px solid #ffffff;
+      padding: 6px;
+    }
+    #image-preview img {
+      display: block;
+      max-width: 320px;
+      max-height: 320px;
+      width: auto;
+      height: auto;
+    }
   </style>
+
  </head>
  <body>
 <h1>Index of /media/images/png</h1>
 <table>
-<tr><th align="left">Name</th><th align="right">Size</th></tr>
-<tr><th colspan="2"><hr></th></tr>
-<tr><td><a href="cryptid-memes.png">/media/images/png/cryptid-memes.png</a></td><td align="right">434 KB</td></tr>
-<tr><td><a href="deadlogo-green.png">/media/images/png/deadlogo-green.png</a></td><td align="right">180 KB</td></tr>
-<tr><td><a href="honestly-thomas.png">/media/images/png/honestly-thomas.png</a></td><td align="right">3026 KB</td></tr>
-<tr><td><a href="oldtube-alt-1.png">/media/images/png/oldtube-alt-1.png</a></td><td align="right">449 KB</td></tr>
-<tr><td><a href="oldtube-alt-2.png">/media/images/png/oldtube-alt-2.png</a></td><td align="right">283 KB</td></tr>
-<tr><td><a href="oldtube.png">/media/images/png/oldtube.png</a></td><td align="right">130 KB</td></tr>
-<tr><td><a href="subscribe.png">/media/images/png/subscribe.png</a></td><td align="right">15 KB</td></tr>
-<tr><th colspan="2"><hr></th></tr>
+<tr class="header-row"><th align="left">Name</th><th align="right">Size</th></tr>
+<tr class="item-row"><td><a href="cryptid-memes.png" data-preview-src="cryptid-memes.png">/media/images/png/cryptid-memes.png</a></td><td align="right">434 KB</td></tr>
+<tr class="item-row"><td><a href="deadlogo-green.png" data-preview-src="deadlogo-green.png">/media/images/png/deadlogo-green.png</a></td><td align="right">180 KB</td></tr>
+<tr class="item-row"><td><a href="honestly-thomas.png" data-preview-src="honestly-thomas.png">/media/images/png/honestly-thomas.png</a></td><td align="right">3026 KB</td></tr>
+<tr class="item-row"><td><a href="oldtube-alt-1.png" data-preview-src="oldtube-alt-1.png">/media/images/png/oldtube-alt-1.png</a></td><td align="right">449 KB</td></tr>
+<tr class="item-row"><td><a href="oldtube-alt-2.png" data-preview-src="oldtube-alt-2.png">/media/images/png/oldtube-alt-2.png</a></td><td align="right">283 KB</td></tr>
+<tr class="item-row"><td><a href="oldtube.png" data-preview-src="oldtube.png">/media/images/png/oldtube.png</a></td><td align="right">130 KB</td></tr>
+<tr class="item-row"><td><a href="subscribe.png" data-preview-src="subscribe.png">/media/images/png/subscribe.png</a></td><td align="right">15 KB</td></tr>
 </table>
+<p><a href="/" class="return-link">Return to theinternetisdead.org</a></p>
+
+<div id="image-preview"><img id="image-preview-img" src="" alt=""></div>
+<script>
+(function () {
+  var preview = document.getElementById('image-preview');
+  var previewImg = document.getElementById('image-preview-img');
+  var links = document.querySelectorAll('a[data-preview-src]');
+
+  function movePreview(e) {
+    var offsetX = 20;
+    var offsetY = 20;
+    var left = e.clientX + offsetX;
+    var top = e.clientY + offsetY;
+
+    var maxLeft = window.innerWidth - preview.offsetWidth - 12;
+    var maxTop = window.innerHeight - preview.offsetHeight - 12;
+
+    if (left > maxLeft) left = Math.max(12, e.clientX - preview.offsetWidth - 20);
+    if (top > maxTop) top = Math.max(12, e.clientY - preview.offsetHeight - 20);
+
+    preview.style.left = left + 'px';
+    preview.style.top = top + 'px';
+  }
+
+  for (var i = 0; i < links.length; i++) {
+    links[i].addEventListener('mouseenter', function (e) {
+      previewImg.src = this.getAttribute('data-preview-src');
+      preview.style.display = 'block';
+      movePreview(e);
+    });
+
+    links[i].addEventListener('mousemove', function (e) {
+      movePreview(e);
+    });
+
+    links[i].addEventListener('mouseleave', function () {
+      preview.style.display = 'none';
+      previewImg.src = '';
+    });
+  }
+})();
+</script>
+
  </body>
 </html>

@@ -10,29 +10,57 @@
     a:link, a:visited, a:active {
       color: #ff0000;
     }
+    a.return-link:link, a.return-link:visited, a.return-link:active {
+      color: #00ffff;
+    }
     hr {
       border: 0;
       border-top: 1px solid #ffffff;
     }
     table {
       color: #ffffff;
+      border-collapse: collapse;
     }
     th, td {
       color: #ffffff;
-      padding-right: 12px;
+      padding: 8px 12px 8px 0;
       vertical-align: middle;
     }
+    tr.item-row td {
+      border-bottom: 1px solid #ffffff;
+    }
+    tr.header-row th {
+      border-bottom: 1px solid #ffffff;
+      padding-bottom: 8px;
+    }
+    #image-preview {
+      position: fixed;
+      display: none;
+      pointer-events: none;
+      z-index: 9999;
+      background: #000000;
+      border: 1px solid #ffffff;
+      padding: 6px;
+    }
+    #image-preview img {
+      display: block;
+      max-width: 320px;
+      max-height: 320px;
+      width: auto;
+      height: auto;
+    }
   </style>
+
  </head>
  <body>
 <h1>Index of /media/images</h1>
 <table>
-<tr><th align="left">Name</th></tr>
-<tr><th><hr></th></tr>
-<tr><td><a href="gifs/">/media/images/gifs/</a></td></tr>
-<tr><td><a href="link-thumbnails/">/media/images/link-thumbnails/</a></td></tr>
-<tr><td><a href="png/">/media/images/png/</a></td></tr>
-<tr><th><hr></th></tr>
+<tr class="header-row"><th align="left">Name</th></tr>
+<tr class="item-row"><td><a href="gifs/">/media/images/gifs/</a></td></tr>
+<tr class="item-row"><td><a href="link-thumbnails/">/media/images/link-thumbnails/</a></td></tr>
+<tr class="item-row"><td><a href="png/">/media/images/png/</a></td></tr>
 </table>
+<p><a href="/" class="return-link">Return to theinternetisdead.org</a></p>
+
  </body>
 </html>
