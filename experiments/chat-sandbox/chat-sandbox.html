@@ -1844,37 +1844,21 @@ const focusSink = document.getElementById('focusSink');
       }
     }
 
-    const DEFAULT_INITIAL_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it.';
-
-    function getInitialWelcomeMessage() {
-      if (document.body.classList.contains('embedded') && pageCommandMeta.sourceKey === 'shooter-game') {
-        return "System: Welcome to Tektite's Shooter Game...";
-      }
-      return DEFAULT_INITIAL_WELCOME_MESSAGE;
-    }
+    const INITIAL_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it.';
 
     function ensureInitialWelcomeMessage() {
-      const welcomeMessage = getInitialWelcomeMessage();
-      const welcomeMessages = Array.from(messages.querySelectorAll('.message[data-role="user"]')).filter((line) => {
-        const rawContent = (line.dataset.rawContent || '').trim();
-        return rawContent === DEFAULT_INITIAL_WELCOME_MESSAGE || rawContent === "System: Welcome to Tektite's Shooter Game...";
+      const existingWelcomeMessage = Array.from(messages.querySelectorAll('.message[data-role="system"]')).find((line) => {
+        return (line.dataset.rawContent || '').trim() === INITIAL_WELCOME_MESSAGE;
       });
-      const existingWelcomeMessage = welcomeMessages[0] || null;
 
       if (existingWelcomeMessage) {
-        existingWelcomeMessage.dataset.rawContent = welcomeMessage;
-        const messageText = existingWelcomeMessage.querySelector('.messageText');
-        if (messageText) {
-          messageText.textContent = welcomeMessage;
-        }
-        welcomeMessages.slice(1).forEach((line) => line.remove());
         if (messages.firstElementChild !== existingWelcomeMessage) {
           messages.insertBefore(existingWelcomeMessage, messages.firstElementChild);
         }
         return existingWelcomeMessage;
       }
 
-      const line = addMessage(welcomeMessage, 'user');
+      const line = addMessage(INITIAL_WELCOME_MESSAGE, 'system');
       if (line && messages.firstElementChild !== line) {
         messages.insertBefore(line, messages.firstElementChild);
       }
@@ -5143,6 +5127,22 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return true;
       }
 
+      if (command === '/help') {
+        addSystemMessage(formatCommandExecutionMessage('/help'));
+        const existingHelpMessage = Array.from(messages.querySelectorAll('.message[data-role="system"][data-command-panel-type="help"]')).at(-1) || null;
+        if (existingHelpMessage && !debugMode) {
+          const messageText = existingHelpMessage.querySelector('.messageText');
+          if (messageText) {
+            existingHelpMessage.dataset.commandPanelType = 'help';
+            messageText.innerHTML = '';
+            messageText.appendChild(createHelpMessageNode());
+          }
+        } else {
+          addMessage(createHelpMessageNode(), 'system');
+        }
+        return true;
+      }
+
       if (embeddedPageOnly && trimmed.startsWith('/')) {
         return false;
       }
@@ -5196,22 +5196,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
         ], {
           panelType: 'color'
         }), 'system');
-        return true;
-      }
-
-      if (command === '/help') {
-        addSystemMessage(formatCommandExecutionMessage('/help'));
-        const existingHelpMessage = Array.from(messages.querySelectorAll('.message[data-role="system"][data-command-panel-type="help"]')).at(-1) || null;
-        if (existingHelpMessage && !debugMode) {
-          const messageText = existingHelpMessage.querySelector('.messageText');
-          if (messageText) {
-            existingHelpMessage.dataset.commandPanelType = 'help';
-            messageText.innerHTML = '';
-            messageText.appendChild(createHelpMessageNode());
-          }
-        } else {
-          addMessage(createHelpMessageNode(), 'system');
-        }
         return true;
       }
 
@@ -5865,17 +5849,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
           title: event.data.title || '',
           sourceKey: event.data.sourceKey || ''
         });
-        ensureInitialWelcomeMessage();
-        refreshVisibleHelpMessages();
-        renderInlineSuggestion();
         return;
       }
 
       if (event.data.type === 'pageChatClear') {
         setPageCommands({ commands: [], pageOnly: false, pageId: '', title: '', sourceKey: '' });
-        ensureInitialWelcomeMessage();
-        refreshVisibleHelpMessages();
-        renderInlineSuggestion();
         return;
       }
 
