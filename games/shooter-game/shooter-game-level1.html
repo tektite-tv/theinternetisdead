@@ -410,7 +410,7 @@ body.invert-colors {
 
 <div id="uiRoot">
   <div id="startMenu" class="panel">
-    <div class="title">Bananaman Shooter <span style="font-size:14px; opacity:0.75;">(v1.96)</span></div>
+    <div class="title">Bananaman Shooter</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="hint">Move: A/D or ⬅➡ (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Bomb: Q (or X/RB) · Shield: RMB (or LB/LT) · Pause: ESC (or Start) · HUD: / (or View)</div>
     <div class="btnRow">
@@ -2626,7 +2626,7 @@ async function loadEnemyImagesFromIndex(){
     setAssetStatus(`Loaded ${enemyImages.length} enemy images ✅`);
   }catch(err){
     console.warn("Failed to load index.json enemy list:", err);
-    setAssetStatus("Failed to load index.json. Using fallback images.");
+    // removed outdated index.json fallback status message
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     assetsReady = true;
