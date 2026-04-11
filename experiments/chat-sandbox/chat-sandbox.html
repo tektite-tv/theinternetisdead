@@ -328,6 +328,10 @@
       color: inherit;
     }
 
+    .message[data-role="system"] .speakerPrefixLabel {
+      color: #ff2a2a;
+    }
+
     .systemCommandLabel {
       font-weight: 700;
       color: inherit;
@@ -1469,7 +1473,7 @@ const focusSink = document.getElementById('focusSink');
     const scriptLoadInput = document.getElementById('scriptLoadInput');
 
     let currentNickname = 'User';
-    let showSystemPrefix = true;
+    let showSystemPrefix = false;
     let debugMode = false;
     let scriptRunCounter = 0;
     let activeScriptRun = null;
@@ -1844,41 +1848,25 @@ const focusSink = document.getElementById('focusSink');
       }
     }
 
-    const DEFAULT_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it.';
-    const SHOOTER_WELCOME_MESSAGE = "System: Welcome to Tektite's Shooter Game...";
-
-    function getInitialWelcomeMessage() {
-      if (document.body.classList.contains('embedded') && pageCommandMeta && pageCommandMeta.sourceKey === 'shooter-game') {
-        return SHOOTER_WELCOME_MESSAGE;
-      }
-      return DEFAULT_WELCOME_MESSAGE;
-    }
+    const INITIAL_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it.';
 
     function ensureInitialWelcomeMessage() {
-      const expectedMessage = getInitialWelcomeMessage();
-      const allWelcomeMessages = Array.from(messages.querySelectorAll('.message')).filter((line) => {
-        const raw = (line.dataset.rawContent || '').trim();
-        return raw === DEFAULT_WELCOME_MESSAGE || raw === SHOOTER_WELCOME_MESSAGE;
+      const existingWelcomeMessage = Array.from(messages.querySelectorAll('.message[data-role="system"]')).find((line) => {
+        return (line.dataset.rawContent || '').trim() === INITIAL_WELCOME_MESSAGE;
       });
 
-      let existingWelcomeMessage = allWelcomeMessages.find((line) => (line.dataset.rawContent || '').trim() === expectedMessage) || null;
-
-      allWelcomeMessages.forEach((line) => {
-        if (line !== existingWelcomeMessage) {
-          line.remove();
+      if (existingWelcomeMessage) {
+        if (messages.firstElementChild !== existingWelcomeMessage) {
+          messages.insertBefore(existingWelcomeMessage, messages.firstElementChild);
         }
-      });
-
-      if (!existingWelcomeMessage) {
-        existingWelcomeMessage = addSystemMessage(expectedMessage, { repeatCount: 1 });
+        return existingWelcomeMessage;
       }
 
-      if (existingWelcomeMessage && messages.firstElementChild !== existingWelcomeMessage) {
-        messages.insertBefore(existingWelcomeMessage, messages.firstElementChild);
+      const line = addMessage(INITIAL_WELCOME_MESSAGE, 'system');
+      if (line && messages.firstElementChild !== line) {
+        messages.insertBefore(line, messages.firstElementChild);
       }
-
-      updateMessagesVisibility();
-      return existingWelcomeMessage;
+      return line;
     }
 
     function showChatBar() {
@@ -3818,14 +3806,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return wrapper;
     }
 
-    function getPageOnlyCommandCatalog() {
-      return Array.from(new Set(['/help', ...pageCommandRegistry.map((entry) => entry.name)])).sort((a, b) => a.localeCompare(b));
-    }
-
     function getCommandCatalog() {
       const pageCommands = pageCommandRegistry.map((entry) => entry.name);
       if (document.body.classList.contains('embedded') && pageCommandMeta.pageOnly) {
-        return getPageOnlyCommandCatalog();
+        return Array.from(new Set(pageCommands)).sort((a, b) => a.localeCompare(b));
       }
       return Array.from(new Set([...builtInCommandList, ...pageCommands])).sort((a, b) => a.localeCompare(b));
     }
@@ -3852,11 +3836,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
         title: typeof source.title === 'string' ? source.title : '',
         sourceKey: typeof source.sourceKey === 'string' ? source.sourceKey : ''
       };
-
-      if (chatBarWrap.classList.contains('visible')) {
-        ensureInitialWelcomeMessage();
-        renderInlineSuggestion();
-      }
     }
 
     function getPageCommandDefinition(command) {
@@ -3883,9 +3862,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         execute: entry.execute !== false,
         desc: entry.desc || 'page command'
       }));
-      const mergedCommands = showPageOnlyHelp
-        ? [{ name: '/help', value: '/help', execute: true, desc: 'show this help message with command links' }, ...pageCommands]
-        : [...builtInCommands, ...pageCommands];
+      const mergedCommands = showPageOnlyHelp ? pageCommands : [...builtInCommands, ...pageCommands];
       return Array.from(mergedCommands.reduce((map, entry) => {
         const key = String(entry.name || '').toLowerCase();
         if (!key) return map;
@@ -5154,14 +5131,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return true;
       }
 
-      if (command === '/help') {
-        addSystemMessage(formatCommandExecutionMessage('/help'));
-        addMessage(createCommandListMessageNode('Available commands', showSystemPrefix ? [] : [], {
-          panelType: 'help'
-        }), 'system');
-        return true;
-      }
-
       if (embeddedPageOnly && trimmed.startsWith('/')) {
         return false;
       }
@@ -5623,23 +5592,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
       renderInlineSuggestion();
     });
 
-    function handleTabCompletion(direction = 1) {
-      if (acceptInlineSuggestion()) {
-        renderInlineSuggestion();
-        return true;
-      }
-      if (cycleCommandArgumentSuggestion(direction)) {
-        renderInlineSuggestion();
-        return true;
-      }
-      const commandInfo = getCommandTokenInfo();
-      if (commandInfo && cycleCommandSuggestion(direction)) {
-        renderInlineSuggestion();
-        return true;
-      }
-      return false;
-    }
-
     chatBar.addEventListener('keydown', (event) => {
       if (!chatInputArmed) {
         event.preventDefault();
@@ -5660,12 +5612,19 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const commandInfo = getCommandTokenInfo();
 
       if (event.key === 'Tab') {
-        if (handleTabCompletion(event.shiftKey ? -1 : 1)) {
+        if (acceptInlineSuggestion()) {
           event.preventDefault();
+          return;
+        }
+        if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
+          event.preventDefault();
+          renderInlineSuggestion();
           return;
         }
         if (commandInfo) {
           event.preventDefault();
+          cycleCommandSuggestion(event.shiftKey ? -1 : 1);
+          renderInlineSuggestion();
         }
         return;
       }
@@ -6014,14 +5973,6 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       if (visible && !chatInputArmed && printable) {
         event.preventDefault();
-        return;
-      }
-
-      if (visible && chatInputArmed && !active && !interactingWithCustomizeControl && event.key === 'Tab') {
-        event.preventDefault();
-        chatBar.focus();
-        moveCursorToEnd();
-        handleTabCompletion(event.shiftKey ? -1 : 1);
         return;
       }
 
