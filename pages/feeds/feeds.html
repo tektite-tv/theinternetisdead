@@ -807,10 +807,7 @@ thumbs
 
 const preferred = thumbs[3] || thumbs[thumbs.length - 1];
 if(preferred && preferred.url) addCandidate(preferred.url);
-thumbs
-.slice()
-.sort((a,b)=>getThumbScore(b) - getThumbScore(a))
-.forEach((thumb)=>addCandidate(String(thumb && thumb.url || "")));
+thumbs.forEach((thumb)=>addCandidate(String(thumb && thumb.url || "")));
 addCandidate(`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`);
 
 return candidates;
