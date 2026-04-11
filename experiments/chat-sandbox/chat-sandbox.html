@@ -3843,7 +3843,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     function getCommandCatalog() {
       const pageCommands = pageCommandRegistry.map((entry) => entry.name);
       if (document.body.classList.contains('embedded') && pageCommandMeta.pageOnly) {
-        return Array.from(new Set(pageCommands)).sort((a, b) => a.localeCompare(b));
+        return Array.from(new Set(['/help', ...pageCommands])).sort((a, b) => a.localeCompare(b));
       }
       return Array.from(new Set([...builtInCommandList, ...pageCommands])).sort((a, b) => a.localeCompare(b));
     }
@@ -3896,7 +3896,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
         execute: entry.execute !== false,
         desc: entry.desc || 'page command'
       }));
-      const mergedCommands = showPageOnlyHelp ? pageCommands : [...builtInCommands, ...pageCommands];
+      const helpCommand = builtInCommands.find((entry) => entry.name === '/help');
+      const mergedCommands = showPageOnlyHelp ? [helpCommand, ...pageCommands].filter(Boolean) : [...builtInCommands, ...pageCommands];
       return Array.from(mergedCommands.reduce((map, entry) => {
         const key = String(entry.name || '').toLowerCase();
         if (!key) return map;
@@ -5165,7 +5166,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return true;
       }
 
-      if (embeddedPageOnly && trimmed.startsWith('/')) {
+      if (embeddedPageOnly && trimmed.startsWith('/') && command !== '/help') {
         return false;
       }
 
