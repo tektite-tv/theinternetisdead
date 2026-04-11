@@ -117,8 +117,7 @@ html, body {
 
 #overlay-root .sidebar-header-link {
   margin-left: 14px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
   align-items: center;
   gap: 8px;
   flex: 1 1 auto;
@@ -129,9 +128,10 @@ html, body {
 #overlay-root .sidebar-header-link .home-link {
   font-size: calc(22px * var(--overlay-font-scale, 1));
   padding: 8px 12px;
-  width: 100%;
+  width: var(--sidebar-header-button-width, auto);
   min-width: 0;
   justify-content: center;
+  flex: 0 0 auto;
 }
 
 #overlay-root .logo-link {
@@ -924,6 +924,60 @@ html, body {
         sidebarCommandLink.removeAttribute('aria-label');
       }
     }
+
+    window.requestAnimationFrame(syncSidebarHeaderButtonWidths);
+  }
+
+  function measureSidebarHeaderButtonWidth(labels = []) {
+    const header = overlayRoot.querySelector('.sidebar-header-link');
+    if (!header || !labels.length) return 0;
+
+    const probe = document.createElement('a');
+    probe.className = 'home-link';
+    probe.href = '#';
+    probe.setAttribute('aria-hidden', 'true');
+    probe.tabIndex = -1;
+    probe.style.position = 'absolute';
+    probe.style.left = '-9999px';
+    probe.style.top = '0';
+    probe.style.visibility = 'hidden';
+    probe.style.pointerEvents = 'none';
+    probe.style.width = 'auto';
+    probe.style.whiteSpace = 'nowrap';
+    header.appendChild(probe);
+
+    let maxWidth = 0;
+    labels.forEach((label) => {
+      probe.textContent = label;
+      maxWidth = Math.max(maxWidth, Math.ceil(probe.getBoundingClientRect().width));
+    });
+
+    probe.remove();
+    return maxWidth;
+  }
+
+  function syncSidebarHeaderButtonWidths() {
+    const header = overlayRoot.querySelector('.sidebar-header-link');
+    if (!header) return;
+
+    const visibleButtons = [sidebarContextLink, sidebarCommandLink].filter((link) => {
+      return !!link && !link.hidden && link.style.display !== 'none';
+    });
+
+    if (!visibleButtons.length) {
+      header.style.removeProperty('--sidebar-header-button-width');
+      return;
+    }
+
+    const measuredWidth = measureSidebarHeaderButtonWidth(['+ Chat', '/command', '+ Home']);
+    const gapValue = window.getComputedStyle(header).columnGap || window.getComputedStyle(header).gap || '0';
+    const gap = parseFloat(gapValue) || 0;
+    const availableWidth = Math.max(0, header.clientWidth - (visibleButtons.length > 1 ? gap * (visibleButtons.length - 1) : 0));
+    const targetWidth = visibleButtons.length > 1
+      ? Math.min(measuredWidth, Math.floor(availableWidth / visibleButtons.length))
+      : Math.min(measuredWidth, availableWidth);
+
+    header.style.setProperty('--sidebar-header-button-width', `${Math.max(targetWidth, 0)}px`);
   }
 
   function handleChatActivate(event) {
