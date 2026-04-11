@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -10,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CHANNELS_PATH = ROOT / "pages" / "feeds" / "channels.json"
 OUTPUT_PATH = ROOT / "pages" / "feeds" / "feed-videos.json"
 LEGACY_FALLBACK_PATH = ROOT / "pages" / "youtube-list-grid" / "videos.json"
+LOCAL_COOKIES_PATH = ROOT / "cookies.txt"
 
 
 def load_channels_config():
@@ -65,7 +67,7 @@ def normalize_channel_url(url):
 
 
 def run_yt_dlp_json(url):
-    command = [
+    base_command = [
         sys.executable,
         "-m",
         "yt_dlp",
@@ -76,20 +78,76 @@ def run_yt_dlp_json(url):
         "-J",
         url,
     ]
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=False,
-    )
-    stdout = result.stdout.strip()
-    if not stdout:
+    cookies_path = get_cookies_path()
+    attempts = [cookies_path] if cookies_path else [None]
+    if cookies_path:
+        attempts.append(None)
+
+    last_error = ""
+    for attempt_cookies_path in attempts:
+        command = list(base_command)
+        using_cookies = attempt_cookies_path is not None
+        if using_cookies:
+            command[3:3] = ["--cookies", str(attempt_cookies_path)]
+
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+        )
+        stdout = result.stdout.strip()
         stderr = result.stderr.strip()
-        raise RuntimeError(stderr or f"yt-dlp returned no JSON for {url}")
-    if result.stderr.strip():
-        print(result.stderr.strip(), file=sys.stderr)
-    return json.loads(stdout)
+        parsed_data = None
+        if stdout:
+            try:
+                parsed_data = json.loads(stdout)
+            except json.JSONDecodeError:
+                parsed_data = None
+
+        if using_cookies and "The page needs to be reloaded" in stderr:
+            last_error = stderr or f"yt-dlp returned no JSON for {url}"
+            print(f"Warning: cookie-backed fetch failed for {url}; retrying without cookies.", file=sys.stderr)
+            continue
+
+        if parsed_data is not None:
+            if stderr:
+                print(stderr, file=sys.stderr)
+            return parsed_data
+
+        last_error = stderr or f"yt-dlp returned no JSON for {url}"
+        if using_cookies:
+            print(f"Warning: cookie-backed fetch failed for {url}; retrying without cookies.", file=sys.stderr)
+            continue
+
+    raise RuntimeError(last_error or f"yt-dlp returned no JSON for {url}")
+
+
+def get_cookies_path():
+    env_path = str(os.environ.get("YT_DLP_COOKIES_PATH") or "").strip()
+    if env_path:
+        candidate = Path(env_path).expanduser()
+        if candidate.exists():
+            return candidate
+        print(f"Warning: cookie file not found at {candidate}", file=sys.stderr)
+
+    if LOCAL_COOKIES_PATH.exists():
+        return LOCAL_COOKIES_PATH
+
+    return None
+
+
+def build_watch_url(video):
+    direct_url = str(video.get("url") or "").strip()
+    if direct_url:
+        return direct_url
+
+    video_id = str(video.get("id") or "").strip()
+    if video_id:
+        return f"https://www.youtube.com/watch?v={video_id}"
+
+    return ""
 
 
 def get_sort_timestamp(video):
@@ -125,6 +183,54 @@ def slim_thumbnails(video):
             }
         )
     return slimmed
+
+
+def has_meaningful_text(value):
+    return bool(str(value or "").strip())
+
+
+def video_needs_hydration(video):
+    if not isinstance(video, dict):
+        return False
+
+    has_timestamp = get_sort_timestamp(video) > 0
+    has_thumbnails = bool(slim_thumbnails(video))
+    return not (has_timestamp and has_thumbnails)
+
+
+def merge_video_data(base_video, hydrated_video):
+    if not isinstance(base_video, dict):
+        return hydrated_video if isinstance(hydrated_video, dict) else {}
+    if not isinstance(hydrated_video, dict):
+        return dict(base_video)
+
+    merged = dict(base_video)
+    for key, value in hydrated_video.items():
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        if isinstance(value, (list, dict)) and not value:
+            continue
+        merged[key] = value
+    return merged
+
+
+def hydrate_video_entry(video):
+    if not video_needs_hydration(video):
+        return video
+
+    watch_url = build_watch_url(video)
+    if not watch_url:
+        return video
+
+    try:
+        hydrated_video = run_yt_dlp_json(watch_url)
+    except Exception as exc:  # noqa: BLE001 - preserve feed generation from partial data.
+        print(f"Warning: failed to hydrate {watch_url}: {exc}", file=sys.stderr)
+        return video
+
+    return merge_video_data(video, hydrated_video)
 
 
 def slim_video(video, channel_meta):
@@ -217,7 +323,7 @@ def main():
             if not video_id or video_id in seen_video_ids:
                 continue
             seen_video_ids.add(video_id)
-            merged_entries.append(slim_video(entry, channel_meta))
+            merged_entries.append(slim_video(hydrate_video_entry(entry), channel_meta))
 
     if not merged_entries:
         fallback_feed = load_legacy_fallback_feed()
