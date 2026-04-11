@@ -777,47 +777,16 @@ return `<div class="videoMetaLine">${content}</div>`;
 
 function buildThumbnailCandidates(video){
 const thumbs = Array.isArray(video.thumbnails) ? video.thumbnails.filter(Boolean) : [];
-const rankedPatterns = [
-/maxresdefault\.(jpg|webp)/i,
-/sddefault\.(jpg|webp)/i,
-/hq720\.(jpg|webp)/i,
-/hqdefault\.(jpg|webp)/i,
-/mqdefault\.(jpg|webp)/i,
-/default\.(jpg|webp)/i
-];
 const candidates = [];
 
 function addCandidate(url){
 if(url && !candidates.includes(url)) candidates.push(url);
 }
 
-function getThumbScore(thumb){
-const width = Number(thumb && thumb.width || 0);
-const height = Number(thumb && thumb.height || 0);
-const url = String(thumb && thumb.url || "");
-const hasQuery = url.includes("?");
-return (width * height) - (hasQuery ? 1 : 0);
-}
-
-for(const pattern of rankedPatterns){
-thumbs
-.filter((thumb)=>pattern.test(String(thumb && thumb.url || "")))
-.sort((a,b)=>getThumbScore(b) - getThumbScore(a))
-.forEach((thumb)=>addCandidate(thumb.url));
-}
-
-thumbs
-.slice()
-.sort((a,b)=>getThumbScore(b) - getThumbScore(a))
-.forEach((thumb)=>addCandidate(String(thumb && thumb.url || "")));
-[
-`https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`,
-`https://i.ytimg.com/vi/${video.id}/sddefault.jpg`,
-`https://i.ytimg.com/vi/${video.id}/hq720.jpg`,
-`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
-`https://i.ytimg.com/vi/${video.id}/mqdefault.jpg`,
-`https://i.ytimg.com/vi/${video.id}/default.jpg`
-].forEach(addCandidate);
+const preferred = thumbs[3] || thumbs[thumbs.length - 1];
+if(preferred && preferred.url) addCandidate(preferred.url);
+thumbs.forEach((thumb)=>addCandidate(String(thumb && thumb.url || "")));
+addCandidate(`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`);
 
 return candidates;
 }
