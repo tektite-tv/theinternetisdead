@@ -1844,21 +1844,37 @@ const focusSink = document.getElementById('focusSink');
       }
     }
 
-    const INITIAL_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it.';
+    const DEFAULT_INITIAL_WELCOME_MESSAGE = 'System: Welcome to theinternetisdead.org... I hope you hate it.';
+
+    function getInitialWelcomeMessage() {
+      if (document.body.classList.contains('embedded') && pageCommandMeta.sourceKey === 'shooter-game') {
+        return "System: Welcome to Tektite's Shooter Game...";
+      }
+      return DEFAULT_INITIAL_WELCOME_MESSAGE;
+    }
 
     function ensureInitialWelcomeMessage() {
-      const existingWelcomeMessage = Array.from(messages.querySelectorAll('.message[data-role="user"]')).find((line) => {
-        return (line.dataset.rawContent || '').trim() === INITIAL_WELCOME_MESSAGE;
+      const welcomeMessage = getInitialWelcomeMessage();
+      const welcomeMessages = Array.from(messages.querySelectorAll('.message[data-role="user"]')).filter((line) => {
+        const rawContent = (line.dataset.rawContent || '').trim();
+        return rawContent === DEFAULT_INITIAL_WELCOME_MESSAGE || rawContent === "System: Welcome to Tektite's Shooter Game...";
       });
+      const existingWelcomeMessage = welcomeMessages[0] || null;
 
       if (existingWelcomeMessage) {
+        existingWelcomeMessage.dataset.rawContent = welcomeMessage;
+        const messageText = existingWelcomeMessage.querySelector('.messageText');
+        if (messageText) {
+          messageText.textContent = welcomeMessage;
+        }
+        welcomeMessages.slice(1).forEach((line) => line.remove());
         if (messages.firstElementChild !== existingWelcomeMessage) {
           messages.insertBefore(existingWelcomeMessage, messages.firstElementChild);
         }
         return existingWelcomeMessage;
       }
 
-      const line = addMessage(INITIAL_WELCOME_MESSAGE, 'user');
+      const line = addMessage(welcomeMessage, 'user');
       if (line && messages.firstElementChild !== line) {
         messages.insertBefore(line, messages.firstElementChild);
       }
@@ -5849,11 +5865,17 @@ function createHomepageCustomizeMessageNode(result = {}) {
           title: event.data.title || '',
           sourceKey: event.data.sourceKey || ''
         });
+        ensureInitialWelcomeMessage();
+        refreshVisibleHelpMessages();
+        renderInlineSuggestion();
         return;
       }
 
       if (event.data.type === 'pageChatClear') {
         setPageCommands({ commands: [], pageOnly: false, pageId: '', title: '', sourceKey: '' });
+        ensureInitialWelcomeMessage();
+        refreshVisibleHelpMessages();
+        renderInlineSuggestion();
         return;
       }
 
