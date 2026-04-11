@@ -16,6 +16,7 @@
 
     body {
       position: relative;
+      font-family: "Courier New", Courier, monospace;
     }
 
     #main-content {
@@ -32,6 +33,41 @@
       display: block;
       background: #000;
     }
+
+    #chat-shell {
+      position: absolute;
+      left: 14px;
+      right: auto;
+      bottom: 14px;
+      width: min(560px, calc(100vw - 28px));
+      height: min(260px, 42vh);
+      z-index: 200;
+      pointer-events: auto;
+      border: 1px solid rgba(0, 255, 102, 0.35);
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.001);
+      box-shadow: 0 0 20px rgba(0, 255, 102, 0.12);
+      backdrop-filter: blur(1px);
+    }
+
+    #chat-sandbox-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: transparent;
+    }
+
+    @media (max-width: 700px) {
+      #chat-shell {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        width: auto;
+        height: min(240px, 38vh);
+      }
+    }
   </style>
 </head>
 <body>
@@ -43,14 +79,109 @@
       loading="eager"
       allowfullscreen
     ></iframe>
+
+    <div id="chat-shell">
+      <iframe
+        id="chat-sandbox-frame"
+        src="/experiments/chat-sandbox/chat-sandbox.html"
+        title="Shooter Chat Commands"
+        loading="eager"
+        allow="clipboard-read; clipboard-write"
+      ></iframe>
+    </div>
   </div>
 
   <script>
-    const overlayContainer = document.getElementById('overlay-container');
     const tektiteFrame = document.getElementById('tektite-frame');
+    const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
     const LEVEL1_SRC = '/games/shooter-game/shooter-game-level1.html';
     const LEVEL2_SRC = '/games/shooter-game/shooter-game-level2.html?autostart=1';
     let hasSwitchedToLevel2 = false;
+    const pendingGameCommands = new Map();
+
+    const SHOOTER_COMMANDS_LEVEL1 = [
+      {
+        name: '/background_color',
+        usage: '/background_color #0b1020',
+        desc: 'set the starfield background color using a color name or hex value',
+        execute: false,
+        suggestions: ['black', '#000000', '#0b1020', '#111827', 'midnightblue']
+      },
+      {
+        name: '/bombs',
+        usage: '/bombs 5',
+        desc: 'set bomb count to a number or infinite',
+        execute: false,
+        suggestions: ['0', '3', '5', 'infinite']
+      },
+      {
+        name: '/fullscreen',
+        usage: '/fullscreen',
+        desc: 'toggle fullscreen for the current shooter frame',
+        execute: true
+      },
+      {
+        name: '/hearts',
+        usage: '/hearts 6',
+        desc: 'set max hearts to a number or infinite',
+        execute: false,
+        suggestions: ['3', '6', '9', 'infinite']
+      },
+      {
+        name: '/invert',
+        usage: '/invert',
+        desc: 'toggle inverted colors for the current level',
+        execute: true
+      },
+      {
+        name: '/lives',
+        usage: '/lives 3',
+        desc: 'set lives to a number or infinite',
+        execute: false,
+        suggestions: ['1', '3', '5', 'infinite']
+      },
+      {
+        name: '/shields',
+        usage: '/shields 2',
+        desc: 'set shields to a number or infinite',
+        execute: false,
+        suggestions: ['0', '1', '2', 'infinite']
+      },
+      {
+        name: '/video_fx',
+        usage: '/video_fx enabled',
+        desc: 'enable or disable chromatic aberration and hue shifting',
+        execute: false,
+        suggestions: ['enabled', 'disabled']
+      }
+    ];
+
+    function getCurrentShooterCommands() {
+      return SHOOTER_COMMANDS_LEVEL1;
+    }
+
+    function postToChatSandbox(message) {
+      if (chatSandboxFrame && chatSandboxFrame.contentWindow) {
+        chatSandboxFrame.contentWindow.postMessage(message, '*');
+      }
+    }
+
+    function postToGameFrame(message) {
+      if (tektiteFrame && tektiteFrame.contentWindow) {
+        tektiteFrame.contentWindow.postMessage(message, '*');
+      }
+    }
+
+    function registerShooterCommands() {
+      postToChatSandbox({
+        type: 'pageChatRegister',
+        pageOnly: false,
+        pageId: hasSwitchedToLevel2 ? 'shooter-game-level2' : 'shooter-game-level1',
+        title: hasSwitchedToLevel2 ? 'Tektite Shooter Level 2' : 'Tektite Shooter Level 1',
+        sourceKey: hasSwitchedToLevel2 ? 'shooter-level2' : 'shooter-level1',
+        commands: getCurrentShooterCommands()
+      });
+    }
 
     async function setIframeFullscreen(shouldEnter) {
       if (!tektiteFrame) return;
@@ -92,20 +223,85 @@
       }
     }
 
+    function forwardShooterCommand(rawCommand) {
+      const command = String(rawCommand || '').trim();
+      if (!command) return;
+
+      const commandId = `shooter-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const timeoutId = window.setTimeout(() => {
+        pendingGameCommands.delete(commandId);
+        postToChatSandbox({
+          type: 'pageChatResult',
+          command,
+          message: `${command.split(/\s+/)[0]} did not respond from the current shooter level`,
+          announce: true
+        });
+      }, 1500);
+
+      pendingGameCommands.set(commandId, { rawCommand: command, timeoutId });
+      postToGameFrame({
+        type: 'tektite:execute-command',
+        command,
+        commandId
+      });
+    }
+
+    chatSandboxFrame.addEventListener('load', () => {
+      registerShooterCommands();
+      postToChatSandbox({ type: 'chatSandboxOpen', focus: false });
+    });
+
+    tektiteFrame.addEventListener('load', () => {
+      registerShooterCommands();
+    });
+
     window.addEventListener('message', async (event) => {
       const data = event.data;
       if (!data || typeof data !== 'object') return;
-      if (data.type === 'tektite:continue-to-level2') {
-        switchToLevel2();
+
+      if (event.source === (chatSandboxFrame ? chatSandboxFrame.contentWindow : null)) {
+        if (data.type === 'chatSandboxState' || data.type === 'chatSandboxDvdState') {
+          registerShooterCommands();
+          return;
+        }
+
+        if (data.type === 'pageChatExecute') {
+          const rawCommand = typeof data.raw === 'string' ? data.raw.trim() : '';
+          if (!rawCommand) return;
+          forwardShooterCommand(rawCommand);
+          return;
+        }
       }
-      if (data.type === 'tektite:return-to-level1') {
-        switchToLevel1Reloaded();
-      }
-      if (data.type === 'tektite:fullscreen') {
-        const action = data.action || 'toggle';
-        if (action === 'enter') await setIframeFullscreen(true);
-        else if (action === 'exit') await setIframeFullscreen(false);
-        else await setIframeFullscreen(document.fullscreenElement !== tektiteFrame);
+
+      if (event.source === (tektiteFrame ? tektiteFrame.contentWindow : null)) {
+        if (data.type === 'tektite:continue-to-level2') {
+          switchToLevel2();
+          return;
+        }
+        if (data.type === 'tektite:return-to-level1') {
+          switchToLevel1Reloaded();
+          return;
+        }
+        if (data.type === 'tektite:fullscreen') {
+          const action = data.action || 'toggle';
+          if (action === 'enter') await setIframeFullscreen(true);
+          else if (action === 'exit') await setIframeFullscreen(false);
+          else await setIframeFullscreen(document.fullscreenElement !== tektiteFrame);
+          return;
+        }
+        if (data.type === 'tektite:command-result') {
+          const pending = pendingGameCommands.get(data.commandId);
+          if (!pending) return;
+          window.clearTimeout(pending.timeoutId);
+          pendingGameCommands.delete(data.commandId);
+          postToChatSandbox({
+            type: 'pageChatResult',
+            command: pending.rawCommand,
+            message: data.message || `${pending.rawCommand.split(/\s+/)[0]} executed`,
+            announce: true
+          });
+          return;
+        }
       }
     });
   </script>

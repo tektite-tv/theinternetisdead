@@ -935,7 +935,7 @@ function setPaused(p){
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
 
   // v1.96: focus the command input when paused
-  if (pauseCommand){
+if (pauseCommand){
     if (isPaused){
       setTimeout(()=>{ try{ pauseCommand.focus(); }catch(e){} }, 0);
     } else {
@@ -961,6 +961,26 @@ function setPaused(p){
   }
 }
 
+
+window.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || typeof data !== "object") return;
+  if (data.type !== "tektite:execute-command") return;
+
+  const rawCommand = typeof data.command === "string" ? data.command.trim() : "";
+  const commandId = typeof data.commandId === "string" ? data.commandId : "";
+  const result = execPauseCommand(rawCommand);
+
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({
+      type: "tektite:command-result",
+      command: rawCommand,
+      commandId,
+      ok: !!(result && result.ok),
+      message: result && result.message ? result.message : (rawCommand ? `${rawCommand.split(/\s+/)[0]} executed` : "Command executed")
+    }, "*");
+  }
+});
 
 // v1.96: /background_color autocomplete + executor
 const BG_CMD = "/background_color";
@@ -1136,18 +1156,18 @@ function cycleBgChoice(dir){
 
 function execPauseCommand(cmd){
   const raw = String(cmd||"").trim();
-  if (!raw) return;
+  if (!raw) return { ok:false, message:"No command received" };
 
   // v1.96: /help -> list commands alphabetically inside the pause panel
   if (raw === "/help"){
     showHelp();
-    return;
+    return { ok:true, message:"Shooter commands listed" };
   }
 
   // v1.96: /fullscreen -> toggle browser fullscreen
   if (raw === "/fullscreen"){
     toggleFullscreen();
-    return;
+    return { ok:true, message:"/fullscreen executed" };
   }
 
   // v1.96: /video_fx enabled|disabled -> toggle chromatic aberration + hue drift
@@ -1155,7 +1175,7 @@ function execPauseCommand(cmd){
     const arg = raw.slice("/video_fx".length).trim().toLowerCase();
     if (["enabled","enable","on","true","1"].includes(arg)) VIDEO_FX_ENABLED = true;
     else if (["disabled","disable","off","false","0"].includes(arg)) VIDEO_FX_ENABLED = false;
-    return;
+    return { ok:true, message:`/video_fx ${VIDEO_FX_ENABLED ? "enabled" : "disabled"}` };
   }
 
   // v1.96: /lives [#|infinite]
@@ -1164,8 +1184,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyLives(p.value);
+      return { ok:true, message:`/lives set to ${p.infinite ? "infinite" : p.value}` };
     }
-    return;
+    return { ok:false, message:"Usage: /lives [number|infinite]" };
   }
 
   // v1.96: /hearts [#|infinite]
@@ -1174,8 +1195,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyHearts(p.value);
+      return { ok:true, message:`/hearts set to ${p.infinite ? "infinite" : p.value}` };
     }
-    return;
+    return { ok:false, message:"Usage: /hearts [number|infinite]" };
   }
 
   // v1.96: /shields [#|infinite]
@@ -1184,8 +1206,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyShields(p.value);
+      return { ok:true, message:`/shields set to ${p.infinite ? "infinite" : p.value}` };
     }
-    return;
+    return { ok:false, message:"Usage: /shields [number|infinite]" };
   }
 
   // v1.96: /bombs [#|infinite]
@@ -1194,8 +1217,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyBombs(p.value);
+      return { ok:true, message:`/bombs set to ${p.infinite ? "infinite" : p.value}` };
     }
-    return;
+    return { ok:false, message:"Usage: /bombs [number|infinite]" };
   }
 
 
@@ -1203,7 +1227,7 @@ function execPauseCommand(cmd){
   // /invert -> toggle invert colors mode (same as Options menu)
   if (raw === "/invert"){
     document.body.classList.toggle("invert-colors");
-    return;
+    return { ok:true, message:`/invert ${document.body.classList.contains("invert-colors") ? "enabled" : "disabled"}` };
   }
 
   if (raw.startsWith(BG_CMD)){
@@ -1212,22 +1236,23 @@ function execPauseCommand(cmd){
     // v1.96: allow named colors OR any valid hex code (#RGB, #RRGGBB, #RRGGBBAA), with or without leading "#"
     if (!arg){
       starfieldBgOverride = null;
-      return;
+      return { ok:true, message:"/background_color reset" };
     }
 
     const hexMatch = arg.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
     if (hexMatch){
       starfieldBgOverride = "#" + hexMatch[1];
-      return;
+      return { ok:true, message:`/background_color set to ${starfieldBgOverride}` };
     }
 
     // fall back to letting the browser try to interpret it as a CSS color name/value
     starfieldBgOverride = arg;
-    return;
+    return { ok:true, message:`/background_color set to ${arg}` };
   }
 
   // future commands go here
   try{ console.log("[PAUSE CMD]", raw); }catch(e){}
+  return { ok:false, message:`${raw.split(/\s+/)[0]} is not a known shooter command` };
 }
 
 
