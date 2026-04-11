@@ -1,0 +1,225 @@
+name: Generate ugly oldschool media indexes
+
+on:
+  push:
+    paths:
+      - 'media/**'
+      - '.github/workflows/generate-media-indexes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-media-indexes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Generate media index pages
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import html
+
+          def write_text_file(path: Path, content: str):
+              path.write_text(content, encoding="utf-8")
+              print(f"Wrote {path}")
+
+          def oldschool_page(title: str, body_html: str) -> str:
+              return f"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+          <html>
+           <head>
+            <title>{title}</title>
+           </head>
+           <body>
+          <h1>{title}</h1>
+          {body_html}
+           </body>
+          </html>
+          """
+
+          def kb_size(path: Path) -> int:
+              return max(1, round(path.stat().st_size / 1024))
+
+          repo_root = Path(".")
+          media_dir = repo_root / "media"
+          audio_dir = media_dir / "audio"
+          images_dir = media_dir / "images"
+
+          audio_exts = {
+              ".mp3", ".wav", ".ogg", ".m4a", ".flac",
+              ".aac", ".opus", ".wma"
+          }
+
+          image_exts = {
+              ".png", ".jpg", ".jpeg", ".gif", ".webp",
+              ".bmp", ".svg", ".avif"
+          }
+
+          # --------------------------------------------------
+          # /media/index.html
+          # --------------------------------------------------
+          media_rows = []
+          media_rows.append('<tr><th align="left">Name</th></tr>')
+          media_rows.append('<tr><th><hr></th></tr>')
+
+          for folder_name in ["audio", "images"]:
+              folder_path = media_dir / folder_name
+              if folder_path.is_dir():
+                  href = html.escape(folder_name) + "/"
+                  name = "/media/" + html.escape(folder_name) + "/"
+                  media_rows.append(f'<tr><td><a href="{href}">{name}</a></td></tr>')
+
+          if len(media_rows) == 2:
+              media_rows.append('<tr><td>No folders found.</td></tr>')
+
+          media_rows.append('<tr><th><hr></th></tr>')
+
+          media_body = f"""<table>
+          {chr(10).join(media_rows)}
+          </table>"""
+
+          write_text_file(
+              media_dir / "index.html",
+              oldschool_page("Index of /media", media_body)
+          )
+
+          # --------------------------------------------------
+          # /media/audio/index.html
+          # --------------------------------------------------
+          if audio_dir.is_dir():
+              audio_files = sorted(
+                  [
+                      p for p in audio_dir.iterdir()
+                      if p.is_file()
+                      and p.name != "index.html"
+                      and p.suffix.lower() in audio_exts
+                  ],
+                  key=lambda p: p.name.lower()
+              )
+
+              audio_rows = []
+              audio_rows.append('<tr><th align="left">Name</th><th align="right">Size</th></tr>')
+              audio_rows.append('<tr><th colspan="2"><hr></th></tr>')
+
+              for f in audio_files:
+                  href = html.escape(f.name)
+                  name = "/media/audio/" + html.escape(f.name)
+                  size = kb_size(f)
+                  audio_rows.append(
+                      f'<tr><td><a href="{href}">{name}</a></td><td align="right">{size} KB</td></tr>'
+                  )
+
+              if not audio_files:
+                  audio_rows.append('<tr><td colspan="2">No audio files found.</td></tr>')
+
+              audio_rows.append('<tr><th colspan="2"><hr></th></tr>')
+              audio_rows.append('<p>This website is a transformative art exhibit. All audio is used as part of a non-profit transformative work.</p>')
+
+              audio_body = f"""<table>
+          {chr(10).join(audio_rows[:-1])}
+          </table>
+          {audio_rows[-1]}"""
+
+              write_text_file(
+                  audio_dir / "index.html",
+                  oldschool_page("Index of /media/audio", audio_body)
+              )
+
+          # --------------------------------------------------
+          # /media/images/index.html
+          # lists subfolders only
+          # --------------------------------------------------
+          image_subfolders = []
+          if images_dir.is_dir():
+              image_subfolders = sorted(
+                  [
+                      p for p in images_dir.iterdir()
+                      if p.is_dir() and not p.name.startswith(".")
+                  ],
+                  key=lambda p: p.name.lower()
+              )
+
+              images_rows = []
+              images_rows.append('<tr><th align="left">Name</th></tr>')
+              images_rows.append('<tr><th><hr></th></tr>')
+
+              for folder in image_subfolders:
+                  href = html.escape(folder.name) + "/"
+                  name = "/media/images/" + html.escape(folder.name) + "/"
+                  images_rows.append(f'<tr><td><a href="{href}">{name}</a></td></tr>')
+
+              if not image_subfolders:
+                  images_rows.append('<tr><td>No folders found.</td></tr>')
+
+              images_rows.append('<tr><th><hr></th></tr>')
+
+              images_body = f"""<table>
+          {chr(10).join(images_rows)}
+          </table>"""
+
+              write_text_file(
+                  images_dir / "index.html",
+                  oldschool_page("Index of /media/images", images_body)
+              )
+
+          # --------------------------------------------------
+          # /media/images/<subfolder>/index.html
+          # lists actual image files
+          # --------------------------------------------------
+          for subfolder in image_subfolders:
+              image_files = sorted(
+                  [
+                      p for p in subfolder.iterdir()
+                      if p.is_file()
+                      and p.name != "index.html"
+                      and p.suffix.lower() in image_exts
+                  ],
+                  key=lambda p: p.name.lower()
+              )
+
+              rel_parts = subfolder.relative_to(repo_root).parts
+              web_path = "/" + "/".join(rel_parts)
+
+              rows = []
+              rows.append('<tr><th align="left">Name</th><th align="right">Size</th></tr>')
+              rows.append('<tr><th colspan="2"><hr></th></tr>')
+
+              for f in image_files:
+                  href = html.escape(f.name)
+                  name = web_path + "/" + html.escape(f.name)
+                  size = kb_size(f)
+                  rows.append(
+                      f'<tr><td><a href="{href}">{name}</a></td><td align="right">{size} KB</td></tr>'
+                  )
+
+              if not image_files:
+                  rows.append('<tr><td colspan="2">No image files found.</td></tr>')
+
+              rows.append('<tr><th colspan="2"><hr></th></tr>')
+
+              body = f"""<table>
+          {chr(10).join(rows)}
+          </table>"""
+
+              write_text_file(
+                  subfolder / "index.html",
+                  oldschool_page(f"Index of {web_path}", body)
+              )
+          PY
+
+      - name: Commit updated index pages
+        run: |
+          if git diff --quiet -- media; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add media/index.html media/audio/index.html media/images/index.html media/images/*/index.html
+          git commit -m "Auto-generate ugly media index pages"
+          git push
