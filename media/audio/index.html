@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Files</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      margin: 0;
+      padding: 24px;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+    }
+
+    p {
+      color: #bbb;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 24px 0 0;
+    }
+
+    li {
+      margin: 8px 0;
+      padding: 10px 12px;
+      background: #1b1b1b;
+      border-radius: 8px;
+    }
+
+    a {
+      color: #7cc7ff;
+      text-decoration: none;
+      word-break: break-word;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .meta {
+      display: block;
+      font-size: 0.9rem;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    audio {
+      display: block;
+      margin-top: 8px;
+      width: 100%;
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <h1>/media/audio</h1>
+  <p>Audio files in this folder.</p>
+
+  <ul id="fileList"></ul>
+
+  <script>
+    // Manually list your audio files here.
+    // Add or remove filenames as needed.
+    const files = [
+      "song1.mp3",
+      "song2.wav",
+      "ambient-loop.ogg",
+      "demo.m4a"
+    ];
+
+    const fileList = document.getElementById("fileList");
+
+    if (files.length === 0) {
+      fileList.innerHTML = "<li>No audio files listed.</li>";
+    } else {
+      files.forEach(filename => {
+        const li = document.createElement("li");
+
+        const link = document.createElement("a");
+        link.href = filename;
+        link.textContent = filename;
+
+        const meta = document.createElement("span");
+        meta.className = "meta";
+        meta.textContent = "Click to open or use the player below.";
+
+        const player = document.createElement("audio");
+        player.controls = true;
+        player.preload = "none";
+        player.src = filename;
+
+        li.appendChild(link);
+        li.appendChild(meta);
+        li.appendChild(player);
+        fileList.appendChild(li);
+      });
+    }
+  </script>
+</body>
+</html>
