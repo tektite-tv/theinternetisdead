@@ -834,17 +834,23 @@ const candidates = Array.isArray(post.thumbCandidates) && post.thumbCandidates.l
 
 if(!img || !candidates.length) return;
 
-let thumbIndex = 0;
-img.onerror = ()=>{
-thumbIndex += 1;
-if(thumbIndex >= candidates.length){
-img.onerror = null;
+function tryCandidate(index){
+if(index >= candidates.length) return;
+
+const probe = new Image();
+probe.onload = ()=>{
+const isTinyPlaceholder = probe.naturalWidth <= 120 && probe.naturalHeight <= 90;
+if(isTinyPlaceholder && index < candidates.length - 1){
+tryCandidate(index + 1);
 return;
 }
-applyThumbnailSource(img, layer, candidates[thumbIndex]);
+applyThumbnailSource(img, layer, candidates[index]);
 };
+probe.onerror = ()=>tryCandidate(index + 1);
+probe.src = candidates[index];
+}
 
-applyThumbnailSource(img, layer, candidates[thumbIndex]);
+tryCandidate(0);
 }
 
 function getRandomChannelUrl(){
