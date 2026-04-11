@@ -1,0 +1,84 @@
+name: Generate ugly oldschool media index
+
+on:
+  push:
+    paths:
+      - 'media/**'
+      - '.github/workflows/generate-media-index.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-media-index:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Generate /media/index.html
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import html
+
+          media_dir = Path("media")
+          output_file = media_dir / "index.html"
+
+          files = sorted(
+              [
+                  p for p in media_dir.iterdir()
+                  if p.is_file() and p.name != "index.html"
+              ],
+              key=lambda p: p.name.lower()
+          )
+
+          rows = []
+          rows.append('<tr><th align="left">Name</th><th align="right">Size</th></tr>')
+          rows.append('<tr><th colspan="2"><hr></th></tr>')
+
+          for f in files:
+              name = html.escape(f.name)
+              href = html.escape(f.name)
+              size_kb = max(1, round(f.stat().st_size / 1024))
+              rows.append(
+                  f'<tr><td><a href="{href}">{name}</a></td><td align="right">{size_kb} KB</td></tr>'
+              )
+
+          if not files:
+              rows.append('<tr><td colspan="2">No files found.</td></tr>')
+
+          rows.append('<tr><th colspan="2"><hr></th></tr>')
+
+          html_doc = f"""<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+          <html>
+           <head>
+            <title>Index of /media</title>
+           </head>
+           <body>
+          <h1>Index of /media</h1>
+          <table>
+          {chr(10).join(rows)}
+          </table>
+           </body>
+          </html>
+          """
+
+          output_file.write_text(html_doc, encoding="utf-8")
+          print(f"Wrote {output_file} with {len(files)} file(s).")
+          PY
+
+      - name: Commit updated index.html
+        run: |
+          if git diff --quiet -- media/index.html; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add media/index.html
+          git commit -m "Auto-generate ugly media index.html"
+          git push
