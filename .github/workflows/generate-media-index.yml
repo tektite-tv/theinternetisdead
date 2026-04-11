@@ -38,8 +38,8 @@ jobs:
           rows.append('<tr><th><hr></th></tr>')
 
           for folder in existing_folders:
-              name = html.escape(folder) + "/"
               href = html.escape(folder) + "/"
+              name = "/media/" + html.escape(folder) + "/"
               rows.append(f'<tr><td><a href="{href}">{name}</a></td></tr>')
 
           if not existing_folders:
