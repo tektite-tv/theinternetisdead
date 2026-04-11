@@ -2082,7 +2082,6 @@ function unlockAudioOnce(){
   }catch(e){}
 
   applyMuteState();
-  ensureMusicPlaying();
 }
 function playSfx(a){
   if (audioMuted) return;
@@ -3198,7 +3197,6 @@ canvas.addEventListener("pointermove", (e) => {
 });
 
 canvas.addEventListener("pointerdown", (e) => {
-  unlockAudioOnce();
   // v1.96: clicking also aims and shoots
   setAimFromClient(e.clientX, e.clientY);
 
