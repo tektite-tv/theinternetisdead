@@ -410,7 +410,7 @@ body.invert-colors {
 
 <div id="uiRoot">
   <div id="startMenu" class="panel">
-    <div class="title">Bananaman Shooter <span style="font-size:14px; opacity:0.75;">(v1.96)</span></div>
+    <div class="title">Bananaman Shooter</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="hint">Move: A/D or ⬅➡ (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Bomb: Q (or X/RB) · Shield: RMB (or LB/LT) · Pause: ESC (or Start) · HUD: / (or View)</div>
     <div class="btnRow">
@@ -723,7 +723,7 @@ const fxCtx = fxCanvas.getContext("2d");
 // v1.96: allow disabling post-processing via /video_fx
 let VIDEO_FX_ENABLED = true;
 
-// v1.96: "R" key screen-glitch spiral burst
+// Screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
 const GLITCH_SPIRAL_DUR = 2.8;
 function triggerGlitchSpiral(){
@@ -861,7 +861,7 @@ if (btnPauseResume){
   });
 }
 
-// v1.96: temporary "glitch spiral" post effect (triggered by R key)
+// Temporary glitch spiral post effect (triggered by Tab)
 // Uses the existing fxCanvas as a scratch buffer.
 // strength: 0..1 (1 = strongest)
 function applyGlitchSpiral(strength){
@@ -3136,13 +3136,20 @@ window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
 
-  // v1.96: Press R anywhere to trigger a temporary glitch spiral burst
-  if (e.key === "r" || e.key === "R"){
+  // Trigger a temporary glitch spiral burst with Tab when focus is not in a text field.
+  const target = e.target;
+  const typingIntoField =
+    target &&
+    ((target.tagName === "INPUT") ||
+     (target.tagName === "TEXTAREA") ||
+     target.isContentEditable);
+
+  if (e.code === "Tab" && !typingIntoField){
     triggerGlitchSpiral();
     e.preventDefault();
   }
 
-  // v1.96: Slash key pauses/resumes the game (replaces old HUD toggle)
+  // Slash key pauses/resumes the game (replaces old HUD toggle)
   if (e.code === "Slash"){
     togglePause();
   }
@@ -4025,7 +4032,7 @@ if (isDragonEnemy(e)){
     applyChromaticAberration(beat);
   }
 
-  // v1.96: Glitch spiral burst (R key)
+  // Glitch spiral burst (Tab)
   if (GLITCH_SPIRAL_T > 0){
     const strength = Math.max(0, Math.min(1, GLITCH_SPIRAL_T / GLITCH_SPIRAL_DUR));
     applyGlitchSpiral(strength);
