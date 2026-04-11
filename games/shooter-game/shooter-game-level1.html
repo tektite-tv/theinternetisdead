@@ -412,7 +412,7 @@ body.invert-colors {
   <div id="startMenu" class="panel">
     <div class="title">Bananaman Shooter</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: A/D or ⬅➡ (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Bomb: Q (or X/RB) · Shield: RMB (or LB/LT) · Pause: ESC (or Start) · HUD: / (or View)</div>
+    <div class="hint">Move: A/D or ⬅➡ (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Bomb: Q (or X/RB) · Shield: RMB (or LB/LT) · Pause: ESC (or Start) · Chat: / (or View)</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -1136,26 +1136,32 @@ function cycleBgChoice(dir){
 
 function execPauseCommand(cmd){
   const raw = String(cmd||"").trim();
-  if (!raw) return;
+  if (!raw) return { ok:false, message:"No command provided" };
 
   // v1.96: /help -> list commands alphabetically inside the pause panel
   if (raw === "/help"){
     showHelp();
-    return;
+    return { ok:true, message:"/help executed" };
   }
 
   // v1.96: /fullscreen -> toggle browser fullscreen
   if (raw === "/fullscreen"){
     toggleFullscreen();
-    return;
+    return { ok:true, message:"/fullscreen executed" };
   }
 
   // v1.96: /video_fx enabled|disabled -> toggle chromatic aberration + hue drift
   if (raw.startsWith("/video_fx")){
     const arg = raw.slice("/video_fx".length).trim().toLowerCase();
-    if (["enabled","enable","on","true","1"].includes(arg)) VIDEO_FX_ENABLED = true;
-    else if (["disabled","disable","off","false","0"].includes(arg)) VIDEO_FX_ENABLED = false;
-    return;
+    if (["enabled","enable","on","true","1"].includes(arg)) {
+      VIDEO_FX_ENABLED = true;
+      return { ok:true, message:"/video_fx enabled" };
+    }
+    if (["disabled","disable","off","false","0"].includes(arg)) {
+      VIDEO_FX_ENABLED = false;
+      return { ok:true, message:"/video_fx disabled" };
+    }
+    return { ok:false, message:"Usage: /video_fx enabled|disabled" };
   }
 
   // v1.96: /lives [#|infinite]
@@ -1164,8 +1170,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyLives(p.value);
+      return { ok:true, message:`/lives ${arg || p.value}` };
     }
-    return;
+    return { ok:false, message:"Usage: /lives [number|infinite]" };
   }
 
   // v1.96: /hearts [#|infinite]
@@ -1174,8 +1181,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyHearts(p.value);
+      return { ok:true, message:`/hearts ${arg || p.value}` };
     }
-    return;
+    return { ok:false, message:"Usage: /hearts [number|infinite]" };
   }
 
   // v1.96: /shields [#|infinite]
@@ -1184,8 +1192,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyShields(p.value);
+      return { ok:true, message:`/shields ${arg || p.value}` };
     }
-    return;
+    return { ok:false, message:"Usage: /shields [number|infinite]" };
   }
 
   // v1.96: /bombs [#|infinite]
@@ -1194,43 +1203,56 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyBombs(p.value);
+      return { ok:true, message:`/bombs ${arg || p.value}` };
     }
-    return;
+    return { ok:false, message:"Usage: /bombs [number|infinite]" };
   }
-
-
 
   // /invert -> toggle invert colors mode (same as Options menu)
   if (raw === "/invert"){
     document.body.classList.toggle("invert-colors");
-    return;
+    return { ok:true, message:"/invert executed" };
   }
 
   if (raw.startsWith(BG_CMD)){
     const arg = raw.slice(BG_CMD.length).trim();
 
-    // v1.96: allow named colors OR any valid hex code (#RGB, #RRGGBB, #RRGGBBAA), with or without leading "#"
     if (!arg){
       starfieldBgOverride = null;
-      return;
+      return { ok:true, message:"/background_color reset" };
     }
 
     const hexMatch = arg.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
     if (hexMatch){
       starfieldBgOverride = "#" + hexMatch[1];
-      return;
+      return { ok:true, message:`/background_color ${starfieldBgOverride}` };
     }
 
-    // fall back to letting the browser try to interpret it as a CSS color name/value
     starfieldBgOverride = arg;
-    return;
+    return { ok:true, message:`/background_color ${arg}` };
   }
 
-  // future commands go here
   try{ console.log("[PAUSE CMD]", raw); }catch(e){}
+  return { ok:false, message:`${raw.split(/\s+/)[0]} is not a known command` };
 }
 
+window.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || typeof data !== "object") return;
+  if (data.type !== "tektite:execute-command") return;
 
+  const command = String(data.command || "").trim();
+  const result = execPauseCommand(command);
+
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({
+      type: "tektite:command-result",
+      ok: !!(result && result.ok),
+      command,
+      message: result && result.message ? result.message : `${command || 'Command'} executed`
+    }, "*");
+  }
+});
 
 // v1.96: Pause command input listeners
 if (pauseCommand){
@@ -3149,10 +3171,6 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
   }
 
-  // Slash key pauses/resumes the game (replaces old HUD toggle)
-  if (e.code === "Slash"){
-    togglePause();
-  }
 const k = e.key.toLowerCase();
   keys[k] = true;
 
@@ -3180,8 +3198,7 @@ canvas.addEventListener("pointermove", (e) => {
 });
 
 canvas.addEventListener("pointerdown", (e) => {
-  // v1.96.x: do not unlock/start audio from random background clicks.
-  // Audio now begins from the actual game start flow instead.
+  unlockAudioOnce();
   // v1.96: clicking also aims and shoots
   setAimFromClient(e.clientX, e.clientY);
 

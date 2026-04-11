@@ -480,7 +480,7 @@ body.invert-colors {
   <div id="startMenu" class="panel">
     <div class="title">Bananaman Shooter <span style="font-size:14px; opacity:0.75;">(v1.96)</span></div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="hint">Move: WASD or Arrow Keys (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Reach the glowing maze exit each wave · Pause: ESC (or Start) · HUD: / (or View)</div>
+    <div class="hint">Move: WASD or Arrow Keys (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Reach the glowing maze exit each wave · Pause: ESC (or Start) · Chat: / (or View)</div>
     <div class="btnRow">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -3781,10 +3781,6 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
   }
 
-  // v1.96: Slash key pauses/resumes the game (replaces old HUD toggle)
-  if (e.code === "Slash"){
-    togglePause();
-  }
 const k = e.key.toLowerCase();
   keys[k] = true;
 
