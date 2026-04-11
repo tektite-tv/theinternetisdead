@@ -33,6 +33,27 @@ jobs:
           <html>
            <head>
             <title>{title}</title>
+            <style>
+              body {{
+                background: #000000;
+                color: #ffffff;
+              }}
+              a:link, a:visited, a:active {{
+                color: #ff0000;
+              }}
+              hr {{
+                border: 0;
+                border-top: 1px solid #ffffff;
+              }}
+              table {{
+                color: #ffffff;
+              }}
+              th, td {{
+                color: #ffffff;
+                padding-right: 12px;
+                vertical-align: middle;
+              }}
+            </style>
            </head>
            <body>
           <h1>{title}</h1>
@@ -57,6 +78,17 @@ jobs:
           image_exts = {
               ".png", ".jpg", ".jpeg", ".gif", ".webp",
               ".bmp", ".svg", ".avif"
+          }
+
+          mime_map = {
+              ".mp3": "audio/mpeg",
+              ".wav": "audio/wav",
+              ".ogg": "audio/ogg",
+              ".m4a": "audio/mp4",
+              ".flac": "audio/flac",
+              ".aac": "audio/aac",
+              ".opus": "audio/ogg",
+              ".wma": "audio/x-ms-wma",
           }
 
           # --------------------------------------------------
@@ -102,27 +134,38 @@ jobs:
               )
 
               audio_rows = []
-              audio_rows.append('<tr><th align="left">Name</th><th align="right">Size</th></tr>')
-              audio_rows.append('<tr><th colspan="2"><hr></th></tr>')
+              audio_rows.append('<tr><th align="left">Name</th><th align="left">Player</th><th align="right">Size</th></tr>')
+              audio_rows.append('<tr><th colspan="3"><hr></th></tr>')
 
               for f in audio_files:
                   href = html.escape(f.name)
                   name = "/media/audio/" + html.escape(f.name)
                   size = kb_size(f)
+                  mime = mime_map.get(f.suffix.lower(), "audio/mpeg")
+
+                  player = (
+                      f'<audio controls preload="none">'
+                      f'<source src="{href}" type="{mime}">'
+                      f'</audio>'
+                  )
+
                   audio_rows.append(
-                      f'<tr><td><a href="{href}">{name}</a></td><td align="right">{size} KB</td></tr>'
+                      f'<tr>'
+                      f'<td><a href="{href}">{name}</a></td>'
+                      f'<td>{player}</td>'
+                      f'<td align="right">{size} KB</td>'
+                      f'</tr>'
                   )
 
               if not audio_files:
-                  audio_rows.append('<tr><td colspan="2">No audio files found.</td></tr>')
+                  audio_rows.append('<tr><td colspan="3">No audio files found.</td></tr>')
 
-              audio_rows.append('<tr><th colspan="2"><hr></th></tr>')
-              audio_rows.append('<p>This website is a transformative art exhibit. All audio is used as part of a non-profit transformative work.</p>')
+              audio_rows.append('<tr><th colspan="3"><hr></th></tr>')
 
               audio_body = f"""<table>
-          {chr(10).join(audio_rows[:-1])}
+          {chr(10).join(audio_rows)}
           </table>
-          {audio_rows[-1]}"""
+          <p>This website is a transformative art exhibit. All audio is used as part of a non-profit transformative work.</p>"""
 
               write_text_file(
                   audio_dir / "index.html",
@@ -221,5 +264,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add media/index.html media/audio/index.html media/images/index.html media/images/*/index.html
-          git commit -m "Auto-generate ugly media index pages"
+          git commit -m "Auto-generate styled media index pages"
           git push
