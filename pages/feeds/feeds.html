@@ -412,21 +412,60 @@ align-items:center;
 min-width:0;
 }
 
+.channelHeader .logoLink{
+height:64px;
+padding:4px 10px;
+flex:0 0 auto;
+}
+
 .channelLogo{
-height:50px;
+height:54px;
+max-width:100%;
 width:auto;
+object-fit:contain;
 flex:0 0 auto;
 }
 
 .channelTitle{
-font-size:calc(22px * var(--page-font-scale));
+font-size:calc(19px * var(--page-font-scale));
 line-height:1.05;
-white-space:normal;
-overflow:visible;
+white-space:nowrap;
+overflow:hidden;
 text-overflow:clip;
 text-align:left;
 min-width:0;
 flex:1 1 auto;
+display:flex;
+align-items:center;
+flex-wrap:nowrap;
+gap:8px;
+}
+
+.channelHandleLink{
+min-width:0;
+max-width:calc(50% - 12px);
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
+padding:0 8px;
+flex:0 1 auto;
+}
+
+.channelHandleLink span{
+display:block;
+min-width:0;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+}
+
+.channelHandleAvatar{
+width:24px;
+height:24px;
+}
+
+.channelHandleSeparator{
+flex:0 0 auto;
 }
 
 .controls{
