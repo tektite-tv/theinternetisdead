@@ -145,11 +145,12 @@ padding:6px 10px;
 
 #videoSearch{
 width:220px;height:40px;
-border:2px solid var(--accent-color);
-background:var(--panel-background);
+border:1px solid var(--accent-color);
+background:#000;
 color:var(--page-text);
 padding:0 12px;
 font-family:var(--page-font-family);
+font-weight:700;
 }
 
 #videoSearch::placeholder{
@@ -159,13 +160,18 @@ opacity:1;
 
 button{
 height:40px;padding:0 16px;
-border:2px solid var(--accent-color);
-background:var(--panel-background);color:var(--page-text);
+border:1px solid var(--accent-color);
+background:#000;color:var(--page-text);
 cursor:pointer;
 font-family:var(--page-font-family);
+font-weight:700;
 }
 
-button:hover{background:var(--button-hover-bg);}
+button:hover,
+button:focus-visible{
+animation: overlay-ui-hueshift 1.8s linear infinite;
+outline:none;
+}
 
 #gridMenu{
 position:absolute;
