@@ -412,26 +412,23 @@ html, body {
 
   #overlay-root .clock {
     flex: 0 0 100%;
-    justify-content: center;
+    justify-content: flex-end;
     min-width: 0;
     margin-top: 2px;
   }
 
   #overlay-root .clock-box {
-    width: 100%;
+    width: auto;
     min-width: 0;
     max-width: 100%;
-    height: 38px;
+    height: 34px;
     overflow: hidden;
-    margin-left: 0;
-    padding-left: 0;
-    justify-content: center;
+    margin-left: auto;
+    padding-left: 10px;
   }
 
   #overlay-root .clock-text {
-    justify-content: center;
-    text-align: center;
-    font-size: calc(23px * var(--overlay-font-scale, 1)) !important;
+    font-size: calc(20px * var(--overlay-font-scale, 1)) !important;
   }
 
   #overlay-root .sidebar {
@@ -510,9 +507,11 @@ html, body {
     <div class="topbar">
       <div class="hamburger" data-action="toggle-sidebar" aria-label="Close sidebar" role="button" tabindex="0">✕</div>
 
-      <div class="sidebar-header-link">
-        <a class="home-link" id="sidebar-context-link" href="/" hidden>+ Home</a>
-        <a class="home-link" id="sidebar-command-link" href="/" hidden>/command</a>
+      <div class="logo">
+        <a class="logo-link sidebar-logo-link" id="sidebar-logo-link" href="#" aria-label="Open chat">
+          <img src="/media/images/pngs/deadlogo-green.png" alt="The Internet Is Dead" draggable="false">
+          <span class="logo-tint-layer" aria-hidden="true" style="--tint-mask: url('/media/images/pngs/deadlogo-green.png');"></span>
+        </a>
       </div>
     </div>
 
@@ -545,9 +544,6 @@ html, body {
     </div>
 
     <div class="sidebar-bottom"></div>
-        </a>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -773,6 +769,7 @@ html, body {
   const logoLinks = overlayRoot.querySelectorAll('.logo-link');
   const sidebarContextLink = overlayRoot.querySelector('#sidebar-context-link');
   const sidebarCommandLink = overlayRoot.querySelector('#sidebar-command-link');
+  const sidebarLogoLink = overlayRoot.querySelector('#sidebar-logo-link');
 
   if (!sidebar || !backdrop) return;
 
@@ -1035,7 +1032,29 @@ html, body {
     });
   }
 
+  if (sidebarLogoLink) {
+    sidebarLogoLink.addEventListener('click', (event) => {
+      if (shouldUseIndexChatBehavior()) {
+        handleChatActivate(event);
+        return;
+      }
+      event.preventDefault();
+      closeSidebar();
+    });
+
+    sidebarLogoLink.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (shouldUseIndexChatBehavior()) {
+        handleChatActivate(event);
+        return;
+      }
+      event.preventDefault();
+      closeSidebar();
+    });
+  }
+
   logoLinks.forEach((link) => {
+    if (link === sidebarLogoLink) return;
     link.addEventListener('click', handleLogoActivate);
 
     link.addEventListener('keydown', (event) => {
