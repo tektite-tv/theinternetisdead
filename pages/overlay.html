@@ -117,19 +117,21 @@ html, body {
 
 #overlay-root .sidebar-header-link {
   margin-left: 14px;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
   gap: 8px;
-  flex-wrap: nowrap;
+  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
 }
 
 #overlay-root .sidebar-header-link .home-link {
   font-size: calc(22px * var(--overlay-font-scale, 1));
   padding: 8px 12px;
+  width: 100%;
   min-width: 0;
   justify-content: center;
-  flex: 1 1 0;
 }
 
 #overlay-root .logo-link {
