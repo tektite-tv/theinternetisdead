@@ -203,7 +203,9 @@ function registerPageCommands(){
             { name: '/clock_time', usage: '/clock_time ', desc: 'set the overlay clock to a manual time string', execute: false },
             { name: '/clock_date', usage: '/clock_date ', desc: 'set the overlay clock to a manual date string', execute: false },
             { name: '/clock_reset', usage: '/clock_reset', desc: 'reset the overlay clock to live Toronto time', execute: true },
-            { name: '/clock_zone', usage: '/clock_zone America/Toronto', desc: 'sync the overlay clock to a named timezone', execute: false, suggestions: allClockZones }
+            { name: '/clock_zone', usage: '/clock_zone America/Toronto', desc: 'sync the overlay clock to a named timezone', execute: false, suggestions: allClockZones },
+            { name: '/games', usage: '/games', desc: 'go to the games index at theinternetisdead.org/games', execute: true },
+            { name: '/experiments', usage: '/experiments', desc: 'go to the experiments index at theinternetisdead.org/experiments', execute: true }
         ]
     });
 }
@@ -250,6 +252,12 @@ window.addEventListener('message', (event) => {
             if (commandName === '/clock_reset') {
                 setOverlayClockStateFromPage({ mode: 'time', zone: defaultClockZone, manualTime: '', manualDate: '' });
                 postToChatSandbox({ type: 'pageChatResult', command: '/clock_reset', message: '/clock_reset executed: synced to America/Toronto', announce: true });
+                return;
+            }
+            if (commandName === '/games' || commandName === '/experiments') {
+                window.location.href = commandName === '/games'
+                    ? 'https://theinternetisdead.org/games'
+                    : 'https://theinternetisdead.org/experiments';
                 return;
             }
             if (commandName === '/clock_zone') {
