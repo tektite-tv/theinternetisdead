@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Bananaman Shooter</title>
+<title>Tektite's Bananaman Shooter Game</title>
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -26,6 +26,28 @@
     text-align:center;
   }
   .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
+  .titleSubWrap{ display:flex; justify-content:center; margin:-4px 0 10px; }
+  .titleSub{ position:relative; display:inline-block; font-size:13px; opacity:0.82; cursor:help; }
+  .titleSubTooltip{
+    position:absolute;
+    left:50%;
+    top:calc(100% + 8px);
+    transform:translateX(-50%);
+    min-width:220px;
+    padding:8px 10px;
+    border:1px solid rgba(0,255,0,0.35);
+    border-radius:12px;
+    background: rgba(0,0,0,0.9);
+    box-shadow: 0 0 18px rgba(0,255,0,0.08);
+    font-size:12px;
+    line-height:1.4;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    white-space:nowrap;
+    z-index:60;
+  }
+  .titleSub:hover .titleSubTooltip{ opacity:1; visibility:visible; }
   .subimg{
     width:120px; height:120px; display:block; margin:0 auto 10px;
     image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
@@ -441,7 +463,10 @@ body.invert-colors {
 
 <div id="uiRoot">
   <div id="startMenu" class="panel">
-    <div class="title">Bananaman Shooter</div>
+    <div class="title">Tektite's Bananaman Shooter Game</div>
+    <div class="titleSubWrap">
+      <div class="titleSub">(New and Improved)<div class="titleSubTooltip">Last updated: 2026-04-12 00:00 UTC</div></div>
+    </div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
     <div class="btnRow">
