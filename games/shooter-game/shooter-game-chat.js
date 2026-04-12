@@ -10,8 +10,7 @@
       { name: '/invert', desc: 'Toggle invert colors', usage: '/invert' },
       { name: '/lives', desc: 'Set lives to a number or infinite', usage: '/lives [number|infinite]', suggestions: ['0', '3', '5', 'infinite'] },
       { name: '/shields', desc: 'Set shields to a number or infinite', usage: '/shields [number|infinite]', suggestions: ['0', '1', '3', 'infinite'] },
-      { name: '/video_fx', desc: 'Enable or disable video effects', usage: '/video_fx [enabled|disabled]', suggestions: ['enabled', 'disabled'] },
-      { name: '/log', desc: 'Show the latest chat interface update timestamp and most recent change summary for this page', usage: '/log' }
+      { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
     ];
     let hasSwitchedToLevel2 = false;
     let chatSandboxVisible = false;
@@ -183,18 +182,7 @@
           registerPageCommands();
           return;
         }
-
         if (data.type === 'pageChatExecute') {
-          const commandName = String(data.command || '').toLowerCase();
-          if (commandName === '/log') {
-            postToChatSandbox({
-              type: 'pageChatResult',
-              command: '/log',
-              message: 'Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /log to the shooter chat wrapper and kept the shooter command list separate from the index-only navigation commands. Previous chat change: fixed Tab cycling so / then Tab walks the page command list instead of getting stuck on the first command.',
-              announce: true
-            });
-            return;
-          }
           if (tektiteFrame && tektiteFrame.contentWindow) {
             tektiteFrame.contentWindow.postMessage({
               type: 'tektite:execute-command',

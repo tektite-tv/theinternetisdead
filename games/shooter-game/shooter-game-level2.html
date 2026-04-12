@@ -1098,8 +1098,7 @@ const PAUSE_COMMANDS = {
   "/invert": "Toggle inverted colors",
   "/lives": "Set lives to a number or infinite (e.g. /lives 3 or /lives infinite)",
   "/shields": "Set shields to a number or infinite (e.g. /shields 2 or /shields infinite)",
-  "/video_fx": "Enable/disable chromatic aberration + hue shifting",
-  "/log": "Show the latest chat interface update timestamp and most recent change summary"
+  "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
 };
 
 // v1.96: Fullscreen toggle (real browser fullscreen)
@@ -1281,23 +1280,12 @@ function execPauseCommand(cmd){
     return;
   }
 
-  // v1.96: /video_fx enabled|disabled -> toggle chromatic aberration + hue drift
-  if (raw.startsWith("/video_fx")){
-    const arg = raw.slice("/video_fx".length).trim().toLowerCase();
-    if (["enabled","enable","on","true","1"].includes(arg)) {
-      VIDEO_FX_ENABLED = true;
-      return { ok:true, message:"/video_fx enabled" };
-    }
-    if (["disabled","disable","off","false","0"].includes(arg)) {
-      VIDEO_FX_ENABLED = false;
-      return { ok:true, message:"/video_fx disabled" };
-    }
-    return { ok:false, message:"Usage: /video_fx enabled|disabled" };
+  // /video_fx -> toggle chromatic aberration + hue drift
+  if (raw === "/video_fx"){
+    VIDEO_FX_ENABLED = !VIDEO_FX_ENABLED;
+    return { ok:true, message:`Video FX ${VIDEO_FX_ENABLED ? "enabled" : "disabled"}` };
   }
 
-  if (raw === "/log"){
-    return { ok:true, message:"Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /log output to this level's in-game chat. Previous chat change: replaced the ESC pause-menu command bar with a button that says 'Press here to enter commands.' and opens the actual chat UI." };
-  }
 
   // v1.96: /lives [#|infinite]
   if (raw.startsWith("/lives")){
