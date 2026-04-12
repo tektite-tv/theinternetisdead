@@ -78,7 +78,7 @@
     line-height:1;
     user-select:none;
   }
-  .controllerFocus{
+  body.controller-active .controllerFocus{
     outline:2px solid rgba(0,255,102,0.95) !important;
     box-shadow:0 0 0 3px rgba(0,255,102,0.18);
     background:rgba(75,0,118,0.55) !important;
@@ -1040,6 +1040,12 @@ function applyGlitchSpiral(strength){
 function setPaused(p){
   isPaused = !!p;
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
+  if (isPaused){
+    pauseFocusIndex = 0;
+    if (!parentChatVisible) syncPauseControllerFocus();
+  } else if (gameState !== STATE.MENU && gameState !== STATE.OPTIONS){
+    clearControllerFocus();
+  }
 
   // v1.96: focus the command input when paused
   if (pauseCommand){
@@ -1367,6 +1373,7 @@ window.addEventListener("message", (event) => {
 
   if (data.type === "tektite:chat-visibility"){
     parentChatVisible = !!data.visible;
+    if (isPaused && !parentChatVisible) syncPauseControllerFocus();
     return;
   }
 
@@ -2351,6 +2358,7 @@ function setActiveInputMode(mode){
   const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
   if (activeInputMode === nextMode) return;
   activeInputMode = nextMode;
+  document.body.classList.toggle('controller-active', activeInputMode === INPUT_MODE_CONTROLLER);
   updateControlsDisplay();
 }
 
@@ -2358,6 +2366,7 @@ updateControlsDisplay();
 
 let menuFocusIndex = 0;
 let optionsFocusIndex = 0;
+let pauseFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
 
@@ -2383,6 +2392,10 @@ function getOptionsControllerTargets(){
   return [startWaveSelect, livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
 }
 
+function getPauseControllerTargets(){
+  return [btnPauseOpenChat, btnPauseQuit, btnPauseResume].filter(Boolean);
+}
+
 function syncMenuControllerFocus(){
   const items = getMenuControllerTargets();
   if (!items.length) return;
@@ -2397,6 +2410,13 @@ function syncOptionsControllerFocus(){
   focusControllerElement(items[optionsFocusIndex]);
 }
 
+function syncPauseControllerFocus(){
+  const items = getPauseControllerTargets();
+  if (!items.length) return;
+  pauseFocusIndex = Math.max(0, Math.min(pauseFocusIndex, items.length - 1));
+  focusControllerElement(items[pauseFocusIndex]);
+}
+
 function moveMenuControllerFocus(delta){
   const items = getMenuControllerTargets();
   if (!items.length) return;
@@ -2409,6 +2429,13 @@ function moveOptionsControllerFocus(delta){
   if (!items.length) return;
   optionsFocusIndex = (optionsFocusIndex + delta + items.length) % items.length;
   syncOptionsControllerFocus();
+}
+
+function movePauseControllerFocus(delta){
+  const items = getPauseControllerTargets();
+  if (!items.length) return;
+  pauseFocusIndex = (pauseFocusIndex + delta + items.length) % items.length;
+  syncPauseControllerFocus();
 }
 
 function cycleSelect(selectEl, delta){
@@ -2894,6 +2921,11 @@ function pollGamepad(dt){
     if (navUp) postChatControllerAction('cycleUp');
     if (navDown) postChatControllerAction('cycleDown');
     if (pressA) postChatControllerAction('execute');
+  } else if (isPaused){
+    if (navUp || navLeft) movePauseControllerFocus(-1);
+    if (navDown || navRight) movePauseControllerFocus(1);
+    if (pressA) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
+    if (pressB || pressStart) togglePause();
   } else if (gameState === STATE.MENU){
     if (navLeft || navUp) moveMenuControllerFocus(-1);
     if (navRight || navDown) moveMenuControllerFocus(1);
