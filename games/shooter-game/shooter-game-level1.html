@@ -721,7 +721,7 @@ const fxCanvas = document.createElement("canvas");
 const fxCtx = fxCanvas.getContext("2d");
 
 // v1.96: allow disabling post-processing via /video_fx
-let VIDEO_FX_ENABLED = true;
+let VIDEO_FX_ENABLED = false;
 
 // Screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
@@ -2214,7 +2214,6 @@ function restartRun(){
   ensureMusicPlaying(true);
   // v1.96: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
-  bombsCount = 0;
   bomb = null;
   ufo = null;
   powerupSlot.style.display = "none";
@@ -2317,7 +2316,6 @@ bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
 
-  bombsCount = 0;
   bomb = null;
   ufo = null;
 
