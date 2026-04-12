@@ -2344,7 +2344,17 @@ if (invertColorsCheckbox){
     s.addEventListener("input", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
-  infiniteToggle.addEventListener("change", () => {});
+  // Keep bomb-related start settings live so gameplay uses the current options value
+  if (bombsSlider){
+    const syncStartBombsFromUI = () => { START_BOMBS = parseInt(bombsSlider.value, 10) || 0; };
+    bombsSlider.addEventListener("input", syncStartBombsFromUI);
+    bombsSlider.addEventListener("change", syncStartBombsFromUI);
+  }
+  if (infiniteToggle){
+    const syncInfiniteFromUI = () => { INFINITE_MODE = !!infiniteToggle.checked; };
+    infiniteToggle.addEventListener("change", syncInfiniteFromUI);
+    infiniteToggle.addEventListener("input", syncInfiniteFromUI);
+  }
   syncStartOptionsLabels();
 function showMenu(){
   setPaused(false);
