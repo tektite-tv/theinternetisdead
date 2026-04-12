@@ -1763,22 +1763,19 @@ function dropBomb(){
   if (!infiniteModeActive) bombsCount = Math.max(0, bombsCount - 1);
   powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
 
-  // Restored glide + bounce behavior: the bomb travels forward, ricochets off
-  // the arena edges, then arms itself after it has gone far enough.
+  // Bomb glides in the current aim direction, keeps moving, and ricochets off screen edges
+  // until it collides with an enemy.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
 
   const spawnDist = player.w * 0.55;
-  const maxTravel = 320;
-  const speed = 760;
+  const speed = 900; // px/sec
 
   bomb = {
     x: player.x + dx * spawnDist,
     y: player.y + dy * spawnDist,
     vx: dx * speed,
     vy: dy * speed,
-    travel: 0,
-    maxTravel,
     r: 12,
 
     mode: "flying",
@@ -1801,15 +1798,12 @@ function explodeBomb(){
 
 function bombHitsEnemy(){
   if (!bomb || bomb.exploding) return false;
-  // Check contact against all enemies (both while flying and while armed).
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
     if (e.dying) continue;
     const rx = e.x - e.w/2, ry = e.y - e.h/2;
 
-    // Treat bomb as a circle hitting an enemy rect.
     if (circleRect(bomb.x, bomb.y, bomb.r, rx, ry, e.w, e.h)){
-      // Detonate at the point of contact.
       explodeBomb();
       return true;
     }
@@ -1820,7 +1814,6 @@ function bombHitsEnemy(){
 function updateBomb(dt){
   if (!bomb) return;
 
-  // Flash toggle (used for both flying + armed for readability)
   bomb.flashT += dt;
   if (bomb.flashT >= 0.12){
     bomb.flashT -= 0.12;
@@ -1828,61 +1821,44 @@ function updateBomb(dt){
   }
 
   if (!bomb.exploding){
-    if (bomb.mode === "flying"){
-      const stepX = bomb.vx * dt;
-      const stepY = bomb.vy * dt;
+    const stepX = bomb.vx * dt;
+    const stepY = bomb.vy * dt;
 
-      bomb.x += stepX;
-      bomb.y += stepY;
+    bomb.x += stepX;
+    bomb.y += stepY;
 
-      const left = bomb.r + 10;
-      const right = canvas.width - bomb.r - 10;
-      const top = bomb.r + 10;
-      const bottom = canvas.height - bomb.r - 10;
+    const minX = bomb.r;
+    const maxX = canvas.width - bomb.r;
+    const minY = bomb.r;
+    const maxY = canvas.height - bomb.r;
 
-      if (bomb.x < left){
-        bomb.x = left;
-        bomb.vx = Math.abs(bomb.vx);
-      } else if (bomb.x > right){
-        bomb.x = right;
-        bomb.vx = -Math.abs(bomb.vx);
-      }
-
-      if (bomb.y < top){
-        bomb.y = top;
-        bomb.vy = Math.abs(bomb.vy);
-      } else if (bomb.y > bottom){
-        bomb.y = bottom;
-        bomb.vy = -Math.abs(bomb.vy);
-      }
-
-      bomb.travel += Math.hypot(stepX, stepY);
-
-      if (bombHitsEnemy()) return;
-
-      if (bomb.travel >= bomb.maxTravel){
-        bomb.mode = "armed";
-        bomb.vx = 0;
-        bomb.vy = 0;
-      }
-    } else if (bomb.mode === "armed"){
-      // Stationary: detonate on first enemy contact.
-      bombHitsEnemy();
+    if (bomb.x < minX){
+      bomb.x = minX + (minX - bomb.x);
+      bomb.vx = Math.abs(bomb.vx);
+    } else if (bomb.x > maxX){
+      bomb.x = maxX - (bomb.x - maxX);
+      bomb.vx = -Math.abs(bomb.vx);
     }
+
+    if (bomb.y < minY){
+      bomb.y = minY + (minY - bomb.y);
+      bomb.vy = Math.abs(bomb.vy);
+    } else if (bomb.y > maxY){
+      bomb.y = maxY - (bomb.y - maxY);
+      bomb.vy = -Math.abs(bomb.vy);
+    }
+
+    if (bombHitsEnemy()) return;
   } else {
-    // expand shockwave
     bomb.rad += (560 + 220 * FUNK) * dt;
     bomb.alpha = Math.max(0, bomb.alpha - dt * 0.60);
 
-    // Apply damage + knockback ONCE at the start of explosion
     if (!bomb.didDamage){
       bomb.didDamage = true;
 
-      // Radius: 1.7 enemy widths (use average current enemy size or fallback)
       const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
       const radius = enemySize * 1.7;
 
-      // v1.96: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
       const BOMB_DAMAGE = 2;
 
       for (let i = enemies.length - 1; i >= 0; i--){
@@ -1893,15 +1869,13 @@ function updateBomb(dt){
         const d2 = dx*dx + dy*dy;
 
         if (d2 <= radius*radius){
-          // damage/kill (flash red, then fade out if killed)
           enemyApplyDamage(e, BOMB_DAMAGE, "bomb");
         } else {
-          // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
           const r2 = (radius * 2.2);
           if (d2 <= r2*r2){
             const d = Math.max(1, Math.sqrt(d2));
             const push = (radius * 0.55) / d;
-            e.col += (dx / d) * push * 0.02;
+e.col += (dx / d) * push * 0.02;
             e.row += (dy / d) * push * 0.02;
           }
         }
@@ -2201,17 +2175,7 @@ if (invertColorsCheckbox){
     s.addEventListener("input", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
-  // Keep bomb-related start settings live so gameplay uses the current options value
-  if (bombsSlider){
-    const syncStartBombsFromUI = () => { START_BOMBS = parseInt(bombsSlider.value, 10) || 0; };
-    bombsSlider.addEventListener("input", syncStartBombsFromUI);
-    bombsSlider.addEventListener("change", syncStartBombsFromUI);
-  }
-  if (infiniteToggle){
-    const syncInfiniteFromUI = () => { INFINITE_MODE = !!infiniteToggle.checked; };
-    infiniteToggle.addEventListener("change", syncInfiniteFromUI);
-    infiniteToggle.addEventListener("input", syncInfiniteFromUI);
-  }
+  infiniteToggle.addEventListener("change", () => {});
   syncStartOptionsLabels();
 function showMenu(){
   setPaused(false);
@@ -2352,7 +2316,6 @@ function startGame(){
 bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
-
   bomb = null;
   ufo = null;
 
