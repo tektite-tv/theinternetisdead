@@ -411,18 +411,40 @@ body.invert-colors {
   <div id="pausePanel">
     <div id="pauseTitle">PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
-    <button id="btnPauseOpenChat" type="button" style="width: 100%;
+
+    <!-- v1.96: Pause command input -->
+    <input id="pauseCommand" type="text" autocomplete="off" spellcheck="false"
+      placeholder="Type a command… (e.g. /help)" style="width: 100%;
+        max-width: 420px;
+        box-sizing: border-box;
+        margin-top: 14px;
+        padding: 10px 12px;
+        font-family: monospace;
+        font-size: 16px;
+        color: #00ff66;
+        background: rgba(0,0,0,0.65);
+        border: 2px solid rgba(0,255,0,0.45);
+        border-radius: 12px;
+        outline: none;
+        pointer-events: auto;" />
+
+    <div id="pauseCmdSuggest" style="width: 100%;
       max-width: 420px;
-      background: rgba(0,0,0,.85);
-      color: #0f0;
-      border: 2px solid rgba(0,255,0,.35);
-      outline: none;
-      padding: 12px 14px;
-      border-radius: 10px;
-      font: 700 14px/1.2 \"Courier New\", monospace;
-      box-shadow: 0 0 0 1px rgba(0,255,0,.08) inset, 0 0 14px rgba(0,255,0,.08);
-      cursor: pointer;
-    ">Press here to enter commands.</button>
+      box-sizing: border-box;
+      margin: 8px auto 0;
+      text-align: left;
+      font-family: monospace;
+      font-size: 14px;
+      color: #b6ffcf;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(0,255,0,0.25);
+      border-radius: 12px;
+      padding: 8px 10px;
+      display: none;
+      pointer-events: auto;
+      max-height: 180px;
+      overflow: auto;
+      box-shadow: 0 0 18px rgba(0,255,0,0.08);"></div>
     <button id="btnPauseQuit" style="
       margin-top:16px;
       font-family:monospace;
@@ -774,7 +796,7 @@ const fxCanvas = document.createElement("canvas");
 const fxCtx = fxCanvas.getContext("2d");
 
 // v1.96: allow disabling post-processing via /video_fx
-let VIDEO_FX_ENABLED = false;
+let VIDEO_FX_ENABLED = true;
 
 // v1.96: "R" key screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
@@ -892,9 +914,7 @@ let hudVisible = false;
 // =======================
 const pauseOverlay = document.getElementById("pauseOverlay");
 
-const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
-const pauseCommand = null;
-const pauseCmdSuggest = null;
+const pauseCommand = document.getElementById("pauseCommand");
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -902,6 +922,7 @@ if (pauseCloseBtn){
     if (typeof togglePause === "function") togglePause();
   });
 }
+const pauseCmdSuggest = document.getElementById("pauseCmdSuggest");
 let isPaused = false;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
@@ -925,31 +946,6 @@ if (btnPauseResume){
   btnPauseResume.addEventListener("click", () => {
     // Resume gameplay (same as pressing ESC)
     togglePause();
-  });
-}
-
-function requestOpenChatFromPause(){
-  setPaused(false);
-  try{
-    if (window.parent && window.parent !== window){
-      window.parent.postMessage({ type: "openChatFromChild", seedSlash: true }, "*");
-      return;
-    }
-  }catch(e){}
-  try{
-    const slashEvent = new KeyboardEvent("keydown", {
-      key: "/",
-      code: "Slash",
-      bubbles: true,
-      cancelable: true
-    });
-    window.dispatchEvent(slashEvent);
-    document.dispatchEvent(slashEvent);
-  }catch(e){}
-}
-if (btnPauseOpenChat){
-  btnPauseOpenChat.addEventListener("click", () => {
-    requestOpenChatFromPause();
   });
 }
 
@@ -1235,15 +1231,9 @@ function execPauseCommand(cmd){
   // v1.96: /video_fx enabled|disabled -> toggle chromatic aberration + hue drift
   if (raw.startsWith("/video_fx")){
     const arg = raw.slice("/video_fx".length).trim().toLowerCase();
-    if (["enabled","enable","on","true","1"].includes(arg)) {
-      VIDEO_FX_ENABLED = true;
-      return { ok:true, message:"/video_fx enabled" };
-    }
-    if (["disabled","disable","off","false","0"].includes(arg)) {
-      VIDEO_FX_ENABLED = false;
-      return { ok:true, message:"/video_fx disabled" };
-    }
-    return { ok:false, message:"Usage: /video_fx enabled|disabled" };
+    if (["enabled","enable","on","true","1"].includes(arg)) VIDEO_FX_ENABLED = true;
+    else if (["disabled","disable","off","false","0"].includes(arg)) VIDEO_FX_ENABLED = false;
+    return;
   }
 
   // v1.96: /lives [#|infinite]
@@ -1917,6 +1907,7 @@ function drawUFO(){
   ctx.restore();
 }
 
+
 function dropBomb(){
   if (isPaused) return;
   if (!infiniteModeActive && bombsCount <= 0) return;
@@ -1925,28 +1916,28 @@ function dropBomb(){
   bombsCount = 0;
   powerupSlot.style.display = "none";
 
-  // v1.96: Bomb is now a short-range "shot" that travels a bit in the aim direction.
-  // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
-
   const spawnDist = player.w * 0.55;
-  const maxTravel = 140;          // "short distance ahead" (px)
-  const speed = 900;              // px/sec while flying (feels snappy)
+  const speed = 900;
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+  const startWorldX = playerWorldX + dx * spawnDist;
+  const startWorldY = playerWorldY + dy * spawnDist;
 
   bomb = {
-    x: player.x + dx * spawnDist,
-    y: player.y + dy * spawnDist,
+    x: (startWorldX - camX),
+    y: (startWorldY - camY),
+    worldX: startWorldX,
+    worldY: startWorldY,
     vx: dx * speed,
     vy: dy * speed,
-    travel: 0,
-    maxTravel,
     r: 12,
-
-    mode: "flying",               // "flying" -> "armed" -> "exploding"
+    ttl: 6.0,
+    bounces: 0,
+    mode: "flying",
     flashT: 0,
     flashOn: true,
-
     exploding: false,
     rad: 0,
     alpha: 0.0
@@ -1963,15 +1954,23 @@ function explodeBomb(){
 
 function bombHitsEnemy(){
   if (!bomb || bomb.exploding) return false;
-  // Check contact against all enemies (both while flying and while armed).
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
     if (e.dying) continue;
-    const rx = e.x - e.w/2, ry = e.y - e.h/2;
-
-    // Treat bomb as a circle hitting an enemy rect.
-    if (circleRect(bomb.x, bomb.y, bomb.r, rx, ry, e.w, e.h)){
-      // Detonate at the point of contact.
+    const ex = (e.mazeMob && typeof e.worldX === "number") ? e.worldX : e.x;
+    const ey = (e.mazeMob && typeof e.worldY === "number") ? e.worldY : e.y;
+    const ew = e.w || ((e.size || 44));
+    const eh = e.h || ((e.size || 44));
+    const rx = ex - ew/2, ry = ey - eh/2;
+    if (circleRect(bomb.worldX, bomb.worldY, bomb.r, rx, ry, ew, eh)){
+      explodeBomb();
+      return true;
+    }
+  }
+  if (ufo && ufo.fade <= 0){
+    const ux = (typeof ufo.worldX === "number") ? ufo.worldX : ufo.x;
+    const uy = (typeof ufo.worldY === "number") ? ufo.worldY : ufo.y;
+    if (circleRect(bomb.worldX, bomb.worldY, bomb.r, ux - 16, uy - 9, 32, 18)){
       explodeBomb();
       return true;
     }
@@ -1982,71 +1981,111 @@ function bombHitsEnemy(){
 function updateBomb(dt){
   if (!bomb) return;
 
-  // Flash toggle (used for both flying + armed for readability)
   bomb.flashT += dt;
   if (bomb.flashT >= 0.12){
     bomb.flashT -= 0.12;
     bomb.flashOn = !bomb.flashOn;
   }
 
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+
   if (!bomb.exploding){
-    if (bomb.mode === "flying"){
-      // Move forward for a short distance.
-      const stepX = bomb.vx * dt;
-      const stepY = bomb.vy * dt;
+    bomb.ttl -= dt;
+    if (bomb.ttl <= 0){ bomb = null; return; }
 
-      bomb.x += stepX;
-      bomb.y += stepY;
+    const nextX = bomb.worldX + bomb.vx * dt;
+    const nextY = bomb.worldY + bomb.vy * dt;
 
-      bomb.travel += Math.hypot(stepX, stepY);
+    if (maze){
+      let bouncedX = false;
+      let bouncedY = false;
+      const r = bomb.r;
 
-      // If it hits an enemy while flying, detonate instantly.
-      if (bombHitsEnemy()) return;
-
-      // After maxTravel, stop and become an "armed mine" that detonates on contact.
-      if (bomb.travel >= bomb.maxTravel){
-        bomb.mode = "armed";
-        bomb.vx = 0;
-        bomb.vy = 0;
+      if (isWallAtWorld(nextX + Math.sign(bomb.vx || 1) * r, bomb.worldY) || isWallAtWorld(nextX, bomb.worldY + r) || isWallAtWorld(nextX, bomb.worldY - r)){
+        bomb.vx *= -1;
+        bouncedX = true;
+      } else {
+        bomb.worldX = nextX;
       }
-    } else if (bomb.mode === "armed"){
-      // Stationary: detonate on first enemy contact.
-      bombHitsEnemy();
+
+      if (isWallAtWorld(bomb.worldX, nextY + Math.sign(bomb.vy || 1) * r) || isWallAtWorld(bomb.worldX + r, nextY) || isWallAtWorld(bomb.worldX - r, nextY)){
+        bomb.vy *= -1;
+        bouncedY = true;
+      } else {
+        bomb.worldY = nextY;
+      }
+
+      if (bouncedX || bouncedY) bomb.bounces += 1;
+    } else {
+      bomb.worldX = nextX;
+      bomb.worldY = nextY;
+      const minX = bomb.r;
+      const maxX = canvas.width - bomb.r;
+      const minY = bomb.r;
+      const maxY = canvas.height - bomb.r;
+      let bounced = false;
+      let sx = bomb.worldX - camX;
+      let sy = bomb.worldY - camY;
+      if (sx < minX){ sx = minX; bomb.worldX = camX + sx; bomb.vx = Math.abs(bomb.vx); bounced = true; }
+      else if (sx > maxX){ sx = maxX; bomb.worldX = camX + sx; bomb.vx = -Math.abs(bomb.vx); bounced = true; }
+      if (sy < minY){ sy = minY; bomb.worldY = camY + sy; bomb.vy = Math.abs(bomb.vy); bounced = true; }
+      else if (sy > maxY){ sy = maxY; bomb.worldY = camY + sy; bomb.vy = -Math.abs(bomb.vy); bounced = true; }
+      if (bounced) bomb.bounces += 1;
     }
+
+    bomb.x = bomb.worldX - camX;
+    bomb.y = bomb.worldY - camY;
+    if (bombHitsEnemy()) return;
   } else {
-    // expand shockwave
+    bomb.x = bomb.worldX - camX;
+    bomb.y = bomb.worldY - camY;
     bomb.rad += (560 + 220 * FUNK) * dt;
     bomb.alpha = Math.max(0, bomb.alpha - dt * 0.60);
 
-    // Apply damage + knockback ONCE at the start of explosion
     if (!bomb.didDamage){
       bomb.didDamage = true;
-
-      // Radius: 1.7 enemy widths (use average current enemy size or fallback)
-      const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
+      const enemySize = enemies.length ? enemies.reduce((s,e)=>s+(e.size || e.w || 44),0)/enemies.length : 44;
       const radius = enemySize * 1.7;
-
-      // v1.96: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
       const BOMB_DAMAGE = 2;
 
       for (let i = enemies.length - 1; i >= 0; i--){
         const e = enemies[i];
         if (e.dying) continue;
-        const dx = e.x - bomb.x;
-        const dy = e.y - bomb.y;
+        const ex = (e.mazeMob && typeof e.worldX === "number") ? e.worldX : e.x;
+        const ey = (e.mazeMob && typeof e.worldY === "number") ? e.worldY : e.y;
+        const dx = ex - bomb.worldX;
+        const dy = ey - bomb.worldY;
         const d2 = dx*dx + dy*dy;
 
         if (d2 <= radius*radius){
-          // damage/kill (flash red, then fade out if killed)
           enemyApplyDamage(e, BOMB_DAMAGE, "bomb");
         } else {
-          // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
-          const r2 = (radius * 2.2);
+          const r2 = radius * 2.2;
           if (d2 <= r2*r2){
             const d = Math.max(1, Math.sqrt(d2));
             const push = (radius * 0.55) / d;
-            e.col += (dx / d) * push * 0.02;
-            e.row += (dy / d) * push * 0.02;
+            if (e.mazeMob && typeof e.worldX === "number"){
+              e.worldX += (dx / d) * push;
+              e.worldY += (dy / d) * push;
+            } else {
+              e.col += (dx / d) * push * 0.02;
+              e.row += (dy / d) * push * 0.02;
+            }
+          }
+        }
+      }
+
+      if (ufo && ufo.fade <= 0){
+        const ux = (typeof ufo.worldX === "number") ? ufo.worldX : ufo.x;
+        const uy = (typeof ufo.worldY === "number") ? ufo.worldY : ufo.y;
+        const udx = ux - bomb.worldX;
+        const udy = uy - bomb.worldY;
+        if ((udx*udx + udy*udy) <= radius*radius){
+          ufo.hits += 1;
+          ufo.stage = Math.min(3, ufo.hits);
+          if (ufo.hits >= 3){
+            ufo.fade = 0.0001;
           }
         }
       }

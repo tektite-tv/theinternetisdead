@@ -343,18 +343,40 @@ body.invert-colors {
   <div id="pausePanel">
     <div id="pauseTitle">PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
-    <button id="btnPauseOpenChat" type="button" style="width: 100%;
+
+    <!-- v1.96: Pause command input -->
+    <input id="pauseCommand" type="text" autocomplete="off" spellcheck="false"
+      placeholder="Type a command… (e.g. /help)" style="width: 100%;
+        max-width: 420px;
+        box-sizing: border-box;
+        margin-top: 14px;
+        padding: 10px 12px;
+        font-family: monospace;
+        font-size: 16px;
+        color: #00ff66;
+        background: rgba(0,0,0,0.65);
+        border: 2px solid rgba(0,255,0,0.45);
+        border-radius: 12px;
+        outline: none;
+        pointer-events: auto;" />
+
+    <div id="pauseCmdSuggest" style="width: 100%;
       max-width: 420px;
-      background: rgba(0,0,0,.85);
-      color: #0f0;
-      border: 2px solid rgba(0,255,0,.35);
-      outline: none;
-      padding: 12px 14px;
-      border-radius: 10px;
-      font: 700 14px/1.2 \"Courier New\", monospace;
-      box-shadow: 0 0 0 1px rgba(0,255,0,.08) inset, 0 0 14px rgba(0,255,0,.08);
-      cursor: pointer;
-    ">Press here to enter commands.</button>
+      box-sizing: border-box;
+      margin: 8px auto 0;
+      text-align: left;
+      font-family: monospace;
+      font-size: 14px;
+      color: #b6ffcf;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(0,255,0,0.25);
+      border-radius: 12px;
+      padding: 8px 10px;
+      display: none;
+      pointer-events: auto;
+      max-height: 180px;
+      overflow: auto;
+      box-shadow: 0 0 18px rgba(0,255,0,0.08);"></div>
     <button id="btnPauseQuit" style="
       margin-top:16px;
       font-family:monospace;
@@ -699,7 +721,7 @@ const fxCanvas = document.createElement("canvas");
 const fxCtx = fxCanvas.getContext("2d");
 
 // v1.96: allow disabling post-processing via /video_fx
-let VIDEO_FX_ENABLED = false;
+let VIDEO_FX_ENABLED = true;
 
 // Screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
@@ -811,9 +833,7 @@ let hudVisible = false;
 // =======================
 const pauseOverlay = document.getElementById("pauseOverlay");
 
-const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
-const pauseCommand = null;
-const pauseCmdSuggest = null;
+const pauseCommand = document.getElementById("pauseCommand");
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -821,6 +841,7 @@ if (pauseCloseBtn){
     if (typeof togglePause === "function") togglePause();
   });
 }
+const pauseCmdSuggest = document.getElementById("pauseCmdSuggest");
 let isPaused = false;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
@@ -837,31 +858,6 @@ if (btnPauseResume){
   btnPauseResume.addEventListener("click", () => {
     // Resume gameplay (same as pressing ESC)
     togglePause();
-  });
-}
-
-function requestOpenChatFromPause(){
-  setPaused(false);
-  try{
-    if (window.parent && window.parent !== window){
-      window.parent.postMessage({ type: "openChatFromChild", seedSlash: true }, "*");
-      return;
-    }
-  }catch(e){}
-  try{
-    const slashEvent = new KeyboardEvent("keydown", {
-      key: "/",
-      code: "Slash",
-      bubbles: true,
-      cancelable: true
-    });
-    window.dispatchEvent(slashEvent);
-    document.dispatchEvent(slashEvent);
-  }catch(e){}
-}
-if (btnPauseOpenChat){
-  btnPauseOpenChat.addEventListener("click", () => {
-    requestOpenChatFromPause();
   });
 }
 
@@ -1749,6 +1745,7 @@ function drawUFO(){
   ctx.restore();
 }
 
+
 function dropBomb(){
   if (isPaused) return;
   if (!infiniteModeActive && bombsCount <= 0) return;
@@ -1757,28 +1754,22 @@ function dropBomb(){
   bombsCount = 0;
   powerupSlot.style.display = "none";
 
-  // v1.96: Bomb is now a short-range "shot" that travels a bit in the aim direction.
-  // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
-
   const spawnDist = player.w * 0.55;
-  const maxTravel = 140;          // "short distance ahead" (px)
-  const speed = 900;              // px/sec while flying (feels snappy)
+  const speed = 900;
 
   bomb = {
     x: player.x + dx * spawnDist,
     y: player.y + dy * spawnDist,
     vx: dx * speed,
     vy: dy * speed,
-    travel: 0,
-    maxTravel,
     r: 12,
-
-    mode: "flying",               // "flying" -> "armed" -> "exploding"
+    ttl: 6.0,
+    bounces: 0,
+    mode: "flying",
     flashT: 0,
     flashOn: true,
-
     exploding: false,
     rad: 0,
     alpha: 0.0
@@ -1795,15 +1786,17 @@ function explodeBomb(){
 
 function bombHitsEnemy(){
   if (!bomb || bomb.exploding) return false;
-  // Check contact against all enemies (both while flying and while armed).
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
     if (e.dying) continue;
     const rx = e.x - e.w/2, ry = e.y - e.h/2;
-
-    // Treat bomb as a circle hitting an enemy rect.
     if (circleRect(bomb.x, bomb.y, bomb.r, rx, ry, e.w, e.h)){
-      // Detonate at the point of contact.
+      explodeBomb();
+      return true;
+    }
+  }
+  if (ufo && ufo.fade <= 0){
+    if (circleRect(bomb.x, bomb.y, bomb.r, ufo.x - 16, ufo.y - 9, 32, 18)){
       explodeBomb();
       return true;
     }
@@ -1814,7 +1807,6 @@ function bombHitsEnemy(){
 function updateBomb(dt){
   if (!bomb) return;
 
-  // Flash toggle (used for both flying + armed for readability)
   bomb.flashT += dt;
   if (bomb.flashT >= 0.12){
     bomb.flashT -= 0.12;
@@ -1822,43 +1814,35 @@ function updateBomb(dt){
   }
 
   if (!bomb.exploding){
-    if (bomb.mode === "flying"){
-      // Move forward for a short distance.
-      const stepX = bomb.vx * dt;
-      const stepY = bomb.vy * dt;
+    bomb.ttl -= dt;
+    if (bomb.ttl <= 0){ bomb = null; return; }
 
-      bomb.x += stepX;
-      bomb.y += stepY;
+    const stepX = bomb.vx * dt;
+    const stepY = bomb.vy * dt;
+    bomb.x += stepX;
+    bomb.y += stepY;
 
-      bomb.travel += Math.hypot(stepX, stepY);
+    const minX = bomb.r;
+    const maxX = canvas.width - bomb.r;
+    const minY = bomb.r;
+    const maxY = canvas.height - bomb.r;
 
-      // If it hits an enemy while flying, detonate instantly.
-      if (bombHitsEnemy()) return;
+    let bounced = false;
+    if (bomb.x < minX){ bomb.x = minX; bomb.vx = Math.abs(bomb.vx); bounced = true; }
+    else if (bomb.x > maxX){ bomb.x = maxX; bomb.vx = -Math.abs(bomb.vx); bounced = true; }
+    if (bomb.y < minY){ bomb.y = minY; bomb.vy = Math.abs(bomb.vy); bounced = true; }
+    else if (bomb.y > maxY){ bomb.y = maxY; bomb.vy = -Math.abs(bomb.vy); bounced = true; }
+    if (bounced) bomb.bounces += 1;
 
-      // After maxTravel, stop and become an "armed mine" that detonates on contact.
-      if (bomb.travel >= bomb.maxTravel){
-        bomb.mode = "armed";
-        bomb.vx = 0;
-        bomb.vy = 0;
-      }
-    } else if (bomb.mode === "armed"){
-      // Stationary: detonate on first enemy contact.
-      bombHitsEnemy();
-    }
+    if (bombHitsEnemy()) return;
   } else {
-    // expand shockwave
     bomb.rad += (560 + 220 * FUNK) * dt;
     bomb.alpha = Math.max(0, bomb.alpha - dt * 0.60);
 
-    // Apply damage + knockback ONCE at the start of explosion
     if (!bomb.didDamage){
       bomb.didDamage = true;
-
-      // Radius: 1.7 enemy widths (use average current enemy size or fallback)
       const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
       const radius = enemySize * 1.7;
-
-      // v1.96: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
       const BOMB_DAMAGE = 2;
 
       for (let i = enemies.length - 1; i >= 0; i--){
@@ -1869,16 +1853,26 @@ function updateBomb(dt){
         const d2 = dx*dx + dy*dy;
 
         if (d2 <= radius*radius){
-          // damage/kill (flash red, then fade out if killed)
           enemyApplyDamage(e, BOMB_DAMAGE, "bomb");
         } else {
-          // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
           const r2 = (radius * 2.2);
           if (d2 <= r2*r2){
             const d = Math.max(1, Math.sqrt(d2));
             const push = (radius * 0.55) / d;
             e.col += (dx / d) * push * 0.02;
             e.row += (dy / d) * push * 0.02;
+          }
+        }
+      }
+
+      if (ufo && ufo.fade <= 0){
+        const ux = ufo.x - bomb.x;
+        const uy = ufo.y - bomb.y;
+        if ((ux*ux + uy*uy) <= radius*radius){
+          ufo.hits += 1;
+          ufo.stage = Math.min(3, ufo.hits);
+          if (ufo.hits >= 3){
+            ufo.fade = 0.0001;
           }
         }
       }
@@ -2129,8 +2123,8 @@ const btnApply = document.getElementById("btnApply");
 
   const speedVal = document.getElementById("speedVal");
   // Saved settings (persist for the session)
-  let START_LIVES = 3;
-  let START_HEARTS = 4;
+  let START_LIVES = 1;
+  let START_HEARTS = 3;
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
   // v1.96: game speed slider (1-10). 5 = 1.0x.
@@ -2193,6 +2187,8 @@ function showMenu(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
+  const heartsEl = document.getElementById("heartsHud");
+  if (heartsEl) heartsEl.style.display = "none";
 
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
@@ -2207,6 +2203,8 @@ function showWinOverlay(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
+  const heartsEl = document.getElementById("heartsHud");
+  if (heartsEl) heartsEl.style.display = "none";
   stopMusic();
 }
 
@@ -2244,6 +2242,8 @@ function showOptions(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
+  const heartsEl = document.getElementById("heartsHud");
+  if (heartsEl) heartsEl.style.display = "none";
 
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
@@ -2263,7 +2263,8 @@ function startGame(){
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "block";
-
+  const heartsEl = document.getElementById("heartsHud");
+  if (heartsEl) heartsEl.style.display = "block";
 
   // v1.96.x: Reset run timer at the start of each game
   runTimer = 0;
@@ -2316,7 +2317,7 @@ bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
 
-  // Preserve the configured START_BOMBS value at game start.
+  bombsCount = 0;
   bomb = null;
   ufo = null;
 
@@ -4063,6 +4064,15 @@ if (isDragonEnemy(e)){
 let lastT = performance.now();
 
 function updateHearts(){
+  const el = document.getElementById("heartsHud");
+  if (!el) return;
+  if (gameState !== STATE.PLAYING){
+    el.style.display = "none";
+    el.textContent = "";
+    return;
+  }
+  el.style.display = "block";
+
   // v1.96: Hearts are configurable (MAX_HEARTS), and shields/bomb-armor show here too.
   const maxH = Math.max(1, MAX_HEARTS|0);
   const dmg = Math.max(0.0001, HIT_DAMAGE || (1/maxH));
@@ -4093,8 +4103,7 @@ function updateHearts(){
   // v1.96: infinite marker so you remember you're cheating
   if (infiniteModeActive) out += "  ♾️";
 
-  const el = document.getElementById("heartsHud");
-  if (el) el.textContent = out.trim();
+  el.textContent = out.trim();
 }
 
 function loop(t){
@@ -4141,7 +4150,7 @@ font-size:28px;
 letter-spacing:6px;
 pointer-events:none;
 z-index:9999;
-">❤️ ❤️ ❤️ ❤️</div>
+"></div>
 </body>
 
 </html>
