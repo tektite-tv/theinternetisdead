@@ -2110,7 +2110,7 @@ const uiRoot = document.getElementById("uiRoot");
 const startMenu = document.getElementById("startMenu");
 const optionsMenu = document.getElementById("optionsMenu");
 const assetStatus = document.getElementById("assetStatus");
-const heartsHud = document.getElementById("heartsHud");
+function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 
 const btnStart = document.getElementById("btnStart");
 const btnOptions = document.getElementById("btnOptions");
@@ -2200,7 +2200,7 @@ function showMenu(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  if (heartsHud) heartsHud.style.display = "none";
+  { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
 
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
@@ -2215,7 +2215,7 @@ function showWinOverlay(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  if (heartsHud) heartsHud.style.display = "none";
+  { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
   stopMusic();
 }
 
@@ -2253,7 +2253,7 @@ function showOptions(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  if (heartsHud) heartsHud.style.display = "none";
+  { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
 
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
@@ -2273,7 +2273,7 @@ function startGame(){
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "block";
-  if (heartsHud) heartsHud.style.display = "block";
+  { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "block"; }
 
   // v1.96.x: Reset run timer at the start of each game
   runTimer = 0;
@@ -4143,7 +4143,6 @@ requestAnimationFrame(loop);
 </script>
 
 <div id="heartsHud" style="
-display:none;
 position:fixed;
 bottom:12px;
 left:50%;
