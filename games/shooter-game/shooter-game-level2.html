@@ -1927,14 +1927,8 @@ function dropBomb(){
   if (!infiniteModeActive && bombsCount <= 0) return;
   if (bomb) return; // only one active
 
-  if (!infiniteModeActive){
-    bombsCount = Math.max(0, bombsCount - 1);
-  }
+  if (!infiniteModeActive) bombsCount = Math.max(0, bombsCount - 1);
   powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
-  if (powerupHint){
-    if (infiniteModeActive) powerupHint.textContent = "Press Q (∞)";
-    else powerupHint.textContent = bombsCount > 0 ? ("Press Q" + (bombsCount > 1 ? (" x" + bombsCount) : "")) : "";
-  }
 
   // v1.96: Bomb is now a short-range "shot" that travels a bit in the aim direction.
   // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
