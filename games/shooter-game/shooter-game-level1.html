@@ -1777,25 +1777,23 @@ function dropBomb(){
   bombsCount = 0;
   powerupSlot.style.display = "none";
 
-  // v1.96: Bomb is now a short-range "shot" that travels a bit in the aim direction.
-  // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
-
   const spawnDist = player.w * 0.55;
-  const maxTravel = 140;          // "short distance ahead" (px)
-  const speed = 900;              // px/sec while flying (feels snappy)
+  const speed = 900;
 
   bomb = {
     x: player.x + dx * spawnDist,
     y: player.y + dy * spawnDist,
     vx: dx * speed,
     vy: dy * speed,
-    travel: 0,
-    maxTravel,
     r: 12,
+    bounceCount: 0,
+    maxBounces: 24,
+    life: 0,
+    maxLife: 8,
 
-    mode: "flying",               // "flying" -> "armed" -> "exploding"
+    mode: "flying",
     flashT: 0,
     flashOn: true,
 
@@ -1815,26 +1813,36 @@ function explodeBomb(){
 
 function bombHitsEnemy(){
   if (!bomb || bomb.exploding) return false;
-  // Check contact against all enemies (both while flying and while armed).
+
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
     if (e.dying) continue;
     const rx = e.x - e.w/2, ry = e.y - e.h/2;
-
-    // Treat bomb as a circle hitting an enemy rect.
     if (circleRect(bomb.x, bomb.y, bomb.r, rx, ry, e.w, e.h)){
-      // Detonate at the point of contact.
       explodeBomb();
       return true;
     }
   }
+
+  if (ufo && ufo.fade === 0){
+    const dxU = bomb.x - ufo.x;
+    const dyU = bomb.y - ufo.y;
+    const rrU = bomb.r + ufo.r;
+    if (dxU * dxU + dyU * dyU <= rrU * rrU){
+      ufo.hits += 1;
+      ufo.stage = Math.min(3, ufo.hits);
+      if (ufo.hits >= 3) ufo.fade = 0.001;
+      explodeBomb();
+      return true;
+    }
+  }
+
   return false;
 }
 
 function updateBomb(dt){
   if (!bomb) return;
 
-  // Flash toggle (used for both flying + armed for readability)
   bomb.flashT += dt;
   if (bomb.flashT >= 0.12){
     bomb.flashT -= 0.12;
@@ -1843,42 +1851,46 @@ function updateBomb(dt){
 
   if (!bomb.exploding){
     if (bomb.mode === "flying"){
-      // Move forward for a short distance.
-      const stepX = bomb.vx * dt;
-      const stepY = bomb.vy * dt;
-
-      bomb.x += stepX;
-      bomb.y += stepY;
-
-      bomb.travel += Math.hypot(stepX, stepY);
-
-      // If it hits an enemy while flying, detonate instantly.
-      if (bombHitsEnemy()) return;
-
-      // After maxTravel, stop and become an "armed mine" that detonates on contact.
-      if (bomb.travel >= bomb.maxTravel){
-        bomb.mode = "armed";
-        bomb.vx = 0;
-        bomb.vy = 0;
+      bomb.life += dt;
+      if (bomb.life >= bomb.maxLife || bomb.bounceCount > bomb.maxBounces){
+        explodeBomb();
+        return;
       }
-    } else if (bomb.mode === "armed"){
-      // Stationary: detonate on first enemy contact.
-      bombHitsEnemy();
+
+      let nextX = bomb.x + bomb.vx * dt;
+      let nextY = bomb.y + bomb.vy * dt;
+      const minX = bomb.r;
+      const maxX = canvas.width - bomb.r;
+      const minY = bomb.r;
+      const maxY = canvas.height - bomb.r;
+      let bounced = false;
+
+      if (nextX <= minX || nextX >= maxX){
+        bomb.vx *= -1;
+        nextX = Math.max(minX, Math.min(maxX, nextX));
+        bounced = true;
+      }
+      if (nextY <= minY || nextY >= maxY){
+        bomb.vy *= -1;
+        nextY = Math.max(minY, Math.min(maxY, nextY));
+        bounced = true;
+      }
+      if (bounced) bomb.bounceCount += 1;
+
+      bomb.x = nextX;
+      bomb.y = nextY;
+
+      if (bombHitsEnemy()) return;
     }
   } else {
-    // expand shockwave
     bomb.rad += (560 + 220 * FUNK) * dt;
     bomb.alpha = Math.max(0, bomb.alpha - dt * 0.60);
 
-    // Apply damage + knockback ONCE at the start of explosion
     if (!bomb.didDamage){
       bomb.didDamage = true;
 
-      // Radius: 1.7 enemy widths (use average current enemy size or fallback)
       const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
       const radius = enemySize * 1.7;
-
-      // v1.96: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
       const BOMB_DAMAGE = 2;
 
       for (let i = enemies.length - 1; i >= 0; i--){
@@ -1889,10 +1901,8 @@ function updateBomb(dt){
         const d2 = dx*dx + dy*dy;
 
         if (d2 <= radius*radius){
-          // damage/kill (flash red, then fade out if killed)
           enemyApplyDamage(e, BOMB_DAMAGE, "bomb");
         } else {
-          // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
           const r2 = (radius * 2.2);
           if (d2 <= r2*r2){
             const d = Math.max(1, Math.sqrt(d2));
