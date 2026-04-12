@@ -66,9 +66,9 @@
   ======================= */
   .cornerSlot{
     position:absolute;
-    min-width:68px;
-    height:68px;
-    padding:6px 8px;
+    min-width:120px;
+    height:86px;
+    padding:8px 10px;
     border:2px solid rgba(0,255,0,0.55);
     border-radius:12px;
     background: rgba(0,0,0,0.55);
@@ -82,44 +82,30 @@
   }
   .cornerSlot .subtxt{
     font-family: "Courier New", monospace;
-    font-size:14px;
+    font-size:12px;
     line-height:1;
     opacity:0.95;
     color:#0f0;
     text-align:center;
-    font-weight:bold;
   }
   #livesSlot img{
-    width:28px; height:28px;
+    width:40px; height:40px;
     image-rendering:pixelated;
     filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
-    flex:0 0 auto;
   }
 
 
   .livesButton{
     flex-direction:row;
     justify-content:center;
-    gap:6px;
+    gap:8px;
   }
   .livesLabel{
     font-family:"Courier New", monospace;
-    font-size:11px;
+    font-size:12px;
     color:#00ff66;
     opacity:0.95;
     white-space:nowrap;
-    font-weight:bold;
-  }
-
-  #livesText{
-    min-width:22px;
-  }
-  #powerupSlot{
-    min-width:68px;
-  }
-  #powerupEmoji{
-    font-size:28px !important;
-    line-height:1;
   }
 
   #deathOverlay{
@@ -668,7 +654,7 @@ const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
 const musicBg = new Audio(AUDIO_BG_MUSIC);
 musicBg.loop = true;
 musicBg.preload = "auto";
-musicBg.volume = 0.5;
+musicBg.volume = 0.6;
 
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
@@ -790,7 +776,7 @@ const fxCtx = fxCanvas.getContext("2d");
 // v1.96: allow disabling post-processing via /video_fx
 let VIDEO_FX_ENABLED = false;
 
-// v1.96: "Tab" key screen-glitch spiral burst
+// v1.96: "R" key screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
 const GLITCH_SPIRAL_DUR = 2.8;
 function triggerGlitchSpiral(){
@@ -967,7 +953,7 @@ if (btnPauseOpenChat){
   });
 }
 
-// v1.96: temporary "glitch spiral" post effect (triggered by Tab key)
+// v1.96: temporary "glitch spiral" post effect (triggered by R key)
 // Uses the existing fxCanvas as a scratch buffer.
 // strength: 0..1 (1 = strongest)
 function applyGlitchSpiral(strength){
@@ -1089,8 +1075,7 @@ const PAUSE_COMMANDS = {
   "/invert": "Toggle inverted colors",
   "/lives": "Set lives to a number or infinite (e.g. /lives 3 or /lives infinite)",
   "/shields": "Set shields to a number or infinite (e.g. /shields 2 or /shields infinite)",
-  "/video_fx": "Enable/disable chromatic aberration + hue shifting",
-  "/log": "Show the latest chat interface update timestamp and most recent change summary"
+  "/video_fx": "Enable/disable chromatic aberration + hue shifting"
 };
 
 // v1.96: Fullscreen toggle (real browser fullscreen)
@@ -1259,10 +1244,6 @@ function execPauseCommand(cmd){
       return { ok:true, message:"/video_fx disabled" };
     }
     return { ok:false, message:"Usage: /video_fx enabled|disabled" };
-  }
-
-  if (raw === "/log"){
-    return { ok:true, message:"Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /log output to this level's in-game chat. Previous chat change: replaced the ESC pause-menu command bar with a button that says 'Press here to enter commands.' and opens the actual chat UI." };
   }
 
   // v1.96: /lives [#|infinite]
@@ -1944,23 +1925,25 @@ function dropBomb(){
   bombsCount = 0;
   powerupSlot.style.display = "none";
 
+  // v1.96: Bomb is now a short-range "shot" that travels a bit in the aim direction.
+  // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
+
   const spawnDist = player.w * 0.55;
-  const speed = 900;
+  const maxTravel = 140;          // "short distance ahead" (px)
+  const speed = 900;              // px/sec while flying (feels snappy)
 
   bomb = {
     x: player.x + dx * spawnDist,
     y: player.y + dy * spawnDist,
     vx: dx * speed,
     vy: dy * speed,
+    travel: 0,
+    maxTravel,
     r: 12,
-    bounceCount: 0,
-    maxBounces: 48,
-    life: 0,
-    maxLife: 10,
 
-    mode: "flying",
+    mode: "flying",               // "flying" -> "armed" -> "exploding"
     flashT: 0,
     flashOn: true,
 
@@ -1980,36 +1963,26 @@ function explodeBomb(){
 
 function bombHitsEnemy(){
   if (!bomb || bomb.exploding) return false;
-
+  // Check contact against all enemies (both while flying and while armed).
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
     if (e.dying) continue;
     const rx = e.x - e.w/2, ry = e.y - e.h/2;
+
+    // Treat bomb as a circle hitting an enemy rect.
     if (circleRect(bomb.x, bomb.y, bomb.r, rx, ry, e.w, e.h)){
+      // Detonate at the point of contact.
       explodeBomb();
       return true;
     }
   }
-
-  if (ufo && ufo.fade === 0){
-    const dxU = bomb.x - ufo.x;
-    const dyU = bomb.y - ufo.y;
-    const rrU = bomb.r + ufo.r;
-    if (dxU * dxU + dyU * dyU <= rrU * rrU){
-      ufo.hits += 1;
-      ufo.stage = Math.min(3, ufo.hits);
-      if (ufo.hits >= 3) ufo.fade = 0.001;
-      explodeBomb();
-      return true;
-    }
-  }
-
   return false;
 }
 
 function updateBomb(dt){
   if (!bomb) return;
 
+  // Flash toggle (used for both flying + armed for readability)
   bomb.flashT += dt;
   if (bomb.flashT >= 0.12){
     bomb.flashT -= 0.12;
@@ -2018,64 +1991,42 @@ function updateBomb(dt){
 
   if (!bomb.exploding){
     if (bomb.mode === "flying"){
-      bomb.life += dt;
-      if (bomb.life >= bomb.maxLife || bomb.bounceCount > bomb.maxBounces){
-        explodeBomb();
-        return;
-      }
+      // Move forward for a short distance.
+      const stepX = bomb.vx * dt;
+      const stepY = bomb.vy * dt;
 
-      const camX = playerWorldX - canvas.width / 2;
-      const camY = playerWorldY - canvas.height / 2;
-      let nextX = bomb.x + bomb.vx * dt;
-      let nextY = bomb.y + bomb.vy * dt;
-      let worldX = nextX + camX;
-      let worldY = nextY + camY;
-      let bounced = false;
+      bomb.x += stepX;
+      bomb.y += stepY;
 
-      const hitsWallX = [
-        [worldX - bomb.r, worldY - bomb.r], [worldX + bomb.r, worldY - bomb.r],
-        [worldX - bomb.r, worldY + bomb.r], [worldX + bomb.r, worldY + bomb.r],
-        [worldX - bomb.r, worldY], [worldX + bomb.r, worldY]
-      ].some(([px, py]) => isWallAtWorld(px, py));
+      bomb.travel += Math.hypot(stepX, stepY);
 
-      if (hitsWallX){
-        bomb.vx *= -1;
-        nextX = bomb.x + bomb.vx * dt;
-        worldX = nextX + camX;
-        bounced = true;
-      }
-
-      const hitsWallY = [
-        [worldX - bomb.r, worldY - bomb.r], [worldX + bomb.r, worldY - bomb.r],
-        [worldX - bomb.r, worldY + bomb.r], [worldX + bomb.r, worldY + bomb.r],
-        [worldX, worldY - bomb.r], [worldX, worldY + bomb.r]
-      ].some(([px, py]) => isWallAtWorld(px, py));
-
-      if (hitsWallY){
-        bomb.vy *= -1;
-        nextY = bomb.y + bomb.vy * dt;
-        worldY = nextY + camY;
-        bounced = true;
-      }
-
-      if (bounced) bomb.bounceCount += 1;
-
-      bomb.x = nextX;
-      bomb.y = nextY;
-
+      // If it hits an enemy while flying, detonate instantly.
       if (bombHitsEnemy()) return;
+
+      // After maxTravel, stop and become an "armed mine" that detonates on contact.
+      if (bomb.travel >= bomb.maxTravel){
+        bomb.mode = "armed";
+        bomb.vx = 0;
+        bomb.vy = 0;
+      }
     } else if (bomb.mode === "armed"){
+      // Stationary: detonate on first enemy contact.
       bombHitsEnemy();
     }
   } else {
+    // expand shockwave
     bomb.rad += (560 + 220 * FUNK) * dt;
     bomb.alpha = Math.max(0, bomb.alpha - dt * 0.60);
 
+    // Apply damage + knockback ONCE at the start of explosion
     if (!bomb.didDamage){
       bomb.didDamage = true;
 
+      // Radius: 1.7 enemy widths (use average current enemy size or fallback)
       const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
       const radius = enemySize * 1.7;
+
+      // v1.96: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
       const BOMB_DAMAGE = 2;
 
       for (let i = enemies.length - 1; i >= 0; i--){
@@ -2086,8 +2037,10 @@ function updateBomb(dt){
         const d2 = dx*dx + dy*dy;
 
         if (d2 <= radius*radius){
+          // damage/kill (flash red, then fade out if killed)
           enemyApplyDamage(e, BOMB_DAMAGE, "bomb");
         } else {
+          // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
           const r2 = (radius * 2.2);
           if (d2 <= r2*r2){
             const d = Math.max(1, Math.sqrt(d2));
@@ -3832,8 +3785,8 @@ window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
 
-  // v1.96: Press Tab anywhere to trigger a temporary glitch spiral burst
-  if (e.key === "Tab"){
+  // v1.96: Press R anywhere to trigger a temporary glitch spiral burst
+  if (e.key === "r" || e.key === "R"){
     triggerGlitchSpiral();
     e.preventDefault();
   }
