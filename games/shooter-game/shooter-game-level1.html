@@ -45,7 +45,8 @@
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
 
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
-  #optionsMenu.panel{ max-height:88vh; overflow:auto; }
+  #optionsMenu.panel{ max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  #optionsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #optionsMenu .title{ font-size:22px; margin:2px 0 8px; }
   #optionsMenu .optionsGrid{ gap:8px; }
   #optionsMenu .optRow{ padding:8px 10px; }
@@ -317,7 +318,7 @@ body.invert-colors {
 <div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
   <span class="livesLabel">LIVES:</span>
   <img src="/media/images/gifs/bananarama.gif" alt="lives"/>
-  <div id="livesText" class="subtxt">x3</div>
+  <div id="livesText" class="subtxt">x1</div>
 </div>
 
 <div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
@@ -404,13 +405,13 @@ body.invert-colors {
     
     <div class="optionsGrid">
       <div class="optRow">
-        <div class="optLabel"><span>Starting Lives</span><span id="livesVal">3</span></div>
-        <input id="livesSlider" type="range" min="0" max="20" value="3" step="1" />
+        <div class="optLabel"><span>Starting Lives</span><span id="livesVal">1</span></div>
+        <input id="livesSlider" type="range" min="0" max="20" value="1" step="1" />
       </div>
 
       <div class="optRow">
-        <div class="optLabel"><span>Starting Hearts</span><span id="heartsVal">4</span></div>
-        <input id="heartsSlider" type="range" min="1" max="12" value="4" step="1" />
+        <div class="optLabel"><span>Starting Hearts</span><span id="heartsVal">3</span></div>
+        <input id="heartsSlider" type="range" min="1" max="12" value="3" step="1" />
         <div class="hint">Hearts = max hits per life. More hearts = smaller damage per hit.</div>
       </div>
 
@@ -1408,7 +1409,7 @@ const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 let lives = 0; // extra lives (decremented when health hits 0)
 let frogKills = 0; // counts frog kills; every 3 frogs awards +1 life
 let health = 1.0; // 0..1 (4 hits -> 0)
-let MAX_HEARTS = 4; // v1.96: configurable hearts per life
+let MAX_HEARTS = 3; // v1.96: configurable hearts per life
 let HIT_DAMAGE = 0.25; // 25% per hit (4 hearts = one life)
 
 // =======================
@@ -2134,8 +2135,8 @@ const btnApply = document.getElementById("btnApply");
 
   const speedVal = document.getElementById("speedVal");
   // Saved settings (persist for the session)
-  let START_LIVES = 3;
-  let START_HEARTS = 4;
+  let START_LIVES = 1;
+  let START_HEARTS = 3;
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
   // v1.96: game speed slider (1-10). 5 = 1.0x.
