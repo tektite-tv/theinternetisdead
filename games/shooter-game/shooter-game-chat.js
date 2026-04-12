@@ -45,6 +45,13 @@
     }
 
     function openChatFromParent(options = {}) {
+      try {
+        if (tektiteFrame && tektiteFrame.contentWindow) {
+          tektiteFrame.contentWindow.postMessage({
+            type: 'tektite:pause-for-chat'
+          }, '*');
+        }
+      } catch (error) {}
       setChatFrameVisible(true);
       pendingChatOpenOptions = { focus: options.focus !== false, seedSlash: !!options.seedSlash };
       flushPendingChatOpen();

@@ -865,7 +865,7 @@ if (btnPauseResume){
 }
 
 function requestOpenChatFromPause(){
-  setPaused(false);
+  try{ setPaused(true); }catch(e){}
   try{
     if (window.parent && window.parent !== window){
       window.parent.postMessage({ type: "openChatFromChild", seedSlash: true }, "*");
@@ -1297,6 +1297,14 @@ function execPauseCommand(cmd){
 window.addEventListener("message", (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
+
+  if (data.type === "tektite:pause-for-chat"){
+    if (gameState === STATE.PLAYING && !isPaused && !isDead && !(deathOverlay && deathOverlay.style.display === "flex")){
+      setPaused(true);
+    }
+    return;
+  }
+
   if (data.type !== "tektite:execute-command") return;
 
   const command = String(data.command || "").trim();
