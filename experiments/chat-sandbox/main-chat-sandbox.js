@@ -204,8 +204,7 @@ function registerPageCommands(){
             { name: '/clock_date', usage: '/clock_date ', desc: 'set the overlay clock to a manual date string', execute: false },
             { name: '/clock_reset', usage: '/clock_reset', desc: 'reset the overlay clock to live Toronto time', execute: true },
             { name: '/clock_zone', usage: '/clock_zone America/Toronto', desc: 'sync the overlay clock to a named timezone', execute: false, suggestions: allClockZones },
-            { name: '/games', usage: '/games', desc: 'go to the games index at theinternetisdead.org/games', execute: true },
-            { name: '/experiments', usage: '/experiments', desc: 'go to the experiments index at theinternetisdead.org/experiments', execute: true }
+            { name: '/log', usage: '/log', desc: 'show the latest chat interface update timestamp and most recent change summary for this page', execute: true }
         ]
     });
 }
@@ -254,12 +253,6 @@ window.addEventListener('message', (event) => {
                 postToChatSandbox({ type: 'pageChatResult', command: '/clock_reset', message: '/clock_reset executed: synced to America/Toronto', announce: true });
                 return;
             }
-            if (commandName === '/games' || commandName === '/experiments') {
-                window.location.href = commandName === '/games'
-                    ? 'https://theinternetisdead.org/games'
-                    : 'https://theinternetisdead.org/experiments';
-                return;
-            }
             if (commandName === '/clock_zone') {
                 const nextZone = sanitizeClockZone(commandValue);
                 if (!commandValue) {
@@ -272,6 +265,16 @@ window.addEventListener('message', (event) => {
                 }
                 setOverlayClockStateFromPage({ zone: nextZone, manualTime: '', manualDate: '' });
                 postToChatSandbox({ type: 'pageChatResult', command: '/clock_zone', message: `/clock_zone executed: synced to ${nextZone}`, announce: true });
+                return;
+            }
+            if (commandName === '/log') {
+                postToChatSandbox({
+                    type: 'pageChatResult',
+                    command: '/log',
+                    message: 'Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /games and /experiments navigation commands to the standalone chat-sandbox controller. Previous chat change: fixed Tab cycling so / then Tab walks the page command list instead of getting stuck on the first command.',
+                    announce: true
+                });
+                return;
             }
         }
     }

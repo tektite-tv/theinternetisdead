@@ -50,15 +50,9 @@
             execute: true
           },
           {
-            name: '/games',
-            usage: '/games',
-            desc: 'go to the games index at theinternetisdead.org/games',
-            execute: true
-          },
-          {
-            name: '/experiments',
-            usage: '/experiments',
-            desc: 'go to the experiments index at theinternetisdead.org/experiments',
+            name: '/log',
+            usage: '/log',
+            desc: 'show the latest chat interface update timestamp and most recent change summary for this page',
             execute: true
           }
         ]
@@ -147,9 +141,13 @@
         return true;
       }
 
-      if (commandName === '/games' || commandName === '/experiments') {
-        const destination = commandName === '/games' ? 'https://theinternetisdead.org/games' : 'https://theinternetisdead.org/experiments';
-        window.location.href = destination;
+      if (commandName === '/log') {
+        window.postToChatSandbox({
+          type: 'pageChatResult',
+          command: '/log',
+          message: 'Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /games and /experiments navigation commands to the index chat controller. Previous chat change: fixed Tab cycling so / then Tab walks the page command list instead of getting stuck on the first command.',
+          announce: true
+        });
         return true;
       }
 
