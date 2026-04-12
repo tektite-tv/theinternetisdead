@@ -654,7 +654,7 @@ const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
 const musicBg = new Audio(AUDIO_BG_MUSIC);
 musicBg.loop = true;
 musicBg.preload = "auto";
-musicBg.volume = 0.6;
+musicBg.volume = 0.5;
 
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
@@ -776,7 +776,7 @@ const fxCtx = fxCanvas.getContext("2d");
 // v1.96: allow disabling post-processing via /video_fx
 let VIDEO_FX_ENABLED = false;
 
-// v1.96: "R" key screen-glitch spiral burst
+// v1.96: "Tab" key screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
 const GLITCH_SPIRAL_DUR = 2.8;
 function triggerGlitchSpiral(){
@@ -953,7 +953,7 @@ if (btnPauseOpenChat){
   });
 }
 
-// v1.96: temporary "glitch spiral" post effect (triggered by R key)
+// v1.96: temporary "glitch spiral" post effect (triggered by Tab key)
 // Uses the existing fxCanvas as a scratch buffer.
 // strength: 0..1 (1 = strongest)
 function applyGlitchSpiral(strength){
@@ -3790,8 +3790,8 @@ window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
 
-  // v1.96: Press R anywhere to trigger a temporary glitch spiral burst
-  if (e.key === "r" || e.key === "R"){
+  // v1.96: Press Tab anywhere to trigger a temporary glitch spiral burst
+  if (e.key === "Tab"){
     triggerGlitchSpiral();
     e.preventDefault();
   }
@@ -4764,7 +4764,7 @@ if (isDragonEnemy(e)){
     applyChromaticAberration(beat);
   }
 
-  // v1.96: Glitch spiral burst (R key)
+  // v1.96: Glitch spiral burst (Tab key)
   if (GLITCH_SPIRAL_T > 0){
     const strength = Math.max(0, Math.min(1, GLITCH_SPIRAL_T / GLITCH_SPIRAL_DUR));
     applyGlitchSpiral(strength);
