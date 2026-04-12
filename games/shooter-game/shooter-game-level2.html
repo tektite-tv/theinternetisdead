@@ -1481,6 +1481,9 @@ let mouseShieldHolding = false;
 let mouseFireHolding = false; // v1.96: allow holding LMB to keep firing (even while shielding)
 let gamepadShieldHolding = false;
 let shieldHolding = false; // combined (mouse OR gamepad)
+const GP_MENU_AXIS_THRESHOLD = 0.55;
+const GP_MENU_REPEAT_DELAY = 0.24;
+const GP_MENU_REPEAT_RATE = 0.12;
 // HP model (more sane than "3 hits" when bullets are flying)
 let shieldHP = 0;
 const SHIELD_HP_MAX = 120;             // "reasonable amount" of damage before it breaks
@@ -2404,6 +2407,147 @@ if (invertColorsCheckbox){
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
   infiniteToggle.addEventListener("change", () => {});
   syncStartOptionsLabels();
+
+const INPUT_MODE_KEYBOARD = "keyboardMouse";
+const INPUT_MODE_CONTROLLER = "controller";
+let activeInputMode = INPUT_MODE_KEYBOARD;
+
+function updateControlsDisplay(){
+  const usingController = activeInputMode === INPUT_MODE_CONTROLLER;
+  if (activeInputIndicator){
+    activeInputIndicator.textContent = usingController ? "🎮" : "⌨️";
+    activeInputIndicator.title = usingController ? "Controller active" : "Keyboard / mouse active";
+    activeInputIndicator.setAttribute("aria-label", activeInputIndicator.title);
+  }
+  if (controlsMoveValue) controlsMoveValue.textContent = usingController ? "Left Stick / D-Pad" : "A / D or ⬅ / ➡";
+  if (controlsAimValue) controlsAimValue.textContent = usingController ? "Right Stick" : "Mouse / Touch";
+  if (controlsShootValue) controlsShootValue.textContent = usingController ? "RT" : "Space / Click";
+  if (controlsShieldValue) controlsShieldValue.textContent = usingController ? "LB" : "Right Mouse Button";
+  if (controlsBombValue) controlsBombValue.textContent = usingController ? "LT" : "Q";
+  if (controlsPauseValue) controlsPauseValue.textContent = usingController ? "Start" : "ESC";
+  if (controlsMuteValue) controlsMuteValue.textContent = usingController ? "Menu only" : "M";
+  if (controlsCommandsValue) controlsCommandsValue.textContent = usingController ? "Use chat with keyboard" : "/";
+}
+
+function setActiveInputMode(mode){
+  const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
+  if (activeInputMode === nextMode) return;
+  activeInputMode = nextMode;
+  updateControlsDisplay();
+}
+
+updateControlsDisplay();
+
+let menuFocusIndex = 0;
+let optionsFocusIndex = 0;
+let gpNavRepeat = { up:0, down:0, left:0, right:0 };
+let gpNavPrevAxis = { horizontal:0, vertical:0 };
+
+function focusControllerElement(el){
+  if (!el) return;
+  document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
+  el.classList.add('controllerFocus');
+  if (typeof el.focus === 'function') { try{ el.focus({ preventScroll:true }); }catch(_){ try{ el.focus(); }catch(__){} } }
+  if (typeof el.scrollIntoView === 'function') {
+    try{ el.scrollIntoView({ block:'nearest', inline:'nearest' }); }catch(_){ }
+  }
+}
+
+function clearControllerFocus(){
+  document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
+}
+
+function getMenuControllerTargets(){
+  return [btnStart, btnOptions, btnControls].filter(Boolean);
+}
+
+function getOptionsControllerTargets(){
+  return [startWaveSelect, livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+}
+
+function syncMenuControllerFocus(){
+  const items = getMenuControllerTargets();
+  if (!items.length) return;
+  menuFocusIndex = Math.max(0, Math.min(menuFocusIndex, items.length - 1));
+  focusControllerElement(items[menuFocusIndex]);
+}
+
+function syncOptionsControllerFocus(){
+  const items = getOptionsControllerTargets();
+  if (!items.length) return;
+  optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
+  focusControllerElement(items[optionsFocusIndex]);
+}
+
+function moveMenuControllerFocus(delta){
+  const items = getMenuControllerTargets();
+  if (!items.length) return;
+  menuFocusIndex = (menuFocusIndex + delta + items.length) % items.length;
+  syncMenuControllerFocus();
+}
+
+function moveOptionsControllerFocus(delta){
+  const items = getOptionsControllerTargets();
+  if (!items.length) return;
+  optionsFocusIndex = (optionsFocusIndex + delta + items.length) % items.length;
+  syncOptionsControllerFocus();
+}
+
+function cycleSelect(selectEl, delta){
+  if (!selectEl || !selectEl.options || !selectEl.options.length) return false;
+  const current = Math.max(0, selectEl.selectedIndex);
+  const next = Math.max(0, Math.min(selectEl.options.length - 1, current + delta));
+  if (next === current) return false;
+  selectEl.selectedIndex = next;
+  selectEl.dispatchEvent(new Event('change', { bubbles:true }));
+  return true;
+}
+
+function stepRange(rangeEl, delta){
+  if (!rangeEl) return false;
+  const step = parseFloat(rangeEl.step || '1') || 1;
+  const min = parseFloat(rangeEl.min || '0');
+  const max = parseFloat(rangeEl.max || '100');
+  const current = parseFloat(rangeEl.value || '0');
+  const next = Math.max(min, Math.min(max, current + (step * delta)));
+  if (next === current) return false;
+  rangeEl.value = String(next);
+  rangeEl.dispatchEvent(new Event('input', { bubbles:true }));
+  rangeEl.dispatchEvent(new Event('change', { bubbles:true }));
+  return true;
+}
+
+function activateControllerTarget(el){
+  if (!el) return;
+  if (el === btnControls){
+    if (controlsPopup && controlsPopup.classList.contains('visible')) hideControlsPopup();
+    else showControlsPopup();
+    syncMenuControllerFocus();
+    return;
+  }
+  if (el.type === 'checkbox'){
+    el.checked = !el.checked;
+    el.dispatchEvent(new Event('change', { bubbles:true }));
+    focusControllerElement(el);
+    return;
+  }
+  if (typeof el.click === 'function') el.click();
+}
+
+function adjustControllerOption(delta){
+  const items = getOptionsControllerTargets();
+  const el = items[optionsFocusIndex];
+  if (!el) return false;
+  if (el.tagName === 'SELECT') return cycleSelect(el, delta);
+  if (el.type === 'range') return stepRange(el, delta);
+  if (el.type === 'checkbox'){
+    el.checked = delta > 0;
+    el.dispatchEvent(new Event('change', { bubbles:true }));
+    focusControllerElement(el);
+    return true;
+  }
+  return false;
+}
 function showMenu(){
   setPaused(false);
   deathYellPlayed = false;
@@ -2480,6 +2624,8 @@ function showOptions(){
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
   uiRoot.style.display = "flex";
+  optionsFocusIndex = 0;
+  syncOptionsControllerFocus();
 }
 function startGame(){
   setPaused(false);
@@ -2551,6 +2697,7 @@ bullets.length = 0;
 spawnEnemies();
   trySpawnUFO();
 
+  clearControllerFocus();
   window.focus();
 }
 
@@ -2742,6 +2889,24 @@ function gpEdge(i, nowPressed){
   return (!!nowPressed && !was);
 }
 
+function consumeMenuAxis(direction, active, dt){
+  const repeatKey = direction;
+  if (!active){
+    gpNavRepeat[repeatKey] = 0;
+    return false;
+  }
+  if (gpNavRepeat[repeatKey] <= 0){
+    gpNavRepeat[repeatKey] = GP_MENU_REPEAT_DELAY;
+    return true;
+  }
+  gpNavRepeat[repeatKey] -= dt;
+  if (gpNavRepeat[repeatKey] <= 0){
+    gpNavRepeat[repeatKey] = GP_MENU_REPEAT_RATE;
+    return true;
+  }
+  return false;
+}
+
 function pollGamepad(dt){
   const gp = getGamepad();
   gpIsConnected = !!gp;
@@ -2756,71 +2921,70 @@ function pollGamepad(dt){
 
   if (!gp){
     gpPrev = null;
+    gpNavRepeat.up = gpNavRepeat.down = gpNavRepeat.left = gpNavRepeat.right = 0;
+    gpNavPrevAxis.horizontal = 0;
+    gpNavPrevAxis.vertical = 0;
     return;
   }
 
-  // Build previous button snapshot on first sight
   if (!gpPrev || gpPrev.length !== gp.buttons.length){
     gpPrev = new Array(gp.buttons.length).fill(false);
   }
 
-  // Axes
-  const ax0 = gp.axes && gp.axes.length > 0 ? gp.axes[0] : 0; // LX
-  const ax2 = gp.axes && gp.axes.length > 2 ? gp.axes[2] : 0; // RX
-  const ax3 = gp.axes && gp.axes.length > 3 ? gp.axes[3] : 0; // RY
+  const ax0 = gp.axes && gp.axes.length > 0 ? gp.axes[0] : 0;
+  const ax1 = gp.axes && gp.axes.length > 1 ? gp.axes[1] : 0;
+  const ax2 = gp.axes && gp.axes.length > 2 ? gp.axes[2] : 0;
+  const ax3 = gp.axes && gp.axes.length > 3 ? gp.axes[3] : 0;
 
   const lx = gpDead(ax0, GP_DEADZONE);
+  const ly = gpDead(ax1, GP_DEADZONE);
   const rx = gpDead(ax2, GP_AIM_DEADZONE);
   const ry = gpDead(ax3, GP_AIM_DEADZONE);
 
-  // D-Pad left/right (14/15)
-  const dLeft  = gpBtn(gp, 14).pressed ? -1 : 0;
-  const dRight = gpBtn(gp, 15).pressed ?  1 : 0;
+  const dUp = gpBtn(gp, 12).pressed;
+  const dDown = gpBtn(gp, 13).pressed;
+  const dLeft = gpBtn(gp, 14).pressed;
+  const dRight = gpBtn(gp, 15).pressed;
 
-  gpMoveX = Math.max(-1, Math.min(1, lx + dLeft + dRight));
-
+  gpMoveX = Math.max(-1, Math.min(1, lx + (dLeft ? -1 : 0) + (dRight ? 1 : 0)));
   gpAimX = rx;
   gpAimY = ry;
 
-  // Triggers + face buttons
-  const lt = gpBtn(gp, 6).value; // LT
-  const rt = gpBtn(gp, 7).value; // RT
-  const a  = gpBtn(gp, 0).pressed; // A
-  const b  = gpBtn(gp, 1).pressed; // B
-  const x  = gpBtn(gp, 2).pressed; // X
-  const y  = gpBtn(gp, 3).pressed; // Y
-  const lb = gpBtn(gp, 4).pressed; // LB
-  const rb = gpBtn(gp, 5).pressed; // RB
-  const back  = gpBtn(gp, 8).pressed; // View/Back
-  const start = gpBtn(gp, 9).pressed; // Menu/Start
-  const lStick = gpBtn(gp, 10).pressed; // LS click
-  const rStick = gpBtn(gp, 11).pressed; // RS click
+  const lt = gpBtn(gp, 6).value;
+  const rt = gpBtn(gp, 7).value;
+  const a = gpBtn(gp, 0).pressed;
+  const b = gpBtn(gp, 1).pressed;
+  const x = gpBtn(gp, 2).pressed;
+  const y = gpBtn(gp, 3).pressed;
+  const lb = gpBtn(gp, 4).pressed;
+  const rb = gpBtn(gp, 5).pressed;
+  const back = gpBtn(gp, 8).pressed;
+  const start = gpBtn(gp, 9).pressed;
+  const lStick = gpBtn(gp, 10).pressed;
+  const rStick = gpBtn(gp, 11).pressed;
 
-  gpFireHeld = (rt > GP_TRIGGER_DEADZONE) || a;
-  gpSpeedBoostHeld = (lt > GP_TRIGGER_DEADZONE);
-  gpShieldHeld = lStick;
+  gpFireHeld = (rt > GP_TRIGGER_DEADZONE);
+  gpShieldHeld = lb;
+  gpSpeedBoostHeld = lStick;
 
-  // Consider any noticeable stick or trigger motion as input
-  if (Math.abs(lx) > 0.01 || Math.abs(rx) > 0.01 || Math.abs(ry) > 0.01 || lt > 0.05 || rt > 0.05){
+  if (Math.abs(lx) > 0.01 || Math.abs(ly) > 0.01 || Math.abs(rx) > 0.01 || Math.abs(ry) > 0.01 || lt > 0.05 || rt > 0.05 || dUp || dDown || dLeft || dRight || a || b || x || y || lb || rb || back || start || lStick || rStick){
     gpHasAnyInput = true;
+    setActiveInputMode(INPUT_MODE_CONTROLLER);
   }
 
-  // Edges (one-shot actions)
   const pressStart = gpEdge(9, start);
-  const pressBack  = gpEdge(8, back);
-  const pressX     = gpEdge(2, x);
-  const pressRB    = gpEdge(5, rb);
-  const pressY     = gpEdge(3, y);
-  const pressB     = gpEdge(1, b);
-  const pressA     = gpEdge(0, a);
-  const pressRS    = gpEdge(11, rStick);
+  const pressBack = gpEdge(8, back);
+  const pressX = gpEdge(2, x);
+  const pressY = gpEdge(3, y);
+  const pressB = gpEdge(1, b);
+  const pressA = gpEdge(0, a);
+  const pressRS = gpEdge(11, rStick);
+  const pressLT = gpEdge(6, lt > GP_TRIGGER_DEADZONE);
 
-  // Unlock audio the first time the user touches the pad
-  if ((gpHasAnyInput || pressA || pressB || pressX || pressY || pressStart || pressBack || pressRB || pressRS) && !audioUnlocked){
+  if ((gpHasAnyInput || pressA || pressB || pressX || pressY || pressStart || pressBack || pressRS || pressLT) && !audioUnlocked){
     unlockAudioOnce();
   }
 
-  // Global toggles (work anywhere sensible)
   if (pressBack){
     hudVisible = !hudVisible;
     overlay.style.display = hudVisible ? "block" : "none";
@@ -2829,30 +2993,37 @@ function pollGamepad(dt){
     toggleFullscreen();
   }
 
-  // Menu navigation
+  const navUp = consumeMenuAxis('up', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt);
+  const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
+  const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
+  const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
+
   if (gameState === STATE.MENU){
-    if (pressA) startGame();
+    if (navLeft || navUp) moveMenuControllerFocus(-1);
+    if (navRight || navDown) moveMenuControllerFocus(1);
+    if (pressA){
+      activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
+    }
+    if (pressB) hideControlsPopup();
     if (pressY) showOptions();
   } else if (gameState === STATE.OPTIONS){
+    if (navUp) moveOptionsControllerFocus(-1);
+    if (navDown) moveOptionsControllerFocus(1);
+    if (navLeft) adjustControllerOption(-1);
+    if (navRight) adjustControllerOption(1);
+    if (pressA) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
     if (pressB) showMenu();
-    if (pressA){
-      // Mirror the Apply button click
-      btnApply && btnApply.click();
-    }
   } else if (deathOverlay && deathOverlay.style.display === "flex"){
-    // Death screen: A restarts
     if (pressA) restartRun();
   } else if (gameState === STATE.PLAYING){
     if (pressStart){
       togglePause();
     }
-    // One-shot bomb actions
-    if (pressX || pressRB){
+    if (pressLT){
       dropBomb();
     }
   }
 
-  // Save prev pressed states
   for (let i = 0; i < gp.buttons.length; i++){
     gpPrev[i] = !!(gp.buttons[i] && gp.buttons[i].pressed);
   }
@@ -3848,6 +4019,7 @@ window.addEventListener("keydown", (e) => {
   }
 
 const k = e.key.toLowerCase();
+  setActiveInputMode(INPUT_MODE_KEYBOARD);
   keys[k] = true;
 
   if (k === "m"){
@@ -3869,6 +4041,7 @@ const k = e.key.toLowerCase();
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
 
 canvas.addEventListener("pointermove", (e) => {
+  setActiveInputMode(INPUT_MODE_KEYBOARD);
   // v1.96: aim follows pointer (mouse or touch)
   setAimFromClient(e.clientX, e.clientY);
 });
