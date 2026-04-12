@@ -96,11 +96,21 @@
   }
   #controlsPopup.panel{ background: rgba(75,0,118,0.72); }
   #controlsPopup .title{ font-size:20px; margin:2px 0 8px; text-align:center; }
-  #controlsPopup .optionsGrid{ gap:8px; margin-top:0; }
-  #controlsPopup .optRow{ padding:8px 10px; }
-  #controlsPopup .optLabel{ margin-bottom:0; gap:14px; }
-  #controlsPopup .optLabel span:last-child{ opacity:0.92; text-align:right; }
   #controlsPopup.visible{ display:block; }
+  #controlsPopup{ width:min(560px, 90vw); }
+  .controlsModeTabs{ display:flex; gap:8px; margin:0 0 10px; }
+  .controlsModeTabs button{ min-width:0; flex:1; }
+  .controlsModeTabs button.active{ background: rgba(0,255,102,0.16); border-color: rgba(0,255,102,0.65); }
+  .controlsBindList{ display:grid; grid-template-columns:1fr; gap:8px; margin-top:8px; }
+  .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:10px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:8px 10px; background: rgba(0,0,0,0.35); }
+  .controlsBindMeta{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .controlsBindTitle{ font-size:14px; }
+  .controlsBindHint{ opacity:0.7; font-size:11px; line-height:1.25; }
+  .controlsBindButton{ min-width:148px; padding:8px 10px; text-align:center; }
+  .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
+  .controlsFooter{ display:flex; justify-content:flex-end; margin-top:10px; }
+  #controlsBindStatus{ margin-top:4px; min-height:34px; }
+  #controlsFixedInfo{ margin-top:6px; line-height:1.35; }
 
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
   #optionsMenu.panel{ background: rgba(75,0,118,0.72); max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
@@ -480,20 +490,20 @@ body.invert-colors {
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
     </div>
-    <div class="controlsWrap">
+        <div class="controlsWrap">
       <button id="btnControls" class="smallBtn" type="button" aria-haspopup="true" aria-expanded="false">Controls</button>
       <span id="activeInputIndicator" class="inputIndicator" aria-live="polite" title="Active input mode">⌨️</span>
       <div id="controlsPopup" class="panel" role="dialog" aria-label="Controls">
         <div class="title">CONTROLS</div>
-        <div class="optionsGrid">
-          <div class="optRow"><div class="optLabel"><span>Move</span><span id="controlsMoveValue">A / D or ⬅ / ➡</span></div></div>
-          <div class="optRow"><div class="optLabel"><span>Aim</span><span id="controlsAimValue">Mouse / Touch</span></div></div>
-          <div class="optRow"><div class="optLabel"><span>Shoot</span><span id="controlsShootValue">Space / Click</span></div></div>
-          <div class="optRow"><div class="optLabel"><span>Shield</span><span id="controlsShieldValue">Right Mouse Button</span></div></div>
-          <div class="optRow"><div class="optLabel"><span>Bomb</span><span id="controlsBombValue">Q</span></div></div>
-          <div class="optRow"><div class="optLabel"><span>Pause</span><span id="controlsPauseValue">ESC</span></div></div>
-          <div class="optRow"><div class="optLabel"><span>Mute</span><span id="controlsMuteValue">M</span></div></div>
-          <div class="optRow"><div class="optLabel"><span>Commands</span><span id="controlsCommandsValue">/</span></div></div>
+        <div class="controlsModeTabs">
+          <button id="controlsModeKeyboard" class="smallBtn active" type="button">Keyboard / Mouse</button>
+          <button id="controlsModeController" class="smallBtn" type="button">Controller</button>
+        </div>
+        <div id="controlsBindStatus" class="hint">Select a control to rebind.</div>
+        <div id="controlsFixedInfo" class="hint">Aim stays on mouse/touch. Stick aim and D-pad navigation stay fixed on controller.</div>
+        <div id="controlsBindList" class="controlsBindList"></div>
+        <div class="controlsFooter">
+          <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
         </div>
       </div>
     </div>
@@ -773,13 +783,13 @@ const canvas = document.getElementById("game");
 // v1.96: Mouse handlers for holding the energy shield (RMB)
 canvas.addEventListener("contextmenu", (e)=>e.preventDefault());
 canvas.addEventListener("mousedown", (e)=>{
-  if (e.button === 2){
+  if (keyboardBindings.shield === mouseButtonToBinding(e.button)){
     mouseShieldHolding = true;
     if (canActivateShield()) startShield();
   }
 });
 canvas.addEventListener("mouseup", (e)=>{
-  if (e.button === 2){
+  if (keyboardBindings.shield === mouseButtonToBinding(e.button)){
     mouseShieldHolding = false;
     stopShield(false);
   }
@@ -943,24 +953,18 @@ if (btnPauseResume){
   });
 }
 
-function requestOpenChatFromPause(){
-  try{ setPaused(true); }catch(e){}
+function requestOpenChat(focusSlash){
   try{
     if (window.parent && window.parent !== window){
-      window.parent.postMessage({ type: "openChatFromChild", seedSlash: true, autoSuggestSlash: true }, "*");
+      window.parent.postMessage({ type: "openChatFromChild", seedSlash: !!focusSlash, autoSuggestSlash: !!focusSlash }, "*");
       return;
     }
   }catch(e){}
-  try{
-    const slashEvent = new KeyboardEvent("keydown", {
-      key: "/",
-      code: "Slash",
-      bubbles: true,
-      cancelable: true
-    });
-    window.dispatchEvent(slashEvent);
-    document.dispatchEvent(slashEvent);
-  }catch(e){}
+}
+
+function requestOpenChatFromPause(){
+  try{ setPaused(true); }catch(e){}
+  requestOpenChat(true);
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
@@ -1845,8 +1849,8 @@ function updateUFO(dt){
   if (ufo.y > bottom){ ufo.y = bottom; ufo.vy *= -1; }
 
   // "Avoid the player's movement toward it": if player is moving toward UFO, add a shove away.
-  const movingLeft  = (keys["a"] || keys["arrowleft"]);
-  const movingRight = (keys["d"] || keys["arrowright"]);
+  const movingLeft  = isKeyboardActionHeld("moveLeft");
+  const movingRight = isKeyboardActionHeld("moveRight");
   const toward =
     (movingLeft  && player.x > ufo.x) ||
     (movingRight && player.x < ufo.x);
@@ -2097,8 +2101,8 @@ function updateStarfield(dt, keys, playerSpeed){
 
   let vxIntent = 0;
   if (gameState === STATE.PLAYING){
-    if (keys["a"] || keys["arrowleft"])  vxIntent -= 1;
-    if (keys["d"] || keys["arrowright"]) vxIntent += 1;
+    if isKeyboardActionHeld("moveLeft")  vxIntent -= 1;
+    if isKeyboardActionHeld("moveRight") vxIntent += 1;
     // Xbox/Gamepad: use left-stick/D-pad horizontal intent too
     vxIntent += (typeof gpMoveX !== "undefined" ? (gpMoveX || 0) : 0);
     vxIntent = Math.max(-1, Math.min(1, vxIntent));
@@ -2253,14 +2257,12 @@ const btnOptions = document.getElementById("btnOptions");
 const btnControls = document.getElementById("btnControls");
 const controlsPopup = document.getElementById("controlsPopup");
 const activeInputIndicator = document.getElementById("activeInputIndicator");
-const controlsMoveValue = document.getElementById("controlsMoveValue");
-const controlsAimValue = document.getElementById("controlsAimValue");
-const controlsShootValue = document.getElementById("controlsShootValue");
-const controlsShieldValue = document.getElementById("controlsShieldValue");
-const controlsBombValue = document.getElementById("controlsBombValue");
-const controlsPauseValue = document.getElementById("controlsPauseValue");
-const controlsMuteValue = document.getElementById("controlsMuteValue");
-const controlsCommandsValue = document.getElementById("controlsCommandsValue");
+const controlsModeKeyboard = document.getElementById("controlsModeKeyboard");
+const controlsModeController = document.getElementById("controlsModeController");
+const controlsBindStatus = document.getElementById("controlsBindStatus");
+const controlsFixedInfo = document.getElementById("controlsFixedInfo");
+const controlsBindList = document.getElementById("controlsBindList");
+const controlsResetBinds = document.getElementById("controlsResetBinds");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 
@@ -2335,25 +2337,101 @@ if (invertColorsCheckbox){
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
 const INPUT_MODE_CONTROLLER = "controller";
+const BINDINGS_STORAGE_KEY = "tektiteShooterBindings_v1";
+const DEFAULT_KEYBOARD_BINDINGS = {
+  moveLeft: "KeyA",
+  moveRight: "KeyD",
+  shoot: "Space",
+  shield: "Mouse2",
+  bomb: "KeyQ",
+  pause: "Escape",
+  commands: "Slash",
+  mute: "KeyM",
+  fullscreen: "KeyF"
+};
+const DEFAULT_CONTROLLER_BINDINGS = {
+  shoot: 7,
+  shield: 4,
+  bomb: 6,
+  pause: 9,
+  menuSelect: 0,
+  menuBack: 1,
+  muteHud: 8,
+  fullscreen: 11
+};
+const KEYBOARD_BIND_ACTIONS = [
+  { key: "moveLeft", label: "Move Left", hint: "Gameplay movement" },
+  { key: "moveRight", label: "Move Right", hint: "Gameplay movement" },
+  { key: "shoot", label: "Shoot", hint: "Key or mouse button" },
+  { key: "shield", label: "Shield", hint: "Key or mouse button" },
+  { key: "bomb", label: "Bomb", hint: "Gameplay action" },
+  { key: "pause", label: "Pause / Resume", hint: "Gameplay and pause menu" },
+  { key: "commands", label: "Open Commands", hint: "Open slash chat" },
+  { key: "mute", label: "Mute", hint: "Toggle audio" },
+  { key: "fullscreen", label: "Fullscreen", hint: "Whole shooter shell" }
+];
+const CONTROLLER_BIND_ACTIONS = [
+  { key: "shoot", label: "Shoot", hint: "Gameplay action" },
+  { key: "shield", label: "Shield", hint: "Gameplay action" },
+  { key: "bomb", label: "Bomb", hint: "Gameplay action" },
+  { key: "pause", label: "Pause / Resume", hint: "Gameplay and pause menu" },
+  { key: "menuSelect", label: "Menu Select", hint: "Menus and command list" },
+  { key: "menuBack", label: "Menu Back / Close Chat", hint: "Menus and pause chat" },
+  { key: "muteHud", label: "HUD Toggle", hint: "Show or hide HUD" },
+  { key: "fullscreen", label: "Fullscreen", hint: "Whole shooter shell" }
+];
+const CONTROLLER_BUTTON_LABELS = {
+  0: "A", 1: "B", 2: "X", 3: "Y", 4: "LB", 5: "RB", 6: "LT", 7: "RT",
+  8: "Back", 9: "Start", 10: "LS", 11: "RS", 12: "D-Pad Up", 13: "D-Pad Down", 14: "D-Pad Left", 15: "D-Pad Right"
+};
 let activeInputMode = INPUT_MODE_KEYBOARD;
+let controlsBindMode = INPUT_MODE_KEYBOARD;
+let controlsPopupFocusIndex = 0;
+let bindingEditState = null;
+let controllerRebindReady = false;
+let keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
+let controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
 
+function loadSavedBindings(){
+  try{
+    const raw = localStorage.getItem(BINDINGS_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.keyboard && typeof parsed.keyboard === 'object') keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS, ...parsed.keyboard };
+    if (parsed && parsed.controller && typeof parsed.controller === 'object') controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS, ...parsed.controller };
+  }catch(_){
+    keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
+    controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
+  }
+}
+function saveBindings(){ try{ localStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
+function formatKeyboardBinding(code){
+  const map = {Space:'Space', Escape:'Esc', Slash:'/', ArrowLeft:'Left Arrow', ArrowRight:'Right Arrow', ArrowUp:'Up Arrow', ArrowDown:'Down Arrow', KeyF:'F', KeyM:'M', KeyQ:'Q', KeyA:'A', KeyD:'D'};
+  if (!code) return 'Unbound';
+  if (map[code]) return map[code];
+  if (/^Mouse\d+$/.test(code)) return code === 'Mouse0' ? 'Left Click' : code === 'Mouse1' ? 'Middle Click' : code === 'Mouse2' ? 'Right Click' : code;
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit\d$/.test(code)) return code.slice(5);
+  return code;
+}
+function formatControllerBinding(index){ return CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`; }
+function mouseButtonToBinding(button){ return `Mouse${Number(button) || 0}`; }
+function isKeyboardActionHeld(action){ const code = keyboardBindings[action]; return !!(code && keys[code]); }
+function getGpButtonPressedByIndex(gp, index){ const btn = gpBtn(gp, index); return (index === 6 || index === 7) ? ((btn.value || 0) > GP_TRIGGER_DEADZONE) : !!btn.pressed; }
+function getGpActionPressed(gp, action){ const index = controllerBindings[action]; return typeof index === 'number' ? getGpButtonPressedByIndex(gp, index) : false; }
 function updateControlsDisplay(){
   const usingController = activeInputMode === INPUT_MODE_CONTROLLER;
   if (activeInputIndicator){
-    activeInputIndicator.textContent = usingController ? "🎮" : "⌨️";
-    activeInputIndicator.title = usingController ? "Controller active" : "Keyboard / mouse active";
-    activeInputIndicator.setAttribute("aria-label", activeInputIndicator.title);
+    activeInputIndicator.textContent = usingController ? '🎮' : '⌨️';
+    activeInputIndicator.title = usingController ? 'Controller active' : 'Keyboard / mouse active';
+    activeInputIndicator.setAttribute('aria-label', activeInputIndicator.title);
   }
-  if (controlsMoveValue) controlsMoveValue.textContent = usingController ? "Left Stick / D-Pad" : "A / D or ⬅ / ➡";
-  if (controlsAimValue) controlsAimValue.textContent = usingController ? "Right Stick" : "Mouse / Touch";
-  if (controlsShootValue) controlsShootValue.textContent = usingController ? "RT" : "Space / Click";
-  if (controlsShieldValue) controlsShieldValue.textContent = usingController ? "LB" : "Right Mouse Button";
-  if (controlsBombValue) controlsBombValue.textContent = usingController ? "LT" : "Q";
-  if (controlsPauseValue) controlsPauseValue.textContent = usingController ? "Start" : "ESC";
-  if (controlsMuteValue) controlsMuteValue.textContent = usingController ? "Menu only" : "M";
-  if (controlsCommandsValue) controlsCommandsValue.textContent = usingController ? "Use chat with keyboard" : "/";
+  if (controlsFixedInfo){
+    controlsFixedInfo.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
+      ? 'Move stays on Left Stick / D-Pad. Aim stays on Right Stick. Fullscreen is rebindable below too.'
+      : 'Aim stays on Mouse / Touch. Bind actions below to keys or mouse buttons, including Fullscreen.';
+  }
 }
-
 function setActiveInputMode(mode){
   const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
   if (activeInputMode === nextMode) return;
@@ -2361,9 +2439,73 @@ function setActiveInputMode(mode){
   document.body.classList.toggle('controller-active', activeInputMode === INPUT_MODE_CONTROLLER);
   updateControlsDisplay();
 }
-
+function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
+function getCurrentBindingValue(action){ return controlsBindMode === INPUT_MODE_CONTROLLER ? controllerBindings[action] : keyboardBindings[action]; }
+function setControlsBindStatus(message){ if (controlsBindStatus) controlsBindStatus.textContent = message; }
+function renderControlsBindingList(){
+  if (!controlsBindList) return;
+  controlsBindList.innerHTML = '';
+  getCurrentBindingDefs().forEach(def => {
+    const row = document.createElement('div');
+    row.className = 'controlsBindRow';
+    const meta = document.createElement('div');
+    meta.className = 'controlsBindMeta';
+    const title = document.createElement('div');
+    title.className = 'controlsBindTitle';
+    title.textContent = def.label;
+    const hint = document.createElement('div');
+    hint.className = 'controlsBindHint';
+    hint.textContent = def.hint;
+    meta.appendChild(title);
+    meta.appendChild(hint);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'controlsBindButton smallBtn';
+    button.dataset.action = def.key;
+    button.dataset.scheme = controlsBindMode;
+    const value = getCurrentBindingValue(def.key);
+    button.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? formatControllerBinding(value) : formatKeyboardBinding(value);
+    if (bindingEditState && bindingEditState.scheme === controlsBindMode && bindingEditState.action === def.key){
+      button.classList.add('listening');
+      button.textContent = 'Press input...';
+    }
+    button.addEventListener('click', () => startBindingEdit(controlsBindMode, def.key));
+    row.appendChild(meta);
+    row.appendChild(button);
+    controlsBindList.appendChild(row);
+  });
+}
+function setControlsBindMode(mode){
+  controlsBindMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
+  if (controlsModeKeyboard) controlsModeKeyboard.classList.toggle('active', controlsBindMode === INPUT_MODE_KEYBOARD);
+  if (controlsModeController) controlsModeController.classList.toggle('active', controlsBindMode === INPUT_MODE_CONTROLLER);
+  bindingEditState = null;
+  controllerRebindReady = false;
+  updateControlsDisplay();
+  renderControlsBindingList();
+}
+function applyBindingValue(scheme, action, value){
+  if (scheme === INPUT_MODE_CONTROLLER) controllerBindings[action] = Number(value);
+  else keyboardBindings[action] = String(value);
+  bindingEditState = null;
+  controllerRebindReady = false;
+  saveBindings();
+  updateControlsDisplay();
+  renderControlsBindingList();
+  setControlsBindStatus('Binding saved.');
+}
+function startBindingEdit(scheme, action){
+  controlsBindMode = scheme === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
+  bindingEditState = { scheme: controlsBindMode, action };
+  controllerRebindReady = false;
+  updateControlsDisplay();
+  renderControlsBindingList();
+  setControlsBindStatus(controlsBindMode === INPUT_MODE_CONTROLLER ? 'Press a controller button for the selected action.' : 'Press a key or mouse button for the selected action.');
+}
+function cancelBindingEdit(message){ bindingEditState = null; controllerRebindReady = false; renderControlsBindingList(); setControlsBindStatus(message || 'Select a control to rebind.'); }
+loadSavedBindings();
 updateControlsDisplay();
-
+renderControlsBindingList();
 let menuFocusIndex = 0;
 let optionsFocusIndex = 0;
 let pauseFocusIndex = 0;
@@ -2384,7 +2526,12 @@ function clearControllerFocus(){
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
 }
 
+if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
+if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
+if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; saveBindings(); cancelBindingEdit('Bindings reset to defaults.'); updateControlsDisplay(); renderControlsBindingList(); });
+
 function getMenuControllerTargets(){
+  if (controlsPopup && controlsPopup.classList.contains('visible')) return [controlsModeKeyboard, controlsModeController, ...Array.from(document.querySelectorAll('#controlsPopup .controlsBindButton')), controlsResetBinds].filter(Boolean);
   return [btnStart, btnOptions, btnControls].filter(Boolean);
 }
 
@@ -2464,6 +2611,10 @@ function stepRange(rangeEl, delta){
 
 function activateControllerTarget(el){
   if (!el) return;
+  if (el.dataset && el.dataset.action && el.dataset.scheme){
+    startBindingEdit(el.dataset.scheme, el.dataset.action);
+    return;
+  }
   if (el === btnControls){
     if (controlsPopup && controlsPopup.classList.contains('visible')) hideControlsPopup();
     else showControlsPopup();
@@ -2523,11 +2674,15 @@ function showControlsPopup(){
   if (!controlsPopup || !btnControls || startMenu.style.display === "none") return;
   controlsPopup.classList.add("visible");
   btnControls.setAttribute("aria-expanded", "true");
+  updateControlsDisplay();
+  renderControlsBindingList();
+  if (activeInputMode === INPUT_MODE_CONTROLLER){ menuFocusIndex = 0; syncMenuControllerFocus(); }
 }
 function hideControlsPopup(){
   if (!controlsPopup || !btnControls) return;
   controlsPopup.classList.remove("visible");
   btnControls.setAttribute("aria-expanded", "false");
+  cancelBindingEdit('Select a control to rebind.');
 }
 
 function showWinOverlay(){
@@ -2660,6 +2815,7 @@ spawnEnemies();
 
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
+if (btnControls) btnControls.addEventListener("click", () => { if (controlsPopup && controlsPopup.classList.contains("visible")) hideControlsPopup(); else showControlsPopup(); });
 if (btnControls && controlsPopup){
   let controlsHideTimer = null;
   const queueHideControls = () => {
@@ -2882,8 +3038,8 @@ function pollGamepad(dt){
   const lStick = gpBtn(gp, 10).pressed;
   const rStick = gpBtn(gp, 11).pressed;
 
-  gpFireHeld = (rt > GP_TRIGGER_DEADZONE);
-  gpShieldHeld = lb;
+  gpFireHeld = getGpActionPressed(gp, 'shoot');
+  gpShieldHeld = getGpActionPressed(gp, 'shield');
   gpSpeedBoostHeld = lStick;
 
   if (Math.abs(lx) > 0.01 || Math.abs(ly) > 0.01 || Math.abs(rx) > 0.01 || Math.abs(ry) > 0.01 || lt > 0.05 || rt > 0.05 || dUp || dDown || dLeft || dRight || a || b || x || y || lb || rb || back || start || lStick || rStick){
@@ -2891,25 +3047,16 @@ function pollGamepad(dt){
     setActiveInputMode(INPUT_MODE_CONTROLLER);
   }
 
-  const pressStart = gpEdge(9, start);
-  const pressBack = gpEdge(8, back);
-  const pressX = gpEdge(2, x);
+  const pressPause = gpEdge(controllerBindings.pause, getGpActionPressed(gp, 'pause'));
+  const pressMenuBack = gpEdge(controllerBindings.menuBack, getGpActionPressed(gp, 'menuBack'));
+  const pressMenuSelect = gpEdge(controllerBindings.menuSelect, getGpActionPressed(gp, 'menuSelect'));
+  const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
+  const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
+  const pressMuteHud = gpEdge(controllerBindings.muteHud, getGpActionPressed(gp, 'muteHud'));
   const pressY = gpEdge(3, y);
-  const pressB = gpEdge(1, b);
-  const pressA = gpEdge(0, a);
-  const pressRS = gpEdge(11, rStick);
-  const pressLT = gpEdge(6, lt > GP_TRIGGER_DEADZONE);
 
-  if ((gpHasAnyInput || pressA || pressB || pressX || pressY || pressStart || pressBack || pressRS || pressLT) && !audioUnlocked){
+  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressY || pressPause || pressMuteHud || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
-  }
-
-  if (pressBack){
-    hudVisible = !hudVisible;
-    overlay.style.display = hudVisible ? "block" : "none";
-  }
-  if (pressRS){
-    toggleFullscreen();
   }
 
   const navUp = consumeMenuAxis('up', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt);
@@ -2917,39 +3064,57 @@ function pollGamepad(dt){
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
 
-  if (isPaused && parentChatVisible){
-    if (navUp) postChatControllerAction('cycleUp');
-    if (navDown) postChatControllerAction('cycleDown');
-    if (pressA) postChatControllerAction('execute');
-    if (pressB) postChatControllerAction('close');
-  } else if (isPaused){
-    if (navUp || navLeft) movePauseControllerFocus(-1);
-    if (navDown || navRight) movePauseControllerFocus(1);
-    if (pressA) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
-    if (pressB || pressStart) togglePause();
-  } else if (gameState === STATE.MENU){
-    if (navLeft || navUp) moveMenuControllerFocus(-1);
-    if (navRight || navDown) moveMenuControllerFocus(1);
-    if (pressA){
-      activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
+  if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
+    const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
+    if (!controllerRebindReady){
+      if (!anyPressedNow) controllerRebindReady = true;
+    } else {
+      for (let idx = 0; idx < gp.buttons.length && idx <= 15; idx++){
+        if (getGpButtonPressedByIndex(gp, idx)){
+          applyBindingValue(INPUT_MODE_CONTROLLER, bindingEditState.action, idx);
+          break;
+        }
+      }
     }
-    if (pressB) hideControlsPopup();
-    if (pressY) showOptions();
-  } else if (gameState === STATE.OPTIONS){
-    if (navUp) moveOptionsControllerFocus(-1);
-    if (navDown) moveOptionsControllerFocus(1);
-    if (navLeft) adjustControllerOption(-1);
-    if (navRight) adjustControllerOption(1);
-    if (pressA) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
-    if (pressB) showMenu();
-  } else if (deathOverlay && deathOverlay.style.display === "flex"){
-    if (pressA) restartRun();
-  } else if (gameState === STATE.PLAYING){
-    if (pressStart){
-      togglePause();
+  } else {
+    if (pressMuteHud){
+      hudVisible = !hudVisible;
+      overlay.style.display = hudVisible ? "block" : "none";
     }
-    if (pressLT){
-      dropBomb();
+    if (pressFullscreen){
+      toggleFullscreen();
+    }
+    if (isPaused && parentChatVisible){
+      if (navUp) postChatControllerAction('cycleUp');
+      if (navDown) postChatControllerAction('cycleDown');
+      if (pressMenuSelect) postChatControllerAction('execute');
+      if (pressMenuBack) postChatControllerAction('close');
+    } else if (isPaused){
+      if (navUp || navLeft) movePauseControllerFocus(-1);
+      if (navDown || navRight) movePauseControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
+      if (pressMenuBack || pressPause) togglePause();
+    } else if (gameState === STATE.MENU){
+      if (navLeft || navUp) moveMenuControllerFocus(-1);
+      if (navRight || navDown) moveMenuControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
+      if (pressMenuBack){
+        if (bindingEditState) cancelBindingEdit('Binding cancelled.');
+        else hideControlsPopup();
+      }
+      if (pressY && !(controlsPopup && controlsPopup.classList.contains('visible'))) showOptions();
+    } else if (gameState === STATE.OPTIONS){
+      if (navUp) moveOptionsControllerFocus(-1);
+      if (navDown) moveOptionsControllerFocus(1);
+      if (navLeft) adjustControllerOption(-1);
+      if (navRight) adjustControllerOption(1);
+      if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
+      if (pressMenuBack) showMenu();
+    } else if (deathOverlay && deathOverlay.style.display === "flex"){
+      if (pressMenuSelect) restartRun();
+    } else if (gameState === STATE.PLAYING){
+      if (pressPause) togglePause();
+      if (pressBomb) dropBomb();
     }
   }
 
@@ -3549,42 +3714,38 @@ function toggleFullscreen(){
 
 window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
-  if (e.code === "Space") e.preventDefault();
-
-  // Trigger a temporary glitch spiral burst with Tab when focus is not in a text field.
-  const target = e.target;
-  const typingIntoField =
-    target &&
-    ((target.tagName === "INPUT") ||
-     (target.tagName === "TEXTAREA") ||
-     target.isContentEditable);
-
-  if (e.code === "Tab" && !typingIntoField){
-    triggerGlitchSpiral();
+  if (bindingEditState && bindingEditState.scheme === INPUT_MODE_KEYBOARD){
     e.preventDefault();
+    e.stopPropagation();
+    setActiveInputMode(INPUT_MODE_KEYBOARD);
+    applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, e.code || e.key);
+    return;
   }
-
-const k = e.key.toLowerCase();
+  if (e.code === "Space") e.preventDefault();
+  const target = e.target;
+  const typingIntoField = target && ((target.tagName === "INPUT") || (target.tagName === "TEXTAREA") || target.isContentEditable);
+  if (e.code === "Tab" && !typingIntoField){ triggerGlitchSpiral(); e.preventDefault(); }
+  const k = e.key.toLowerCase();
+  const code = e.code || e.key;
   setActiveInputMode(INPUT_MODE_KEYBOARD);
   keys[k] = true;
-
-  if (k === "m"){
-    audioMuted = !audioMuted;
-    applyMuteState();
-    // If unmuting, try to resume background music.
-    if (!audioMuted) ensureMusicPlaying();
-  }
-
-  if (e.code === "Space" && gameState === STATE.PLAYING) shoot();
-  if (e.key === "f" || e.key === "F") toggleFullscreen();
-  if ((e.key === "q" || e.key === "Q") && gameState === STATE.PLAYING) dropBomb();
-  if (k === "escape"){
-    // v1.96: ESC pauses/resumes instead of opening the menu
-    togglePause();
-  }
+  keys[code] = true;
+  if (!typingIntoField && code === keyboardBindings.commands){ e.preventDefault(); requestOpenChat(true); return; }
+  if (code === keyboardBindings.mute){ audioMuted = !audioMuted; applyMuteState(); if (!audioMuted) ensureMusicPlaying(); }
+  if (code === keyboardBindings.shoot && gameState === STATE.PLAYING) shoot();
+  if (code === keyboardBindings.fullscreen) toggleFullscreen();
+  if (code === keyboardBindings.bomb && gameState === STATE.PLAYING) dropBomb();
+  if (code === keyboardBindings.pause) togglePause();
 }, { passive:false });
 
-window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; keys[e.code || e.key] = false; });
+window.addEventListener("mousedown", (e) => {
+  if (!(bindingEditState && bindingEditState.scheme === INPUT_MODE_KEYBOARD)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  setActiveInputMode(INPUT_MODE_KEYBOARD);
+  applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, mouseButtonToBinding(e.button));
+}, true);
 
 canvas.addEventListener("pointermove", (e) => {
   setActiveInputMode(INPUT_MODE_KEYBOARD);
@@ -3594,25 +3755,19 @@ canvas.addEventListener("pointermove", (e) => {
 
 canvas.addEventListener("pointerdown", (e) => {
   setActiveInputMode(INPUT_MODE_KEYBOARD);
-  // v1.96: clicking also aims and shoots
   setAimFromClient(e.clientX, e.clientY);
-
-  // v1.96: RIGHT CLICK hold = shield
-  // Note: pointer events use button 2 for right mouse.
-  if (e.button === 2){
+  if (e.button === 2 && keyboardBindings.shield === 'Mouse2'){
     e.preventDefault();
     mouseShieldHolding = true;
     if (canActivateShield()) startShield();
     return;
   }
-
-  if (e.button === 0) mouseFireHolding = true; // v1.96: hold LMB to keep firing
-
-  if (gameState === STATE.PLAYING) shoot();
+  if (keyboardBindings.shoot === mouseButtonToBinding(e.button)) mouseFireHolding = true;
+  if (gameState === STATE.PLAYING && keyboardBindings.shoot === mouseButtonToBinding(e.button)) shoot();
 });
 
 canvas.addEventListener("pointerup", (e) => {
-  if (e.button === 0) mouseFireHolding = false; // v1.96: stop held-fire on LMB release
+  if (keyboardBindings.shoot === mouseButtonToBinding(e.button)) mouseFireHolding = false;
   // Release RMB shield
   if (e.button === 2){
     mouseShieldHolding = false;
@@ -3715,8 +3870,8 @@ function update(dt){
 
   // player move (keyboard + gamepad)
   let moveX = 0;
-  if (keys["a"] || keys["arrowleft"]) moveX -= 1;
-  if (keys["d"] || keys["arrowright"]) moveX += 1;
+  if isKeyboardActionHeld("moveLeft") moveX -= 1;
+  if isKeyboardActionHeld("moveRight") moveX += 1;
   // add analog movement from Xbox pad
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
