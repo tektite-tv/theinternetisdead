@@ -1930,25 +1930,31 @@ function dropBomb(){
   if (!infiniteModeActive) bombsCount = Math.max(0, bombsCount - 1);
   powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
 
-  // v1.96: Bomb is now a short-range "shot" that travels a bit in the aim direction.
-  // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
+  // Restored glide + bounce behavior for the maze: the bomb travels ahead,
+  // ricochets off maze walls, then arms itself after enough travel distance.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
 
   const spawnDist = player.w * 0.55;
-  const maxTravel = 140;          // "short distance ahead" (px)
-  const speed = 900;              // px/sec while flying (feels snappy)
+  const maxTravel = 320;
+  const speed = 760;
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+  const startX = player.x + dx * spawnDist;
+  const startY = player.y + dy * spawnDist;
 
   bomb = {
-    x: player.x + dx * spawnDist,
-    y: player.y + dy * spawnDist,
+    x: startX,
+    y: startY,
+    worldX: startX + camX,
+    worldY: startY + camY,
     vx: dx * speed,
     vy: dy * speed,
     travel: 0,
     maxTravel,
     r: 12,
 
-    mode: "flying",               // "flying" -> "armed" -> "exploding"
+    mode: "flying",
     flashT: 0,
     flashOn: true,
 
@@ -1996,19 +2002,41 @@ function updateBomb(dt){
 
   if (!bomb.exploding){
     if (bomb.mode === "flying"){
-      // Move forward for a short distance.
       const stepX = bomb.vx * dt;
       const stepY = bomb.vy * dt;
 
-      bomb.x += stepX;
-      bomb.y += stepY;
+      let nextWorldX = (bomb.worldX ?? bomb.x) + stepX;
+      let nextWorldY = (bomb.worldY ?? bomb.y) + stepY;
+      let bouncedX = false;
+      let bouncedY = false;
+
+      if (canOccupyWorld(nextWorldX, bomb.worldY ?? bomb.y, bomb.r)){
+        bomb.worldX = nextWorldX;
+      } else {
+        bouncedX = true;
+        bomb.vx = -bomb.vx;
+        nextWorldX = (bomb.worldX ?? bomb.x) + bomb.vx * dt;
+        if (canOccupyWorld(nextWorldX, bomb.worldY ?? bomb.y, bomb.r)) bomb.worldX = nextWorldX;
+      }
+
+      if (canOccupyWorld(bomb.worldX ?? bomb.x, nextWorldY, bomb.r)){
+        bomb.worldY = nextWorldY;
+      } else {
+        bouncedY = true;
+        bomb.vy = -bomb.vy;
+        nextWorldY = (bomb.worldY ?? bomb.y) + bomb.vy * dt;
+        if (canOccupyWorld(bomb.worldX ?? bomb.x, nextWorldY, bomb.r)) bomb.worldY = nextWorldY;
+      }
+
+      const camX = playerWorldX - canvas.width / 2;
+      const camY = playerWorldY - canvas.height / 2;
+      bomb.x = (bomb.worldX ?? bomb.x) - camX;
+      bomb.y = (bomb.worldY ?? bomb.y) - camY;
 
       bomb.travel += Math.hypot(stepX, stepY);
 
-      // If it hits an enemy while flying, detonate instantly.
       if (bombHitsEnemy()) return;
 
-      // After maxTravel, stop and become an "armed mine" that detonates on contact.
       if (bomb.travel >= bomb.maxTravel){
         bomb.mode = "armed";
         bomb.vx = 0;

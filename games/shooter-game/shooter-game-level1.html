@@ -1760,17 +1760,17 @@ function dropBomb(){
   if (!infiniteModeActive && bombsCount <= 0) return;
   if (bomb) return; // only one active
 
-  bombsCount = 0;
-  powerupSlot.style.display = "none";
+  if (!infiniteModeActive) bombsCount = Math.max(0, bombsCount - 1);
+  powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
 
-  // v1.96: Bomb is now a short-range "shot" that travels a bit in the aim direction.
-  // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
+  // Restored glide + bounce behavior: the bomb travels forward, ricochets off
+  // the arena edges, then arms itself after it has gone far enough.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
 
   const spawnDist = player.w * 0.55;
-  const maxTravel = 140;          // "short distance ahead" (px)
-  const speed = 900;              // px/sec while flying (feels snappy)
+  const maxTravel = 320;
+  const speed = 760;
 
   bomb = {
     x: player.x + dx * spawnDist,
@@ -1781,7 +1781,7 @@ function dropBomb(){
     maxTravel,
     r: 12,
 
-    mode: "flying",               // "flying" -> "armed" -> "exploding"
+    mode: "flying",
     flashT: 0,
     flashOn: true,
 
@@ -1829,19 +1829,37 @@ function updateBomb(dt){
 
   if (!bomb.exploding){
     if (bomb.mode === "flying"){
-      // Move forward for a short distance.
       const stepX = bomb.vx * dt;
       const stepY = bomb.vy * dt;
 
       bomb.x += stepX;
       bomb.y += stepY;
 
+      const left = bomb.r + 10;
+      const right = canvas.width - bomb.r - 10;
+      const top = bomb.r + 10;
+      const bottom = canvas.height - bomb.r - 10;
+
+      if (bomb.x < left){
+        bomb.x = left;
+        bomb.vx = Math.abs(bomb.vx);
+      } else if (bomb.x > right){
+        bomb.x = right;
+        bomb.vx = -Math.abs(bomb.vx);
+      }
+
+      if (bomb.y < top){
+        bomb.y = top;
+        bomb.vy = Math.abs(bomb.vy);
+      } else if (bomb.y > bottom){
+        bomb.y = bottom;
+        bomb.vy = -Math.abs(bomb.vy);
+      }
+
       bomb.travel += Math.hypot(stepX, stepY);
 
-      // If it hits an enemy while flying, detonate instantly.
       if (bombHitsEnemy()) return;
 
-      // After maxTravel, stop and become an "armed mine" that detonates on contact.
       if (bomb.travel >= bomb.maxTravel){
         bomb.mode = "armed";
         bomb.vx = 0;
