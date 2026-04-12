@@ -48,6 +48,18 @@
             usage: '/color_element',
             desc: 'toggle click-to-pick color mode for page customize elements',
             execute: true
+          },
+          {
+            name: '/games',
+            usage: '/games',
+            desc: 'go to the games index at theinternetisdead.org/games',
+            execute: true
+          },
+          {
+            name: '/experiments',
+            usage: '/experiments',
+            desc: 'go to the experiments index at theinternetisdead.org/experiments',
+            execute: true
           }
         ]
       };
@@ -132,6 +144,12 @@
           message: enabled ? '/color_element click mode enabled' : '/color_element click mode disabled',
           announce: false
         });
+        return true;
+      }
+
+      if (commandName === '/games' || commandName === '/experiments') {
+        const destination = commandName === '/games' ? 'https://theinternetisdead.org/games' : 'https://theinternetisdead.org/experiments';
+        window.location.href = destination;
         return true;
       }
 
