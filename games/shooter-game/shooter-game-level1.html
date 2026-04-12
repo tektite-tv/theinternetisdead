@@ -45,8 +45,7 @@
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
 
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
-  #optionsMenu.panel{ max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
-  #optionsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #optionsMenu.panel{ max-height:88vh; overflow:auto; }
   #optionsMenu .title{ font-size:22px; margin:2px 0 8px; }
   #optionsMenu .optionsGrid{ gap:8px; }
   #optionsMenu .optRow{ padding:8px 10px; }
@@ -67,9 +66,9 @@
   ======================= */
   .cornerSlot{
     position:absolute;
-    min-width:68px;
-    height:68px;
-    padding:6px 8px;
+    min-width:120px;
+    height:86px;
+    padding:8px 10px;
     border:2px solid rgba(0,255,0,0.55);
     border-radius:12px;
     background: rgba(0,0,0,0.55);
@@ -83,44 +82,30 @@
   }
   .cornerSlot .subtxt{
     font-family: "Courier New", monospace;
-    font-size:14px;
+    font-size:12px;
     line-height:1;
     opacity:0.95;
     color:#0f0;
     text-align:center;
-    font-weight:bold;
   }
   #livesSlot img{
-    width:28px; height:28px;
+    width:40px; height:40px;
     image-rendering:pixelated;
     filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
-    flex:0 0 auto;
   }
 
 
   .livesButton{
     flex-direction:row;
     justify-content:center;
-    gap:6px;
+    gap:8px;
   }
   .livesLabel{
     font-family:"Courier New", monospace;
-    font-size:11px;
+    font-size:12px;
     color:#00ff66;
     opacity:0.95;
     white-space:nowrap;
-    font-weight:bold;
-  }
-
-  #livesText{
-    min-width:22px;
-  }
-  #powerupSlot{
-    min-width:68px;
-  }
-  #powerupEmoji{
-    font-size:28px !important;
-    line-height:1;
   }
 
   #deathOverlay{
@@ -419,13 +404,13 @@ body.invert-colors {
     
     <div class="optionsGrid">
       <div class="optRow">
-        <div class="optLabel"><span>Starting Lives</span><span id="livesVal">1</span></div>
-        <input id="livesSlider" type="range" min="0" max="20" value="1" step="1" />
+        <div class="optLabel"><span>Starting Lives</span><span id="livesVal">3</span></div>
+        <input id="livesSlider" type="range" min="0" max="20" value="3" step="1" />
       </div>
 
       <div class="optRow">
-        <div class="optLabel"><span>Starting Hearts</span><span id="heartsVal">3</span></div>
-        <input id="heartsSlider" type="range" min="1" max="12" value="3" step="1" />
+        <div class="optLabel"><span>Starting Hearts</span><span id="heartsVal">4</span></div>
+        <input id="heartsSlider" type="range" min="1" max="12" value="4" step="1" />
         <div class="hint">Hearts = max hits per life. More hearts = smaller damage per hit.</div>
       </div>
 
@@ -1185,7 +1170,7 @@ function execPauseCommand(cmd){
   }
 
   if (raw === "/log"){
-    return { ok:true, message:"Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /log output to this level's in-game chat. Previous chat change: replaced the ESC pause-menu command bar with a button that says 'Press here to enter commands.' and opens the actual chat UI." };
+    return { ok:true, message:"Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /log output to this level's in-game chat. Previous chat change: replaced the ESC pause-menu command bar with a button that says "Press here to enter commands." and opens the actual chat UI." };
   }
 
   // v1.96: /lives [#|infinite]
@@ -1777,23 +1762,25 @@ function dropBomb(){
   bombsCount = 0;
   powerupSlot.style.display = "none";
 
+  // v1.96: Bomb is now a short-range "shot" that travels a bit in the aim direction.
+  // It detonates immediately on first enemy contact, and the explosion can wipe MULTIPLE enemies.
   const dx = Math.cos(aimAngleSmoothed);
   const dy = Math.sin(aimAngleSmoothed);
+
   const spawnDist = player.w * 0.55;
-  const speed = 900;
+  const maxTravel = 140;          // "short distance ahead" (px)
+  const speed = 900;              // px/sec while flying (feels snappy)
 
   bomb = {
     x: player.x + dx * spawnDist,
     y: player.y + dy * spawnDist,
     vx: dx * speed,
     vy: dy * speed,
+    travel: 0,
+    maxTravel,
     r: 12,
-    bounceCount: 0,
-    maxBounces: 24,
-    life: 0,
-    maxLife: 8,
 
-    mode: "flying",
+    mode: "flying",               // "flying" -> "armed" -> "exploding"
     flashT: 0,
     flashOn: true,
 
@@ -1813,36 +1800,26 @@ function explodeBomb(){
 
 function bombHitsEnemy(){
   if (!bomb || bomb.exploding) return false;
-
+  // Check contact against all enemies (both while flying and while armed).
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
     if (e.dying) continue;
     const rx = e.x - e.w/2, ry = e.y - e.h/2;
+
+    // Treat bomb as a circle hitting an enemy rect.
     if (circleRect(bomb.x, bomb.y, bomb.r, rx, ry, e.w, e.h)){
+      // Detonate at the point of contact.
       explodeBomb();
       return true;
     }
   }
-
-  if (ufo && ufo.fade === 0){
-    const dxU = bomb.x - ufo.x;
-    const dyU = bomb.y - ufo.y;
-    const rrU = bomb.r + ufo.r;
-    if (dxU * dxU + dyU * dyU <= rrU * rrU){
-      ufo.hits += 1;
-      ufo.stage = Math.min(3, ufo.hits);
-      if (ufo.hits >= 3) ufo.fade = 0.001;
-      explodeBomb();
-      return true;
-    }
-  }
-
   return false;
 }
 
 function updateBomb(dt){
   if (!bomb) return;
 
+  // Flash toggle (used for both flying + armed for readability)
   bomb.flashT += dt;
   if (bomb.flashT >= 0.12){
     bomb.flashT -= 0.12;
@@ -1851,46 +1828,42 @@ function updateBomb(dt){
 
   if (!bomb.exploding){
     if (bomb.mode === "flying"){
-      bomb.life += dt;
-      if (bomb.life >= bomb.maxLife || bomb.bounceCount > bomb.maxBounces){
-        explodeBomb();
-        return;
-      }
+      // Move forward for a short distance.
+      const stepX = bomb.vx * dt;
+      const stepY = bomb.vy * dt;
 
-      let nextX = bomb.x + bomb.vx * dt;
-      let nextY = bomb.y + bomb.vy * dt;
-      const minX = bomb.r;
-      const maxX = canvas.width - bomb.r;
-      const minY = bomb.r;
-      const maxY = canvas.height - bomb.r;
-      let bounced = false;
+      bomb.x += stepX;
+      bomb.y += stepY;
 
-      if (nextX <= minX || nextX >= maxX){
-        bomb.vx *= -1;
-        nextX = Math.max(minX, Math.min(maxX, nextX));
-        bounced = true;
-      }
-      if (nextY <= minY || nextY >= maxY){
-        bomb.vy *= -1;
-        nextY = Math.max(minY, Math.min(maxY, nextY));
-        bounced = true;
-      }
-      if (bounced) bomb.bounceCount += 1;
+      bomb.travel += Math.hypot(stepX, stepY);
 
-      bomb.x = nextX;
-      bomb.y = nextY;
-
+      // If it hits an enemy while flying, detonate instantly.
       if (bombHitsEnemy()) return;
+
+      // After maxTravel, stop and become an "armed mine" that detonates on contact.
+      if (bomb.travel >= bomb.maxTravel){
+        bomb.mode = "armed";
+        bomb.vx = 0;
+        bomb.vy = 0;
+      }
+    } else if (bomb.mode === "armed"){
+      // Stationary: detonate on first enemy contact.
+      bombHitsEnemy();
     }
   } else {
+    // expand shockwave
     bomb.rad += (560 + 220 * FUNK) * dt;
     bomb.alpha = Math.max(0, bomb.alpha - dt * 0.60);
 
+    // Apply damage + knockback ONCE at the start of explosion
     if (!bomb.didDamage){
       bomb.didDamage = true;
 
+      // Radius: 1.7 enemy widths (use average current enemy size or fallback)
       const enemySize = enemies.length ? enemies.reduce((s,e)=>s+e.size,0)/enemies.length : 44;
       const radius = enemySize * 1.7;
+
+      // v1.96: multi-kill blast. Also supports future "hp > 1" enemies by dealing damage instead of auto-delete.
       const BOMB_DAMAGE = 2;
 
       for (let i = enemies.length - 1; i >= 0; i--){
@@ -1901,8 +1874,10 @@ function updateBomb(dt){
         const d2 = dx*dx + dy*dy;
 
         if (d2 <= radius*radius){
+          // damage/kill (flash red, then fade out if killed)
           enemyApplyDamage(e, BOMB_DAMAGE, "bomb");
         } else {
+          // knockback ring: if within 2.2x radius, shove outward a bit (keeps it fun)
           const r2 = (radius * 2.2);
           if (d2 <= r2*r2){
             const d = Math.max(1, Math.sqrt(d2));
@@ -2159,8 +2134,8 @@ const btnApply = document.getElementById("btnApply");
 
   const speedVal = document.getElementById("speedVal");
   // Saved settings (persist for the session)
-  let START_LIVES = 1;
-  let START_HEARTS = 3;
+  let START_LIVES = 3;
+  let START_HEARTS = 4;
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
   // v1.96: game speed slider (1-10). 5 = 1.0x.
@@ -2223,8 +2198,6 @@ function showMenu(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  const heartsHudEl_menu = document.getElementById("heartsHud");
-  if (heartsHudEl_menu) heartsHudEl_menu.style.display = "none";
 
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
@@ -2239,8 +2212,6 @@ function showWinOverlay(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  const heartsHudEl_win = document.getElementById("heartsHud");
-  if (heartsHudEl_win) heartsHudEl_win.style.display = "none";
   stopMusic();
 }
 
@@ -2278,8 +2249,6 @@ function showOptions(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  const heartsHudEl_options = document.getElementById("heartsHud");
-  if (heartsHudEl_options) heartsHudEl_options.style.display = "none";
 
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
@@ -2299,8 +2268,7 @@ function startGame(){
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "block";
-  const heartsHudEl_game = document.getElementById("heartsHud");
-  if (heartsHudEl_game) heartsHudEl_game.style.display = "block";
+
 
   // v1.96.x: Reset run timer at the start of each game
   runTimer = 0;
@@ -2353,7 +2321,7 @@ bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
 
-  bombsCount = 0;
+  // Preserve the configured START_BOMBS value at game start.
   bomb = null;
   ufo = null;
 
@@ -4178,7 +4146,6 @@ font-size:28px;
 letter-spacing:6px;
 pointer-events:none;
 z-index:9999;
-display:none;
 ">❤️ ❤️ ❤️ ❤️</div>
 </body>
 
