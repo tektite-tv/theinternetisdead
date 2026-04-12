@@ -52,6 +52,10 @@
   #optionsMenu .optRow{ padding:8px 10px; }
   #optionsMenu .optLabel{ margin-bottom:6px; }
   #optionsMenu .hint{ margin-top:6px; line-height:1.25; }
+  #optionsMenu .checkboxGroup{ display:flex; flex-direction:column; gap:10px; }
+  #optionsMenu .checkOption{ display:flex; flex-direction:column; gap:6px; }
+  #optionsMenu .checkOption label{ display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer; }
+  #optionsMenu .checkOption .hint{ margin-top:0; padding-left:32px; }
 
   @media (max-height: 700px){
     #optionsMenu.panel{ padding:12px; }
@@ -433,22 +437,24 @@ body.invert-colors {
         <div class="hint">5 = normal. 1 = slow-mo. 10 = turbo.</div>
       </div>
 
-      <div class="optRow" style="gap:10px;">
-        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
-          <input id="infiniteToggle" type="checkbox" style="transform:scale(1.2);" />
-          <span>Infinite (no damage, no resource consumption)</span>
-        </label>
-        <div class="hint">For testing, chaos, or avoiding consequences. Pick one.</div>
+      <div class="optRow checkboxGroup">
+        <div class="checkOption">
+          <label>
+            <input id="infiniteToggle" type="checkbox" style="transform:scale(1.2);" />
+            <span>Infinite (no damage, no resource consumption)</span>
+          </label>
+          <div class="hint">For testing, chaos, or avoiding consequences. Pick one.</div>
+        </div>
 
-      <div class="optRow" style="gap:10px;">
-        <label style="display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer;">
-          <input id="invertColorsCheckbox" type="checkbox" style="transform:scale(1.2);" />
-          <span>Invert Colors</span>
-        </label>
-        <div class="hint">Flips all colors for night mode, screenshots, or chaos.</div>
+        <div class="checkOption">
+          <label>
+            <input id="invertColorsCheckbox" type="checkbox" style="transform:scale(1.2);" />
+            <span>Invert Colors</span>
+          </label>
+          <div class="hint">Flips all colors for night mode, screenshots, or chaos.</div>
+        </div>
       </div>
 
-      
       <div class="optRow">
         <div class="optLabel"><span>Starting Level</span><span id="startWaveLabel">Wave 1</span></div>
         <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
