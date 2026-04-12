@@ -79,7 +79,7 @@
       src="/games/shooter-game/shooter-game-level1.html"
       title="Tektite Shooter Game"
       loading="eager"
-      allowfullscreen
+      allow="gamepad *; fullscreen *" allowfullscreen
     ></iframe>
   </div>
 
@@ -93,95 +93,26 @@
 
 
   <script>
-    (function(){
-      const tektiteFrame = document.getElementById("tektite-frame");
-      let relayFrame = null;
-      let relayTimer = null;
+    const tektiteFrame = document.getElementById("tektite-frame");
 
-      function serializeGamepads(){
-        try{
-          const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
-          if (!pads || !pads.length) return [];
-          return Array.from(pads).map((gp) => {
-            if (!gp) return null;
-            return {
-              id: gp.id || "",
-              index: typeof gp.index === "number" ? gp.index : 0,
-              connected: gp.connected !== false,
-              mapping: gp.mapping || "",
-              timestamp: typeof gp.timestamp === "number" ? gp.timestamp : 0,
-              axes: Array.isArray(gp.axes) ? Array.from(gp.axes) : [],
-              buttons: Array.isArray(gp.buttons) ? gp.buttons.map((b) => ({
-                pressed: !!(b && b.pressed),
-                touched: !!(b && b.touched),
-                value: b && typeof b.value === "number" ? b.value : (b && b.pressed ? 1 : 0)
-              })) : []
-            };
-          });
-        }catch(_){ return []; }
+    function activateLevelFrame(){
+      try { tektiteFrame.focus(); } catch (e) {}
+      try { tektiteFrame.contentWindow?.focus(); } catch (e) {}
+      try { tektiteFrame.contentWindow?.postMessage({ type: "tektite-activate-gamepad" }, "*"); } catch (e) {}
+    }
+
+    tektiteFrame.addEventListener("load", activateLevelFrame);
+    window.addEventListener("pointerdown", activateLevelFrame, { passive: true });
+    window.addEventListener("mousedown", activateLevelFrame, { passive: true });
+    window.addEventListener("touchstart", activateLevelFrame, { passive: true });
+    window.addEventListener("keydown", activateLevelFrame);
+    window.addEventListener("gamepadconnected", activateLevelFrame);
+
+    window.addEventListener("message", (event) => {
+      if (event?.data?.type === "tektite-activate-gamepad") {
+        activateLevelFrame();
       }
-
-      function getRelayTarget(){
-        try{
-          if (!tektiteFrame || !tektiteFrame.contentWindow) return null;
-          const nested = tektiteFrame.contentDocument && tektiteFrame.contentDocument.getElementById("tektite-frame");
-          if (nested && nested.contentWindow) return nested.contentWindow;
-          return tektiteFrame.contentWindow;
-        }catch(_){
-          return tektiteFrame && tektiteFrame.contentWindow ? tektiteFrame.contentWindow : null;
-        }
-      }
-
-      function postGamepads(gamepads, source){
-        const target = getRelayTarget();
-        if (!target) return;
-        target.postMessage({
-          type: "tektite:gamepad-state",
-          source: source || "shooter-game.html",
-          gamepads: Array.isArray(gamepads) ? gamepads : [],
-          sentAt: Date.now()
-        }, "*");
-      }
-
-      function relayGamepads(){
-        postGamepads(serializeGamepads(), "shooter-game.html");
-      }
-
-      function startRelay(){
-        if (relayTimer) return;
-        relayTimer = window.setInterval(relayGamepads, 16);
-      }
-
-      function stopRelay(){
-        if (!relayTimer) return;
-        window.clearInterval(relayTimer);
-        relayTimer = null;
-      }
-
-      tektiteFrame && tektiteFrame.addEventListener("load", relayGamepads);
-      window.addEventListener("focus", startRelay);
-      window.addEventListener("blur", stopRelay);
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible"){
-          startRelay();
-          relayGamepads();
-        }else{
-          stopRelay();
-        }
-      });
-      window.addEventListener("gamepadconnected", () => {
-        startRelay();
-        relayGamepads();
-      });
-      window.addEventListener("gamepaddisconnected", relayGamepads);
-      window.addEventListener("message", (event) => {
-        const data = event.data;
-        if (!data || typeof data !== "object") return;
-        if (data.type !== "tektite:gamepad-state") return;
-        postGamepads(data.gamepads, data.source || "parent");
-      });
-      startRelay();
-    })();
+    });
   </script>
 
   <script src="/games/shooter-game/shooter-game-chat.js"></script>

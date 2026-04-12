@@ -89,7 +89,7 @@ body::-webkit-scrollbar{
 
 <div id="app-shell">
     <div id="overlay-container"></div>
-    <iframe id="shooter-game-frame" src="/games/shooter-game/shooter-game.html"></iframe>
+    <iframe id="shooter-game-frame" src="/games/shooter-game/shooter-game.html" allow="gamepad *; fullscreen *"></iframe>
 </div>
 
 <script>
@@ -133,6 +133,21 @@ async function loadOverlay(){
 
 const frame = document.getElementById("shooter-game-frame");
 
+frame.addEventListener("load", () => {
+    try { frame.focus(); } catch (e) {}
+});
+
+function nudgeGameFocus(){
+    try { frame.focus(); } catch (e) {}
+    try { frame.contentWindow?.postMessage({ type: "tektite-activate-gamepad" }, "*"); } catch (e) {}
+}
+
+window.addEventListener("pointerdown", nudgeGameFocus, { passive: true });
+window.addEventListener("mousedown", nudgeGameFocus, { passive: true });
+window.addEventListener("touchstart", nudgeGameFocus, { passive: true });
+window.addEventListener("keydown", nudgeGameFocus);
+window.addEventListener("gamepadconnected", nudgeGameFocus);
+
 function syncLayout(){
     const overlayContainer = document.getElementById("overlay-container");
     const overlayHeight = overlayContainer ? overlayContainer.offsetHeight : 0;
@@ -150,72 +165,6 @@ window.addEventListener("load", syncLayout);
 
 const resizeObserver = new ResizeObserver(syncLayout);
 resizeObserver.observe(document.getElementById("overlay-container"));
-
-(function(){
-    let relayTimer = null;
-
-    function serializeGamepads(){
-        try{
-            const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
-            if (!pads || !pads.length) return [];
-            return Array.from(pads).map((gp) => {
-                if (!gp) return null;
-                return {
-                    id: gp.id || "",
-                    index: typeof gp.index === "number" ? gp.index : 0,
-                    connected: gp.connected !== false,
-                    mapping: gp.mapping || "",
-                    timestamp: typeof gp.timestamp === "number" ? gp.timestamp : 0,
-                    axes: Array.isArray(gp.axes) ? Array.from(gp.axes) : [],
-                    buttons: Array.isArray(gp.buttons) ? gp.buttons.map((b) => ({
-                        pressed: !!(b && b.pressed),
-                        touched: !!(b && b.touched),
-                        value: b && typeof b.value === "number" ? b.value : (b && b.pressed ? 1 : 0)
-                    })) : []
-                };
-            });
-        } catch(_){ return []; }
-    }
-
-    function relayGamepads(){
-        if (!frame || !frame.contentWindow) return;
-        frame.contentWindow.postMessage({
-            type: "tektite:gamepad-state",
-            source: "index.html",
-            gamepads: serializeGamepads(),
-            sentAt: Date.now()
-        }, "*");
-    }
-
-    function startRelay(){
-        if (relayTimer) return;
-        relayTimer = window.setInterval(relayGamepads, 16);
-    }
-
-    function stopRelay(){
-        if (!relayTimer) return;
-        window.clearInterval(relayTimer);
-        relayTimer = null;
-    }
-
-    frame && frame.addEventListener("load", relayGamepads);
-    window.addEventListener("focus", startRelay);
-    window.addEventListener("blur", stopRelay);
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible"){
-            startRelay();
-            relayGamepads();
-        } else {
-            stopRelay();
-        }
-    });
-    window.addEventListener("gamepadconnected", () => {
-        startRelay();
-        relayGamepads();
-    });
-    window.addEventListener("gamepaddisconnected", relayGamepads);
-    startRelay();
-})();
 </script>
 
   <script src="/scripts/screenshot-shortcut.js"></script>

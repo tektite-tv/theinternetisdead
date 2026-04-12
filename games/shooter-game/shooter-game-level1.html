@@ -1344,12 +1344,6 @@ window.addEventListener("message", (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
 
-  if (data.type === "tektite:gamepad-state"){
-    relayedGamepads = Array.isArray(data.gamepads) ? data.gamepads : [];
-    relayedGamepadAt = Date.now();
-    return;
-  }
-
   if (data.type === "tektite:pause-for-chat"){
     if (gameState === STATE.PLAYING && !isPaused && !isDead && !(deathOverlay && deathOverlay.style.display === "flex")){
       setPaused(true);
@@ -2566,33 +2560,14 @@ let gpSpeedBoostHeld = false;
 let gpHasAnyInput = false;
 let gpIsConnected = false;
 
-let relayedGamepads = [];
-let relayedGamepadAt = 0;
-const RELAYED_GAMEPAD_TTL_MS = 120;
-
 const GP_DEADZONE = 0.18;
 const GP_AIM_DEADZONE = 0.22;
 const GP_TRIGGER_DEADZONE = 0.35;
 
 function gpDead(v, dz){ return (Math.abs(v) < dz) ? 0 : v; }
 
-function getLiveGamepads(){
-  try{
-    return (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
-  }catch(_){
-    return [];
-  }
-}
-
-function getRelayedGamepads(){
-  if (!Array.isArray(relayedGamepads) || !relayedGamepads.length) return [];
-  if ((Date.now() - relayedGamepadAt) > RELAYED_GAMEPAD_TTL_MS) return [];
-  return relayedGamepads;
-}
-
 function getGamepad(){
-  const livePads = getLiveGamepads();
-  const pads = (livePads && livePads.length) ? livePads : getRelayedGamepads();
+  const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
   if (!pads || !pads.length) return null;
   // Prefer last known index, otherwise first non-null.
   if (pads[gpIndex]) return pads[gpIndex];
