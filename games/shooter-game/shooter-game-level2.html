@@ -2433,6 +2433,7 @@ function setActiveInputMode(mode){
   const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
   if (activeInputMode === nextMode) return;
   activeInputMode = nextMode;
+  if (activeInputMode !== INPUT_MODE_CONTROLLER) clearControllerFocus();
   updateControlsDisplay();
 }
 
