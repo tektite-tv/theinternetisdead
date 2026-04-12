@@ -5647,8 +5647,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const commandInfo = getCommandTokenInfo();
 
       if (event.key === 'Tab') {
-        if (acceptInlineSuggestion()) {
+        // Keep Tab cycling command names directly whenever the caret is still
+        // inside the command token. Otherwise `/` just accepts the first ghost
+        // suggestion and immediately traps the cycle on that exact command.
+        if (commandInfo) {
           event.preventDefault();
+          cycleCommandSuggestion(event.shiftKey ? -1 : 1);
+          renderInlineSuggestion();
           return;
         }
         if (cycleCommandArgumentSuggestion(event.shiftKey ? -1 : 1)) {
@@ -5656,10 +5661,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
           renderInlineSuggestion();
           return;
         }
-        if (commandInfo) {
+        if (acceptInlineSuggestion()) {
           event.preventDefault();
-          cycleCommandSuggestion(event.shiftKey ? -1 : 1);
-          renderInlineSuggestion();
+          return;
         }
         return;
       }
