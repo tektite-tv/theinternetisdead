@@ -2213,6 +2213,8 @@ function showMenu(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
+  const heartsHudEl_menu = document.getElementById("heartsHud");
+  if (heartsHudEl_menu) heartsHudEl_menu.style.display = "none";
 
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
@@ -2227,6 +2229,8 @@ function showWinOverlay(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
+  const heartsHudEl_win = document.getElementById("heartsHud");
+  if (heartsHudEl_win) heartsHudEl_win.style.display = "none";
   stopMusic();
 }
 
@@ -2264,6 +2268,8 @@ function showOptions(){
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
+  const heartsHudEl_options = document.getElementById("heartsHud");
+  if (heartsHudEl_options) heartsHudEl_options.style.display = "none";
 
   startMenu.style.display = "none";
   optionsMenu.style.display = "block";
@@ -2283,7 +2289,8 @@ function startGame(){
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "block";
-
+  const heartsHudEl_game = document.getElementById("heartsHud");
+  if (heartsHudEl_game) heartsHudEl_game.style.display = "block";
 
   // v1.96.x: Reset run timer at the start of each game
   runTimer = 0;
@@ -4161,6 +4168,7 @@ font-size:28px;
 letter-spacing:6px;
 pointer-events:none;
 z-index:9999;
+display:none;
 ">❤️ ❤️ ❤️ ❤️</div>
 </body>
 
