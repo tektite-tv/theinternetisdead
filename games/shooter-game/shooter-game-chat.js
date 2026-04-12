@@ -27,9 +27,96 @@
       chatWindow.postMessage(payload, '*');
     }
 
+    function notifyChildChatVisibility() {
+      try {
+        if (tektiteFrame && tektiteFrame.contentWindow) {
+          tektiteFrame.contentWindow.postMessage({
+            type: 'tektite:chat-visibility',
+            visible: !!chatSandboxVisible
+          }, '*');
+        }
+      } catch (error) {}
+    }
+
     function setChatFrameVisible(visible) {
       chatSandboxVisible = !!visible;
       chatSandboxFrame.classList.toggle('visible', chatSandboxVisible);
+      notifyChildChatVisibility();
+    }
+
+    function getChatInput() {
+      try {
+        const chatWindow = getChatWindow();
+        const chatDoc = chatWindow && chatWindow.document;
+        if (!chatDoc) return null;
+        return chatDoc.getElementById('chatBar');
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function setChatInputValue(input, value) {
+      if (!input) return false;
+      try {
+        const proto = input.ownerDocument && input.ownerDocument.defaultView
+          ? input.ownerDocument.defaultView.HTMLInputElement.prototype
+          : HTMLInputElement.prototype;
+        const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+        if (descriptor && typeof descriptor.set === 'function') {
+          descriptor.set.call(input, value);
+        } else {
+          input.value = value;
+        }
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('keyup', { bubbles: true }));
+        return true;
+      } catch (error) {
+        try {
+          input.value = value;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('keyup', { bubbles: true }));
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+    }
+
+    function dispatchChatKey(key, code) {
+      const input = getChatInput();
+      if (!input) return false;
+      try {
+        input.focus();
+        const view = (input.ownerDocument && input.ownerDocument.defaultView) || window;
+        const event = new view.KeyboardEvent('keydown', {
+          key,
+          code: code || key,
+          bubbles: true,
+          cancelable: true
+        });
+        input.dispatchEvent(event);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function primeChatSlashSuggestion() {
+      const input = getChatInput();
+      if (!input) return false;
+      try {
+        input.focus();
+        input.click();
+      } catch (error) {}
+      if (!setChatInputValue(input, '/')) return false;
+      dispatchChatKey('ArrowDown', 'ArrowDown');
+      return true;
+    }
+
+    function withChatInputReady(callback, attempt = 0) {
+      if (callback()) return;
+      if (attempt >= 12) return;
+      window.setTimeout(() => withChatInputReady(callback, attempt + 1), 35);
     }
 
     function flushPendingChatOpen() {
@@ -41,6 +128,9 @@
         focus: options.focus !== false,
         seedSlash: !!options.seedSlash
       });
+      if (options.autoSuggestSlash) {
+        withChatInputReady(primeChatSlashSuggestion);
+      }
     }
 
     function openChatFromParent(options = {}) {
@@ -52,7 +142,11 @@
         }
       } catch (error) {}
       setChatFrameVisible(true);
-      pendingChatOpenOptions = { focus: options.focus !== false, seedSlash: !!options.seedSlash };
+      pendingChatOpenOptions = {
+        focus: options.focus !== false,
+        seedSlash: !!options.seedSlash,
+        autoSuggestSlash: !!options.autoSuggestSlash
+      };
       flushPendingChatOpen();
     }
 
@@ -218,7 +312,29 @@
         return;
       }
       if (data.type === 'openChatFromChild') {
-        openChatFromParent({ focus: true, seedSlash: !!data.seedSlash });
+        openChatFromParent({
+          focus: true,
+          seedSlash: !!data.seedSlash,
+          autoSuggestSlash: !!data.autoSuggestSlash
+        });
+        return;
+      }
+      if (data.type === 'closeChatFromChild') {
+        closeChatFromParent();
+        return;
+      }
+      if (data.type === 'tektite:chat-control') {
+        const action = String(data.action || '').trim();
+        if (action === 'cycleUp') {
+          dispatchChatKey('ArrowUp', 'ArrowUp');
+        } else if (action === 'cycleDown') {
+          dispatchChatKey('ArrowDown', 'ArrowDown');
+        } else if (action === 'execute') {
+          dispatchChatKey('Enter', 'Enter');
+        } else if (action === 'seedSlash') {
+          withChatInputReady(primeChatSlashSuggestion);
+        }
+        return;
       }
     });
   
