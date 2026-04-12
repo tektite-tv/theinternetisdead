@@ -1061,16 +1061,39 @@ function _parseCountOrInfinite(arg){
   return { infinite:false, value: Math.max(0, n) };
 }
 
+function _syncStartResourceControls(){
+  try{
+    if (typeof livesSlider !== "undefined" && livesSlider) livesSlider.value = String(Math.max(0, parseInt(START_LIVES, 10) || 0));
+    if (typeof heartsSlider !== "undefined" && heartsSlider) heartsSlider.value = String(Math.max(1, parseInt(START_HEARTS, 10) || 1));
+    if (typeof shieldsSlider !== "undefined" && shieldsSlider) shieldsSlider.value = String(Math.max(0, parseInt(START_SHIELDS, 10) || 0));
+    if (typeof bombsSlider !== "undefined" && bombsSlider) bombsSlider.value = String(Math.max(0, parseInt(START_BOMBS, 10) || 0));
+    if (typeof syncStartOptionsLabels === "function") syncStartOptionsLabels();
+  }catch(e){}
+}
+
+function _syncBombHud(){
+  if (powerupSlot){
+    powerupSlot.style.display = (bombsCount > 0 || infiniteModeActive) ? "flex" : "none";
+  }
+  if (powerupHint){
+    if (infiniteModeActive) powerupHint.textContent = "Press Q (∞)";
+    else powerupHint.textContent = "Press Q" + (bombsCount > 1 ? (" x" + bombsCount) : "");
+  }
+}
+
 function _applyLives(n){
-  lives = n;
-  if (typeof START_LIVES !== "undefined") START_LIVES = n;
+  const nextLives = Math.max(0, parseInt(n, 10) || 0);
+  lives = nextLives;
+  if (typeof START_LIVES !== "undefined") START_LIVES = nextLives;
+  _syncStartResourceControls();
   if (livesText) livesText.textContent = "x" + lives;
 }
 
 function _applyHearts(n){
-  MAX_HEARTS = Math.max(1, n);
+  MAX_HEARTS = Math.max(1, parseInt(n, 10) || 1);
   HIT_DAMAGE = 1 / MAX_HEARTS;
   if (typeof START_HEARTS !== "undefined") START_HEARTS = MAX_HEARTS;
+  _syncStartResourceControls();
   // Top off health so the new max doesn't instantly punish you.
   health = 1.0;
   if (typeof updateHearts === "function") updateHearts();
@@ -1079,17 +1102,19 @@ function _applyHearts(n){
 }
 
 function _applyShields(n){
-  shieldPips = n;
-  if (typeof START_SHIELDS !== "undefined") START_SHIELDS = n;
+  const nextShields = Math.max(0, parseInt(n, 10) || 0);
+  shieldPips = nextShields;
+  if (typeof START_SHIELDS !== "undefined") START_SHIELDS = nextShields;
+  _syncStartResourceControls();
   if (typeof updateHearts === "function") updateHearts();
 }
 
 function _applyBombs(n){
-  bombsCount = n;
-  if (typeof START_BOMBS !== "undefined") START_BOMBS = n;
-  if (powerupSlot){
-    powerupSlot.style.display = (bombsCount > 0 || infiniteModeActive) ? "flex" : "none";
-  }
+  const nextBombs = Math.max(0, parseInt(n, 10) || 0);
+  bombsCount = nextBombs;
+  if (typeof START_BOMBS !== "undefined") START_BOMBS = nextBombs;
+  _syncStartResourceControls();
+  _syncBombHud();
 }
 
 
@@ -1784,7 +1809,7 @@ function dropBomb(){
   if (bomb) return; // only one active
 
   if (!infiniteModeActive) bombsCount = Math.max(0, bombsCount - 1);
-  powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
+  _syncBombHud();
 
   // Bomb glides in the current aim direction, keeps moving, and ricochets off screen edges
   // until it collides with an enemy.
@@ -2315,11 +2340,7 @@ function startGame(){
   shieldPips = Math.max(0, parseInt(START_SHIELDS, 10) || 0);
 
   bombsCount = Math.max(0, parseInt(START_BOMBS, 10) || 0);
-  powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
-  if (powerupHint){
-    if (infiniteModeActive) powerupHint.textContent = "Press Q (∞)";
-    else powerupHint.textContent = "Press Q" + (bombsCount > 1 ? (" x" + bombsCount) : "");
-  }
+  _syncBombHud();
 
   health = 1.0;
 
@@ -4056,7 +4077,7 @@ if (isDragonEnemy(e)){
 
   // v1.96: corner HUD updates
   livesText.textContent = "x" + lives;
-  powerupSlot.style.display = (infiniteModeActive || bombsCount > 0) ? "flex" : "none";
+  _syncBombHud();
   if (gameState === STATE.PLAYING){
     const info = getStageInfo(wave);
     const clampedWave = Math.min(wave, info.end);
