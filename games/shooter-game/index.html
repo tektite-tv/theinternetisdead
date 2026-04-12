@@ -89,7 +89,7 @@ body::-webkit-scrollbar{
 
 <div id="app-shell">
     <div id="overlay-container"></div>
-    <iframe id="shooter-game-frame" src="/games/shooter-game/shooter-game.html" allow="gamepad *; fullscreen *"></iframe>
+    <iframe id="shooter-game-frame" src="/games/shooter-game/shooter-game.html" allow="gamepad *; fullscreen *" allowfullscreen tabindex="0"></iframe>
 </div>
 
 <script>
@@ -133,20 +133,19 @@ async function loadOverlay(){
 
 const frame = document.getElementById("shooter-game-frame");
 
-frame.addEventListener("load", () => {
-    try { frame.focus(); } catch (e) {}
-});
-
-function nudgeGameFocus(){
-    try { frame.focus(); } catch (e) {}
-    try { frame.contentWindow?.postMessage({ type: "tektite-activate-gamepad" }, "*"); } catch (e) {}
+function focusShooterFrame(){
+    try{ window.focus(); }catch(_){ }
+    try{ document.body && document.body.focus && document.body.focus(); }catch(_){ }
+    try{ frame && frame.focus && frame.focus(); }catch(_){ }
+    try{ if(frame && frame.contentWindow && frame.contentWindow.focus) frame.contentWindow.focus(); }catch(_){ }
 }
 
-window.addEventListener("pointerdown", nudgeGameFocus, { passive: true });
-window.addEventListener("mousedown", nudgeGameFocus, { passive: true });
-window.addEventListener("touchstart", nudgeGameFocus, { passive: true });
-window.addEventListener("keydown", nudgeGameFocus);
-window.addEventListener("gamepadconnected", nudgeGameFocus);
+window.addEventListener("load", focusShooterFrame, { passive:true });
+window.addEventListener("focus", focusShooterFrame, { passive:true });
+window.addEventListener("click", focusShooterFrame, { passive:true });
+window.addEventListener("pointerdown", focusShooterFrame, { passive:true });
+window.addEventListener("gamepadconnected", focusShooterFrame, { passive:true });
+document.addEventListener("visibilitychange", () => { if(!document.hidden) focusShooterFrame(); });
 
 function syncLayout(){
     const overlayContainer = document.getElementById("overlay-container");

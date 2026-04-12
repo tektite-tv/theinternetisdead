@@ -79,7 +79,9 @@
       src="/games/shooter-game/shooter-game-level1.html"
       title="Tektite Shooter Game"
       loading="eager"
-      allow="gamepad *; fullscreen *" allowfullscreen
+      allow="gamepad *; fullscreen *"
+      allowfullscreen
+      tabindex="0"
     ></iframe>
   </div>
 
@@ -92,27 +94,52 @@
   ></iframe>
 
 
+
   <script>
-    const tektiteFrame = document.getElementById("tektite-frame");
+    (function(){
+      const gameFrame = document.getElementById("tektite-frame");
+      const mainContent = document.getElementById("main-content");
 
-    function activateLevelFrame(){
-      try { tektiteFrame.focus(); } catch (e) {}
-      try { tektiteFrame.contentWindow?.focus(); } catch (e) {}
-      try { tektiteFrame.contentWindow?.postMessage({ type: "tektite-activate-gamepad" }, "*"); } catch (e) {}
-    }
-
-    tektiteFrame.addEventListener("load", activateLevelFrame);
-    window.addEventListener("pointerdown", activateLevelFrame, { passive: true });
-    window.addEventListener("mousedown", activateLevelFrame, { passive: true });
-    window.addEventListener("touchstart", activateLevelFrame, { passive: true });
-    window.addEventListener("keydown", activateLevelFrame);
-    window.addEventListener("gamepadconnected", activateLevelFrame);
-
-    window.addEventListener("message", (event) => {
-      if (event?.data?.type === "tektite-activate-gamepad") {
-        activateLevelFrame();
+      function focusGameFrame(){
+        try { window.focus(); } catch(_) {}
+        try { document.body && document.body.focus && document.body.focus(); } catch(_) {}
+        try { mainContent && mainContent.focus && mainContent.focus(); } catch(_) {}
+        try { gameFrame && gameFrame.focus && gameFrame.focus(); } catch(_) {}
+        try {
+          if (gameFrame && gameFrame.contentWindow && gameFrame.contentWindow.focus) {
+            gameFrame.contentWindow.focus();
+          }
+        } catch(_) {}
       }
-    });
+
+      window.addEventListener("load", focusGameFrame, { passive: true });
+      window.addEventListener("focus", focusGameFrame, { passive: true });
+      window.addEventListener("click", focusGameFrame, { passive: true });
+      window.addEventListener("pointerdown", focusGameFrame, { passive: true });
+      window.addEventListener("gamepadconnected", focusGameFrame, { passive: true });
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) focusGameFrame();
+      });
+
+      window.addEventListener("message", (event) => {
+        const data = event && event.data ? event.data : null;
+        if (!data || typeof data !== "object") return;
+        if (data.type === "tektite:continue-to-level2") {
+          if (gameFrame) {
+            gameFrame.src = "/games/shooter-game/shooter-game-level2.html";
+            setTimeout(focusGameFrame, 50);
+            setTimeout(focusGameFrame, 250);
+          }
+        } else if (data.type === "tektite:return-to-level1") {
+          if (gameFrame) {
+            gameFrame.src = "/games/shooter-game/shooter-game-level1.html";
+            setTimeout(focusGameFrame, 50);
+            setTimeout(focusGameFrame, 250);
+          }
+        }
+      });
+    })();
   </script>
 
   <script src="/games/shooter-game/shooter-game-chat.js"></script>
