@@ -152,6 +152,73 @@ const resizeObserver = new ResizeObserver(syncLayout);
 resizeObserver.observe(document.getElementById("overlay-container"));
 </script>
 
+
+<script>
+(function(){
+    const shooterFrame = document.getElementById('shooter-game-frame');
+    let lastForward = 0;
+    let relayToken = 0;
+
+    function serializeGamepad(gp){
+        if (!gp) return null;
+        return {
+            index: typeof gp.index === 'number' ? gp.index : 0,
+            id: gp.id || '',
+            axes: Array.isArray(gp.axes) ? gp.axes.slice(0) : Array.from(gp.axes || []),
+            buttons: Array.from(gp.buttons || []).map((button) => ({
+                pressed: !!(button && button.pressed),
+                touched: !!(button && button.touched),
+                value: button && typeof button.value === 'number' ? button.value : ((button && button.pressed) ? 1 : 0)
+            }))
+        };
+    }
+
+    function getPrimaryGamepad(){
+        try{
+            const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
+            if (!pads || !pads.length) return null;
+            for (let i = 0; i < pads.length; i++){
+                if (pads[i]) return pads[i];
+            }
+        }catch(error){}
+        return null;
+    }
+
+    function forwardGamepadState(targetWindow){
+        if (!targetWindow) return;
+        targetWindow.postMessage({
+            type: 'tektite:gamepad-state',
+            relayToken: ++relayToken,
+            gamepad: serializeGamepad(getPrimaryGamepad())
+        }, '*');
+    }
+
+    function relayLoop(now){
+        if (!lastForward || (now - lastForward) >= 16){
+            forwardGamepadState(shooterFrame && shooterFrame.contentWindow);
+            lastForward = now;
+        }
+        requestAnimationFrame(relayLoop);
+    }
+
+    window.addEventListener('gamepadconnected', () => {
+        forwardGamepadState(shooterFrame && shooterFrame.contentWindow);
+    });
+    window.addEventListener('gamepaddisconnected', () => {
+        forwardGamepadState(shooterFrame && shooterFrame.contentWindow);
+    });
+    window.addEventListener('message', (event) => {
+        const data = event.data;
+        if (!data || typeof data !== 'object') return;
+        if (data.type === 'tektite:request-gamepad-sync'){
+            forwardGamepadState(shooterFrame && shooterFrame.contentWindow);
+        }
+    });
+
+    requestAnimationFrame(relayLoop);
+})();
+</script>
+
   <script src="/scripts/screenshot-shortcut.js"></script>
   <script src="/scripts/hide-overlay.js"></script>
 </body>

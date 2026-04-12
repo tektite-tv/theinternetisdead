@@ -1351,6 +1351,12 @@ window.addEventListener("message", (event) => {
     return;
   }
 
+  if (data.type === "tektite:gamepad-state"){
+    gpRelayState = data.gamepad || null;
+    gpRelayStamp = performance.now();
+    return;
+  }
+
   if (data.type !== "tektite:execute-command") return;
 
   const command = String(data.command || "").trim();
@@ -2559,14 +2565,21 @@ let gpShieldHeld = false;
 let gpSpeedBoostHeld = false;
 let gpHasAnyInput = false;
 let gpIsConnected = false;
+let gpRelayState = null;
+let gpRelayStamp = 0;
 
 const GP_DEADZONE = 0.18;
 const GP_AIM_DEADZONE = 0.22;
 const GP_TRIGGER_DEADZONE = 0.35;
+const GP_RELAY_TIMEOUT_MS = 250;
 
 function gpDead(v, dz){ return (Math.abs(v) < dz) ? 0 : v; }
 
 function getGamepad(){
+  const now = performance.now();
+  if (gpRelayState && (now - gpRelayStamp) <= GP_RELAY_TIMEOUT_MS){
+    return gpRelayState;
+  }
   const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
   if (!pads || !pads.length) return null;
   // Prefer last known index, otherwise first non-null.

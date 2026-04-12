@@ -91,6 +91,75 @@
     allow="clipboard-read; clipboard-write"
   ></iframe>
 
+  <script>
+    (function(){
+      const tektiteFrame = document.getElementById('tektite-frame');
+      const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
+      let lastForward = 0;
+      let relayToken = 0;
+
+      function serializeGamepad(gp){
+        if (!gp) return null;
+        return {
+          index: typeof gp.index === 'number' ? gp.index : 0,
+          id: gp.id || '',
+          axes: Array.isArray(gp.axes) ? gp.axes.slice(0) : Array.from(gp.axes || []),
+          buttons: Array.from(gp.buttons || []).map((button) => ({
+            pressed: !!(button && button.pressed),
+            touched: !!(button && button.touched),
+            value: button && typeof button.value === 'number' ? button.value : ((button && button.pressed) ? 1 : 0)
+          }))
+        };
+      }
+
+      function getPrimaryGamepad(){
+        try{
+          const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
+          if (!pads || !pads.length) return null;
+          for (let i = 0; i < pads.length; i++){
+            if (pads[i]) return pads[i];
+          }
+        }catch(error){}
+        return null;
+      }
+
+      function forwardGamepadState(targetWindow){
+        if (!targetWindow) return;
+        const gp = getPrimaryGamepad();
+        targetWindow.postMessage({
+          type: 'tektite:gamepad-state',
+          relayToken: ++relayToken,
+          gamepad: serializeGamepad(gp)
+        }, '*');
+      }
+
+      function relayLoop(now){
+        if (!lastForward || (now - lastForward) >= 16){
+          forwardGamepadState(tektiteFrame && tektiteFrame.contentWindow);
+          lastForward = now;
+        }
+        requestAnimationFrame(relayLoop);
+      }
+
+      window.addEventListener('gamepadconnected', () => {
+        forwardGamepadState(tektiteFrame && tektiteFrame.contentWindow);
+      });
+      window.addEventListener('gamepaddisconnected', () => {
+        forwardGamepadState(tektiteFrame && tektiteFrame.contentWindow);
+      });
+      window.addEventListener('message', (event) => {
+        if (event.source === chatSandboxFrame?.contentWindow) return;
+        const data = event.data;
+        if (!data || typeof data !== 'object') return;
+        if (data.type === 'tektite:request-gamepad-sync'){
+          forwardGamepadState(tektiteFrame && tektiteFrame.contentWindow);
+        }
+      });
+
+      requestAnimationFrame(relayLoop);
+    })();
+  </script>
+
   <script src="/games/shooter-game/shooter-game-chat.js"></script>
 </body>
 </html>
