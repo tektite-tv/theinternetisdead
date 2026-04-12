@@ -91,72 +91,96 @@
     allow="clipboard-read; clipboard-write"
   ></iframe>
 
+
   <script>
     (function(){
-      const tektiteFrame = document.getElementById('tektite-frame');
-      const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
-      let lastForward = 0;
-      let relayToken = 0;
+      const tektiteFrame = document.getElementById("tektite-frame");
+      let relayFrame = null;
+      let relayTimer = null;
 
-      function serializeGamepad(gp){
-        if (!gp) return null;
-        return {
-          index: typeof gp.index === 'number' ? gp.index : 0,
-          id: gp.id || '',
-          axes: Array.isArray(gp.axes) ? gp.axes.slice(0) : Array.from(gp.axes || []),
-          buttons: Array.from(gp.buttons || []).map((button) => ({
-            pressed: !!(button && button.pressed),
-            touched: !!(button && button.touched),
-            value: button && typeof button.value === 'number' ? button.value : ((button && button.pressed) ? 1 : 0)
-          }))
-        };
-      }
-
-      function getPrimaryGamepad(){
+      function serializeGamepads(){
         try{
           const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
-          if (!pads || !pads.length) return null;
-          for (let i = 0; i < pads.length; i++){
-            if (pads[i]) return pads[i];
-          }
-        }catch(error){}
-        return null;
+          if (!pads || !pads.length) return [];
+          return Array.from(pads).map((gp) => {
+            if (!gp) return null;
+            return {
+              id: gp.id || "",
+              index: typeof gp.index === "number" ? gp.index : 0,
+              connected: gp.connected !== false,
+              mapping: gp.mapping || "",
+              timestamp: typeof gp.timestamp === "number" ? gp.timestamp : 0,
+              axes: Array.isArray(gp.axes) ? Array.from(gp.axes) : [],
+              buttons: Array.isArray(gp.buttons) ? gp.buttons.map((b) => ({
+                pressed: !!(b && b.pressed),
+                touched: !!(b && b.touched),
+                value: b && typeof b.value === "number" ? b.value : (b && b.pressed ? 1 : 0)
+              })) : []
+            };
+          });
+        }catch(_){ return []; }
       }
 
-      function forwardGamepadState(targetWindow){
-        if (!targetWindow) return;
-        const gp = getPrimaryGamepad();
-        targetWindow.postMessage({
-          type: 'tektite:gamepad-state',
-          relayToken: ++relayToken,
-          gamepad: serializeGamepad(gp)
-        }, '*');
-      }
-
-      function relayLoop(now){
-        if (!lastForward || (now - lastForward) >= 16){
-          forwardGamepadState(tektiteFrame && tektiteFrame.contentWindow);
-          lastForward = now;
+      function getRelayTarget(){
+        try{
+          if (!tektiteFrame || !tektiteFrame.contentWindow) return null;
+          const nested = tektiteFrame.contentDocument && tektiteFrame.contentDocument.getElementById("tektite-frame");
+          if (nested && nested.contentWindow) return nested.contentWindow;
+          return tektiteFrame.contentWindow;
+        }catch(_){
+          return tektiteFrame && tektiteFrame.contentWindow ? tektiteFrame.contentWindow : null;
         }
-        requestAnimationFrame(relayLoop);
       }
 
-      window.addEventListener('gamepadconnected', () => {
-        forwardGamepadState(tektiteFrame && tektiteFrame.contentWindow);
+      function postGamepads(gamepads, source){
+        const target = getRelayTarget();
+        if (!target) return;
+        target.postMessage({
+          type: "tektite:gamepad-state",
+          source: source || "shooter-game.html",
+          gamepads: Array.isArray(gamepads) ? gamepads : [],
+          sentAt: Date.now()
+        }, "*");
+      }
+
+      function relayGamepads(){
+        postGamepads(serializeGamepads(), "shooter-game.html");
+      }
+
+      function startRelay(){
+        if (relayTimer) return;
+        relayTimer = window.setInterval(relayGamepads, 16);
+      }
+
+      function stopRelay(){
+        if (!relayTimer) return;
+        window.clearInterval(relayTimer);
+        relayTimer = null;
+      }
+
+      tektiteFrame && tektiteFrame.addEventListener("load", relayGamepads);
+      window.addEventListener("focus", startRelay);
+      window.addEventListener("blur", stopRelay);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible"){
+          startRelay();
+          relayGamepads();
+        }else{
+          stopRelay();
+        }
       });
-      window.addEventListener('gamepaddisconnected', () => {
-        forwardGamepadState(tektiteFrame && tektiteFrame.contentWindow);
+      window.addEventListener("gamepadconnected", () => {
+        startRelay();
+        relayGamepads();
       });
-      window.addEventListener('message', (event) => {
-        if (event.source === chatSandboxFrame?.contentWindow) return;
+      window.addEventListener("gamepaddisconnected", relayGamepads);
+      window.addEventListener("message", (event) => {
         const data = event.data;
-        if (!data || typeof data !== 'object') return;
-        if (data.type === 'tektite:request-gamepad-sync'){
-          forwardGamepadState(tektiteFrame && tektiteFrame.contentWindow);
-        }
+        if (!data || typeof data !== "object") return;
+        if (data.type !== "tektite:gamepad-state") return;
+        postGamepads(data.gamepads, data.source || "parent");
       });
-
-      requestAnimationFrame(relayLoop);
+      startRelay();
     })();
   </script>
 
