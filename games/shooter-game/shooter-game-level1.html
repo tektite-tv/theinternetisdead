@@ -297,6 +297,24 @@
 body.invert-colors {
   filter: invert(1) hue-rotate(180deg);
 }
+
+  /* Kill browser click-flash / focus indicator artifacts */
+  html, body, canvas, button, select, input, textarea, label, div, iframe {
+    -webkit-tap-highlight-color: transparent;
+  }
+  *:focus,
+  *:focus-visible,
+  *:active{
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  body{
+    caret-color: transparent;
+  }
+  canvas, .panel, button, select, label, #main-content, #app-shell, #overlay-container, #shooter-game-frame, #tektite-frame{
+    user-select:none;
+    -webkit-user-select:none;
+  }
 </style>
 
 </head>
