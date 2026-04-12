@@ -47,7 +47,7 @@
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
   #optionsMenu.panel{ max-height:88vh; overflow:auto; }
   #optionsMenu .title{ font-size:22px; margin:2px 0 8px; }
-  #optionsMenu .optionsGrid{ gap:8px; }
+  #optionsMenu .optionsGrid{ gap:6px; }
   #optionsMenu .optRow{ padding:8px 10px; }
   #optionsMenu .optLabel{ margin-bottom:6px; }
   #optionsMenu .hint{ margin-top:6px; line-height:1.25; }
@@ -66,9 +66,9 @@
   ======================= */
   .cornerSlot{
     position:absolute;
-    min-width:120px;
-    height:86px;
-    padding:8px 10px;
+    min-width:92px;
+    height:68px;
+    padding:6px 8px;
     border:2px solid rgba(0,255,0,0.55);
     border-radius:12px;
     background: rgba(0,0,0,0.55);
@@ -77,21 +77,24 @@
     align-items:center;
     justify-content:center;
     flex-direction:column;
-    gap:4px;
+    gap:3px;
     pointer-events:none;
+    box-sizing:border-box;
   }
   .cornerSlot .subtxt{
     font-family: "Courier New", monospace;
-    font-size:12px;
+    font-size:14px;
     line-height:1;
     opacity:0.95;
     color:#0f0;
     text-align:center;
+    font-weight:bold;
   }
   #livesSlot img{
-    width:40px; height:40px;
+    width:28px; height:28px;
     image-rendering:pixelated;
     filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
+    flex:0 0 auto;
   }
 
 
@@ -102,10 +105,18 @@
   }
   .livesLabel{
     font-family:"Courier New", monospace;
-    font-size:12px;
+    font-size:11px;
     color:#00ff66;
     opacity:0.95;
     white-space:nowrap;
+    font-weight:bold;
+  }
+
+  #livesText{
+    min-width:22px;
+  }
+  #powerupSlot{
+    min-width:68px;
   }
 
   #deathOverlay{
@@ -654,7 +665,7 @@ const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
 const musicBg = new Audio(AUDIO_BG_MUSIC);
 musicBg.loop = true;
 musicBg.preload = "auto";
-musicBg.volume = 0.5;
+musicBg.volume = 0.6;
 
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
@@ -776,7 +787,7 @@ const fxCtx = fxCanvas.getContext("2d");
 // v1.96: allow disabling post-processing via /video_fx
 let VIDEO_FX_ENABLED = false;
 
-// v1.96: "Tab" key screen-glitch spiral burst
+// v1.96: "R" key screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
 const GLITCH_SPIRAL_DUR = 2.8;
 function triggerGlitchSpiral(){
@@ -953,7 +964,7 @@ if (btnPauseOpenChat){
   });
 }
 
-// v1.96: temporary "glitch spiral" post effect (triggered by Tab key)
+// v1.96: temporary "glitch spiral" post effect (triggered by R key)
 // Uses the existing fxCanvas as a scratch buffer.
 // strength: 0..1 (1 = strongest)
 function applyGlitchSpiral(strength){
@@ -1248,7 +1259,7 @@ function execPauseCommand(cmd){
   }
 
   if (raw === "/log"){
-    return { ok:true, message:"Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /log output to this level's in-game chat. Previous chat change: replaced the ESC pause-menu command bar with a button that says 'Press here to enter commands.' and opens the actual chat UI." };
+    return { ok:true, message:"Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /log output to this level's in-game chat. Previous chat change: replaced the ESC pause-menu command bar with a button that says "Press here to enter commands." and opens the actual chat UI." };
   }
 
   // v1.96: /lives [#|infinite]
@@ -3790,8 +3801,8 @@ window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
   if (e.code === "Space") e.preventDefault();
 
-  // v1.96: Press Tab anywhere to trigger a temporary glitch spiral burst
-  if (e.key === "Tab"){
+  // v1.96: Press R anywhere to trigger a temporary glitch spiral burst
+  if (e.key === "r" || e.key === "R"){
     triggerGlitchSpiral();
     e.preventDefault();
   }
@@ -4764,7 +4775,7 @@ if (isDragonEnemy(e)){
     applyChromaticAberration(beat);
   }
 
-  // v1.96: Glitch spiral burst (Tab key)
+  // v1.96: Glitch spiral burst (R key)
   if (GLITCH_SPIRAL_T > 0){
     const strength = Math.max(0, Math.min(1, GLITCH_SPIRAL_T / GLITCH_SPIRAL_DUR));
     applyGlitchSpiral(strength);
