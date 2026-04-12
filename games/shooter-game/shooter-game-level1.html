@@ -27,27 +27,11 @@
   }
   .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
   .titleSubWrap{ display:flex; justify-content:center; margin:-4px 0 10px; }
-  .titleSub{ position:relative; display:inline-block; font-size:13px; opacity:0.82; cursor:help; }
-  .titleSubTooltip{
-    position:absolute;
-    left:50%;
-    top:calc(100% + 8px);
-    transform:translateX(-50%);
-    min-width:220px;
-    padding:8px 10px;
-    border:1px solid rgba(0,255,0,0.35);
-    border-radius:12px;
-    background: rgba(0,0,0,0.9);
-    box-shadow: 0 0 18px rgba(0,255,0,0.08);
-    font-size:12px;
-    line-height:1.4;
-    opacity:0;
-    visibility:hidden;
-    pointer-events:none;
-    white-space:nowrap;
-    z-index:60;
-  }
-  .titleSub:hover .titleSubTooltip{ opacity:1; visibility:visible; }
+  .titleSub{ position:relative; display:inline-block; font-size:13px; opacity:0.82; cursor:help; min-width:220px; }
+  .titleSubDefault, .titleSubHover{ display:block; white-space:nowrap; transition:opacity 120ms ease; }
+  .titleSubHover{ position:absolute; inset:0; opacity:0; pointer-events:none; }
+  .titleSub:hover .titleSubDefault{ opacity:0; }
+  .titleSub:hover .titleSubHover{ opacity:1; }
   .subimg{
     width:120px; height:120px; display:block; margin:0 auto 10px;
     image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
@@ -80,7 +64,7 @@
   }
   #controlsPopup{
     position: absolute;
-    top: calc(100% + 10px);
+    bottom: calc(100% + 10px);
     left: 50%;
     transform: translateX(-50%);
     width: min(430px, 82vw);
@@ -465,7 +449,7 @@ body.invert-colors {
   <div id="startMenu" class="panel">
     <div class="title">Tektite's Bananaman Shooter Game</div>
     <div class="titleSubWrap">
-      <div class="titleSub">(New and Improved)<div class="titleSubTooltip">Last updated: 2026-04-12 00:00 UTC</div></div>
+      <div class="titleSub"><span class="titleSubDefault">(New and Improved)</span><span class="titleSubHover">(Last updated: 2026-04-12 16:35 UTC)</span></div>
     </div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
