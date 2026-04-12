@@ -1228,7 +1228,7 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyLives(p.value);
-      return { ok:true, message:`/lives ${arg || p.value}` };
+      return { ok:true, message:`Set player lives to ${p.value}` };
     }
     return { ok:false, message:"Usage: /lives [number|infinite]" };
   }
@@ -1239,7 +1239,7 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyHearts(p.value);
-      return { ok:true, message:`/hearts ${arg || p.value}` };
+      return { ok:true, message:`Set player hearts to ${p.value}` };
     }
     return { ok:false, message:"Usage: /hearts [number|infinite]" };
   }
@@ -1250,7 +1250,7 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyShields(p.value);
-      return { ok:true, message:`/shields ${arg || p.value}` };
+      return { ok:true, message:`Set player shields to ${p.value}` };
     }
     return { ok:false, message:"Usage: /shields [number|infinite]" };
   }
@@ -1261,7 +1261,7 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyBombs(p.value);
-      return { ok:true, message:`/bombs ${arg || p.value}` };
+      return { ok:true, message:`Set player bombs to ${p.value}` };
     }
     return { ok:false, message:"Usage: /bombs [number|infinite]" };
   }
