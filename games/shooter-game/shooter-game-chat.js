@@ -169,12 +169,13 @@
     }
 
     async function setIframeFullscreen(shouldEnter) {
-      if (!tektiteFrame) return;
+      const fullscreenTarget = document.documentElement || document.body || tektiteFrame;
+      if (!fullscreenTarget) return;
       try {
         const fsElement = document.fullscreenElement;
         if (shouldEnter) {
-          if (fsElement !== tektiteFrame && tektiteFrame.requestFullscreen) {
-            await tektiteFrame.requestFullscreen();
+          if (fsElement !== fullscreenTarget && fullscreenTarget.requestFullscreen) {
+            await fullscreenTarget.requestFullscreen();
           }
         } else if (fsElement && document.exitFullscreen) {
           await document.exitFullscreen();
@@ -187,7 +188,7 @@
     function switchToLevel2() {
       if (!tektiteFrame || hasSwitchedToLevel2) return;
       hasSwitchedToLevel2 = true;
-      const keepFullscreen = document.fullscreenElement === tektiteFrame;
+      const keepFullscreen = !!document.fullscreenElement;
       tektiteFrame.src = LEVEL2_SRC;
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
@@ -199,7 +200,7 @@
     function switchToLevel1Reloaded() {
       if (!tektiteFrame) return;
       hasSwitchedToLevel2 = false;
-      const keepFullscreen = document.fullscreenElement === tektiteFrame;
+      const keepFullscreen = !!document.fullscreenElement;
       tektiteFrame.src = `${LEVEL1_SRC}?reload=${Date.now()}`;
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
@@ -333,6 +334,8 @@
           dispatchChatKey('Enter', 'Enter');
         } else if (action === 'seedSlash') {
           withChatInputReady(primeChatSlashSuggestion);
+        } else if (action === 'close') {
+          closeChatFromParent();
         }
         return;
       }
