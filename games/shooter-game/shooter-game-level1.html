@@ -657,7 +657,7 @@ function ensureMusicPlaying(restart=false){
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
-    musicBg.play().catch(()=>{});
+    tryPlayWithRetry(musicBg, 30, 80);
   }catch(e){}
 }
 
@@ -2107,6 +2107,7 @@ sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
 
 let audioUnlocked = false;
+let pendingWaveStartMusic = false;
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -2132,8 +2133,8 @@ function unlockAudioOnce(){
   }catch(e){}
 
   applyMuteState();
-  ensureMusicPlaying();
 }
+
 function playSfx(a){
   if (audioMuted) return;
   try{
@@ -2302,8 +2303,6 @@ function showOptions(){
 function startGame(){
   setPaused(false);
   unlockAudioOnce();
-  // Start looping music exactly when the game starts.
-  ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
   deathOverlay.style.display = "none";
@@ -2368,6 +2367,9 @@ bullets.length = 0;
   updateHearts();
 spawnEnemies();
   trySpawnUFO();
+
+  // Only begin the level music after Wave 1 gameplay has actually spawned.
+  pendingWaveStartMusic = true;
 
   window.focus();
 }
@@ -3293,6 +3295,14 @@ function update(dt){
   if (gameState === STATE.PLAYING && isPaused) return;
 
   if (gameState !== STATE.PLAYING) return;
+
+  if (pendingWaveStartMusic){
+    const waveIsLive = enemies.length > 0 || (wave === 11 && boss.active);
+    if (waveIsLive){
+      pendingWaveStartMusic = false;
+      if (!audioMuted) ensureMusicPlaying(true);
+    }
+  }
 
   // Run timer (seconds since Start Game)
   runTimer += dt;
