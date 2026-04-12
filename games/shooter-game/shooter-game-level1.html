@@ -652,15 +652,13 @@ function ensureMusicPlaying(restart=false){
       musicBg.currentTime = 0;
     }
     musicBg.loop = true;
-    musicBg.muted = !!audioMuted;
   }catch(e){}
   if (audioMuted) return;
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
+    musicBg.play().catch(()=>{});
   }catch(e){}
-  // Use the retry helper so autoplay timing race conditions do not leave Level 1 silent.
-  tryPlayWithRetry(musicBg, 30, 80);
 }
 
 function stopMusic(){
@@ -2124,8 +2122,9 @@ function unlockAudioOnce(){
 
   // Prime music/death audio once the browser allows it.
   try{
+    // Prime the background music once the browser allows it.
     musicBg.muted = true;
-    musicBg.play().then(()=>{ musicBg.pause(); musicBg.currentTime = 0; musicBg.muted = !!audioMuted; }).catch(()=>{ musicBg.muted = !!audioMuted; });
+    musicBg.play().then(()=>{ musicBg.pause(); musicBg.currentTime = 0; musicBg.muted = false; }).catch(()=>{ musicBg.muted = false; });
 
     // Prime the death yell audio once the browser allows it.
     sfxDeath.muted = true;
@@ -2133,7 +2132,7 @@ function unlockAudioOnce(){
   }catch(e){}
 
   applyMuteState();
-  ensureMusicPlaying(true);
+  ensureMusicPlaying();
 }
 function playSfx(a){
   if (audioMuted) return;
