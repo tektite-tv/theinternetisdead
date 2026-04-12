@@ -79,9 +79,11 @@
     user-select:none;
   }
   .controllerFocus{
+    background:rgba(75,0,118,0.55) !important;
+  }
+  body.controller-active .controllerFocus{
     outline:2px solid rgba(0,255,102,0.95) !important;
     box-shadow:0 0 0 3px rgba(0,255,102,0.18);
-    background:rgba(75,0,118,0.55) !important;
   }
   #controlsPopup{
     position: absolute;
@@ -2345,8 +2347,10 @@ function setActiveInputMode(mode){
   const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
   if (activeInputMode === nextMode) return;
   activeInputMode = nextMode;
+  document.body.classList.toggle("controller-active", activeInputMode === INPUT_MODE_CONTROLLER);
   if (activeInputMode !== INPUT_MODE_CONTROLLER) clearControllerFocus();
-  updateControlsDisplay();
+  document.body.classList.toggle("controller-active", activeInputMode === INPUT_MODE_CONTROLLER);
+updateControlsDisplay();
 }
 
 updateControlsDisplay();
