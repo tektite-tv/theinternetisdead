@@ -2101,8 +2101,8 @@ function updateStarfield(dt, keys, playerSpeed){
 
   let vxIntent = 0;
   if (gameState === STATE.PLAYING){
-    if isKeyboardActionHeld("moveLeft")  vxIntent -= 1;
-    if isKeyboardActionHeld("moveRight") vxIntent += 1;
+    if (isKeyboardActionHeld("moveLeft")) vxIntent -= 1;
+    if (isKeyboardActionHeld("moveRight")) vxIntent += 1;
     // Xbox/Gamepad: use left-stick/D-pad horizontal intent too
     vxIntent += (typeof gpMoveX !== "undefined" ? (gpMoveX || 0) : 0);
     vxIntent = Math.max(-1, Math.min(1, vxIntent));
@@ -3870,8 +3870,8 @@ function update(dt){
 
   // player move (keyboard + gamepad)
   let moveX = 0;
-  if isKeyboardActionHeld("moveLeft") moveX -= 1;
-  if isKeyboardActionHeld("moveRight") moveX += 1;
+  if (isKeyboardActionHeld("moveLeft")) moveX -= 1;
+  if (isKeyboardActionHeld("moveRight")) moveX += 1;
   // add analog movement from Xbox pad
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
