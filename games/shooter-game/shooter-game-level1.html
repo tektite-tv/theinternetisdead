@@ -536,7 +536,7 @@ body.invert-colors {
     <div id="pauseTitle">PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
     <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
-    <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Press Here to Enter Commands</button>
+    <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Controls</button>
     <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
 
   </div>
@@ -1041,7 +1041,7 @@ function requestOpenChatFromPause(){
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
-    requestOpenChatFromPause();
+    showControlsMenu();
   });
 }
 
@@ -3253,9 +3253,10 @@ function pollGamepad(dt){
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
   const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
   const pressMuteHud = gpEdge(controllerBindings.muteHud, getGpActionPressed(gp, 'muteHud'));
+  const pressSelectButton = gpEdge(8, back);
   const pressY = gpEdge(3, y);
 
-  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressY || pressPause || pressMuteHud || pressFullscreen || pressBomb) && !audioUnlocked){
+  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressSelectButton || pressY || pressPause || pressMuteHud || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
   }
 
@@ -3277,7 +3278,7 @@ function pollGamepad(dt){
       }
     }
   } else {
-    if (pressMuteHud){
+    if (pressMuteHud && !isPaused){
       hudVisible = !hudVisible;
       overlay.style.display = hudVisible ? "block" : "none";
     }
@@ -3292,9 +3293,13 @@ function pollGamepad(dt){
       if (pressMenuSelect) postChatControllerAction('execute');
       if (pressMenuBack) postChatControllerAction('close');
     } else if (isPaused){
-      if (navUp || navLeft) movePauseControllerFocus(-1);
-      if (navDown || navRight) movePauseControllerFocus(1);
-      if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
+      if (pressSelectButton){
+        requestOpenChatFromPause();
+      } else {
+        if (navUp || navLeft) movePauseControllerFocus(-1);
+        if (navDown || navRight) movePauseControllerFocus(1);
+        if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
+      }
       if (pressMenuBack || pressPause) togglePause();
     } else if (gameState === STATE.MENU){
       if (navLeft){
