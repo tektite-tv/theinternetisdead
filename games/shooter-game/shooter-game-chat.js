@@ -67,23 +67,64 @@
     function getChatInteractiveTargets() {
       const chatDoc = getChatDocument();
       if (!chatDoc) return [];
-      const selectors = [
-        'a[href]',
-        'button',
-        '[role="button"]',
+      const preferredSelectors = [
         '[data-command]',
         '[data-cmd]',
         '.help-link',
         '.command-link',
         '.chat-command-link'
       ];
-      const nodes = Array.from(chatDoc.querySelectorAll(selectors.join(',')));
-      return nodes.filter((node) => {
+      const fallbackSelectors = [
+        'a[href]',
+        'button',
+        '[role="button"]'
+      ];
+      const allSelectors = preferredSelectors.concat(fallbackSelectors);
+      const nodes = Array.from(chatDoc.querySelectorAll(allSelectors.join(',')));
+      const filtered = nodes.filter((node) => {
         if (!node) return false;
         const style = node.ownerDocument && node.ownerDocument.defaultView ? node.ownerDocument.defaultView.getComputedStyle(node) : null;
         const hidden = style && (style.display === 'none' || style.visibility === 'hidden');
         const rect = typeof node.getBoundingClientRect === 'function' ? node.getBoundingClientRect() : null;
         return !hidden && !node.disabled && !node.hasAttribute('disabled') && !node.hasAttribute('aria-hidden') && (!rect || (rect.width > 0 && rect.height > 0)) && (!style || style.pointerEvents !== 'none');
+      });
+      const preferred = filtered.filter((node) =>
+        node.matches(preferredSelectors.join(','))
+      );
+      return preferred.length ? preferred : filtered;
+    }
+
+    function updateChatControllerSelectionVisuals(selectedNode) {
+      const targets = getChatInteractiveTargets();
+      targets.forEach((node) => {
+        if (!node) return;
+        const isSelected = node === selectedNode;
+        if (!node.dataset.tektiteControllerBaseBg) node.dataset.tektiteControllerBaseBg = node.style.backgroundColor || '';
+        if (!node.dataset.tektiteControllerBaseOutline) node.dataset.tektiteControllerBaseOutline = node.style.outline || '';
+        if (!node.dataset.tektiteControllerBaseBoxShadow) node.dataset.tektiteControllerBaseBoxShadow = node.style.boxShadow || '';
+        if (!node.dataset.tektiteControllerBaseBorderRadius) node.dataset.tektiteControllerBaseBorderRadius = node.style.borderRadius || '';
+        if (!node.dataset.tektiteControllerBaseColor) node.dataset.tektiteControllerBaseColor = node.style.color || '';
+        if (!node.dataset.tektiteControllerBaseFilter) node.dataset.tektiteControllerBaseFilter = node.style.filter || '';
+        if (!node.dataset.tektiteControllerBaseTransform) node.dataset.tektiteControllerBaseTransform = node.style.transform || '';
+        if (isSelected) {
+          node.dataset.tektiteControllerSelected = 'true';
+          node.style.backgroundColor = 'rgba(75,0,118,0.82)';
+          node.style.outline = '2px solid rgba(0,255,102,0.98)';
+          node.style.boxShadow = '0 0 0 1px rgba(0,255,102,0.35), 0 0 14px rgba(0,255,102,0.28)';
+          node.style.borderRadius = node.dataset.tektiteControllerBaseBorderRadius || '10px';
+          node.style.color = '#ffffff';
+          node.style.filter = 'brightness(1.08)';
+          node.style.transform = 'translateX(0)';
+        } else if (node.dataset.tektiteControllerSelected === 'true') {
+          node.dataset.tektiteControllerSelected = 'false';
+          node.style.backgroundColor = node.dataset.tektiteControllerBaseBg || '';
+          node.style.outline = node.dataset.tektiteControllerBaseOutline || '';
+          node.style.boxShadow = node.dataset.tektiteControllerBaseBoxShadow || '';
+          node.style.borderRadius = node.dataset.tektiteControllerBaseBorderRadius || '';
+          node.style.color = node.dataset.tektiteControllerBaseColor || '';
+          node.style.filter = node.dataset.tektiteControllerBaseFilter || '';
+          node.style.transform = node.dataset.tektiteControllerBaseTransform || '';
+        }
       });
     }
 
@@ -110,12 +151,19 @@
 
     function focusChatTargetByIndex(index) {
       const targets = getChatInteractiveTargets();
-      if (!targets.length) return false;
+      if (!targets.length) {
+        updateChatControllerSelectionVisuals(null);
+        return false;
+      }
       if (typeof index !== 'number' || Number.isNaN(index)) index = 0;
       chatControllerTargetIndex = ((index % targets.length) + targets.length) % targets.length;
       const next = targets[chatControllerTargetIndex];
-      if (!next) return false;
+      if (!next) {
+        updateChatControllerSelectionVisuals(null);
+        return false;
+      }
       try { next.setAttribute('tabindex', next.getAttribute('tabindex') || '0'); } catch (error) {}
+      updateChatControllerSelectionVisuals(next);
       try { next.focus({ preventScroll: false }); } catch (error) { try { next.focus(); } catch (_) {} }
       try { next.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (error) {}
       return true;
@@ -139,8 +187,15 @@
       const target = activeIndex >= 0 ? targets[activeIndex] : null;
       const chatDoc = getChatDocument();
       const active = target || (chatDoc && chatDoc.activeElement ? chatDoc.activeElement : null);
-      if (active && active !== chatDoc.body) {
-        try { active.click(); return true; } catch (error) {}
+      if (active && chatDoc && active !== chatDoc.body) {
+        try {
+          const view = (active.ownerDocument && active.ownerDocument.defaultView) || window;
+          active.dispatchEvent(new view.MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
+          active.dispatchEvent(new view.MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+          active.dispatchEvent(new view.MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+          active.click();
+          return true;
+        } catch (error) {}
         try {
           const view = (active.ownerDocument && active.ownerDocument.defaultView) || window;
           active.dispatchEvent(new view.KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
@@ -277,6 +332,7 @@
 
     function closeChatFromParent() {
       chatControllerTargetIndex = -1;
+      updateChatControllerSelectionVisuals(null);
       postToChatSandbox({ type: 'chatSandboxClose' });
       setChatFrameVisible(false);
       try { tektiteFrame.contentWindow.focus(); } catch (error) {}
