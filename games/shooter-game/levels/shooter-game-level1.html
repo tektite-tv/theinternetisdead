@@ -1120,6 +1120,7 @@ function showPauseControlsMenu(){
   resetDraftBindingsFromActive();
   pauseOverlay.classList.add("pauseControlsVisible");
   uiRoot.classList.add("pauseControlsOpen");
+  lockControlsInputMode(activeInputMode);
   startMenu.style.display = "none";
   optionsMenu.style.display = "none";
   controlsMenu.style.display = "block";
@@ -1141,6 +1142,7 @@ function hidePauseControlsMenu(){
   pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
   uiRoot.style.display = "none";
+  unlockControlsInputMode();
   cancelBindingEdit('Select a control to rebind.');
   pauseFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
@@ -2716,6 +2718,7 @@ const CONTROLLER_BUTTON_LABELS = {
   8: "View", 9: "Menu", 10: "LS", 11: "RS", 12: "D-Pad Up", 13: "D-Pad Down", 14: "D-Pad Left", 15: "D-Pad Right"
 };
 let activeInputMode = INPUT_MODE_KEYBOARD;
+let controlsInputLockMode = null;
 let controlsBindMode = INPUT_MODE_KEYBOARD;
 let controlsFocusIndex = 0;
 let controlsMoveFocusIndex = 0;
@@ -2785,8 +2788,10 @@ function updateControlsDisplay(){
       : 'Aim stays on Mouse / Touch. Slash opens chat. Bind actions below to keys or mouse buttons, including Fullscreen.';
   }
 }
-function setActiveInputMode(mode){
+function setActiveInputMode(mode, options = null){
   const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
+  const force = !!(options && options.force);
+  if (!force && nextMode === INPUT_MODE_KEYBOARD && controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) return;
   if (activeInputMode === nextMode) return;
   activeInputMode = nextMode;
   document.body.classList.toggle('controller-active', activeInputMode === INPUT_MODE_CONTROLLER);
@@ -2797,6 +2802,12 @@ function setActiveInputMode(mode){
     renderControlsBindingList();
   }
   updateControlsDisplay();
+}
+function lockControlsInputMode(mode){
+  controlsInputLockMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : null;
+}
+function unlockControlsInputMode(){
+  controlsInputLockMode = null;
 }
 function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
 function getCurrentBindingValue(action){ return controlsBindMode === INPUT_MODE_CONTROLLER ? draftControllerBindings[action] : draftKeyboardBindings[action]; }
@@ -3289,6 +3300,7 @@ function showControlsMenu(){
   uiRoot.classList.remove("pauseControlsOpen");
   gameState = STATE.CONTROLS;
   resetDraftBindingsFromActive();
+  lockControlsInputMode(activeInputMode);
   setControlsBindMode(activeInputMode);
   startMenu.style.display = "none";
   optionsMenu.style.display = "none";
@@ -3308,6 +3320,7 @@ function hideControlsMenu(){
   resetDraftBindingsFromActive();
   controlsMenu.style.display = "none";
   controlsMenu.classList.remove("pauseControlsMode");
+  unlockControlsInputMode();
   cancelBindingEdit('Select a control to rebind.');
   if (pauseControlsOpen && isPaused){
     hidePauseControlsMenu();
@@ -4476,10 +4489,14 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; keys[e.code || e.key] = false; });
 window.addEventListener("mousedown", (e) => {
+  if (controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) {
+    unlockControlsInputMode();
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+  }
   if (!(bindingEditState && bindingEditState.scheme === INPUT_MODE_KEYBOARD)) return;
   e.preventDefault();
   e.stopPropagation();
-  setActiveInputMode(INPUT_MODE_KEYBOARD);
+  setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
   applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, mouseButtonToBinding(e.button));
 }, true);
 
@@ -4490,7 +4507,12 @@ canvas.addEventListener("pointermove", (e) => {
 });
 
 canvas.addEventListener("pointerdown", (e) => {
-  setActiveInputMode(INPUT_MODE_KEYBOARD);
+  if (controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) {
+    unlockControlsInputMode();
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+  } else {
+    setActiveInputMode(INPUT_MODE_KEYBOARD);
+  }
   setAimFromClient(e.clientX, e.clientY);
   if (e.button === 2 && keyboardBindings.shield === 'Mouse2'){
     e.preventDefault();
