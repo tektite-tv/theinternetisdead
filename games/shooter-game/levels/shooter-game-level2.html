@@ -416,8 +416,8 @@
     text-shadow: 0 0 10px rgba(0,255,0,0.25);
   }
   #pauseHint{
+    margin-bottom:12px;
     margin-top:10px;
-    margin-bottom:16px;
     font-family:monospace;
     font-size:14px;
     opacity:0.9;
@@ -607,7 +607,6 @@ body.invert-colors {
     <div id="pauseTitle">PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
     <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
-    <button id="btnPauseOptions" class="pauseMenuBtn" type="button" style="font-size:18px;">Options</button>
     <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Controls</button>
     <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
 
@@ -1093,11 +1092,9 @@ let hudVisible = false;
 const pauseOverlay = document.getElementById("pauseOverlay");
 
 const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
-const btnPauseOptions = document.getElementById("btnPauseOptions");
 const pauseCommand = null;
 const pauseCmdSuggest = null;
 let parentChatVisible = false;
-let optionsOpenedFromPause = false;
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -1175,11 +1172,6 @@ function hidePauseControlsMenu(){
   pauseFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
   else clearControllerFocus();
-}
-if (btnPauseOptions){
-  btnPauseOptions.addEventListener("click", () => {
-    showOptions(true);
-  });
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
@@ -2944,7 +2936,7 @@ function getControlsControllerTargets(){
 }
 
 function getPauseControllerTargets(){
-  return [btnPauseResume, btnPauseOptions, btnPauseOpenChat, btnPauseQuit].filter(Boolean);
+  return [btnPauseResume, btnPauseOpenChat, btnPauseQuit].filter(Boolean);
 }
 
 function syncMenuControllerFocus(){
@@ -3184,8 +3176,7 @@ function hideControlsMenu(){
   showMenu();
 }
 
-function showOptions(fromPause = false){
-  optionsOpenedFromPause = !!fromPause;
+function showOptions(){
   setPaused(false);
   gameState = STATE.OPTIONS;
     // v1.96: populate start options UI with saved settings
@@ -3309,20 +3300,7 @@ if (AUTO_START_LEVEL){
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
-btnBack.addEventListener("click", () => {
-  if (optionsOpenedFromPause){
-    optionsOpenedFromPause = false;
-    setPaused(true);
-    optionsMenu.style.display = "none";
-    uiRoot.style.display = "none";
-    if (pauseOverlay) pauseOverlay.style.display = "flex";
-    pauseFocusIndex = 0;
-    if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
-    else clearControllerFocus();
-    return;
-  }
-  showMenu();
-});
+btnBack.addEventListener("click", showMenu);
 if (controlsBack) controlsBack.addEventListener("click", hideControlsMenu);
 btnApply.addEventListener("click", () => {
   // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
@@ -3338,20 +3316,9 @@ btnApply.addEventListener("click", () => {
   applyInvertColors();
   START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
 
-  // Keep the UI labels in sync and return to the appropriate menu.
+  // Keep the UI labels in sync and return to the main menu.
   syncStartOptionsLabels();
-  if (optionsOpenedFromPause){
-    optionsOpenedFromPause = false;
-    setPaused(true);
-    optionsMenu.style.display = "none";
-    uiRoot.style.display = "none";
-    if (pauseOverlay) pauseOverlay.style.display = "flex";
-    pauseFocusIndex = 0;
-    if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
-    else clearControllerFocus();
-  } else {
-    showMenu();
-  }
+  showMenu();
 });
 
 btnRestart.addEventListener("click", () => {
