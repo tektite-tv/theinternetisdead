@@ -132,6 +132,10 @@
   #optionsMenu input[type="checkbox"]{ transition: box-shadow 120ms ease, border-color 120ms ease, outline-color 120ms ease, filter 120ms ease, background-color 120ms ease; }
   #optionsMenu select{ scrollbar-width:none; -ms-overflow-style:none; }
   #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
+  .menuActionButton{ width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none; cursor:pointer; transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease, filter 120ms ease; }
+  .menuActionButton:hover{ border-color:rgba(0,255,102,0.85); box-shadow:0 0 0 1px rgba(0,255,102,0.28), 0 0 14px rgba(0,255,102,0.18); filter:brightness(1.05); }
+  .menuActionButton.dual{ width:auto; min-width:0; flex:1 1 0; }
+  .menuActionRow{ display:flex; gap:8px; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
   #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
@@ -709,6 +713,14 @@ body.invert-colors {
           <option value="21">Insanity 10</option>
         </select>
         <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Bonus Mode, or Insanity 1-10.</div>
+      </div>
+
+      <div class="optRow fullRow">
+        <div class="menuActionRow">
+          <button id="btnReturnToLevel1" class="menuActionButton dual" type="button">Return to Level 1</button>
+          <button id="btnSkipToLevel3" class="menuActionButton dual" type="button">Skip to Level 3</button>
+        </div>
+        <div class="hint">Return to the Level 1 shell, or stare into the empty promise of Level 3.</div>
       </div>
 
 </div>
@@ -2607,6 +2619,8 @@ const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
+const btnReturnToLevel1 = document.getElementById("btnReturnToLevel1");
+const btnSkipToLevel3 = document.getElementById("btnSkipToLevel3");
 
   // =======================
   // Start Options (v1.96)
@@ -2637,7 +2651,7 @@ const btnApply = document.getElementById("btnApply");
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   let INFINITE_MODE = false;
   
-let START_WAVE = 1; // 1-10 = maze waves, 11 = Bonus Mode, 12-21 = Insanity 1-10
+let START_WAVE = Math.max(1, Math.min(21, parseInt(LEVEL_PARAMS.get("startWave"), 10) || 1)); // 1-10 = maze waves, 11 = Bonus Mode, 12-21 = Insanity 1-10
 
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
@@ -2917,7 +2931,7 @@ function getMenuControllerTargets(){
 }
 
 function getOptionsControllerTargets(){
-  return [startWaveSelect, livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+  return [startWaveSelect, btnReturnToLevel1, btnSkipToLevel3, livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -3307,6 +3321,30 @@ btnApply.addEventListener("click", () => {
   syncStartOptionsLabels();
   showMenu();
 });
+
+if (btnReturnToLevel1){
+  btnReturnToLevel1.addEventListener("click", () => {
+    if (window.parent && window.parent !== window){
+      try {
+        window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");
+        return;
+      } catch (err) {
+        console.warn("Failed to return to Level 1 through parent host.", err);
+      }
+    }
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.pathname = nextUrl.pathname.replace(/shooter-game-level2\.html$/i, "shooter-game-level1.html");
+    nextUrl.search = "";
+    window.location.href = nextUrl.toString();
+  });
+}
+
+if (btnSkipToLevel3){
+  btnSkipToLevel3.addEventListener("click", () => {
+    setAssetStatus("Level 3 is not built yet.");
+  });
+}
 
 btnRestart.addEventListener("click", () => {
   restartRun();

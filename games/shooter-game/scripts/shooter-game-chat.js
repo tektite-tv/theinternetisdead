@@ -1,7 +1,7 @@
     const tektiteFrame = document.getElementById('tektite-frame');
     const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
     const LEVEL1_SRC = '/games/shooter-game/levels/shooter-game-level1.html';
-    const LEVEL2_SRC = '/games/shooter-game/levels/shooter-game-level2.html?autostart=1';
+    const LEVEL2_SRC = '/games/shooter-game/levels/shooter-game-level2.html?autostart=1&startWave=1';
     const shooterPageCommands = [
       { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'] },
       { name: '/bombs', desc: 'Set bombs to a number or infinite', usage: '/bombs [number|infinite]', suggestions: ['0', '3', '5', 'infinite'] },
@@ -492,11 +492,14 @@
       }
     }
 
-    function switchToLevel2() {
+    function switchToLevel2(startWave = 1) {
       if (!tektiteFrame || hasSwitchedToLevel2) return;
       hasSwitchedToLevel2 = true;
       const keepFullscreen = !!document.fullscreenElement;
-      tektiteFrame.src = LEVEL2_SRC;
+      const nextLevelUrl = new URL(LEVEL2_SRC, window.location.origin);
+      nextLevelUrl.searchParams.set('autostart', '1');
+      nextLevelUrl.searchParams.set('startWave', String(Math.max(1, Math.min(21, parseInt(startWave, 10) || 1))));
+      tektiteFrame.src = `${nextLevelUrl.pathname}${nextLevelUrl.search}`;
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
           setIframeFullscreen(true);
@@ -596,7 +599,7 @@
       }
 
       if (data.type === 'tektite:continue-to-level2') {
-        switchToLevel2();
+        switchToLevel2(data.startWave);
         return;
       }
       if (data.type === 'tektite:return-to-level1') {
