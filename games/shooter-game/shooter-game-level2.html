@@ -1082,6 +1082,7 @@ const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
 const pauseCommand = null;
 const pauseCmdSuggest = null;
 let parentChatVisible = false;
+let controlsReturnTarget = 'menu';
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -1130,7 +1131,7 @@ function requestOpenChatFromPause(){
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
-    showControlsMenu();
+    showControlsMenu(true);
   });
 }
 
@@ -2859,7 +2860,7 @@ function clearControllerFocus(){
 if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
 if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
-if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); });
+if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (controlsReturnTarget === 'pause') returnToPauseMenu(); });
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
 
 function getMenuControllerTargets(){
@@ -3079,12 +3080,22 @@ function restartRun(){
   powerupSlot.style.display = "none";
   startGame();
 }
-function showControlsPopup(){
-  if (!controlsMenu || !btnControls || startMenu.style.display === "none") return;
+function showControlsMenu(fromPause = false){
+  if (!controlsMenu) return;
+  const openFromPause = !!fromPause || (!!isPaused && gameState === STATE.PLAYING);
+  controlsReturnTarget = openFromPause ? 'pause' : 'menu';
+  if (!openFromPause && (!btnControls || startMenu.style.display === "none")) return;
   resetDraftBindingsFromActive();
   gameState = STATE.CONTROLS;
   controlsMenu.style.display = "block";
-  btnControls.setAttribute("aria-expanded", "true");
+  if (btnControls) btnControls.setAttribute("aria-expanded", "true");
+  if (openFromPause){
+    setPaused(true);
+    if (pauseOverlay) pauseOverlay.style.display = "flex";
+    const pausePanel = document.getElementById('pausePanel');
+    if (pausePanel) pausePanel.style.display = "none";
+    uiRoot.style.display = "flex";
+  }
   updateControlsDisplay();
   renderControlsBindingList();
   setControlsBindStatus('Select a control to rebind.');
@@ -3094,15 +3105,32 @@ function showControlsPopup(){
   else clearControllerFocus();
   fitControlsMenuToViewport();
 }
-function hideControlsPopup(){
-  if (!controlsMenu || !btnControls) return;
+function returnToPauseMenu(){
+  if (controlsReturnTarget !== 'pause') return;
+  gameState = STATE.PLAYING;
+  controlsMenu.style.display = "none";
+  if (btnControls) btnControls.setAttribute("aria-expanded", "false");
+  uiRoot.style.display = "none";
+  cancelBindingEdit('Select a control to rebind.');
+  if (pauseOverlay) pauseOverlay.style.display = "flex";
+  const pausePanel = document.getElementById('pausePanel');
+  if (pausePanel) pausePanel.style.display = "block";
+  pauseFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
+  else clearControllerFocus();
+}
+function hideControlsMenu(){
+  if (!controlsMenu) return;
   resetDraftBindingsFromActive();
   controlsMenu.style.display = "none";
-  btnControls.setAttribute("aria-expanded", "false");
+  if (btnControls) btnControls.setAttribute("aria-expanded", "false");
   cancelBindingEdit('Select a control to rebind.');
-  gameState = STATE.MENU;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-  else clearControllerFocus();
+  if (controlsReturnTarget === 'pause') returnToPauseMenu();
+  else {
+    gameState = STATE.MENU;
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+    else clearControllerFocus();
+  }
 }
 
 function showOptions(){
@@ -3220,7 +3248,7 @@ if (AUTO_START_LEVEL){
 
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
-if (btnControls) btnControls.addEventListener("click", () => { if (controlsMenu && controlsMenu.classList.contains("visible")) hideControlsPopup(); else showControlsPopup(); });
+if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 btnBack.addEventListener("click", showMenu);
 btnApply.addEventListener("click", () => {
   // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
@@ -3522,11 +3550,13 @@ function pollGamepad(dt){
       }
     }
   } else {
-    if (isPaused && !parentChatVisible && pressMuteHud){
-      requestOpenChatFromPause();
-    } else if (pressMuteHud){
-      hudVisible = !hudVisible;
-      overlay.style.display = hudVisible ? "block" : "none";
+    if (pressMuteHud){
+      if (isPaused && !parentChatVisible && gameState === STATE.PLAYING){
+        requestOpenChatFromPause();
+      } else if (!isPaused){
+        hudVisible = !hudVisible;
+        overlay.style.display = hudVisible ? "block" : "none";
+      }
     }
     if (pressFullscreen){
       toggleFullscreen();
@@ -3584,7 +3614,7 @@ function pollGamepad(dt){
       if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
       if (pressMenuBack){
         if (bindingEditState) cancelBindingEdit('Binding cancelled.');
-        else hideControlsPopup();
+        else hideControlsMenu();
       }
     } else if (deathOverlay && deathOverlay.style.display === "flex"){
       if (pressMenuSelect) restartRun();
