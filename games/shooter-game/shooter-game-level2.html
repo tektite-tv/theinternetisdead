@@ -43,76 +43,33 @@
   .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
-
-
-  .controlsWrap{
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-  }
-  .inputIndicator{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-width:36px;
-    height:36px;
-    padding:0 8px;
-    border-radius:10px;
-    border:1px solid rgba(0,255,0,0.35);
-    background:rgba(0,0,0,0.35);
-    font-size:20px;
-    line-height:1;
-    user-select:none;
-  }
-  body.controller-active .controllerFocus{
-    outline:2px solid rgba(0,255,102,0.95) !important;
-    box-shadow:0 0 0 3px rgba(0,255,102,0.18);
-    background:rgba(75,0,118,0.55) !important;
-  }
-  #controlsPopup{
-    position: absolute;
-    bottom: calc(100% + 10px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(500px, 90vw);
-    max-height: min(74vh, 560px);
-    display: none;
-    z-index: 50;
-    text-align: left;
-    pointer-events: auto;
-    overflow: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    padding: 14px 14px 12px;
-  }
-  #controlsPopup::-webkit-scrollbar{ width:0; height:0; display:none; }
-  #controlsPopup.panel{ background: rgba(75,0,118,0.72); }
-  #controlsPopup .title{ font-size:18px; margin:0 0 6px; text-align:center; }
-  #controlsPopup.visible{ display:block; }
-  .controlsModeTabs{ display:flex; gap:6px; margin:0 0 8px; }
-  .controlsModeTabs button{ min-width:0; flex:1; padding:7px 10px; font-size:13px; }
-  .controlsModeTabs button.active{ background: rgba(0,255,102,0.16); border-color: rgba(0,255,102,0.65); }
-  .controlsBindList{ display:grid; grid-template-columns:1fr; gap:6px; margin-top:6px; }
-  .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:6px 8px; background: rgba(0,0,0,0.35); }
-  .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; }
-  .controlsBindTitle{ font-size:13px; }
-  .controlsBindHint{ opacity:0.7; font-size:10px; line-height:1.2; }
-  .controlsBindButton{ min-width:132px; padding:6px 8px; text-align:center; font-size:12px; }
-  .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
-  .controlsFooter{ display:flex; justify-content:flex-end; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  #controlsMenu.panel{ background: rgba(75,0,118,0.72); max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #controlsMenu .title{ font-size:22px; margin:2px 0 8px; }
+  #controlsMenu .controlsGrid{ display:grid; gap:8px; }
+  #controlsMenu .optRow{ padding:8px 10px; }
+  #controlsMenu .hint{ margin-top:6px; line-height:1.25; }
+  #controlsMenu .controlsModeTabs{ display:flex; gap:6px; margin:0 0 8px; }
+  #controlsMenu .controlsModeTabs button{ min-width:0; flex:1; padding:10px 12px; font-size:14px; }
+  #controlsMenu .controlsModeTabs button.active{ background: rgba(0,255,102,0.16); border-color: rgba(0,255,102,0.65); }
+  #controlsMenu .controlsBindList{ display:grid; grid-template-columns:1fr; gap:8px; margin-top:6px; }
+  #controlsMenu .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:8px 10px; background: rgba(0,0,0,0.35); }
+  #controlsMenu .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  #controlsMenu .controlsBindTitle{ font-size:13px; }
+  #controlsMenu .controlsBindHint{ opacity:0.7; font-size:10px; line-height:1.2; }
+  #controlsMenu .controlsBindButton{ min-width:132px; padding:8px 10px; text-align:center; font-size:12px; }
+  #controlsMenu .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
   #controlsBindStatus{ margin-top:2px; min-height:28px; font-size:11px; }
   #controlsFixedInfo{ margin-top:4px; line-height:1.25; font-size:11px; }
-
   @media (max-height: 760px){
-    #controlsPopup{ max-height:min(68vh, 500px); padding:12px 12px 10px; }
-    #controlsPopup .title{ font-size:16px; margin-bottom:5px; }
-    .controlsBindRow{ padding:5px 7px; }
-    .controlsBindTitle{ font-size:12px; }
-    .controlsBindHint{ font-size:9px; }
-    .controlsBindButton{ min-width:116px; padding:5px 7px; font-size:11px; }
+    #controlsMenu.panel{ padding:12px; }
+    #controlsMenu .title{ font-size:20px; }
+    #controlsMenu .controlsGrid{ gap:6px; }
+    #controlsMenu .optRow{ padding:7px 9px; }
+    #controlsMenu .controlsBindRow{ padding:6px 8px; }
+    #controlsMenu .controlsBindTitle{ font-size:12px; }
+    #controlsMenu .controlsBindHint{ font-size:9px; }
+    #controlsMenu .controlsBindButton{ min-width:116px; padding:6px 8px; font-size:11px; }
   }
 
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
@@ -560,7 +517,7 @@ body.invert-colors {
     <div class="controlsWrap">
       <button id="btnControls" class="smallBtn" type="button" aria-haspopup="true" aria-expanded="false">Controls</button>
       <span id="activeInputIndicator" class="inputIndicator" aria-live="polite" title="Active input mode">⌨️</span>
-      <div id="controlsPopup" class="panel" role="dialog" aria-label="Controls">
+      <div id="controlsMenu" class="panel" role="dialog" aria-label="Controls">
         <div class="title">CONTROLS</div>
         <div class="controlsModeTabs">
           <button id="controlsModeKeyboard" class="smallBtn active" type="button">Keyboard / Mouse</button>
@@ -663,6 +620,28 @@ body.invert-colors {
     <div class="btnRow" style="margin-top:14px;">
       <button id="btnBack" class="smallBtn">Back</button>
       <button id="btnApply" class="smallBtn">Apply</button>
+    </div>
+  </div>
+
+  <div id="controlsMenu" class="panel" style="display:none;">
+    <div class="title">CONTROLS</div>
+    <div class="controlsGrid">
+      <div class="optRow">
+        <div class="controlsModeTabs">
+          <button id="controlsModeKeyboard" class="smallBtn active" type="button">Keyboard / Mouse</button>
+          <button id="controlsModeController" class="smallBtn" type="button">Controller</button>
+        </div>
+        <div id="controlsBindStatus" class="hint">Select a control to rebind.</div>
+        <div id="controlsFixedInfo" class="hint">Aim stays on mouse/touch. Stick aim and D-pad navigation stay fixed on controller.</div>
+      </div>
+      <div class="optRow">
+        <div id="controlsBindList" class="controlsBindList"></div>
+      </div>
+    </div>
+    <div class="btnRow" style="margin-top:14px;">
+      <button id="controlsBack" class="smallBtn" type="button">Back</button>
+      <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
+      <button id="controlsApplyBinds" class="smallBtn" type="button">Apply</button>
     </div>
   </div>
 </div>
@@ -1697,7 +1676,7 @@ function showWaveBanner(n){
   waveBanner.t = 1.35;
 }
 
-const STATE = { MENU:"menu", OPTIONS:"options", PLAYING:"playing", WIN:"win" };
+const STATE = { MENU:"menu", OPTIONS:"options", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
 let gameWon = false;
 
@@ -2434,7 +2413,7 @@ const assetStatus = document.getElementById("assetStatus");
 const btnStart = document.getElementById("btnStart");
 const btnOptions = document.getElementById("btnOptions");
 const btnControls = document.getElementById("btnControls");
-const controlsPopup = document.getElementById("controlsPopup");
+const controlsMenu = document.getElementById("controlsMenu");
 const activeInputIndicator = document.getElementById("activeInputIndicator");
 const controlsModeKeyboard = document.getElementById("controlsModeKeyboard");
 const controlsModeController = document.getElementById("controlsModeController");
@@ -2443,6 +2422,7 @@ const controlsFixedInfo = document.getElementById("controlsFixedInfo");
 const controlsBindList = document.getElementById("controlsBindList");
 const controlsResetBinds = document.getElementById("controlsResetBinds");
 const controlsApplyBinds = document.getElementById("controlsApplyBinds");
+const controlsBack = document.getElementById("controlsBack");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 
@@ -2566,7 +2546,7 @@ const CONTROLLER_BUTTON_LABELS = {
 };
 let activeInputMode = INPUT_MODE_KEYBOARD;
 let controlsBindMode = INPUT_MODE_KEYBOARD;
-let controlsPopupFocusIndex = 0;
+let controlsFocusIndex = 0;
 let bindingEditState = null;
 let controllerRebindReady = false;
 let keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
@@ -2721,14 +2701,18 @@ if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => s
 if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
 if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); });
+if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
 
 function getMenuControllerTargets(){
-  if (controlsPopup && controlsPopup.classList.contains('visible')) return [controlsModeKeyboard, controlsModeController, ...Array.from(document.querySelectorAll('#controlsPopup .controlsBindButton')), controlsResetBinds, controlsApplyBinds].filter(Boolean);
   return [btnStart, btnOptions, btnControls].filter(Boolean);
 }
 
 function getOptionsControllerTargets(){
   return [startWaveSelect, livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+}
+
+function getControlsControllerTargets(){
+  return [controlsModeKeyboard, controlsModeController, ...Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton')), controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
 }
 
 function getPauseControllerTargets(){
@@ -2756,6 +2740,13 @@ function syncPauseControllerFocus(){
   focusControllerElement(items[pauseFocusIndex]);
 }
 
+function syncControlsControllerFocus(){
+  const items = getControlsControllerTargets();
+  if (!items.length) return;
+  controlsFocusIndex = Math.max(0, Math.min(controlsFocusIndex, items.length - 1));
+  focusControllerElement(items[controlsFocusIndex]);
+}
+
 function moveMenuControllerFocus(delta){
   const items = getMenuControllerTargets();
   if (!items.length) return;
@@ -2775,6 +2766,13 @@ function movePauseControllerFocus(delta){
   if (!items.length) return;
   pauseFocusIndex = (pauseFocusIndex + delta + items.length) % items.length;
   syncPauseControllerFocus();
+}
+
+function moveControlsControllerFocus(delta){
+  const items = getControlsControllerTargets();
+  if (!items.length) return;
+  controlsFocusIndex = (controlsFocusIndex + delta + items.length) % items.length;
+  syncControlsControllerFocus();
 }
 
 function cycleSelect(selectEl, delta){
@@ -2808,9 +2806,7 @@ function activateControllerTarget(el){
     return;
   }
   if (el === btnControls){
-    if (controlsPopup && controlsPopup.classList.contains('visible')) hideControlsPopup();
-    else showControlsPopup();
-    syncMenuControllerFocus();
+    showControlsMenu();
     return;
   }
   if (el.type === 'checkbox'){
@@ -2887,9 +2883,9 @@ function restartRun(){
   startGame();
 }
 function showControlsPopup(){
-  if (!controlsPopup || !btnControls || startMenu.style.display === "none") return;
+  if (!controlsMenu || !btnControls || startMenu.style.display === "none") return;
   resetDraftBindingsFromActive();
-  controlsPopup.classList.add("visible");
+  controlsMenu.style.display = "block";
   btnControls.setAttribute("aria-expanded", "true");
   updateControlsDisplay();
   renderControlsBindingList();
@@ -2897,9 +2893,9 @@ function showControlsPopup(){
   if (activeInputMode === INPUT_MODE_CONTROLLER){ menuFocusIndex = 0; syncMenuControllerFocus(); }
 }
 function hideControlsPopup(){
-  if (!controlsPopup || !btnControls) return;
+  if (!controlsMenu || !btnControls) return;
   resetDraftBindingsFromActive();
-  controlsPopup.classList.remove("visible");
+  controlsMenu.style.display = "none";
   btnControls.setAttribute("aria-expanded", "false");
   cancelBindingEdit('Select a control to rebind.');
 }
@@ -2928,6 +2924,7 @@ function showOptions(){
   if (timerHud) timerHud.style.display = "none";
 
   startMenu.style.display = "none";
+  if (controlsMenu) controlsMenu.style.display = "none";
   optionsMenu.style.display = "block";
   uiRoot.style.display = "flex";
   optionsFocusIndex = 0;
@@ -2940,6 +2937,7 @@ function startGame(){
   ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
+  if (controlsMenu) controlsMenu.style.display = "none";
   deathOverlay.style.display = "none";
   if (winOverlay) winOverlay.style.display = "none";
 
@@ -3015,7 +3013,7 @@ if (AUTO_START_LEVEL){
 
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
-if (btnControls) btnControls.addEventListener("click", () => { if (controlsPopup && controlsPopup.classList.contains("visible")) hideControlsPopup(); else showControlsPopup(); });
+if (btnControls) btnControls.addEventListener("click", () => { if (controlsMenu && controlsMenu.classList.contains("visible")) hideControlsPopup(); else showControlsPopup(); });
 btnBack.addEventListener("click", showMenu);
 btnApply.addEventListener("click", () => {
   // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
@@ -3338,11 +3336,8 @@ function pollGamepad(dt){
       if (navLeft || navUp) moveMenuControllerFocus(-1);
       if (navRight || navDown) moveMenuControllerFocus(1);
       if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
-      if (pressMenuBack){
-        if (bindingEditState) cancelBindingEdit('Binding cancelled.');
-        else hideControlsPopup();
-      }
-      if (pressY && !(controlsPopup && controlsPopup.classList.contains('visible'))) showOptions();
+      if (pressMenuBack && bindingEditState) cancelBindingEdit('Binding cancelled.');
+      if (pressY) showOptions();
     } else if (gameState === STATE.OPTIONS){
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown) moveOptionsControllerFocus(1);
@@ -3350,6 +3345,14 @@ function pollGamepad(dt){
       if (navRight) adjustControllerOption(1);
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) showMenu();
+    } else if (gameState === STATE.CONTROLS){
+      if (navUp || navLeft) moveControlsControllerFocus(-1);
+      if (navDown || navRight) moveControlsControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
+      if (pressMenuBack){
+        if (bindingEditState) cancelBindingEdit('Binding cancelled.');
+        else hideControlsMenu();
+      }
     } else if (deathOverlay && deathOverlay.style.display === "flex"){
       if (pressMenuSelect) restartRun();
     } else if (gameState === STATE.PLAYING){
