@@ -201,6 +201,18 @@
   #optionsMenu .optLabel{ margin-bottom:3px; font-size:12px; }
   #optionsMenu .hint{ margin-top:3px; line-height:1.15; font-size:10px; }
   #optionsMenu .checkboxGroup{ display:flex; flex-direction:column; gap:7px; }
+  #optionsMenu .startStatsRow{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
+  #optionsMenu .startStatField{ display:flex; flex-direction:column; gap:4px; }
+  #optionsMenu .startStatField label{ font-size:11px; opacity:0.9; }
+  #optionsMenu .startStatField input[type="number"]{ width:100%; }
+  #cheatsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
+  #cheatsMenu .title{ font-size:18px; margin:1px 0 5px; }
+  #cheatsMenu .cheatsGrid{ display:grid; grid-template-columns:1fr; gap:6px; margin-top:10px; }
+  #cheatsMenu .cheatRow{ padding:10px 12px; }
+  #cheatsMenu .cheatHeader{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  #cheatsMenu .cheatTitle{ font-size:14px; }
+  #cheatsMenu .cheatCommand{ font-size:10px; opacity:0.7; }
+  #cheatsMenu input[type="checkbox"]{ transform:scale(1.2); }
   #optionsMenu .checkOption{ display:flex; flex-direction:column; gap:4px; }
   #optionsMenu .checkOption label{ display:flex; align-items:center; gap:8px; font-size:12px; opacity:0.95; cursor:pointer; }
   #optionsMenu .checkOption .hint{ margin-top:0; padding-left:28px; }
@@ -651,27 +663,55 @@ body.invert-colors {
         <div class="hint">5 = normal. 1 = slow-mo. 10 = turbo.</div>
       </div>
 
-      <div class="optRow checkboxGroup">
-        <div class="checkOption">
-          <label>
-            <input id="infiniteToggle" type="checkbox" style="transform:scale(1.2);" />
-            <span>Infinite (no damage, no resource consumption)</span>
-          </label>
-          <div class="hint">For testing, chaos, or avoiding consequences. Pick one.</div>
-        </div>
-
-        <div class="checkOption">
-          <label>
-            <input id="invertColorsCheckbox" type="checkbox" style="transform:scale(1.2);" />
-            <span>Invert Colors</span>
-          </label>
-          <div class="hint">Flips all colors for night mode, screenshots, or chaos.</div>
-        </div>
+      <div class="optRow fullRow">
+        <button id="btnCheats" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Cheats</button>
       </div></div>
 
     <div class="btnRow" style="margin-top:14px;">
       <button id="btnBack" class="smallBtn">Back</button>
       <button id="btnApply" class="smallBtn">Apply</button>
+    </div>
+  </div>
+
+  <div id="cheatsMenu" class="panel" style="display:none;">
+    <div class="title">CHEATS</div>
+    <div class="cheatsGrid">
+      <div class="optRow cheatRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Infinite Mode</div>
+            <div class="cheatCommand">Starting state + live gameplay</div>
+          </div>
+          <label><input id="infiniteToggle" type="checkbox" /><span style="margin-left:8px;">Enabled</span></label>
+        </div>
+        <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
+      </div>
+
+      <div class="optRow cheatRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Invert Colors</div>
+            <div class="cheatCommand">/invert</div>
+          </div>
+          <label><input id="invertColorsCheckbox" type="checkbox" /><span style="margin-left:8px;">Enabled</span></label>
+        </div>
+        <div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
+      </div>
+
+      <div class="optRow cheatRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Video FX</div>
+            <div class="cheatCommand">/video_fx</div>
+          </div>
+          <label><input id="videoFxCheckbox" type="checkbox" /><span style="margin-left:8px;">Enabled</span></label>
+        </div>
+        <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
+      </div>
+    </div>
+
+    <div class="btnRow" style="margin-top:14px;">
+      <button id="btnCheatsBack" class="smallBtn">Back</button>
     </div>
   </div>
 
@@ -1428,6 +1468,7 @@ function execPauseCommand(cmd){
   // /video_fx -> toggle chromatic aberration + hue drift
   if (raw === "/video_fx"){
     VIDEO_FX_ENABLED = !VIDEO_FX_ENABLED;
+    syncCheatsMenuState();
     return { ok:true, message:`Video FX ${VIDEO_FX_ENABLED ? "enabled" : "disabled"}` };
   }
 
@@ -1478,8 +1519,10 @@ function execPauseCommand(cmd){
 
   // /invert -> toggle invert colors mode (same as Options menu)
   if (raw === "/invert"){
-    document.body.classList.toggle("invert-colors");
-    return { ok:true, message:"/invert executed" };
+    INVERT_COLORS = !INVERT_COLORS;
+    applyInvertColors();
+    syncCheatsMenuState();
+    return { ok:true, message:`Invert colors ${INVERT_COLORS ? "enabled" : "disabled"}` };
   }
 
   if (raw.startsWith(BG_CMD)){
@@ -1744,7 +1787,7 @@ function showWaveBanner(n){
   waveBanner.t = 1.35;
 }
 
-const STATE = { MENU:"menu", OPTIONS:"options", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
+const STATE = { MENU:"menu", OPTIONS:"options", CHEATS:"cheats", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
 let gameWon = false;
 
@@ -2302,6 +2345,7 @@ function resize(){
   resetStarfield();
   resizeFX();
   fitOptionsMenuToViewport();
+  fitCheatsMenuToViewport();
   fitControlsMenuToViewport();
 }
 window.addEventListener("resize", resize);
@@ -2324,6 +2368,26 @@ function fitOptionsMenuToViewport(){
     const slack = Math.max(0, availableH - scaledHeight);
     optionsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
   }
+}
+
+function fitCheatsMenuToViewport(){
+  if (!cheatsMenu) return;
+  cheatsMenu.style.transform = "scale(1)";
+  cheatsMenu.style.margin = "0";
+  cheatsMenu.style.transformOrigin = "center center";
+  if (cheatsMenu.style.display === "none" || cheatsMenu.offsetParent === null) return;
+
+  const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
+  const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+  const rect = cheatsMenu.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const scaleX = (viewportW - 24) / rect.width;
+  const scaleY = (viewportH - 24) / rect.height;
+  const scale = Math.max(0.78, Math.min(1, scaleX, scaleY));
+  cheatsMenu.style.transform = `scale(${scale})`;
+  const scaledHeight = rect.height * scale;
+  const slack = Math.max(0, viewportH - scaledHeight);
+  if (slack > 6){ cheatsMenu.style.margin = `${Math.floor(slack / 2)}px 0`; }
 }
 
 function fitControlsMenuToViewport(){
@@ -2434,6 +2498,7 @@ function playSfx(a){
 const uiRoot = document.getElementById("uiRoot");
 const startMenu = document.getElementById("startMenu");
 const optionsMenu = document.getElementById("optionsMenu");
+const cheatsMenu = document.getElementById("cheatsMenu");
 const assetStatus = document.getElementById("assetStatus");
 function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 
@@ -2451,6 +2516,8 @@ const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
+const btnCheats = document.getElementById("btnCheats");
+const btnCheatsBack = document.getElementById("btnCheatsBack");
 
   // =======================
   // Start Options (v1.96)
@@ -2486,15 +2553,38 @@ let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-1
 
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
+const videoFxCheckbox = document.getElementById("videoFxCheckbox");
 
 function applyInvertColors(){
   document.body.classList.toggle("invert-colors", INVERT_COLORS);
+}
+
+function syncCheatsMenuState(){
+  if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
+  if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
+  if (videoFxCheckbox) videoFxCheckbox.checked = !!VIDEO_FX_ENABLED;
+}
+
+if (infiniteToggle){
+  infiniteToggle.addEventListener("change", () => {
+    INFINITE_MODE = !!infiniteToggle.checked;
+    infiniteModeActive = !!INFINITE_MODE;
+    syncCheatsMenuState();
+  });
 }
 
 if (invertColorsCheckbox){
   invertColorsCheckbox.addEventListener("change", () => {
     INVERT_COLORS = invertColorsCheckbox.checked;
     applyInvertColors();
+    syncCheatsMenuState();
+  });
+}
+
+if (videoFxCheckbox){
+  videoFxCheckbox.addEventListener("change", () => {
+    VIDEO_FX_ENABLED = !!videoFxCheckbox.checked;
+    syncCheatsMenuState();
   });
 }
 
@@ -2546,8 +2636,8 @@ function syncStartOptionsLabels(){
     s.addEventListener("change", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
-  infiniteToggle.addEventListener("change", () => {});
   syncStartOptionsLabels();
+  syncCheatsMenuState();
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
 const INPUT_MODE_CONTROLLER = "controller";
@@ -2752,6 +2842,7 @@ updateControlsDisplay();
 renderControlsBindingList();
 let menuFocusIndex = 0;
 let optionsFocusIndex = 0;
+let cheatsFocusIndex = 0;
 let startingStatFocusIndex = 0;
 let pauseFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
@@ -2798,7 +2889,11 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [startWaveSelect, skipTarget, statRowTarget, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+  return [startWaveSelect, skipTarget, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
+}
+
+function getCheatsControllerTargets(){
+  return [infiniteToggle, invertColorsCheckbox, videoFxCheckbox, btnCheatsBack].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -2823,6 +2918,13 @@ function syncOptionsControllerFocus(){
   if (!items.length) return;
   optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
   focusControllerElement(items[optionsFocusIndex]);
+}
+
+function syncCheatsControllerFocus(){
+  const items = getCheatsControllerTargets();
+  if (!items.length) return;
+  cheatsFocusIndex = Math.max(0, Math.min(cheatsFocusIndex, items.length - 1));
+  focusControllerElement(items[cheatsFocusIndex]);
 }
 
 function syncPauseControllerFocus(){
@@ -2858,6 +2960,14 @@ function moveOptionsControllerFocus(delta){
     startingStatFocusIndex = 0; // Entering the row from Skip to Level 2 lands on Hearts. Humanity survives.
   }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
+}
+
+function moveCheatsControllerFocus(delta){
+  const items = getCheatsControllerTargets();
+  if (!items.length) return;
+  cheatsFocusIndex = (cheatsFocusIndex + delta + items.length) % items.length;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncCheatsControllerFocus();
   else clearControllerFocus();
 }
 
@@ -2996,6 +3106,16 @@ function adjustControllerOption(delta){
   }
   return false;
 }
+
+function adjustControllerCheat(delta){
+  const items = getCheatsControllerTargets();
+  const el = items[cheatsFocusIndex];
+  if (!el || el.type !== 'checkbox') return false;
+  el.checked = delta > 0;
+  el.dispatchEvent(new Event('change', { bubbles:true }));
+  focusControllerElement(el);
+  return true;
+}
 function showMenu(){
   setPaused(false);
   deathYellPlayed = false;
@@ -3016,6 +3136,7 @@ function showMenu(){
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
+  if (cheatsMenu) cheatsMenu.style.display = "none";
   pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
@@ -3082,6 +3203,31 @@ function restartRun(){
   powerupSlot.style.display = "none";
   startGame();
 }
+function showCheats(){
+  setPaused(false);
+  gameState = STATE.CHEATS;
+  syncCheatsMenuState();
+  startMenu.style.display = "none";
+  if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
+  optionsMenu.style.display = "none";
+  if (cheatsMenu) cheatsMenu.style.display = "block";
+  uiRoot.style.display = "flex";
+  fitCheatsMenuToViewport();
+  cheatsFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncCheatsControllerFocus();
+  else clearControllerFocus();
+}
+
+function hideCheats(){
+  gameState = STATE.OPTIONS;
+  if (cheatsMenu) cheatsMenu.style.display = "none";
+  optionsMenu.style.display = "block";
+  fitOptionsMenuToViewport();
+  optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
+}
+
 function showOptions(){
   setPaused(false);
   gameState = STATE.OPTIONS;
@@ -3091,10 +3237,9 @@ function showOptions(){
   shieldsSlider.value = START_SHIELDS;
   bombsSlider.value = START_BOMBS;
   if (speedSlider) speedSlider.value = START_GAME_SPEED;
-  infiniteToggle.checked = !!INFINITE_MODE;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
-  if (invertColorsCheckbox) invertColorsCheckbox.checked = INVERT_COLORS;
   syncStartOptionsLabels();
+  syncCheatsMenuState();
 
 // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
@@ -3112,6 +3257,7 @@ function showOptions(){
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
   optionsMenu.style.display = "block";
+  if (cheatsMenu) cheatsMenu.style.display = "none";
   uiRoot.style.display = "flex";
   fitOptionsMenuToViewport();
   optionsFocusIndex = 0;
@@ -3200,6 +3346,8 @@ spawnEnemies();
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
+if (btnCheats) btnCheats.addEventListener("click", showCheats);
+if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
 btnBack.addEventListener("click", showMenu);
 btnApply.addEventListener("click", () => {
   // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
@@ -3210,10 +3358,8 @@ btnApply.addEventListener("click", () => {
   // v1.96: Save game speed (1-10), where 5 = normal.
   START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
-  INFINITE_MODE = !!infiniteToggle.checked;
-  if (invertColorsCheckbox) INVERT_COLORS = invertColorsCheckbox.checked;
-  applyInvertColors();
   START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
+  syncCheatsMenuState();
 
   // Keep the UI labels in sync and return to the main menu.
   syncStartOptionsLabels();
@@ -3542,6 +3688,13 @@ function pollGamepad(dt){
       }
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) showMenu();
+    } else if (gameState === STATE.CHEATS){
+      if (navUp) moveCheatsControllerFocus(-1);
+      if (navDown) moveCheatsControllerFocus(1);
+      if (navLeft) adjustControllerCheat(-1);
+      if (navRight) adjustControllerCheat(1);
+      if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
+      if (pressMenuBack) hideCheats();
     } else if (gameState === STATE.CONTROLS){
       if (navUp || navLeft) moveControlsControllerFocus(-1);
       if (navDown || navRight) moveControlsControllerFocus(1);

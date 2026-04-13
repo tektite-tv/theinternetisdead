@@ -4,6 +4,7 @@
 const uiRoot = document.getElementById("uiRoot");
 const startMenu = document.getElementById("startMenu");
 const optionsMenu = document.getElementById("optionsMenu");
+const cheatsMenu = document.getElementById("cheatsMenu");
 const assetStatus = document.getElementById("assetStatus");
 function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 
@@ -21,6 +22,8 @@ const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
+const btnCheats = document.getElementById("btnCheats");
+const btnCheatsBack = document.getElementById("btnCheatsBack");
 
   // =======================
   // Start Options (v1.96)
@@ -55,15 +58,38 @@ let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-1
 
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
+const videoFxCheckbox = document.getElementById("videoFxCheckbox");
 
 function applyInvertColors(){
   document.body.classList.toggle("invert-colors", INVERT_COLORS);
+}
+
+function syncCheatsMenuState(){
+  if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
+  if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
+  if (videoFxCheckbox) videoFxCheckbox.checked = !!VIDEO_FX_ENABLED;
+}
+
+if (infiniteToggle){
+  infiniteToggle.addEventListener("change", () => {
+    INFINITE_MODE = !!infiniteToggle.checked;
+    infiniteModeActive = !!INFINITE_MODE;
+    syncCheatsMenuState();
+  });
 }
 
 if (invertColorsCheckbox){
   invertColorsCheckbox.addEventListener("change", () => {
     INVERT_COLORS = invertColorsCheckbox.checked;
     applyInvertColors();
+    syncCheatsMenuState();
+  });
+}
+
+if (videoFxCheckbox){
+  videoFxCheckbox.addEventListener("change", () => {
+    VIDEO_FX_ENABLED = !!videoFxCheckbox.checked;
+    syncCheatsMenuState();
   });
 }
 
@@ -112,8 +138,8 @@ function syncStartOptionsLabels(){
     s.addEventListener("change", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
-  infiniteToggle.addEventListener("change", () => {});
   syncStartOptionsLabels();
+  syncCheatsMenuState();
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
 const INPUT_MODE_CONTROLLER = "controller";
@@ -352,7 +378,11 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [startWaveSelect, skipTarget, statRowTarget, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+  return [startWaveSelect, skipTarget, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
+}
+
+function getCheatsControllerTargets(){
+  return [infiniteToggle, invertColorsCheckbox, videoFxCheckbox, btnCheatsBack].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -754,6 +784,8 @@ spawnEnemies();
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
+if (btnCheats) btnCheats.addEventListener("click", showCheats);
+if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
 btnBack.addEventListener("click", showMenu);
 btnApply.addEventListener("click", () => {
   // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
@@ -764,10 +796,8 @@ btnApply.addEventListener("click", () => {
   // v1.96: Save game speed (1-10), where 5 = normal.
   START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
-  INFINITE_MODE = !!infiniteToggle.checked;
-  if (invertColorsCheckbox) INVERT_COLORS = invertColorsCheckbox.checked;
-  applyInvertColors();
   START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
+  syncCheatsMenuState();
 
   // Keep the UI labels in sync and return to the main menu.
   syncStartOptionsLabels();
