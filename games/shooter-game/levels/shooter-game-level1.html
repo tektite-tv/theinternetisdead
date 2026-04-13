@@ -77,7 +77,7 @@
   body.controller-active input[type="range"].controllerFocus::-webkit-slider-runnable-track{
     height: 8px;
     border-radius: 999px;
-    background: rgba(75,0,118,0.78);
+    background: linear-gradient(90deg, #00ff66 0%, #00ff66 var(--range-progress, 44%), rgba(75,0,118,0.78) var(--range-progress, 44%), rgba(75,0,118,0.78) 100%);
     box-shadow: 0 0 0 2px rgba(0,255,0,0.55), 0 0 12px rgba(0,255,0,0.22);
   }
   body.controller-active input[type="range"].controllerFocus::-webkit-slider-thumb{
@@ -95,6 +95,11 @@
     border-radius: 999px;
     background: rgba(75,0,118,0.78);
     box-shadow: 0 0 0 2px rgba(0,255,0,0.55), 0 0 12px rgba(0,255,0,0.22);
+  }
+  body.controller-active input[type="range"].controllerFocus::-moz-range-progress{
+    height: 8px;
+    border-radius: 999px;
+    background: #00ff66;
   }
   body.controller-active input[type="range"].controllerFocus::-moz-range-thumb{
     width: 18px;
@@ -2512,7 +2517,17 @@ if (invertColorsCheckbox){
     inputEl.value = String(value);
   }
 
-  function syncStartOptionsLabels(){
+  function syncRangeProgress(rangeEl){
+  if (!rangeEl) return;
+  const min = parseFloat(rangeEl.min || '0');
+  const max = parseFloat(rangeEl.max || '100');
+  const value = parseFloat(rangeEl.value || '0');
+  const span = max - min;
+  const progress = span ? ((value - min) / span) * 100 : 0;
+  rangeEl.style.setProperty('--range-progress', Math.max(0, Math.min(100, progress)) + '%');
+}
+
+function syncStartOptionsLabels(){
     clampNumericInput(livesSlider);
     clampNumericInput(heartsSlider);
     clampNumericInput(shieldsSlider);
@@ -2522,6 +2537,7 @@ if (invertColorsCheckbox){
     if (shieldsVal && shieldsSlider) shieldsVal.textContent = shieldsSlider.value;
     if (bombsVal && bombsSlider) bombsVal.textContent = bombsSlider.value;
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
+    syncRangeProgress(speedSlider);
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
 

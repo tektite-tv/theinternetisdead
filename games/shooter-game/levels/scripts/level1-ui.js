@@ -86,6 +86,16 @@ if (invertColorsCheckbox){
   inputEl.value = String(value);
 }
 
+function syncRangeProgress(rangeEl){
+  if (!rangeEl) return;
+  const min = parseFloat(rangeEl.min || '0');
+  const max = parseFloat(rangeEl.max || '100');
+  const value = parseFloat(rangeEl.value || '0');
+  const span = max - min;
+  const progress = span ? ((value - min) / span) * 100 : 0;
+  rangeEl.style.setProperty('--range-progress', Math.max(0, Math.min(100, progress)) + '%');
+}
+
 function syncStartOptionsLabels(){
     if (typeof clampNumericInput === "function") { clampNumericInput(livesSlider); clampNumericInput(heartsSlider); clampNumericInput(shieldsSlider); clampNumericInput(bombsSlider); }
     if (livesVal && livesSlider) livesVal.textContent = livesSlider.value;
@@ -93,6 +103,7 @@ function syncStartOptionsLabels(){
     if (shieldsVal && shieldsSlider) shieldsVal.textContent = shieldsSlider.value;
     if (bombsVal && bombsSlider) bombsVal.textContent = bombsSlider.value;
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
+    syncRangeProgress(speedSlider);
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
 
