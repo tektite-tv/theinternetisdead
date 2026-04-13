@@ -2720,6 +2720,10 @@ function focusControllerElement(el){
   if (!el) return;
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
   el.classList.add('controllerFocus');
+  const optRow = el.closest('.optRow');
+  if (optRow) optRow.classList.add('controllerFocus');
+  const bindRow = el.closest('.controlsBindRow');
+  if (bindRow) bindRow.classList.add('controllerFocus');
   if (typeof el.focus === 'function') { try{ el.focus({ preventScroll:true }); }catch(_){ try{ el.focus(); }catch(__){} } }
   if (typeof el.scrollIntoView === 'function') {
     try{ el.scrollIntoView({ block:'nearest', inline:'nearest' }); }catch(_){ }
