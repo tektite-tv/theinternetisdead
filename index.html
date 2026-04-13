@@ -203,6 +203,38 @@
     let chatSandboxReady = false;
     let pendingChatOpenOptions = null;
 
+    // ADDED: Hidden homepage-only shortcut. It registers for autocomplete and execution,
+    // but chat-sandbox.html hides commands marked hidden from /help.
+    window.TektiteIndexChatController = {
+      getRegistrationPayload() {
+        return {
+          type: 'pageChatRegister',
+          pageOnly: false,
+          pageId: 'tektite-index',
+          title: 'TheInternetIsDead.org Index',
+          sourceKey: 'tektite-index',
+          commands: [
+            {
+              name: '/games/shooter-game',
+              usage: '/games/shooter-game',
+              desc: 'open the shooter game',
+              execute: true,
+              hidden: true,
+              replaceBuiltIn: true
+            }
+          ]
+        };
+      },
+      handlePageChatExecute(eventData = {}) {
+        const commandName = String(eventData.command || '').trim().toLowerCase();
+        if (commandName !== '/games/shooter-game') {
+          return false;
+        }
+        window.location.href = '/games/shooter-game/';
+        return true;
+      }
+    };
+
     const defaultClockZone = 'America/Toronto';
     const supportedClockZones = (typeof Intl.supportedValuesOf === 'function'
       ? Intl.supportedValuesOf('timeZone')
