@@ -75,6 +75,8 @@
     function getChatPromptTarget() {
       const chatDoc = getChatDocument();
       if (!chatDoc) return null;
+      const chatInput = getChatInput();
+      if (chatInput && isVisibleChatTarget(chatInput)) return chatInput;
       const selectors = [
         '[data-chat-prompt]',
         '#chatPromptButton',
