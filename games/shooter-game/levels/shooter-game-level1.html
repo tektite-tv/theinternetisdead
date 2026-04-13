@@ -631,9 +631,6 @@ body.invert-colors {
       </div>
 
       <div class="optRow fullRow">
-        <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
-      </div>
-      <div class="optRow fullRow">
         <div class="optLabel"><span>Starting Hearts / Shields / Lives / Bombs</span></div>
         <div class="startStatsRow">
           <div class="startStatField">
@@ -682,7 +679,7 @@ body.invert-colors {
             <div class="cheatTitle">Infinite Mode</div>
             <div class="cheatCommand">Starting state + live gameplay</div>
           </div>
-          <label><input id="infiniteToggle" type="checkbox" /><span style="margin-left:8px;">Enabled</span></label>
+          <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:8px;">Disabled</span></label>
         </div>
         <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
       </div>
@@ -693,7 +690,7 @@ body.invert-colors {
             <div class="cheatTitle">Invert Colors</div>
             <div class="cheatCommand">/invert</div>
           </div>
-          <label><input id="invertColorsCheckbox" type="checkbox" /><span style="margin-left:8px;">Enabled</span></label>
+          <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:8px;">Disabled</span></label>
         </div>
         <div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
       </div>
@@ -704,11 +701,15 @@ body.invert-colors {
             <div class="cheatTitle">Video FX</div>
             <div class="cheatCommand">/video_fx</div>
           </div>
-          <label><input id="videoFxCheckbox" type="checkbox" /><span style="margin-left:8px;">Enabled</span></label>
+          <label><input id="videoFxCheckbox" type="checkbox" /><span id="videoFxStatus" style="margin-left:8px;">Disabled</span></label>
         </div>
         <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
       </div>
     </div>
+
+      <div class="optRow fullRow">
+        <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
+      </div>
 
     <div class="btnRow" style="margin-top:14px;">
       <button id="btnCheatsBack" class="smallBtn">Back</button>
@@ -2554,6 +2555,9 @@ let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-1
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
 const videoFxCheckbox = document.getElementById("videoFxCheckbox");
+const infiniteToggleStatus = document.getElementById("infiniteToggleStatus");
+const invertColorsStatus = document.getElementById("invertColorsStatus");
+const videoFxStatus = document.getElementById("videoFxStatus");
 
 function applyInvertColors(){
   document.body.classList.toggle("invert-colors", INVERT_COLORS);
@@ -2563,6 +2567,9 @@ function syncCheatsMenuState(){
   if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
   if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
   if (videoFxCheckbox) videoFxCheckbox.checked = !!VIDEO_FX_ENABLED;
+  if (infiniteToggleStatus) infiniteToggleStatus.textContent = INFINITE_MODE ? "Enabled" : "Disabled";
+  if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
+  if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
 }
 
 if (infiniteToggle){
@@ -2885,15 +2892,15 @@ function getStartingStatInputs(){
 }
 
 function getOptionsControllerTargets(){
-  const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [startWaveSelect, skipTarget, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
+  return [startWaveSelect, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
-  return [infiniteToggle, invertColorsCheckbox, videoFxCheckbox, btnCheatsBack].filter(Boolean);
+  const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
+  return [infiniteToggle, invertColorsCheckbox, videoFxCheckbox, skipTarget, btnCheatsBack].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -2957,7 +2964,7 @@ function moveOptionsControllerFocus(delta){
   const next = getOptionsControllerTargets()[optionsFocusIndex];
   const statInputs = getStartingStatInputs();
   if (statInputs.includes(next) && !statInputs.includes(previous)){
-    startingStatFocusIndex = 0; // Entering the row from Skip to Level 2 lands on Hearts. Humanity survives.
+    startingStatFocusIndex = 0; // Entering the stat row lands on Hearts. Humanity survives.
   }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   else clearControllerFocus();

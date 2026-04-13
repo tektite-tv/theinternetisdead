@@ -59,6 +59,9 @@ let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-1
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
 const videoFxCheckbox = document.getElementById("videoFxCheckbox");
+const infiniteToggleStatus = document.getElementById("infiniteToggleStatus");
+const invertColorsStatus = document.getElementById("invertColorsStatus");
+const videoFxStatus = document.getElementById("videoFxStatus");
 
 function applyInvertColors(){
   document.body.classList.toggle("invert-colors", INVERT_COLORS);
@@ -68,6 +71,9 @@ function syncCheatsMenuState(){
   if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
   if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
   if (videoFxCheckbox) videoFxCheckbox.checked = !!VIDEO_FX_ENABLED;
+  if (infiniteToggleStatus) infiniteToggleStatus.textContent = INFINITE_MODE ? "Enabled" : "Disabled";
+  if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
+  if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
 }
 
 if (infiniteToggle){
@@ -374,15 +380,15 @@ function getStartingStatInputs(){
 }
 
 function getOptionsControllerTargets(){
-  const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [startWaveSelect, skipTarget, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
+  return [startWaveSelect, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
-  return [infiniteToggle, invertColorsCheckbox, videoFxCheckbox, btnCheatsBack].filter(Boolean);
+  const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
+  return [infiniteToggle, invertColorsCheckbox, videoFxCheckbox, skipTarget, btnCheatsBack].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -439,7 +445,7 @@ function moveOptionsControllerFocus(delta){
   const next = getOptionsControllerTargets()[optionsFocusIndex];
   const statInputs = getStartingStatInputs();
   if (statInputs.includes(next) && !statInputs.includes(previous)){
-    startingStatFocusIndex = 0; // Entering the row from Skip to Level 2 lands on Hearts. Humanity survives.
+    startingStatFocusIndex = 0; // Entering the stat row lands on Hearts. Humanity survives.
   }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   else clearControllerFocus();
