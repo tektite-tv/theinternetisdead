@@ -300,10 +300,10 @@
       return false;
     }
 
-    function hasActiveChatNumberPicker() {
+    function hasActiveChatValuePicker() {
       const chatDoc = getChatDocument();
       if (!chatDoc) return false;
-      return !!chatDoc.querySelector('.helpItem[data-number-picker-active="true"]');
+      return !!chatDoc.querySelector('.helpItem[data-number-picker-active="true"], .helpItem[data-color-picker-active="true"]');
     }
 
     function activateFocusedChatTarget() {
@@ -636,18 +636,18 @@
       }
       if (data.type === 'tektite:chat-control') {
         const action = String(data.action || '').trim();
-        const numberPickerActive = hasActiveChatNumberPicker();
+        const valuePickerActive = hasActiveChatValuePicker();
         if (action === 'cycleUp') {
-          if (numberPickerActive) dispatchChatKey('ArrowUp', 'ArrowUp', { target: 'active' });
+          if (valuePickerActive) dispatchChatKey('ArrowUp', 'ArrowUp', { target: 'active' });
           else if (!moveChatControllerSelection('up')) dispatchChatKey('ArrowUp', 'ArrowUp', { target: 'active' });
         } else if (action === 'cycleDown') {
-          if (numberPickerActive) dispatchChatKey('ArrowDown', 'ArrowDown', { target: 'active' });
+          if (valuePickerActive) dispatchChatKey('ArrowDown', 'ArrowDown', { target: 'active' });
           else if (!moveChatControllerSelection('down')) dispatchChatKey('ArrowDown', 'ArrowDown', { target: 'active' });
         } else if (action === 'cycleLeft') {
-          if (numberPickerActive) dispatchChatKey('ArrowLeft', 'ArrowLeft', { target: 'active' });
+          if (valuePickerActive) dispatchChatKey('ArrowLeft', 'ArrowLeft', { target: 'active' });
           else if (!moveChatControllerSelection('left')) dispatchChatKey('ArrowLeft', 'ArrowLeft', { target: 'active' });
         } else if (action === 'cycleRight') {
-          if (numberPickerActive) dispatchChatKey('ArrowRight', 'ArrowRight', { target: 'active' });
+          if (valuePickerActive) dispatchChatKey('ArrowRight', 'ArrowRight', { target: 'active' });
           else if (!moveChatControllerSelection('right')) dispatchChatKey('ArrowRight', 'ArrowRight', { target: 'active' });
         } else if (action === 'execute') {
           activateFocusedChatTarget();
