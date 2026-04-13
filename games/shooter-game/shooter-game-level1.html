@@ -137,13 +137,13 @@
   #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
-  #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:left; }
+  #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:left; width:100%; min-width:0; }
   #controlsMenu .optRow{ padding:6px 8px; }
   #controlsMenu .hint{ margin-top:3px; line-height:1.15; font-size:10px; }
-  #controlsMenu .controlsModeTabs{ display:flex; gap:6px; margin:0 0 6px; align-items:stretch; }
-  #controlsMenu .controlsModeTabs button{ min-width:0; width:calc(50% - 3px); flex:0 0 calc(50% - 3px); box-sizing:border-box; padding:9px 10px; font-size:13px; text-align:center; white-space:nowrap; }
+  #controlsMenu .controlsModeTabs{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:6px; margin:0 0 6px; align-items:stretch; width:100%; min-width:0; }
+  #controlsMenu .controlsModeTabs button{ display:flex; align-items:center; justify-content:center; min-width:0; width:100%; max-width:100%; flex:none; box-sizing:border-box; padding:9px 10px; font-size:13px; line-height:1.2; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #controlsMenu .controlsModeTabs button.active{ background: rgba(0,255,102,0.16); border-color: rgba(0,255,102,0.65); }
-  #controlsMenu .controlsBindList{ display:grid; grid-template-columns:1fr; gap:6px; margin-top:4px; }
+  #controlsMenu .controlsBindList{ display:grid; grid-template-columns:minmax(0, 1fr); gap:6px; margin-top:4px; width:100%; min-width:0; }
   #controlsMenu .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:6px 8px; background: rgba(0,0,0,0.35); }
   #controlsMenu .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; }
   #controlsMenu .controlsBindTitle{ font-size:12px; }
