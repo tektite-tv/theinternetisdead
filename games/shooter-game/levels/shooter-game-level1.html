@@ -104,6 +104,12 @@
     border: 2px solid rgba(0,0,0,0.82);
     box-shadow: 0 0 0 2px rgba(0,255,0,0.58), 0 0 16px rgba(0,255,0,0.30);
   }
+  body.controller-active input[type="number"].controllerFocus{
+    border-color:#00ff66 !important;
+    box-shadow:0 0 0 2px rgba(0,255,102,0.4), 0 0 18px rgba(0,255,102,0.22) !important;
+    background:rgba(0,0,0,0.72) !important;
+  }
+
   body.controller-active input[type="checkbox"].controllerFocus{
     outline: 2px solid rgba(0,255,0,0.95);
     outline-offset: 2px;
@@ -129,6 +135,13 @@
   #optionsMenu select{ scrollbar-width:none; -ms-overflow-style:none; }
   #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
+  .startStatsRow{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; align-items:start; }
+  .startStatField{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .startStatField label{ font-size:13px; color:#00ff66; }
+  .startStatField input[type="number"]{ width:100%; padding:10px 12px; font-family:monospace; font-size:18px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none; box-sizing:border-box; text-align:center; }
+  .startStatField input[type="number"]:focus{ border-color:#00ff66; box-shadow:0 0 0 2px rgba(0,255,102,0.2); }
+  .startStatField input[type="number"]::-webkit-outer-spin-button,
+  .startStatField input[type="number"]::-webkit-inner-spin-button{ opacity:1; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
   .menuBlurb{
     max-width: 440px;
@@ -603,27 +616,27 @@ body.invert-colors {
       <div class="optRow fullRow">
         <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
       </div>
-
-      <div class="optRow">
-        <div class="optLabel"><span>Starting Lives</span><span id="livesVal">1</span></div>
-        <input id="livesSlider" type="range" min="0" max="20" value="1" step="1" />
-      </div>
-
-      <div class="optRow">
-        <div class="optLabel"><span>Starting Hearts</span><span id="heartsVal">3</span></div>
-        <input id="heartsSlider" type="range" min="1" max="12" value="3" step="1" />
-        <div class="hint">Hearts = max hits per life. More hearts = smaller damage per hit.</div>
-      </div>
-
-      <div class="optRow">
-        <div class="optLabel"><span>Starting Shields</span><span id="shieldsVal">0</span></div>
-        <input id="shieldsSlider" type="range" min="0" max="10" value="0" step="1" />
-        <div class="hint">Shields act like extra one-hit armor pips (🛡️) next to your hearts.</div>
-      </div>
-
-      <div class="optRow">
-        <div class="optLabel"><span>Starting Bombs</span><span id="bombsVal">0</span></div>
-        <input id="bombsSlider" type="range" min="0" max="20" value="0" step="1" />
+      <div class="optRow fullRow">
+        <div class="optLabel"><span>Starting Hearts / Shields / Lives / Bombs</span></div>
+        <div class="startStatsRow">
+          <div class="startStatField">
+            <label for="heartsSlider">Hearts</label>
+            <input id="heartsSlider" type="number" min="1" max="12" value="3" step="1" inputmode="numeric" />
+          </div>
+          <div class="startStatField">
+            <label for="shieldsSlider">Shields</label>
+            <input id="shieldsSlider" type="number" min="0" max="10" value="0" step="1" inputmode="numeric" />
+          </div>
+          <div class="startStatField">
+            <label for="livesSlider">Lives</label>
+            <input id="livesSlider" type="number" min="0" max="20" value="1" step="1" inputmode="numeric" />
+          </div>
+          <div class="startStatField">
+            <label for="bombsSlider">Bombs</label>
+            <input id="bombsSlider" type="number" min="0" max="20" value="0" step="1" inputmode="numeric" />
+          </div>
+        </div>
+        <div class="hint">The sliders are dead. Type the exact numbers you want and spare your retinas.</div>
       </div>
 
 
@@ -2488,17 +2501,33 @@ if (invertColorsCheckbox){
     return String(n);
   }
 
+  function clampNumericInput(inputEl){
+    if (!inputEl) return;
+    const min = Number(inputEl.min);
+    const max = Number(inputEl.max);
+    let value = parseInt(inputEl.value, 10);
+    if (!Number.isFinite(value)) value = Number.isFinite(min) ? min : 0;
+    if (Number.isFinite(min)) value = Math.max(min, value);
+    if (Number.isFinite(max)) value = Math.min(max, value);
+    inputEl.value = String(value);
+  }
+
   function syncStartOptionsLabels(){
-    livesVal.textContent = livesSlider.value;
-    heartsVal.textContent = heartsSlider.value;
-    shieldsVal.textContent = shieldsSlider.value;
-    bombsVal.textContent = bombsSlider.value;
+    clampNumericInput(livesSlider);
+    clampNumericInput(heartsSlider);
+    clampNumericInput(shieldsSlider);
+    clampNumericInput(bombsSlider);
+    if (livesVal && livesSlider) livesVal.textContent = livesSlider.value;
+    if (heartsVal && heartsSlider) heartsVal.textContent = heartsSlider.value;
+    if (shieldsVal && shieldsSlider) shieldsVal.textContent = shieldsSlider.value;
+    if (bombsVal && bombsSlider) bombsVal.textContent = bombsSlider.value;
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
 
   [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].forEach(s => {
     s.addEventListener("input", syncStartOptionsLabels);
+    s.addEventListener("change", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
   infiniteToggle.addEventListener("change", () => {});
@@ -2744,7 +2773,7 @@ function getMenuControllerTargets(){
 }
 
 function getOptionsControllerTargets(){
-  return [startWaveSelect, btnSkipToLevel2, livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+  return [startWaveSelect, btnSkipToLevel2, heartsSlider, shieldsSlider, livesSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -2839,6 +2868,22 @@ function stepRange(rangeEl, delta){
   return true;
 }
 
+function stepNumberInput(inputEl, delta){
+  if (!inputEl) return false;
+  const step = parseInt(inputEl.step || '1', 10) || 1;
+  const min = parseInt(inputEl.min || '0', 10);
+  const max = parseInt(inputEl.max || '999', 10);
+  const current = parseInt(inputEl.value || '0', 10);
+  const safeCurrent = Number.isFinite(current) ? current : min;
+  const next = Math.max(min, Math.min(max, safeCurrent + (step * delta)));
+  if (next === safeCurrent) return false;
+  inputEl.value = String(next);
+  inputEl.dispatchEvent(new Event('input', { bubbles:true }));
+  inputEl.dispatchEvent(new Event('change', { bubbles:true }));
+  focusControllerElement(inputEl);
+  return true;
+}
+
 function openControllerSelect(selectEl){
   if (!selectEl || selectEl.tagName !== 'SELECT') return false;
   focusControllerElement(selectEl);
@@ -2896,6 +2941,7 @@ function adjustControllerOption(delta){
   if (!el) return false;
   if (el.tagName === 'SELECT') return cycleSelect(el, delta);
   if (el.type === 'range') return stepRange(el, delta);
+  if (el.type === 'number') return stepNumberInput(el, delta);
   if (el.type === 'checkbox'){
     el.checked = delta > 0;
     el.dispatchEvent(new Event('change', { bubbles:true }));

@@ -75,17 +75,30 @@ if (invertColorsCheckbox){
     return String(n);
   }
 
-  function syncStartOptionsLabels(){
-    livesVal.textContent = livesSlider.value;
-    heartsVal.textContent = heartsSlider.value;
-    shieldsVal.textContent = shieldsSlider.value;
-    bombsVal.textContent = bombsSlider.value;
+  function clampNumericInput(inputEl){
+  if (!inputEl) return;
+  const min = Number(inputEl.min);
+  const max = Number(inputEl.max);
+  let value = parseInt(inputEl.value, 10);
+  if (!Number.isFinite(value)) value = Number.isFinite(min) ? min : 0;
+  if (Number.isFinite(min)) value = Math.max(min, value);
+  if (Number.isFinite(max)) value = Math.min(max, value);
+  inputEl.value = String(value);
+}
+
+function syncStartOptionsLabels(){
+    if (typeof clampNumericInput === "function") { clampNumericInput(livesSlider); clampNumericInput(heartsSlider); clampNumericInput(shieldsSlider); clampNumericInput(bombsSlider); }
+    if (livesVal && livesSlider) livesVal.textContent = livesSlider.value;
+    if (heartsVal && heartsSlider) heartsVal.textContent = heartsSlider.value;
+    if (shieldsVal && shieldsSlider) shieldsVal.textContent = shieldsSlider.value;
+    if (bombsVal && bombsSlider) bombsVal.textContent = bombsSlider.value;
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
 
   [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].forEach(s => {
     s.addEventListener("input", syncStartOptionsLabels);
+    s.addEventListener("change", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
   infiniteToggle.addEventListener("change", () => {});
@@ -414,6 +427,22 @@ function stepRange(rangeEl, delta){
   return true;
 }
 
+function stepNumberInput(inputEl, delta){
+  if (!inputEl) return false;
+  const step = parseInt(inputEl.step || '1', 10) || 1;
+  const min = parseInt(inputEl.min || '0', 10);
+  const max = parseInt(inputEl.max || '999', 10);
+  const current = parseInt(inputEl.value || '0', 10);
+  const safeCurrent = Number.isFinite(current) ? current : min;
+  const next = Math.max(min, Math.min(max, safeCurrent + (step * delta)));
+  if (next === safeCurrent) return false;
+  inputEl.value = String(next);
+  inputEl.dispatchEvent(new Event('input', { bubbles:true }));
+  inputEl.dispatchEvent(new Event('change', { bubbles:true }));
+  focusControllerElement(inputEl);
+  return true;
+}
+
 function openControllerSelect(selectEl){
   if (!selectEl || selectEl.tagName !== 'SELECT') return false;
   focusControllerElement(selectEl);
@@ -471,6 +500,7 @@ function adjustControllerOption(delta){
   if (!el) return false;
   if (el.tagName === 'SELECT') return cycleSelect(el, delta);
   if (el.type === 'range') return stepRange(el, delta);
+  if (el.type === 'number') return stepNumberInput(el, delta);
   if (el.type === 'checkbox'){
     el.checked = delta > 0;
     el.dispatchEvent(new Event('change', { bubbles:true }));
