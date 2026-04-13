@@ -96,7 +96,7 @@ const BINDINGS_STORAGE_KEY = "tektiteShooterBindings_v1";
 const DEFAULT_KEYBOARD_BINDINGS = {
   moveLeft: "KeyA",
   moveRight: "KeyD",
-  shoot: "Space",
+  shoot: "Mouse0",
   shield: "Mouse2",
   bomb: "KeyQ",
   pause: "Escape",
