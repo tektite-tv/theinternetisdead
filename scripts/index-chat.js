@@ -50,9 +50,15 @@
             execute: true
           },
           {
-            name: '/log',
-            usage: '/log',
-            desc: 'show the latest chat interface update timestamp and most recent change summary for this page',
+            name: '/games',
+            usage: '/games',
+            desc: 'open the games page',
+            execute: true
+          },
+          {
+            name: '/experiments',
+            usage: '/experiments',
+            desc: 'open the experiments page',
             execute: true
           }
         ]
@@ -141,13 +147,21 @@
         return true;
       }
 
-      if (commandName === '/log') {
-        window.postToChatSandbox({
-          type: 'pageChatResult',
-          command: '/log',
-          message: 'Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /games and /experiments navigation commands to the index chat controller. Previous chat change: fixed Tab cycling so / then Tab walks the page command list instead of getting stuck on the first command.',
-          announce: true
-        });
+      if (commandName === '/games') {
+        try {
+          window.location.href = '/games/';
+        } catch (error) {
+          window.location.assign('/games/');
+        }
+        return true;
+      }
+
+      if (commandName === '/experiments') {
+        try {
+          window.location.href = '/experiments/';
+        } catch (error) {
+          window.location.assign('/experiments/');
+        }
         return true;
       }
 
