@@ -535,20 +535,9 @@ body.invert-colors {
   <div id="pausePanel">
     <div id="pauseTitle">PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
-    <button id="btnPauseOpenChat" type="button" style="width: 100%;
-      max-width: 420px;
-      background: rgba(0,0,0,.85);
-      color: #0f0;
-      border: 2px solid rgba(0,255,0,.35);
-      outline: none;
-      padding: 12px 14px;
-      border-radius: 10px;
-      font: 700 14px/1.2 \"Courier New\", monospace;
-      box-shadow: 0 0 0 1px rgba(0,255,0,.08) inset, 0 0 14px rgba(0,255,0,.08);
-      cursor: pointer;
-    ">Press here to enter commands.</button>
-    <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
     <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
+    <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Press here to enter commands.</button>
+    <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
 
   </div>
 </div>
@@ -1037,10 +1026,10 @@ if (btnPauseResume){
   });
 }
 
-function requestOpenChat(focusSlash){
+function requestOpenChat(focusSlash, runCommand){
   try{
     if (window.parent && window.parent !== window){
-      window.parent.postMessage({ type: "openChatFromChild", seedSlash: !!focusSlash, autoSuggestSlash: !!focusSlash }, "*");
+      window.parent.postMessage({ type: "openChatFromChild", seedSlash: !!focusSlash, autoSuggestSlash: !!focusSlash, runCommand: runCommand ? String(runCommand) : "" }, "*");
       return;
     }
   }catch(e){}
@@ -1048,7 +1037,7 @@ function requestOpenChat(focusSlash){
 
 function requestOpenChatFromPause(){
   try{ setPaused(true); }catch(e){}
-  requestOpenChat(true);
+  requestOpenChat(false, "/help");
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
@@ -2707,7 +2696,7 @@ function getControlsControllerTargets(){
 }
 
 function getPauseControllerTargets(){
-  return [btnPauseOpenChat, btnPauseQuit, btnPauseResume].filter(Boolean);
+  return [btnPauseResume, btnPauseOpenChat, btnPauseQuit].filter(Boolean);
 }
 
 function syncMenuControllerFocus(){

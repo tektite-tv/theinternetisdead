@@ -44,15 +44,80 @@
       notifyChildChatVisibility();
     }
 
-    function getChatInput() {
+    function getChatDocument() {
       try {
         const chatWindow = getChatWindow();
-        const chatDoc = chatWindow && chatWindow.document;
+        return chatWindow && chatWindow.document ? chatWindow.document : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function getChatInput() {
+      try {
+        const chatDoc = getChatDocument();
         if (!chatDoc) return null;
         return chatDoc.getElementById('chatBar');
       } catch (error) {
         return null;
       }
+    }
+
+    function getChatInteractiveTargets() {
+      const chatDoc = getChatDocument();
+      if (!chatDoc) return [];
+      const selectors = [
+        'a[href]',
+        'button',
+        '[role="button"]',
+        '[data-command]',
+        '[data-cmd]',
+        '.help-link',
+        '.command-link',
+        '.chat-command-link'
+      ];
+      const nodes = Array.from(chatDoc.querySelectorAll(selectors.join(',')));
+      return nodes.filter((node) => {
+        if (!node) return false;
+        const style = node.ownerDocument && node.ownerDocument.defaultView ? node.ownerDocument.defaultView.getComputedStyle(node) : null;
+        const hidden = style && (style.display === 'none' || style.visibility === 'hidden');
+        const rect = typeof node.getBoundingClientRect === 'function' ? node.getBoundingClientRect() : null;
+        return !node.disabled && !node.hasAttribute('disabled') && !node.hasAttribute('aria-hidden') && (!rect || (rect.width > 0 && rect.height > 0)) && (!style || style.pointerEvents !== 'none');
+      });
+    }
+
+    function focusChatTargetByStep(step) {
+      const targets = getChatInteractiveTargets();
+      if (!targets.length) return false;
+      const chatDoc = getChatDocument();
+      const active = chatDoc && chatDoc.activeElement ? chatDoc.activeElement : null;
+      let index = targets.findIndex((node) => node === active);
+      if (index < 0) {
+        const containsIndex = targets.findIndex((node) => active && typeof node.contains === 'function' && node.contains(active));
+        index = containsIndex;
+      }
+      index = index < 0 ? (step > 0 ? 0 : targets.length - 1) : (index + step + targets.length) % targets.length;
+      const next = targets[index];
+      if (!next) return false;
+      try { next.setAttribute('tabindex', next.getAttribute('tabindex') || '0'); } catch (error) {}
+      try { next.focus({ preventScroll: false }); } catch (error) { try { next.focus(); } catch (_) {} }
+      try { next.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (error) {}
+      return true;
+    }
+
+    function activateFocusedChatTarget() {
+      const chatDoc = getChatDocument();
+      const active = chatDoc && chatDoc.activeElement ? chatDoc.activeElement : null;
+      if (active && active !== chatDoc.body) {
+        try { active.click(); return true; } catch (error) {}
+        try {
+          const view = (active.ownerDocument && active.ownerDocument.defaultView) || window;
+          active.dispatchEvent(new view.KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
+          active.dispatchEvent(new view.KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
+          return true;
+        } catch (error) {}
+      }
+      return dispatchChatKey('Enter', 'Enter');
     }
 
     function setChatInputValue(input, value) {
@@ -82,23 +147,39 @@
       }
     }
 
-    function dispatchChatKey(key, code) {
+    function dispatchChatKey(key, code, options = {}) {
+      const chatDoc = getChatDocument();
       const input = getChatInput();
-      if (!input) return false;
+      const target = options.target === 'active' && chatDoc && chatDoc.activeElement && chatDoc.activeElement !== chatDoc.body
+        ? chatDoc.activeElement
+        : input;
+      if (!target) return false;
       try {
-        input.focus();
-        const view = (input.ownerDocument && input.ownerDocument.defaultView) || window;
+        if (typeof target.focus === 'function') target.focus();
+        const view = (target.ownerDocument && target.ownerDocument.defaultView) || window;
         const event = new view.KeyboardEvent('keydown', {
           key,
           code: code || key,
           bubbles: true,
-          cancelable: true
+          cancelable: true,
+          shiftKey: !!options.shiftKey
         });
-        input.dispatchEvent(event);
+        target.dispatchEvent(event);
         return true;
       } catch (error) {
         return false;
       }
+    }
+
+    function runChatCommand(command) {
+      const input = getChatInput();
+      if (!input) return false;
+      try {
+        input.focus();
+        input.click();
+      } catch (error) {}
+      if (!setChatInputValue(input, String(command || '').trim())) return false;
+      return dispatchChatKey('Enter', 'Enter');
     }
 
     function primeChatSlashSuggestion() {
@@ -318,6 +399,9 @@
           seedSlash: !!data.seedSlash,
           autoSuggestSlash: !!data.autoSuggestSlash
         });
+        if (data.runCommand) {
+          withChatInputReady(() => runChatCommand(data.runCommand));
+        }
         return;
       }
       if (data.type === 'closeChatFromChild') {
@@ -327,11 +411,11 @@
       if (data.type === 'tektite:chat-control') {
         const action = String(data.action || '').trim();
         if (action === 'cycleUp') {
-          dispatchChatKey('ArrowUp', 'ArrowUp');
+          if (!focusChatTargetByStep(-1)) dispatchChatKey('ArrowUp', 'ArrowUp', { target: 'active' });
         } else if (action === 'cycleDown') {
-          dispatchChatKey('ArrowDown', 'ArrowDown');
+          if (!focusChatTargetByStep(1)) dispatchChatKey('ArrowDown', 'ArrowDown', { target: 'active' });
         } else if (action === 'execute') {
-          dispatchChatKey('Enter', 'Enter');
+          activateFocusedChatTarget();
         } else if (action === 'seedSlash') {
           withChatInputReady(primeChatSlashSuggestion);
         } else if (action === 'close') {
