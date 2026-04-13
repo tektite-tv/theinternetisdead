@@ -262,6 +262,10 @@ function pollGamepad(dt){
         if (bindingEditState) cancelBindingEdit('Binding cancelled.');
         else hideControlsMenu();
       }
+    } else if (gameState === STATE.WIN){
+      if (activeInputMode === INPUT_MODE_CONTROLLER) syncWinControllerFocus();
+      if (pressMenuSelect) activateControllerTarget(getWinControllerTargets()[0]);
+      if (pressMenuBack) activateControllerTarget(getWinControllerTargets()[0]);
     } else if (deathOverlay && deathOverlay.style.display === "flex"){
       if (pressMenuSelect) restartRun();
     } else if (gameState === STATE.PLAYING){

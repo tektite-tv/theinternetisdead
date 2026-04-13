@@ -508,6 +508,10 @@ function getPauseControllerTargets(){
   return [btnPauseResume, btnPauseOpenChat, btnPauseQuit].filter(Boolean);
 }
 
+function getWinControllerTargets(){
+  return [btnContinue].filter(Boolean);
+}
+
 function syncMenuControllerFocus(){
   const items = getMenuControllerTargets();
   if (!items.length) return;
@@ -529,6 +533,12 @@ function syncPauseControllerFocus(){
   if (!items.length) return;
   pauseFocusIndex = Math.max(0, Math.min(pauseFocusIndex, items.length - 1));
   focusControllerElement(items[pauseFocusIndex]);
+}
+
+function syncWinControllerFocus(){
+  const items = getWinControllerTargets();
+  if (!items.length) return;
+  focusControllerElement(items[0]);
 }
 
 function syncControlsControllerFocus(){
@@ -775,6 +785,8 @@ function showWinOverlay(){
   if (timerHud) timerHud.style.display = "none";
   { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
   stopMusic();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncWinControllerFocus();
+  else clearControllerFocus();
 }
 
 function restartRun(){
