@@ -995,12 +995,13 @@ let hudVisible = false;
 // - Freezes gameplay updates and input-driven actions.
 // =======================
 const pauseOverlay = document.getElementById("pauseOverlay");
+const pausePanel = document.getElementById("pausePanel");
 
 const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
 const pauseCommand = null;
 const pauseCmdSuggest = null;
 let parentChatVisible = false;
-let controlsReturnTarget = 'menu';
+let pauseControlsOpen = false;
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -1040,9 +1041,39 @@ function requestOpenChatFromPause(){
   try{ setPaused(true); }catch(e){}
   requestOpenChat(false, "/help");
 }
+function showPauseControlsMenu(){
+  if (!controlsMenu || !pauseOverlay || !pausePanel || !isPaused) return;
+  pauseControlsOpen = true;
+  resetDraftBindingsFromActive();
+  startMenu.style.display = "none";
+  optionsMenu.style.display = "none";
+  controlsMenu.style.display = "block";
+  uiRoot.style.display = "flex";
+  pausePanel.style.display = "none";
+  updateControlsDisplay();
+  renderControlsBindingList();
+  setControlsBindStatus('Select a control to rebind.');
+  fitControlsMenuToViewport();
+  controlsFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
+  else clearControllerFocus();
+}
+function hidePauseControlsMenu(saveChanges){
+  if (!controlsMenu || !pausePanel) return;
+  if (saveChanges) applyDraftBindings();
+  else resetDraftBindingsFromActive();
+  pauseControlsOpen = false;
+  controlsMenu.style.display = "none";
+  cancelBindingEdit(saveChanges ? 'Bindings applied and saved.' : 'Select a control to rebind.');
+  uiRoot.style.display = "none";
+  pausePanel.style.display = "block";
+  pauseFocusIndex = 1;
+  if (activeInputMode === INPUT_MODE_CONTROLLER && !parentChatVisible) syncPauseControllerFocus();
+  else clearControllerFocus();
+}
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
-    showControlsMenu(true);
+    showPauseControlsMenu();
   });
 }
 
@@ -1117,11 +1148,26 @@ function applyGlitchSpiral(strength){
 
 function setPaused(p){
   isPaused = !!p;
+  if (!isPaused) pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
+  if (pausePanel) pausePanel.style.display = (!isPaused || !pauseControlsOpen) ? "block" : "none";
   if (isPaused){
-    pauseFocusIndex = 0;
-    if (!parentChatVisible) syncPauseControllerFocus();
-  } else if (gameState !== STATE.MENU && gameState !== STATE.OPTIONS){
+    if (pauseControlsOpen){
+      startMenu.style.display = "none";
+      optionsMenu.style.display = "none";
+      if (controlsMenu) controlsMenu.style.display = "block";
+      uiRoot.style.display = "flex";
+      controlsFocusIndex = 0;
+      if (!parentChatVisible) syncControlsControllerFocus();
+    } else {
+      if (controlsMenu) controlsMenu.style.display = "none";
+      uiRoot.style.display = "none";
+      pauseFocusIndex = 0;
+      if (!parentChatVisible) syncPauseControllerFocus();
+    }
+  } else if (gameState !== STATE.MENU && gameState !== STATE.OPTIONS && gameState !== STATE.CONTROLS){
+    if (controlsMenu) controlsMenu.style.display = "none";
+    uiRoot.style.display = "none";
     clearControllerFocus();
   }
 
@@ -2681,8 +2727,20 @@ function clearControllerFocus(){
 if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
 if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
-if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (controlsReturnTarget === 'pause') returnToPauseMenu(); });
-if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
+if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => {
+  if (pauseControlsOpen){
+    hidePauseControlsMenu(true);
+  } else {
+    applyDraftBindings();
+    cancelBindingEdit('Bindings applied and saved.');
+    updateControlsDisplay();
+    renderControlsBindingList();
+  }
+});
+if (controlsBack) controlsBack.addEventListener('click', () => {
+  if (pauseControlsOpen) hidePauseControlsMenu(false);
+  else hideControlsMenu();
+});
 
 function getMenuControllerTargets(){
   return [btnStart, btnOptions, btnControls].filter(Boolean);
@@ -2875,23 +2933,12 @@ function showMenu(){
   else clearControllerFocus();
 }
 
-function showControlsMenu(fromPause = false){
-  if (!controlsMenu) return;
-  const openFromPause = !!fromPause || (!!isPaused && gameState === STATE.PLAYING);
-  controlsReturnTarget = openFromPause ? 'pause' : 'menu';
-  if (!openFromPause && startMenu.style.display === "none") return;
-  if (openFromPause){
-    setPaused(true);
-    gameState = STATE.CONTROLS;
-    if (pauseOverlay) pauseOverlay.style.display = "flex";
-    const pausePanel = document.getElementById('pausePanel');
-    if (pausePanel) pausePanel.style.display = "none";
-  } else {
-    setPaused(false);
-    gameState = STATE.CONTROLS;
-    startMenu.style.display = "none";
-  }
+function showControlsMenu(){
+  if (!controlsMenu || startMenu.style.display === "none") return;
+  setPaused(false);
+  gameState = STATE.CONTROLS;
   resetDraftBindingsFromActive();
+  startMenu.style.display = "none";
   optionsMenu.style.display = "none";
   controlsMenu.style.display = "block";
   uiRoot.style.display = "flex";
@@ -2903,26 +2950,12 @@ function showControlsMenu(fromPause = false){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
 }
-function returnToPauseMenu(){
-  if (controlsReturnTarget !== 'pause') return;
-  gameState = STATE.PLAYING;
-  controlsMenu.style.display = "none";
-  uiRoot.style.display = "none";
-  cancelBindingEdit('Select a control to rebind.');
-  if (pauseOverlay) pauseOverlay.style.display = "flex";
-  const pausePanel = document.getElementById('pausePanel');
-  if (pausePanel) pausePanel.style.display = "block";
-  pauseFocusIndex = 0;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
-  else clearControllerFocus();
-}
 function hideControlsMenu(){
   if (!controlsMenu) return;
   resetDraftBindingsFromActive();
   controlsMenu.style.display = "none";
   cancelBindingEdit('Select a control to rebind.');
-  if (controlsReturnTarget === 'pause') returnToPauseMenu();
-  else showMenu();
+  showMenu();
 }
 
 function showWinOverlay(){
@@ -3303,13 +3336,9 @@ function pollGamepad(dt){
       }
     }
   } else {
-    if (pressMuteHud){
-      if (isPaused && !parentChatVisible && gameState === STATE.PLAYING){
-        requestOpenChatFromPause();
-      } else if (!isPaused){
-        hudVisible = !hudVisible;
-        overlay.style.display = hudVisible ? "block" : "none";
-      }
+    if (pressMuteHud && !isPaused){
+      hudVisible = !hudVisible;
+      overlay.style.display = hudVisible ? "block" : "none";
     }
     if (pressFullscreen){
       toggleFullscreen();
@@ -3322,10 +3351,20 @@ function pollGamepad(dt){
       if (pressMenuSelect) postChatControllerAction('execute');
       if (pressMenuBack) postChatControllerAction('close');
     } else if (isPaused){
-      if (navUp || navLeft) movePauseControllerFocus(-1);
-      if (navDown || navRight) movePauseControllerFocus(1);
-      if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
-      if (pressMenuBack || pressPause) togglePause();
+      if (pauseControlsOpen){
+        if (navUp || navLeft) moveControlsControllerFocus(-1);
+        if (navDown || navRight) moveControlsControllerFocus(1);
+        if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
+        if (pressMenuBack && bindingEditState) cancelBindingEdit('Binding cancelled.');
+        else if (pressMenuBack || pressPause) hidePauseControlsMenu(false);
+        if (pressMuteHud) requestOpenChatFromPause();
+      } else {
+        if (navUp || navLeft) movePauseControllerFocus(-1);
+        if (navDown || navRight) movePauseControllerFocus(1);
+        if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
+        if (pressMuteHud) requestOpenChatFromPause();
+        if (pressPause) togglePause();
+      }
     } else if (gameState === STATE.MENU){
       if (navLeft){
         if (menuFocusIndex === 1) menuFocusIndex = 0;
