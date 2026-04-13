@@ -65,12 +65,51 @@
     filter: drop-shadow(0 0 6px rgba(0,255,0,0.45));
     background-color: transparent;
   }
+  body.controller-active input[type="range"].controllerFocus::-webkit-slider-runnable-track{
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(75,0,118,0.78);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.55), 0 0 12px rgba(0,255,0,0.22);
+  }
+  body.controller-active input[type="range"].controllerFocus::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #00ff66;
+    border: 2px solid rgba(0,0,0,0.82);
+    margin-top: -5px;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.58), 0 0 16px rgba(0,255,0,0.30);
+  }
+  body.controller-active input[type="range"].controllerFocus::-moz-range-track{
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(75,0,118,0.78);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.55), 0 0 12px rgba(0,255,0,0.22);
+  }
+  body.controller-active input[type="range"].controllerFocus::-moz-range-thumb{
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #00ff66;
+    border: 2px solid rgba(0,0,0,0.82);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.58), 0 0 16px rgba(0,255,0,0.30);
+  }
   body.controller-active input[type="checkbox"].controllerFocus{
     outline: 2px solid rgba(0,255,0,0.95);
     outline-offset: 2px;
     border-radius: 4px;
     box-shadow: 0 0 10px rgba(0,255,0,0.24);
     background-color: transparent;
+  }
+  body.controller-active #optionsMenu label:has(input[type="checkbox"].controllerFocus){
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(75,0,118,0.45);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 12px rgba(0,255,0,0.22);
   }
   .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:left; margin-top:10px; }
   .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
