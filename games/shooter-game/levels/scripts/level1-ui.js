@@ -307,6 +307,34 @@ function renderControlsBindingList(){
   const moveDefs = defs.filter(def => isMoveBindAction(def.key));
   const otherDefs = defs.filter(def => !isMoveBindAction(def.key));
 
+  {
+    const row = document.createElement('div');
+    row.className = 'controlsBindRow controlsAimRow';
+    const meta = document.createElement('div');
+    meta.className = 'controlsBindMeta';
+    const title = document.createElement('div');
+    title.className = 'controlsBindTitle';
+    title.textContent = 'Aim Control';
+    const hint = document.createElement('div');
+    hint.className = 'controlsBindHint';
+    hint.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? 'Aim stays on Right Stick.' : 'Aim stays on Mouse / Touch.';
+    meta.appendChild(title);
+    meta.appendChild(hint);
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'controlsAimButtonGroup';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'controlsBindButton controlsAimButton controlsFixedBindButton smallBtn';
+    button.disabled = true;
+    button.tabIndex = -1;
+    button.setAttribute('aria-disabled', 'true');
+    button.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? 'Right Stick' : 'Mouse';
+    buttonGroup.appendChild(button);
+    row.appendChild(meta);
+    row.appendChild(buttonGroup);
+    controlsBindList.appendChild(row);
+  }
+
   if (moveDefs.length){
     const row = document.createElement('div');
     row.className = 'controlsBindRow controlsMoveRow';
