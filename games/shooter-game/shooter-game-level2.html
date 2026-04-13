@@ -121,7 +121,7 @@
   #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
-  #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
+  #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; ; z-index: 2600; position: relative}
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:left; width:100%; min-width:0; }
@@ -373,7 +373,7 @@
     justify-content:center;
     background: rgba(0,0,0,0.55);
     pointer-events:none;
-    z-index: 10010;
+    z-index: 90;
   }
   #pausePanel{
     width:min(520px, 92vw);
@@ -591,7 +591,7 @@ body.invert-colors {
     <div id="pauseTitle">PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
     <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
-    <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Press Here to Enter Commands</button>
+    <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Controls</button>
     <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
 
   </div>
@@ -1090,6 +1090,7 @@ if (pauseCloseBtn){
   });
 }
 let isPaused = false;
+let controlsOpenedFromPause = false;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
   btnPauseQuit.addEventListener("click", () => {
@@ -1128,9 +1129,42 @@ function requestOpenChatFromPause(){
   try{ setPaused(true); }catch(e){}
   requestOpenChat(false, "/help");
 }
+function openPauseControlsMenu(){
+  if (!controlsMenu || !pauseOverlay) return;
+  controlsOpenedFromPause = true;
+  gameState = STATE.CONTROLS;
+  resetDraftBindingsFromActive();
+  startMenu.style.display = "none";
+  optionsMenu.style.display = "none";
+  uiRoot.style.display = "flex";
+  controlsMenu.style.display = "block";
+  const pausePanel = document.getElementById("pausePanel");
+  if (pausePanel) pausePanel.style.display = "none";
+  updateControlsDisplay();
+  renderControlsBindingList();
+  setControlsBindStatus('Select a control to rebind.');
+  fitControlsMenuToViewport();
+  controlsFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
+  else clearControllerFocus();
+}
+function closePauseControlsMenu(keepPaused = true){
+  if (!controlsMenu) return;
+  controlsOpenedFromPause = false;
+  controlsMenu.style.display = "none";
+  cancelBindingEdit('Select a control to rebind.');
+  const pausePanel = document.getElementById("pausePanel");
+  if (pausePanel) pausePanel.style.display = "block";
+  if (keepPaused){
+    gameState = STATE.PLAYING;
+    pauseFocusIndex = 0;
+    if (!parentChatVisible && activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
+    else clearControllerFocus();
+  }
+}
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
-    requestOpenChatFromPause();
+    openPauseControlsMenu();
   });
 }
 
@@ -1205,7 +1239,10 @@ function applyGlitchSpiral(strength){
 
 function setPaused(p){
   isPaused = !!p;
+  const pausePanel = document.getElementById("pausePanel");
+  if (!isPaused && controlsOpenedFromPause) closePauseControlsMenu(false);
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
+  if (pausePanel) pausePanel.style.display = isPaused ? "block" : "none";
   if (isPaused){
     pauseFocusIndex = 0;
     if (!parentChatVisible) syncPauseControllerFocus();
@@ -2859,8 +2896,8 @@ function clearControllerFocus(){
 if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
 if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
-if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); });
-if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
+if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (controlsOpenedFromPause) closePauseControlsMenu(true); });
+if (controlsBack) controlsBack.addEventListener('click', () => { if (controlsOpenedFromPause) closePauseControlsMenu(true); else if (typeof hideControlsMenu === 'function') hideControlsMenu(); else if (typeof hideControlsPopup === 'function') hideControlsPopup(); });
 
 function getMenuControllerTargets(){
   return [btnStart, btnOptions, btnControls].filter(Boolean);
@@ -3523,8 +3560,12 @@ function pollGamepad(dt){
     }
   } else {
     if (pressMuteHud){
-      hudVisible = !hudVisible;
-      overlay.style.display = hudVisible ? "block" : "none";
+      if (isPaused && !parentChatVisible){
+        requestOpenChatFromPause();
+      } else {
+        hudVisible = !hudVisible;
+        overlay.style.display = hudVisible ? "block" : "none";
+      }
     }
     if (pressFullscreen){
       toggleFullscreen();
@@ -5654,3 +5695,7 @@ display:none;
 </body>
 
 </html>
+
+
+function showControlsMenu(){ return showControlsPopup(); }
+function hideControlsMenu(){ return hideControlsPopup(); }
