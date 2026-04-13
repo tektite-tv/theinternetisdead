@@ -2823,6 +2823,7 @@ renderControlsBindingList();
 let menuFocusIndex = 0;
 let optionsFocusIndex = 0;
 let pauseFocusIndex = 0;
+let optionsOpenedFromPause = false;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
 
@@ -3108,7 +3109,7 @@ function hideControlsMenu(){
 }
 
 function isPauseSelectLevelOpen(){
-  return !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+  return !!(typeof optionsOpenedFromPause !== "undefined" && optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
 }
 
 function showOptions(fromPause = false){
