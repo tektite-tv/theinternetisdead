@@ -203,8 +203,7 @@ function registerPageCommands(){
             { name: '/clock_time', usage: '/clock_time ', desc: 'set the overlay clock to a manual time string', execute: false },
             { name: '/clock_date', usage: '/clock_date ', desc: 'set the overlay clock to a manual date string', execute: false },
             { name: '/clock_reset', usage: '/clock_reset', desc: 'reset the overlay clock to live Toronto time', execute: true },
-            { name: '/clock_zone', usage: '/clock_zone America/Toronto', desc: 'sync the overlay clock to a named timezone', execute: false, suggestions: allClockZones },
-            { name: '/log', usage: '/log', desc: 'show the latest chat interface update timestamp and most recent change summary for this page', execute: true }
+            { name: '/clock_zone', usage: '/clock_zone America/Toronto', desc: 'sync the overlay clock to a named timezone', execute: false, suggestions: allClockZones }
         ]
     });
 }
@@ -265,15 +264,6 @@ window.addEventListener('message', (event) => {
                 }
                 setOverlayClockStateFromPage({ zone: nextZone, manualTime: '', manualDate: '' });
                 postToChatSandbox({ type: 'pageChatResult', command: '/clock_zone', message: `/clock_zone executed: synced to ${nextZone}`, announce: true });
-                return;
-            }
-            if (commandName === '/log') {
-                postToChatSandbox({
-                    type: 'pageChatResult',
-                    command: '/log',
-                    message: 'Update log: completed 2026-04-11 08:51:11 PM EDT. Most recent chat interface change: added /games and /experiments navigation commands to the standalone chat-sandbox controller. Previous chat change: fixed Tab cycling so / then Tab walks the page command list instead of getting stuck on the first command.',
-                    announce: true
-                });
                 return;
             }
         }
