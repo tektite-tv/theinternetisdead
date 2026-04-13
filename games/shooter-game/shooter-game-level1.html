@@ -134,33 +134,38 @@
     font-size: 13px;
     line-height: 1.5;
   }
-  #controlsMenu.panel{ background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
+  #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
-  #controlsMenu .title{ font-size:22px; margin:2px 0 8px; }
-  #controlsMenu .controlsGrid{ display:grid; gap:8px; }
-  #controlsMenu .optRow{ padding:8px 10px; }
-  #controlsMenu .hint{ margin-top:6px; line-height:1.25; }
-  #controlsMenu .controlsModeTabs{ display:flex; gap:6px; margin:0 0 8px; }
-  #controlsMenu .controlsModeTabs button{ min-width:0; flex:1; padding:10px 12px; font-size:14px; }
+  #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
+  #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:left; }
+  #controlsMenu .optRow{ padding:6px 8px; }
+  #controlsMenu .hint{ margin-top:3px; line-height:1.15; font-size:10px; }
+  #controlsMenu .controlsModeTabs{ display:flex; gap:6px; margin:0 0 6px; }
+  #controlsMenu .controlsModeTabs button{ min-width:0; flex:1; padding:9px 10px; font-size:13px; }
   #controlsMenu .controlsModeTabs button.active{ background: rgba(0,255,102,0.16); border-color: rgba(0,255,102,0.65); }
-  #controlsMenu .controlsBindList{ display:grid; grid-template-columns:1fr; gap:8px; margin-top:6px; }
-  #controlsMenu .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:8px 10px; background: rgba(0,0,0,0.35); }
+  #controlsMenu .controlsBindList{ display:grid; grid-template-columns:1fr; gap:6px; margin-top:4px; }
+  #controlsMenu .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:6px 8px; background: rgba(0,0,0,0.35); }
   #controlsMenu .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; }
-  #controlsMenu .controlsBindTitle{ font-size:13px; }
-  #controlsMenu .controlsBindHint{ opacity:0.7; font-size:10px; line-height:1.2; }
-  #controlsMenu .controlsBindButton{ min-width:132px; padding:8px 10px; text-align:center; font-size:12px; }
+  #controlsMenu .controlsBindTitle{ font-size:12px; }
+  #controlsMenu .controlsBindHint{ opacity:0.7; font-size:9px; line-height:1.15; }
+  #controlsMenu .controlsBindButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; }
   #controlsMenu .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
-  #controlsBindStatus{ margin-top:2px; min-height:28px; font-size:11px; }
-  #controlsFixedInfo{ margin-top:4px; line-height:1.25; font-size:11px; }
-  @media (max-height: 760px){
-    #controlsMenu.panel{ padding:12px; }
-    #controlsMenu .title{ font-size:20px; }
-    #controlsMenu .controlsGrid{ gap:6px; }
-    #controlsMenu .optRow{ padding:7px 9px; }
-    #controlsMenu .controlsBindRow{ padding:6px 8px; }
-    #controlsMenu .controlsBindTitle{ font-size:12px; }
-    #controlsMenu .controlsBindHint{ font-size:9px; }
-    #controlsMenu .controlsBindButton{ min-width:116px; padding:6px 8px; font-size:11px; }
+  #controlsBindStatus{ margin-top:2px; min-height:24px; font-size:10px; }
+  #controlsFixedInfo{ margin-top:3px; line-height:1.15; font-size:10px; }
+
+  @media (max-width: 640px), (max-height: 760px){
+    #controlsMenu.panel{ width:min(520px, 94vw); padding:10px; max-height:none; }
+    #controlsMenu .title{ font-size:17px; }
+    #controlsMenu .controlsGrid{ gap:5px; }
+    #controlsMenu .optRow{ padding:6px 8px; }
+    #controlsMenu .controlsBindList{ gap:5px; }
+    #controlsMenu .controlsBindRow{ padding:6px 8px; gap:5px; }
+    #controlsMenu .controlsBindTitle{ font-size:11px; }
+    #controlsMenu .controlsBindHint{ font-size:8px; }
+    #controlsMenu .controlsBindButton{ min-width:104px; padding:6px 7px; font-size:10px; }
+    #controlsBindStatus,
+    #controlsFixedInfo,
+    #controlsMenu .hint{ font-size:9px; }
   }
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
   #optionsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
@@ -2612,6 +2617,7 @@ function renderControlsBindingList(){
     row.appendChild(button);
     controlsBindList.appendChild(row);
   });
+  fitControlsMenuToViewport();
 }
 function setControlsBindMode(mode){
   controlsBindMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
@@ -2621,6 +2627,7 @@ function setControlsBindMode(mode){
   controllerRebindReady = false;
   updateControlsDisplay();
   renderControlsBindingList();
+  fitControlsMenuToViewport();
 }
 function applyBindingValue(scheme, action, value){
   if (scheme === INPUT_MODE_CONTROLLER) draftControllerBindings[action] = Number(value);
@@ -2630,6 +2637,7 @@ function applyBindingValue(scheme, action, value){
   updateControlsDisplay();
   renderControlsBindingList();
   setControlsBindStatus('Binding updated. Press Apply to save.');
+  fitControlsMenuToViewport();
 }
 function startBindingEdit(scheme, action){
   controlsBindMode = scheme === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
@@ -2638,8 +2646,9 @@ function startBindingEdit(scheme, action){
   updateControlsDisplay();
   renderControlsBindingList();
   setControlsBindStatus(controlsBindMode === INPUT_MODE_CONTROLLER ? 'Press a controller button for the selected action.' : 'Press a key or mouse button for the selected action.');
+  fitControlsMenuToViewport();
 }
-function cancelBindingEdit(message){ bindingEditState = null; controllerRebindReady = false; renderControlsBindingList(); setControlsBindStatus(message || 'Select a control to rebind.'); }
+function cancelBindingEdit(message){ bindingEditState = null; controllerRebindReady = false; renderControlsBindingList(); setControlsBindStatus(message || 'Select a control to rebind.'); fitControlsMenuToViewport(); }
 loadSavedBindings();
 resetDraftBindingsFromActive();
 updateControlsDisplay();
@@ -2881,6 +2890,7 @@ function showControlsMenu(){
   updateControlsDisplay();
   renderControlsBindingList();
   setControlsBindStatus('Select a control to rebind.');
+  fitControlsMenuToViewport();
   controlsFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
