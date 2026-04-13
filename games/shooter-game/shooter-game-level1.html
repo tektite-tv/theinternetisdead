@@ -2534,6 +2534,10 @@ let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
 
 function focusControllerElement(el){
+  if (activeInputMode !== INPUT_MODE_CONTROLLER) {
+    clearControllerFocus();
+    return;
+  }
   if (!el) return;
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
   el.classList.add('controllerFocus');
@@ -2601,14 +2605,16 @@ function moveMenuControllerFocus(delta){
   const items = getMenuControllerTargets();
   if (!items.length) return;
   menuFocusIndex = (menuFocusIndex + delta + items.length) % items.length;
-  syncMenuControllerFocus();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
 }
 
 function moveOptionsControllerFocus(delta){
   const items = getOptionsControllerTargets();
   if (!items.length) return;
   optionsFocusIndex = (optionsFocusIndex + delta + items.length) % items.length;
-  syncOptionsControllerFocus();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
 }
 
 function movePauseControllerFocus(delta){
@@ -2622,7 +2628,8 @@ function moveControlsControllerFocus(delta){
   const items = getControlsControllerTargets();
   if (!items.length) return;
   controlsFocusIndex = (controlsFocusIndex + delta + items.length) % items.length;
-  syncControlsControllerFocus();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
+  else clearControllerFocus();
 }
 
 function cycleSelect(selectEl, delta){
@@ -2704,7 +2711,8 @@ function showMenu(){
   if (controlsMenu) controlsMenu.style.display = "none";
   uiRoot.style.display = "flex";
   menuFocusIndex = 0;
-  syncMenuControllerFocus();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
 }
 
 function showControlsMenu(){
@@ -2720,7 +2728,8 @@ function showControlsMenu(){
   renderControlsBindingList();
   setControlsBindStatus('Select a control to rebind.');
   controlsFocusIndex = 0;
-  syncControlsControllerFocus();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
+  else clearControllerFocus();
 }
 function hideControlsMenu(){
   if (!controlsMenu) return;
@@ -2782,7 +2791,8 @@ function showOptions(){
   optionsMenu.style.display = "block";
   uiRoot.style.display = "flex";
   optionsFocusIndex = 0;
-  syncOptionsControllerFocus();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
 }
 function startGame(){
   setPaused(false);
@@ -3127,22 +3137,26 @@ function pollGamepad(dt){
       if (navLeft){
         if (menuFocusIndex === 1) menuFocusIndex = 0;
         else if (menuFocusIndex === 2) menuFocusIndex = 0;
-        syncMenuControllerFocus();
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
       }
       if (navRight){
         if (menuFocusIndex === 0) menuFocusIndex = 1;
         else if (menuFocusIndex === 2) menuFocusIndex = 1;
-        syncMenuControllerFocus();
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
       }
       if (navDown){
         if (menuFocusIndex === 0 || menuFocusIndex === 1) menuFocusIndex = 2;
         else menuFocusIndex = 0;
-        syncMenuControllerFocus();
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
       }
       if (navUp){
         if (menuFocusIndex === 2) menuFocusIndex = 0;
         else menuFocusIndex = 2;
-        syncMenuControllerFocus();
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
       }
       if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
       if (pressMenuBack && bindingEditState) cancelBindingEdit('Binding cancelled.');
