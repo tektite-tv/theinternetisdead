@@ -29,20 +29,6 @@
     text-align:center;
   }
   .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
-  .titleSubWrap{ display:flex; justify-content:center; margin:-4px 0 10px; }
-  .titleSub{ position:relative; display:inline-block; font-size:13px; opacity:0.82; cursor:default; min-width:220px; }
-  .titleSubDefault, .titleSubHover{ display:block; white-space:nowrap; transition:opacity 120ms ease; }
-  .titleSubHover{ position:absolute; inset:0; opacity:0; pointer-events:none; }
-  .titleSub:hover .titleSubDefault{ opacity:0; }
-  .titleSub:hover .titleSubHover{ opacity:1; }
-  .menuBlurb{
-    width:min(460px, 100%);
-    margin: 0 auto 4px;
-    font-size:14px;
-    line-height:1.45;
-    color: rgba(200,255,210,0.9);
-    text-shadow:0 0 6px rgba(0,255,0,0.08);
-  }
   .subimg{
     width:120px; height:120px; display:block; margin:0 auto 10px;
     image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
@@ -618,13 +604,10 @@ body.invert-colors {
 
 
 <div id="uiRoot">
-  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px;">
-    <div class="title">Tektite's Bananaman Shooter Game</div>
-    <div class="titleSubWrap">
-      <div class="titleSub"><span class="titleSubDefault">(Maze Mode)</span><span class="titleSubHover">(Last updated: 2026-04-13 09:40 UTC)</span></div>
-    </div>
+  <div id="startMenu" class="panel">
+    <div class="title">Bananaman Shooter</div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
-    <div class="menuBlurb">Drop directly into the maze phase, sweep glowing corridors, dodge roaming enemies, and reach the exit to advance each wave.</div>
+    <div class="hint">Move: WASD or Arrow Keys (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Reach the glowing maze exit each wave · Pause: ESC (or Start) · Chat: / (or View)</div>
     <div class="btnRow btnRowTop">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
@@ -632,23 +615,8 @@ body.invert-colors {
     <div class="btnRow btnRowBottom">
       <button id="btnControls" class="smallBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-live="polite" title="Keyboard / mouse active">Controls ⌨️</button>
     </div>
-    <div class="controlsWrap">
-      <div id="controlsMenu" class="panel" role="dialog" aria-label="Controls">
-        <div class="title">CONTROLS</div>
-        <div class="controlsModeTabs">
-          <button id="controlsModeKeyboard" class="smallBtn active" type="button">Keyboard / Mouse</button>
-          <button id="controlsModeController" class="smallBtn" type="button">Controller</button>
-        </div>
-        <div id="controlsBindStatus" class="hint">Select a control to rebind.</div>
-        <div id="controlsFixedInfo" class="hint">Aim stays on mouse/touch. Stick aim and D-pad navigation stay fixed on controller.</div>
-        <div id="controlsBindList" class="controlsBindList"></div>
-        <div class="controlsFooter">
-          <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
-          <button id="controlsApplyBinds" class="smallBtn" type="button">Apply</button>
-        </div>
-      </div>
-    </div>
     <div id="assetStatus" class="statusLine">Loading enemy images...</div>
+
   </div>
 
   <div id="optionsMenu" class="panel" style="display:none;">
@@ -1089,8 +1057,9 @@ const mazeSummaryCoverage = document.getElementById("mazeSummaryCoverage");
 const mazeSummaryMissed = document.getElementById("mazeSummaryMissed");
 const mazeSummaryBonus = document.getElementById("mazeSummaryBonus");
 const btnNextMaze = document.getElementById("btnNextMaze");
-const level2Params = new URLSearchParams(window.location.search);
-const AUTO_START_LEVEL = level2Params.get("menu") === "1" ? false : level2Params.get("autostart") !== "0";
+const LEVEL2_BOOT_PARAMS = new URLSearchParams(window.location.search);
+const FORCE_SHOW_MENU = LEVEL2_BOOT_PARAMS.get("menu") === "1";
+const AUTO_START_LEVEL = !FORCE_SHOW_MENU && LEVEL2_BOOT_PARAMS.get("autostart") !== "0";
 
 let hudVisible = false;
 
@@ -2647,7 +2616,7 @@ const btnApply = document.getElementById("btnApply");
   const speedVal = document.getElementById("speedVal");
   // Saved settings (persist for the session)
   let START_LIVES = 1;
-  let START_HEARTS = 3;
+  let START_HEARTS = 1;
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
   // v1.96: game speed slider (1-10). 5 = 1.0x.
@@ -3275,13 +3244,12 @@ spawnEnemies();
   window.focus();
 }
 
-if (AUTO_START_LEVEL){
-  startMenu.style.display = "none";
-  uiRoot.style.display = "none";
-  window.addEventListener("load", () => {
-    requestAnimationFrame(() => startGame());
-  }, { once: true });
-}
+window.addEventListener("load", () => {
+  requestAnimationFrame(() => {
+    if (AUTO_START_LEVEL) startGame();
+    else showMenu();
+  });
+}, { once: true });
 
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
@@ -5710,9 +5678,9 @@ resetStarfield();
 resize(); // also resets starfield + anchors player
 startMenu.style.display = "none";
 optionsMenu.style.display = "none";
+if (controlsMenu) controlsMenu.style.display = "none";
 uiRoot.style.display = "none";
 powerupSlot.style.display = "none";
-startGame();
 
 requestAnimationFrame(loop);
 </script>
