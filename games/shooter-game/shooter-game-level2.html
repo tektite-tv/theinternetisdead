@@ -16,7 +16,7 @@
 
   #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   #uiRoot.pauseControlsOpen{ z-index:10001; }
-  #controlsMenu.pauseControlsMode{ display:block; position:relative; z-index:10002; }
+  #controlsMenu.pauseControlsMode{ display:block; position:relative; z-index:10002; background: rgba(75,0,118,0.88); }
   #pauseOverlay.pauseControlsVisible #pausePanel{ display:none; }
   .panel{
     pointer-events:auto;
@@ -129,6 +129,8 @@
   #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:left; width:100%; min-width:0; }
   #controlsMenu .optRow{ padding:6px 8px; }
+  #controlsMenu .controlsHeaderRow{ border:none; background:transparent; padding:0; }
+  #controlsMenu .controlsHeaderRow .hint{ padding:0 2px; }
   #controlsMenu .hint{ margin-top:3px; line-height:1.15; font-size:10px; }
   #controlsMenu .controlsModeTabs{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:6px; margin:0 0 6px; align-items:stretch; width:100%; min-width:0; }
   #controlsMenu .controlsModeTabs button{ display:flex; align-items:center; justify-content:center; min-width:0; width:100%; max-width:100%; flex:none; box-sizing:border-box; padding:9px 10px; font-size:13px; line-height:1.2; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -723,7 +725,7 @@ body.invert-colors {
   <div id="controlsMenu" class="panel" style="display:none;">
     <div class="title">CONTROLS</div>
     <div class="controlsGrid">
-      <div class="optRow">
+      <div class="optRow controlsHeaderRow">
         <div class="controlsModeTabs">
           <button id="controlsModeKeyboard" class="smallBtn active" type="button">Keyboard / Mouse</button>
           <button id="controlsModeController" class="smallBtn" type="button">Controller</button>
