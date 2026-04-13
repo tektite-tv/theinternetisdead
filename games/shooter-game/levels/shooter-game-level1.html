@@ -29,12 +29,22 @@
     text-align:center;
   }
   .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
-  .titleSubWrap{ display:flex; justify-content:center; margin:-4px 0 10px; }
-  .titleSub{ position:relative; display:inline-block; font-size:13px; opacity:0.82; cursor:default; min-width:220px; }
+  body.controller-active #startMenuTitle.controllerFocus{ filter:hue-rotate(135deg) saturate(1.35) brightness(1.15); }
+  .titleSubWrap{ display:flex; justify-content:center; width:120px; margin:-4px auto 10px; }
+  .titleSub{ position:relative; display:inline-block; font-size:13px; opacity:0.82; cursor:default; min-width:0; width:max-content; max-width:none; text-align:center; }
   .titleSubDefault, .titleSubHover{ display:block; white-space:nowrap; transition:opacity 120ms ease; }
   .titleSubHover{ position:absolute; inset:0; opacity:0; pointer-events:none; }
-  .titleSub:hover .titleSubDefault{ opacity:0; }
-  .titleSub:hover .titleSubHover{ opacity:1; }
+  .titleSub:hover .titleSubDefault,
+  body.controller-active .titleSub.controllerFocus .titleSubDefault{ opacity:0; }
+  .titleSub:hover .titleSubHover,
+  body.controller-active .titleSub.controllerFocus .titleSubHover{ opacity:1; }
+  body.controller-active .titleSub.controllerFocus{
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+    background: rgba(75,0,118,0.52);
+    border-radius: 10px;
+    padding: 2px 8px;
+  }
   .subimg{
     width:120px; height:120px; display:block; margin:0 auto 10px;
     image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
@@ -626,10 +636,10 @@ body.invert-colors {
 
 <div id="uiRoot">
   <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px;">
-    <div class="title">Tektite's Bananaman Shooter Game</div>
+    <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title">Tektite's Bananaman Shooter Game</div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-      <div class="titleSub"><span class="titleSubDefault">(New and Improved)</span><span class="titleSubHover">(Last updated: 2026-04-13 5:43 PM EDT)</span></div>
+      <div id="titleHoverReveal" class="titleSub" tabindex="-1" aria-label="Latest update message"><span class="titleSubDefault">(New and Improved)</span><span class="titleSubHover">(Last updated: 2026-04-13 5:52 PM EDT)</span></div>
     </div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -2562,6 +2572,8 @@ function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 
 const btnStart = document.getElementById("btnStart");
 const btnOptions = document.getElementById("btnOptions");
+const startMenuTitle = document.getElementById("startMenuTitle");
+const titleHoverReveal = document.getElementById("titleHoverReveal");
 const btnControls = document.getElementById("btnControls");
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsModeKeyboard = document.getElementById("controlsModeKeyboard");
@@ -3067,7 +3079,7 @@ if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { app
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
 
 function getMenuControllerTargets(){
-  return [btnStart, btnOptions, btnControls].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnControls].filter(Boolean);
 }
 
 function getStartingStatInputs(){
@@ -3892,30 +3904,35 @@ function pollGamepad(dt){
       }
     } else if (gameState === STATE.MENU){
       if (navLeft){
-        if (menuFocusIndex === 1) menuFocusIndex = 0;
-        else if (menuFocusIndex === 2) menuFocusIndex = 0;
-        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-  else clearControllerFocus();
-      }
-      if (navRight){
-        if (menuFocusIndex === 0) menuFocusIndex = 1;
+        if (menuFocusIndex === 3) menuFocusIndex = 2;
         else if (menuFocusIndex === 2) menuFocusIndex = 1;
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-  else clearControllerFocus();
+        else clearControllerFocus();
+      }
+      if (navRight){
+        if (menuFocusIndex === 1) menuFocusIndex = 2;
+        else if (menuFocusIndex === 2) menuFocusIndex = 3;
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+        else clearControllerFocus();
       }
       if (navDown){
-        if (menuFocusIndex === 0 || menuFocusIndex === 1) menuFocusIndex = 2;
+        if (menuFocusIndex === 0) menuFocusIndex = 1;
+        else if (menuFocusIndex === 1) menuFocusIndex = 2;
+        else if (menuFocusIndex === 2 || menuFocusIndex === 3) menuFocusIndex = 4;
         else menuFocusIndex = 0;
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-  else clearControllerFocus();
+        else clearControllerFocus();
       }
       if (navUp){
-        if (menuFocusIndex === 2) menuFocusIndex = 0;
+        if (menuFocusIndex === 2 || menuFocusIndex === 3) menuFocusIndex = 1;
+        else if (menuFocusIndex === 1) menuFocusIndex = 0;
+        else if (menuFocusIndex === 0) menuFocusIndex = 4;
         else menuFocusIndex = 2;
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-  else clearControllerFocus();
+        else clearControllerFocus();
       }
-      if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
+      const menuTarget = getMenuControllerTargets()[menuFocusIndex];
+      if (pressMenuSelect && menuTarget && menuTarget !== titleHoverReveal && menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
       if (pressMenuBack && bindingEditState) cancelBindingEdit('Binding cancelled.');
       if (pressY) showOptions();
     } else if (gameState === STATE.OPTIONS){
