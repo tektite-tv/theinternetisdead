@@ -16,6 +16,7 @@
     let chatSandboxVisible = false;
     let chatSandboxReady = false;
     let pendingChatOpenOptions = null;
+    let chatControllerTargetIndex = -1;
 
     function getChatWindow() {
       return chatSandboxFrame && chatSandboxFrame.contentWindow ? chatSandboxFrame.contentWindow : null;
@@ -82,22 +83,37 @@
         const style = node.ownerDocument && node.ownerDocument.defaultView ? node.ownerDocument.defaultView.getComputedStyle(node) : null;
         const hidden = style && (style.display === 'none' || style.visibility === 'hidden');
         const rect = typeof node.getBoundingClientRect === 'function' ? node.getBoundingClientRect() : null;
-        return !node.disabled && !node.hasAttribute('disabled') && !node.hasAttribute('aria-hidden') && (!rect || (rect.width > 0 && rect.height > 0)) && (!style || style.pointerEvents !== 'none');
+        return !hidden && !node.disabled && !node.hasAttribute('disabled') && !node.hasAttribute('aria-hidden') && (!rect || (rect.width > 0 && rect.height > 0)) && (!style || style.pointerEvents !== 'none');
       });
     }
 
-    function focusChatTargetByStep(step) {
-      const targets = getChatInteractiveTargets();
-      if (!targets.length) return false;
+    function syncChatControllerTargetIndex(targets) {
+      if (!targets.length) {
+        chatControllerTargetIndex = -1;
+        return -1;
+      }
       const chatDoc = getChatDocument();
       const active = chatDoc && chatDoc.activeElement ? chatDoc.activeElement : null;
       let index = targets.findIndex((node) => node === active);
       if (index < 0) {
-        const containsIndex = targets.findIndex((node) => active && typeof node.contains === 'function' && node.contains(active));
-        index = containsIndex;
+        index = targets.findIndex((node) => active && typeof node.contains === 'function' && node.contains(active));
       }
-      index = index < 0 ? (step > 0 ? 0 : targets.length - 1) : (index + step + targets.length) % targets.length;
-      const next = targets[index];
+      if (index >= 0) {
+        chatControllerTargetIndex = index;
+        return index;
+      }
+      if (chatControllerTargetIndex < 0 || chatControllerTargetIndex >= targets.length) {
+        chatControllerTargetIndex = 0;
+      }
+      return chatControllerTargetIndex;
+    }
+
+    function focusChatTargetByIndex(index) {
+      const targets = getChatInteractiveTargets();
+      if (!targets.length) return false;
+      if (typeof index !== 'number' || Number.isNaN(index)) index = 0;
+      chatControllerTargetIndex = ((index % targets.length) + targets.length) % targets.length;
+      const next = targets[chatControllerTargetIndex];
       if (!next) return false;
       try { next.setAttribute('tabindex', next.getAttribute('tabindex') || '0'); } catch (error) {}
       try { next.focus({ preventScroll: false }); } catch (error) { try { next.focus(); } catch (_) {} }
@@ -105,9 +121,24 @@
       return true;
     }
 
+    function focusChatTargetByStep(step) {
+      const targets = getChatInteractiveTargets();
+      if (!targets.length) return false;
+      const currentIndex = syncChatControllerTargetIndex(targets);
+      const nextIndex = currentIndex < 0 ? (step > 0 ? 0 : targets.length - 1) : (currentIndex + step + targets.length) % targets.length;
+      return focusChatTargetByIndex(nextIndex);
+    }
+
+    function focusFirstChatInteractiveTarget() {
+      return focusChatTargetByIndex(0);
+    }
+
     function activateFocusedChatTarget() {
+      const targets = getChatInteractiveTargets();
+      const activeIndex = syncChatControllerTargetIndex(targets);
+      const target = activeIndex >= 0 ? targets[activeIndex] : null;
       const chatDoc = getChatDocument();
-      const active = chatDoc && chatDoc.activeElement ? chatDoc.activeElement : null;
+      const active = target || (chatDoc && chatDoc.activeElement ? chatDoc.activeElement : null);
       if (active && active !== chatDoc.body) {
         try { active.click(); return true; } catch (error) {}
         try {
@@ -174,12 +205,24 @@
     function runChatCommand(command) {
       const input = getChatInput();
       if (!input) return false;
+      const normalizedCommand = String(command || '').trim();
       try {
         input.focus();
         input.click();
       } catch (error) {}
-      if (!setChatInputValue(input, String(command || '').trim())) return false;
-      return dispatchChatKey('Enter', 'Enter');
+      chatControllerTargetIndex = -1;
+      if (!setChatInputValue(input, normalizedCommand)) return false;
+      const didDispatch = dispatchChatKey('Enter', 'Enter');
+      if (didDispatch && normalizedCommand.toLowerCase() === '/help') {
+        const focusHelpTargets = (attempt = 0) => {
+          if (focusFirstChatInteractiveTarget()) return true;
+          if (attempt >= 15) return false;
+          window.setTimeout(() => focusHelpTargets(attempt + 1), 40);
+          return false;
+        };
+        window.setTimeout(() => focusHelpTargets(0), 50);
+      }
+      return didDispatch;
     }
 
     function primeChatSlashSuggestion() {
@@ -215,6 +258,7 @@
     }
 
     function openChatFromParent(options = {}) {
+      chatControllerTargetIndex = -1;
       try {
         if (tektiteFrame && tektiteFrame.contentWindow) {
           tektiteFrame.contentWindow.postMessage({
@@ -232,6 +276,7 @@
     }
 
     function closeChatFromParent() {
+      chatControllerTargetIndex = -1;
       postToChatSandbox({ type: 'chatSandboxClose' });
       setChatFrameVisible(false);
       try { tektiteFrame.contentWindow.focus(); } catch (error) {}
