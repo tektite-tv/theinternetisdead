@@ -153,21 +153,24 @@
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
   #optionsMenu.panel{ max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
   #optionsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
-  #optionsMenu .title{ font-size:22px; margin:2px 0 8px; }
-  #optionsMenu .optionsGrid{ gap:8px; }
+  #optionsMenu .title{ font-size:20px; margin:2px 0 6px; }
+  #optionsMenu .optionsGrid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; align-items:start; }
+  #optionsMenu .optRow.fullRow,
+  #optionsMenu .optRow.checkboxGroup{ grid-column:1 / -1; }
   #optionsMenu .optRow{ padding:8px 10px; }
-  #optionsMenu .optLabel{ margin-bottom:6px; }
-  #optionsMenu .hint{ margin-top:6px; line-height:1.25; }
+  #optionsMenu .optLabel{ margin-bottom:4px; font-size:13px; }
+  #optionsMenu .hint{ margin-top:4px; line-height:1.2; font-size:11px; }
   #optionsMenu .checkboxGroup{ display:flex; flex-direction:column; gap:10px; }
   #optionsMenu .checkOption{ display:flex; flex-direction:column; gap:6px; }
-  #optionsMenu .checkOption label{ display:flex; align-items:center; gap:10px; font-size:14px; opacity:0.95; cursor:pointer; }
+  #optionsMenu .checkOption label{ display:flex; align-items:center; gap:10px; font-size:13px; opacity:0.95; cursor:pointer; }
   #optionsMenu .checkOption .hint{ margin-top:0; padding-left:32px; }
 
-  @media (max-height: 700px){
-    #optionsMenu.panel{ padding:12px; }
-    #optionsMenu .title{ font-size:20px; }
-    #optionsMenu .optionsGrid{ gap:6px; }
+  @media (max-width: 640px), (max-height: 760px){
+    #optionsMenu.panel{ width:min(520px, 94vw); padding:12px; max-height:92vh; }
+    #optionsMenu .title{ font-size:18px; }
+    #optionsMenu .optionsGrid{ grid-template-columns:1fr; gap:6px; }
     #optionsMenu .optRow{ padding:7px 9px; }
+    #optionsMenu .hint{ font-size:10px; }
   }
 
   .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
@@ -677,7 +680,7 @@ body.invert-colors {
         </div>
       </div>
 
-      <div class="optRow">
+      <div class="optRow fullRow">
         <div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
         <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
           <option value="1">Wave 1</option>
@@ -2904,10 +2907,29 @@ function stepRange(rangeEl, delta){
 function openControllerSelect(selectEl){
   if (!selectEl || selectEl.tagName !== 'SELECT') return false;
   focusControllerElement(selectEl);
-  try{ if (typeof selectEl.showPicker === 'function'){ selectEl.showPicker(); return true; } }catch(_){}
-  try{ selectEl.dispatchEvent(new MouseEvent('mousedown', { bubbles:true, cancelable:true, view:window })); return true; }catch(_){}
-  try{ selectEl.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowDown', code:'ArrowDown', keyCode:40, which:40, altKey:true, bubbles:true })); return true; }catch(_){}
-  return false;
+  const forceTopOpen = selectEl.id === 'startWaveSelect';
+  const previousIndex = selectEl.selectedIndex;
+  if (forceTopOpen){
+    try{ selectEl.scrollTop = 0; }catch(_){ }
+    try{ selectEl.selectedIndex = 0; }catch(_){ }
+  }
+  let opened = false;
+  try{ if (typeof selectEl.showPicker === 'function'){ selectEl.showPicker(); opened = true; } }catch(_){}
+  if (!opened){
+    try{ selectEl.dispatchEvent(new MouseEvent('mousedown', { bubbles:true, cancelable:true, view:window })); opened = true; }catch(_){}
+  }
+  if (!opened){
+    try{ selectEl.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowDown', code:'ArrowDown', keyCode:40, which:40, altKey:true, bubbles:true })); opened = true; }catch(_){}
+  }
+  if (forceTopOpen){
+    const restoreSelection = () => {
+      try{ selectEl.scrollTop = 0; }catch(_){ }
+      try{ selectEl.selectedIndex = previousIndex; }catch(_){ }
+    };
+    setTimeout(restoreSelection, 0);
+    setTimeout(restoreSelection, 120);
+  }
+  return opened;
 }
 
 function activateControllerTarget(el){
