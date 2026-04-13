@@ -54,9 +54,30 @@
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
     background: rgba(75,0,118,0.52);
   }
+  body.controller-active .optRow .controllerFocus,
+  body.controller-active .controlsBindRow .controllerFocus{
+    border-color: rgba(0,255,0,0.95) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.38), 0 0 12px rgba(0,255,0,0.22);
+    outline: none;
+    background-color: rgba(75,0,118,0.45);
+  }
+  body.controller-active input[type="range"].controllerFocus{
+    filter: drop-shadow(0 0 6px rgba(0,255,0,0.45));
+    background-color: transparent;
+  }
+  body.controller-active input[type="checkbox"].controllerFocus{
+    outline: 2px solid rgba(0,255,0,0.95);
+    outline-offset: 2px;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0,255,0,0.24);
+    background-color: transparent;
+  }
   .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:left; margin-top:10px; }
   .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
   .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
+  #optionsMenu select,
+  #optionsMenu input[type="range"],
+  #optionsMenu input[type="checkbox"]{ transition: box-shadow 120ms ease, border-color 120ms ease, outline-color 120ms ease, filter 120ms ease, background-color 120ms ease; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
   #controlsMenu.panel{ background: rgba(75,0,118,0.72); max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
