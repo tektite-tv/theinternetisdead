@@ -4878,7 +4878,10 @@ function updateHearts(){
   if (infiniteModeActive) out += "  ♾️";
 
   const el = document.getElementById("heartsHud");
-  if (el) el.textContent = out.trim();
+  if (el){
+    el.textContent = out.trim();
+    el.style.display = (gameState === STATE.PLAYING) ? "block" : "none";
+  }
 }
 
 function loop(t){
@@ -4925,6 +4928,7 @@ font-size:28px;
 letter-spacing:6px;
 pointer-events:none;
 z-index:9999;
+display:none;
 ">❤️ ❤️ ❤️ ❤️</div>
 </body>
 
