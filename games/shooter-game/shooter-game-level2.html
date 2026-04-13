@@ -117,6 +117,8 @@
   #optionsMenu select,
   #optionsMenu input[type="range"],
   #optionsMenu input[type="checkbox"]{ transition: box-shadow 120ms ease, border-color 120ms ease, outline-color 120ms ease, filter 120ms ease, background-color 120ms ease; }
+  #optionsMenu select{ scrollbar-width:none; -ms-overflow-style:none; }
+  #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
   #controlsMenu.panel{ background: rgba(75,0,118,0.72); max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
@@ -676,7 +678,7 @@ body.invert-colors {
       </div>
 
       <div class="optRow">
-        <div class="optLabel"><span>Starting Level</span><span id="startWaveLabel">Wave 1</span></div>
+        <div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
         <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
           <option value="1">Wave 1</option>
           <option value="2">Wave 2</option>
@@ -2899,6 +2901,15 @@ function stepRange(rangeEl, delta){
   return true;
 }
 
+function openControllerSelect(selectEl){
+  if (!selectEl || selectEl.tagName !== 'SELECT') return false;
+  focusControllerElement(selectEl);
+  try{ if (typeof selectEl.showPicker === 'function'){ selectEl.showPicker(); return true; } }catch(_){}
+  try{ selectEl.dispatchEvent(new MouseEvent('mousedown', { bubbles:true, cancelable:true, view:window })); return true; }catch(_){}
+  try{ selectEl.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowDown', code:'ArrowDown', keyCode:40, which:40, altKey:true, bubbles:true })); return true; }catch(_){}
+  return false;
+}
+
 function activateControllerTarget(el){
   if (!el) return;
   if (el.dataset && el.dataset.action && el.dataset.scheme){
@@ -2907,6 +2918,10 @@ function activateControllerTarget(el){
   }
   if (el === btnControls){
     showControlsMenu();
+    return;
+  }
+  if (el.tagName === 'SELECT'){
+    openControllerSelect(el);
     return;
   }
   if (el.type === 'checkbox'){
