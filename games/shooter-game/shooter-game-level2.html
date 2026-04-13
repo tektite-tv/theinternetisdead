@@ -3498,10 +3498,9 @@ function pollGamepad(dt){
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
   const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
   const pressMuteHud = gpEdge(controllerBindings.muteHud, getGpActionPressed(gp, 'muteHud'));
-  const pressSelectButton = gpEdge(8, back);
   const pressY = gpEdge(3, y);
 
-  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressSelectButton || pressY || pressPause || pressMuteHud || pressFullscreen || pressBomb) && !audioUnlocked){
+  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressY || pressPause || pressMuteHud || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
   }
 
@@ -3523,7 +3522,9 @@ function pollGamepad(dt){
       }
     }
   } else {
-    if (pressMuteHud && !isPaused){
+    if (isPaused && !parentChatVisible && pressMuteHud){
+      requestOpenChatFromPause();
+    } else if (pressMuteHud){
       hudVisible = !hudVisible;
       overlay.style.display = hudVisible ? "block" : "none";
     }
@@ -3538,13 +3539,9 @@ function pollGamepad(dt){
       if (pressMenuSelect) postChatControllerAction('execute');
       if (pressMenuBack) postChatControllerAction('close');
     } else if (isPaused){
-      if (pressSelectButton){
-        requestOpenChatFromPause();
-      } else {
-        if (navUp || navLeft) movePauseControllerFocus(-1);
-        if (navDown || navRight) movePauseControllerFocus(1);
-        if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
-      }
+      if (navUp || navLeft) movePauseControllerFocus(-1);
+      if (navDown || navRight) movePauseControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
       if (pressMenuBack || pressPause) togglePause();
     } else if (gameState === STATE.MENU){
       if (navLeft){
