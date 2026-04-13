@@ -102,7 +102,7 @@
   .controlsBindHint{ opacity:0.7; font-size:10px; line-height:1.2; }
   .controlsBindButton{ min-width:132px; padding:6px 8px; text-align:center; font-size:12px; }
   .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
-  .controlsFooter{ display:flex; justify-content:flex-end; margin-top:8px; }
+  .controlsFooter{ display:flex; justify-content:flex-end; gap:8px; margin-top:8px; flex-wrap:wrap; }
   #controlsBindStatus{ margin-top:2px; min-height:28px; font-size:11px; }
   #controlsFixedInfo{ margin-top:4px; line-height:1.25; font-size:11px; }
 
@@ -571,6 +571,7 @@ body.invert-colors {
         <div id="controlsBindList" class="controlsBindList"></div>
         <div class="controlsFooter">
           <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
+          <button id="controlsApplyBinds" class="smallBtn" type="button">Apply</button>
         </div>
       </div>
     </div>
@@ -2441,6 +2442,7 @@ const controlsBindStatus = document.getElementById("controlsBindStatus");
 const controlsFixedInfo = document.getElementById("controlsFixedInfo");
 const controlsBindList = document.getElementById("controlsBindList");
 const controlsResetBinds = document.getElementById("controlsResetBinds");
+const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 
@@ -2569,6 +2571,8 @@ let bindingEditState = null;
 let controllerRebindReady = false;
 let keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
 let controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
+let draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
+let draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
 
 function loadSavedBindings(){
   try{
@@ -2583,6 +2587,15 @@ function loadSavedBindings(){
   }
 }
 function saveBindings(){ try{ localStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
+function resetDraftBindingsFromActive(){
+  draftKeyboardBindings = { ...keyboardBindings };
+  draftControllerBindings = { ...controllerBindings };
+}
+function applyDraftBindings(){
+  keyboardBindings = { ...draftKeyboardBindings };
+  controllerBindings = { ...draftControllerBindings };
+  saveBindings();
+}
 function formatKeyboardBinding(code){
   const map = {Space:'Space', Escape:'Esc', Slash:'/', ArrowLeft:'Left Arrow', ArrowRight:'Right Arrow', ArrowUp:'Up Arrow', ArrowDown:'Down Arrow', KeyF:'F', KeyM:'M', KeyQ:'Q', KeyA:'A', KeyD:'D'};
   if (!code) return 'Unbound';
@@ -2618,7 +2631,7 @@ function setActiveInputMode(mode){
   updateControlsDisplay();
 }
 function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
-function getCurrentBindingValue(action){ return controlsBindMode === INPUT_MODE_CONTROLLER ? controllerBindings[action] : keyboardBindings[action]; }
+function getCurrentBindingValue(action){ return controlsBindMode === INPUT_MODE_CONTROLLER ? draftControllerBindings[action] : draftKeyboardBindings[action]; }
 function setControlsBindStatus(message){ if (controlsBindStatus) controlsBindStatus.textContent = message; }
 function renderControlsBindingList(){
   if (!controlsBindList) return;
@@ -2663,14 +2676,13 @@ function setControlsBindMode(mode){
   renderControlsBindingList();
 }
 function applyBindingValue(scheme, action, value){
-  if (scheme === INPUT_MODE_CONTROLLER) controllerBindings[action] = Number(value);
-  else keyboardBindings[action] = String(value);
+  if (scheme === INPUT_MODE_CONTROLLER) draftControllerBindings[action] = Number(value);
+  else draftKeyboardBindings[action] = String(value);
   bindingEditState = null;
   controllerRebindReady = false;
-  saveBindings();
   updateControlsDisplay();
   renderControlsBindingList();
-  setControlsBindStatus('Binding saved.');
+  setControlsBindStatus('Binding updated. Press Apply to save.');
 }
 function startBindingEdit(scheme, action){
   controlsBindMode = scheme === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
@@ -2682,6 +2694,7 @@ function startBindingEdit(scheme, action){
 }
 function cancelBindingEdit(message){ bindingEditState = null; controllerRebindReady = false; renderControlsBindingList(); setControlsBindStatus(message || 'Select a control to rebind.'); }
 loadSavedBindings();
+resetDraftBindingsFromActive();
 updateControlsDisplay();
 renderControlsBindingList();
 let menuFocusIndex = 0;
@@ -2706,10 +2719,11 @@ function clearControllerFocus(){
 
 if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
 if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
-if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; saveBindings(); cancelBindingEdit('Bindings reset to defaults.'); updateControlsDisplay(); renderControlsBindingList(); });
+if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
+if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); });
 
 function getMenuControllerTargets(){
-  if (controlsPopup && controlsPopup.classList.contains('visible')) return [controlsModeKeyboard, controlsModeController, ...Array.from(document.querySelectorAll('#controlsPopup .controlsBindButton')), controlsResetBinds].filter(Boolean);
+  if (controlsPopup && controlsPopup.classList.contains('visible')) return [controlsModeKeyboard, controlsModeController, ...Array.from(document.querySelectorAll('#controlsPopup .controlsBindButton')), controlsResetBinds, controlsApplyBinds].filter(Boolean);
   return [btnStart, btnOptions, btnControls].filter(Boolean);
 }
 
@@ -2874,14 +2888,17 @@ function restartRun(){
 }
 function showControlsPopup(){
   if (!controlsPopup || !btnControls || startMenu.style.display === "none") return;
+  resetDraftBindingsFromActive();
   controlsPopup.classList.add("visible");
   btnControls.setAttribute("aria-expanded", "true");
   updateControlsDisplay();
   renderControlsBindingList();
+  setControlsBindStatus('Select a control to rebind.');
   if (activeInputMode === INPUT_MODE_CONTROLLER){ menuFocusIndex = 0; syncMenuControllerFocus(); }
 }
 function hideControlsPopup(){
   if (!controlsPopup || !btnControls) return;
+  resetDraftBindingsFromActive();
   controlsPopup.classList.remove("visible");
   btnControls.setAttribute("aria-expanded", "false");
   cancelBindingEdit('Select a control to rebind.');
