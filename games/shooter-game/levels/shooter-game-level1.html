@@ -3151,6 +3151,36 @@ function isStartingStatFocused(){
   return statInputs.includes(getOptionsControllerTargets()[optionsFocusIndex]);
 }
 
+function isOptionsBottomButtonFocused(){
+  const items = getOptionsControllerTargets();
+  const current = items[optionsFocusIndex];
+  return current === btnBack || current === btnApply;
+}
+
+function moveOptionsBottomButtonsHorizontally(delta){
+  const items = getOptionsControllerTargets();
+  const current = items[optionsFocusIndex];
+  if (current !== btnBack && current !== btnApply) return false;
+  if (delta < 0 && current === btnApply && btnBack){
+    optionsFocusIndex = Math.max(0, items.indexOf(btnBack));
+  } else if (delta > 0 && current === btnBack && btnApply){
+    optionsFocusIndex = Math.max(0, items.indexOf(btnApply));
+  } else {
+    return false;
+  }
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
+  return true;
+}
+
+function wrapOptionsBottomButtonsToTop(){
+  if (!isOptionsBottomButtonFocused()) return false;
+  optionsFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
+  return true;
+}
+
 function cycleSelect(selectEl, delta){
   if (!selectEl || !selectEl.options || !selectEl.options.length) return false;
   const current = Math.max(0, selectEl.selectedIndex);
@@ -3828,15 +3858,17 @@ function pollGamepad(dt){
       if (pressY) showOptions();
     } else if (gameState === STATE.OPTIONS){
       if (navUp) moveOptionsControllerFocus(-1);
-      if (navDown) moveOptionsControllerFocus(1);
+      if (navDown){
+        if (!wrapOptionsBottomButtonsToTop()) moveOptionsControllerFocus(1);
+      }
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
         if (rNavUp) adjustControllerOption(1);
         if (rNavDown) adjustControllerOption(-1);
       } else {
-        if (navLeft) adjustControllerOption(-1);
-        if (navRight) adjustControllerOption(1);
+        if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
+        if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
         if (rNavUp) adjustControllerOption(1);
         if (rNavDown) adjustControllerOption(-1);
       }
