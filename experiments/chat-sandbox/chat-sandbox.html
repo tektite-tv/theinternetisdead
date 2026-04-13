@@ -179,6 +179,38 @@
       text-decoration-thickness: 2px;
     }
 
+    .helpItem.commandNumberPickerOpen .helpCommandName,
+    .helpItem.commandNumberPickerOpen .helpCommandDesc {
+      color: #d7ffd7;
+    }
+
+    .helpNumberPicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      outline: 1px solid rgba(0,255,102,0.4);
+      background: rgba(0,0,0,0.55);
+      box-shadow: 0 0 0 2px rgba(0,255,102,0.12);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .helpNumberPickerLabel {
+      opacity: 0.78;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+
+    .helpNumberPickerValue {
+      min-width: 2ch;
+      font-weight: 700;
+      color: #baffc9;
+      text-align: right;
+    }
+
 
     .overclockRefreshLink {
       color: #00ffff;
@@ -3923,6 +3955,145 @@ function createHomepageCustomizeMessageNode(result = {}) {
         normalized === '/color_element';
     }
 
+    let activeCommandNumberPicker = null;
+
+    function isShooterNumberPickerCommand(command = {}) {
+      if (!command || pageCommandMeta.sourceKey !== 'shooter-game') return false;
+      const normalized = String(command.name || '').trim().toLowerCase();
+      return normalized === '/bombs' ||
+        normalized === '/hearts' ||
+        normalized === '/lives' ||
+        normalized === '/shields';
+    }
+
+    function getShooterNumberPickerDefaultValue(commandName = '') {
+      const normalized = String(commandName || '').trim().toLowerCase();
+      if (normalized === '/hearts') return 4;
+      if (normalized === '/bombs') return 3;
+      if (normalized === '/lives') return 1;
+      if (normalized === '/shields') return 0;
+      return 0;
+    }
+
+    function closeActiveCommandNumberPicker() {
+      if (!activeCommandNumberPicker || !activeCommandNumberPicker.item) {
+        activeCommandNumberPicker = null;
+        return;
+      }
+      const { item, picker } = activeCommandNumberPicker;
+      item.classList.remove('commandNumberPickerOpen');
+      item.removeAttribute('data-number-picker-active');
+      item.removeAttribute('data-number-picker-command');
+      if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
+      activeCommandNumberPicker = null;
+    }
+
+    function updateActiveCommandNumberPicker(delta = 0) {
+      if (!activeCommandNumberPicker || !activeCommandNumberPicker.valueNode) return false;
+      if (delta) {
+        const nextValue = Math.max(0, Math.min(999, Number(activeCommandNumberPicker.value || 0) + Number(delta)));
+        activeCommandNumberPicker.value = nextValue;
+      }
+      activeCommandNumberPicker.valueNode.textContent = String(activeCommandNumberPicker.value);
+      return true;
+    }
+
+    function submitActiveCommandNumberPicker() {
+      if (!activeCommandNumberPicker || !activeCommandNumberPicker.command) return false;
+      const rawCommand = `${activeCommandNumberPicker.command} ${activeCommandNumberPicker.value}`;
+      const itemToRefocus = activeCommandNumberPicker.item || null;
+      closeActiveCommandNumberPicker();
+      showChatBar();
+      chatBar.value = rawCommand;
+      moveCursorToEnd();
+      submitMessage();
+      if (itemToRefocus && typeof itemToRefocus.focus === 'function') {
+        try { itemToRefocus.focus(); } catch (error) {}
+      }
+      return true;
+    }
+
+    function openCommandNumberPicker(item, command = {}) {
+      if (!item || !command) return false;
+      const normalized = String(command.name || '').trim().toLowerCase();
+      closeActiveCommandNumberPicker();
+
+      const picker = document.createElement('span');
+      picker.className = 'helpNumberPicker';
+      picker.setAttribute('aria-hidden', 'true');
+
+      const label = document.createElement('span');
+      label.className = 'helpNumberPickerLabel';
+      label.textContent = '#';
+
+      const valueNode = document.createElement('span');
+      valueNode.className = 'helpNumberPickerValue';
+
+      picker.appendChild(label);
+      picker.appendChild(valueNode);
+      item.appendChild(picker);
+      item.classList.add('commandNumberPickerOpen');
+      item.dataset.numberPickerActive = 'true';
+      item.dataset.numberPickerCommand = normalized;
+
+      activeCommandNumberPicker = {
+        item,
+        picker,
+        command: normalized,
+        value: getShooterNumberPickerDefaultValue(normalized),
+        valueNode
+      };
+      updateActiveCommandNumberPicker(0);
+
+      if (typeof item.focus === 'function') {
+        try { item.focus(); } catch (error) {}
+      }
+      return true;
+    }
+
+    function handleActiveCommandNumberPickerKeydown(event) {
+      if (!activeCommandNumberPicker || !activeCommandNumberPicker.item) return false;
+      const target = event && event.target ? event.target : null;
+      if (target && target !== activeCommandNumberPicker.item && !activeCommandNumberPicker.item.contains(target)) {
+        return false;
+      }
+
+      if (event.key === 'ArrowUp' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        event.stopPropagation();
+        return updateActiveCommandNumberPicker(1);
+      }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') {
+        event.preventDefault();
+        event.stopPropagation();
+        return updateActiveCommandNumberPicker(-1);
+      }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        return submitActiveCommandNumberPicker();
+      }
+      if (event.key === 'Escape' || event.key === 'Backspace') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeActiveCommandNumberPicker();
+        return true;
+      }
+      return false;
+    }
+
+    document.addEventListener('keydown', (event) => {
+      handleActiveCommandNumberPickerKeydown(event);
+    }, true);
+
+    document.addEventListener('focusin', (event) => {
+      if (!activeCommandNumberPicker || !activeCommandNumberPicker.item) return;
+      const target = event && event.target ? event.target : null;
+      if (target && target !== activeCommandNumberPicker.item && !activeCommandNumberPicker.item.contains(target)) {
+        closeActiveCommandNumberPicker();
+      }
+    });
+
     function createCommandListMessageNode(titleText, commandNames = [], options = {}) {
       const wrapper = document.createElement('div');
       if (options && typeof options.panelType === 'string' && options.panelType.trim()) {
@@ -3969,6 +4140,16 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
         item.addEventListener('click', (event) => {
           event.preventDefault();
+          if (isShooterNumberPickerCommand(command)) {
+            if (activeCommandNumberPicker && activeCommandNumberPicker.item === item) {
+              submitActiveCommandNumberPicker();
+            } else {
+              openCommandNumberPicker(item, command);
+            }
+            return;
+          }
+
+          closeActiveCommandNumberPicker();
           showChatBar();
 
           if (command.execute) {
