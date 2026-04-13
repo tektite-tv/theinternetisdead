@@ -232,7 +232,7 @@ const linksData = [
   {
     title: "Tektite's Shooter Game",
     description: "I had a bunch of random images I turned into a decent and fun Galaga clone with lots of secrets!",
-    url: "/games/shooter-game",
+    url: "/games/shooter-game/",
     image: "/media/images/link-thumbnails/shooter-game.png"
   },
   {
@@ -278,7 +278,7 @@ let filteredLinks = [...linksData];
 function renderLinks(){
   linksEl.className = currentView === 'grid' ? 'grid-view' : 'list-view';
   linksEl.innerHTML = filteredLinks.map(link => `
-    <a class="post" href="${link.url}" target="_blank" rel="noopener noreferrer">
+    <a class="post" href="${link.url}">
       <div class="thumb"><img src="${link.image}" alt="${link.title}"></div>
       <div class="post-copy">
         <div class="post-title">${link.title}</div>
