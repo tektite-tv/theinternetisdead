@@ -407,6 +407,37 @@
     opacity:0.9;
     color:#b6ffcf;
   }
+  .pauseMenuBtn{
+    width:100%;
+    max-width:420px;
+    box-sizing:border-box;
+    display:block;
+    margin-left:auto;
+    margin-right:auto;
+    font-family:"Courier New", monospace;
+    font-weight:800;
+    color:#0f0;
+    background: rgba(0,0,0,0.55);
+    border:2px solid rgba(0,255,0,0.55);
+    padding:12px 14px;
+    border-radius:14px;
+    cursor:pointer;
+    pointer-events:auto;
+    transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .pauseMenuBtn + .pauseMenuBtn{ margin-top:10px; }
+  #btnPauseQuit.pauseMenuBtn{ margin-top:16px; }
+  body.controller-active #pausePanel .pauseMenuBtn.controllerFocus{
+    background: rgba(75,0,118,0.55) !important;
+    border-color: rgba(0,255,0,0.95) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+  }
+  body.controller-active #pausePanel .pauseMenuBtn.controllerFocus *{ box-shadow:none !important; }
+  #pausePanel .pauseMenuBtn:hover{
+    background: rgba(75,0,118,0.55);
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+  }
 
 
   /* v1.96: keep HUD off the menu and keep menu clickable */
@@ -571,32 +602,8 @@ body.invert-colors {
       box-shadow: 0 0 0 1px rgba(0,255,0,.08) inset, 0 0 14px rgba(0,255,0,.08);
       cursor: pointer;
     ">Press here to enter commands.</button>
-    <button id="btnPauseQuit" style="
-      margin-top:16px;
-      font-family:monospace;
-      font-size:18px;
-      font-weight:800;
-      color:#0f0;
-      background: rgba(0,0,0,0.55);
-      border:2px solid rgba(0,255,0,0.55);
-      padding:10px 18px;
-      border-radius:14px;
-      cursor:pointer;
-      pointer-events:auto;
-    ">Quit to Menu</button>
-    <button id="btnPauseResume" style="
-      margin-top:10px;
-      font-family:monospace;
-      font-size:18px;
-      font-weight:800;
-      color:#0f0;
-      background: rgba(0,0,0,0.55);
-      border:2px solid rgba(0,255,0,0.55);
-      padding:10px 18px;
-      border-radius:14px;
-      cursor:pointer;
-      pointer-events:auto;
-    ">Resume</button>
+    <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
+    <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
 
   </div>
 </div>
