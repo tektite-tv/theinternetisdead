@@ -2540,16 +2540,19 @@ function fitControlsMenuToViewport(){
   const prevOverflow = controlsMenu.style.overflow;
   controlsMenu.style.maxHeight = "none";
   controlsMenu.style.overflow = "visible";
-  const margin = isPauseLayer ? 18 : 12;
+  const margin = isPauseLayer ? 24 : 12;
   const availableW = Math.max(320, window.innerWidth - margin * 2);
-  const availableH = Math.max(240, window.innerHeight - margin * 2);
+  // Pause-opened Controls needs the compact fit it had before this became a layer/z-index problem.
+  // Leave the start-menu Controls sizing alone; only cap the pause submenu so it fits on screen.
+  const availableH = Math.max(240, window.innerHeight - margin * 2 - (isPauseLayer ? 120 : 0));
   const rect = controlsMenu.getBoundingClientRect();
   if (!rect.width || !rect.height) {
     controlsMenu.style.maxHeight = prevMaxHeight;
     controlsMenu.style.overflow = prevOverflow;
     return;
   }
-  const scale = Math.min(1, availableW / rect.width, availableH / rect.height);
+  const fitScale = Math.min(1, availableW / rect.width, availableH / rect.height);
+  const scale = isPauseLayer ? Math.min(0.86, fitScale) : fitScale;
   if (isPauseLayer){
     controlsMenu.style.setProperty("--controls-fit-scale", String(scale));
   } else {
