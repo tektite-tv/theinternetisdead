@@ -2782,6 +2782,11 @@ function updateControlsDisplay(){
     btnControls.title = inputTitle;
     btnControls.setAttribute('aria-label', `Controls. ${inputTitle}`);
   }
+  if (controlsMenuTitle){
+    controlsMenuTitle.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
+      ? 'Controller Keybinds'
+      : 'Keyboard / Mouse Controls';
+  }
   if (controlsFixedInfo){
     controlsFixedInfo.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
       ? 'Left Stick movement and D-Pad movement can both drive gameplay. View opens chat. Aim stays on Right Stick. Fullscreen is rebindable below too.'
