@@ -31,6 +31,9 @@
     image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
   }
   .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  .btnRowTop{ margin-top:12px; }
+  .btnRowBottom{ margin-top:10px; }
+  #btnControls{ min-width:160px; }
   button{
     font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
     border:1px solid rgba(0,255,0,0.45);
@@ -510,13 +513,14 @@ body.invert-colors {
     <div class="title">Bananaman Shooter <span style="font-size:14px; opacity:0.75;">(v1.96)</span></div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="hint">Move: WASD or Arrow Keys (or Left Stick/D-Pad) · Aim: Mouse/Touch (or Right Stick) · Shoot: Space/Click (or RT/A) · Reach the glowing maze exit each wave · Pause: ESC (or Start) · Chat: / (or View)</div>
-    <div class="btnRow">
+    <div class="btnRow btnRowTop">
       <button id="btnStart">Start Game</button>
       <button id="btnOptions">Options</button>
     </div>
+    <div class="btnRow btnRowBottom">
+      <button id="btnControls" class="smallBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-live="polite" title="Keyboard / mouse active">Controls ⌨️</button>
+    </div>
     <div class="controlsWrap">
-      <button id="btnControls" class="smallBtn" type="button" aria-haspopup="true" aria-expanded="false">Controls</button>
-      <span id="activeInputIndicator" class="inputIndicator" aria-live="polite" title="Active input mode">⌨️</span>
       <div id="controlsMenu" class="panel" role="dialog" aria-label="Controls">
         <div class="title">CONTROLS</div>
         <div class="controlsModeTabs">
@@ -2414,7 +2418,6 @@ const btnStart = document.getElementById("btnStart");
 const btnOptions = document.getElementById("btnOptions");
 const btnControls = document.getElementById("btnControls");
 const controlsMenu = document.getElementById("controlsMenu");
-const activeInputIndicator = document.getElementById("activeInputIndicator");
 const controlsModeKeyboard = document.getElementById("controlsModeKeyboard");
 const controlsModeController = document.getElementById("controlsModeController");
 const controlsBindStatus = document.getElementById("controlsBindStatus");
@@ -2592,10 +2595,12 @@ function getGpButtonPressedByIndex(gp, index){ const btn = gpBtn(gp, index); ret
 function getGpActionPressed(gp, action){ const index = controllerBindings[action]; return typeof index === 'number' ? getGpButtonPressedByIndex(gp, index) : false; }
 function updateControlsDisplay(){
   const usingController = activeInputMode === INPUT_MODE_CONTROLLER;
-  if (activeInputIndicator){
-    activeInputIndicator.textContent = usingController ? '🎮' : '⌨️';
-    activeInputIndicator.title = usingController ? 'Controller active' : 'Keyboard / mouse active';
-    activeInputIndicator.setAttribute('aria-label', activeInputIndicator.title);
+  if (btnControls){
+    const inputLabel = usingController ? '🎮' : '⌨️';
+    const inputTitle = usingController ? 'Controller active' : 'Keyboard / mouse active';
+    btnControls.textContent = `Controls ${inputLabel}`;
+    btnControls.title = inputTitle;
+    btnControls.setAttribute('aria-label', `Controls. ${inputTitle}`);
   }
   if (controlsFixedInfo){
     controlsFixedInfo.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
@@ -2885,12 +2890,14 @@ function restartRun(){
 function showControlsPopup(){
   if (!controlsMenu || !btnControls || startMenu.style.display === "none") return;
   resetDraftBindingsFromActive();
+  gameState = STATE.CONTROLS;
   controlsMenu.style.display = "block";
   btnControls.setAttribute("aria-expanded", "true");
   updateControlsDisplay();
   renderControlsBindingList();
   setControlsBindStatus('Select a control to rebind.');
-  if (activeInputMode === INPUT_MODE_CONTROLLER){ menuFocusIndex = 0; syncMenuControllerFocus(); }
+  controlsFocusIndex = 0;
+  syncControlsControllerFocus();
 }
 function hideControlsPopup(){
   if (!controlsMenu || !btnControls) return;
@@ -2898,6 +2905,8 @@ function hideControlsPopup(){
   controlsMenu.style.display = "none";
   btnControls.setAttribute("aria-expanded", "false");
   cancelBindingEdit('Select a control to rebind.');
+  gameState = STATE.MENU;
+  syncMenuControllerFocus();
 }
 
 function showOptions(){
@@ -3333,8 +3342,26 @@ function pollGamepad(dt){
       if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
       if (pressMenuBack || pressPause) togglePause();
     } else if (gameState === STATE.MENU){
-      if (navLeft || navUp) moveMenuControllerFocus(-1);
-      if (navRight || navDown) moveMenuControllerFocus(1);
+      if (navLeft){
+        if (menuFocusIndex === 1) menuFocusIndex = 0;
+        else if (menuFocusIndex === 2) menuFocusIndex = 0;
+        syncMenuControllerFocus();
+      }
+      if (navRight){
+        if (menuFocusIndex === 0) menuFocusIndex = 1;
+        else if (menuFocusIndex === 2) menuFocusIndex = 1;
+        syncMenuControllerFocus();
+      }
+      if (navDown){
+        if (menuFocusIndex === 0 || menuFocusIndex === 1) menuFocusIndex = 2;
+        else menuFocusIndex = 0;
+        syncMenuControllerFocus();
+      }
+      if (navUp){
+        if (menuFocusIndex === 2) menuFocusIndex = 0;
+        else menuFocusIndex = 2;
+        syncMenuControllerFocus();
+      }
       if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
       if (pressMenuBack && bindingEditState) cancelBindingEdit('Binding cancelled.');
       if (pressY) showOptions();
@@ -3351,7 +3378,7 @@ function pollGamepad(dt){
       if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
       if (pressMenuBack){
         if (bindingEditState) cancelBindingEdit('Binding cancelled.');
-        else hideControlsMenu();
+        else hideControlsPopup();
       }
     } else if (deathOverlay && deathOverlay.style.display === "flex"){
       if (pressMenuSelect) restartRun();
