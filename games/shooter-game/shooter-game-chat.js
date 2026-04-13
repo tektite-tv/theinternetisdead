@@ -94,23 +94,28 @@
       return preferred.length ? preferred : filtered;
     }
 
+    function rememberChatControllerBaseStyles(node) {
+      if (!node) return;
+      if (!node.hasAttribute('data-tektite-controller-base-bg')) node.dataset.tektiteControllerBaseBg = node.style.backgroundColor || '';
+      if (!node.hasAttribute('data-tektite-controller-base-outline')) node.dataset.tektiteControllerBaseOutline = node.style.outline || '';
+      if (!node.hasAttribute('data-tektite-controller-base-box-shadow')) node.dataset.tektiteControllerBaseBoxShadow = node.style.boxShadow || '';
+      if (!node.hasAttribute('data-tektite-controller-base-border-radius')) node.dataset.tektiteControllerBaseBorderRadius = node.style.borderRadius || '';
+      if (!node.hasAttribute('data-tektite-controller-base-color')) node.dataset.tektiteControllerBaseColor = node.style.color || '';
+      if (!node.hasAttribute('data-tektite-controller-base-filter')) node.dataset.tektiteControllerBaseFilter = node.style.filter || '';
+      if (!node.hasAttribute('data-tektite-controller-base-transform')) node.dataset.tektiteControllerBaseTransform = node.style.transform || '';
+    }
+
     function updateChatControllerSelectionVisuals(selectedNode) {
       const chatDoc = getChatDocument();
       const targets = getChatInteractiveTargets();
       const previouslyTouched = chatDoc
-        ? Array.from(chatDoc.querySelectorAll('[data-tektite-controller-selected], [data-tektite-controller-base-bg]'))
+        ? Array.from(chatDoc.querySelectorAll('[data-tektite-controller-selected], [data-tektite-controller-base-bg], [data-tektite-controller-base-outline]'))
         : [];
       const uniqueNodes = Array.from(new Set(previouslyTouched.concat(targets)));
       uniqueNodes.forEach((node) => {
         if (!node) return;
+        rememberChatControllerBaseStyles(node);
         const isSelected = node === selectedNode;
-        if (!node.dataset.tektiteControllerBaseBg) node.dataset.tektiteControllerBaseBg = node.style.backgroundColor || '';
-        if (!node.dataset.tektiteControllerBaseOutline) node.dataset.tektiteControllerBaseOutline = node.style.outline || '';
-        if (!node.dataset.tektiteControllerBaseBoxShadow) node.dataset.tektiteControllerBaseBoxShadow = node.style.boxShadow || '';
-        if (!node.dataset.tektiteControllerBaseBorderRadius) node.dataset.tektiteControllerBaseBorderRadius = node.style.borderRadius || '';
-        if (!node.dataset.tektiteControllerBaseColor) node.dataset.tektiteControllerBaseColor = node.style.color || '';
-        if (!node.dataset.tektiteControllerBaseFilter) node.dataset.tektiteControllerBaseFilter = node.style.filter || '';
-        if (!node.dataset.tektiteControllerBaseTransform) node.dataset.tektiteControllerBaseTransform = node.style.transform || '';
         if (isSelected) {
           node.dataset.tektiteControllerSelected = 'true';
           node.style.backgroundColor = 'rgba(75,0,118,0.82)';
