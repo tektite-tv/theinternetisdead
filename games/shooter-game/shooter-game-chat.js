@@ -95,8 +95,13 @@
     }
 
     function updateChatControllerSelectionVisuals(selectedNode) {
+      const chatDoc = getChatDocument();
       const targets = getChatInteractiveTargets();
-      targets.forEach((node) => {
+      const previouslyTouched = chatDoc
+        ? Array.from(chatDoc.querySelectorAll('[data-tektite-controller-selected], [data-tektite-controller-base-bg]'))
+        : [];
+      const uniqueNodes = Array.from(new Set(previouslyTouched.concat(targets)));
+      uniqueNodes.forEach((node) => {
         if (!node) return;
         const isSelected = node === selectedNode;
         if (!node.dataset.tektiteControllerBaseBg) node.dataset.tektiteControllerBaseBg = node.style.backgroundColor || '';
@@ -115,7 +120,7 @@
           node.style.color = '#ffffff';
           node.style.filter = 'brightness(1.08)';
           node.style.transform = 'translateX(0)';
-        } else if (node.dataset.tektiteControllerSelected === 'true') {
+        } else {
           node.dataset.tektiteControllerSelected = 'false';
           node.style.backgroundColor = node.dataset.tektiteControllerBaseBg || '';
           node.style.outline = node.dataset.tektiteControllerBaseOutline || '';
