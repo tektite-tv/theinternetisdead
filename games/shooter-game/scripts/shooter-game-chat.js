@@ -2,6 +2,10 @@
     const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
     const LEVEL1_SRC = '/games/shooter-game/levels/shooter-game-level1.html';
     const LEVEL2_SRC = '/games/shooter-game/levels/shooter-game-level2.html?autostart=1&startWave=1';
+
+    function buildLevel2Src() {
+      return `${LEVEL2_SRC}&reload=${Date.now()}`;
+    }
     const shooterPageCommands = [
       { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'] },
       { name: '/bombs', desc: 'Set bombs to a number or infinite', usage: '/bombs [number|infinite]', suggestions: ['0', '3', '5', 'infinite'] },
@@ -496,7 +500,7 @@
       if (!tektiteFrame || hasSwitchedToLevel2) return;
       hasSwitchedToLevel2 = true;
       const keepFullscreen = !!document.fullscreenElement;
-      tektiteFrame.src = LEVEL2_SRC;
+      tektiteFrame.src = buildLevel2Src();
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
           setIframeFullscreen(true);
