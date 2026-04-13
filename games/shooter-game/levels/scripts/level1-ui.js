@@ -260,10 +260,11 @@ function updateControlsDisplay(){
     btnControls.title = inputTitle;
     btnControls.setAttribute('aria-label', `Controls. ${inputTitle}`);
   }
+  if (controlsMenuTitle){
+    controlsMenuTitle.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? 'Controller Keybinds' : 'Keyboard / Mouse Controls';
+  }
   if (controlsFixedInfo){
-    controlsFixedInfo.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
-      ? 'Move stays on Left Stick / D-Pad. Aim stays on Right Stick. Fullscreen is rebindable below too.'
-      : 'Aim stays on Mouse / Touch. Bind actions below to keys or mouse buttons, including Fullscreen.';
+    controlsFixedInfo.textContent = '';
   }
 }
 function setActiveInputMode(mode){
@@ -271,6 +272,12 @@ function setActiveInputMode(mode){
   if (activeInputMode === nextMode) return;
   activeInputMode = nextMode;
   document.body.classList.toggle('controller-active', activeInputMode === INPUT_MODE_CONTROLLER);
+  if (controlsMenu && controlsMenu.style.display !== 'none') {
+    controlsBindMode = activeInputMode;
+    bindingEditState = null;
+    controllerRebindReady = false;
+    renderControlsBindingList();
+  }
   updateControlsDisplay();
 }
 function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
@@ -306,34 +313,6 @@ function renderControlsBindingList(){
   const defs = getCurrentBindingDefs();
   const moveDefs = defs.filter(def => isMoveBindAction(def.key));
   const otherDefs = defs.filter(def => !isMoveBindAction(def.key));
-
-  {
-    const row = document.createElement('div');
-    row.className = 'controlsBindRow controlsAimRow';
-    const meta = document.createElement('div');
-    meta.className = 'controlsBindMeta';
-    const title = document.createElement('div');
-    title.className = 'controlsBindTitle';
-    title.textContent = 'Aim Control';
-    const hint = document.createElement('div');
-    hint.className = 'controlsBindHint';
-    hint.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? 'Aim stays on Right Stick.' : 'Aim stays on Mouse / Touch.';
-    meta.appendChild(title);
-    meta.appendChild(hint);
-    const buttonGroup = document.createElement('div');
-    buttonGroup.className = 'controlsAimButtonGroup';
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'controlsBindButton controlsAimButton controlsFixedBindButton smallBtn';
-    button.disabled = true;
-    button.tabIndex = -1;
-    button.setAttribute('aria-disabled', 'true');
-    button.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? 'Right Stick' : 'Mouse';
-    buttonGroup.appendChild(button);
-    row.appendChild(meta);
-    row.appendChild(buttonGroup);
-    controlsBindList.appendChild(row);
-  }
 
   if (moveDefs.length){
     const row = document.createElement('div');
@@ -374,6 +353,34 @@ function renderControlsBindingList(){
     controlsBindList.appendChild(row);
   }
 
+  {
+    const row = document.createElement('div');
+    row.className = 'controlsBindRow controlsAimRow';
+    const meta = document.createElement('div');
+    meta.className = 'controlsBindMeta';
+    const title = document.createElement('div');
+    title.className = 'controlsBindTitle';
+    title.textContent = 'Aim Control';
+    const hint = document.createElement('div');
+    hint.className = 'controlsBindHint';
+    hint.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? 'Aim stays on Right Stick.' : 'Aim stays on Mouse / Touch.';
+    meta.appendChild(title);
+    meta.appendChild(hint);
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'controlsAimButtonGroup';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'controlsBindButton controlsAimButton controlsFixedBindButton smallBtn';
+    button.disabled = true;
+    button.tabIndex = -1;
+    button.setAttribute('aria-disabled', 'true');
+    button.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? 'Right Stick' : 'Mouse';
+    buttonGroup.appendChild(button);
+    row.appendChild(meta);
+    row.appendChild(buttonGroup);
+    controlsBindList.appendChild(row);
+  }
+
   otherDefs.forEach(def => {
     const row = document.createElement('div');
     row.className = 'controlsBindRow';
@@ -407,8 +414,6 @@ function renderControlsBindingList(){
 }
 function setControlsBindMode(mode){
   controlsBindMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
-  if (controlsModeKeyboard) controlsModeKeyboard.classList.toggle('active', controlsBindMode === INPUT_MODE_KEYBOARD);
-  if (controlsModeController) controlsModeController.classList.toggle('active', controlsBindMode === INPUT_MODE_CONTROLLER);
   bindingEditState = null;
   controllerRebindReady = false;
   updateControlsDisplay();
@@ -468,8 +473,6 @@ function clearControllerFocus(){
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
 }
 
-if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
-if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
 if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (pauseControlsOpen && isPaused) hidePauseControlsMenu(); });
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
@@ -498,7 +501,7 @@ function getControlsControllerTargets(){
   const moveButtons = getControlsMoveButtons();
   const moveTarget = moveButtons[controlsMoveFocusIndex] || moveButtons[0];
   const otherBindButtons = Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton:not(.controlsMoveButton)'));
-  return [controlsModeKeyboard, controlsModeController, moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
+  return [moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
 }
 
 function getPauseControllerTargets(){
@@ -735,6 +738,7 @@ function showControlsMenu(){
   uiRoot.classList.remove("pauseControlsOpen");
   gameState = STATE.CONTROLS;
   resetDraftBindingsFromActive();
+  setControlsBindMode(activeInputMode);
   startMenu.style.display = "none";
   optionsMenu.style.display = "none";
   controlsMenu.style.display = "block";

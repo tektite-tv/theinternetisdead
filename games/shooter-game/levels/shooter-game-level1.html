@@ -734,12 +734,6 @@ body.invert-colors {
   <div id="controlsMenu" class="panel" style="display:none;">
     <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
     <div class="controlsGrid">
-      <div class="optRow controlsHeaderRow">
-        <div class="controlsModeTabs">
-          <button id="controlsModeKeyboard" class="smallBtn active" type="button">Keyboard / Mouse</button>
-          <button id="controlsModeController" class="smallBtn" type="button">Controller</button>
-        </div>
-      </div>
       <div class="optRow">
         <div id="controlsBindList" class="controlsBindList"></div>
       </div>
@@ -2796,6 +2790,12 @@ function setActiveInputMode(mode){
   if (activeInputMode === nextMode) return;
   activeInputMode = nextMode;
   document.body.classList.toggle('controller-active', activeInputMode === INPUT_MODE_CONTROLLER);
+  if (controlsMenu && controlsMenu.style.display !== 'none') {
+    controlsBindMode = activeInputMode;
+    bindingEditState = null;
+    controllerRebindReady = false;
+    renderControlsBindingList();
+  }
   updateControlsDisplay();
 }
 function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
@@ -2938,8 +2938,6 @@ function renderControlsBindingList(){
 }
 function setControlsBindMode(mode){
   controlsBindMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
-  if (controlsModeKeyboard) controlsModeKeyboard.classList.toggle('active', controlsBindMode === INPUT_MODE_KEYBOARD);
-  if (controlsModeController) controlsModeController.classList.toggle('active', controlsBindMode === INPUT_MODE_CONTROLLER);
   bindingEditState = null;
   controllerRebindReady = false;
   updateControlsDisplay();
@@ -3000,8 +2998,6 @@ function clearControllerFocus(){
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
 }
 
-if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
-if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
 if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (pauseControlsOpen && isPaused) hidePauseControlsMenu(); });
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
@@ -3030,7 +3026,7 @@ function getControlsControllerTargets(){
   const moveButtons = getControlsMoveButtons();
   const moveTarget = moveButtons[controlsMoveFocusIndex] || moveButtons[0];
   const otherBindButtons = Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton:not(.controlsMoveButton)'));
-  return [controlsModeKeyboard, controlsModeController, moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
+  return [moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
 }
 
 function getPauseControllerTargets(){
@@ -3293,6 +3289,7 @@ function showControlsMenu(){
   uiRoot.classList.remove("pauseControlsOpen");
   gameState = STATE.CONTROLS;
   resetDraftBindingsFromActive();
+  setControlsBindMode(activeInputMode);
   startMenu.style.display = "none";
   optionsMenu.style.display = "none";
   controlsMenu.style.display = "block";
