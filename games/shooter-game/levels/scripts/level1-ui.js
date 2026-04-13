@@ -240,6 +240,13 @@ function formatKeyboardBinding(code){
   return code;
 }
 function formatControllerBinding(index){ return CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`; }
+function formatCompactMoveBinding(value){
+  if (controlsBindMode === INPUT_MODE_CONTROLLER){
+    const map = {12:"D↑", 13:"D↓", 14:"D←", 15:"D→"};
+    return map[value] || formatControllerBinding(value);
+  }
+  return formatKeyboardBinding(value);
+}
 function mouseButtonToBinding(button){ return `Mouse${Number(button) || 0}`; }
 function isKeyboardActionHeld(action){ const code = keyboardBindings[action]; return !!(code && keys[code]); }
 function getGpButtonPressedByIndex(gp, index){ const btn = gpBtn(gp, index); return (index === 6 || index === 7) ? ((btn.value || 0) > GP_TRIGGER_DEADZONE) : !!btn.pressed; }
@@ -325,7 +332,7 @@ function renderControlsBindingList(){
       button.dataset.scheme = controlsBindMode;
       const value = getCurrentBindingValue(def.key);
       const label = MOVE_BIND_LABELS[def.key] || def.label.replace(/^Move\s+/i, '');
-      const binding = controlsBindMode === INPUT_MODE_CONTROLLER ? formatControllerBinding(value) : formatKeyboardBinding(value);
+      const binding = formatCompactMoveBinding(value);
       button.textContent = `${label}: ${binding}`;
       if (bindingEditState && bindingEditState.scheme === controlsBindMode && bindingEditState.action === def.key){
         button.classList.add('listening');

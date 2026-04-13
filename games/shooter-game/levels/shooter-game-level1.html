@@ -174,10 +174,10 @@
   #controlsMenu .controlsBindButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; }
   #controlsMenu .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
   #controlsMenu .controlsMoveRow{ grid-template-columns:minmax(120px, 0.92fr) minmax(0, 1.08fr); }
-  #controlsMenu .controlsMoveButtonGroup{ display:grid; grid-template-columns:repeat(4, max-content); gap:6px; align-items:stretch; justify-content:end; min-width:0; width:100%; max-width:100%; }
-  #controlsMenu .controlsMoveButton{ min-width:72px; width:72px; max-width:72px; height:56px; min-height:56px; padding:6px 0; font-size:10px; line-height:1.0; white-space:normal; overflow:hidden; text-overflow:clip; display:grid; grid-template-rows:auto auto; align-content:center; justify-items:center; text-align:center; box-sizing:border-box; }
-  #controlsMenu .controlsMoveButton .moveBindLabel{ display:block; font-size:16px; line-height:1.0; }
-  #controlsMenu .controlsMoveButton .moveBindValue{ display:block; font-size:9px; line-height:1.0; opacity:0.95; overflow-wrap:anywhere; word-break:break-word; }
+  #controlsMenu .controlsMoveButtonGroup{ display:grid; grid-template-columns:repeat(4, 58px); gap:0; align-items:stretch; justify-content:end; min-width:0; width:100%; max-width:100%; }
+  #controlsMenu .controlsMoveButton{ min-width:58px; width:58px; max-width:58px; min-height:0; padding:6px 0; font-size:10px; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:clip; display:flex; align-items:center; justify-content:center; gap:2px; text-align:center; box-sizing:border-box; }
+  #controlsMenu .controlsMoveButton .moveBindLabel{ display:inline-block; font-size:15px; line-height:1.0; }
+  #controlsMenu .controlsMoveButton .moveBindValue{ display:inline-block; font-size:8px; line-height:1.0; opacity:0.95; white-space:nowrap; overflow:hidden; text-overflow:clip; }
   #controlsBindStatus{ margin-top:2px; min-height:24px; font-size:10px; }
   #controlsFixedInfo{ margin-top:3px; line-height:1.15; font-size:10px; }
 
@@ -191,7 +191,8 @@
     #controlsMenu .controlsBindTitle{ font-size:11px; }
     #controlsMenu .controlsBindHint{ font-size:8px; }
     #controlsMenu .controlsBindButton{ min-width:104px; padding:6px 7px; font-size:10px; }
-    #controlsMenu .controlsMoveButton{ min-width:64px; width:64px; max-width:64px; height:42px; min-height:42px; padding:4px 0; }
+    #controlsMenu .controlsMoveButtonGroup{ grid-template-columns:repeat(4, 52px); gap:0; }
+    #controlsMenu .controlsMoveButton{ min-width:52px; width:52px; max-width:52px; padding:6px 0; }
     #controlsMenu .controlsMoveButton .moveBindLabel{ font-size:14px; }
     #controlsMenu .controlsMoveButton .moveBindValue{ font-size:8px; }
     #controlsBindStatus,
@@ -2759,6 +2760,13 @@ function formatKeyboardBinding(code){
   return code;
 }
 function formatControllerBinding(index){ return typeof index === "number" ? (CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`) : "Unbound"; }
+function formatCompactMoveBinding(value){
+  if (controlsBindMode === INPUT_MODE_CONTROLLER){
+    const map = {12:"D↑", 13:"D↓", 14:"D←", 15:"D→"};
+    return map[value] || formatControllerBinding(value);
+  }
+  return formatKeyboardBinding(value);
+}
 function mouseButtonToBinding(button){ return `Mouse${Number(button) || 0}`; }
 function isKeyboardActionHeld(action){ const code = keyboardBindings[action]; return !!(code && keys[code]); }
 function getGpButtonPressedByIndex(gp, index){ const btn = gpBtn(gp, index); return (index === 6 || index === 7) ? ((btn.value || 0) > GP_TRIGGER_DEADZONE) : !!btn.pressed; }
@@ -2844,7 +2852,7 @@ function renderControlsBindingList(){
       button.dataset.scheme = controlsBindMode;
       const value = getCurrentBindingValue(def.key);
       const label = MOVE_BIND_LABELS[def.key] || def.label.replace(/^Move\s+/i, '');
-      const binding = controlsBindMode === INPUT_MODE_CONTROLLER ? formatControllerBinding(value) : formatKeyboardBinding(value);
+      const binding = formatCompactMoveBinding(value);
       const labelSpan = document.createElement('span');
       labelSpan.className = 'moveBindLabel';
       labelSpan.textContent = label;
