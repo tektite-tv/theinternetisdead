@@ -214,127 +214,62 @@ code{
     <p class="subtitle">Play with my website it feels good!</p>
   </div>
 
-  <div class="controls">
-    <input id="searchInput" type="text" placeholder="Search links...">
-    <button id="gridBtn" type="button">GRID</button>
-    <button id="listBtn" type="button">LIST</button>
-  </div>
 </div>
 
-<div id="links" class="grid-view"></div>
+<div id="links" class="grid-view">
+  <a class="post" href="https://theinternetisdead.org/games/shooter-game/">
+    <div class="thumb"><img src="/media/images/link-thumbnails/shooter-game.png" alt="Tektite's Shooter Game"></div>
+    <div class="post-copy">
+      <div class="post-title">Tektite's Shooter Game</div>
+      <div class="post-desc">I had a bunch of random images I turned into a decent and fun Galaga clone with lots of secrets!</div>
+    </div>
+  </a>
+
+  <a class="post" href="#">
+    <div class="thumb"><img src="https://placehold.co/1280x720/140014/00ff00?text=Placeholder+2" alt="Placeholder Link 2"></div>
+    <div class="post-copy">
+      <div class="post-title">Placeholder Link 2</div>
+      <div class="post-desc">Another manually editable item in the same layout style.</div>
+    </div>
+  </a>
+
+  <a class="post" href="#">
+    <div class="thumb"><img src="https://placehold.co/1280x720/101010/00ff00?text=Placeholder+3" alt="Placeholder Link 3"></div>
+    <div class="post-copy">
+      <div class="post-title">Placeholder Link 3</div>
+      <div class="post-desc">Use local image paths if you want, like /media/images/pngs/example.png.</div>
+    </div>
+  </a>
+
+  <a class="post" href="#">
+    <div class="thumb"><img src="https://placehold.co/1280x720/1d0028/00ff00?text=Placeholder+4" alt="Placeholder Link 4"></div>
+    <div class="post-copy">
+      <div class="post-title">Placeholder Link 4</div>
+      <div class="post-desc">This keeps the same general visual rhythm as your reference file.</div>
+    </div>
+  </a>
+
+  <a class="post" href="#">
+    <div class="thumb"><img src="https://placehold.co/1280x720/001414/00ff00?text=Placeholder+5" alt="Placeholder Link 5"></div>
+    <div class="post-copy">
+      <div class="post-title">Placeholder Link 5</div>
+      <div class="post-desc">Grid view shows cards. List view shows rows. Civilization limps onward.</div>
+    </div>
+  </a>
+
+  <a class="post" href="#">
+    <div class="thumb"><img src="https://placehold.co/1280x720/181800/00ff00?text=Placeholder+6" alt="Placeholder Link 6"></div>
+    <div class="post-copy">
+      <div class="post-title">Placeholder Link 6</div>
+      <div class="post-desc">Delete, duplicate, or reorder these objects however you want.</div>
+    </div>
+  </a>
+</div>
 
 <div class="edit-note">
   All games painstakingly hand vibe-coded in ChatGPT by Thomas Harrison aka @Honestly_Thomas (Tektite) / Copyright 2026 / theinternetisdead.org
 </div>
 
-<script>
-const linksData = [
-  {
-    title: "Tektite's Shooter Game",
-    description: "I had a bunch of random images I turned into a decent and fun Galaga clone with lots of secrets!",
-    url: "https://theinternetisdead.org/games/shooter-game/",
-    image: "/media/images/link-thumbnails/shooter-game.png"
-  },
-  {
-    title: "Placeholder Link 2",
-    description: "Another manually editable item in the same layout style.",
-    url: "#",
-    image: "https://placehold.co/1280x720/140014/00ff00?text=Placeholder+2"
-  },
-  {
-    title: "Placeholder Link 3",
-    description: "Use local image paths if you want, like /media/images/pngs/example.png.",
-    url: "#",
-    image: "https://placehold.co/1280x720/101010/00ff00?text=Placeholder+3"
-  },
-  {
-    title: "Placeholder Link 4",
-    description: "This keeps the same general visual rhythm as your reference file.",
-    url: "#",
-    image: "https://placehold.co/1280x720/1d0028/00ff00?text=Placeholder+4"
-  },
-  {
-    title: "Placeholder Link 5",
-    description: "Grid view shows cards. List view shows rows. Civilization limps onward.",
-    url: "#",
-    image: "https://placehold.co/1280x720/001414/00ff00?text=Placeholder+5"
-  },
-  {
-    title: "Placeholder Link 6",
-    description: "Delete, duplicate, or reorder these objects however you want.",
-    url: "#",
-    image: "https://placehold.co/1280x720/181800/00ff00?text=Placeholder+6"
-  }
-];
-
-const linksEl = document.getElementById('links');
-const searchInput = document.getElementById('searchInput');
-const gridBtn = document.getElementById('gridBtn');
-const listBtn = document.getElementById('listBtn');
-
-let currentView = 'grid';
-let filteredLinks = [...linksData];
-
-function renderLinks(){
-  linksEl.className = currentView === 'grid' ? 'grid-view' : 'list-view';
-  linksEl.innerHTML = '';
-
-  filteredLinks.forEach(link => {
-    const post = document.createElement('a');
-    post.className = 'post';
-    post.href = link.url;
-
-    const thumb = document.createElement('div');
-    thumb.className = 'thumb';
-
-    const img = document.createElement('img');
-    img.src = link.image;
-    img.alt = link.title;
-
-    const postCopy = document.createElement('div');
-    postCopy.className = 'post-copy';
-
-    const postTitle = document.createElement('div');
-    postTitle.className = 'post-title';
-    postTitle.textContent = link.title;
-
-    const postDesc = document.createElement('div');
-    postDesc.className = 'post-desc';
-    postDesc.textContent = link.description || '';
-
-    thumb.appendChild(img);
-    postCopy.appendChild(postTitle);
-    postCopy.appendChild(postDesc);
-    post.appendChild(thumb);
-    post.appendChild(postCopy);
-    linksEl.appendChild(post);
-  });
-}
-
-function applySearch(){
-  const q = searchInput.value.trim().toLowerCase();
-  filteredLinks = !q
-    ? [...linksData]
-    : linksData.filter(link =>
-        `${link.title} ${link.description} ${link.url}`.toLowerCase().includes(q)
-      );
-  renderLinks();
-}
-
-gridBtn.addEventListener('click', () => {
-  currentView = 'grid';
-  renderLinks();
-});
-
-listBtn.addEventListener('click', () => {
-  currentView = 'list';
-  renderLinks();
-});
-
-searchInput.addEventListener('input', applySearch);
-
-renderLinks();
-</script>
 
 </body>
 </html>
