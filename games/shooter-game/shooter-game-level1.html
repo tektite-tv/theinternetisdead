@@ -3287,6 +3287,8 @@ function pollGamepad(dt){
     if (isPaused && parentChatVisible){
       if (navUp) postChatControllerAction('cycleUp');
       if (navDown) postChatControllerAction('cycleDown');
+      if (navLeft) postChatControllerAction('cycleLeft');
+      if (navRight) postChatControllerAction('cycleRight');
       if (pressMenuSelect) postChatControllerAction('execute');
       if (pressMenuBack) postChatControllerAction('close');
     } else if (isPaused){

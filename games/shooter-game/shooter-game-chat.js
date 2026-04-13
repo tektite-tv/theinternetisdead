@@ -64,7 +64,61 @@
       }
     }
 
-    function getChatInteractiveTargets() {
+    function isVisibleChatTarget(node) {
+      if (!node) return false;
+      const style = node.ownerDocument && node.ownerDocument.defaultView ? node.ownerDocument.defaultView.getComputedStyle(node) : null;
+      const hidden = style && (style.display === 'none' || style.visibility === 'hidden');
+      const rect = typeof node.getBoundingClientRect === 'function' ? node.getBoundingClientRect() : null;
+      return !hidden && !node.disabled && !node.hasAttribute('disabled') && !node.hasAttribute('aria-hidden') && (!rect || (rect.width > 0 && rect.height > 0)) && (!style || style.pointerEvents !== 'none');
+    }
+
+    function getChatPromptTarget() {
+      const chatDoc = getChatDocument();
+      if (!chatDoc) return null;
+      const selectors = [
+        '[data-chat-prompt]',
+        '#chatPromptButton',
+        '#chatPrompt',
+        '.chat-prompt',
+        '.chat-input-prompt',
+        '.chat-open-prompt',
+        '.chat-launcher'
+      ];
+      for (const selector of selectors) {
+        const node = chatDoc.querySelector(selector);
+        if (node && isVisibleChatTarget(node)) return node;
+      }
+      const textMatch = Array.from(chatDoc.querySelectorAll('button, [role="button"], a, div, span')).find((node) => {
+        const text = String(node.textContent || '').trim().toLowerCase();
+        return text.includes('press here to chat') || text.includes('/ for commands');
+      });
+      return textMatch && isVisibleChatTarget(textMatch) ? textMatch : null;
+    }
+
+    function getChatCloseTarget() {
+      const chatDoc = getChatDocument();
+      if (!chatDoc) return null;
+      const selectors = [
+        '#chatCloseBtn',
+        '#closeChatBtn',
+        '.chat-close-btn',
+        '.chat-close',
+        '[data-chat-close]',
+        '[aria-label="Close chat"]',
+        '[aria-label="Close"]'
+      ];
+      for (const selector of selectors) {
+        const node = chatDoc.querySelector(selector);
+        if (node && isVisibleChatTarget(node)) return node;
+      }
+      const textMatch = Array.from(chatDoc.querySelectorAll('button, [role="button"], a')).find((node) => {
+        const text = String(node.textContent || '').trim().toLowerCase();
+        return text in {'x':1, '×':1, 'close':1};
+      });
+      return textMatch && isVisibleChatTarget(textMatch) ? textMatch : null;
+    }
+
+    function getChatHelpCommandTargets() {
       const chatDoc = getChatDocument();
       if (!chatDoc) return [];
       const preferredSelectors = [
@@ -81,17 +135,22 @@
       ];
       const allSelectors = preferredSelectors.concat(fallbackSelectors);
       const nodes = Array.from(chatDoc.querySelectorAll(allSelectors.join(',')));
-      const filtered = nodes.filter((node) => {
-        if (!node) return false;
-        const style = node.ownerDocument && node.ownerDocument.defaultView ? node.ownerDocument.defaultView.getComputedStyle(node) : null;
-        const hidden = style && (style.display === 'none' || style.visibility === 'hidden');
-        const rect = typeof node.getBoundingClientRect === 'function' ? node.getBoundingClientRect() : null;
-        return !hidden && !node.disabled && !node.hasAttribute('disabled') && !node.hasAttribute('aria-hidden') && (!rect || (rect.width > 0 && rect.height > 0)) && (!style || style.pointerEvents !== 'none');
-      });
-      const preferred = filtered.filter((node) =>
-        node.matches(preferredSelectors.join(','))
-      );
+      const filtered = nodes.filter((node) => isVisibleChatTarget(node));
+      const preferred = filtered.filter((node) => node.matches(preferredSelectors.join(',')));
       return preferred.length ? preferred : filtered;
+    }
+
+    function getChatInteractiveTargets() {
+      const promptTarget = getChatPromptTarget();
+      const closeTarget = getChatCloseTarget();
+      const helpTargets = getChatHelpCommandTargets().filter((node) => node !== promptTarget && node !== closeTarget);
+      const ordered = [];
+      if (promptTarget) ordered.push(promptTarget);
+      if (closeTarget) ordered.push(closeTarget);
+      helpTargets.forEach((node) => {
+        if (!ordered.includes(node)) ordered.push(node);
+      });
+      return ordered;
     }
 
     function rememberChatControllerBaseStyles(node) {
@@ -189,6 +248,54 @@
 
     function focusFirstChatInteractiveTarget() {
       return focusChatTargetByIndex(0);
+    }
+
+    function focusChatPromptTarget() {
+      const promptTarget = getChatPromptTarget();
+      if (!promptTarget) return focusFirstChatInteractiveTarget();
+      const targets = getChatInteractiveTargets();
+      const index = targets.findIndex((node) => node === promptTarget);
+      return focusChatTargetByIndex(index >= 0 ? index : 0);
+    }
+
+    function moveChatControllerSelection(direction) {
+      const targets = getChatInteractiveTargets();
+      if (!targets.length) return false;
+      const currentIndex = syncChatControllerTargetIndex(targets);
+      const promptTarget = getChatPromptTarget();
+      const closeTarget = getChatCloseTarget();
+      const helpTargets = targets.filter((node) => node !== promptTarget && node !== closeTarget);
+      const current = currentIndex >= 0 ? targets[currentIndex] : null;
+
+      if (direction === 'up') {
+        if (current === promptTarget && helpTargets.length) return focusChatTargetByIndex(targets.findIndex((node) => node === helpTargets[helpTargets.length - 1]));
+        if (current === closeTarget && helpTargets.length) return focusChatTargetByIndex(targets.findIndex((node) => node === helpTargets[helpTargets.length - 1]));
+        if (current && helpTargets.includes(current)) {
+          const helpIndex = helpTargets.indexOf(current);
+          if (helpIndex > 0) return focusChatTargetByIndex(targets.findIndex((node) => node === helpTargets[helpIndex - 1]));
+          if (helpIndex === 0 && promptTarget) return focusChatTargetByIndex(targets.findIndex((node) => node === promptTarget));
+        }
+        return focusChatPromptTarget();
+      }
+      if (direction === 'down') {
+        if (current === promptTarget) return closeTarget ? focusChatTargetByIndex(targets.findIndex((node) => node === closeTarget)) : focusChatPromptTarget();
+        if (current === closeTarget) return promptTarget ? focusChatTargetByIndex(targets.findIndex((node) => node === promptTarget)) : focusChatPromptTarget();
+        if (current && helpTargets.includes(current)) {
+          const helpIndex = helpTargets.indexOf(current);
+          if (helpIndex < helpTargets.length - 1) return focusChatTargetByIndex(targets.findIndex((node) => node === helpTargets[helpIndex + 1]));
+          if (helpIndex === helpTargets.length - 1 && promptTarget) return focusChatTargetByIndex(targets.findIndex((node) => node === promptTarget));
+        }
+        return focusChatPromptTarget();
+      }
+      if (direction === 'right') {
+        if (current === promptTarget && closeTarget) return focusChatTargetByIndex(targets.findIndex((node) => node === closeTarget));
+        return current ? focusChatTargetByIndex(currentIndex) : focusChatPromptTarget();
+      }
+      if (direction === 'left') {
+        if (current === closeTarget && promptTarget) return focusChatTargetByIndex(targets.findIndex((node) => node === promptTarget));
+        return promptTarget ? focusChatTargetByIndex(targets.findIndex((node) => node === promptTarget)) : focusFirstChatInteractiveTarget();
+      }
+      return false;
     }
 
     function activateFocusedChatTarget() {
@@ -522,9 +629,13 @@
       if (data.type === 'tektite:chat-control') {
         const action = String(data.action || '').trim();
         if (action === 'cycleUp') {
-          if (!focusChatTargetByStep(-1)) dispatchChatKey('ArrowUp', 'ArrowUp', { target: 'active' });
+          if (!moveChatControllerSelection('up')) dispatchChatKey('ArrowUp', 'ArrowUp', { target: 'active' });
         } else if (action === 'cycleDown') {
-          if (!focusChatTargetByStep(1)) dispatchChatKey('ArrowDown', 'ArrowDown', { target: 'active' });
+          if (!moveChatControllerSelection('down')) dispatchChatKey('ArrowDown', 'ArrowDown', { target: 'active' });
+        } else if (action === 'cycleLeft') {
+          if (!moveChatControllerSelection('left')) dispatchChatKey('ArrowLeft', 'ArrowLeft', { target: 'active' });
+        } else if (action === 'cycleRight') {
+          if (!moveChatControllerSelection('right')) dispatchChatKey('ArrowRight', 'ArrowRight', { target: 'active' });
         } else if (action === 'execute') {
           activateFocusedChatTarget();
         } else if (action === 'seedSlash') {
