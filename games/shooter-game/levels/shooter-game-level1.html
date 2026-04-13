@@ -2505,6 +2505,8 @@ const BINDINGS_STORAGE_KEY = "tektiteShooterBindings_v1";
 const DEFAULT_KEYBOARD_BINDINGS = {
   moveLeft: "KeyA",
   moveRight: "KeyD",
+  moveUp: "KeyW",
+  moveDown: "KeyS",
   shoot: "Space",
   shield: "Mouse2",
   bomb: "KeyQ",
@@ -2514,6 +2516,10 @@ const DEFAULT_KEYBOARD_BINDINGS = {
   fullscreen: "KeyF"
 };
 const DEFAULT_CONTROLLER_BINDINGS = {
+  moveUp: 12,
+  moveDown: 13,
+  moveLeft: 14,
+  moveRight: 15,
   shoot: 7,
   shield: 4,
   bomb: 6,
@@ -2526,6 +2532,8 @@ const DEFAULT_CONTROLLER_BINDINGS = {
 const KEYBOARD_BIND_ACTIONS = [
   { key: "moveLeft", label: "Move Left", hint: "Gameplay movement" },
   { key: "moveRight", label: "Move Right", hint: "Gameplay movement" },
+  { key: "moveUp", label: "Move Up", hint: "Gameplay movement" },
+  { key: "moveDown", label: "Move Down", hint: "Gameplay movement" },
   { key: "shoot", label: "Shoot", hint: "Key or mouse button" },
   { key: "shield", label: "Shield", hint: "Key or mouse button" },
   { key: "bomb", label: "Bomb", hint: "Gameplay action" },
@@ -2535,6 +2543,10 @@ const KEYBOARD_BIND_ACTIONS = [
   { key: "fullscreen", label: "Fullscreen", hint: "Whole shooter shell" }
 ];
 const CONTROLLER_BIND_ACTIONS = [
+  { key: "moveUp", label: "Move Up", hint: "Gameplay movement" },
+  { key: "moveDown", label: "Move Down", hint: "Gameplay movement" },
+  { key: "moveLeft", label: "Move Left", hint: "Gameplay movement" },
+  { key: "moveRight", label: "Move Right", hint: "Gameplay movement" },
   { key: "shoot", label: "Shoot", hint: "Gameplay action" },
   { key: "shield", label: "Shield", hint: "Gameplay action" },
   { key: "bomb", label: "Bomb", hint: "Gameplay action" },
@@ -2582,7 +2594,7 @@ function applyDraftBindings(){
   saveBindings();
 }
 function formatKeyboardBinding(code){
-  const map = {Space:'Space', Escape:'Esc', Slash:'/', ArrowLeft:'Left Arrow', ArrowRight:'Right Arrow', ArrowUp:'Up Arrow', ArrowDown:'Down Arrow', KeyF:'F', KeyM:'M', KeyQ:'Q', KeyA:'A', KeyD:'D'};
+  const map = {Space:'Space', Escape:'Esc', Slash:'/', ArrowLeft:'Left Arrow', ArrowRight:'Right Arrow', ArrowUp:'Up Arrow', ArrowDown:'Down Arrow', KeyF:'F', KeyM:'M', KeyQ:'Q', KeyA:'A', KeyD:'D', KeyW:'W', KeyS:'S'};
   if (!code) return 'Unbound';
   if (map[code]) return map[code];
   if (/^Mouse\d+$/.test(code)) return code === 'Mouse0' ? 'Left Click' : code === 'Mouse1' ? 'Middle Click' : code === 'Mouse2' ? 'Right Click' : code;
@@ -2606,7 +2618,7 @@ function updateControlsDisplay(){
   }
   if (controlsFixedInfo){
     controlsFixedInfo.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
-      ? 'Move stays on Left Stick / D-Pad. Aim stays on Right Stick. Fullscreen is rebindable below too.'
+      ? 'Left Stick movement and D-Pad movement can both drive gameplay. Aim stays on Right Stick. Fullscreen is rebindable below too.'
       : 'Aim stays on Mouse / Touch. Bind actions below to keys or mouse buttons, including Fullscreen.';
   }
 }
@@ -3176,6 +3188,7 @@ let fireCooldown = 0;
 let gpIndex = 0;
 let gpPrev = null; // previous button pressed states
 let gpMoveX = 0;
+let gpMoveY = 0;
 let gpAimX = 0;
 let gpAimY = 0;
 let gpFireHeld = false;
@@ -3245,6 +3258,7 @@ function pollGamepad(dt){
   gpHasAnyInput = false;
 
   gpMoveX = 0;
+  gpMoveY = 0;
   gpAimX = 0;
   gpAimY = 0;
   gpFireHeld = false;
@@ -3273,12 +3287,13 @@ function pollGamepad(dt){
   const rx = gpDead(ax2, GP_AIM_DEADZONE);
   const ry = gpDead(ax3, GP_AIM_DEADZONE);
 
-  const dUp = gpBtn(gp, 12).pressed;
-  const dDown = gpBtn(gp, 13).pressed;
-  const dLeft = gpBtn(gp, 14).pressed;
-  const dRight = gpBtn(gp, 15).pressed;
+  const dUp = getGpActionPressed(gp, 'moveUp');
+  const dDown = getGpActionPressed(gp, 'moveDown');
+  const dLeft = getGpActionPressed(gp, 'moveLeft');
+  const dRight = getGpActionPressed(gp, 'moveRight');
 
   gpMoveX = Math.max(-1, Math.min(1, lx + (dLeft ? -1 : 0) + (dRight ? 1 : 0)));
+  gpMoveY = Math.max(-1, Math.min(1, ly + (dUp ? -1 : 0) + (dDown ? 1 : 0)));
   gpAimX = rx;
   gpAimY = ry;
 
