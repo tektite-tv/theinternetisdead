@@ -2702,9 +2702,10 @@ const DEFAULT_CONTROLLER_BINDINGS = {
   shield: 4,
   bomb: 6,
   pause: 9,
+  commands: 8,
   menuSelect: 0,
   menuBack: 1,
-  muteHud: 8,
+  muteHud: null,
   fullscreen: 11
 };
 const KEYBOARD_BIND_ACTIONS = [
@@ -2729,6 +2730,7 @@ const CONTROLLER_BIND_ACTIONS = [
   { key: "shield", label: "Shield", hint: "Gameplay action" },
   { key: "bomb", label: "Bomb", hint: "Gameplay action" },
   { key: "pause", label: "Pause / Resume", hint: "Gameplay and pause menu" },
+  { key: "commands", label: "Open Commands", hint: "Open slash chat" },
   { key: "menuSelect", label: "Menu Select", hint: "Menus and command list" },
   { key: "menuBack", label: "Menu Back / Close Chat", hint: "Menus and pause chat" },
   { key: "muteHud", label: "HUD Toggle", hint: "Show or hide HUD" },
@@ -2736,7 +2738,7 @@ const CONTROLLER_BIND_ACTIONS = [
 ];
 const CONTROLLER_BUTTON_LABELS = {
   0: "A", 1: "B", 2: "X", 3: "Y", 4: "LB", 5: "RB", 6: "LT", 7: "RT",
-  8: "Back", 9: "Start", 10: "LS", 11: "RS", 12: "D-Pad Up", 13: "D-Pad Down", 14: "D-Pad Left", 15: "D-Pad Right"
+  8: "View", 9: "Menu", 10: "LS", 11: "RS", 12: "D-Pad Up", 13: "D-Pad Down", 14: "D-Pad Left", 15: "D-Pad Right"
 };
 let activeInputMode = INPUT_MODE_KEYBOARD;
 let controlsBindMode = INPUT_MODE_KEYBOARD;
@@ -2780,7 +2782,7 @@ function formatKeyboardBinding(code){
   if (/^Digit\d$/.test(code)) return code.slice(5);
   return code;
 }
-function formatControllerBinding(index){ return CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`; }
+function formatControllerBinding(index){ return typeof index === "number" ? (CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`) : "Unbound"; }
 function mouseButtonToBinding(button){ return `Mouse${Number(button) || 0}`; }
 function isKeyboardActionHeld(action){ const code = keyboardBindings[action]; return !!(code && keys[code]); }
 function getGpButtonPressedByIndex(gp, index){ const btn = gpBtn(gp, index); return (index === 6 || index === 7) ? ((btn.value || 0) > GP_TRIGGER_DEADZONE) : !!btn.pressed; }
@@ -2796,8 +2798,8 @@ function updateControlsDisplay(){
   }
   if (controlsFixedInfo){
     controlsFixedInfo.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
-      ? 'Left Stick movement and D-Pad movement can both drive gameplay. Aim stays on Right Stick. Fullscreen is rebindable below too.'
-      : 'Aim stays on Mouse / Touch. Bind actions below to keys or mouse buttons, including Fullscreen.';
+      ? 'Left Stick movement and D-Pad movement can both drive gameplay. View opens chat. Aim stays on Right Stick. Fullscreen is rebindable below too.'
+      : 'Aim stays on Mouse / Touch. Slash opens chat. Bind actions below to keys or mouse buttons, including Fullscreen.';
   }
 }
 function setActiveInputMode(mode){
@@ -3563,6 +3565,7 @@ function pollGamepad(dt){
   }
 
   const pressPause = gpEdge(controllerBindings.pause, getGpActionPressed(gp, 'pause'));
+  const pressCommands = gpEdge(controllerBindings.commands, getGpActionPressed(gp, 'commands'));
   const pressMenuBack = gpEdge(controllerBindings.menuBack, getGpActionPressed(gp, 'menuBack'));
   const pressMenuSelect = gpEdge(controllerBindings.menuSelect, getGpActionPressed(gp, 'menuSelect'));
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
@@ -3570,7 +3573,7 @@ function pollGamepad(dt){
   const pressMuteHud = gpEdge(controllerBindings.muteHud, getGpActionPressed(gp, 'muteHud'));
   const pressY = gpEdge(3, y);
 
-  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressY || pressPause || pressMuteHud || pressFullscreen || pressBomb) && !audioUnlocked){
+  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressPause || pressMuteHud || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
   }
 
@@ -3598,6 +3601,9 @@ function pollGamepad(dt){
     }
     if (pressFullscreen){
       toggleFullscreen();
+    }
+    if (pressCommands){
+      requestOpenChat(true);
     }
     if (isPaused && parentChatVisible){
       if (navUp) postChatControllerAction('cycleUp');
