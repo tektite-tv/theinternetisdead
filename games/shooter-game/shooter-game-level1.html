@@ -134,7 +134,7 @@
     font-size: 13px;
     line-height: 1.5;
   }
-  #controlsMenu.panel{ background: rgba(75,0,118,0.72); max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  #controlsMenu.panel{ background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #controlsMenu .title{ font-size:22px; margin:2px 0 8px; }
   #controlsMenu .controlsGrid{ display:grid; gap:8px; }
@@ -2751,6 +2751,7 @@ function moveControlsControllerFocus(delta){
   controlsFocusIndex = (controlsFocusIndex + delta + items.length) % items.length;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
+  fitControlsMenuToViewport();
 }
 
 function cycleSelect(selectEl, delta){

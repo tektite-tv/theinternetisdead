@@ -121,7 +121,7 @@
   #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
-  #controlsMenu.panel{ background: rgba(75,0,118,0.72); max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  #controlsMenu.panel{ background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #controlsMenu .title{ font-size:22px; margin:2px 0 8px; }
   #controlsMenu .controlsGrid{ display:grid; gap:8px; }
@@ -2930,6 +2930,7 @@ function moveControlsControllerFocus(delta){
   controlsFocusIndex = (controlsFocusIndex + delta + items.length) % items.length;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
+  fitControlsMenuToViewport();
 }
 
 function cycleSelect(selectEl, delta){
@@ -3083,6 +3084,7 @@ function showControlsPopup(){
   controlsFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
+  fitControlsMenuToViewport();
 }
 function hideControlsPopup(){
   if (!controlsMenu || !btnControls) return;
