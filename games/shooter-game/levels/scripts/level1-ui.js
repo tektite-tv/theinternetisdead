@@ -199,6 +199,7 @@ const CONTROLLER_BUTTON_LABELS = {
 let activeInputMode = INPUT_MODE_KEYBOARD;
 let controlsBindMode = INPUT_MODE_KEYBOARD;
 let controlsFocusIndex = 0;
+let controlsMoveFocusIndex = 0;
 let bindingEditState = null;
 let controllerRebindReady = false;
 let pauseControlsOpen = false;
@@ -268,10 +269,77 @@ function setActiveInputMode(mode){
 function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
 function getCurrentBindingValue(action){ return controlsBindMode === INPUT_MODE_CONTROLLER ? draftControllerBindings[action] : draftKeyboardBindings[action]; }
 function setControlsBindStatus(message){ if (controlsBindStatus) controlsBindStatus.textContent = message; }
+const MOVE_BIND_ACTIONS = ["moveUp", "moveDown", "moveLeft", "moveRight"];
+const MOVE_BIND_LABELS = { moveUp: "Up", moveDown: "Down", moveLeft: "Left", moveRight: "Right" };
+function isMoveBindAction(action){ return MOVE_BIND_ACTIONS.includes(action); }
+function getControlsMoveButtons(){ return Array.from(document.querySelectorAll('#controlsMenu .controlsMoveButton')); }
+function isControlsMoveFocused(){
+  const target = getControlsControllerTargets()[controlsFocusIndex];
+  return !!(target && target.classList && target.classList.contains('controlsMoveButton'));
+}
+function syncControlsMoveFocus(){
+  const moveButtons = getControlsMoveButtons();
+  if (!moveButtons.length) return;
+  controlsMoveFocusIndex = Math.max(0, Math.min(controlsMoveFocusIndex, moveButtons.length - 1));
+  const items = getControlsControllerTargets();
+  const targetIndex = items.indexOf(moveButtons[controlsMoveFocusIndex]);
+  if (targetIndex !== -1) controlsFocusIndex = targetIndex;
+  focusControllerElement(moveButtons[controlsMoveFocusIndex]);
+}
+function moveControlsMoveFocus(delta){
+  const moveButtons = getControlsMoveButtons();
+  if (!moveButtons.length) return false;
+  controlsMoveFocusIndex = Math.max(0, Math.min(moveButtons.length - 1, controlsMoveFocusIndex + delta));
+  syncControlsMoveFocus();
+  return true;
+}
 function renderControlsBindingList(){
   if (!controlsBindList) return;
   controlsBindList.innerHTML = '';
-  getCurrentBindingDefs().forEach(def => {
+  const defs = getCurrentBindingDefs();
+  const moveDefs = defs.filter(def => isMoveBindAction(def.key));
+  const otherDefs = defs.filter(def => !isMoveBindAction(def.key));
+
+  if (moveDefs.length){
+    const row = document.createElement('div');
+    row.className = 'controlsBindRow controlsMoveRow';
+    const meta = document.createElement('div');
+    meta.className = 'controlsBindMeta';
+    const title = document.createElement('div');
+    title.className = 'controlsBindTitle';
+    title.textContent = 'Move Controls';
+    const hint = document.createElement('div');
+    hint.className = 'controlsBindHint';
+    hint.textContent = 'Left stick left/right chooses a direction; A edits it.';
+    meta.appendChild(title);
+    meta.appendChild(hint);
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'controlsMoveButtonGroup';
+    MOVE_BIND_ACTIONS.forEach(action => {
+      const def = moveDefs.find(item => item.key === action);
+      if (!def) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'controlsBindButton controlsMoveButton smallBtn';
+      button.dataset.action = def.key;
+      button.dataset.scheme = controlsBindMode;
+      const value = getCurrentBindingValue(def.key);
+      const label = MOVE_BIND_LABELS[def.key] || def.label.replace(/^Move\s+/i, '');
+      const binding = controlsBindMode === INPUT_MODE_CONTROLLER ? formatControllerBinding(value) : formatKeyboardBinding(value);
+      button.textContent = `${label}: ${binding}`;
+      if (bindingEditState && bindingEditState.scheme === controlsBindMode && bindingEditState.action === def.key){
+        button.classList.add('listening');
+        button.textContent = `${label}: Press input...`;
+      }
+      button.addEventListener('click', () => startBindingEdit(controlsBindMode, def.key));
+      buttonGroup.appendChild(button);
+    });
+    row.appendChild(meta);
+    row.appendChild(buttonGroup);
+    controlsBindList.appendChild(row);
+  }
+
+  otherDefs.forEach(def => {
     const row = document.createElement('div');
     row.className = 'controlsBindRow';
     const meta = document.createElement('div');
@@ -392,7 +460,10 @@ function getCheatsControllerTargets(){
 }
 
 function getControlsControllerTargets(){
-  return [controlsModeKeyboard, controlsModeController, ...Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton')), controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
+  const moveButtons = getControlsMoveButtons();
+  const moveTarget = moveButtons[controlsMoveFocusIndex] || moveButtons[0];
+  const otherBindButtons = Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton:not(.controlsMoveButton)'));
+  return [controlsModeKeyboard, controlsModeController, moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
 }
 
 function getPauseControllerTargets(){
@@ -459,9 +530,15 @@ function movePauseControllerFocus(delta){
 }
 
 function moveControlsControllerFocus(delta){
+  const previous = getControlsControllerTargets()[controlsFocusIndex];
   const items = getControlsControllerTargets();
   if (!items.length) return;
   controlsFocusIndex = (controlsFocusIndex + delta + items.length) % items.length;
+  const next = getControlsControllerTargets()[controlsFocusIndex];
+  const moveButtons = getControlsMoveButtons();
+  if (moveButtons.includes(next) && !moveButtons.includes(previous)){
+    controlsMoveFocusIndex = 0;
+  }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
   fitControlsMenuToViewport();
