@@ -232,7 +232,7 @@ const linksData = [
   {
     title: "Tektite's Shooter Game",
     description: "I had a bunch of random images I turned into a decent and fun Galaga clone with lots of secrets!",
-    url: "/games/shooter-game/",
+    url: "https://theinternetisdead.org/games/shooter-game/",
     image: "/media/images/link-thumbnails/shooter-game.png"
   },
   {
@@ -277,15 +277,38 @@ let filteredLinks = [...linksData];
 
 function renderLinks(){
   linksEl.className = currentView === 'grid' ? 'grid-view' : 'list-view';
-  linksEl.innerHTML = filteredLinks.map(link => `
-    <a class="post" href="${link.url}">
-      <div class="thumb"><img src="${link.image}" alt="${link.title}"></div>
-      <div class="post-copy">
-        <div class="post-title">${link.title}</div>
-        <div class="post-desc">${link.description || ''}</div>
-      </div>
-    </a>
-  `).join('');
+  linksEl.innerHTML = '';
+
+  filteredLinks.forEach(link => {
+    const post = document.createElement('a');
+    post.className = 'post';
+    post.href = link.url;
+
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+
+    const img = document.createElement('img');
+    img.src = link.image;
+    img.alt = link.title;
+
+    const postCopy = document.createElement('div');
+    postCopy.className = 'post-copy';
+
+    const postTitle = document.createElement('div');
+    postTitle.className = 'post-title';
+    postTitle.textContent = link.title;
+
+    const postDesc = document.createElement('div');
+    postDesc.className = 'post-desc';
+    postDesc.textContent = link.description || '';
+
+    thumb.appendChild(img);
+    postCopy.appendChild(postTitle);
+    postCopy.appendChild(postDesc);
+    post.appendChild(thumb);
+    post.appendChild(postCopy);
+    linksEl.appendChild(post);
+  });
 }
 
 function applySearch(){
