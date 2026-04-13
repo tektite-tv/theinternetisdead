@@ -608,6 +608,7 @@ body.invert-colors {
     <div id="pauseHint">Press ESC to resume</div>
     <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
     <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Controls</button>
+    <button id="btnPauseOptions" class="pauseMenuBtn" type="button" style="font-size:18px;">Options</button>
     <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
 
   </div>
@@ -635,95 +636,18 @@ body.invert-colors {
   <div id="optionsMenu" class="panel" style="display:none;">
     <div class="title">OPTIONS</div>
 
-    
+
     <div class="optionsGrid">
-      <div class="optRow">
-        <div class="optLabel"><span>Starting Lives</span><span id="livesVal">1</span></div>
-        <input id="livesSlider" type="range" min="0" max="20" value="1" step="1" />
-      </div>
-
-      <div class="optRow">
-        <div class="optLabel"><span>Starting Hearts</span><span id="heartsVal">3</span></div>
-        <input id="heartsSlider" type="range" min="1" max="12" value="3" step="1" />
-        <div class="hint">Hearts = max hits per life. More hearts = smaller damage per hit.</div>
-      </div>
-
-      <div class="optRow">
-        <div class="optLabel"><span>Starting Shields</span><span id="shieldsVal">0</span></div>
-        <input id="shieldsSlider" type="range" min="0" max="10" value="0" step="1" />
-        <div class="hint">Shields act like extra one-hit armor pips (🛡️) next to your hearts.</div>
-      </div>
-
-      <div class="optRow">
-        <div class="optLabel"><span>Starting Bombs</span><span id="bombsVal">0</span></div>
-        <input id="bombsSlider" type="range" min="0" max="20" value="0" step="1" />
-      </div>
-
-
-      <div class="optRow">
-        <div class="optLabel"><span>Game Speed</span><span id="speedVal">5</span></div>
-        <input id="speedSlider" type="range" min="1" max="10" value="5" step="1" />
-        <div class="hint">5 = normal. 1 = slow-mo. 10 = turbo.</div>
-      </div>
-
-      <div class="optRow checkboxGroup">
-        <div class="checkOption">
-          <label>
-            <input id="infiniteToggle" type="checkbox" style="transform:scale(1.2);" />
-            <span>Infinite (no damage, no resource consumption)</span>
-          </label>
-          <div class="hint">For testing, chaos, or avoiding consequences. Pick one.</div>
-        </div>
-
-        <div class="checkOption">
-          <label>
-            <input id="invertColorsCheckbox" type="checkbox" style="transform:scale(1.2);" />
-            <span>Invert Colors</span>
-          </label>
-          <div class="hint">Flips all colors for night mode, screenshots, or chaos.</div>
-        </div>
-      </div>
-
-      <div class="optRow fullRow">
-        <div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
-        <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
-          <option value="1">Wave 1</option>
-          <option value="2">Wave 2</option>
-          <option value="3">Wave 3</option>
-          <option value="4">Wave 4</option>
-          <option value="5">Wave 5</option>
-          <option value="6">Wave 6</option>
-          <option value="7">Wave 7</option>
-          <option value="8">Wave 8</option>
-          <option value="9">Wave 9</option>
-          <option value="10">Wave 10</option>
-          <option value="11">Bonus Mode</option>
-          <option value="12">Insanity 1</option>
-          <option value="13">Insanity 2</option>
-          <option value="14">Insanity 3</option>
-          <option value="15">Insanity 4</option>
-          <option value="16">Insanity 5</option>
-          <option value="17">Insanity 6</option>
-          <option value="18">Insanity 7</option>
-          <option value="19">Insanity 8</option>
-          <option value="20">Insanity 9</option>
-          <option value="21">Insanity 10</option>
-        </select>
-        <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Bonus Mode, or Insanity 1-10.</div>
-      </div>
-
       <div class="optRow fullRow">
         <div class="btnRow" style="margin-top:0; gap:10px;">
           <button id="btnReturnToLevel1" class="smallBtn" type="button" style="flex:1 1 0; min-height:46px; font-size:16px;">Return to Level 1</button>
           <button id="btnSkipToLevel3" class="smallBtn" type="button" style="flex:1 1 0; min-height:46px; font-size:16px;">Skip to Level 3</button>
         </div>
       </div>
+    </div>
 
-</div>
-
-    <div class="btnRow" style="margin-top:14px;">
-      <button id="btnBack" class="smallBtn">Back</button>
-      <button id="btnApply" class="smallBtn">Apply</button>
+    <div class="btnRow" style="margin-top:14px; justify-content:center;">
+      <button id="btnBack" class="smallBtn" type="button" style="min-width:220px;">Back</button>
     </div>
   </div>
 
@@ -2618,7 +2542,7 @@ const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 
   // =======================
-  // Start Options (v1.96)
+  // Level 2 navigation menu
   // =======================
   const livesSlider = document.getElementById("livesSlider");
   const heartsSlider = document.getElementById("heartsSlider");
@@ -2637,18 +2561,16 @@ const btnSkipToLevel3 = document.getElementById("btnSkipToLevel3");
   const bombsVal = document.getElementById("bombsVal");
 
   const speedVal = document.getElementById("speedVal");
-  // Saved settings (persist for the session)
   let START_LIVES = 1;
   let START_HEARTS = 3;
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
-  // v1.96: game speed slider (1-10). 5 = 1.0x.
   let START_GAME_SPEED = 5;
   let GAME_SPEED_MULT = 1.0;
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   let INFINITE_MODE = false;
   
-let START_WAVE = 1; // 1-10 = maze waves, 11 = Bonus Mode, 12-21 = Insanity 1-10
+let START_WAVE = 1;
 
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
@@ -2673,19 +2595,19 @@ if (invertColorsCheckbox){
   }
 
   function syncStartOptionsLabels(){
-    livesVal.textContent = livesSlider.value;
-    heartsVal.textContent = heartsSlider.value;
-    shieldsVal.textContent = shieldsSlider.value;
-    bombsVal.textContent = bombsSlider.value;
+    if (livesVal && livesSlider) livesVal.textContent = livesSlider.value;
+    if (heartsVal && heartsSlider) heartsVal.textContent = heartsSlider.value;
+    if (shieldsVal && shieldsSlider) shieldsVal.textContent = shieldsSlider.value;
+    if (bombsVal && bombsSlider) bombsVal.textContent = bombsSlider.value;
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
 
-  [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].forEach(s => {
+  [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].filter(Boolean).forEach(s => {
     s.addEventListener("input", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
-  infiniteToggle.addEventListener("change", () => {});
+  if (infiniteToggle) infiniteToggle.addEventListener("change", () => {});
   syncStartOptionsLabels();
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
@@ -2928,7 +2850,7 @@ function getMenuControllerTargets(){
 }
 
 function getOptionsControllerTargets(){
-  return [startWaveSelect, btnReturnToLevel1, btnSkipToLevel3, livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+  return [btnReturnToLevel1, btnSkipToLevel3, btnBack].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -2936,7 +2858,7 @@ function getControlsControllerTargets(){
 }
 
 function getPauseControllerTargets(){
-  return [btnPauseResume, btnPauseOpenChat, btnPauseQuit].filter(Boolean);
+  return [btnPauseResume, btnPauseOpenChat, btnPauseOptions, btnPauseQuit].filter(Boolean);
 }
 
 function syncMenuControllerFocus(){
@@ -3176,26 +3098,16 @@ function hideControlsMenu(){
   showMenu();
 }
 
-function showOptions(){
-  setPaused(false);
+function showOptions(fromPause = false){
+  optionsOpenedFromPause = !!fromPause;
+  if (!fromPause) {
+    setPaused(false);
+  }
   gameState = STATE.OPTIONS;
-    // v1.96: populate start options UI with saved settings
-  livesSlider.value = START_LIVES;
-  heartsSlider.value = START_HEARTS;
-  shieldsSlider.value = START_SHIELDS;
-  bombsSlider.value = START_BOMBS;
-  if (speedSlider) speedSlider.value = START_GAME_SPEED;
-  infiniteToggle.checked = !!INFINITE_MODE;
-  START_WAVE = Math.max(1, Math.min(21, START_WAVE || URL_START_WAVE || 1));
-  if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
-  if (invertColorsCheckbox) invertColorsCheckbox.checked = INVERT_COLORS;
-  syncStartOptionsLabels();
 
-// v1.96: drop shield when entering menus
   mouseShieldHolding = false;
   stopShield(false);
 
-  // v1.96: hide HUD in menus
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
@@ -3205,6 +3117,7 @@ function showOptions(){
   pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
+  if (pauseOverlay) pauseOverlay.style.display = "none";
   optionsMenu.style.display = "block";
   uiRoot.style.display = "flex";
   fitOptionsMenuToViewport();
@@ -3298,28 +3211,24 @@ if (AUTO_START_LEVEL){
 }
 
 btnStart.addEventListener("click", startGame);
-btnOptions.addEventListener("click", showOptions);
+btnOptions.addEventListener("click", () => showOptions(false));
+if (btnPauseOptions) btnPauseOptions.addEventListener("click", () => showOptions(true));
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
-btnBack.addEventListener("click", showMenu);
-if (controlsBack) controlsBack.addEventListener("click", hideControlsMenu);
-btnApply.addEventListener("click", () => {
-  // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
-  START_LIVES = parseInt(livesSlider.value, 10);
-  START_HEARTS = parseInt(heartsSlider.value, 10);
-  START_SHIELDS = parseInt(shieldsSlider.value, 10);
-  START_BOMBS = parseInt(bombsSlider.value, 10);
-  // v1.96: Save game speed (1-10), where 5 = normal.
-  START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
-  GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
-  INFINITE_MODE = !!infiniteToggle.checked;
-  if (invertColorsCheckbox) INVERT_COLORS = invertColorsCheckbox.checked;
-  applyInvertColors();
-  START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
-
-  // Keep the UI labels in sync and return to the main menu.
-  syncStartOptionsLabels();
+btnBack.addEventListener("click", () => {
+  if (optionsOpenedFromPause && isPaused){
+    optionsMenu.style.display = "none";
+    uiRoot.style.display = "none";
+    if (pauseOverlay) pauseOverlay.style.display = "flex";
+    optionsOpenedFromPause = false;
+    pauseFocusIndex = 2;
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
+    else clearControllerFocus();
+    return;
+  }
+  optionsOpenedFromPause = false;
   showMenu();
 });
+if (controlsBack) controlsBack.addEventListener("click", hideControlsMenu);
 
 btnRestart.addEventListener("click", () => {
   restartRun();
