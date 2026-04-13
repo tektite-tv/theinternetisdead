@@ -44,8 +44,80 @@
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
 
+
+  .controlsWrap{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .inputIndicator{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:36px;
+    height:36px;
+    padding:0 8px;
+    border-radius:10px;
+    border:1px solid rgba(0,255,0,0.35);
+    background:rgba(0,0,0,0.35);
+    font-size:20px;
+    line-height:1;
+    user-select:none;
+  }
+  body.controller-active .controllerFocus{
+    outline:2px solid rgba(0,255,102,0.95) !important;
+    box-shadow:0 0 0 3px rgba(0,255,102,0.18);
+    background:rgba(75,0,118,0.55) !important;
+  }
+  #controlsPopup{
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(500px, 90vw);
+    max-height: min(74vh, 560px);
+    display: none;
+    z-index: 50;
+    text-align: left;
+    pointer-events: auto;
+    overflow: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding: 14px 14px 12px;
+  }
+  #controlsPopup::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #controlsPopup.panel{ background: rgba(75,0,118,0.72); }
+  #controlsPopup .title{ font-size:18px; margin:0 0 6px; text-align:center; }
+  #controlsPopup.visible{ display:block; }
+  .controlsModeTabs{ display:flex; gap:6px; margin:0 0 8px; }
+  .controlsModeTabs button{ min-width:0; flex:1; padding:7px 10px; font-size:13px; }
+  .controlsModeTabs button.active{ background: rgba(0,255,102,0.16); border-color: rgba(0,255,102,0.65); }
+  .controlsBindList{ display:grid; grid-template-columns:1fr; gap:6px; margin-top:6px; }
+  .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:6px 8px; background: rgba(0,0,0,0.35); }
+  .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  .controlsBindTitle{ font-size:13px; }
+  .controlsBindHint{ opacity:0.7; font-size:10px; line-height:1.2; }
+  .controlsBindButton{ min-width:132px; padding:6px 8px; text-align:center; font-size:12px; }
+  .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
+  .controlsFooter{ display:flex; justify-content:flex-end; margin-top:8px; }
+  #controlsBindStatus{ margin-top:2px; min-height:28px; font-size:11px; }
+  #controlsFixedInfo{ margin-top:4px; line-height:1.25; font-size:11px; }
+
+  @media (max-height: 760px){
+    #controlsPopup{ max-height:min(68vh, 500px); padding:12px 12px 10px; }
+    #controlsPopup .title{ font-size:16px; margin-bottom:5px; }
+    .controlsBindRow{ padding:5px 7px; }
+    .controlsBindTitle{ font-size:12px; }
+    .controlsBindHint{ font-size:9px; }
+    .controlsBindButton{ min-width:116px; padding:5px 7px; font-size:11px; }
+  }
+
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
-  #optionsMenu.panel{ max-height:88vh; overflow:auto; }
+  #optionsMenu.panel{ max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  #optionsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #optionsMenu .title{ font-size:22px; margin:2px 0 8px; }
   #optionsMenu .optionsGrid{ gap:8px; }
   #optionsMenu .optRow{ padding:8px 10px; }
@@ -2219,8 +2291,8 @@ function updateStarfield(dt, keys, playerSpeed){
 
   let vxIntent = 0;
   if (gameState === STATE.PLAYING){
-    if isKeyboardActionHeld("moveLeft")  vxIntent -= 1;
-    if isKeyboardActionHeld("moveRight") vxIntent += 1;
+    if (isKeyboardActionHeld("moveLeft")) vxIntent -= 1;
+    if (isKeyboardActionHeld("moveRight")) vxIntent += 1;
     // Xbox/Gamepad: use left-stick/D-pad horizontal intent too
     vxIntent += (typeof gpMoveX !== "undefined" ? (gpMoveX || 0) : 0);
     vxIntent = Math.max(-1, Math.min(1, vxIntent));
@@ -4409,8 +4481,8 @@ function update(dt){
 
   // player move (keyboard + gamepad)
   let moveX = 0;
-  if isKeyboardActionHeld("moveLeft") moveX -= 1;
-  if isKeyboardActionHeld("moveRight") moveX += 1;
+  if (isKeyboardActionHeld("moveLeft")) moveX -= 1;
+  if (isKeyboardActionHeld("moveRight")) moveX += 1;
   // add analog movement from Xbox pad
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
