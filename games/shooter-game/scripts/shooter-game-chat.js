@@ -492,14 +492,11 @@
       }
     }
 
-    function switchToLevel2(startWave = 1) {
+    function switchToLevel2() {
       if (!tektiteFrame || hasSwitchedToLevel2) return;
       hasSwitchedToLevel2 = true;
       const keepFullscreen = !!document.fullscreenElement;
-      const nextLevelUrl = new URL(LEVEL2_SRC, window.location.origin);
-      nextLevelUrl.searchParams.set('autostart', '1');
-      nextLevelUrl.searchParams.set('startWave', String(Math.max(1, Math.min(21, parseInt(startWave, 10) || 1))));
-      tektiteFrame.src = `${nextLevelUrl.pathname}${nextLevelUrl.search}`;
+      tektiteFrame.src = LEVEL2_SRC;
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
           setIframeFullscreen(true);
@@ -599,7 +596,7 @@
       }
 
       if (data.type === 'tektite:continue-to-level2') {
-        switchToLevel2(data.startWave);
+        switchToLevel2();
         return;
       }
       if (data.type === 'tektite:return-to-level1') {

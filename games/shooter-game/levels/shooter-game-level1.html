@@ -128,10 +128,6 @@
   #optionsMenu input[type="checkbox"]{ transition: box-shadow 120ms ease, border-color 120ms ease, outline-color 120ms ease, filter 120ms ease, background-color 120ms ease; }
   #optionsMenu select{ scrollbar-width:none; -ms-overflow-style:none; }
   #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
-  .menuActionButton{ width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none; cursor:pointer; transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease, filter 120ms ease; }
-  .menuActionButton:hover{ border-color:rgba(0,255,102,0.85); box-shadow:0 0 0 1px rgba(0,255,102,0.28), 0 0 14px rgba(0,255,102,0.18); filter:brightness(1.05); }
-  .menuActionButton.dual{ width:auto; min-width:0; flex:1 1 0; }
-  .menuActionRow{ display:flex; gap:8px; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
   .menuBlurb{
@@ -605,8 +601,7 @@ body.invert-colors {
       </div>
 
       <div class="optRow fullRow">
-        <button id="btnSkipToLevel2" class="menuActionButton" type="button">Skip to Level 2</button>
-        <div class="hint">Immediately load Maze Wave 1 and bypass Level 2's start menu.</div>
+        <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
       </div>
 
       <div class="optRow">
@@ -2438,7 +2433,6 @@ const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
-const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
 
   // =======================
   // Start Options (v1.96)
@@ -2450,6 +2444,7 @@ const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
   const speedSlider = document.getElementById("speedSlider");
   const infiniteToggle = document.getElementById("infiniteToggle");
   const startWaveSelect = document.getElementById("startWaveSelect");
+const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
   const startWaveLabel = document.getElementById("startWaveLabel");
 
   const livesVal = document.getElementById("livesVal");
@@ -3156,18 +3151,14 @@ if (btnSkipToLevel2){
   btnSkipToLevel2.addEventListener("click", () => {
     if (window.parent && window.parent !== window){
       try{
-        window.parent.postMessage({ type: "tektite:continue-to-level2", startWave: 1 }, "*");
+        window.parent.postMessage({ type: "tektite:continue-to-level2" }, "*");
         return;
       }catch(err){
-        console.warn("Failed to skip to Level 2 through parent host.", err);
+        console.warn("Failed to notify parent iframe host about level transition.", err);
       }
     }
 
-    const nextUrl = new URL(window.location.href);
-    nextUrl.pathname = nextUrl.pathname.replace(/shooter-game-level1\.html$/i, "shooter-game-level2.html");
-    nextUrl.searchParams.set("autostart", "1");
-    nextUrl.searchParams.set("startWave", "1");
-    window.location.href = nextUrl.toString();
+    window.location.href = "/games/shooter-game/levels/shooter-game-level2.html?autostart=1&startWave=1";
   });
 }
 
