@@ -381,10 +381,13 @@
     position: fixed !important;
     left: 50% !important;
     top: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    z-index: 10001 !important;
+    transform: translate(-50%, -50%) scale(var(--controls-fit-scale, 1)) !important;
+    transform-origin: center center !important;
+    z-index: 10003 !important;
     pointer-events: auto !important;
     margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
     box-shadow: 0 0 36px rgba(0,255,0,0.18) !important;
   }
   #pausePanel{
@@ -454,6 +457,8 @@
 
   /* v1.96: keep HUD off the menu and keep menu clickable */
   #uiRoot{ z-index: 50; }
+  #uiRoot.pauseControlsLayer{ z-index:10002; }
+  #uiRoot.pauseControlsLayer #controlsMenu{ pointer-events:auto; }
   #deathOverlay{ z-index: 100; }
   #livesSlot{ display:none; }
   #powerupSlot{ display:none; }
@@ -1146,13 +1151,19 @@ function requestOpenChatFromPause(){
 function showPauseControlsMenu(){
   if (!controlsMenu || !isPaused) return;
   pauseControlsOpen = true;
-  gameState = STATE.CONTROLS;
+  // Pause controls are a paused-game submenu, not the start-menu controls screen.
+  // Keep gameState in PLAYING while isPaused remains true so menu code does not route through the title menu.
+  gameState = STATE.PLAYING;
   resetDraftBindingsFromActive();
   if (pauseOverlay) pauseOverlay.classList.add("pauseControlsOverlayOpen");
   if (pausePanel) pausePanel.style.display = "none";
   controlsMenu.classList.add("pauseOverlayMenu");
+  controlsMenu.style.setProperty("--controls-fit-scale", "1");
   controlsMenu.style.display = "block";
-  if (uiRoot) uiRoot.style.display = "flex";
+  if (uiRoot){
+    uiRoot.style.display = "flex";
+    uiRoot.classList.add("pauseControlsLayer");
+  }
   if (startMenu) startMenu.style.display = "none";
   if (optionsMenu) optionsMenu.style.display = "none";
   updateControlsDisplay();
@@ -1169,6 +1180,8 @@ function hidePauseControlsMenu(){
   pauseControlsOpen = false;
   controlsMenu.style.display = "none";
   controlsMenu.classList.remove("pauseOverlayMenu");
+  controlsMenu.style.removeProperty("--controls-fit-scale");
+  if (uiRoot) uiRoot.classList.remove("pauseControlsLayer");
   cancelBindingEdit('Select a control to rebind.');
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsOverlayOpen");
   if (pausePanel) pausePanel.style.display = "block";
@@ -1259,7 +1272,11 @@ function setPaused(p){
     pauseControlsOpen = false;
     if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsOverlayOpen");
     if (pausePanel) pausePanel.style.display = "block";
-    if (controlsMenu) controlsMenu.classList.remove("pauseOverlayMenu");
+    if (controlsMenu){
+      controlsMenu.classList.remove("pauseOverlayMenu");
+      controlsMenu.style.removeProperty("--controls-fit-scale");
+    }
+    if (uiRoot) uiRoot.classList.remove("pauseControlsLayer");
   }
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
   if (isPaused){
@@ -2510,15 +2527,20 @@ function fitOptionsMenuToViewport(){
 
 function fitControlsMenuToViewport(){
   if (!controlsMenu) return;
-  controlsMenu.style.transform = "scale(1)";
-  controlsMenu.style.margin = "0";
+  const isPauseLayer = controlsMenu.classList.contains("pauseOverlayMenu");
+  if (isPauseLayer){
+    controlsMenu.style.setProperty("--controls-fit-scale", "1");
+  } else {
+    controlsMenu.style.transform = "scale(1)";
+    controlsMenu.style.margin = "0";
+  }
   controlsMenu.style.transformOrigin = "center center";
   if (controlsMenu.style.display === "none" || controlsMenu.offsetParent === null) return;
   const prevMaxHeight = controlsMenu.style.maxHeight;
   const prevOverflow = controlsMenu.style.overflow;
   controlsMenu.style.maxHeight = "none";
   controlsMenu.style.overflow = "visible";
-  const margin = 12;
+  const margin = isPauseLayer ? 18 : 12;
   const availableW = Math.max(320, window.innerWidth - margin * 2);
   const availableH = Math.max(240, window.innerHeight - margin * 2);
   const rect = controlsMenu.getBoundingClientRect();
@@ -2528,11 +2550,15 @@ function fitControlsMenuToViewport(){
     return;
   }
   const scale = Math.min(1, availableW / rect.width, availableH / rect.height);
-  controlsMenu.style.transform = `scale(${scale})`;
-  if (scale < 1) {
-    const scaledHeight = rect.height * scale;
-    const slack = Math.max(0, availableH - scaledHeight);
-    controlsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
+  if (isPauseLayer){
+    controlsMenu.style.setProperty("--controls-fit-scale", String(scale));
+  } else {
+    controlsMenu.style.transform = `scale(${scale})`;
+    if (scale < 1) {
+      const scaledHeight = rect.height * scale;
+      const slack = Math.max(0, availableH - scaledHeight);
+      controlsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
+    }
   }
   controlsMenu.style.maxHeight = prevMaxHeight;
   controlsMenu.style.overflow = prevOverflow;
