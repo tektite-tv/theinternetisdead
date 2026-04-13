@@ -369,7 +369,31 @@
     cursor:pointer;
   }
   #btnContinue:hover{ background: rgba(0,255,0,0.12); }
-
+  #winStatsTitle{
+    margin-top: 10px;
+    font-family: "Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #dfffe2;
+  }
+  #winStatsList{
+    margin: 12px auto 0;
+    width: min(360px, 86vw);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+  }
+  .winStatRow{
+    font-family: "Courier New", Courier, monospace;
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1.15;
+  }
+  #winStatScore{ color: #ffe866; }
+  #winStatKills{ color: #ff4d4d; }
+  #winStatBullets{ color: #5ab6ff; }
+  #winStatTime{ color: #ffffff; }
 
   #pauseOverlay{
     position:absolute;
@@ -577,6 +601,13 @@ body.invert-colors {
 <div id="winOverlay">
   <div id="winPanel">
     <div id="winTitle">You Win!</div>
+    <div id="winStatsTitle">Level 1 Completion Stats</div>
+    <div id="winStatsList">
+      <div id="winStatScore" class="winStatRow">Score: 0</div>
+      <div id="winStatKills" class="winStatRow">Enemies Killed: 0 / 0</div>
+      <div id="winStatBullets" class="winStatRow">Bullets Shot: 0</div>
+      <div id="winStatTime" class="winStatRow">Time: 0.0s</div>
+    </div>
     <button id="btnContinue">Continue to Level 2</button>
   </div>
 </div>
@@ -1729,6 +1760,7 @@ let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
+let totalEnemiesSpawned = 0;
 // v1.96: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
@@ -1835,11 +1867,26 @@ function awardScore(basePoints){
 
 const accuracyScoreEl = document.getElementById("accuracyScore");
 const timerHud = document.getElementById("timerHud");
+const winStatScoreEl = document.getElementById("winStatScore");
+const winStatKillsEl = document.getElementById("winStatKills");
+const winStatBulletsEl = document.getElementById("winStatBullets");
+const winStatTimeEl = document.getElementById("winStatTime");
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
   else accuracyScoreEl.style.display = "none";
   accuracyScoreEl.textContent = String(Math.floor(score));
+}
+
+function formatRunTime(seconds){
+  return (Math.max(0, seconds || 0)).toFixed(1) + "s";
+}
+
+function refreshWinStats(){
+  if (winStatScoreEl) winStatScoreEl.textContent = "Score: " + Math.floor(score);
+  if (winStatKillsEl) winStatKillsEl.textContent = "Enemies Killed: " + totalEnemiesSpawned + " / " + totalEnemiesSpawned;
+  if (winStatBulletsEl) winStatBulletsEl.textContent = "Bullets Shot: " + shotsFired;
+  if (winStatTimeEl) winStatTimeEl.textContent = "Time: " + formatRunTime(runTimer);
 }
 
 function updateTimerHUD(){
@@ -3379,6 +3426,7 @@ function showWinOverlay(){
   gameState = STATE.WIN;
   if (winOverlay) winOverlay.style.display = "flex";
   if (pauseOverlay) pauseOverlay.style.display = "none";
+  refreshWinStats();
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
@@ -3486,6 +3534,7 @@ function startGame(){
   shotsFired = 0;
   hitsConnected = 0;
   damageDealt = 0;
+  totalEnemiesSpawned = 0;
   // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
 
@@ -4161,6 +4210,7 @@ function spawnBossWave11(additive=false){
     shieldsAlive: 4
   };
   enemies.push(boss);
+  totalEnemiesSpawned += 1;
 
   // Shields: 4 copies of the same GIF orbiting around the boss.
   // They do NOT move independently; their x/y is forced each frame.
@@ -4192,6 +4242,7 @@ function spawnBossWave11(additive=false){
       shootTimer: i * 0.25
     };
     enemies.push(shield);
+    totalEnemiesSpawned += 1;
   }
 
   // Restore formation settings if we were additive.
@@ -4230,6 +4281,7 @@ function getEnemyCountForWave(w){
   return 4 + (w - 3) * 2;
 }
 const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
+  totalEnemiesSpawned += count;
 
   // v1.96: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
   // Keep the "formation area" mostly in the top half.
