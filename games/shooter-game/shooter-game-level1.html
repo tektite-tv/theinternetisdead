@@ -4686,11 +4686,8 @@ function draw(){
 
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  if (gameState === STATE.PLAYING){
-    if (!flicker){
-      ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
-    }
-  } else {
+  const shouldDrawPlayer = (gameState === STATE.PLAYING);
+  if (shouldDrawPlayer && !flicker){
     ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
   }
 
