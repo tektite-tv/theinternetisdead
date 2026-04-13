@@ -162,6 +162,9 @@ function pollGamepad(dt){
   const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
+  // Options menu: right stick changes number values without dragging focus around like a caffeinated raccoon.
+  const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt);
+  const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt);
 
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
     const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
@@ -238,8 +241,17 @@ function pollGamepad(dt){
     } else if (gameState === STATE.OPTIONS){
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown) moveOptionsControllerFocus(1);
-      if (navLeft) adjustControllerOption(-1);
-      if (navRight) adjustControllerOption(1);
+      if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
+        if (navLeft) moveStartingStatFocus(-1);
+        if (navRight) moveStartingStatFocus(1);
+        if (rNavUp) adjustControllerOption(1);
+        if (rNavDown) adjustControllerOption(-1);
+      } else {
+        if (navLeft) adjustControllerOption(-1);
+        if (navRight) adjustControllerOption(1);
+        if (rNavUp) adjustControllerOption(1);
+        if (rNavDown) adjustControllerOption(-1);
+      }
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) showMenu();
     } else if (gameState === STATE.CONTROLS){

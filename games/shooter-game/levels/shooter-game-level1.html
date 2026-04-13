@@ -2736,6 +2736,7 @@ updateControlsDisplay();
 renderControlsBindingList();
 let menuFocusIndex = 0;
 let optionsFocusIndex = 0;
+let startingStatFocusIndex = 0;
 let pauseFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
@@ -2772,8 +2773,16 @@ function getMenuControllerTargets(){
   return [btnStart, btnOptions, btnControls].filter(Boolean);
 }
 
+function getStartingStatInputs(){
+  return [heartsSlider, shieldsSlider, livesSlider, bombsSlider].filter(Boolean);
+}
+
 function getOptionsControllerTargets(){
-  return [startWaveSelect, btnSkipToLevel2, heartsSlider, shieldsSlider, livesSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+  const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
+  // Treat the four starting-stat number boxes as one vertical controller row.
+  // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
+  const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
+  return [startWaveSelect, skipTarget, statRowTarget, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -2792,6 +2801,8 @@ function syncMenuControllerFocus(){
 }
 
 function syncOptionsControllerFocus(){
+  const statInputs = getStartingStatInputs();
+  if (statInputs.length) startingStatFocusIndex = Math.max(0, Math.min(startingStatFocusIndex, statInputs.length - 1));
   const items = getOptionsControllerTargets();
   if (!items.length) return;
   optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
@@ -2821,9 +2832,15 @@ function moveMenuControllerFocus(delta){
 }
 
 function moveOptionsControllerFocus(delta){
+  const previous = getOptionsControllerTargets()[optionsFocusIndex];
   const items = getOptionsControllerTargets();
   if (!items.length) return;
   optionsFocusIndex = (optionsFocusIndex + delta + items.length) % items.length;
+  const next = getOptionsControllerTargets()[optionsFocusIndex];
+  const statInputs = getStartingStatInputs();
+  if (statInputs.includes(next) && !statInputs.includes(previous)){
+    startingStatFocusIndex = 0; // Entering the row from Skip to Level 2 lands on Hearts. Humanity survives.
+  }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   else clearControllerFocus();
 }
@@ -2842,6 +2859,19 @@ function moveControlsControllerFocus(delta){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
   fitControlsMenuToViewport();
+}
+
+function moveStartingStatFocus(delta){
+  const statInputs = getStartingStatInputs();
+  if (!statInputs.length) return false;
+  startingStatFocusIndex = Math.max(0, Math.min(statInputs.length - 1, startingStatFocusIndex + delta));
+  syncOptionsControllerFocus();
+  return true;
+}
+
+function isStartingStatFocused(){
+  const statInputs = getStartingStatInputs();
+  return statInputs.includes(getOptionsControllerTargets()[optionsFocusIndex]);
 }
 
 function cycleSelect(selectEl, delta){
@@ -3402,6 +3432,9 @@ function pollGamepad(dt){
   const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
+  // Options menu: right stick changes number values without dragging focus around like a caffeinated raccoon.
+  const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt);
+  const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt);
 
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
     const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
@@ -3480,8 +3513,17 @@ function pollGamepad(dt){
     } else if (gameState === STATE.OPTIONS){
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown) moveOptionsControllerFocus(1);
-      if (navLeft) adjustControllerOption(-1);
-      if (navRight) adjustControllerOption(1);
+      if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
+        if (navLeft) moveStartingStatFocus(-1);
+        if (navRight) moveStartingStatFocus(1);
+        if (rNavUp) adjustControllerOption(1);
+        if (rNavDown) adjustControllerOption(-1);
+      } else {
+        if (navLeft) adjustControllerOption(-1);
+        if (navRight) adjustControllerOption(1);
+        if (rNavUp) adjustControllerOption(1);
+        if (rNavDown) adjustControllerOption(-1);
+      }
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) showMenu();
     } else if (gameState === STATE.CONTROLS){

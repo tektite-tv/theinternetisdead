@@ -295,6 +295,7 @@ updateControlsDisplay();
 renderControlsBindingList();
 let menuFocusIndex = 0;
 let optionsFocusIndex = 0;
+let startingStatFocusIndex = 0;
 let pauseFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
@@ -331,8 +332,16 @@ function getMenuControllerTargets(){
   return [btnStart, btnOptions, btnControls].filter(Boolean);
 }
 
+function getStartingStatInputs(){
+  return [heartsSlider, shieldsSlider, livesSlider, bombsSlider].filter(Boolean);
+}
+
 function getOptionsControllerTargets(){
-  return [startWaveSelect, livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
+  const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
+  // Treat the four starting-stat number boxes as one vertical controller row.
+  // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
+  const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
+  return [startWaveSelect, skipTarget, statRowTarget, speedSlider, infiniteToggle, invertColorsCheckbox, btnBack, btnApply].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -351,6 +360,8 @@ function syncMenuControllerFocus(){
 }
 
 function syncOptionsControllerFocus(){
+  const statInputs = getStartingStatInputs();
+  if (statInputs.length) startingStatFocusIndex = Math.max(0, Math.min(startingStatFocusIndex, statInputs.length - 1));
   const items = getOptionsControllerTargets();
   if (!items.length) return;
   optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
@@ -380,9 +391,15 @@ function moveMenuControllerFocus(delta){
 }
 
 function moveOptionsControllerFocus(delta){
+  const previous = getOptionsControllerTargets()[optionsFocusIndex];
   const items = getOptionsControllerTargets();
   if (!items.length) return;
   optionsFocusIndex = (optionsFocusIndex + delta + items.length) % items.length;
+  const next = getOptionsControllerTargets()[optionsFocusIndex];
+  const statInputs = getStartingStatInputs();
+  if (statInputs.includes(next) && !statInputs.includes(previous)){
+    startingStatFocusIndex = 0; // Entering the row from Skip to Level 2 lands on Hearts. Humanity survives.
+  }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   else clearControllerFocus();
 }
@@ -401,6 +418,19 @@ function moveControlsControllerFocus(delta){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
   fitControlsMenuToViewport();
+}
+
+function moveStartingStatFocus(delta){
+  const statInputs = getStartingStatInputs();
+  if (!statInputs.length) return false;
+  startingStatFocusIndex = Math.max(0, Math.min(statInputs.length - 1, startingStatFocusIndex + delta));
+  syncOptionsControllerFocus();
+  return true;
+}
+
+function isStartingStatFocused(){
+  const statInputs = getStartingStatInputs();
+  return statInputs.includes(getOptionsControllerTargets()[optionsFocusIndex]);
 }
 
 function cycleSelect(selectEl, delta){
