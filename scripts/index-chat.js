@@ -56,6 +56,13 @@
             execute: true
           },
           {
+            name: '/games/shooter-game',
+            usage: '/games/shooter-game',
+            desc: 'open the shooter game',
+            execute: true,
+            hidden: true
+          },
+          {
             name: '/experiments',
             usage: '/experiments',
             desc: 'open the experiments page',
@@ -156,6 +163,15 @@
         return true;
       }
 
+      if (commandName === '/games/shooter-game') {
+        try {
+          window.location.href = '/games/shooter-game/';
+        } catch (error) {
+          window.location.assign('/games/shooter-game/');
+        }
+        return true;
+      }
+
       if (commandName === '/experiments') {
         try {
           window.location.href = '/experiments/';
@@ -221,5 +237,21 @@
     }
   };
 
+
   window.TektiteIndexChatController = controller;
+
+  // Re-register after this external controller loads. index.html can register once
+  // before /scripts/index-chat.js finishes loading, because apparently web pages
+  // are built out of timing goblins and duct tape.
+  if (typeof window.registerPageCommands === 'function') {
+    window.registerPageCommands();
+  } else {
+    const frame = document.getElementById('chat-sandbox-frame');
+    if (frame && frame.contentWindow) {
+      try {
+        frame.contentWindow.postMessage(controller.getRegistrationPayload(), '*');
+      } catch (error) {
+      }
+    }
+  }
 })();
