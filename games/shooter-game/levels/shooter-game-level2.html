@@ -3107,12 +3107,16 @@ function hideControlsMenu(){
   showMenu();
 }
 
+function isPauseSelectLevelOpen(){
+  return !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+}
+
 function showOptions(fromPause = false){
   optionsOpenedFromPause = !!fromPause;
   if (!fromPause) {
     setPaused(false);
+    gameState = STATE.OPTIONS;
   }
-  gameState = STATE.OPTIONS;
 
   mouseShieldHolding = false;
   stopShield(false);
@@ -3229,6 +3233,7 @@ btnBack.addEventListener("click", () => {
     uiRoot.style.display = "none";
     if (pauseOverlay) pauseOverlay.style.display = "flex";
     optionsOpenedFromPause = false;
+    gameState = STATE.PLAYING;
     pauseFocusIndex = 2;
     if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
     else clearControllerFocus();
@@ -3564,7 +3569,15 @@ function pollGamepad(dt){
         postChatControllerAction('close');
         togglePause();
       }
-    } else if (isPaused){
+    } else if (isPauseSelectLevelOpen()){
+      if (navUp) moveOptionsControllerFocus(-1);
+      if (navDown) moveOptionsControllerFocus(1);
+      if (navLeft) moveOptionsControllerFocus(-1);
+      if (navRight) moveOptionsControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
+      if (pressMenuBack) activateControllerTarget(btnBack);
+      if (pressPause) activateControllerTarget(btnBack);
+    } else if (isPaused && gameState !== STATE.OPTIONS){
       if (pauseControlsOpen){
         if (navUp || navLeft) moveControlsControllerFocus(-1);
         if (navDown || navRight) moveControlsControllerFocus(1);
@@ -3610,12 +3623,14 @@ function pollGamepad(dt){
       if (pressMenuBack && bindingEditState) cancelBindingEdit('Binding cancelled.');
       if (pressY) showOptions();
     } else if (gameState === STATE.OPTIONS){
+      // Level 2 Select Level can be opened while paused. Keep controller focus on
+      // the visible Select Level buttons, not the hidden pause menu buttons.
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown) moveOptionsControllerFocus(1);
-      if (navLeft) adjustControllerOption(-1);
-      if (navRight) adjustControllerOption(1);
+      if (navLeft) moveOptionsControllerFocus(-1);
+      if (navRight) moveOptionsControllerFocus(1);
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
-      if (pressMenuBack) showMenu();
+      if (pressMenuBack) activateControllerTarget(btnBack);
     } else if (gameState === STATE.CONTROLS){
       if (navUp || navLeft) moveControlsControllerFocus(-1);
       if (navDown || navRight) moveControlsControllerFocus(1);
