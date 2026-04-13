@@ -121,7 +121,7 @@
   #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
   input[type="range"]{ width:100%; accent-color:#00ff66; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
-  #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; ; z-index: 2600; position: relative}
+  #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:left; width:100%; min-width:0; }
@@ -374,6 +374,18 @@
     background: rgba(0,0,0,0.55);
     pointer-events:none;
     z-index: 90;
+  }
+  #pauseOverlay.pauseControlsOverlayOpen{ pointer-events:auto; }
+  #pauseOverlay.pauseControlsOverlayOpen #pausePanel{ display:none; }
+  #controlsMenu.pauseOverlayMenu{
+    position: fixed !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10001 !important;
+    pointer-events: auto !important;
+    margin: 0 !important;
+    box-shadow: 0 0 36px rgba(0,255,0,0.18) !important;
   }
   #pausePanel{
     width:min(520px, 92vw);
@@ -1077,11 +1089,13 @@ let hudVisible = false;
 // - Freezes gameplay updates and input-driven actions.
 // =======================
 const pauseOverlay = document.getElementById("pauseOverlay");
+const pausePanel = document.getElementById("pausePanel");
 
 const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
 const pauseCommand = null;
 const pauseCmdSuggest = null;
 let parentChatVisible = false;
+let pauseControlsOpen = false;
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -1090,7 +1104,6 @@ if (pauseCloseBtn){
   });
 }
 let isPaused = false;
-let controlsOpenedFromPause = false;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
   btnPauseQuit.addEventListener("click", () => {
@@ -1129,17 +1142,19 @@ function requestOpenChatFromPause(){
   try{ setPaused(true); }catch(e){}
   requestOpenChat(false, "/help");
 }
-function openPauseControlsMenu(){
-  if (!controlsMenu || !pauseOverlay) return;
-  controlsOpenedFromPause = true;
+
+function showPauseControlsMenu(){
+  if (!controlsMenu || !isPaused) return;
+  pauseControlsOpen = true;
   gameState = STATE.CONTROLS;
   resetDraftBindingsFromActive();
-  startMenu.style.display = "none";
-  optionsMenu.style.display = "none";
-  uiRoot.style.display = "flex";
-  controlsMenu.style.display = "block";
-  const pausePanel = document.getElementById("pausePanel");
+  if (pauseOverlay) pauseOverlay.classList.add("pauseControlsOverlayOpen");
   if (pausePanel) pausePanel.style.display = "none";
+  controlsMenu.classList.add("pauseOverlayMenu");
+  controlsMenu.style.display = "block";
+  if (uiRoot) uiRoot.style.display = "flex";
+  if (startMenu) startMenu.style.display = "none";
+  if (optionsMenu) optionsMenu.style.display = "none";
   updateControlsDisplay();
   renderControlsBindingList();
   setControlsBindStatus('Select a control to rebind.');
@@ -1148,23 +1163,24 @@ function openPauseControlsMenu(){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
 }
-function closePauseControlsMenu(keepPaused = true){
+
+function hidePauseControlsMenu(){
   if (!controlsMenu) return;
-  controlsOpenedFromPause = false;
+  pauseControlsOpen = false;
   controlsMenu.style.display = "none";
+  controlsMenu.classList.remove("pauseOverlayMenu");
   cancelBindingEdit('Select a control to rebind.');
-  const pausePanel = document.getElementById("pausePanel");
+  if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsOverlayOpen");
   if (pausePanel) pausePanel.style.display = "block";
-  if (keepPaused){
-    gameState = STATE.PLAYING;
-    pauseFocusIndex = 0;
-    if (!parentChatVisible && activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
-    else clearControllerFocus();
-  }
+  gameState = STATE.PLAYING;
+  pauseFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
+  else clearControllerFocus();
 }
+
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
-    openPauseControlsMenu();
+    showPauseControlsMenu();
   });
 }
 
@@ -1239,10 +1255,13 @@ function applyGlitchSpiral(strength){
 
 function setPaused(p){
   isPaused = !!p;
-  const pausePanel = document.getElementById("pausePanel");
-  if (!isPaused && controlsOpenedFromPause) closePauseControlsMenu(false);
+  if (!isPaused){
+    pauseControlsOpen = false;
+    if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsOverlayOpen");
+    if (pausePanel) pausePanel.style.display = "block";
+    if (controlsMenu) controlsMenu.classList.remove("pauseOverlayMenu");
+  }
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
-  if (pausePanel) pausePanel.style.display = isPaused ? "block" : "none";
   if (isPaused){
     pauseFocusIndex = 0;
     if (!parentChatVisible) syncPauseControllerFocus();
@@ -2896,8 +2915,8 @@ function clearControllerFocus(){
 if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
 if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
-if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (controlsOpenedFromPause) closePauseControlsMenu(true); });
-if (controlsBack) controlsBack.addEventListener('click', () => { if (controlsOpenedFromPause) closePauseControlsMenu(true); else if (typeof hideControlsMenu === 'function') hideControlsMenu(); else if (typeof hideControlsPopup === 'function') hideControlsPopup(); });
+if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (pauseControlsOpen) hidePauseControlsMenu(); });
+if (controlsBack) controlsBack.addEventListener('click', () => { if (pauseControlsOpen) hidePauseControlsMenu(); else hideControlsMenu(); });
 
 function getMenuControllerTargets(){
   return [btnStart, btnOptions, btnControls].filter(Boolean);
@@ -3118,6 +3137,7 @@ function restartRun(){
 }
 function showControlsPopup(){
   if (!controlsMenu || !btnControls || startMenu.style.display === "none") return;
+  pauseControlsOpen = false;
   resetDraftBindingsFromActive();
   gameState = STATE.CONTROLS;
   controlsMenu.style.display = "block";
@@ -3133,6 +3153,10 @@ function showControlsPopup(){
 }
 function hideControlsPopup(){
   if (!controlsMenu || !btnControls) return;
+  if (pauseControlsOpen){
+    hidePauseControlsMenu();
+    return;
+  }
   resetDraftBindingsFromActive();
   controlsMenu.style.display = "none";
   btnControls.setAttribute("aria-expanded", "false");
@@ -3560,12 +3584,8 @@ function pollGamepad(dt){
     }
   } else {
     if (pressMuteHud){
-      if (isPaused && !parentChatVisible){
-        requestOpenChatFromPause();
-      } else {
-        hudVisible = !hudVisible;
-        overlay.style.display = hudVisible ? "block" : "none";
-      }
+      hudVisible = !hudVisible;
+      overlay.style.display = hudVisible ? "block" : "none";
     }
     if (pressFullscreen){
       toggleFullscreen();
@@ -3577,6 +3597,14 @@ function pollGamepad(dt){
       if (navRight) postChatControllerAction('cycleRight');
       if (pressMenuSelect) postChatControllerAction('execute');
       if (pressMenuBack) postChatControllerAction('close');
+    } else if (pauseControlsOpen){
+      if (navUp || navLeft) moveControlsControllerFocus(-1);
+      if (navDown || navRight) moveControlsControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
+      if (pressMenuBack || pressPause){
+        if (bindingEditState) cancelBindingEdit('Binding cancelled.');
+        else hidePauseControlsMenu();
+      }
     } else if (isPaused){
       if (navUp || navLeft) movePauseControllerFocus(-1);
       if (navDown || navRight) movePauseControllerFocus(1);
@@ -5695,7 +5723,3 @@ display:none;
 </body>
 
 </html>
-
-
-function showControlsMenu(){ return showControlsPopup(); }
-function hideControlsMenu(){ return hideControlsPopup(); }
