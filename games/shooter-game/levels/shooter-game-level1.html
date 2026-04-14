@@ -676,6 +676,43 @@ body.invert-colors {
 }
 </style>
 
+<style>
+/* BANANARAMA LEVEL 2 LINK PATCH */
+
+.bananarama-level2-link {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  margin: 16px auto 0 auto;
+  text-decoration: none;
+  line-height: 0;
+  cursor: pointer;
+}
+.bananarama-level2-link img {
+  display: block;
+  max-width: min(24vw, 150px);
+  height: auto;
+}
+.bananarama-level2-number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff2020;
+  font-family: "Courier New", monospace;
+  font-size: clamp(38px, 6vw, 64px);
+  font-weight: 900;
+  text-shadow:
+    0 0 3px #000,
+    0 0 7px #000,
+    2px 2px 0 #000,
+    -2px -2px 0 #000;
+  pointer-events: none;
+}
+
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -731,6 +768,10 @@ body.invert-colors {
       </div>
     </div>
     <button id="btnContinue">Continue to Level 2</button>
+<a class="bananarama-level2-link" href="javascript:void(0);" aria-label="Continue to Level 2">
+  <img src="/media/images/gifs/bananarama.gif" alt="Level 2 player icon">
+  <span class="bananarama-level2-number">2</span>
+</a>
   </div>
 </div>
 
@@ -5727,6 +5768,35 @@ pointer-events:none;
 z-index:9999;
 display:none;
 ">❤️ ❤️ ❤️ ❤️</div>
+<script>
+
+/* BANANARAMA LEVEL 2 CLICK PATCH */
+document.addEventListener('click', (event) => {
+  const bananaLevel2Link = event.target.closest('.bananarama-level2-link');
+  if (!bananaLevel2Link) return;
+  event.preventDefault();
+
+  const continueButton =
+    document.querySelector('#continueToLevel2Button') ||
+    document.querySelector('.continue-to-level-2') ||
+    Array.from(document.querySelectorAll('button')).find((button) =>
+      /continue to level 2/i.test(button.textContent || '')
+    );
+
+  if (continueButton) {
+    continueButton.click();
+    return;
+  }
+
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: 'SHOOTER_GAME_GO_TO_LEVEL_2' }, '*');
+    return;
+  }
+
+  window.location.href = 'shooter-game-level2.html';
+});
+
+</script>
 </body>
 
 </html>
