@@ -630,242 +630,94 @@ body.invert-colors {
 </style>
 
 
+
 <style>
-/* YOU WIN CENTERED BONUS PATCH */
+/* YOU WIN CLEAN FIT PATCH */
 #levelCompleteOverlay,
+#winOverlay {
+  overflow: hidden !important;
+}
+
 #levelCompleteModal,
-#winOverlay,
 #winModal,
 .completion-stats-modal,
 .win-screen,
 .level-complete-modal {
+  width: min(88vw, 520px) !important;
+  max-width: min(88vw, 520px) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc(100vh - 150px) !important;
+  padding: 12px 18px !important;
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  box-sizing: border-box !important;
   text-align: center !important;
+  
 }
 
-#levelCompleteOverlay *,
 #levelCompleteModal *,
-#winOverlay *,
 #winModal *,
 .completion-stats-modal *,
 .win-screen *,
 .level-complete-modal * {
   text-align: center !important;
-}
-
-#levelCompleteOverlay .bonus-row,
-#levelCompleteModal .bonus-row,
-#winOverlay .bonus-row,
-#winModal .bonus-row,
-.completion-stats-modal .bonus-row,
-.win-screen .bonus-row,
-.level-complete-modal .bonus-row {
-  margin-left: 0 !important;
-  padding-left: 0 !important;
-  text-indent: 0 !important;
-}
-
-#levelCompleteOverlay button,
-#levelCompleteModal button,
-#winOverlay button,
-#winModal button,
-.completion-stats-modal button,
-.win-screen button,
-.level-complete-modal button {
-  margin-top: 14px !important;
-  margin-bottom: 0 !important;
-}
-</style>
-
-<style>
-/* BANANARAMA LEVEL 2 LINK PATCH */
-#levelCompleteOverlay,
-#levelCompleteModal,
-#winOverlay,
-#winModal,
-.completion-stats-modal,
-.win-screen,
-.level-complete-modal {
-  overflow: hidden !important;
-  max-height: min(86vh, 560px) !important;
   box-sizing: border-box !important;
 }
 
 .level2-win-action-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 14px;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  margin: 6px auto 0 auto !important;
+  padding: 0 !important;
+}
+
+.bananarama-level2-link {
+  display: flex !important;
+  position: relative !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: min(11vw, 62px) !important;
+  height: min(11vw, 62px) !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  text-decoration: none !important;
+  line-height: 0 !important;
+  cursor: pointer !important;
+  flex: 0 0 auto !important;
+}
+
+.bananarama-level2-link img {
+  display: block !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+.bananarama-level2-number {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  color: #ff2020 !important;
+  font-family: "Courier New", monospace !important;
+  font-size: clamp(18px, 2.6vw, 30px) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  padding-bottom: 0 !important;
+  text-shadow: 0 0 3px #000, 0 0 7px #000, 2px 2px 0 #000, -2px -2px 0 #000 !important;
+  pointer-events: none !important;
 }
 
 .level2-win-action-stack button {
   display: block !important;
   margin: 0 auto !important;
-}
-
-.bananarama-level2-link {
-  display: flex;
-  position: relative;
-  align-items: center;
-  justify-content: center;
-  width: min(18vw, 96px);
-  height: min(18vw, 96px);
-  margin: 0 auto;
-  text-decoration: none;
-  line-height: 0;
-  cursor: pointer;
-  flex: 0 0 auto;
-}
-
-.bananarama-level2-link img {
-  display: block;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.bananarama-level2-number {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  color: #ff2020;
-  font-family: "Courier New", monospace;
-  font-size: clamp(28px, 4vw, 46px);
-  font-weight: 900;
-  text-shadow:
-    0 0 3px #000,
-    0 0 7px #000,
-    2px 2px 0 #000,
-    -2px -2px 0 #000;
-  pointer-events: none;
-  padding-bottom: 4px;
-  box-sizing: border-box;
-}
-</style>
-<style>
-/* YOU WIN NO SCROLL CENTER PATCH */
-#levelCompleteOverlay,
-#levelCompleteModal,
-#winOverlay,
-#winModal,
-.completion-stats-modal,
-.win-screen,
-.level-complete-modal {
-  overflow: hidden !important;
-  overflow-y: hidden !important;
-  max-height: min(86vh, 560px) !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin: auto !important;
-  transform-origin: center center !important;
-}
-
-#levelCompleteOverlay *,
-#levelCompleteModal *,
-#winOverlay *,
-#winModal *,
-.completion-stats-modal *,
-.win-screen *,
-.level-complete-modal * {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.level2-win-action-stack {
-  gap: 8px !important;
-  margin-top: 8px !important;
-}
-
-.bananarama-level2-link {
-  width: min(14vw, 78px) !important;
-  height: min(14vw, 78px) !important;
-  margin: 0 auto !important;
-}
-
-.bananarama-level2-number {
-  font-size: clamp(22px, 3vw, 34px) !important;
-  padding-bottom: 0 !important;
-}
-
-.level2-win-action-stack button {
-  margin: 0 auto !important;
-  padding-top: 10px !important;
-  padding-bottom: 10px !important;
-}
-</style>
-<style>
-/* YOU WIN BOTTOM GAP FIX */
-#levelCompleteOverlay,
-#levelCompleteModal,
-#winOverlay,
-#winModal,
-.completion-stats-modal,
-.win-screen,
-.level-complete-modal {
-  justify-content: center !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: 86vh !important;
-  padding-top: 14px !important;
-  padding-bottom: 14px !important;
-}
-
-.level2-win-action-stack {
-  margin-top: 8px !important;
-  margin-bottom: 0 !important;
-}
-
-.level2-win-action-stack button {
-  margin-bottom: 0 !important;
-}
-
-.bananarama-level2-link {
-  margin-bottom: 0 !important;
-}
-</style>
-
-<style>
-/* YOU WIN ACTIVE-ONLY CHAT BAR GAP FIX */
-#levelCompleteOverlay:not([hidden]):not(.hidden):not([aria-hidden="true"]),
-#winOverlay:not([hidden]):not(.hidden):not([aria-hidden="true"]),
-.level-complete-overlay:not([hidden]):not(.hidden):not([aria-hidden="true"]),
-.win-overlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-#levelCompleteOverlay[hidden],
-#winOverlay[hidden],
-.level-complete-overlay.hidden,
-.win-overlay.hidden,
-#levelCompleteOverlay[aria-hidden="true"],
-#winOverlay[aria-hidden="true"] {
-  display: none !important;
-}
-
-#levelCompleteOverlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) #levelCompleteModal,
-#winOverlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) #winModal,
-.level-complete-overlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) .level-complete-modal,
-.win-overlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) .win-screen,
-.completion-stats-modal {
-  max-height: calc(100vh - 28px);
-  overflow: hidden;
-  box-sizing: border-box;
+  padding: 8px 18px !important;
+  line-height: 1.05 !important;
 }
 </style>
 
