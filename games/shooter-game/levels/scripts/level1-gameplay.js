@@ -526,13 +526,13 @@ const BG_COLORS = [
 // v1.96: Pause command registry for /help output (kept alphabetizable)
 const PAUSE_COMMANDS = {
   "/background_color": "Set starfield background color (name or hex)",
-  "/bombs": "Set bombs to 0-99, or 100/infinite (e.g. /bombs 5 or /bombs 100)",
+  "/bombs": "Set bombs to 0-99, or 100/MAX (e.g. /bombs 5 or /bombs 100)",
   "/fullscreen": "Toggle fullscreen mode",
-  "/hearts": "Set max hearts to 1-99, or 100/infinite (e.g. /hearts 6 or /hearts 100)",
+  "/hearts": "Set max hearts to 1-99, or 100/MAX (e.g. /hearts 6 or /hearts 100)",
   "/help": "List all available commands",
   "/invert": "Toggle inverted colors",
-  "/lives": "Set lives to 0-99, or 100/infinite (e.g. /lives 3 or /lives 100)",
-  "/shields": "Set shields to 0-99, or 100/infinite (e.g. /shields 2 or /shields 100)",
+  "/lives": "Set lives to 0-99, or 100/MAX (e.g. /lives 3 or /lives 100)",
+  "/shields": "Set shields to 0-99, or 100/MAX (e.g. /shields 2 or /shields 100)",
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
 };
 
@@ -576,7 +576,7 @@ function showHelp(){
 function _parseCountOrInfinite(arg){
   const a = String(arg||"").trim().toLowerCase();
   if (!a) return null;
-  if (a === "infinite" || a === "inf" || a === "∞" || a === "forever") return { infinite:true, value: 100 };
+  if (a === "max" || a === "infinite" || a === "inf" || a === "∞" || a === "forever") return { infinite:true, value: 100 };
   const n = parseInt(a, 10);
   if (isNaN(n)) return null;
   if (n >= 100) return { infinite:true, value: 100 };
@@ -747,9 +747,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyLives(p.value, !!p.infinite);
-      return { ok:true, message:`Set player lives to ${p.infinite ? "INFINITE" : p.value}` };
+      return { ok:true, message:`Set player lives to ${p.infinite ? "MAX" : p.value}` };
     }
-    return { ok:false, message:"Usage: /lives [0-99|100|infinite]" };
+    return { ok:false, message:"Usage: /lives [0-99|100|MAX]" };
   }
 
   // v1.96: /hearts [#|infinite]
@@ -758,9 +758,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyHearts(p.value, !!p.infinite);
-      return { ok:true, message:`Set player hearts to ${p.infinite ? "INFINITE" : p.value}` };
+      return { ok:true, message:`Set player hearts to ${p.infinite ? "MAX" : p.value}` };
     }
-    return { ok:false, message:"Usage: /hearts [1-99|100|infinite]" };
+    return { ok:false, message:"Usage: /hearts [1-99|100|MAX]" };
   }
 
   // v1.96: /shields [#|infinite]
@@ -769,9 +769,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyShields(p.value, !!p.infinite);
-      return { ok:true, message:`Set player shields to ${p.infinite ? "INFINITE" : p.value}` };
+      return { ok:true, message:`Set player shields to ${p.infinite ? "MAX" : p.value}` };
     }
-    return { ok:false, message:"Usage: /shields [0-99|100|infinite]" };
+    return { ok:false, message:"Usage: /shields [0-99|100|MAX]" };
   }
 
   // v1.96: /bombs [#|infinite]
@@ -780,9 +780,9 @@ function execPauseCommand(cmd){
     const p = _parseCountOrInfinite(arg);
     if (p){
       _applyBombs(p.value, !!p.infinite);
-      return { ok:true, message:`Set player bombs to ${p.infinite ? "INFINITE" : p.value}` };
+      return { ok:true, message:`Set player bombs to ${p.infinite ? "MAX" : p.value}` };
     }
-    return { ok:false, message:"Usage: /bombs [0-99|100|infinite]" };
+    return { ok:false, message:"Usage: /bombs [0-99|100|MAX]" };
   }
 
   // /invert -> toggle invert colors mode (same as Options menu)

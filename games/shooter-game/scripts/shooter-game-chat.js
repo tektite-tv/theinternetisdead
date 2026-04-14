@@ -8,12 +8,12 @@
     }
     const shooterPageCommands = [
       { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'] },
-      { name: '/bombs', desc: 'Set bombs to 0-99, or 100/infinite', usage: '/bombs [0-99|100|infinite]', suggestions: ['0', '3', '5', '99', '100', 'infinite'] },
+      { name: '/bombs', desc: 'Set bombs to 0-99, or 100/MAX', usage: '/bombs [0-99|100|MAX]', suggestions: ['0', '3', '5', '99', '100', 'MAX'] },
       { name: '/fullscreen', desc: 'Toggle fullscreen', usage: '/fullscreen' },
-      { name: '/hearts', desc: 'Set max hearts to 1-99, or 100/infinite', usage: '/hearts [1-99|100|infinite]', suggestions: ['1', '4', '8', '99', '100', 'infinite'] },
+      { name: '/hearts', desc: 'Set max hearts to 1-99, or 100/MAX', usage: '/hearts [1-99|100|MAX]', suggestions: ['1', '4', '8', '99', '100', 'MAX'] },
       { name: '/invert', desc: 'Toggle invert colors', usage: '/invert' },
-      { name: '/lives', desc: 'Set lives to 0-99, or 100/infinite', usage: '/lives [0-99|100|infinite]', suggestions: ['0', '3', '5', '99', '100', 'infinite'] },
-      { name: '/shields', desc: 'Set shields to 0-99, or 100/infinite', usage: '/shields [0-99|100|infinite]', suggestions: ['0', '1', '3', '99', '100', 'infinite'] },
+      { name: '/lives', desc: 'Set lives to 0-99, or 100/MAX', usage: '/lives [0-99|100|MAX]', suggestions: ['0', '3', '5', '99', '100', 'MAX'] },
+      { name: '/shields', desc: 'Set shields to 0-99, or 100/MAX', usage: '/shields [0-99|100|MAX]', suggestions: ['0', '1', '3', '99', '100', 'MAX'] },
       { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
     ];
     let hasSwitchedToLevel2 = false;

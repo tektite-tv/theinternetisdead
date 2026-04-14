@@ -141,7 +141,7 @@ function syncRangeProgress(rangeEl){
 function formatResourceOptionValue(inputEl){
   const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
   const n = parseInt(raw, 10);
-  return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "INFINITE" : String(Number.isFinite(n) ? n : 0);
+  return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "MAX" : String(Number.isFinite(n) ? n : 0);
 }
 
 function parseResourceOption(inputEl, minValue){
@@ -159,7 +159,7 @@ function syncStartOptionsLabels(){
     if (bombsVal && bombsSlider) bombsVal.textContent = formatResourceOptionValue(bombsSlider);
     [livesSlider, heartsSlider, shieldsSlider, bombsSlider].forEach(input => {
       const field = input && input.closest ? input.closest('.startStatField') : null;
-      if (field) field.classList.toggle('statInfinite', formatResourceOptionValue(input) === 'INFINITE');
+      if (field) field.classList.toggle('statInfinite', formatResourceOptionValue(input) === 'MAX');
     });
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
     syncRangeProgress(speedSlider);
