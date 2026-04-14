@@ -44,6 +44,11 @@ const btnApply = document.getElementById("btnApply");
   let START_HEARTS = 3;
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
+  // v1.97: each resource can independently use 100 as INFINITE.
+  let START_LIVES_INFINITE = false;
+  let START_HEARTS_INFINITE = false;
+  let START_SHIELDS_INFINITE = false;
+  let START_BOMBS_INFINITE = false;
   // v1.96: game speed slider (1-10). 5 = 1.0x.
   let START_GAME_SPEED = 5;
   let GAME_SPEED_MULT = 1.0;
@@ -74,7 +79,20 @@ if (invertColorsCheckbox){
     return "Wave " + n;
   }
 
-  function syncStartOptionsLabels(){
+  function formatResourceOptionValue(inputEl){
+  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
+  const n = parseInt(raw, 10);
+  return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "INFINITE" : String(Number.isFinite(n) ? n : 0);
+}
+
+function parseResourceOption(inputEl, minValue){
+  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
+  const n = parseInt(raw, 10);
+  if (raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100) return { value: 100, infinite: true };
+  return { value: Math.max(minValue || 0, Number.isFinite(n) ? n : (minValue || 0)), infinite: false };
+}
+
+function syncStartOptionsLabels(){
     livesVal.textContent = livesSlider.value;
     heartsVal.textContent = heartsSlider.value;
     shieldsVal.textContent = shieldsSlider.value;
@@ -570,10 +588,10 @@ function showOptions(){
   setPaused(false);
   gameState = STATE.OPTIONS;
     // v1.96: populate start options UI with saved settings
-  livesSlider.value = START_LIVES;
-  heartsSlider.value = START_HEARTS;
-  shieldsSlider.value = START_SHIELDS;
-  bombsSlider.value = START_BOMBS;
+  livesSlider.value = START_LIVES_INFINITE ? "INFINITE" : START_LIVES;
+  heartsSlider.value = START_HEARTS_INFINITE ? "INFINITE" : START_HEARTS;
+  shieldsSlider.value = START_SHIELDS_INFINITE ? "INFINITE" : START_SHIELDS;
+  bombsSlider.value = START_BOMBS_INFINITE ? "INFINITE" : START_BOMBS;
   if (speedSlider) speedSlider.value = START_GAME_SPEED;
   infiniteToggle.checked = !!INFINITE_MODE;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
@@ -631,11 +649,15 @@ function startGame(){
   damageDealt = 0;
   // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
+  livesInfiniteActive = !!START_LIVES_INFINITE || !!INFINITE_MODE;
+  heartsInfiniteActive = !!START_HEARTS_INFINITE || !!INFINITE_MODE;
+  shieldsInfiniteActive = !!START_SHIELDS_INFINITE || !!INFINITE_MODE;
+  bombsInfiniteActive = !!START_BOMBS_INFINITE || !!INFINITE_MODE;
 
-  lives = Math.max(0, parseInt(START_LIVES, 10) || 0);
-  livesText.textContent = "x" + lives;
+  lives = livesInfiniteActive ? 100 : Math.max(0, parseInt(START_LIVES, 10) || 0);
+  livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
 
-  MAX_HEARTS = Math.max(1, parseInt(START_HEARTS, 10) || 4);
+  MAX_HEARTS = heartsInfiniteActive ? 100 : Math.max(1, parseInt(START_HEARTS, 10) || 4);
   HIT_DAMAGE = 1 / MAX_HEARTS;
 
   health = 1.0;
@@ -644,9 +666,9 @@ function startGame(){
   player.x = canvas.width / 2;
   player.y = canvas.height / 2;
 
-  shieldPips = Math.max(0, parseInt(START_SHIELDS, 10) || 0);
+  shieldPips = shieldsInfiniteActive ? 100 : Math.max(0, parseInt(START_SHIELDS, 10) || 0);
 
-  bombsCount = Math.max(0, parseInt(START_BOMBS, 10) || 0);
+  bombsCount = bombsInfiniteActive ? 100 : Math.max(0, parseInt(START_BOMBS, 10) || 0);
   _syncBombHud();
 
   health = 1.0;
@@ -692,10 +714,20 @@ btnBack.addEventListener("click", showMenu);
 if (controlsBack) controlsBack.addEventListener("click", hideControlsMenu);
 btnApply.addEventListener("click", () => {
   // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
-  START_LIVES = parseInt(livesSlider.value, 10);
-  START_HEARTS = parseInt(heartsSlider.value, 10);
-  START_SHIELDS = parseInt(shieldsSlider.value, 10);
-  START_BOMBS = parseInt(bombsSlider.value, 10);
+  {
+    const livesOpt = parseResourceOption(livesSlider, 0);
+    const heartsOpt = parseResourceOption(heartsSlider, 1);
+    const shieldsOpt = parseResourceOption(shieldsSlider, 0);
+    const bombsOpt = parseResourceOption(bombsSlider, 0);
+    START_LIVES = livesOpt.value;
+    START_HEARTS = heartsOpt.value;
+    START_SHIELDS = shieldsOpt.value;
+    START_BOMBS = bombsOpt.value;
+    START_LIVES_INFINITE = livesOpt.infinite;
+    START_HEARTS_INFINITE = heartsOpt.infinite;
+    START_SHIELDS_INFINITE = shieldsOpt.infinite;
+    START_BOMBS_INFINITE = bombsOpt.infinite;
+  }
   // v1.96: Save game speed (1-10), where 5 = normal.
   START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));

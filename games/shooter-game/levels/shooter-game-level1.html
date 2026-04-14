@@ -855,19 +855,19 @@ body.invert-colors {
         <div class="startStatsRow">
           <div class="startStatField">
             <label for="heartsSlider">Hearts</label>
-            <input id="heartsSlider" type="number" min="1" max="12" value="3" step="1" inputmode="numeric" />
+            <input id="heartsSlider" type="text" min="1" max="100" value="3" step="1" inputmode="numeric" />
           </div>
           <div class="startStatField">
             <label for="shieldsSlider">Shields</label>
-            <input id="shieldsSlider" type="number" min="0" max="10" value="0" step="1" inputmode="numeric" />
+            <input id="shieldsSlider" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" />
           </div>
           <div class="startStatField">
             <label for="livesSlider">Lives</label>
-            <input id="livesSlider" type="number" min="0" max="20" value="1" step="1" inputmode="numeric" />
+            <input id="livesSlider" type="text" min="0" max="100" value="1" step="1" inputmode="numeric" />
           </div>
           <div class="startStatField">
             <label for="bombsSlider">Bombs</label>
-            <input id="bombsSlider" type="number" min="0" max="20" value="0" step="1" inputmode="numeric" />
+            <input id="bombsSlider" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" />
           </div>
         </div>
         <div class="hint">The sliders are dead. Type the exact numbers you want and spare your retinas.</div>
@@ -1539,36 +1539,40 @@ function _parseCountOrInfinite(arg){
 
 function _syncStartResourceControls(){
   try{
-    if (typeof livesSlider !== "undefined" && livesSlider) livesSlider.value = String(Math.max(0, parseInt(START_LIVES, 10) || 0));
-    if (typeof heartsSlider !== "undefined" && heartsSlider) heartsSlider.value = String(Math.max(1, parseInt(START_HEARTS, 10) || 1));
-    if (typeof shieldsSlider !== "undefined" && shieldsSlider) shieldsSlider.value = String(Math.max(0, parseInt(START_SHIELDS, 10) || 0));
-    if (typeof bombsSlider !== "undefined" && bombsSlider) bombsSlider.value = String(Math.max(0, parseInt(START_BOMBS, 10) || 0));
+    if (typeof livesSlider !== "undefined" && livesSlider) livesSlider.value = ((typeof START_LIVES_INFINITE !== "undefined" && START_LIVES_INFINITE) ? "INFINITE" : String(Math.max(0, parseInt(START_LIVES, 10) || 0)));
+    if (typeof heartsSlider !== "undefined" && heartsSlider) heartsSlider.value = ((typeof START_HEARTS_INFINITE !== "undefined" && START_HEARTS_INFINITE) ? "INFINITE" : String(Math.max(1, parseInt(START_HEARTS, 10) || 1)));
+    if (typeof shieldsSlider !== "undefined" && shieldsSlider) shieldsSlider.value = ((typeof START_SHIELDS_INFINITE !== "undefined" && START_SHIELDS_INFINITE) ? "INFINITE" : String(Math.max(0, parseInt(START_SHIELDS, 10) || 0)));
+    if (typeof bombsSlider !== "undefined" && bombsSlider) bombsSlider.value = ((typeof START_BOMBS_INFINITE !== "undefined" && START_BOMBS_INFINITE) ? "INFINITE" : String(Math.max(0, parseInt(START_BOMBS, 10) || 0)));
     if (typeof syncStartOptionsLabels === "function") syncStartOptionsLabels();
   }catch(e){}
 }
 
 function _syncBombHud(){
   if (powerupSlot){
-    powerupSlot.style.display = (bombsCount > 0 || infiniteModeActive) ? "flex" : "none";
+    powerupSlot.style.display = (bombsCount > 0 || infiniteModeActive || bombsInfiniteActive) ? "flex" : "none";
   }
   if (powerupHint){
-    if (infiniteModeActive) powerupHint.textContent = "Press Q (∞)";
+    if (infiniteModeActive || bombsInfiniteActive) powerupHint.textContent = "Press Q (∞)";
     else powerupHint.textContent = "Press Q" + (bombsCount > 1 ? (" x" + bombsCount) : "");
   }
 }
 
-function _applyLives(n){
-  const nextLives = Math.max(0, parseInt(n, 10) || 0);
+function _applyLives(n, forceInfinite){
+  const nextLives = forceInfinite ? 100 : Math.max(0, parseInt(n, 10) || 0);
+  livesInfiniteActive = !!forceInfinite;
   lives = nextLives;
   if (typeof START_LIVES !== "undefined") START_LIVES = nextLives;
+  if (typeof START_LIVES_INFINITE !== "undefined") START_LIVES_INFINITE = !!forceInfinite;
   _syncStartResourceControls();
-  if (livesText) livesText.textContent = "x" + lives;
+  if (livesText) livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
 }
 
-function _applyHearts(n){
-  MAX_HEARTS = Math.max(1, parseInt(n, 10) || 1);
+function _applyHearts(n, forceInfinite){
+  heartsInfiniteActive = !!forceInfinite;
+  MAX_HEARTS = heartsInfiniteActive ? 100 : Math.max(1, parseInt(n, 10) || 1);
   HIT_DAMAGE = 1 / MAX_HEARTS;
   if (typeof START_HEARTS !== "undefined") START_HEARTS = MAX_HEARTS;
+  if (typeof START_HEARTS_INFINITE !== "undefined") START_HEARTS_INFINITE = !!forceInfinite;
   _syncStartResourceControls();
   // Top off health so the new max doesn't instantly punish you.
   health = 1.0;
@@ -1577,18 +1581,22 @@ function _applyHearts(n){
   try{ player.y = getPlayerAlignedY(); }catch(e){}
 }
 
-function _applyShields(n){
-  const nextShields = Math.max(0, parseInt(n, 10) || 0);
+function _applyShields(n, forceInfinite){
+  const nextShields = forceInfinite ? 100 : Math.max(0, parseInt(n, 10) || 0);
+  shieldsInfiniteActive = !!forceInfinite;
   shieldPips = nextShields;
   if (typeof START_SHIELDS !== "undefined") START_SHIELDS = nextShields;
+  if (typeof START_SHIELDS_INFINITE !== "undefined") START_SHIELDS_INFINITE = !!forceInfinite;
   _syncStartResourceControls();
   if (typeof updateHearts === "function") updateHearts();
 }
 
-function _applyBombs(n){
-  const nextBombs = Math.max(0, parseInt(n, 10) || 0);
+function _applyBombs(n, forceInfinite){
+  const nextBombs = forceInfinite ? 100 : Math.max(0, parseInt(n, 10) || 0);
+  bombsInfiniteActive = !!forceInfinite;
   bombsCount = nextBombs;
   if (typeof START_BOMBS !== "undefined") START_BOMBS = nextBombs;
+  if (typeof START_BOMBS_INFINITE !== "undefined") START_BOMBS_INFINITE = !!forceInfinite;
   _syncStartResourceControls();
   _syncBombHud();
 }
@@ -1693,8 +1701,8 @@ function execPauseCommand(cmd){
     const arg = raw.slice("/lives".length).trim();
     const p = _parseCountOrInfinite(arg);
     if (p){
-      _applyLives(p.value);
-      return { ok:true, message:`Set player lives to ${p.value}` };
+      _applyLives(p.value, !!p.infinite);
+      return { ok:true, message:`Set player lives to ${p.infinite ? "INFINITE" : p.value}` };
     }
     return { ok:false, message:"Usage: /lives [number|infinite]" };
   }
@@ -1704,8 +1712,8 @@ function execPauseCommand(cmd){
     const arg = raw.slice("/hearts".length).trim();
     const p = _parseCountOrInfinite(arg);
     if (p){
-      _applyHearts(p.value);
-      return { ok:true, message:`Set player hearts to ${p.value}` };
+      _applyHearts(p.value, !!p.infinite);
+      return { ok:true, message:`Set player hearts to ${p.infinite ? "INFINITE" : p.value}` };
     }
     return { ok:false, message:"Usage: /hearts [number|infinite]" };
   }
@@ -1715,8 +1723,8 @@ function execPauseCommand(cmd){
     const arg = raw.slice("/shields".length).trim();
     const p = _parseCountOrInfinite(arg);
     if (p){
-      _applyShields(p.value);
-      return { ok:true, message:`Set player shields to ${p.value}` };
+      _applyShields(p.value, !!p.infinite);
+      return { ok:true, message:`Set player shields to ${p.infinite ? "INFINITE" : p.value}` };
     }
     return { ok:false, message:"Usage: /shields [number|infinite]" };
   }
@@ -1726,8 +1734,8 @@ function execPauseCommand(cmd){
     const arg = raw.slice("/bombs".length).trim();
     const p = _parseCountOrInfinite(arg);
     if (p){
-      _applyBombs(p.value);
-      return { ok:true, message:`Set player bombs to ${p.value}` };
+      _applyBombs(p.value, !!p.infinite);
+      return { ok:true, message:`Set player bombs to ${p.infinite ? "INFINITE" : p.value}` };
     }
     return { ok:false, message:"Usage: /bombs [number|infinite]" };
   }
@@ -2014,6 +2022,10 @@ let ufo = null;
 let bomb = null;
 let bombsCount = 0;
 let infiniteModeActive = false;
+let livesInfiniteActive = false;
+let heartsInfiniteActive = false;
+let shieldsInfiniteActive = false;
+let bombsInfiniteActive = false;
 
 
 /* =======================
@@ -2181,7 +2193,7 @@ function enemyKill(e, source){
       frogKills += 1;
       if (frogKills % 3 === 0){
         lives += 1;
-        livesText.textContent = "x" + lives;
+        livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
         // Optional tiny feedback burst (kept simple and non-breaking).
         if (typeof spawnFloatingText === 'function') spawnFloatingText(e.x, e.y - 18, "+1 LIFE", 0.85);
         if (typeof playSfx === 'function') playSfx(sfxHit);
@@ -2331,10 +2343,10 @@ function drawUFO(){
 
 function dropBomb(){
   if (isPaused) return;
-  if (!infiniteModeActive && bombsCount <= 0) return;
+  if (!infiniteModeActive && !bombsInfiniteActive && bombsCount <= 0) return;
   if (bomb) return; // only one active
 
-  if (!infiniteModeActive) bombsCount = Math.max(0, bombsCount - 1);
+  if (!infiniteModeActive && !bombsInfiniteActive) bombsCount = Math.max(0, bombsCount - 1);
   _syncBombHud();
 
   // Bomb glides in the current aim direction, keeps moving, and ricochets off screen edges
@@ -2802,6 +2814,11 @@ const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
   let START_HEARTS = 3;
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
+  // v1.97: each resource can independently use 100 as INFINITE.
+  let START_LIVES_INFINITE = false;
+  let START_HEARTS_INFINITE = false;
+  let START_SHIELDS_INFINITE = false;
+  let START_BOMBS_INFINITE = false;
   // v1.96: game speed slider (1-10). 5 = 1.0x.
   let START_GAME_SPEED = 5;
   let GAME_SPEED_MULT = 1.0;
@@ -2882,15 +2899,28 @@ if (videoFxCheckbox){
   rangeEl.style.setProperty('--range-progress', Math.max(0, Math.min(100, progress)) + '%');
 }
 
+function formatResourceOptionValue(inputEl){
+  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
+  const n = parseInt(raw, 10);
+  return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "INFINITE" : String(Number.isFinite(n) ? n : 0);
+}
+
+function parseResourceOption(inputEl, minValue){
+  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
+  const n = parseInt(raw, 10);
+  if (raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100) return { value: 100, infinite: true };
+  return { value: Math.max(minValue || 0, Number.isFinite(n) ? n : (minValue || 0)), infinite: false };
+}
+
 function syncStartOptionsLabels(){
     clampNumericInput(livesSlider);
     clampNumericInput(heartsSlider);
     clampNumericInput(shieldsSlider);
     clampNumericInput(bombsSlider);
-    if (livesVal && livesSlider) livesVal.textContent = livesSlider.value;
-    if (heartsVal && heartsSlider) heartsVal.textContent = heartsSlider.value;
-    if (shieldsVal && shieldsSlider) shieldsVal.textContent = shieldsSlider.value;
-    if (bombsVal && bombsSlider) bombsVal.textContent = bombsSlider.value;
+    if (livesVal && livesSlider) livesVal.textContent = formatResourceOptionValue(livesSlider);
+    if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
+    if (shieldsVal && shieldsSlider) shieldsVal.textContent = formatResourceOptionValue(shieldsSlider);
+    if (bombsVal && bombsSlider) bombsVal.textContent = formatResourceOptionValue(bombsSlider);
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
     syncRangeProgress(speedSlider);
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
@@ -3472,11 +3502,13 @@ function stepNumberInput(inputEl, delta){
   const step = parseInt(inputEl.step || '1', 10) || 1;
   const min = parseInt(inputEl.min || '0', 10);
   const max = parseInt(inputEl.max || '999', 10);
-  const current = parseInt(inputEl.value || '0', 10);
+  const raw = String(inputEl.value || '').trim().toLowerCase();
+  const isInfinite = raw === 'infinite' || raw === 'inf' || raw === '∞';
+  const current = isInfinite ? max : parseInt(raw || '0', 10);
   const safeCurrent = Number.isFinite(current) ? current : min;
   const next = Math.max(min, Math.min(max, safeCurrent + (step * delta)));
   if (next === safeCurrent) return false;
-  inputEl.value = String(next);
+  inputEl.value = next >= 100 ? 'INFINITE' : String(next);
   inputEl.dispatchEvent(new Event('input', { bubbles:true }));
   inputEl.dispatchEvent(new Event('change', { bubbles:true }));
   focusControllerElement(inputEl);
@@ -3681,10 +3713,10 @@ function showOptions(){
   setPaused(false);
   gameState = STATE.OPTIONS;
     // v1.96: populate start options UI with saved settings
-  livesSlider.value = START_LIVES;
-  heartsSlider.value = START_HEARTS;
-  shieldsSlider.value = START_SHIELDS;
-  bombsSlider.value = START_BOMBS;
+  livesSlider.value = START_LIVES_INFINITE ? "INFINITE" : START_LIVES;
+  heartsSlider.value = START_HEARTS_INFINITE ? "INFINITE" : START_HEARTS;
+  shieldsSlider.value = START_SHIELDS_INFINITE ? "INFINITE" : START_SHIELDS;
+  bombsSlider.value = START_BOMBS_INFINITE ? "INFINITE" : START_BOMBS;
   if (speedSlider) speedSlider.value = START_GAME_SPEED;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   syncStartOptionsLabels();
@@ -3744,11 +3776,15 @@ function startGame(){
   bombFrogKills = 0;
   // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
+  livesInfiniteActive = !!START_LIVES_INFINITE || !!INFINITE_MODE;
+  heartsInfiniteActive = !!START_HEARTS_INFINITE || !!INFINITE_MODE;
+  shieldsInfiniteActive = !!START_SHIELDS_INFINITE || !!INFINITE_MODE;
+  bombsInfiniteActive = !!START_BOMBS_INFINITE || !!INFINITE_MODE;
 
-  lives = Math.max(0, parseInt(START_LIVES, 10) || 0);
-  livesText.textContent = "x" + lives;
+  lives = livesInfiniteActive ? 100 : Math.max(0, parseInt(START_LIVES, 10) || 0);
+  livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
 
-  MAX_HEARTS = Math.max(1, parseInt(START_HEARTS, 10) || 4);
+  MAX_HEARTS = heartsInfiniteActive ? 100 : Math.max(1, parseInt(START_HEARTS, 10) || 4);
   HIT_DAMAGE = 1 / MAX_HEARTS;
 
   health = 1.0;
@@ -3757,9 +3793,9 @@ function startGame(){
   player.x = canvas.width / 2;
   player.y = getPlayerAlignedY();
 
-  shieldPips = Math.max(0, parseInt(START_SHIELDS, 10) || 0);
+  shieldPips = shieldsInfiniteActive ? 100 : Math.max(0, parseInt(START_SHIELDS, 10) || 0);
 
-  bombsCount = Math.max(0, parseInt(START_BOMBS, 10) || 0);
+  bombsCount = bombsInfiniteActive ? 100 : Math.max(0, parseInt(START_BOMBS, 10) || 0);
   _syncBombHud();
 
   health = 1.0;
@@ -3803,10 +3839,20 @@ if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
 btnBack.addEventListener("click", showMenu);
 btnApply.addEventListener("click", () => {
   // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
-  START_LIVES = parseInt(livesSlider.value, 10);
-  START_HEARTS = parseInt(heartsSlider.value, 10);
-  START_SHIELDS = parseInt(shieldsSlider.value, 10);
-  START_BOMBS = parseInt(bombsSlider.value, 10);
+  {
+    const livesOpt = parseResourceOption(livesSlider, 0);
+    const heartsOpt = parseResourceOption(heartsSlider, 1);
+    const shieldsOpt = parseResourceOption(shieldsSlider, 0);
+    const bombsOpt = parseResourceOption(bombsSlider, 0);
+    START_LIVES = livesOpt.value;
+    START_HEARTS = heartsOpt.value;
+    START_SHIELDS = shieldsOpt.value;
+    START_BOMBS = bombsOpt.value;
+    START_LIVES_INFINITE = livesOpt.infinite;
+    START_HEARTS_INFINITE = heartsOpt.infinite;
+    START_SHIELDS_INFINITE = shieldsOpt.infinite;
+    START_BOMBS_INFINITE = bombsOpt.infinite;
+  }
   // v1.96: Save game speed (1-10), where 5 = normal.
   START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
@@ -4728,15 +4774,15 @@ function damagePlayer(){
   if (player.invuln > 0 || isDead) return;
 
   // v1.96: Infinite mode means consequences are cancelled.
-  if (infiniteModeActive){
+  if (infiniteModeActive || heartsInfiniteActive){
     playSfx(sfxHit);
     player.invuln = 0.15;
     return;
   }
 
   // v1.96: shield pips absorb one hit (before health)
-  if (shieldPips > 0){
-    shieldPips = Math.max(0, shieldPips - 1);
+  if (shieldPips > 0 || shieldsInfiniteActive){
+    if (!shieldsInfiniteActive) shieldPips = Math.max(0, shieldPips - 1);
     playSfx(sfxHit);
     player.invuln = 0.35;
     return;
@@ -4757,8 +4803,8 @@ function damagePlayer(){
 
   if (health <= 0){
     // Lose a life and explode into pixel dust.
-    lives = Math.max(0, lives - 1);
-    spawnPlayerDeath(lives <= 0);
+    if (!livesInfiniteActive) lives = Math.max(0, lives - 1);
+    spawnPlayerDeath(!livesInfiniteActive && lives <= 0);
   }
 }
 
@@ -5665,7 +5711,7 @@ if (isDragonEnemy(e)){
   updateTimerHUD();
 
   // v1.96: corner HUD updates
-  livesText.textContent = "x" + lives;
+  livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
   _syncBombHud();
   if (gameState === STATE.PLAYING){
     const info = getStageInfo(wave);
@@ -5705,15 +5751,17 @@ function updateHearts(){
   const full = "❤️";
   const empty = "❌";
   let out = "";
-  for (let i = 0; i < maxH; i++){
+  const visibleMaxH = Math.min(10, maxH);
+  for (let i = 0; i < visibleMaxH; i++){
     out += (i < hearts ? full : empty) + " ";
   }
+  if (maxH > 10) out += "+" + (maxH - 10) + " ";
 
   // v1.96: shield pips (one-hit armor) next to hearts
   if (shieldPips > 0){
     const show = Math.min(10, shieldPips);
     out += "  " + "🛡️ ".repeat(show);
-    if (shieldPips > 10) out += "x" + shieldPips + " ";
+    if (shieldPips > 10) out += "+" + (shieldPips - 10) + " ";
   }
 
   // v1.96: bonus armor indicator next to hearts
@@ -5723,7 +5771,7 @@ function updateHearts(){
   if (armorIcon) out += "  " + armorIcon;
 
   // v1.96: infinite marker so you remember you're cheating
-  if (infiniteModeActive) out += "  ♾️";
+  if (infiniteModeActive || heartsInfiniteActive || shieldsInfiniteActive || bombsInfiniteActive || livesInfiniteActive) out += "  ♾️";
 
   const el = document.getElementById("heartsHud");
   if (el){
