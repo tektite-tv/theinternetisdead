@@ -279,7 +279,18 @@ window.addEventListener("contextmenu", (e) => {
 }, { passive:false });
 
 
+function requestHostFullscreen(action="toggle"){
+  if (window.parent && window.parent !== window){
+    try{
+      window.parent.postMessage({ type: "tektite:fullscreen", action }, "*");
+      return true;
+    }catch(e){}
+  }
+  return false;
+}
+
 function toggleFullscreen(){
+  if (requestHostFullscreen("toggle")) return;
   const elem = document.documentElement;
   if (!document.fullscreenElement){
     if (elem.requestFullscreen) elem.requestFullscreen();

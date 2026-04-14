@@ -559,8 +559,18 @@ const PAUSE_COMMANDS = {
 };
 
 // v1.96: Fullscreen toggle (real browser fullscreen)
+function requestHostFullscreen(action="toggle"){
+  if (window.parent && window.parent !== window){
+    try{
+      window.parent.postMessage({ type: "tektite:fullscreen", action }, "*");
+      return true;
+    }catch(e){}
+  }
+  return false;
+}
 function toggleFullscreen(){
   try{
+    if (requestHostFullscreen("toggle")) return;
     if (!document.fullscreenElement){
       (document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : null);
     } else {

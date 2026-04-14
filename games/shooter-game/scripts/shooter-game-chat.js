@@ -611,7 +611,7 @@
         const action = data.action || 'toggle';
         if (action === 'enter') await setIframeFullscreen(true);
         else if (action === 'exit') await setIframeFullscreen(false);
-        else await setIframeFullscreen(document.fullscreenElement !== tektiteFrame);
+        else await setIframeFullscreen(!document.fullscreenElement);
         return;
       }
       if (data.type === 'tektite:command-result') {
