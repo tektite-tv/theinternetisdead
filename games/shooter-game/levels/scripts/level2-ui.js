@@ -326,7 +326,7 @@ function getControlsControllerTargets(){
 }
 
 function getPauseControllerTargets(){
-  return [btnPauseResume, btnPauseOpenChat, btnPauseQuit].filter(Boolean);
+  return [btnPauseResume, btnPauseOpenChat, btnPauseOptions, btnPauseQuit].filter(Boolean);
 }
 
 function syncMenuControllerFocus(){
