@@ -125,7 +125,7 @@ if (videoFxCheckbox){
   if (!Number.isFinite(value)) value = Number.isFinite(min) ? min : 0;
   if (Number.isFinite(min)) value = Math.max(min, value);
   if (Number.isFinite(max)) value = Math.min(max, value);
-  inputEl.value = value >= 100 ? "INFINITE" : String(value);
+  inputEl.value = (value >= 100 && inputEl.type !== "range") ? "INFINITE" : String(value);
 }
 
 function syncRangeProgress(rangeEl){
@@ -829,10 +829,10 @@ function showOptions(){
   setPaused(false);
   gameState = STATE.OPTIONS;
     // v1.96: populate start options UI with saved settings
-  livesSlider.value = START_LIVES_INFINITE ? "INFINITE" : START_LIVES;
-  heartsSlider.value = START_HEARTS_INFINITE ? "INFINITE" : START_HEARTS;
-  shieldsSlider.value = START_SHIELDS_INFINITE ? "INFINITE" : START_SHIELDS;
-  bombsSlider.value = START_BOMBS_INFINITE ? "INFINITE" : START_BOMBS;
+  livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
+  heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
+  shieldsSlider.value = START_SHIELDS_INFINITE ? 100 : START_SHIELDS;
+  bombsSlider.value = START_BOMBS_INFINITE ? 100 : START_BOMBS;
   if (speedSlider) speedSlider.value = START_GAME_SPEED;
   infiniteToggle.checked = !!INFINITE_MODE;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);

@@ -1281,13 +1281,13 @@ const BG_COLORS = [
 // v1.96: Pause command registry for /help output (kept alphabetizable)
 const PAUSE_COMMANDS = {
   "/background_color": "Set starfield background color (name or hex)",
-  "/bombs": "Set bombs to a number or infinite (e.g. /bombs 5 or /bombs infinite)",
+  "/bombs": "Set bombs to 0-99, or 100/infinite (e.g. /bombs 5 or /bombs 100)",
   "/fullscreen": "Toggle fullscreen mode",
-  "/hearts": "Set max hearts to a number or infinite (e.g. /hearts 6 or /hearts infinite)",
+  "/hearts": "Set max hearts to 1-99, or 100/infinite (e.g. /hearts 6 or /hearts 100)",
   "/help": "List all available commands",
   "/invert": "Toggle inverted colors",
-  "/lives": "Set lives to a number or infinite (e.g. /lives 3 or /lives infinite)",
-  "/shields": "Set shields to a number or infinite (e.g. /shields 2 or /shields infinite)",
+  "/lives": "Set lives to 0-99, or 100/infinite (e.g. /lives 3 or /lives 100)",
+  "/shields": "Set shields to 0-99, or 100/infinite (e.g. /shields 2 or /shields 100)",
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
 };
 
@@ -1331,18 +1331,19 @@ function showHelp(){
 function _parseCountOrInfinite(arg){
   const a = String(arg||"").trim().toLowerCase();
   if (!a) return null;
-  if (a === "infinite" || a === "inf" || a === "∞" || a === "forever") return { infinite:true, value: 999999 };
+  if (a === "infinite" || a === "inf" || a === "∞" || a === "forever") return { infinite:true, value: 100 };
   const n = parseInt(a, 10);
   if (isNaN(n)) return null;
-  return { infinite:false, value: Math.max(0, n) };
+  if (n >= 100) return { infinite:true, value: 100 };
+  return { infinite:false, value: Math.max(0, Math.min(99, n)) };
 }
 
 function _syncStartResourceControls(){
   try{
-    if (typeof livesSlider !== "undefined" && livesSlider) livesSlider.value = ((typeof START_LIVES_INFINITE !== "undefined" && START_LIVES_INFINITE) ? "INFINITE" : String(Math.max(0, parseInt(START_LIVES, 10) || 0)));
-    if (typeof heartsSlider !== "undefined" && heartsSlider) heartsSlider.value = ((typeof START_HEARTS_INFINITE !== "undefined" && START_HEARTS_INFINITE) ? "INFINITE" : String(Math.max(1, parseInt(START_HEARTS, 10) || 1)));
-    if (typeof shieldsSlider !== "undefined" && shieldsSlider) shieldsSlider.value = ((typeof START_SHIELDS_INFINITE !== "undefined" && START_SHIELDS_INFINITE) ? "INFINITE" : String(Math.max(0, parseInt(START_SHIELDS, 10) || 0)));
-    if (typeof bombsSlider !== "undefined" && bombsSlider) bombsSlider.value = ((typeof START_BOMBS_INFINITE !== "undefined" && START_BOMBS_INFINITE) ? "INFINITE" : String(Math.max(0, parseInt(START_BOMBS, 10) || 0)));
+    if (typeof livesSlider !== "undefined" && livesSlider) livesSlider.value = ((typeof START_LIVES_INFINITE !== "undefined" && START_LIVES_INFINITE) ? "100" : String(Math.max(0, parseInt(START_LIVES, 10) || 0)));
+    if (typeof heartsSlider !== "undefined" && heartsSlider) heartsSlider.value = ((typeof START_HEARTS_INFINITE !== "undefined" && START_HEARTS_INFINITE) ? "100" : String(Math.max(1, parseInt(START_HEARTS, 10) || 1)));
+    if (typeof shieldsSlider !== "undefined" && shieldsSlider) shieldsSlider.value = ((typeof START_SHIELDS_INFINITE !== "undefined" && START_SHIELDS_INFINITE) ? "100" : String(Math.max(0, parseInt(START_SHIELDS, 10) || 0)));
+    if (typeof bombsSlider !== "undefined" && bombsSlider) bombsSlider.value = ((typeof START_BOMBS_INFINITE !== "undefined" && START_BOMBS_INFINITE) ? "100" : String(Math.max(0, parseInt(START_BOMBS, 10) || 0)));
     if (typeof syncStartOptionsLabels === "function") syncStartOptionsLabels();
   }catch(e){}
 }
@@ -1503,7 +1504,7 @@ function execPauseCommand(cmd){
       _applyLives(p.value, !!p.infinite);
       return { ok:true, message:`Set player lives to ${p.infinite ? "INFINITE" : p.value}` };
     }
-    return { ok:false, message:"Usage: /lives [number|infinite]" };
+    return { ok:false, message:"Usage: /lives [0-99|100|infinite]" };
   }
 
   // v1.96: /hearts [#|infinite]
@@ -1514,7 +1515,7 @@ function execPauseCommand(cmd){
       _applyHearts(p.value, !!p.infinite);
       return { ok:true, message:`Set player hearts to ${p.infinite ? "INFINITE" : p.value}` };
     }
-    return { ok:false, message:"Usage: /hearts [number|infinite]" };
+    return { ok:false, message:"Usage: /hearts [1-99|100|infinite]" };
   }
 
   // v1.96: /shields [#|infinite]
@@ -1525,7 +1526,7 @@ function execPauseCommand(cmd){
       _applyShields(p.value, !!p.infinite);
       return { ok:true, message:`Set player shields to ${p.infinite ? "INFINITE" : p.value}` };
     }
-    return { ok:false, message:"Usage: /shields [number|infinite]" };
+    return { ok:false, message:"Usage: /shields [0-99|100|infinite]" };
   }
 
   // v1.96: /bombs [#|infinite]
@@ -1536,7 +1537,7 @@ function execPauseCommand(cmd){
       _applyBombs(p.value, !!p.infinite);
       return { ok:true, message:`Set player bombs to ${p.infinite ? "INFINITE" : p.value}` };
     }
-    return { ok:false, message:"Usage: /bombs [number|infinite]" };
+    return { ok:false, message:"Usage: /bombs [0-99|100|infinite]" };
   }
 
 
@@ -2680,7 +2681,7 @@ if (invertColorsCheckbox){
   function formatResourceOptionValue(inputEl){
   const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
   const n = parseInt(raw, 10);
-  return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "INFINITE" : String(Number.isFinite(n) ? n : 0);
+  return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "100" : String(Number.isFinite(n) ? n : 0);
 }
 
 function parseResourceOption(inputEl, minValue){

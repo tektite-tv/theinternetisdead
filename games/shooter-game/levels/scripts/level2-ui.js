@@ -93,10 +93,10 @@ function parseResourceOption(inputEl, minValue){
 }
 
 function syncStartOptionsLabels(){
-    livesVal.textContent = livesSlider.value;
-    heartsVal.textContent = heartsSlider.value;
-    shieldsVal.textContent = shieldsSlider.value;
-    bombsVal.textContent = bombsSlider.value;
+    if (livesVal && livesSlider) livesVal.textContent = formatResourceOptionValue(livesSlider);
+    if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
+    if (shieldsVal && shieldsSlider) shieldsVal.textContent = formatResourceOptionValue(shieldsSlider);
+    if (bombsVal && bombsSlider) bombsVal.textContent = formatResourceOptionValue(bombsSlider);
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
@@ -588,10 +588,10 @@ function showOptions(){
   setPaused(false);
   gameState = STATE.OPTIONS;
     // v1.96: populate start options UI with saved settings
-  livesSlider.value = START_LIVES_INFINITE ? "INFINITE" : START_LIVES;
-  heartsSlider.value = START_HEARTS_INFINITE ? "INFINITE" : START_HEARTS;
-  shieldsSlider.value = START_SHIELDS_INFINITE ? "INFINITE" : START_SHIELDS;
-  bombsSlider.value = START_BOMBS_INFINITE ? "INFINITE" : START_BOMBS;
+  livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
+  heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
+  shieldsSlider.value = START_SHIELDS_INFINITE ? 100 : START_SHIELDS;
+  bombsSlider.value = START_BOMBS_INFINITE ? 100 : START_BOMBS;
   if (speedSlider) speedSlider.value = START_GAME_SPEED;
   infiniteToggle.checked = !!INFINITE_MODE;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
