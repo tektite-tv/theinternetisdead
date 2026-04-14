@@ -180,7 +180,7 @@
     background: rgba(75,0,118,0.45);
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 12px rgba(0,255,0,0.22);
   }
-  .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:left; margin-top:10px; }
+  .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:center; margin-top:10px; }
   .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
   .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
   #optionsMenu select,
@@ -207,7 +207,7 @@
   #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
-  #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:left; width:100%; min-width:0; }
+  #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:center; width:100%; min-width:0; }
   #controlsMenu .optRow{ padding:6px 8px; }
   #controlsMenu .controlsHeaderRow{ border:none; background:transparent; padding:0; }
   #controlsMenu .controlsHeaderRow .hint{ padding:0 2px; }
@@ -279,7 +279,7 @@
   #cheatsMenu input[type="checkbox"]{ transform:scale(1.2); }
   #optionsMenu .checkOption{ display:flex; flex-direction:column; gap:4px; }
   #optionsMenu .checkOption label{ display:flex; align-items:center; gap:8px; font-size:12px; opacity:0.95; cursor:pointer; }
-  #optionsMenu .checkOption .hint{ margin-top:0; padding-left:28px; }
+  #optionsMenu .checkOption .hint{ margin-top:0; padding-left:0; }
 
   @media (max-width: 640px), (max-height: 760px){
     #optionsMenu.panel{ width:min(520px, 94vw); padding:10px; max-height:none; }
@@ -436,7 +436,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    text-align: left;
+    text-align: center;
   }
   .winStatRow{
     font-family: "Courier New", Courier, monospace;
@@ -629,6 +629,53 @@ body.invert-colors {
   }
 </style>
 
+
+<style>
+/* YOU WIN CENTERED BONUS PATCH */
+#levelCompleteOverlay,
+#levelCompleteModal,
+#winOverlay,
+#winModal,
+.completion-stats-modal,
+.win-screen,
+.level-complete-modal {
+  text-align: center !important;
+}
+
+#levelCompleteOverlay *,
+#levelCompleteModal *,
+#winOverlay *,
+#winModal *,
+.completion-stats-modal *,
+.win-screen *,
+.level-complete-modal * {
+  text-align: center !important;
+}
+
+#levelCompleteOverlay .bonus-row,
+#levelCompleteModal .bonus-row,
+#winOverlay .bonus-row,
+#winModal .bonus-row,
+.completion-stats-modal .bonus-row,
+.win-screen .bonus-row,
+.level-complete-modal .bonus-row {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}
+
+#levelCompleteOverlay button,
+#levelCompleteModal button,
+#winOverlay button,
+#winModal button,
+.completion-stats-modal button,
+.win-screen button,
+.level-complete-modal button {
+  margin-top: 28px !important;
+  margin-bottom: 24px !important;
+}
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -679,8 +726,8 @@ body.invert-colors {
       <div id="winStatAccuracy" class="winStatRow">Accuracy: 0%</div>
       <div id="winStatBonus" class="winStatRow">
         <div class="winStatBonusTitle">BONUS POINTS</div>
-        <div id="winStatBonusDragons" class="winStatBonusLine">+ Dragons Killed With Bombs: 0</div>
-        <div id="winStatBonusFrogs" class="winStatBonusLine">+ Frogs Killed With Bombs: 0</div>
+        <div id="winStatBonusDragons" class="winStatBonusLine">Dragons Bombed: +0</div>
+        <div id="winStatBonusFrogs" class="winStatBonusLine">Frogs Bombed: +0</div>
       </div>
     </div>
     <button id="btnContinue">Continue to Level 2</button>
@@ -801,7 +848,7 @@ body.invert-colors {
             <div class="cheatTitle">Infinite Mode</div>
             <div class="cheatCommand">Starting state + live gameplay</div>
           </div>
-          <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:8px;">Disabled</span></label>
+          <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:0;">Disabled</span></label>
         </div>
         <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
       </div>
@@ -812,7 +859,7 @@ body.invert-colors {
             <div class="cheatTitle">Invert Colors</div>
             <div class="cheatCommand">/invert</div>
           </div>
-          <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:8px;">Disabled</span></label>
+          <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:0;">Disabled</span></label>
         </div>
         <div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
       </div>
@@ -823,7 +870,7 @@ body.invert-colors {
             <div class="cheatTitle">Video FX</div>
             <div class="cheatCommand">/video_fx</div>
           </div>
-          <label><input id="videoFxCheckbox" type="checkbox" /><span id="videoFxStatus" style="margin-left:8px;">Disabled</span></label>
+          <label><input id="videoFxCheckbox" type="checkbox" /><span id="videoFxStatus" style="margin-left:0;">Disabled</span></label>
         </div>
         <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
       </div>
@@ -1979,8 +2026,8 @@ function refreshWinStats(){
 
   const hasBombBonus = (bombDragonKills + bombFrogKills) > 0;
   if (winStatBonusEl) winStatBonusEl.style.display = hasBombBonus ? "block" : "none";
-  if (winStatBonusDragonsEl) winStatBonusDragonsEl.textContent = "+ Dragons Killed With Bombs: " + bombDragonKills;
-  if (winStatBonusFrogsEl) winStatBonusFrogsEl.textContent = "+ Frogs Killed With Bombs: " + bombFrogKills;
+  if (winStatBonusDragonsEl) winStatBonusDragonsEl.textContent = "Dragons Bombed: +" + bombDragonKills;
+  if (winStatBonusFrogsEl) winStatBonusFrogsEl.textContent = "Frogs Bombed: +" + bombFrogKills;
 }
 
 function updateTimerHUD(){
