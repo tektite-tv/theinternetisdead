@@ -976,6 +976,8 @@ let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
+let bombDragonKills = 0;
+let bombFrogKills = 0;
 // v1.96: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
@@ -1173,7 +1175,14 @@ function enemyKill(e, source){
   // One-time kill side effects.
   if (!e._killAwarded){
     e._killAwarded = true;
-    if (source === "bomb" && isDragonEnemy(e)) grantBonusArmor();
+    if (source === "bomb" && isDragonEnemy(e)){
+      bombDragonKills += 1;
+      grantBonusArmor();
+    }
+
+    if (source === "bomb" && e.isFrog){
+      bombFrogKills += 1;
+    }
 
     if (e.isFrog){
       healPlayer(0.50);

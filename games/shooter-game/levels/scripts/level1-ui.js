@@ -862,6 +862,8 @@ function startGame(){
   shotsFired = 0;
   hitsConnected = 0;
   damageDealt = 0;
+  bombDragonKills = 0;
+  bombFrogKills = 0;
   // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
 

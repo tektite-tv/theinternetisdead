@@ -444,7 +444,11 @@
   #winStatKills{ color: #ff4d4d; }
   #winStatBullets{ color: #5ab6ff; }
   #winStatAccuracy{ color: #00ff66; }
-  #winStatRank{ color: #7dff7d; }
+  #winStatBonus{ color: #ffffff; display:none; }
+  .winStatBonusTitle{ color:#ffffff; }
+  .winStatBonusLine{ padding-left: 1.25em; }
+  #winStatBonusDragons{ color:#ff4d4d; }
+  #winStatBonusFrogs{ color:#00ff66; }
 
   #pauseOverlay{
     position:absolute;
@@ -659,7 +663,11 @@ body.invert-colors {
       <div id="winStatKills" class="winStatRow">Enemies Killed: 0 / 0</div>
       <div id="winStatBullets" class="winStatRow">Bullets Shot: 0</div>
       <div id="winStatAccuracy" class="winStatRow">Accuracy: 0%</div>
-      <div id="winStatRank" class="winStatRow">Rank: ☆☆☆</div>
+      <div id="winStatBonus" class="winStatRow">
+        <div class="winStatBonusTitle">BONUS POINTS</div>
+        <div id="winStatBonusDragons" class="winStatBonusLine">+ Dragons Killed With Bombs: 0</div>
+        <div id="winStatBonusFrogs" class="winStatBonusLine">+ Frogs Killed With Bombs: 0</div>
+      </div>
     </div>
     <button id="btnContinue">Continue to Level 2</button>
   </div>
@@ -1815,6 +1823,8 @@ let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
 let totalEnemiesSpawned = 0;
+let bombDragonKills = 0;
+let bombFrogKills = 0;
 // v1.96: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
@@ -1925,7 +1935,9 @@ const winStatScoreEl = document.getElementById("winStatScore");
 const winStatKillsEl = document.getElementById("winStatKills");
 const winStatBulletsEl = document.getElementById("winStatBullets");
 const winStatAccuracyEl = document.getElementById("winStatAccuracy");
-const winStatRankEl = document.getElementById("winStatRank");
+const winStatBonusEl = document.getElementById("winStatBonus");
+const winStatBonusDragonsEl = document.getElementById("winStatBonusDragons");
+const winStatBonusFrogsEl = document.getElementById("winStatBonusFrogs");
 const winStatTimeEl = document.getElementById("winStatTime");
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
@@ -1942,24 +1954,6 @@ function clamp01(n){
   return Math.max(0, Math.min(1, n));
 }
 
-function getLevelOneStarRank(){
-  // Level 1 rank recipe, because apparently victory now needs a tiny accounting department:
-  // accuracy matters most, clearing enemies matters, score gets credit, and faster runs get a small bonus.
-  const accuracyPart = getAccuracy() * 45;
-  const killRatio = totalEnemiesSpawned > 0 ? 1 : 0;
-  const killPart = killRatio * 25;
-  const scorePart = clamp01(score / 500) * 20;
-  const timePart = clamp01(1 - ((runTimer - 30) / 210)) * 10;
-  const performance = accuracyPart + killPart + scorePart + timePart;
-  if (performance >= 85) return 3;
-  if (performance >= 60) return 2;
-  return 1;
-}
-
-function formatStarRank(stars){
-  const filled = Math.max(1, Math.min(3, stars || 1));
-  return "★".repeat(filled) + "☆".repeat(3 - filled);
-}
 
 function refreshWinStats(){
   const accuracyPercent = Math.round(getAccuracy() * 100);
@@ -1968,7 +1962,11 @@ function refreshWinStats(){
   if (winStatKillsEl) winStatKillsEl.textContent = "Enemies Killed: " + totalEnemiesSpawned + " / " + totalEnemiesSpawned;
   if (winStatBulletsEl) winStatBulletsEl.textContent = "Bullets Shot: " + shotsFired;
   if (winStatAccuracyEl) winStatAccuracyEl.textContent = "Accuracy: " + accuracyPercent + "%";
-  if (winStatRankEl) winStatRankEl.textContent = "Rank: " + formatStarRank(getLevelOneStarRank());
+
+  const hasBombBonus = (bombDragonKills + bombFrogKills) > 0;
+  if (winStatBonusEl) winStatBonusEl.style.display = hasBombBonus ? "block" : "none";
+  if (winStatBonusDragonsEl) winStatBonusDragonsEl.textContent = "+ Dragons Killed With Bombs: " + bombDragonKills;
+  if (winStatBonusFrogsEl) winStatBonusFrogsEl.textContent = "+ Frogs Killed With Bombs: " + bombFrogKills;
 }
 
 function updateTimerHUD(){
@@ -2055,7 +2053,14 @@ function enemyKill(e, source){
   // One-time kill side effects.
   if (!e._killAwarded){
     e._killAwarded = true;
-    if (source === "bomb" && isDragonEnemy(e)) grantBonusArmor();
+    if (source === "bomb" && isDragonEnemy(e)){
+      bombDragonKills += 1;
+      grantBonusArmor();
+    }
+
+    if (source === "bomb" && e.isFrog){
+      bombFrogKills += 1;
+    }
 
     if (e.isFrog){
       healPlayer(0.50);
@@ -3623,6 +3628,8 @@ function startGame(){
   hitsConnected = 0;
   damageDealt = 0;
   totalEnemiesSpawned = 0;
+  bombDragonKills = 0;
+  bombFrogKills = 0;
   // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
 
