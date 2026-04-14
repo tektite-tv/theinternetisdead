@@ -125,7 +125,7 @@ if (videoFxCheckbox){
   if (!Number.isFinite(value)) value = Number.isFinite(min) ? min : 0;
   if (Number.isFinite(min)) value = Math.max(min, value);
   if (Number.isFinite(max)) value = Math.min(max, value);
-  inputEl.value = (value >= 100 && inputEl.type !== "range") ? "INFINITE" : String(value);
+  inputEl.value = String(value >= 100 ? 100 : value);
 }
 
 function syncRangeProgress(rangeEl){
@@ -157,6 +157,10 @@ function syncStartOptionsLabels(){
     if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
     if (shieldsVal && shieldsSlider) shieldsVal.textContent = formatResourceOptionValue(shieldsSlider);
     if (bombsVal && bombsSlider) bombsVal.textContent = formatResourceOptionValue(bombsSlider);
+    [livesSlider, heartsSlider, shieldsSlider, bombsSlider].forEach(input => {
+      const field = input && input.closest ? input.closest('.startStatField') : null;
+      if (field) field.classList.toggle('statInfinite', formatResourceOptionValue(input) === 'INFINITE');
+    });
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
     syncRangeProgress(speedSlider);
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
@@ -663,7 +667,7 @@ function stepNumberInput(inputEl, delta){
   const safeCurrent = Number.isFinite(current) ? current : min;
   const next = Math.max(min, Math.min(max, safeCurrent + (step * delta)));
   if (next === safeCurrent) return false;
-  inputEl.value = next >= 100 ? 'INFINITE' : String(next);
+  inputEl.value = String(next >= 100 ? 100 : next);
   inputEl.dispatchEvent(new Event('input', { bubbles:true }));
   inputEl.dispatchEvent(new Event('change', { bubbles:true }));
   focusControllerElement(inputEl);

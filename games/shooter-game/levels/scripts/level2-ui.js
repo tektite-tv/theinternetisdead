@@ -97,6 +97,10 @@ function syncStartOptionsLabels(){
     if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
     if (shieldsVal && shieldsSlider) shieldsVal.textContent = formatResourceOptionValue(shieldsSlider);
     if (bombsVal && bombsSlider) bombsVal.textContent = formatResourceOptionValue(bombsSlider);
+    [livesSlider, heartsSlider, shieldsSlider, bombsSlider].forEach(input => {
+      const field = input && input.closest ? input.closest('.startStatField') : null;
+      if (field) field.classList.toggle('statInfinite', formatResourceOptionValue(input) === 'INFINITE');
+    });
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }

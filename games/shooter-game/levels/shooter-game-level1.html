@@ -196,6 +196,9 @@
   .startStatField input[type="number"]:focus{ border-color:#00ff66; box-shadow:0 0 0 2px rgba(0,255,102,0.2); }
   .startStatField input[type="number"]::-webkit-outer-spin-button,
   .startStatField input[type="number"]::-webkit-inner-spin-button{ opacity:1; }
+  .startStatField.statInfinite{ position:relative; }
+  .startStatField.statInfinite input[type="number"]{ color:transparent; text-shadow:none; }
+  .startStatField.statInfinite::after{ content:"INFINITE"; position:absolute; left:10px; right:34px; bottom:10px; height:22px; line-height:22px; text-align:center; color:#00ff66; font-family:monospace; font-size:18px; pointer-events:none; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
   .menuBlurb{
     max-width: 440px;
@@ -855,22 +858,22 @@ body.invert-colors {
         <div class="startStatsRow">
           <div class="startStatField">
             <label for="heartsSlider">Hearts</label>
-            <input id="heartsSlider" type="range" min="1" max="100" value="3" step="1" />
+            <input id="heartsSlider" type="number" min="1" max="100" value="3" step="1" inputmode="numeric" />
           </div>
           <div class="startStatField">
             <label for="shieldsSlider">Shields</label>
-            <input id="shieldsSlider" type="range" min="0" max="100" value="0" step="1" />
+            <input id="shieldsSlider" type="number" min="0" max="100" value="0" step="1" inputmode="numeric" />
           </div>
           <div class="startStatField">
             <label for="livesSlider">Lives</label>
-            <input id="livesSlider" type="range" min="0" max="100" value="1" step="1" />
+            <input id="livesSlider" type="number" min="0" max="100" value="1" step="1" inputmode="numeric" />
           </div>
           <div class="startStatField">
             <label for="bombsSlider">Bombs</label>
-            <input id="bombsSlider" type="range" min="0" max="100" value="0" step="1" />
+            <input id="bombsSlider" type="number" min="0" max="100" value="0" step="1" inputmode="numeric" />
           </div>
         </div>
-        <div class="hint">The sliders are dead. Type the exact numbers you want and spare your retinas.</div>
+        <div class="hint">Use 0-99 for exact values. One tick past 99 becomes INFINITE.</div>
       </div>
 
 
