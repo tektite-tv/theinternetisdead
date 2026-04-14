@@ -194,8 +194,14 @@
   .startStatField label{ font-size:13px; color:#00ff66; }
   .startStatField input[type="number"]{ width:100%; padding:10px 12px; font-family:monospace; font-size:18px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none; box-sizing:border-box; text-align:center; }
   .startStatField input[type="number"]:focus{ border-color:#00ff66; box-shadow:0 0 0 2px rgba(0,255,102,0.2); }
+  /* v1.99: keep the number spinners, but make the native arrow area stop looking like a white office printer accident. */
   .startStatField input[type="number"]::-webkit-outer-spin-button,
-  .startStatField input[type="number"]::-webkit-inner-spin-button{ opacity:1; }
+  .startStatField input[type="number"]::-webkit-inner-spin-button{
+    opacity:1;
+    background:transparent !important;
+    background-color:transparent !important;
+    filter: invert(52%) sepia(99%) saturate(1950%) hue-rotate(96deg) brightness(110%) contrast(110%);
+  }
   .startStatField.statInfinite{ position:relative; }
   .startStatField.statInfinite input[type="number"]{ color:transparent; text-shadow:none; }
   .startStatField.statInfinite::after{ content:"MAX"; position:absolute; left:10px; right:34px; bottom:10px; height:22px; line-height:22px; text-align:center; color:#00ff66; font-family:monospace; font-size:18px; pointer-events:none; }
@@ -873,7 +879,7 @@ body.invert-colors {
             <input id="bombsSlider" type="number" min="0" max="100" value="0" step="1" inputmode="numeric" />
           </div>
         </div>
-        <div class="hint">Use 0-99 for exact values. One tick past 99 becomes MAX.</div>
+        <div class="hint">Use 0-99 for exact values. 100 = INFINITE</div>
       </div>
 
 
