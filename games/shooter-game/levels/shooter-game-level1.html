@@ -678,22 +678,49 @@ body.invert-colors {
 
 <style>
 /* BANANARAMA LEVEL 2 LINK PATCH */
+#levelCompleteOverlay,
+#levelCompleteModal,
+#winOverlay,
+#winModal,
+.completion-stats-modal,
+.win-screen,
+.level-complete-modal {
+  overflow: hidden !important;
+}
+
+.level2-win-action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.level2-win-action-stack button {
+  display: block !important;
+  margin: 0 auto !important;
+}
 
 .bananarama-level2-link {
-  display: inline-flex;
+  display: flex;
   position: relative;
   align-items: center;
   justify-content: center;
-  margin: 16px auto 0 auto;
+  width: min(26vw, 135px);
+  height: min(26vw, 135px);
+  margin: 14px auto 0 auto;
   text-decoration: none;
   line-height: 0;
   cursor: pointer;
 }
+
 .bananarama-level2-link img {
   display: block;
-  max-width: min(24vw, 150px);
-  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
+
 .bananarama-level2-number {
   position: absolute;
   inset: 0;
@@ -702,7 +729,7 @@ body.invert-colors {
   justify-content: center;
   color: #ff2020;
   font-family: "Courier New", monospace;
-  font-size: clamp(38px, 6vw, 64px);
+  font-size: clamp(34px, 5vw, 58px);
   font-weight: 900;
   text-shadow:
     0 0 3px #000,
@@ -711,7 +738,6 @@ body.invert-colors {
     -2px -2px 0 #000;
   pointer-events: none;
 }
-
 </style>
 </head>
 <body>
@@ -767,11 +793,13 @@ body.invert-colors {
         <div id="winStatBonusFrogs" class="winStatBonusLine">Frogs Bombed: +0</div>
       </div>
     </div>
-    <button id="btnContinue">Continue to Level 2</button>
+    <div class="level2-win-action-stack">
+<button id="btnContinue">Continue to Level 2</button>
 <a class="bananarama-level2-link" href="javascript:void(0);" aria-label="Continue to Level 2">
   <img src="/media/images/gifs/bananarama.gif" alt="Level 2 player icon">
   <span class="bananarama-level2-number">2</span>
 </a>
+</div>
   </div>
 </div>
 
