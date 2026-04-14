@@ -689,7 +689,7 @@ function renderBgSuggest(){
   pauseCmdSuggest.innerHTML = bgSuggestList.map((c,i)=>{
     const active = (i===bgSuggestIndex);
     return `<div data-i="${i}" style="padding:6px 6px;border-radius:8px;${active ? 'background: rgba(0,255,102,0.12); outline:1px solid rgba(0,255,102,0.25);' : ''}">
-      <span style="display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:middle;background:${c};border:1px solid rgba(255,255,255,0.18);"></span>
+      <span style="display:inline-block;width:min(88vw, 520px);height:12px;border-radius:3px;margin-right:8px;vertical-align:middle;background:${c};border:1px solid rgba(255,255,255,0.18);"></span>
       <span>${c}</span>
     </div>`;
   }).join("");

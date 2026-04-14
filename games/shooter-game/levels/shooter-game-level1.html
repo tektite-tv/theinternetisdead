@@ -85,22 +85,22 @@
     padding: 0;
   }
   .subimg{
-    width:120px; height:120px; display:block; margin:0 auto 10px;
+    width:min(88vw, 520px); height:120px; display:block; margin:0 auto 10px;
     image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
   }
   .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
   .btnRowTop{ margin-top:12px; }
   .btnRowBottom{ margin-top:10px; }
-  #btnControls{ min-width:160px; }
+  #btnControls{ min-width:min(88vw, 520px); }
   button{
     font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
     border:1px solid rgba(0,255,0,0.45);
-    padding:10px 14px; border-radius:12px; cursor:pointer; min-width:160px;
+    padding:10px 14px; border-radius:12px; cursor:pointer; min-width:min(88vw, 520px);
   }
   button:hover,
   body.controller-active button.controllerFocus,
   body.controller-active .smallBtn.controllerFocus{ background: rgba(75,0,118,0.55); }
-  .smallBtn{ min-width:120px; padding:8px 12px; border-radius:10px; }
+  .smallBtn{ min-width:min(88vw, 520px); padding:8px 12px; border-radius:10px; }
   body.controller-active button.controllerFocus,
   body.controller-active .smallBtn.controllerFocus{
     border-color: rgba(0,255,0,0.9);
@@ -131,7 +131,7 @@
   }
   body.controller-active input[type="range"].controllerFocus::-webkit-slider-thumb{
     -webkit-appearance: none;
-    width: 18px;
+    width: min(88vw, 520px);
     height: 18px;
     border-radius: 50%;
     background: #00ff66;
@@ -151,7 +151,7 @@
     background: #00ff66;
   }
   body.controller-active input[type="range"].controllerFocus::-moz-range-thumb{
-    width: 18px;
+    width: min(88vw, 520px);
     height: 18px;
     border-radius: 50%;
     background: #00ff66;
@@ -198,7 +198,7 @@
   .startStatField input[type="number"]::-webkit-inner-spin-button{ opacity:1; }
   .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
   .menuBlurb{
-    max-width: 440px;
+    max-width: min(88vw, 520px);
     margin: 0 auto 4px;
     opacity: 0.9;
     font-size: 13px;
@@ -220,16 +220,16 @@
   #controlsMenu .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; }
   #controlsMenu .controlsBindTitle{ font-size:12px; }
   #controlsMenu .controlsBindHint{ opacity:0.7; font-size:9px; line-height:1.15; }
-  #controlsMenu .controlsBindButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; }
+  #controlsMenu .controlsBindButton{ min-width:min(88vw, 520px); padding:6px 8px; text-align:center; font-size:11px; }
   #controlsMenu .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
   #controlsMenu .controlsMoveRow{ grid-template-columns:minmax(120px, 0.92fr) minmax(0, 1.08fr); }
   #controlsMenu .controlsMoveButtonGroup{ display:grid; grid-template-columns:repeat(4, 58px); gap:0; align-items:stretch; justify-content:end; min-width:0; width:100%; max-width:100%; }
-  #controlsMenu .controlsMoveButton{ min-width:58px; width:58px; max-width:58px; min-height:0; padding:6px 0; font-size:10px; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:clip; display:flex; align-items:center; justify-content:center; gap:2px; text-align:center; box-sizing:border-box; }
+  #controlsMenu .controlsMoveButton{ min-width:min(88vw, 520px); width:min(88vw, 520px); max-width:min(88vw, 520px); min-height:0; padding:6px 0; font-size:10px; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:clip; display:flex; align-items:center; justify-content:center; gap:2px; text-align:center; box-sizing:border-box; }
   #controlsMenu .controlsMoveButton .moveBindLabel{ display:inline-block; font-size:15px; line-height:1.0; }
   #controlsMenu .controlsMoveButton .moveBindValue{ display:inline-block; font-size:8px; line-height:1.0; opacity:0.95; white-space:nowrap; overflow:hidden; text-overflow:clip; }
   #controlsMenu .controlsAimRow{ grid-template-columns:minmax(120px, 0.92fr) auto; }
   #controlsMenu .controlsAimButtonGroup{ display:flex; justify-content:end; align-items:stretch; min-width:0; width:100%; max-width:100%; }
-  #controlsMenu .controlsAimButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
+  #controlsMenu .controlsAimButton{ min-width:min(88vw, 520px); padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
   #controlsMenu .controlsFixedBindButton{ cursor:default; }
   #controlsMenu .controlsFixedBindButton:focus{ outline:none; }
   #controlsBindStatus{ margin-top:2px; min-height:24px; font-size:10px; }
@@ -244,12 +244,12 @@
     #controlsMenu .controlsBindRow{ padding:6px 8px; gap:5px; }
     #controlsMenu .controlsBindTitle{ font-size:11px; }
     #controlsMenu .controlsBindHint{ font-size:8px; }
-    #controlsMenu .controlsBindButton{ min-width:104px; padding:6px 7px; font-size:10px; }
+    #controlsMenu .controlsBindButton{ min-width:min(88vw, 520px); padding:6px 7px; font-size:10px; }
     #controlsMenu .controlsMoveButtonGroup{ grid-template-columns:repeat(4, 52px); gap:0; }
-    #controlsMenu .controlsMoveButton{ min-width:52px; width:52px; max-width:52px; padding:6px 0; }
+    #controlsMenu .controlsMoveButton{ min-width:min(88vw, 520px); width:min(88vw, 520px); max-width:min(88vw, 520px); padding:6px 0; }
     #controlsMenu .controlsMoveButton .moveBindLabel{ font-size:14px; }
     #controlsMenu .controlsMoveButton .moveBindValue{ font-size:8px; }
-    #controlsMenu .controlsAimButton{ min-width:104px; padding:6px 7px; font-size:10px; }
+    #controlsMenu .controlsAimButton{ min-width:min(88vw, 520px); padding:6px 7px; font-size:10px; }
     #controlsBindStatus,
     #controlsFixedInfo,
     #controlsMenu .hint{ font-size:9px; }
@@ -296,7 +296,7 @@
   ======================= */
   .cornerSlot{
     position:absolute;
-    min-width:120px;
+    min-width:min(88vw, 520px);
     height:86px;
     padding:8px 10px;
     border:2px solid rgba(0,255,0,0.55);
@@ -319,7 +319,7 @@
     text-align:center;
   }
   #livesSlot img{
-    width:40px; height:40px;
+    width:min(88vw, 520px); height:40px;
     image-rendering:pixelated;
     filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
   }
@@ -495,7 +495,7 @@
   }
   .pauseMenuBtn{
     width:100%;
-    max-width:420px;
+    max-width:min(88vw, 520px);
     box-sizing:border-box;
     display:block;
     margin-left:auto;
@@ -615,6 +615,36 @@ body.invert-colors {
   }
 </style>
 
+
+<style>
+/* WIN SCREEN SQUARE PATCH */
+#levelCompleteOverlay,
+#levelCompleteModal,
+#winOverlay,
+#winModal,
+.completion-stats-modal,
+.win-screen,
+.level-complete-modal {
+  width: min(88vw, 520px) !important;
+  max-width: min(88vw, 520px) !important;
+  min-width: 0 !important;
+  max-height: 88vh !important;
+  aspect-ratio: 1 / 1 !important;
+  padding: 20px !important;
+  overflow-y: auto !important;
+  box-sizing: border-box !important;
+}
+#levelCompleteOverlay .stats-list,
+#levelCompleteModal .stats-list,
+#winOverlay .stats-list,
+#winModal .stats-list,
+.completion-stats-modal .stats-list,
+.win-screen .stats-list,
+.level-complete-modal .stats-list {
+  gap: 8px !important;
+}
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -686,7 +716,7 @@ body.invert-colors {
 
 
 <div id="uiRoot">
-  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px;">
+  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: min(88vw, 520px);">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
@@ -1520,7 +1550,7 @@ function renderBgSuggest(){
   pauseCmdSuggest.innerHTML = bgSuggestList.map((c,i)=>{
     const active = (i===bgSuggestIndex);
     return `<div data-i="${i}" style="padding:6px 6px;border-radius:8px;${active ? 'background: rgba(0,255,102,0.12); outline:1px solid rgba(0,255,102,0.25);' : ''}">
-      <span style="display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:middle;background:${c};border:1px solid rgba(255,255,255,0.18);"></span>
+      <span style="display:inline-block;width:min(88vw, 520px);height:12px;border-radius:3px;margin-right:8px;vertical-align:middle;background:${c};border:1px solid rgba(255,255,255,0.18);"></span>
       <span>${c}</span>
     </div>`;
   }).join("");
