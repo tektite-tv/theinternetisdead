@@ -3121,6 +3121,10 @@ function getMenuControllerTargets(){
   return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnControls].filter(Boolean);
 }
 
+function isTitleHoverRevealFocused(){
+  return getMenuControllerTargets()[menuFocusIndex] === titleHoverReveal;
+}
+
 function getStartingStatInputs(){
   return [heartsSlider, shieldsSlider, livesSlider, bombsSlider].filter(Boolean);
 }
@@ -3943,14 +3947,18 @@ function pollGamepad(dt){
       }
     } else if (gameState === STATE.MENU){
       if (navLeft){
-        if (menuFocusIndex === 3) menuFocusIndex = 2;
-        else if (menuFocusIndex === 2) menuFocusIndex = 1;
+        if (!isTitleHoverRevealFocused()){
+          if (menuFocusIndex === 3) menuFocusIndex = 2;
+          else if (menuFocusIndex === 2) menuFocusIndex = 1;
+        }
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
         else clearControllerFocus();
       }
       if (navRight){
-        if (menuFocusIndex === 1) menuFocusIndex = 2;
-        else if (menuFocusIndex === 2) menuFocusIndex = 3;
+        if (!isTitleHoverRevealFocused()){
+          if (menuFocusIndex === 1) menuFocusIndex = 2;
+          else if (menuFocusIndex === 2) menuFocusIndex = 3;
+        }
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
         else clearControllerFocus();
       }
