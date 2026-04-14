@@ -829,51 +829,46 @@ body.invert-colors {
   margin-bottom: 0 !important;
 }
 </style>
+
 <style>
-/* YOU WIN CHAT BAR GAP FIX */
-#levelCompleteOverlay,
-#winOverlay,
-.level-complete-overlay,
-.win-overlay {
-  position: fixed !important;
-  inset: 0 !important;
-  top: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  min-height: 100vh !important;
-  max-height: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
+/* YOU WIN ACTIVE-ONLY CHAT BAR GAP FIX */
+#levelCompleteOverlay:not([hidden]):not(.hidden):not([aria-hidden="true"]),
+#winOverlay:not([hidden]):not(.hidden):not([aria-hidden="true"]),
+.level-complete-overlay:not([hidden]):not(.hidden):not([aria-hidden="true"]),
+.win-overlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-#levelCompleteModal,
-#winModal,
-.completion-stats-modal,
-.win-screen,
-.level-complete-modal {
-  position: relative !important;
-  top: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-  right: auto !important;
-  transform: none !important;
-  margin: 0 auto !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: calc(100vh - 28px) !important;
-  padding: 14px !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
+#levelCompleteOverlay[hidden],
+#winOverlay[hidden],
+.level-complete-overlay.hidden,
+.win-overlay.hidden,
+#levelCompleteOverlay[aria-hidden="true"],
+#winOverlay[aria-hidden="true"] {
+  display: none !important;
+}
+
+#levelCompleteOverlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) #levelCompleteModal,
+#winOverlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) #winModal,
+.level-complete-overlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) .level-complete-modal,
+.win-overlay:not([hidden]):not(.hidden):not([aria-hidden="true"]) .win-screen,
+.completion-stats-modal {
+  max-height: calc(100vh - 28px);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 </style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -912,7 +907,7 @@ body.invert-colors {
 </div>
 </div>
 
-<div id="winOverlay">
+<div id="winOverlay" hidden aria-hidden="true">
   <div id="winPanel">
     <div id="winTitle">You Win!</div>
     <div id="winStatsTitle">Level 1 Completion Stats</div>
@@ -5959,6 +5954,18 @@ document.addEventListener('click', (event) => {
   window.location.href = 'shooter-game-level2.html';
 });
 
+</script>
+<script>
+/* YOU WIN VISIBILITY ACTIVATION FALLBACK */
+document.addEventListener('click', () => {
+  const overlay = document.getElementById('levelCompleteOverlay') || document.getElementById('winOverlay');
+  if (!overlay) return;
+  if (/You Win|Completion Stats/i.test(overlay.textContent || '') && overlay.style.display && overlay.style.display !== 'none') {
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    overlay.classList.remove('hidden');
+  }
+});
 </script>
 </body>
 
