@@ -420,7 +420,7 @@
   #btnContinue:hover{ background: rgba(0,255,0,0.12); }
   #winStatsTitle{
     margin-top: 10px;
-    font-family: "Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-family: "Courier New", Courier, monospace;
     font-size: 22px;
     font-weight: 800;
     color: #dfffe2;
@@ -439,10 +439,12 @@
     font-size: 24px;
     line-height: 1.15;
   }
+  #winStatTime{ color: #ffffff; }
   #winStatScore{ color: #ffe866; }
   #winStatKills{ color: #ff4d4d; }
   #winStatBullets{ color: #5ab6ff; }
-  #winStatTime{ color: #ffffff; }
+  #winStatAccuracy{ color: #00ff66; }
+  #winStatRank{ color: #7dff7d; }
 
   #pauseOverlay{
     position:absolute;
@@ -652,10 +654,12 @@ body.invert-colors {
     <div id="winTitle">You Win!</div>
     <div id="winStatsTitle">Level 1 Completion Stats</div>
     <div id="winStatsList">
+      <div id="winStatTime" class="winStatRow">Time: 0.0s</div>
       <div id="winStatScore" class="winStatRow">Score: 0</div>
       <div id="winStatKills" class="winStatRow">Enemies Killed: 0 / 0</div>
       <div id="winStatBullets" class="winStatRow">Bullets Shot: 0</div>
-      <div id="winStatTime" class="winStatRow">Time: 0.0s</div>
+      <div id="winStatAccuracy" class="winStatRow">Accuracy: 0%</div>
+      <div id="winStatRank" class="winStatRow">Rank: ☆☆☆</div>
     </div>
     <button id="btnContinue">Continue to Level 2</button>
   </div>
@@ -678,7 +682,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-      <div id="titleHoverReveal" class="titleSub" tabindex="-1" aria-label="Latest update message"><span class="titleSubDefault">(New and Improved)</span><span class="titleSubHover">(Last updated: 2026-04-13 8:04 PM EDT)</span></div>
+      <div id="titleHoverReveal" class="titleSub" tabindex="-1" aria-label="Latest update message"><span class="titleSubDefault">(New and Improved)</span><span class="titleSubHover">(Last updated: 2026-04-13 8:49 PM EDT)</span></div>
     </div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1920,6 +1924,8 @@ const timerHud = document.getElementById("timerHud");
 const winStatScoreEl = document.getElementById("winStatScore");
 const winStatKillsEl = document.getElementById("winStatKills");
 const winStatBulletsEl = document.getElementById("winStatBullets");
+const winStatAccuracyEl = document.getElementById("winStatAccuracy");
+const winStatRankEl = document.getElementById("winStatRank");
 const winStatTimeEl = document.getElementById("winStatTime");
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
@@ -1932,11 +1938,37 @@ function formatRunTime(seconds){
   return (Math.max(0, seconds || 0)).toFixed(1) + "s";
 }
 
+function clamp01(n){
+  return Math.max(0, Math.min(1, n));
+}
+
+function getLevelOneStarRank(){
+  // Level 1 rank recipe, because apparently victory now needs a tiny accounting department:
+  // accuracy matters most, clearing enemies matters, score gets credit, and faster runs get a small bonus.
+  const accuracyPart = getAccuracy() * 45;
+  const killRatio = totalEnemiesSpawned > 0 ? 1 : 0;
+  const killPart = killRatio * 25;
+  const scorePart = clamp01(score / 500) * 20;
+  const timePart = clamp01(1 - ((runTimer - 30) / 210)) * 10;
+  const performance = accuracyPart + killPart + scorePart + timePart;
+  if (performance >= 85) return 3;
+  if (performance >= 60) return 2;
+  return 1;
+}
+
+function formatStarRank(stars){
+  const filled = Math.max(1, Math.min(3, stars || 1));
+  return "★".repeat(filled) + "☆".repeat(3 - filled);
+}
+
 function refreshWinStats(){
+  const accuracyPercent = Math.round(getAccuracy() * 100);
+  if (winStatTimeEl) winStatTimeEl.textContent = "Time: " + formatRunTime(runTimer);
   if (winStatScoreEl) winStatScoreEl.textContent = "Score: " + Math.floor(score);
   if (winStatKillsEl) winStatKillsEl.textContent = "Enemies Killed: " + totalEnemiesSpawned + " / " + totalEnemiesSpawned;
   if (winStatBulletsEl) winStatBulletsEl.textContent = "Bullets Shot: " + shotsFired;
-  if (winStatTimeEl) winStatTimeEl.textContent = "Time: " + formatRunTime(runTimer);
+  if (winStatAccuracyEl) winStatAccuracyEl.textContent = "Accuracy: " + accuracyPercent + "%";
+  if (winStatRankEl) winStatRankEl.textContent = "Rank: " + formatStarRank(getLevelOneStarRank());
 }
 
 function updateTimerHUD(){
