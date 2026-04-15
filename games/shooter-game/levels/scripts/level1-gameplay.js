@@ -1746,8 +1746,109 @@ function playSfx(a){
 /* =======================
    Player (v1.96 bigger)
 ======================= */
-const playerImg = new Image();
-playerImg.src = PLAYER_IMG_URL;
+// Keep the player GIF alive as an attached DOM image so canvas draws the current animated frame.
+// Canvas is a joyless little photocopier unless the browser sees the GIF actually living in the DOM.
+const playerImg = (() => {
+  const img = document.createElement("img");
+  img.decoding = "async";
+  img.loading = "eager";
+  img.alt = "";
+  img.style.cssText = "width:1px;height:1px;position:fixed;left:-99999px;top:-99999px;opacity:0;pointer-events:none;";
+  img.src = PLAYER_IMG_URL;
+
+  const attach = () => {
+    if (!img.parentNode && document.body) document.body.appendChild(img);
+  };
+  if (document.body) attach();
+  else document.addEventListener("DOMContentLoaded", attach, { once:true });
+
+  return img;
+})();
+
+// Animated GIF sprites are rendered as real DOM <img> elements positioned over the canvas.
+// drawImage() can freeze animated GIFs on a single frame in Chromium, because naturally the browser chose drama.
+const USE_DOM_ANIMATED_GIF_SPRITES = true;
+const animatedGifSpriteLayer = (() => {
+  let layer = document.getElementById("animatedGifSpriteLayer");
+  if (!layer){
+    layer = document.createElement("div");
+    layer.id = "animatedGifSpriteLayer";
+    layer.setAttribute("aria-hidden", "true");
+    layer.style.cssText = [
+      "position:fixed",
+      "left:0",
+      "top:0",
+      "width:100vw",
+      "height:100vh",
+      "pointer-events:none",
+      "overflow:hidden",
+      "z-index:12"
+    ].join(";");
+    const attach = () => { if (!layer.parentNode && document.body) document.body.appendChild(layer); };
+    if (document.body) attach();
+    else document.addEventListener("DOMContentLoaded", attach, { once:true });
+  }
+  return layer;
+})();
+
+const animatedGifSpriteMap = new WeakMap();
+const animatedGifSprites = new Set();
+let animatedGifSpritesActiveThisFrame = new Set();
+
+function beginAnimatedGifSpriteFrame(){
+  animatedGifSpritesActiveThisFrame = new Set();
+}
+
+function getAnimatedGifSprite(owner, img, className){
+  if (!owner || !img || !img.src || !USE_DOM_ANIMATED_GIF_SPRITES) return null;
+  let sprite = animatedGifSpriteMap.get(owner);
+  if (!sprite){
+    sprite = document.createElement("img");
+    sprite.decoding = "async";
+    sprite.loading = "eager";
+    sprite.alt = "";
+    sprite.className = "animated-gif-sprite " + (className || "");
+    sprite.draggable = false;
+    sprite.style.cssText = [
+      "position:fixed",
+      "left:0",
+      "top:0",
+      "pointer-events:none",
+      "user-select:none",
+      "image-rendering:auto",
+      "transform-origin:center center",
+      "will-change:transform,width,height,opacity,filter"
+    ].join(";");
+    animatedGifSpriteMap.set(owner, sprite);
+    animatedGifSprites.add(sprite);
+    animatedGifSpriteLayer.appendChild(sprite);
+  }
+  if (sprite.src !== img.src) sprite.src = img.src;
+  return sprite;
+}
+
+function syncAnimatedGifSprite(owner, img, x, y, w, h, opts = {}){
+  const sprite = getAnimatedGifSprite(owner, img, opts.className);
+  if (!sprite) return false;
+  const alpha = Number.isFinite(opts.alpha) ? Math.max(0, Math.min(1, opts.alpha)) : 1;
+  const hidden = !!opts.hidden || alpha <= 0;
+  sprite.style.display = hidden ? "none" : "block";
+  if (!hidden){
+    sprite.style.width = Math.max(1, w) + "px";
+    sprite.style.height = Math.max(1, h) + "px";
+    sprite.style.opacity = String(alpha);
+    sprite.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+    sprite.style.filter = opts.hitFlash ? "brightness(1.7) sepia(1) saturate(5) hue-rotate(300deg)" : "none";
+  }
+  animatedGifSpritesActiveThisFrame.add(sprite);
+  return true;
+}
+
+function endAnimatedGifSpriteFrame(){
+  for (const sprite of animatedGifSprites){
+    if (!animatedGifSpritesActiveThisFrame.has(sprite)) sprite.style.display = "none";
+  }
+}
 
 // v1.96 sizing + anchoring
 const PLAYER_SIZE = 72;                 // was 48
@@ -1863,7 +1964,7 @@ async function loadEnemyImagesFromEnemyGifsJson(){
 
     if (!urls.length) throw new Error("No gifs in enemy-gifs.json");
 
-    setAssetStatus(`Preloading ${urls.length} enemy images...`);
+    setAssetStatus("");
     let imgs = await preloadImages(urls);
     imgs = imgs.filter(img => img && img.naturalWidth > 0);
     if (!imgs.length) throw new Error("All enemy images failed to load");
@@ -1874,6 +1975,7 @@ async function loadEnemyImagesFromEnemyGifsJson(){
     setAssetStatus("");
   }catch(err){
     console.warn("Failed to load enemy-gifs.json enemy list:", err);
+    setAssetStatus("Enemy GIFs failed to load. Using fallback enemy image.");
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;
@@ -3041,8 +3143,19 @@ function draw(){
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
   const shouldDrawPlayer = (gameState === STATE.PLAYING);
+  if (USE_DOM_ANIMATED_GIF_SPRITES) beginAnimatedGifSpriteFrame();
+
   if (shouldDrawPlayer && !flicker){
-    ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+    const drewDomPlayer = syncAnimatedGifSprite(
+      player,
+      playerImg,
+      player.x - player.w/2,
+      player.y - player.h/2,
+      player.w,
+      player.h,
+      { className:"player-gif-sprite" }
+    );
+    if (!drewDomPlayer) ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
   }
 
     // v1.96: shield ring (RMB hold)
@@ -3114,7 +3227,16 @@ if (gameState === STATE.PLAYING){
     const alpha = (e.dying ? Math.max(0, Math.min(1, e.fade)) : 1);
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.drawImage(e.img, ex, ey, e.w, e.h);
+    const drewDomEnemy = syncAnimatedGifSprite(
+      e,
+      e.img,
+      ex,
+      ey,
+      e.w,
+      e.h,
+      { className:"enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
+    );
+    if (!drewDomEnemy) ctx.drawImage(e.img, ex, ey, e.w, e.h);
 
 // Dragon marker: upside-down red equilateral triangle (because dragons deserve drama)
 if (isDragonEnemy(e)){
@@ -3134,6 +3256,8 @@ if (isDragonEnemy(e)){
     }
     ctx.restore();
   }
+
+  if (USE_DOM_ANIMATED_GIF_SPRITES) endAnimatedGifSpriteFrame();
 
   // bullets (player)
   // v1.96: draw as simple circles (no text/letter-like shapes)

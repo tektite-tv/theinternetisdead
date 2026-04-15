@@ -1873,8 +1873,24 @@ function playSfx(a){
 /* =======================
    Player (v1.96 bigger)
 ======================= */
-const playerImg = new Image();
-playerImg.src = PLAYER_IMG_URL;
+// Keep the player GIF alive as an attached DOM image so canvas draws the current animated frame.
+// Canvas is a joyless little photocopier unless the browser sees the GIF actually living in the DOM.
+const playerImg = (() => {
+  const img = document.createElement("img");
+  img.decoding = "async";
+  img.loading = "eager";
+  img.alt = "";
+  img.style.cssText = "width:1px;height:1px;position:fixed;left:-99999px;top:-99999px;opacity:0;pointer-events:none;";
+  img.src = PLAYER_IMG_URL;
+
+  const attach = () => {
+    if (!img.parentNode && document.body) document.body.appendChild(img);
+  };
+  if (document.body) attach();
+  else document.addEventListener("DOMContentLoaded", attach, { once:true });
+
+  return img;
+})();
 
 // v1.96 sizing + anchoring
 const PLAYER_SIZE = 72;                 // was 48
@@ -2037,9 +2053,7 @@ function getBossEnemyImg(){
 }
 
 async function loadEnemyImagesFromEnemyGifsJson(){
-  try{
-    setAssetStatus("Fetching enemy-gifs.json...");
-    const res = await fetch(ENEMY_GIF_INDEX_URL, { cache: "no-store" });
+  try{    const res = await fetch(ENEMY_GIF_INDEX_URL, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
 
     const list = await res.json();
@@ -2051,7 +2065,7 @@ async function loadEnemyImagesFromEnemyGifsJson(){
 
     if (!urls.length) throw new Error("No gifs in enemy-gifs.json");
 
-    setAssetStatus(`Preloading ${urls.length} enemy images...`);
+    setAssetStatus("");
     let imgs = await preloadImages(urls);
     imgs = imgs.filter(img => img && img.naturalWidth > 0);
     if (!imgs.length) throw new Error("All enemy images failed to load");
@@ -2059,10 +2073,10 @@ async function loadEnemyImagesFromEnemyGifsJson(){
     enemyImages = imgs;
     bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;
     assetsReady = true;
-    setAssetStatus(`Loaded ${enemyImages.length} enemy images ✅`);
+    setAssetStatus("");
   }catch(err){
     console.warn("Failed to load enemy-gifs.json enemy list:", err);
-    setAssetStatus("Failed to load enemy-gifs.json. Using fallback enemy image.");
+    setAssetStatus("Enemy GIFs failed to load. Using fallback enemy image.");
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;

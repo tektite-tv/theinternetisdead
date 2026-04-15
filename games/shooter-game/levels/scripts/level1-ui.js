@@ -1027,5 +1027,9 @@ if (btnContinue){
 }
 
 
-function setAssetStatus(msg){ assetStatus.textContent = msg; }
+function setAssetStatus(msg){
+  if (!assetStatus) return;
+  assetStatus.textContent = msg || "";
+  assetStatus.style.display = msg ? "block" : "none";
+}
 
