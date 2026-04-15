@@ -518,16 +518,6 @@ function _syncStartResourceControls(){
   }catch(e){}
 }
 
-function _syncBombHud(){
-  if (powerupSlot){
-    powerupSlot.style.display = (bombsCount > 0 || infiniteModeActive || bombsInfiniteActive) ? "flex" : "none";
-  }
-  if (powerupHint){
-    if (infiniteModeActive || bombsInfiniteActive) powerupHint.textContent = "Press Q (∞)";
-    else powerupHint.textContent = "Press Q" + (bombsCount > 1 ? (" x" + bombsCount) : "");
-  }
-}
-
 function _applyLives(n, forceInfinite){
   const nextLives = forceInfinite ? 100 : Math.max(0, parseInt(n, 10) || 0);
   livesInfiniteActive = !!forceInfinite;
