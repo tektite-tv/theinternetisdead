@@ -1980,11 +1980,26 @@ function setAimFromClient(clientX, clientY){
    Enemy Images from enemy-gifs.json
 ======================= */
 let enemyImages = [];
+let bossEnemyImg = null;
 let assetsReady = false;
 
 const FALLBACK_URLS = [
   BOSS_IMG_URL
 ];
+
+// Keep GIFs alive as real DOM images, then draw those same animated elements onto canvas.
+// Some browsers get weirdly "first-frame only" with unattached Image() objects, because apparently joy is optional.
+const enemyGifRack = (() => {
+  let rack = document.getElementById("enemyGifAnimationRack");
+  if (!rack){
+    rack = document.createElement("div");
+    rack.id = "enemyGifAnimationRack";
+    rack.setAttribute("aria-hidden", "true");
+    rack.style.cssText = "position:fixed;left:-99999px;top:-99999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;";
+    document.body.appendChild(rack);
+  }
+  return rack;
+})();
 
 function preloadImages(urls){
   return new Promise((resolve) => {
@@ -1993,13 +2008,32 @@ function preloadImages(urls){
     if (!urls.length) resolve(imgs);
 
     urls.forEach((url) => {
-      const img = new Image();
+      const img = document.createElement("img");
+      img.decoding = "async";
+      img.loading = "eager";
+      img.alt = "";
+      img.style.cssText = "width:1px;height:1px;position:absolute;left:-99999px;top:-99999px;";
       img.onload = () => { done++; if (done === urls.length) resolve(imgs); };
       img.onerror = () => { done++; if (done === urls.length) resolve(imgs); };
       img.src = url;
+      enemyGifRack.appendChild(img);
       imgs.push(img);
     });
   });
+}
+
+function getBossEnemyImg(){
+  if (bossEnemyImg && bossEnemyImg.naturalWidth > 0) return bossEnemyImg;
+  bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;
+  if (bossEnemyImg) return bossEnemyImg;
+  bossEnemyImg = document.createElement("img");
+  bossEnemyImg.decoding = "async";
+  bossEnemyImg.loading = "eager";
+  bossEnemyImg.alt = "";
+  bossEnemyImg.style.cssText = "width:1px;height:1px;position:absolute;left:-99999px;top:-99999px;";
+  bossEnemyImg.src = BOSS_IMG_URL;
+  enemyGifRack.appendChild(bossEnemyImg);
+  return bossEnemyImg;
 }
 
 async function loadEnemyImagesFromEnemyGifsJson(){
@@ -2023,6 +2057,7 @@ async function loadEnemyImagesFromEnemyGifsJson(){
     if (!imgs.length) throw new Error("All enemy images failed to load");
 
     enemyImages = imgs;
+    bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;
     assetsReady = true;
     setAssetStatus(`Loaded ${enemyImages.length} enemy images ✅`);
   }catch(err){
@@ -2030,6 +2065,7 @@ async function loadEnemyImagesFromEnemyGifsJson(){
     setAssetStatus("Failed to load enemy-gifs.json. Using fallback enemy image.");
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
+    bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;
     assetsReady = true;
   }
 }
@@ -2579,8 +2615,7 @@ function spawnBossWave11(additive=false){
     : Math.max(baseSize * 2.0, 65);   // smaller recurring boss
   firstBossSpawned = true;
 
-  const bossImg = new Image();
-  bossImg.src = BOSS_IMG_URL;
+  const bossImg = getBossEnemyImg();
 
   // Shared HP for core + orbiters (requested).
   const BOSS_HP = isFirstBoss
