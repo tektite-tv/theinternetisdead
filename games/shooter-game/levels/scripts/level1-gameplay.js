@@ -1101,7 +1101,7 @@ function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
   else accuracyScoreEl.style.display = "none";
-  accuracyScoreEl.textContent = String(Math.floor(score));
+  accuracyScoreEl.textContent = "Score: " + String(Math.floor(score));
 }
 
 function updateTimerHUD(){
@@ -1112,7 +1112,7 @@ function updateTimerHUD(){
     return;
   }
   timerHud.style.display = "block";
-  timerHud.textContent = runTimer.toFixed(1) + "s";
+  timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div>' + runTimer.toFixed(1) + 's</div>';
 }
 
 function rand(min, max){ return min + Math.random() * (max - min); }
@@ -3190,7 +3190,7 @@ function updateHearts(){
   for (let i = 0; i < visibleMaxH; i++){
     out += (i < hearts ? full : empty) + " ";
   }
-  if (maxH > 10) out += "+" + (maxH - 10) + " ";
+  if (maxH > 10) out += `<span class="heartsExtra">+${maxH - 10}</span> `;
 
   // v1.96: shield pips (one-hit armor) next to hearts
   if (shieldPips > 0){
@@ -3210,7 +3210,7 @@ function updateHearts(){
 
   const el = document.getElementById("heartsHud");
   if (el){
-    el.textContent = out.trim();
+    el.innerHTML = out.trim();
     el.style.display = (gameState === STATE.PLAYING) ? "block" : "none";
   }
 }
