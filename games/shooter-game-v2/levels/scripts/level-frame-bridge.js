@@ -34,3 +34,14 @@ function toggleFullscreen(){
     if (document.exitFullscreen) document.exitFullscreen();
   }
 }
+
+function postCommandResult(command, result){
+  if (window.parent && window.parent !== window){
+    window.parent.postMessage({
+      type: "tektite:command-result",
+      ok: !!(result && result.ok),
+      command,
+      message: result && result.message ? result.message : `${command || 'Command'} executed`
+    }, "*");
+  }
+}

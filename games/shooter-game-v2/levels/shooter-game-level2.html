@@ -1627,12 +1627,7 @@ window.addEventListener("message", (event) => {
   const result = execPauseCommand(command);
 
   if (window.parent && window.parent !== window) {
-    window.parent.postMessage({
-      type: "tektite:command-result",
-      ok: !!(result && result.ok),
-      command,
-      message: result && result.message ? result.message : `${command || 'Command'} executed`
-    }, "*");
+    postCommandResult(command, result);
   }
 });
 
