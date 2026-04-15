@@ -24,3 +24,13 @@ function requestOpenChat(focusSlash, runCommand){
     }
   }catch(e){}
 }
+
+function toggleFullscreen(){
+  if (requestHostFullscreen("toggle")) return;
+  const elem = document.documentElement;
+  if (!document.fullscreenElement){
+    if (elem.requestFullscreen) elem.requestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+  }
+}

@@ -1535,17 +1535,6 @@ const PAUSE_COMMANDS = {
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
 };
 
-function toggleFullscreen(){
-  try{
-    if (requestHostFullscreen("toggle")) return;
-    if (!document.fullscreenElement){
-      (document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : null);
-    } else {
-      (document.exitFullscreen ? document.exitFullscreen() : null);
-    }
-  }catch(e){}
-}
-
 // v1.96: Help UI (lists commands in the pause suggestion panel)
 function showHelp(){
   if (!pauseCmdSuggest) return;
@@ -4936,16 +4925,6 @@ window.addEventListener("contextmenu", (e) => {
   if (e.target === canvas) e.preventDefault();
 }, { passive:false });
 
-
-function toggleFullscreen(){
-  if (requestHostFullscreen("toggle")) return;
-  const elem = document.documentElement;
-  if (!document.fullscreenElement){
-    if (elem.requestFullscreen) elem.requestFullscreen();
-  } else {
-    if (document.exitFullscreen) document.exitFullscreen();
-  }
-}
 
 window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
