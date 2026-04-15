@@ -1359,15 +1359,6 @@ if (btnPauseResume){
   });
 }
 
-function requestOpenChat(focusSlash, runCommand){
-  try{
-    if (window.parent && window.parent !== window){
-      window.parent.postMessage({ type: "openChatFromChild", seedSlash: !!focusSlash, autoSuggestSlash: !!focusSlash, runCommand: runCommand ? String(runCommand) : "" }, "*");
-      return;
-    }
-  }catch(e){}
-}
-
 function requestOpenChatFromPause(){
   try{ setPaused(true); }catch(e){}
   requestOpenChat(false, "");

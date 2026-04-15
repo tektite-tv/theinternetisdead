@@ -15,3 +15,12 @@ function postChatControllerAction(action){
     }
   }catch(e){}
 }
+
+function requestOpenChat(focusSlash, runCommand){
+  try{
+    if (window.parent && window.parent !== window){
+      window.parent.postMessage({ type: "openChatFromChild", seedSlash: !!focusSlash, autoSuggestSlash: !!focusSlash, runCommand: runCommand ? String(runCommand) : "" }, "*");
+      return;
+    }
+  }catch(e){}
+}
