@@ -3226,21 +3226,6 @@ loadEnemyImagesFromEnemyWebpsJson();
 ======================= */
 const BASE_SPACING_X = 105;
 
-function getSpacingX(){
-  // v1.96: Responsive horizontal spacing (desktop-friendly)
-  const maxFormationWidth = canvas.width * 0.82;     // use most of the screen width
-  const cols = Math.max(1, formationCols - 1);       // gaps between columns (dynamic per wave)
-  return Math.min(120, Math.max(80, maxFormationWidth / cols));
-}
-
-function getSpacingY(){
-  // v1.96: Responsive vertical spacing based on current wave formation size
-  const maxFormationHeight = canvas.height * 0.38; // keep formation mostly in top zone
-  const rows = Math.max(1, formationRows - 1);
-  return Math.min(110, Math.max(45, maxFormationHeight / rows));
-}
-
-
 let enemies = [];
 
 const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, descentSpeed:12, boundsPad:40 };
