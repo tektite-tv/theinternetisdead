@@ -83,7 +83,11 @@
 /* =======================
    Paths (EDIT IF NEEDED)
 ======================= */
-const GIF_BASE = "/media/images/gifs/";
+const ENEMY_GIF_BASE = "/games/shooter-game/enemy-gifs/";
+const ENEMY_GIF_INDEX_URL = "/games/shooter-game/enemy-gifs.json";
+const PLAYER_IMG_URL = "/games/shooter-game/bananarama.gif";
+const BOSS_IMG_URL = ENEMY_GIF_BASE + "180px-NO_U_cycle.gif";
+const GIF_BASE = ENEMY_GIF_BASE; // kept for legacy enemy-path code
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
 const AUDIO_OOF = "/media/audio/oof.mp3";
 
@@ -1870,7 +1874,7 @@ function playSfx(a){
    Player (v1.96 bigger)
 ======================= */
 const playerImg = new Image();
-playerImg.src = GIF_BASE + "bananarama.gif";
+playerImg.src = PLAYER_IMG_URL;
 
 // v1.96 sizing + anchoring
 const PLAYER_SIZE = 72;                 // was 48
@@ -1973,16 +1977,13 @@ function setAimFromClient(clientX, clientY){
 }
 
 /* =======================
-   Enemy Images from index.json
+   Enemy Images from enemy-gifs.json
 ======================= */
 let enemyImages = [];
 let assetsReady = false;
 
 const FALLBACK_URLS = [
-  GIF_BASE + "frog.gif",
-  GIF_BASE + "skeleton.gif",
-  GIF_BASE + "dragon.gif",
-  GIF_BASE + "firework.gif"
+  BOSS_IMG_URL
 ];
 
 function preloadImages(urls){
@@ -2001,20 +2002,20 @@ function preloadImages(urls){
   });
 }
 
-async function loadEnemyImagesFromIndex(){
+async function loadEnemyImagesFromEnemyGifsJson(){
   try{
-    setAssetStatus("Fetching index.json...");
-    const res = await fetch(GIF_BASE + "index.json", { cache: "no-store" });
+    setAssetStatus("Fetching enemy-gifs.json...");
+    const res = await fetch(ENEMY_GIF_INDEX_URL, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
 
     const list = await res.json();
-    if (!Array.isArray(list)) throw new Error("index.json not an array");
+    if (!Array.isArray(list)) throw new Error("enemy-gifs.json not an array");
 
     const urls = list
       .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".gif"))
-      .map(name => GIF_BASE + name);
+      .map(name => name.startsWith("/") ? name : ENEMY_GIF_BASE + name);
 
-    if (!urls.length) throw new Error("No gifs in index.json");
+    if (!urls.length) throw new Error("No gifs in enemy-gifs.json");
 
     setAssetStatus(`Preloading ${urls.length} enemy images...`);
     let imgs = await preloadImages(urls);
@@ -2025,14 +2026,14 @@ async function loadEnemyImagesFromIndex(){
     assetsReady = true;
     setAssetStatus(`Loaded ${enemyImages.length} enemy images ✅`);
   }catch(err){
-    console.warn("Failed to load index.json enemy list:", err);
-    setAssetStatus("Failed to load index.json. Using fallback images.");
+    console.warn("Failed to load enemy-gifs.json enemy list:", err);
+    setAssetStatus("Failed to load enemy-gifs.json. Using fallback enemy image.");
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     assetsReady = true;
   }
 }
-loadEnemyImagesFromIndex();
+loadEnemyImagesFromEnemyGifsJson();
 
 /* =======================
    Enemies + Formation Movement
@@ -2579,7 +2580,7 @@ function spawnBossWave11(additive=false){
   firstBossSpawned = true;
 
   const bossImg = new Image();
-  bossImg.src = GIF_BASE + "180px-NO_U_cycle.gif";
+  bossImg.src = BOSS_IMG_URL;
 
   // Shared HP for core + orbiters (requested).
   const BOSS_HP = isFirstBoss
