@@ -970,8 +970,6 @@ function updateTimerHUD(){
   timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div>' + runTimer.toFixed(1) + 's</div>';
 }
 
-function rand(min, max){ return min + Math.random() * (max - min); }
-
 function drawInvertedTriangle(x, y, r){
   // Upside-down equilateral triangle around (x,y)
   const a0 = Math.PI/2; // point down
