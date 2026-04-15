@@ -3880,8 +3880,7 @@ if (btnContinue){
   btnContinue.addEventListener("click", () => {
     if (window.parent && window.parent !== window){
       try{
-        window.parent.postMessage({ type: "tektite:continue-to-level2" }, "*");
-        return;
+        if (requestContinueToLevel2()) return;
       }catch(err){
         console.warn("Failed to notify parent iframe host about level transition.", err);
       }
@@ -3895,8 +3894,7 @@ if (btnSkipToLevel2){
   btnSkipToLevel2.addEventListener("click", () => {
     if (window.parent && window.parent !== window){
       try{
-        window.parent.postMessage({ type: "tektite:continue-to-level2" }, "*");
-        return;
+        if (requestContinueToLevel2()) return;
       }catch(err){
         console.warn("Failed to notify parent iframe host about level transition.", err);
       }

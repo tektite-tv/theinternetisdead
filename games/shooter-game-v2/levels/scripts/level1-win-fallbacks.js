@@ -16,10 +16,7 @@ document.addEventListener('click', (event) => {
     return;
   }
 
-  if (window.parent && window.parent !== window) {
-    window.parent.postMessage({ type: 'SHOOTER_GAME_GO_TO_LEVEL_2' }, '*');
-    return;
-  }
+  if (requestContinueToLevel2()) return;
 
   window.location.href = 'shooter-game-level2.html';
 });

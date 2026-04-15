@@ -45,3 +45,19 @@ function postCommandResult(command, result){
     }, "*");
   }
 }
+
+function requestContinueToLevel2(){
+  if (window.parent && window.parent !== window){
+    window.parent.postMessage({ type: "tektite:continue-to-level2" }, "*");
+    return true;
+  }
+  return false;
+}
+
+function requestReturnToLevel1(){
+  if (window.parent && window.parent !== window){
+    window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");
+    return true;
+  }
+  return false;
+}

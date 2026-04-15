@@ -1151,8 +1151,7 @@ if (btnPauseQuit){
     stopMusic();
     if (window.parent && window.parent !== window){
       try {
-        window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");
-        return;
+        if (requestReturnToLevel1()) return;
       } catch (e) {}
     }
     // Fallback for standalone use.
@@ -3385,8 +3384,7 @@ if (btnReturnToLevel1){
   btnReturnToLevel1.addEventListener("click", () => {
     if (window.parent && window.parent !== window){
       try{
-        window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");
-        return;
+        if (requestReturnToLevel1()) return;
       }catch(err){
         console.warn("Failed to notify parent iframe host about level transition.", err);
       }
