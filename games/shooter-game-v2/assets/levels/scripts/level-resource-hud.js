@@ -1,3 +1,9 @@
+function formatResourceOptionValue(inputEl){
+  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
+  const n = parseInt(raw, 10);
+  return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "MAX" : String(Number.isFinite(n) ? n : 0);
+}
+
 function _syncStartResourceControls(){
   try{
     const livesSlider = document.getElementById("livesSlider");
