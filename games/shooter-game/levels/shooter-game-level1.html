@@ -575,13 +575,35 @@
   left:14px;
   font-family:monospace;
   font-weight:900;
-  font-size:40px;
+  font-size:20px;
   color:#ffd400;
   text-shadow:0 0 8px rgba(0,0,0,0.65);
   pointer-events:none;
   z-index:60;
   user-select:none;
   white-space:nowrap;
+}
+
+#storeUnlockedHud{
+  position:absolute;
+  top:34px;
+  left:14px;
+  font-family:monospace;
+  font-weight:900;
+  font-size:12px;
+  color:#fff;
+  text-shadow:0 0 8px rgba(0,0,0,0.75);
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+  white-space:nowrap;
+  display:none;
+  animation:storeUnlockedHue 1.1s linear infinite;
+}
+
+@keyframes storeUnlockedHue{
+  0%{filter:hue-rotate(0deg);}
+  100%{filter:hue-rotate(360deg);}
 }
 
 #timerHud{
@@ -762,7 +784,8 @@ body.invert-colors {
   pointer-events:none;
   z-index:20;
 "></div>
-<div id="accuracyScore">0</div>
+<div id="accuracyScore">Score: 0pts</div>
+<div id="storeUnlockedHud">Store Unlocked</div>
 <div id="timerHud">0.0s</div>
 
 
@@ -827,7 +850,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-      <div id="titleHoverReveal" class="titleSub" tabindex="-1" aria-label="Latest update message"><span class="titleSubDefault">(New and Improved)</span><span class="titleSubHover">(Last updated: April 15, 2026 12:00 AM)</span></div>
+      <div id="titleHoverReveal" class="titleSub" tabindex="-1" aria-label="Latest update message"><span class="titleSubDefault">(New and Improved)</span><span class="titleSubHover">(Last updated: April 15, 2026 12:26 AM)</span></div>
     </div>
     <img class="subimg" src="/media/images/gifs/bananarama.gif" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1045,8 +1068,8 @@ body.invert-colors {
   Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
 
 - 2025-12-19 | v1.96
-  Added: Bomb-killing a dragon.gif enemy grants a one-time +25% "armor" pip next to the hearts HUD.
-  Behavior: The armor absorbs the next hit (any damage) and then flips to ❌ briefly.
+  Changed: Bomb-killing a dragon.gif enemy no longer grants free armor.
+  Changed: Frog kills no longer heal the player or award free lives.
 
 ====================================================================== */
 
@@ -1977,14 +2000,14 @@ const SPECTRAL_FUNK = 1000;
 const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
 let lives = 0; // extra lives (decremented when health hits 0)
-let frogKills = 0; // counts frog kills; every 3 frogs awards +1 life
+let frogKills = 0; // legacy counter kept for reset compatibility; frog kills no longer award free lives
 let health = 1.0; // 0..1 (4 hits -> 0)
 let MAX_HEARTS = 3; // v1.96: configurable hearts per life
 let HIT_DAMAGE = 0.25; // 25% per hit (4 hearts = one life)
 
 // =======================
 // Dragon Bomb-Kill Armor (v1.96)
-// - If a dragon.gif enemy is killed by the BOMB blast, grant a one-time +25% armor.
+// - Dragon bomb kills are tracked for the win screen, but no longer grant free armor.
 // - Armor absorbs the next hit, then turns into an ❌ briefly next to the hearts HUD.
 // =======================
 let bonusArmor = 0;              // 0 or 0.25
@@ -2093,7 +2116,9 @@ function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
   else accuracyScoreEl.style.display = "none";
-  accuracyScoreEl.textContent = "Score: " + String(Math.floor(score));
+  accuracyScoreEl.textContent = "Score: " + String(Math.floor(score)) + "pts";
+  const storeUnlockedHudEl = document.getElementById("storeUnlockedHud");
+  if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = (gameState === STATE.PLAYING && Math.floor(score) >= 250) ? "block" : "none";
 }
 
 function formatRunTime(seconds){
@@ -2205,27 +2230,14 @@ function enemyKill(e, source){
     e._killAwarded = true;
     if (source === "bomb" && isDragonEnemy(e)){
       bombDragonKills += 1;
-      grantBonusArmor();
     }
 
     if (source === "bomb" && e.isFrog){
       bombFrogKills += 1;
     }
 
-    if (e.isFrog){
-      healPlayer(0.50);
-
-      // Extra life system: every 3 frog kills, award +1 life.
-      frogKills += 1;
-      if (frogKills % 3 === 0){
-        lives += 1;
-        livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
-        // Optional tiny feedback burst (kept simple and non-breaking).
-        if (typeof spawnFloatingText === 'function') spawnFloatingText(e.x, e.y - 18, "+1 LIFE", 0.85);
-        if (typeof playSfx === 'function') playSfx(sfxHit);
-      }
-    }
-awardScore(10);
+    // Frog kills no longer heal the player or award free lives.
+    awardScore(10);
     playSfx(sfxHit);
   }
 }

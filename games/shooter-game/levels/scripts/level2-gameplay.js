@@ -1128,7 +1128,9 @@ function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
   else accuracyScoreEl.style.display = "none";
-  accuracyScoreEl.textContent = "Score: " + String(Math.floor(score));
+  accuracyScoreEl.textContent = "Score: " + String(Math.floor(score)) + "pts";
+  const storeUnlockedHudEl = document.getElementById("storeUnlockedHud");
+  if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = (gameState === STATE.PLAYING && Math.floor(score) >= 250) ? "block" : "none";
 }
 
 function updateTimerHUD(){

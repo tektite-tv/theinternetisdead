@@ -67,8 +67,8 @@
   Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
 
 - 2025-12-19 | v1.96
-  Added: Bomb-killing a dragon.gif enemy grants a one-time +25% "armor" pip next to the hearts HUD.
-  Behavior: The armor absorbs the next hit (any damage) and then flips to ❌ briefly.
+  Changed: Bomb-killing a dragon.gif enemy no longer grants free armor.
+  Changed: Frog kills no longer heal the player or award free lives.
 
 ====================================================================== */
 
@@ -993,14 +993,14 @@ const SPECTRAL_FUNK = 1000;
 const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
 let lives = 0; // extra lives (decremented when health hits 0)
-let frogKills = 0; // counts frog kills; every 3 frogs awards +1 life
+let frogKills = 0; // legacy counter kept for reset compatibility; frog kills no longer award free lives
 let health = 1.0; // 0..1 (4 hits -> 0)
 let MAX_HEARTS = 3; // v1.96: configurable hearts per life
 let HIT_DAMAGE = 0.25; // 25% per hit (4 hearts = one life)
 
 // =======================
 // Dragon Bomb-Kill Armor (v1.96)
-// - If a dragon.gif enemy is killed by the BOMB blast, grant a one-time +25% armor.
+// - Dragon bomb kills are tracked for the win screen, but no longer grant free armor.
 // - Armor absorbs the next hit, then turns into an ❌ briefly next to the hearts HUD.
 // =======================
 let bonusArmor = 0;              // 0 or 0.25
@@ -1101,7 +1101,9 @@ function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
   else accuracyScoreEl.style.display = "none";
-  accuracyScoreEl.textContent = "Score: " + String(Math.floor(score));
+  accuracyScoreEl.textContent = "Score: " + String(Math.floor(score)) + "pts";
+  const storeUnlockedHudEl = document.getElementById("storeUnlockedHud");
+  if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = (gameState === STATE.PLAYING && Math.floor(score) >= 250) ? "block" : "none";
 }
 
 function updateTimerHUD(){
@@ -1190,27 +1192,14 @@ function enemyKill(e, source){
     e._killAwarded = true;
     if (source === "bomb" && isDragonEnemy(e)){
       bombDragonKills += 1;
-      grantBonusArmor();
     }
 
     if (source === "bomb" && e.isFrog){
       bombFrogKills += 1;
     }
 
-    if (e.isFrog){
-      healPlayer(0.50);
-
-      // Extra life system: every 3 frog kills, award +1 life.
-      frogKills += 1;
-      if (frogKills % 3 === 0){
-        lives += 1;
-        livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
-        // Optional tiny feedback burst (kept simple and non-breaking).
-        if (typeof spawnFloatingText === 'function') spawnFloatingText(e.x, e.y - 18, "+1 LIFE", 0.85);
-        if (typeof playSfx === 'function') playSfx(sfxHit);
-      }
-    }
-awardScore(10);
+    // Frog kills no longer heal the player or award free lives.
+    awardScore(10);
     playSfx(sfxHit);
   }
 }
