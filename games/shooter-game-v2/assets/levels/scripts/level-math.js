@@ -1,1 +1,16 @@
 function rand(min, max){ return min + Math.random() * (max - min); }
+
+function drawInvertedTriangle(x, y, r){
+  // Upside-down equilateral triangle around (x,y)
+  const a0 = Math.PI/2; // point down
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++){
+    const a = a0 + i * (Math.PI * 2 / 3);
+    const px = x + Math.cos(a) * r;
+    const py = y + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.stroke();
+}
