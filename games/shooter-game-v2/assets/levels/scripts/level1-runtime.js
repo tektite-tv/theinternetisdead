@@ -1067,12 +1067,6 @@ function breakBonusArmor(){
    - Press Q drops a flashing + that explodes after 3 flashes (0.5s each)
 ======================= */
 
-function shouldForceUFOForWave(w){
-  // v1.96: Always spawn a UFO on key milestone waves.
-  // v1.96: Wave 11 is now a boss wave, so don't force a UFO there.
-  return (w === 21);
-}
-
 function trySpawnUFO(force=false){
   if (ufo) return; // only one at a time
   // v1.96: Force-spawn on wave 11 and 21 (or when explicitly forced).
