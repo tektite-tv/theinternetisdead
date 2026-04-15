@@ -3193,12 +3193,6 @@ let aimY = 0;
 let aimAngle = -Math.PI/2;
 let aimAngleSmoothed = -Math.PI/2;
 
-function normAngle(a){
-  while (a > Math.PI) a -= Math.PI * 2;
-  while (a < -Math.PI) a += Math.PI * 2;
-  return a;
-}
-
 function setAimFromClient(clientX, clientY){
   const r = canvas.getBoundingClientRect();
   aimX = clientX - r.left;

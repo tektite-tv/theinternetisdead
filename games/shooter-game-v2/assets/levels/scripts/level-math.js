@@ -1,5 +1,11 @@
 function rand(min, max){ return min + Math.random() * (max - min); }
 
+function normAngle(a){
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
 function drawInvertedTriangle(x, y, r){
   // Upside-down equilateral triangle around (x,y)
   const a0 = Math.PI/2; // point down
