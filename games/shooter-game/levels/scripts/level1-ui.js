@@ -174,43 +174,15 @@ function setResourceNumberValue(inputEl, delta){
 }
 
 function setupCustomResourceSteppers(){
+  // v2.02: Leave the resource number boxes plain and centered.
+  // Native browser spinners and custom arrow buttons are both intentionally removed.
   [heartsSlider, shieldsSlider, livesSlider, bombsSlider].filter(Boolean).forEach(inputEl => {
-    if (inputEl.dataset.customResourceStepper === 'true') return;
-    inputEl.dataset.customResourceStepper = 'true';
-    let wrap = inputEl.parentElement && inputEl.parentElement.classList.contains('resourceNumberWrap') ? inputEl.parentElement : null;
-    if (!wrap){
-      wrap = document.createElement('div');
-      wrap.className = 'resourceNumberWrap';
-      inputEl.parentNode.insertBefore(wrap, inputEl);
-      wrap.appendChild(inputEl);
+    inputEl.dataset.customResourceStepper = 'plain';
+    const wrap = inputEl.parentElement && inputEl.parentElement.classList && inputEl.parentElement.classList.contains('resourceNumberWrap') ? inputEl.parentElement : null;
+    if (wrap){
+      const buttons = wrap.querySelector('.resourceStepperButtons');
+      if (buttons) buttons.remove();
     }
-    const buttons = document.createElement('div');
-    buttons.className = 'resourceStepperButtons';
-    const up = document.createElement('button');
-    up.type = 'button';
-    up.className = 'resourceStepBtn resourceStepUp';
-    up.setAttribute('aria-label', 'Increase ' + (inputEl.id || 'value'));
-    up.textContent = '▲';
-    up.title = 'Increase';
-    const down = document.createElement('button');
-    down.type = 'button';
-    down.className = 'resourceStepBtn resourceStepDown';
-    down.setAttribute('aria-label', 'Decrease ' + (inputEl.id || 'value'));
-    down.textContent = '▼';
-    down.title = 'Decrease';
-    buttons.appendChild(up);
-    buttons.appendChild(down);
-    wrap.appendChild(buttons);
-    const clickStep = (delta, event) => {
-      if (event) event.preventDefault();
-      setResourceNumberValue(inputEl, delta);
-      if (typeof focusControllerElement === 'function' && typeof activeInputMode !== 'undefined' && activeInputMode === INPUT_MODE_CONTROLLER) focusControllerElement(inputEl);
-      else {
-        try{ inputEl.focus({ preventScroll:true }); }catch(_){ try{ inputEl.focus(); }catch(__){} }
-      }
-    };
-    up.addEventListener('click', event => clickStep(1, event));
-    down.addEventListener('click', event => clickStep(-1, event));
   });
 }
 
