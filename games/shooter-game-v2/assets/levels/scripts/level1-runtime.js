@@ -1095,13 +1095,6 @@ function trySpawnUFO(force=false){
   if (Math.abs(ufo.vx) < 2) ufo.vx = (ufo.vx < 0 ? -2.5 : 2.5);
 }
 
-function ufoColorForStage(stage){
-  if (stage === 1) return "rgba(255,60,60,1)";
-  if (stage === 2) return "rgba(60,255,120,1)";
-  if (stage === 3) return "rgba(80,140,255,1)";
-  return null;
-}
-
 function updateUFO(dt){
   if (!ufo) return;
 
