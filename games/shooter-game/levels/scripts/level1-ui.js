@@ -151,6 +151,67 @@ function parseResourceOption(inputEl, minValue){
   return { value: Math.max(minValue || 0, Number.isFinite(n) ? n : (minValue || 0)), infinite: false };
 }
 
+
+function dispatchResourceInputEvents(inputEl){
+  if (!inputEl) return;
+  inputEl.dispatchEvent(new Event('input', { bubbles:true }));
+  inputEl.dispatchEvent(new Event('change', { bubbles:true }));
+}
+
+function setResourceNumberValue(inputEl, delta){
+  if (!inputEl) return false;
+  const step = parseInt(inputEl.step || '1', 10) || 1;
+  const min = parseInt(inputEl.min || '0', 10);
+  const max = parseInt(inputEl.max || '100', 10);
+  const raw = String(inputEl.value || '').trim().toLowerCase();
+  const parsed = raw === 'infinite' || raw === 'inf' || raw === '∞' ? max : parseInt(raw || '0', 10);
+  const current = Number.isFinite(parsed) ? parsed : min;
+  const next = Math.max(min, Math.min(max, current + (step * delta)));
+  if (next === current) return false;
+  inputEl.value = String(next);
+  dispatchResourceInputEvents(inputEl);
+  return true;
+}
+
+function setupCustomResourceSteppers(){
+  [heartsSlider, shieldsSlider, livesSlider, bombsSlider].filter(Boolean).forEach(inputEl => {
+    if (inputEl.dataset.customResourceStepper === 'true') return;
+    inputEl.dataset.customResourceStepper = 'true';
+    let wrap = inputEl.parentElement && inputEl.parentElement.classList.contains('resourceNumberWrap') ? inputEl.parentElement : null;
+    if (!wrap){
+      wrap = document.createElement('div');
+      wrap.className = 'resourceNumberWrap';
+      inputEl.parentNode.insertBefore(wrap, inputEl);
+      wrap.appendChild(inputEl);
+    }
+    const buttons = document.createElement('div');
+    buttons.className = 'resourceStepperButtons';
+    const up = document.createElement('button');
+    up.type = 'button';
+    up.className = 'resourceStepBtn resourceStepUp';
+    up.setAttribute('aria-label', 'Increase ' + (inputEl.id || 'value'));
+    up.textContent = '▲';
+    const down = document.createElement('button');
+    down.type = 'button';
+    down.className = 'resourceStepBtn resourceStepDown';
+    down.setAttribute('aria-label', 'Decrease ' + (inputEl.id || 'value'));
+    down.textContent = '▼';
+    buttons.appendChild(up);
+    buttons.appendChild(down);
+    wrap.appendChild(buttons);
+    const clickStep = (delta, event) => {
+      if (event) event.preventDefault();
+      setResourceNumberValue(inputEl, delta);
+      if (typeof focusControllerElement === 'function' && typeof activeInputMode !== 'undefined' && activeInputMode === INPUT_MODE_CONTROLLER) focusControllerElement(inputEl);
+      else {
+        try{ inputEl.focus({ preventScroll:true }); }catch(_){ try{ inputEl.focus(); }catch(__){} }
+      }
+    };
+    up.addEventListener('click', event => clickStep(1, event));
+    down.addEventListener('click', event => clickStep(-1, event));
+  });
+}
+
 function syncStartOptionsLabels(){
     if (typeof clampNumericInput === "function") { clampNumericInput(livesSlider); clampNumericInput(heartsSlider); clampNumericInput(shieldsSlider); clampNumericInput(bombsSlider); }
     if (livesVal && livesSlider) livesVal.textContent = formatResourceOptionValue(livesSlider);
@@ -171,6 +232,7 @@ function syncStartOptionsLabels(){
     s.addEventListener("change", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
+  setupCustomResourceSteppers();
   syncStartOptionsLabels();
   syncCheatsMenuState();
 
@@ -657,21 +719,9 @@ function stepRange(rangeEl, delta){
 }
 
 function stepNumberInput(inputEl, delta){
-  if (!inputEl) return false;
-  const step = parseInt(inputEl.step || '1', 10) || 1;
-  const min = parseInt(inputEl.min || '0', 10);
-  const max = parseInt(inputEl.max || '999', 10);
-  const raw = String(inputEl.value || '').trim().toLowerCase();
-  const isInfinite = raw === 'infinite' || raw === 'inf' || raw === '∞';
-  const current = isInfinite ? max : parseInt(raw || '0', 10);
-  const safeCurrent = Number.isFinite(current) ? current : min;
-  const next = Math.max(min, Math.min(max, safeCurrent + (step * delta)));
-  if (next === safeCurrent) return false;
-  inputEl.value = String(next >= 100 ? 100 : next);
-  inputEl.dispatchEvent(new Event('input', { bubbles:true }));
-  inputEl.dispatchEvent(new Event('change', { bubbles:true }));
-  focusControllerElement(inputEl);
-  return true;
+  const changed = setResourceNumberValue(inputEl, delta);
+  if (changed) focusControllerElement(inputEl);
+  return changed;
 }
 
 function openControllerSelect(selectEl){
