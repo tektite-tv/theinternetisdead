@@ -76,11 +76,11 @@
 /* =======================
    Paths (EDIT IF NEEDED)
 ======================= */
-const ENEMY_GIF_BASE = "/games/shooter-game/enemy-gifs/";
-const ENEMY_GIF_INDEX_URL = "/games/shooter-game/enemy-gifs.json";
-const PLAYER_IMG_URL = "/games/shooter-game/bananarama.gif";
-const BOSS_IMG_URL = ENEMY_GIF_BASE + "180px-NO_U_cycle.gif";
-const GIF_BASE = ENEMY_GIF_BASE; // kept for legacy enemy-path code
+const ENEMY_WEBP_BASE = "/games/shooter-game/enemy-webps/";
+const ENEMY_WEBP_INDEX_URL = "/games/shooter-game/enemy-webps.json";
+const PLAYER_IMG_URL = "/games/shooter-game/bananarama.webp";
+const BOSS_IMG_URL = ENEMY_WEBP_BASE + "180px-NO_U_cycle.webp";
+const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
 const AUDIO_OOF = "/media/audio/oof.mp3";
 
@@ -1891,7 +1891,7 @@ function setAimFromClient(clientX, clientY){
 }
 
 /* =======================
-   Enemy Images from enemy-gifs.json
+   Enemy Images from enemy-webps.json
 ======================= */
 let enemyImages = [];
 let bossEnemyImg = null;
@@ -1903,11 +1903,11 @@ const FALLBACK_URLS = [
 
 // Keep GIFs alive as real DOM images, then draw those same animated elements onto canvas.
 // Some browsers get weirdly "first-frame only" with unattached Image() objects, because apparently joy is optional.
-const enemyGifRack = (() => {
-  let rack = document.getElementById("enemyGifAnimationRack");
+const enemyWebpRack = (() => {
+  let rack = document.getElementById("enemyWebpAnimationRack");
   if (!rack){
     rack = document.createElement("div");
-    rack.id = "enemyGifAnimationRack";
+    rack.id = "enemyWebpAnimationRack";
     rack.setAttribute("aria-hidden", "true");
     rack.style.cssText = "position:fixed;left:-99999px;top:-99999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;";
     document.body.appendChild(rack);
@@ -1930,7 +1930,7 @@ function preloadImages(urls){
       img.onload = () => { done++; if (done === urls.length) resolve(imgs); };
       img.onerror = () => { done++; if (done === urls.length) resolve(imgs); };
       img.src = url;
-      enemyGifRack.appendChild(img);
+      enemyWebpRack.appendChild(img);
       imgs.push(img);
     });
   });
@@ -1938,7 +1938,7 @@ function preloadImages(urls){
 
 function getBossEnemyImg(){
   if (bossEnemyImg && bossEnemyImg.naturalWidth > 0) return bossEnemyImg;
-  bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;
+  bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.webp")) || null;
   if (bossEnemyImg) return bossEnemyImg;
   bossEnemyImg = document.createElement("img");
   bossEnemyImg.decoding = "async";
@@ -1946,23 +1946,23 @@ function getBossEnemyImg(){
   bossEnemyImg.alt = "";
   bossEnemyImg.style.cssText = "width:1px;height:1px;position:absolute;left:-99999px;top:-99999px;";
   bossEnemyImg.src = BOSS_IMG_URL;
-  enemyGifRack.appendChild(bossEnemyImg);
+  enemyWebpRack.appendChild(bossEnemyImg);
   return bossEnemyImg;
 }
 
-async function loadEnemyImagesFromEnemyGifsJson(){
+async function loadEnemyImagesFromEnemyWebpsJson(){
   try{
-    const res = await fetch(ENEMY_GIF_INDEX_URL, { cache: "no-store" });
+    const res = await fetch(ENEMY_WEBP_INDEX_URL, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
 
     const list = await res.json();
-    if (!Array.isArray(list)) throw new Error("enemy-gifs.json not an array");
+    if (!Array.isArray(list)) throw new Error("enemy-webps.json not an array");
 
     const urls = list
-      .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".gif"))
-      .map(name => name.startsWith("/") ? name : ENEMY_GIF_BASE + name);
+      .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".webp"))
+      .map(name => name.startsWith("/") ? name : ENEMY_WEBP_BASE + name);
 
-    if (!urls.length) throw new Error("No gifs in enemy-gifs.json");
+    if (!urls.length) throw new Error("No webps in enemy-webps.json");
 
     setAssetStatus("");
     let imgs = await preloadImages(urls);
@@ -1970,20 +1970,20 @@ async function loadEnemyImagesFromEnemyGifsJson(){
     if (!imgs.length) throw new Error("All enemy images failed to load");
 
     enemyImages = imgs;
-    bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;
+    bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.webp")) || null;
     assetsReady = true;
     setAssetStatus("");
   }catch(err){
-    console.warn("Failed to load enemy-gifs.json enemy list:", err);
-    setAssetStatus("Enemy GIFs failed to load. Using fallback enemy image.");
+    console.warn("Failed to load enemy-webps.json enemy list:", err);
+    setAssetStatus("Enemy WebPs failed to load. Using fallback enemy image.");
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
-    bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.gif")) || null;
+    bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.webp")) || null;
     assetsReady = true;
     setAssetStatus("");
   }
 }
-loadEnemyImagesFromEnemyGifsJson();
+loadEnemyImagesFromEnemyWebpsJson();
 
 /* =======================
    Enemies + Formation Movement

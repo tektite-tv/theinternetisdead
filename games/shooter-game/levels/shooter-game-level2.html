@@ -680,7 +680,7 @@ body.invert-colors {
 
 <div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
   <span class="livesLabel">LIVES:</span>
-  <img src="/games/shooter-game/bananarama.gif" alt="lives"/>
+  <img src="/games/shooter-game/bananarama.webp" alt="lives"/>
   <div id="livesText" class="subtxt">x3</div>
 </div>
 
@@ -734,7 +734,7 @@ body.invert-colors {
     <div class="titleSubWrap">
       <div class="titleSub"><span class="titleSubDefault">(Maze Mode)</span><span class="titleSubHover">(Level 2)</span></div>
     </div>
-    <img class="subimg" src="/games/shooter-game/bananarama.gif" alt="bananarama" />
+    <img class="subimg" src="/games/shooter-game/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Navigate the maze, paint the floor, avoid hazards, and reach the glowing exit to advance. This menu is mainly for testing because Level 2 normally boots straight into gameplay.</div>
     <div class="btnRow btnRowTop">
       <button id="btnStart">Start Game</button>
@@ -870,11 +870,11 @@ body.invert-colors {
 /* =======================
    Paths (EDIT IF NEEDED)
 ======================= */
-const ENEMY_GIF_BASE = "/games/shooter-game/enemy-gifs/";
-const ENEMY_GIF_INDEX_URL = "/games/shooter-game/enemy-gifs.json";
-const PLAYER_IMG_URL = "/games/shooter-game/bananarama.gif";
-const BOSS_IMG_URL = ENEMY_GIF_BASE + "180px-NO_U_cycle.gif";
-const GIF_BASE = ENEMY_GIF_BASE; // kept for legacy enemy-path code
+const ENEMY_WEBP_BASE = "/games/shooter-game/enemy-webps/";
+const ENEMY_WEBP_INDEX_URL = "/games/shooter-game/enemy-webps.json";
+const PLAYER_IMG_URL = "/games/shooter-game/bananarama.webp";
+const BOSS_IMG_URL = ENEMY_WEBP_BASE + "180px-NO_U_cycle.webp";
+const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
 const AUDIO_OOF = "/media/audio/oof.mp3";
 
@@ -3856,7 +3856,7 @@ function setAimFromClient(clientX, clientY){
 }
 
 /* =======================
-   Enemy Images from enemy-gifs.json
+   Enemy Images from enemy-webps.json
 ======================= */
 let enemyImages = [];
 let assetsReady = false;
@@ -3881,18 +3881,18 @@ function preloadImages(urls){
   });
 }
 
-async function loadEnemyImagesFromEnemyGifsJson(){
-  try{    const res = await fetch(ENEMY_GIF_INDEX_URL, { cache: "no-store" });
+async function loadEnemyImagesFromEnemyWebpsJson(){
+  try{    const res = await fetch(ENEMY_WEBP_INDEX_URL, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
 
     const list = await res.json();
-    if (!Array.isArray(list)) throw new Error("enemy-gifs.json not an array");
+    if (!Array.isArray(list)) throw new Error("enemy-webps.json not an array");
 
     const urls = list
-      .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".gif"))
-      .map(name => name.startsWith("/") ? name : ENEMY_GIF_BASE + name);
+      .filter(name => typeof name === "string" && name.toLowerCase().endsWith(".webp"))
+      .map(name => name.startsWith("/") ? name : ENEMY_WEBP_BASE + name);
 
-    if (!urls.length) throw new Error("No gifs in enemy-gifs.json");
+    if (!urls.length) throw new Error("No webps in enemy-webps.json");
 
     setAssetStatus("");
     let imgs = await preloadImages(urls);
@@ -3903,14 +3903,14 @@ async function loadEnemyImagesFromEnemyGifsJson(){
     assetsReady = true;
     setAssetStatus("");
   }catch(err){
-    console.warn("Failed to load enemy-gifs.json enemy list:", err);
-    setAssetStatus("Enemy GIFs failed to load. Using fallback enemy image.");
+    console.warn("Failed to load enemy-webps.json enemy list:", err);
+    setAssetStatus("Enemy WebPs failed to load. Using fallback enemy image.");
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     assetsReady = true;
   }
 }
-loadEnemyImagesFromEnemyGifsJson();
+loadEnemyImagesFromEnemyWebpsJson();
 
 /* =======================
    Enemies + Formation Movement
