@@ -132,11 +132,13 @@ function setupCustomResourceSteppers(){
     up.className = 'resourceStepBtn resourceStepUp';
     up.setAttribute('aria-label', 'Increase ' + (inputEl.id || 'value'));
     up.textContent = '▲';
+    up.title = 'Increase';
     const down = document.createElement('button');
     down.type = 'button';
     down.className = 'resourceStepBtn resourceStepDown';
     down.setAttribute('aria-label', 'Decrease ' + (inputEl.id || 'value'));
     down.textContent = '▼';
+    down.title = 'Decrease';
     buttons.appendChild(up);
     buttons.appendChild(down);
     wrap.appendChild(buttons);
@@ -170,7 +172,8 @@ function syncStartOptionsLabels(){
     s.addEventListener("input", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
-  infiniteToggle.addEventListener("change", () => {});
+  if (infiniteToggle) infiniteToggle.addEventListener("change", () => {});
+  setupCustomResourceSteppers();
   syncStartOptionsLabels();
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
