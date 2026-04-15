@@ -849,18 +849,6 @@ let wave = 1;
 let firstBossSpawned = false; // track first boss size
 
 
-
-function getStageInfo(wave){
-  if (wave <= 10){
-    return { stage: 1, start: 0, end: 10 };
-  } else if (wave <= 20){
-    return { stage: 2, start: 11, end: 20 };
-  } else {
-    return { stage: 3, start: 21, end: 30 };
-  }
-}
-
-
 // v1.96: formation dimensions are dynamic per wave (wave 1 = 1 enemy, then doubles)
 let formationCols = 1;
 let formationRows = 1;
