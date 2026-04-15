@@ -4,6 +4,13 @@ function formatResourceOptionValue(inputEl){
   return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "MAX" : String(Number.isFinite(n) ? n : 0);
 }
 
+function parseResourceOption(inputEl, minValue){
+  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
+  const n = parseInt(raw, 10);
+  if (raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100) return { value: 100, infinite: true };
+  return { value: Math.max(minValue || 0, Number.isFinite(n) ? n : (minValue || 0)), infinite: false };
+}
+
 function _syncStartResourceControls(){
   try{
     const livesSlider = document.getElementById("livesSlider");

@@ -1756,13 +1756,6 @@ if (invertColorsCheckbox){
     return "Wave " + n;
   }
 
-function parseResourceOption(inputEl, minValue){
-  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
-  const n = parseInt(raw, 10);
-  if (raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100) return { value: 100, infinite: true };
-  return { value: Math.max(minValue || 0, Number.isFinite(n) ? n : (minValue || 0)), infinite: false };
-}
-
 function syncStartOptionsLabels(){
     if (livesVal && livesSlider) livesVal.textContent = formatResourceOptionValue(livesSlider);
     if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
