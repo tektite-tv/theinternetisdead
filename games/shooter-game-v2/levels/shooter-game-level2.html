@@ -1319,16 +1319,6 @@ function setPaused(p){
 }
 
 // v1.96: Resource commands: /lives, /hearts, /shields, /bombs
-function _parseCountOrInfinite(arg){
-  const a = String(arg||"").trim().toLowerCase();
-  if (!a) return null;
-  if (a === "max" || a === "infinite" || a === "inf" || a === "∞" || a === "forever") return { infinite:true, value: 100 };
-  const n = parseInt(a, 10);
-  if (isNaN(n)) return null;
-  if (n >= 100) return { infinite:true, value: 100 };
-  return { infinite:false, value: Math.max(0, Math.min(99, n)) };
-}
-
 function _syncStartResourceControls(){
   try{
     if (typeof livesSlider !== "undefined" && livesSlider) livesSlider.value = ((typeof START_LIVES_INFINITE !== "undefined" && START_LIVES_INFINITE) ? "100" : String(Math.max(0, parseInt(START_LIVES, 10) || 0)));

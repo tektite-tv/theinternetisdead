@@ -22,6 +22,16 @@ const PAUSE_COMMANDS = {
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
 };
 
+function _parseCountOrInfinite(arg){
+  const a = String(arg||"").trim().toLowerCase();
+  if (!a) return null;
+  if (a === "max" || a === "infinite" || a === "inf" || a === "\u221e" || a === "forever") return { infinite:true, value: 100 };
+  const n = parseInt(a, 10);
+  if (isNaN(n)) return null;
+  if (n >= 100) return { infinite:true, value: 100 };
+  return { infinite:false, value: Math.max(0, Math.min(99, n)) };
+}
+
 // v1.96: Help UI (lists commands in the pause suggestion panel)
 function showHelp(){
   if (!pauseCmdSuggest) return;
