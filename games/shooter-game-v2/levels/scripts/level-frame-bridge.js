@@ -7,3 +7,11 @@ function requestHostFullscreen(action="toggle"){
   }
   return false;
 }
+
+function postChatControllerAction(action){
+  try{
+    if (window.parent && window.parent !== window){
+      window.parent.postMessage({ type: "tektite:chat-control", action }, "*");
+    }
+  }catch(e){}
+}
