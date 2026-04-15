@@ -344,6 +344,7 @@ if (btnPauseQuit){
     // Unpause and return to start menu
     setPaused(false);
     stopMusic();
+    _resetStartResourceDefaults();
     showMenu();
   });
 }
@@ -507,23 +508,10 @@ function setPaused(p){
   }
 }
 
-// v1.96: Resource commands: /lives, /hearts, /shields, /bombs
-function _syncStartResourceControls(){
-  try{
-    if (typeof livesSlider !== "undefined" && livesSlider) livesSlider.value = ((typeof START_LIVES_INFINITE !== "undefined" && START_LIVES_INFINITE) ? "100" : String(Math.max(0, parseInt(START_LIVES, 10) || 0)));
-    if (typeof heartsSlider !== "undefined" && heartsSlider) heartsSlider.value = ((typeof START_HEARTS_INFINITE !== "undefined" && START_HEARTS_INFINITE) ? "100" : String(Math.max(1, parseInt(START_HEARTS, 10) || 1)));
-    if (typeof shieldsSlider !== "undefined" && shieldsSlider) shieldsSlider.value = ((typeof START_SHIELDS_INFINITE !== "undefined" && START_SHIELDS_INFINITE) ? "100" : String(Math.max(0, parseInt(START_SHIELDS, 10) || 0)));
-    if (typeof bombsSlider !== "undefined" && bombsSlider) bombsSlider.value = ((typeof START_BOMBS_INFINITE !== "undefined" && START_BOMBS_INFINITE) ? "100" : String(Math.max(0, parseInt(START_BOMBS, 10) || 0)));
-    if (typeof syncStartOptionsLabels === "function") syncStartOptionsLabels();
-  }catch(e){}
-}
-
 function _applyLives(n, forceInfinite){
   const nextLives = forceInfinite ? 100 : Math.max(0, parseInt(n, 10) || 0);
   livesInfiniteActive = !!forceInfinite;
   lives = nextLives;
-  if (typeof START_LIVES !== "undefined") START_LIVES = nextLives;
-  if (typeof START_LIVES_INFINITE !== "undefined") START_LIVES_INFINITE = !!forceInfinite;
   _syncStartResourceControls();
   if (livesText) livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
 }
@@ -532,8 +520,6 @@ function _applyHearts(n, forceInfinite){
   heartsInfiniteActive = !!forceInfinite;
   MAX_HEARTS = heartsInfiniteActive ? 100 : Math.max(1, parseInt(n, 10) || 1);
   HIT_DAMAGE = 1 / MAX_HEARTS;
-  if (typeof START_HEARTS !== "undefined") START_HEARTS = MAX_HEARTS;
-  if (typeof START_HEARTS_INFINITE !== "undefined") START_HEARTS_INFINITE = !!forceInfinite;
   _syncStartResourceControls();
   // Top off health so the new max doesn't instantly punish you.
   health = 1.0;
@@ -546,8 +532,6 @@ function _applyShields(n, forceInfinite){
   const nextShields = forceInfinite ? 100 : Math.max(0, parseInt(n, 10) || 0);
   shieldsInfiniteActive = !!forceInfinite;
   shieldPips = nextShields;
-  if (typeof START_SHIELDS !== "undefined") START_SHIELDS = nextShields;
-  if (typeof START_SHIELDS_INFINITE !== "undefined") START_SHIELDS_INFINITE = !!forceInfinite;
   _syncStartResourceControls();
   if (typeof updateHearts === "function") updateHearts();
 }
@@ -556,8 +540,6 @@ function _applyBombs(n, forceInfinite){
   const nextBombs = forceInfinite ? 100 : Math.max(0, parseInt(n, 10) || 0);
   bombsInfiniteActive = !!forceInfinite;
   bombsCount = nextBombs;
-  if (typeof START_BOMBS !== "undefined") START_BOMBS = nextBombs;
-  if (typeof START_BOMBS_INFINITE !== "undefined") START_BOMBS_INFINITE = !!forceInfinite;
   _syncStartResourceControls();
   _syncBombHud();
 }
