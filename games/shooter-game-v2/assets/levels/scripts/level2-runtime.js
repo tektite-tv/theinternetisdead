@@ -1654,8 +1654,6 @@ const btnStart = document.getElementById("btnStart");
 const btnOptions = document.getElementById("btnOptions");
 const btnControls = document.getElementById("btnControls");
 const controlsMenu = document.getElementById("controlsMenu");
-const controlsModeKeyboard = document.getElementById("controlsModeKeyboard");
-const controlsModeController = document.getElementById("controlsModeController");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
 const controlsResetBinds = document.getElementById("controlsResetBinds");
@@ -2038,8 +2036,6 @@ function renderControlsBindingList(){
 }
 function setControlsBindMode(mode){
   controlsBindMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
-  if (controlsModeKeyboard) controlsModeKeyboard.classList.toggle('active', controlsBindMode === INPUT_MODE_KEYBOARD);
-  if (controlsModeController) controlsModeController.classList.toggle('active', controlsBindMode === INPUT_MODE_CONTROLLER);
   bindingEditState = null;
   controllerRebindReady = false;
   updateControlsDisplay();
@@ -2097,8 +2093,6 @@ function clearControllerFocus(){
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
 }
 
-if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
-if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); });
 if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); if (pauseControlsOpen && isPaused) hidePauseControlsMenu(); });
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
