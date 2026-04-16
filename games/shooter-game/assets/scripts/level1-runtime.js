@@ -654,7 +654,8 @@ window.addEventListener("message", (event) => {
 
   if (data.type === "tektite:chat-visibility"){
     parentChatVisible = !!data.visible;
-    if (isPaused && !parentChatVisible) syncPauseControllerFocus();
+    if (parentChatVisible) clearControllerFocus();
+    else syncControllerFocusForCurrentState();
     return;
   }
 
@@ -2149,6 +2150,42 @@ function syncControlsControllerFocus(){
   focusControllerElement(items[controlsFocusIndex]);
 }
 
+function syncControllerFocusForCurrentState(){
+  if (activeInputMode !== INPUT_MODE_CONTROLLER || parentChatVisible){
+    clearControllerFocus();
+    return;
+  }
+  if (pauseControlsOpen && isPaused){
+    syncControlsControllerFocus();
+    return;
+  }
+  if (isPaused){
+    syncPauseControllerFocus();
+    return;
+  }
+  if (gameState === STATE.MENU){
+    syncMenuControllerFocus();
+    return;
+  }
+  if (gameState === STATE.OPTIONS){
+    syncOptionsControllerFocus();
+    return;
+  }
+  if (gameState === STATE.CHEATS){
+    syncCheatsControllerFocus();
+    return;
+  }
+  if (gameState === STATE.CONTROLS){
+    syncControlsControllerFocus();
+    return;
+  }
+  if (gameState === STATE.WIN){
+    syncWinControllerFocus();
+    return;
+  }
+  clearControllerFocus();
+}
+
 function moveMenuControllerFocus(delta){
   const items = getMenuControllerTargets();
   if (!items.length) return;
@@ -2979,16 +3016,19 @@ function pollGamepad(dt){
     }
     if (pressCommands){
       requestOpenChat(false);
+      clearControllerFocus();
     }
-    if (isPaused && parentChatVisible){
-      if (navUp) postChatControllerAction('cycleUp');
-      if (navDown) postChatControllerAction('cycleDown');
-      if (navLeft) postChatControllerAction('cycleLeft');
-      if (navRight) postChatControllerAction('cycleRight');
-      if (pressMenuSelect) postChatControllerAction('execute');
-      if (pressMenuBack){
-        postChatControllerAction('close');
-        togglePause();
+    const chatOwnsControllerInput = parentChatVisible || pressCommands;
+    if (chatOwnsControllerInput){
+      if (parentChatVisible){
+        if (navUp) postChatControllerAction('cycleUp');
+        if (navDown) postChatControllerAction('cycleDown');
+        if (navLeft) postChatControllerAction('cycleLeft');
+        if (navRight) postChatControllerAction('cycleRight');
+        if (pressMenuSelect) postChatControllerAction('execute');
+        if (pressMenuBack){
+          postChatControllerAction('close');
+        }
       }
     } else if (isPaused){
       if (pauseControlsOpen){
