@@ -99,7 +99,7 @@ musicBg.volume = 0.6;
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
-sfxDeath.volume = 0.9;
+sfxDeath.volume = 0.405;
 
 // Global mute toggle (M key)
 let audioMuted = false;
@@ -163,9 +163,10 @@ function playDeathYell(){
   if (audioMuted) return;
   try{
     sfxDeath.currentTime = 0;
+    sfxDeath.muted = !!audioMuted;
   }catch(e){}
   // Try immediately, then retry briefly to avoid "plays only after next keypress" behavior.
-  tryPlayWithRetry(sfxDeath, 30, 60);
+  sfxDeath.play().catch(()=>{ tryPlayWithRetry(sfxDeath, 30, 60); });
 }
 
 /* =======================
@@ -1707,6 +1708,14 @@ function playSfx(a){
     c.volume = a.volume;
     c.muted = !!audioMuted;
     c.play().catch(()=>{});
+  }catch(e){}
+}
+function playSfxImmediate(a){
+  if (audioMuted || !a) return;
+  try{
+    a.currentTime = 0;
+    a.muted = !!audioMuted;
+    a.play().catch(()=>{});
   }catch(e){}
 }
 
@@ -3802,6 +3811,9 @@ function spawnPlayerDeath(isGameOver){
   isDead = true;
   deathGameOver = !!isGameOver;
   deathTimer = deathGameOver ? 1.2 : 0.85;
+  if (deathGameOver){
+    deathOverlay.style.display = "flex";
+  }
 
   const n = 160;
   for (let i = 0; i < n; i++){
@@ -3845,15 +3857,28 @@ function damagePlayer(){
   }
 
   // Each hit drains HIT_DAMAGE health (MAX_HEARTS hearts per life).
-  health = Math.max(0, health - HIT_DAMAGE);
+  const nextHealth = health - HIT_DAMAGE;
+  health = (nextHealth <= 0.000001) ? 0 : Math.max(0, nextHealth);
   player.invuln = 1.00;
-  playSfx(sfxOof);
 
   if (health <= 0){
     // Lose a life and explode into pixel dust.
     if (!livesInfiniteActive) lives = Math.max(0, lives - 1);
-    spawnPlayerDeath(!livesInfiniteActive && lives <= 0);
+    const deathIsGameOver = !livesInfiniteActive && lives <= 0;
+    if (deathIsGameOver && !deathYellPlayed){
+      playSfxImmediate(sfxOof);
+      deathYellPlayed = true;
+      setTimeout(() => {
+        if (deathYellPlayed) playDeathYell();
+      }, 0);
+      stopMusic();
+    } else {
+      playSfx(sfxOof);
+    }
+    spawnPlayerDeath(deathIsGameOver);
+    return;
   }
+  playSfx(sfxOof);
 }
 
 /* =======================
@@ -4005,10 +4030,11 @@ function update(dt){
       if (deathGameOver){
         // GAME OVER overlay
         deathOverlay.style.display = "flex";
-        // v1.96: death yell fires exactly when YOU DIED appears
-        stopMusic();
-        playDeathYell();
-        stopMusic();
+        if (!deathYellPlayed){
+          stopMusic();
+          playDeathYell();
+          deathYellPlayed = true;
+        }
       } else {
         // Respawn for next life (keep wave/enemies as-is)
         isDead = false;
@@ -4637,12 +4663,15 @@ function draw(){
     // v1.96: shield ring (RMB hold)
   drawShieldRing();
 
-// v1.96: always-on health bar under the player (4 hits total)
+// v1.96: always-on health bar under the player
   if (gameState === STATE.PLAYING){
     const barW = player.w;
     const barH = 7;
     const bx = player.x - barW/2;
     const by = player.y + player.h/2 + 10;
+    const maxHearts = Math.max(1, MAX_HEARTS|0);
+    const currentHearts = Math.max(0, Math.min(maxHearts, health * maxHearts));
+    const healthBarPercent = Math.max(0, Math.min(100, (currentHearts / maxHearts) * 100));
 
     ctx.save();
     ctx.globalAlpha = 0.95;
@@ -4653,7 +4682,7 @@ function draw(){
     ctx.fillRect(bx, by, barW, barH);
 
     ctx.fillStyle = "rgba(0,255,102,0.85)";
-    ctx.fillRect(bx, by, barW * Math.max(0, Math.min(1, health)), barH);
+    ctx.fillRect(bx, by, barW * (healthBarPercent / 100), barH);
     ctx.restore();
   }
 
@@ -4803,10 +4832,10 @@ let lastT = performance.now();
 function updateHearts(){
   // v1.96: Hearts are configurable (MAX_HEARTS), and shields/bomb-armor show here too.
   const maxH = Math.max(1, MAX_HEARTS|0);
-  const dmg = Math.max(0.0001, HIT_DAMAGE || (1/maxH));
+  const currentHearts = Math.max(0, Math.min(maxH, health * maxH));
 
   // Convert 0..1 health into "filled hearts" count.
-  const hearts = Math.max(0, Math.min(maxH, Math.ceil(health / dmg)));
+  const hearts = Math.max(0, Math.min(maxH, Math.ceil(currentHearts - 0.000001)));
 
   const full = "❤️";
   const empty = "❌";
