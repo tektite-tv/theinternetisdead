@@ -375,7 +375,6 @@ function showPauseControlsMenu(){
   uiRoot.style.display = "flex";
   updateControlsDisplay();
   renderControlsBindingList();
-  setControlsBindStatus('Select a control to rebind.');
   fitControlsMenuToViewport();
   controlsFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
@@ -390,7 +389,7 @@ function hidePauseControlsMenu(){
   uiRoot.classList.remove("pauseControlsOpen");
   uiRoot.style.display = "none";
   unlockControlsInputMode();
-  cancelBindingEdit('Select a control to rebind.');
+  cancelBindingEdit();
   pauseFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
   else clearControllerFocus();
@@ -1590,8 +1589,6 @@ const btnControls = document.getElementById("btnControls");
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsModeKeyboard = document.getElementById("controlsModeKeyboard");
 const controlsModeController = document.getElementById("controlsModeController");
-const controlsBindStatus = document.getElementById("controlsBindStatus");
-const controlsFixedInfo = document.getElementById("controlsFixedInfo");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
 const controlsResetBinds = document.getElementById("controlsResetBinds");
@@ -1864,11 +1861,6 @@ function updateControlsDisplay(){
       ? 'Controller Keybinds'
       : 'Keyboard / Mouse Controls';
   }
-  if (controlsFixedInfo){
-    controlsFixedInfo.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
-      ? 'Left Stick movement and D-Pad movement can both drive gameplay. View opens chat. Aim stays on Right Stick. Fullscreen is rebindable below too.'
-      : 'Aim stays on Mouse / Touch. Slash opens chat. Bind actions below to keys or mouse buttons, including Fullscreen.';
-  }
 }
 function setActiveInputMode(mode, options = null){
   const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
@@ -1893,7 +1885,6 @@ function unlockControlsInputMode(){
 }
 function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
 function getCurrentBindingValue(action){ return controlsBindMode === INPUT_MODE_CONTROLLER ? draftControllerBindings[action] : draftKeyboardBindings[action]; }
-function setControlsBindStatus(message){ if (controlsBindStatus) controlsBindStatus.textContent = message; }
 const MOVE_BIND_ACTIONS = ["moveUp", "moveDown", "moveLeft", "moveRight"];
 const MOVE_BIND_LABELS = { moveUp: "↑", moveDown: "↓", moveLeft: "←", moveRight: "→" };
 function isMoveBindAction(action){ return MOVE_BIND_ACTIONS.includes(action); }
@@ -2044,7 +2035,6 @@ function applyBindingValue(scheme, action, value){
   controllerRebindReady = false;
   updateControlsDisplay();
   renderControlsBindingList();
-  setControlsBindStatus('Binding updated. Press Apply to save.');
   fitControlsMenuToViewport();
 }
 function startBindingEdit(scheme, action){
@@ -2053,10 +2043,9 @@ function startBindingEdit(scheme, action){
   controllerRebindReady = false;
   updateControlsDisplay();
   renderControlsBindingList();
-  setControlsBindStatus(controlsBindMode === INPUT_MODE_CONTROLLER ? 'Press a controller button for the selected action.' : 'Press a key or mouse button for the selected action.');
   fitControlsMenuToViewport();
 }
-function cancelBindingEdit(message){ bindingEditState = null; controllerRebindReady = false; renderControlsBindingList(); setControlsBindStatus(message || 'Select a control to rebind.'); fitControlsMenuToViewport(); }
+function cancelBindingEdit(){ bindingEditState = null; controllerRebindReady = false; renderControlsBindingList(); fitControlsMenuToViewport(); }
 loadSavedBindings();
 resetDraftBindingsFromActive();
 updateControlsDisplay();
@@ -2091,8 +2080,8 @@ function clearControllerFocus(){
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
 }
 
-if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
-if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (pauseControlsOpen && isPaused) hidePauseControlsMenu(); });
+if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); });
+if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); if (pauseControlsOpen && isPaused) hidePauseControlsMenu(); });
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
 
 function getMenuControllerTargets(){
@@ -2437,7 +2426,6 @@ function showControlsMenu(){
   uiRoot.style.display = "flex";
   updateControlsDisplay();
   renderControlsBindingList();
-  setControlsBindStatus('Select a control to rebind.');
   fitControlsMenuToViewport();
   controlsFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
@@ -2449,7 +2437,7 @@ function hideControlsMenu(){
   controlsMenu.style.display = "none";
   controlsMenu.classList.remove("pauseControlsMode");
   unlockControlsInputMode();
-  cancelBindingEdit('Select a control to rebind.');
+  cancelBindingEdit();
   if (pauseControlsOpen && isPaused){
     hidePauseControlsMenu();
     return;
@@ -3025,7 +3013,7 @@ function pollGamepad(dt){
         if (navDown || navRight) moveControlsControllerFocus(1);
         if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
         if (pressMenuBack){
-          if (bindingEditState) cancelBindingEdit('Binding cancelled.');
+          if (bindingEditState) cancelBindingEdit();
           else hidePauseControlsMenu();
         }
         if (pressPause) togglePause();
@@ -3071,7 +3059,7 @@ function pollGamepad(dt){
       }
       const menuTarget = getMenuControllerTargets()[menuFocusIndex];
       if (pressMenuSelect && menuTarget && menuTarget !== titleHoverReveal && menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
-      if (pressMenuBack && bindingEditState) cancelBindingEdit('Binding cancelled.');
+      if (pressMenuBack && bindingEditState) cancelBindingEdit();
       if (pressY) showOptions();
     } else if (gameState === STATE.OPTIONS){
       if (navUp) moveOptionsControllerFocus(-1);
@@ -3110,7 +3098,7 @@ function pollGamepad(dt){
       }
       if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
       if (pressMenuBack){
-        if (bindingEditState) cancelBindingEdit('Binding cancelled.');
+        if (bindingEditState) cancelBindingEdit();
         else hideControlsMenu();
       }
     } else if (gameState === STATE.WIN){
