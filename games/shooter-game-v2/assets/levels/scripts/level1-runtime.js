@@ -1824,15 +1824,6 @@ function applyDraftBindings(){
   controllerBindings = { ...draftControllerBindings };
   saveBindings();
 }
-function formatKeyboardBinding(code){
-  const map = {Space:'Space', Escape:'Esc', Slash:'/', ArrowLeft:'Left Arrow', ArrowRight:'Right Arrow', ArrowUp:'Up Arrow', ArrowDown:'Down Arrow', KeyF:'F', KeyM:'M', KeyQ:'Q', KeyA:'A', KeyD:'D', KeyW:'W', KeyS:'S'};
-  if (!code) return 'Unbound';
-  if (map[code]) return map[code];
-  if (/^Mouse\d+$/.test(code)) return code === 'Mouse0' ? 'Left Click' : code === 'Mouse1' ? 'Middle Click' : code === 'Mouse2' ? 'Right Click' : code;
-  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
-  if (/^Digit\d$/.test(code)) return code.slice(5);
-  return code;
-}
 function formatControllerBinding(index){ return typeof index === "number" ? (CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`) : "Unbound"; }
 function formatCompactMoveBinding(value){
   if (controlsBindMode === INPUT_MODE_CONTROLLER){
@@ -1841,7 +1832,6 @@ function formatCompactMoveBinding(value){
   }
   return formatKeyboardBinding(value);
 }
-function mouseButtonToBinding(button){ return `Mouse${Number(button) || 0}`; }
 function isKeyboardActionHeld(action){ const code = keyboardBindings[action]; return !!(code && keys[code]); }
 function getGpButtonPressedByIndex(gp, index){ const btn = gpBtn(gp, index); return (index === 6 || index === 7) ? ((btn.value || 0) > GP_TRIGGER_DEADZONE) : !!btn.pressed; }
 function getGpActionPressed(gp, action){ const index = controllerBindings[action]; return typeof index === 'number' ? getGpButtonPressedByIndex(gp, index) : false; }
