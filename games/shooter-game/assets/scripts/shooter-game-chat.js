@@ -285,7 +285,10 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       }
       if (direction === 'down') {
         if (current === promptTarget) return closeTarget ? focusChatTargetByIndex(targets.findIndex((node) => node === closeTarget)) : focusChatPromptTarget();
-        if (current === closeTarget) return promptTarget ? focusChatTargetByIndex(targets.findIndex((node) => node === promptTarget)) : focusChatPromptTarget();
+        if (current === closeTarget) {
+          if (helpTargets.length) return focusChatTargetByIndex(targets.findIndex((node) => node === helpTargets[0]));
+          return promptTarget ? focusChatTargetByIndex(targets.findIndex((node) => node === promptTarget)) : focusChatPromptTarget();
+        }
         if (current && helpTargets.includes(current)) {
           const helpIndex = helpTargets.indexOf(current);
           if (helpIndex < helpTargets.length - 1) return focusChatTargetByIndex(targets.findIndex((node) => node === helpTargets[helpIndex + 1]));
