@@ -1,4 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bananaman Shooter v1.96</title>
+<style>
+  html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
+  canvas { display:block; }
+  #overlay{
+    position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
+    text-shadow:0 0 6px rgba(0,255,0,0.35);
+   display:none; /* HUD hidden by default (toggle with /) */
+  }
 
+
+  #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  #uiRoot.pauseControlsOpen{ z-index:10001; }
+  #controlsMenu.pauseControlsMode{ display:block; position:relative; z-index:10002; background: rgba(75,0,118,0.88); }
+  #pauseOverlay.pauseControlsVisible #pausePanel{ display:none; }
+  .panel{
+    pointer-events:auto;
+    width:min(520px, 92vw);
+    border:1px solid rgba(0,255,0,0.35);
+    border-radius:14px;
+    background: rgba(0,0,0,0.72);
+    box-shadow: 0 0 28px rgba(0,255,0,0.08);
+    padding: 18px 18px 16px;
+    text-align:center;
+  }
+  .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
+  .subimg{
+    width:120px; height:120px; display:block; margin:0 auto 10px;
+    image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
+  }
+  .titleSubWrap{ display:flex; justify-content:center; margin:-4px 0 10px; }
+  .titleSub{ position:relative; display:inline-block; font-size:13px; opacity:0.82; cursor:default; min-width:220px; }
+  .titleSubDefault, .titleSubHover{ display:block; white-space:nowrap; transition:opacity 120ms ease; }
+  .titleSubHover{ position:absolute; inset:0; opacity:0; pointer-events:none; }
+  .titleSub:hover .titleSubDefault{ opacity:0; }
+  .titleSub:hover .titleSubHover{ opacity:1; }
+  .subimg{
+    width:120px; height:120px; display:block; margin:0 auto 10px;
+    image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
+  }
+  .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  .btnRowTop{ margin-top:12px; }
+  .btnRowBottom{ margin-top:10px; }
+  #btnControls{ min-width:160px; }
+  button{
+    font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    padding:10px 14px; border-radius:12px; cursor:pointer; min-width:160px;
+  }
+  button:hover,
+  body.controller-active button.controllerFocus,
+  body.controller-active .smallBtn.controllerFocus{ background: rgba(0,255,0,0.08); }
+  .smallBtn{ min-width:120px; padding:8px 12px; border-radius:10px; }
+  body.controller-active button.controllerFocus,
+  body.controller-active .smallBtn.controllerFocus{
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+  }
+  body.controller-active .optRow.controllerFocus,
+  body.controller-active .controlsBindRow.controllerFocus{
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+    background: rgba(75,0,118,0.52);
+  }
+  body.controller-active .optRow .controllerFocus,
+  body.controller-active .controlsBindRow .controllerFocus{
+    border-color: rgba(0,255,0,0.95) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.38), 0 0 12px rgba(0,255,0,0.22);
+    outline: none;
+    background-color: rgba(75,0,118,0.45);
+  }
+  body.controller-active #optionsMenu .selectLevelTopButtons .smallBtn.controllerFocus,
+  body.controller-active #optionsMenu .selectLevelBackRow .smallBtn.controllerFocus{
+    border-color: rgba(0,255,0,0.95) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+    outline: none;
+    background-color: rgba(75,0,118,0.45);
+  }
+  body.controller-active input[type="range"].controllerFocus{
+    filter: drop-shadow(0 0 6px rgba(0,255,0,0.45));
+    background-color: transparent;
+  }
+  body.controller-active input[type="range"].controllerFocus::-webkit-slider-runnable-track{
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(75,0,118,0.78);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.55), 0 0 12px rgba(0,255,0,0.22);
+  }
+  body.controller-active input[type="range"].controllerFocus::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #00ff66;
+    border: 2px solid rgba(0,0,0,0.82);
+    margin-top: -5px;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.58), 0 0 16px rgba(0,255,0,0.30);
+  }
+  body.controller-active input[type="range"].controllerFocus::-moz-range-track{
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(75,0,118,0.78);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.55), 0 0 12px rgba(0,255,0,0.22);
+  }
+  body.controller-active input[type="range"].controllerFocus::-moz-range-thumb{
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #00ff66;
+    border: 2px solid rgba(0,0,0,0.82);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.58), 0 0 16px rgba(0,255,0,0.30);
+  }
+  body.controller-active input[type="checkbox"].controllerFocus{
+    outline: 2px solid rgba(0,255,0,0.95);
+    outline-offset: 2px;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0,255,0,0.24);
+    background-color: transparent;
+  }
+  body.controller-active #optionsMenu label:has(input[type="checkbox"].controllerFocus){
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(75,0,118,0.45);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 12px rgba(0,255,0,0.22);
+  }
+  .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:center; margin-top:10px; }
+  .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
+  .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
+  #optionsMenu select,
+  #optionsMenu input[type="range"],
+  #optionsMenu input[type="checkbox"]{ transition: box-shadow 120ms ease, border-color 120ms ease, outline-color 120ms ease, filter 120ms ease, background-color 120ms ease; }
+  #optionsMenu select{ scrollbar-width:none; -ms-overflow-style:none; }
+  #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
+  input[type="range"]{ width:100%; accent-color:#00ff66; }
+  .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
+  #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
+  #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
+  #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:center; width:100%; min-width:0; }
+  #controlsMenu .optRow{ padding:6px 8px; }
+  #controlsMenu .controlsHeaderRow{ border:none; background:transparent; padding:0; }
+  #controlsMenu .controlsHeaderRow .hint{ padding:0 2px; }
+  #controlsMenu .hint{ margin-top:3px; line-height:1.15; font-size:10px; }
+  #controlsMenu .controlsModeTabs{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:6px; margin:0 0 6px; align-items:stretch; width:100%; min-width:0; }
+  #controlsMenu .controlsModeTabs button{ display:flex; align-items:center; justify-content:center; min-width:0; width:100%; max-width:100%; flex:none; box-sizing:border-box; padding:9px 10px; font-size:13px; line-height:1.2; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #controlsMenu .controlsModeTabs button.active{ background: rgba(0,255,102,0.16); border-color: rgba(0,255,102,0.65); }
+  #controlsMenu .controlsBindList{ display:grid; grid-template-columns:minmax(0, 1fr); gap:6px; margin-top:4px; width:100%; min-width:0; }
+  #controlsMenu .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:6px 8px; background: rgba(0,0,0,0.35); }
+  #controlsMenu .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+  #controlsMenu .controlsBindTitle{ font-size:12px; }
+  #controlsMenu .controlsBindHint{ opacity:0.7; font-size:9px; line-height:1.15; }
+  #controlsMenu .controlsBindButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; }
+  #controlsMenu .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
+  #controlsBindStatus{ margin-top:2px; min-height:24px; font-size:10px; }
+  #controlsFixedInfo{ margin-top:3px; line-height:1.15; font-size:10px; }
+
+  @media (max-width: 640px), (max-height: 760px){
+    #controlsMenu.panel{ width:min(520px, 94vw); padding:10px; max-height:none; }
+    #controlsMenu .title{ font-size:17px; }
+    #controlsMenu .controlsGrid{ gap:5px; }
+    #controlsMenu .optRow{ padding:6px 8px; }
+    #controlsMenu .controlsBindList{ gap:5px; }
+    #controlsMenu .controlsBindRow{ padding:6px 8px; gap:5px; }
+    #controlsMenu .controlsBindTitle{ font-size:11px; }
+    #controlsMenu .controlsBindHint{ font-size:8px; }
+    #controlsMenu .controlsBindButton{ min-width:104px; padding:6px 7px; font-size:10px; }
+    #controlsBindStatus,
+    #controlsFixedInfo,
+    #controlsMenu .hint{ font-size:9px; }
+  }
+
+  /* OPTIONS MENU: keep it on-screen, scroll if needed */
+  #optionsMenu.panel{ max-height:88vh; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  #optionsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #optionsMenu .title{ font-size:18px; margin:1px 0 5px; }
+  #optionsMenu .optionsGrid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; align-items:start; }
+  #optionsMenu .optRow.fullRow,
+  #optionsMenu .optRow.checkboxGroup{ grid-column:1 / -1; }
+  #optionsMenu .optRow{ padding:6px 8px; }
+  #optionsMenu .optLabel{ margin-bottom:3px; font-size:12px; }
+  #optionsMenu .hint{ margin-top:3px; line-height:1.15; font-size:10px; }
+  #optionsMenu .selectLevelGrid{ display:block; margin-top:10px; }
+  #optionsMenu .selectLevelTopButtons{ display:flex; gap:10px; margin-top:0; }
+  #optionsMenu .selectLevelTopButtons .smallBtn{ flex:1 1 0; }
+  #optionsMenu .selectLevelBackRow{ margin-top:14px; justify-content:center; }
+  #optionsMenu .checkboxGroup{ display:flex; flex-direction:column; gap:7px; }
+  #optionsMenu .checkOption{ display:flex; flex-direction:column; gap:4px; }
+  #optionsMenu .checkOption label{ display:flex; align-items:center; gap:8px; font-size:12px; opacity:0.95; cursor:pointer; }
+  #optionsMenu .checkOption .hint{ margin-top:0; padding-left:0; }
+
+  @media (max-width: 640px), (max-height: 760px){
+    #optionsMenu.panel{ width:min(520px, 94vw); padding:10px; max-height:none; }
+    #optionsMenu .title{ font-size:17px; }
+    #optionsMenu .optionsGrid{ grid-template-columns:1fr; gap:5px; }
+    #optionsMenu .optRow{ padding:6px 8px; }
+    #optionsMenu .hint{ font-size:9px; }
+  }
+
+  .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
+
+  /* =======================
+     HUD Corner Slots (v1.96)
+  ======================= */
+  .cornerSlot{
+    position:absolute;
+    min-width:120px;
+    height:86px;
+    padding:8px 10px;
+    border:2px solid rgba(0,255,0,0.55);
+    border-radius:12px;
+    background: rgba(0,0,0,0.55);
+    box-shadow: 0 0 18px rgba(0,255,0,0.10);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:4px;
+    pointer-events:none;
+  }
+  .cornerSlot .subtxt{
+    font-family: "Courier New", monospace;
+    font-size:12px;
+    line-height:1;
+    opacity:0.95;
+    color:#0f0;
+    text-align:center;
+  }
+  #livesSlot img{
+    width:40px; height:40px;
+    image-rendering:pixelated;
+    filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
+  }
+
+
+  .livesButton{
+    flex-direction:row;
+    justify-content:center;
+    gap:8px;
+  }
+  .livesLabel{
+    font-family:"Courier New", monospace;
+    font-size:12px;
+    color:#00ff66;
+    opacity:0.95;
+    white-space:nowrap;
+  }
+
+  #deathOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(255,0,0,0.22);
+    pointer-events:auto;
+  }
+  #deathPanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(255,0,0,0.65);
+    border-radius:16px;
+    background: rgba(0,0,0,0.72);
+    padding: 18px 18px 16px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(255,0,0,0.14);
+  }
+  #deathTitle{
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:2px;
+    color:#ff4444;
+    text-shadow: 0 0 10px rgba(255,0,0,0.25);
+  }
+  #btnRestart{
+    margin-top:14px;
+    font-family:"Courier New", monospace;
+    font-size:20px;
+    font-weight:800;
+    color:#ffdddd;
+    background: rgba(0,0,0,0.55);
+    border:2px solid rgba(255,0,0,0.55);
+    padding:10px 18px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  #btnRestart:hover{ background: rgba(255,0,0,0.10); }
+
+  #winOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,255,0,0.22);
+    pointer-events:auto;
+    z-index: 110;
+  }
+
+  #mazeSummaryOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,0.68);
+    pointer-events:auto;
+    z-index: 105;
+  }
+  #mazeSummaryPanel{
+    width:min(560px, 92vw);
+    border:3px solid rgba(255,215,0,0.70);
+    border-radius:18px;
+    background: rgba(0,0,0,0.84);
+    padding: 22px 20px 18px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(255,215,0,0.16);
+  }
+  #mazeSummaryTitle{
+    font-family:"Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-weight:900;
+    font-size:44px;
+    letter-spacing:1px;
+    color:#ffe680;
+    text-shadow:0 0 12px rgba(255,215,0,0.20);
+  }
+  #mazeSummaryStats{
+    margin-top:12px;
+    font-family:monospace;
+    font-size:20px;
+    line-height:1.6;
+    color:#f7ffcf;
+  }
+  #mazeSummaryBonus{
+    margin-top:10px;
+    font-family:monospace;
+    font-weight:900;
+    font-size:28px;
+    color:#ffd400;
+    text-shadow:0 0 10px rgba(255,212,0,0.18);
+  }
+  #btnNextMaze{
+    margin-top:16px;
+    font-family:"Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-size:22px;
+    font-weight:800;
+    color:#fff6d5;
+    background: rgba(60,40,0,0.70);
+    border:2px solid rgba(255,215,0,0.62);
+    padding:10px 18px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  #btnNextMaze:hover{ background: rgba(255,215,0,0.12); }
+  #winPanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(0,255,0,0.75);
+    border-radius:16px;
+    background: rgba(0,0,0,0.82);
+    padding: 20px 18px 18px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(0,255,0,0.18);
+  }
+  #winTitle{
+    font-family: "Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:1px;
+    color:#7dff7d;
+    text-shadow: 0 0 12px rgba(0,255,0,0.28);
+  }
+  #btnContinue{
+    margin-top:14px;
+    font-family:"Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-size:22px;
+    font-weight:800;
+    color:#dfffe2;
+    background: rgba(0,40,0,0.65);
+    border:2px solid rgba(0,255,0,0.60);
+    padding:10px 18px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  #btnContinue:hover{ background: rgba(0,255,0,0.12); }
+
+
+  #pauseOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,0.55);
+    pointer-events:none;
+    z-index: 90;
+  }
+  #pausePanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(0,255,0,0.65);
+    border-radius:16px;
+    background: rgba(0,0,0,0.72);
+    padding: 18px 18px 16px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(0,255,0,0.14);
+  
+  box-sizing: border-box;
+  max-width: min(520px, 92vw);
+  width: min(520px, 92vw);
+
+  position: relative;
+
+  pointer-events: auto;
+}
+  #pauseTitle{
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:2px;
+    color:#00ff66;
+    text-shadow: 0 0 10px rgba(0,255,0,0.25);
+  }
+  #pauseHint{
+    margin-bottom:12px;
+    margin-top:10px;
+    font-family:monospace;
+    font-size:14px;
+    opacity:0.9;
+    color:#b6ffcf;
+  }
+  .pauseMenuBtn{
+    width:100%;
+    max-width:420px;
+    box-sizing:border-box;
+    display:block;
+    margin-left:auto;
+    margin-right:auto;
+    font-family:"Courier New", monospace;
+    font-weight:800;
+    color:#0f0;
+    background: rgba(0,0,0,0.55);
+    border:2px solid rgba(0,255,0,0.55);
+    padding:12px 14px;
+    border-radius:14px;
+    cursor:pointer;
+    pointer-events:auto;
+    transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .pauseMenuBtn + .pauseMenuBtn{ margin-top:10px; }
+  /* Quit to Menu now uses the same stacked spacing as the rest of the pause menu. */
+  body.controller-active #pausePanel .pauseMenuBtn.controllerFocus{
+    background: rgba(75,0,118,0.55) !important;
+    border-color: rgba(0,255,0,0.95) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+  }
+  body.controller-active #pausePanel .pauseMenuBtn.controllerFocus *{ box-shadow:none !important; }
+  #pausePanel .pauseMenuBtn:hover{
+    background: rgba(75,0,118,0.55);
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+  }
+
+
+  /* v1.96: keep HUD off the menu and keep menu clickable */
+  #uiRoot{ z-index: 50; }
+  #deathOverlay{ z-index: 100; }
+  #livesSlot{ display:none; }
+  #powerupSlot{ display:none; }
+
+
+/* Centered wave label (replaces old Stage/Waves HUD) */
+/* Centered wave label (final) */
+#stageHud{
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font: bold 20px monospace;
+  z-index: 50;
+  text-shadow: 0 0 8px rgba(0,0,0,0.65);
+  pointer-events: none;
+}
+
+/* Accuracy score (top-left, 2x wave counter) */
+#accuracyScore{
+  position:absolute;
+  top:10px;
+  left:14px;
+  font-family:monospace;
+  font-weight:900;
+  font-size:20px;
+  color:#ffd400;
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+  white-space:nowrap;
+}
+
+#storeUnlockedHud{
+  position:absolute;
+  top:34px;
+  left:14px;
+  font-family:monospace;
+  font-weight:900;
+  font-size:12px;
+  color:#fff;
+  text-shadow:0 0 8px rgba(0,0,0,0.75);
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+  white-space:nowrap;
+  display:none;
+  animation:storeUnlockedHue 1.1s linear infinite;
+}
+
+@keyframes storeUnlockedHue{
+  0%{filter:hue-rotate(0deg);}
+  100%{filter:hue-rotate(360deg);}
+}
+
+#timerHud{
+  position:absolute;
+  top:10px;
+  right:14px;
+  font-family:monospace;
+  font-weight:800;
+  font-size:18px;
+  color:#ffffff;
+  opacity:0.95;
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+  text-align:center;
+  line-height:1.05;
+  white-space:nowrap;
+}
+.timerHudLabel{
+  display:block;
+  font-size:14px;
+  line-height:1;
+  margin-bottom:2px;
+  text-transform:none;
+}
+
+
+/* =======================
+   Invert Colors Mode
+======================= */
+body.invert-colors {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+  /* Kill browser click-flash / focus indicator artifacts */
+  html, body, canvas, button, select, input, textarea, label, div, iframe {
+    -webkit-tap-highlight-color: transparent;
+  }
+  *:focus,
+  *:focus-visible,
+  *:active{
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  body{
+    caret-color: transparent;
+  }
+
+  /* Keep lime menu highlight scoped to real hover or active controller navigation only */
+  button:hover,
+  .smallBtn:hover{
+    border-color: rgba(0,255,0,0.9) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+  }
+  body:not(.controller-active) .controllerFocus{
+    border-color: inherit !important;
+    box-shadow: none !important;
+  }
+  canvas, .panel, button, select, label, #main-content, #app-shell, #overlay-container, #shooter-game-frame, #tektite-frame{
+    user-select:none;
+    -webkit-user-select:none;
+  }
+
+  /* v1.98: show compact MAX overlay when resource spinner is at 100. */
+  .startStatField.statInfinite{ position:relative; }
+  .startStatField.statInfinite input[type="number"]{ color:transparent; text-shadow:none; }
+  .startStatField.statInfinite::after{ content:"MAX"; position:absolute; left:10px; right:34px; bottom:10px; height:22px; line-height:22px; text-align:center; color:#00ff66; font-family:monospace; font-size:18px; pointer-events:none; }
+  /* v2.02: plain centered resource number boxes. No native or custom arrows. */
+  .startStatField input[type="number"]{ -moz-appearance:textfield; appearance:textfield; padding-right:12px; text-align:center; }
+  .startStatField input[type="number"]::-webkit-outer-spin-button,
+  .startStatField input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; display:none; }
+  .resourceNumberWrap{ position:relative; width:100%; }
+  .resourceNumberWrap input[type="number"]{ width:100%; }
+  .resourceStepperButtons{ display:none !important; }
+  .startStatField.statInfinite::after{ display:none; }
+  .startStatField.statInfinite .resourceNumberWrap::after{ content:"MAX"; position:absolute; left:12px; right:12px; top:50%; transform:translateY(-50%); height:22px; line-height:22px; text-align:center; color:#00ff66; font-family:monospace; font-size:18px; pointer-events:none; }
+</style>
+
+
+<style>
+/* YOU WIN CENTERED BONUS PATCH */
+#levelCompleteOverlay,
+#levelCompleteModal,
+#winOverlay,
+#winModal,
+.completion-stats-modal,
+.win-screen,
+.level-complete-modal {
+  text-align: center !important;
+}
+
+#levelCompleteOverlay *,
+#levelCompleteModal *,
+#winOverlay *,
+#winModal *,
+.completion-stats-modal *,
+.win-screen *,
+.level-complete-modal * {
+  text-align: center !important;
+}
+
+#levelCompleteOverlay .bonus-row,
+#levelCompleteModal .bonus-row,
+#winOverlay .bonus-row,
+#winModal .bonus-row,
+.completion-stats-modal .bonus-row,
+.win-screen .bonus-row,
+.level-complete-modal .bonus-row {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}
+
+#levelCompleteOverlay button,
+#levelCompleteModal button,
+#winOverlay button,
+#winModal button,
+.completion-stats-modal button,
+.win-screen button,
+.level-complete-modal button {
+  margin-top: 28px !important;
+  margin-bottom: 24px !important;
+}
+
+#heartsHud .heartsExtra{
+  display:inline-block;
+  letter-spacing:0;
+  margin-left:2px;
+  vertical-align:middle;
+}
+</style>
+
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="overlay" hidden aria-hidden="true" style="display:none !important;"></div>
+
+<div id="stageHud" style="
+  position:absolute;
+  top:10px;
+  left:10px;
+  font-family:monospace;
+  font-size:14px;
+  color:#00ff66;
+  text-shadow:0 0 6px rgba(0,255,0,0.35);
+  pointer-events:none;
+  z-index:20;
+"></div>
+<div id="accuracyScore">Score: 0pts</div>
+<div id="storeUnlockedHud">Store Unlocked</div>
+<div id="timerHud">0.0s</div>
+
+
+<div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
+  <span class="livesLabel">LIVES:</span>
+<img src="/legacy/games/shooter-game-legacy/bananarama.webp" alt="lives"/>
+  <div id="livesText" class="subtxt">x3</div>
+</div>
+
+<div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
+  <div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
+  <div id="powerupHint" class="subtxt">Press Q</div>
+</div>
+
+<div id="deathOverlay">
+  <div id="deathPanel">
+    <div id="deathTitle">YOU DIED</div>
+    <button id="btnRestart">Restart</button>
+</div>
+</div>
+
+<div id="winOverlay">
+  <div id="winPanel">
+    <div id="winTitle">You Win!</div>
+    <button id="btnContinue">Continue</button>
+  </div>
+</div>
+
+<div id="mazeSummaryOverlay">
+  <div id="mazeSummaryPanel">
+    <div id="mazeSummaryTitle">Maze Clear</div>
+    <div id="mazeSummaryStats">
+      <div id="mazeSummaryCoverage">Coverage: 0 / 0 tiles</div>
+      <div id="mazeSummaryMissed">Unstepped tiles: 0</div>
+    </div>
+    <div id="mazeSummaryBonus">+0 points</div>
+    <button id="btnNextMaze">Next Maze</button>
+  </div>
+</div>
+
+<div id="pauseOverlay">
+  <div id="pausePanel">
+    <div id="pauseTitle">PAUSED</div>
+    <div id="pauseHint">Press ESC to resume</div>
+    <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
+    <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Controls</button>
+    <button id="btnPauseOptions" class="pauseMenuBtn" type="button" style="font-size:18px;">Select Level</button>
+    <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
+
+  </div>
+</div>
+
+
+<div id="uiRoot">
+  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px; display:none;">
+    <div class="title">Tektite's Bananaman Shooter Game</div>
+    <div class="titleSubWrap">
+      <div class="titleSub"><span class="titleSubDefault">(Maze Mode)</span><span class="titleSubHover">(Level 2)</span></div>
+    </div>
+<img class="subimg" src="/legacy/games/shooter-game-legacy/bananarama.webp" alt="bananarama" />
+    <div class="menuBlurb">Navigate the maze, paint the floor, avoid hazards, and reach the glowing exit to advance. This menu is mainly for testing because Level 2 normally boots straight into gameplay.</div>
+    <div class="btnRow btnRowTop">
+      <button id="btnStart">Start Game</button>
+      <button id="btnOptions">Options</button>
+    </div>
+    <div class="btnRow btnRowBottom">
+      <button id="btnControls" class="smallBtn" type="button" aria-live="polite" title="Keyboard / mouse active">Controls ⌨️</button>
+    </div>
+    <div id="assetStatus" class="statusLine" style="display:none;"></div>
+  </div>
+
+  <div id="optionsMenu" class="panel" style="display:none;">
+    <div class="title">SELECT LEVEL</div>
+
+
+    <div class="optionsGrid selectLevelGrid">
+      <div class="selectLevelTopButtons">
+        <button id="btnReturnToLevel1" class="smallBtn" type="button" style="flex:1 1 0; min-height:46px; font-size:16px;">Return to Level 1</button>
+        <button id="btnSkipToLevel3" class="smallBtn" type="button" style="flex:1 1 0; min-height:46px; font-size:16px;">Skip to Level 3</button>
+      </div>
+    </div>
+
+    <div class="btnRow selectLevelBackRow" style="margin-top:14px; justify-content:center;">
+      <button id="btnBack" class="smallBtn" type="button" style="min-width:220px;">Back</button>
+    </div>
+  </div>
+
+  <div id="controlsMenu" class="panel" style="display:none;">
+    <div class="title">CONTROLS</div>
+    <div class="controlsGrid">
+      <div class="optRow controlsHeaderRow">
+        <div class="controlsModeTabs">
+          <button id="controlsModeKeyboard" class="smallBtn active" type="button">Keyboard / Mouse</button>
+          <button id="controlsModeController" class="smallBtn" type="button">Controller</button>
+        </div>
+        <div id="controlsBindStatus" class="hint">Select a control to rebind.</div>
+        <div id="controlsFixedInfo" class="hint">Aim stays on mouse/touch. Stick aim and D-pad navigation stay fixed on controller.</div>
+      </div>
+      <div class="optRow">
+        <div id="controlsBindList" class="controlsBindList"></div>
+      </div>
+    </div>
+    <div class="btnRow" style="margin-top:14px;">
+      <button id="controlsBack" class="smallBtn" type="button">Back</button>
+      <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
+      <button id="controlsApplyBinds" class="smallBtn" type="button">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script>
 /* ======================================================================
   PROJECT CHANGELOG / REMOVAL LOG
 ========================================================================
@@ -83,9 +870,9 @@
 /* =======================
    Paths (EDIT IF NEEDED)
 ======================= */
-const ENEMY_WEBP_BASE = "/games/shooter-game/enemy-webps/";
-const ENEMY_WEBP_INDEX_URL = "/games/shooter-game/enemy-webps.json";
-const PLAYER_IMG_URL = "/games/shooter-game/bananarama.webp";
+const ENEMY_WEBP_BASE = "/legacy/games/shooter-game-legacy/enemy-webps/";
+const ENEMY_WEBP_INDEX_URL = "/legacy/games/shooter-game-legacy/enemy-webps.json";
+const PLAYER_IMG_URL = "/legacy/games/shooter-game-legacy/bananarama.webp";
 const BOSS_IMG_URL = ENEMY_WEBP_BASE + "180px-NO_U_cycle.webp";
 const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
@@ -330,6 +1117,7 @@ const mazeSummaryMissed = document.getElementById("mazeSummaryMissed");
 const mazeSummaryBonus = document.getElementById("mazeSummaryBonus");
 const btnNextMaze = document.getElementById("btnNextMaze");
 const LEVEL_PARAMS = new URLSearchParams(window.location.search);
+const URL_START_WAVE = Math.max(1, Math.min(21, parseInt(LEVEL_PARAMS.get("startWave") || "1", 10) || 1));
 const FORCE_MENU = LEVEL_PARAMS.get("menu") === "1" || LEVEL_PARAMS.get("autostart") === "0";
 const AUTO_START_LEVEL = !FORCE_MENU;
 
@@ -390,7 +1178,7 @@ function requestOpenChat(focusSlash, runCommand){
 
 function requestOpenChatFromPause(){
   try{ setPaused(true); }catch(e){}
-  requestOpenChat(false, "/help");
+  requestOpenChat(false, "");
 }
 function showPauseControlsMenu(){
   if (!controlsMenu || !isPaused) return;
@@ -1871,6 +2659,794 @@ function playSfx(a){
 }
 
 /* =======================
+   UI
+======================= */
+const uiRoot = document.getElementById("uiRoot");
+const startMenu = document.getElementById("startMenu");
+const optionsMenu = document.getElementById("optionsMenu");
+const assetStatus = document.getElementById("assetStatus");
+
+const btnStart = document.getElementById("btnStart");
+const btnOptions = document.getElementById("btnOptions");
+const btnControls = document.getElementById("btnControls");
+const controlsMenu = document.getElementById("controlsMenu");
+const controlsModeKeyboard = document.getElementById("controlsModeKeyboard");
+const controlsModeController = document.getElementById("controlsModeController");
+const controlsBindStatus = document.getElementById("controlsBindStatus");
+const controlsFixedInfo = document.getElementById("controlsFixedInfo");
+const controlsBindList = document.getElementById("controlsBindList");
+const controlsResetBinds = document.getElementById("controlsResetBinds");
+const controlsApplyBinds = document.getElementById("controlsApplyBinds");
+const controlsBack = document.getElementById("controlsBack");
+const btnBack = document.getElementById("btnBack");
+const btnApply = document.getElementById("btnApply");
+
+  // =======================
+  // Level 2 navigation menu
+  // =======================
+  const livesSlider = document.getElementById("livesSlider");
+  const heartsSlider = document.getElementById("heartsSlider");
+  const shieldsSlider = document.getElementById("shieldsSlider");
+  const bombsSlider = document.getElementById("bombsSlider");
+  const speedSlider = document.getElementById("speedSlider");
+  const infiniteToggle = document.getElementById("infiniteToggle");
+  const startWaveSelect = document.getElementById("startWaveSelect");
+const btnReturnToLevel1 = document.getElementById("btnReturnToLevel1");
+const btnSkipToLevel3 = document.getElementById("btnSkipToLevel3");
+  const startWaveLabel = document.getElementById("startWaveLabel");
+
+  const livesVal = document.getElementById("livesVal");
+  const heartsVal = document.getElementById("heartsVal");
+  const shieldsVal = document.getElementById("shieldsVal");
+  const bombsVal = document.getElementById("bombsVal");
+
+  const speedVal = document.getElementById("speedVal");
+  let START_LIVES = 1;
+  let START_HEARTS = 3;
+  let START_SHIELDS = 0;
+  let START_BOMBS = 0;
+  // v1.97: 100 in a resource box means INFINITE for that resource only.
+  let START_LIVES_INFINITE = false;
+  let START_HEARTS_INFINITE = false;
+  let START_SHIELDS_INFINITE = false;
+  let START_BOMBS_INFINITE = false;
+  let START_GAME_SPEED = 5;
+  let GAME_SPEED_MULT = 1.0;
+  GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
+  let INFINITE_MODE = false;
+  
+let START_WAVE = 1;
+
+let INVERT_COLORS = false;
+const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
+
+function applyInvertColors(){
+  document.body.classList.toggle("invert-colors", INVERT_COLORS);
+}
+
+if (invertColorsCheckbox){
+  invertColorsCheckbox.addEventListener("change", () => {
+    INVERT_COLORS = invertColorsCheckbox.checked;
+    applyInvertColors();
+  });
+}
+
+
+  function getStartWaveText(v){
+    const n = parseInt(v, 10) || 1;
+    if (n === 11) return "Bonus Mode";
+    if (n >= 12 && n <= 21) return "Insanity " + (n - 11);
+    return "Wave " + n;
+  }
+
+  function formatResourceOptionValue(inputEl){
+  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
+  const n = parseInt(raw, 10);
+  return raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100 ? "MAX" : String(Number.isFinite(n) ? n : 0);
+}
+
+function parseResourceOption(inputEl, minValue){
+  const raw = String(inputEl && inputEl.value || "").trim().toLowerCase();
+  const n = parseInt(raw, 10);
+  if (raw === "infinite" || raw === "inf" || raw === "∞" || n >= 100) return { value: 100, infinite: true };
+  return { value: Math.max(minValue || 0, Number.isFinite(n) ? n : (minValue || 0)), infinite: false };
+}
+
+function syncStartOptionsLabels(){
+    if (livesVal && livesSlider) livesVal.textContent = formatResourceOptionValue(livesSlider);
+    if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
+    if (shieldsVal && shieldsSlider) shieldsVal.textContent = formatResourceOptionValue(shieldsSlider);
+    if (bombsVal && bombsSlider) bombsVal.textContent = formatResourceOptionValue(bombsSlider);
+    if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
+    if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
+  }
+
+  [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].filter(Boolean).forEach(s => {
+    s.addEventListener("input", syncStartOptionsLabels);
+  });
+  if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
+  if (infiniteToggle) infiniteToggle.addEventListener("change", () => {});
+  syncStartOptionsLabels();
+
+const INPUT_MODE_KEYBOARD = "keyboardMouse";
+const INPUT_MODE_CONTROLLER = "controller";
+const BINDINGS_STORAGE_KEY = "tektiteShooterBindings_v1";
+const DEFAULT_KEYBOARD_BINDINGS = {
+  moveLeft: "KeyA",
+  moveRight: "KeyD",
+  moveUp: "KeyW",
+  moveDown: "KeyS",
+  shoot: "Mouse0",
+  shield: "Mouse2",
+  bomb: "KeyQ",
+  pause: "Escape",
+  commands: "Slash",
+  mute: "KeyM",
+  fullscreen: "KeyF"
+};
+const DEFAULT_CONTROLLER_BINDINGS = {
+  moveUp: 12,
+  moveDown: 13,
+  moveLeft: 14,
+  moveRight: 15,
+  shoot: 7,
+  shield: 4,
+  bomb: 6,
+  pause: 9,
+  commands: 8,
+  menuSelect: 0,
+  menuBack: 1,
+  fullscreen: 11
+};
+const KEYBOARD_BIND_ACTIONS = [
+  { key: "moveLeft", label: "Move Left", hint: "Gameplay movement" },
+  { key: "moveRight", label: "Move Right", hint: "Gameplay movement" },
+  { key: "moveUp", label: "Move Up", hint: "Gameplay movement" },
+  { key: "moveDown", label: "Move Down", hint: "Gameplay movement" },
+  { key: "shoot", label: "Shoot", hint: "Key or mouse button" },
+  { key: "shield", label: "Shield", hint: "Key or mouse button" },
+  { key: "bomb", label: "Bomb", hint: "Gameplay action" },
+  { key: "pause", label: "Pause / Resume", hint: "Gameplay and pause menu" },
+  { key: "commands", label: "Open Commands", hint: "Open slash chat" },
+  { key: "mute", label: "Mute", hint: "Toggle audio" },
+  { key: "fullscreen", label: "Fullscreen", hint: "Whole shooter shell" }
+];
+const CONTROLLER_BIND_ACTIONS = [
+  { key: "moveUp", label: "Move Up", hint: "Gameplay movement" },
+  { key: "moveDown", label: "Move Down", hint: "Gameplay movement" },
+  { key: "moveLeft", label: "Move Left", hint: "Gameplay movement" },
+  { key: "moveRight", label: "Move Right", hint: "Gameplay movement" },
+  { key: "shoot", label: "Shoot", hint: "Gameplay action" },
+  { key: "shield", label: "Shield", hint: "Gameplay action" },
+  { key: "bomb", label: "Bomb", hint: "Gameplay action" },
+  { key: "pause", label: "Pause / Resume", hint: "Gameplay and pause menu" },
+  { key: "commands", label: "Open Commands", hint: "Open slash chat" },
+  { key: "menuSelect", label: "Menu Select", hint: "Menus and command list" },
+  { key: "menuBack", label: "Menu Back / Close Chat", hint: "Menus and pause chat" },
+  { key: "fullscreen", label: "Fullscreen", hint: "Whole shooter shell" }
+];
+const CONTROLLER_BUTTON_LABELS = {
+  0: "A", 1: "B", 2: "X", 3: "Y", 4: "LB", 5: "RB", 6: "LT", 7: "RT",
+  8: "View", 9: "Menu", 10: "LS", 11: "RS", 12: "D-Pad Up", 13: "D-Pad Down", 14: "D-Pad Left", 15: "D-Pad Right"
+};
+let activeInputMode = INPUT_MODE_KEYBOARD;
+let controlsBindMode = INPUT_MODE_KEYBOARD;
+let controlsFocusIndex = 0;
+let bindingEditState = null;
+let controllerRebindReady = false;
+let pauseControlsOpen = false;
+let keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
+let controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
+let draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
+let draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
+
+function loadSavedBindings(){
+  try{
+    const raw = localStorage.getItem(BINDINGS_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.keyboard && typeof parsed.keyboard === 'object') keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS, ...parsed.keyboard };
+    if (parsed && parsed.controller && typeof parsed.controller === 'object') controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS, ...parsed.controller };
+  }catch(_){
+    keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
+    controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
+  }
+}
+function saveBindings(){ try{ localStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
+function resetDraftBindingsFromActive(){
+  draftKeyboardBindings = { ...keyboardBindings };
+  draftControllerBindings = { ...controllerBindings };
+}
+function applyDraftBindings(){
+  keyboardBindings = { ...draftKeyboardBindings };
+  controllerBindings = { ...draftControllerBindings };
+  saveBindings();
+}
+function formatKeyboardBinding(code){
+  const map = {Space:'Space', Escape:'Esc', Slash:'/', ArrowLeft:'Left Arrow', ArrowRight:'Right Arrow', ArrowUp:'Up Arrow', ArrowDown:'Down Arrow', KeyF:'F', KeyM:'M', KeyQ:'Q', KeyA:'A', KeyD:'D', KeyW:'W', KeyS:'S'};
+  if (!code) return 'Unbound';
+  if (map[code]) return map[code];
+  if (/^Mouse\d+$/.test(code)) return code === 'Mouse0' ? 'Left Click' : code === 'Mouse1' ? 'Middle Click' : code === 'Mouse2' ? 'Right Click' : code;
+  if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+  if (/^Digit\d$/.test(code)) return code.slice(5);
+  return code;
+}
+function formatControllerBinding(index){ return typeof index === "number" ? (CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`) : "Unbound"; }
+function mouseButtonToBinding(button){ return `Mouse${Number(button) || 0}`; }
+function isKeyboardActionHeld(action){ const code = keyboardBindings[action]; return !!(code && keys[code]); }
+function getGpButtonPressedByIndex(gp, index){ const btn = gpBtn(gp, index); return (index === 6 || index === 7) ? ((btn.value || 0) > GP_TRIGGER_DEADZONE) : !!btn.pressed; }
+function getGpActionPressed(gp, action){ const index = controllerBindings[action]; return typeof index === 'number' ? getGpButtonPressedByIndex(gp, index) : false; }
+function updateControlsDisplay(){
+  const usingController = activeInputMode === INPUT_MODE_CONTROLLER;
+  if (btnControls){
+    const inputLabel = usingController ? '🎮' : '⌨️';
+    const inputTitle = usingController ? 'Controller active' : 'Keyboard / mouse active';
+    btnControls.textContent = `Controls ${inputLabel}`;
+    btnControls.title = inputTitle;
+    btnControls.setAttribute('aria-label', `Controls. ${inputTitle}`);
+  }
+  if (controlsFixedInfo){
+    controlsFixedInfo.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
+      ? 'Left Stick movement and D-Pad movement can both drive gameplay. View opens chat. Aim stays on Right Stick. Fullscreen is rebindable below too.'
+      : 'Aim stays on Mouse / Touch. Slash opens chat. Bind actions below to keys or mouse buttons, including Fullscreen.';
+  }
+}
+function setActiveInputMode(mode){
+  const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
+  if (activeInputMode === nextMode) return;
+  activeInputMode = nextMode;
+  document.body.classList.toggle('controller-active', activeInputMode === INPUT_MODE_CONTROLLER);
+  updateControlsDisplay();
+}
+function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
+function getCurrentBindingValue(action){ return controlsBindMode === INPUT_MODE_CONTROLLER ? draftControllerBindings[action] : draftKeyboardBindings[action]; }
+function setControlsBindStatus(message){ if (controlsBindStatus) controlsBindStatus.textContent = message; }
+function renderControlsBindingList(){
+  if (!controlsBindList) return;
+  controlsBindList.innerHTML = '';
+  getCurrentBindingDefs().forEach(def => {
+    const row = document.createElement('div');
+    row.className = 'controlsBindRow';
+    const meta = document.createElement('div');
+    meta.className = 'controlsBindMeta';
+    const title = document.createElement('div');
+    title.className = 'controlsBindTitle';
+    title.textContent = def.label;
+    const hint = document.createElement('div');
+    hint.className = 'controlsBindHint';
+    hint.textContent = def.hint;
+    meta.appendChild(title);
+    meta.appendChild(hint);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'controlsBindButton smallBtn';
+    button.dataset.action = def.key;
+    button.dataset.scheme = controlsBindMode;
+    const value = getCurrentBindingValue(def.key);
+    button.textContent = controlsBindMode === INPUT_MODE_CONTROLLER ? formatControllerBinding(value) : formatKeyboardBinding(value);
+    if (bindingEditState && bindingEditState.scheme === controlsBindMode && bindingEditState.action === def.key){
+      button.classList.add('listening');
+      button.textContent = 'Press input...';
+    }
+    button.addEventListener('click', () => startBindingEdit(controlsBindMode, def.key));
+    row.appendChild(meta);
+    row.appendChild(button);
+    controlsBindList.appendChild(row);
+  });
+  fitControlsMenuToViewport();
+}
+function setControlsBindMode(mode){
+  controlsBindMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
+  if (controlsModeKeyboard) controlsModeKeyboard.classList.toggle('active', controlsBindMode === INPUT_MODE_KEYBOARD);
+  if (controlsModeController) controlsModeController.classList.toggle('active', controlsBindMode === INPUT_MODE_CONTROLLER);
+  bindingEditState = null;
+  controllerRebindReady = false;
+  updateControlsDisplay();
+  renderControlsBindingList();
+  fitControlsMenuToViewport();
+}
+function applyBindingValue(scheme, action, value){
+  if (scheme === INPUT_MODE_CONTROLLER) draftControllerBindings[action] = Number(value);
+  else draftKeyboardBindings[action] = String(value);
+  bindingEditState = null;
+  controllerRebindReady = false;
+  updateControlsDisplay();
+  renderControlsBindingList();
+  setControlsBindStatus('Binding updated. Press Apply to save.');
+  fitControlsMenuToViewport();
+}
+function startBindingEdit(scheme, action){
+  controlsBindMode = scheme === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
+  bindingEditState = { scheme: controlsBindMode, action };
+  controllerRebindReady = false;
+  updateControlsDisplay();
+  renderControlsBindingList();
+  setControlsBindStatus(controlsBindMode === INPUT_MODE_CONTROLLER ? 'Press a controller button for the selected action.' : 'Press a key or mouse button for the selected action.');
+  fitControlsMenuToViewport();
+}
+function cancelBindingEdit(message){ bindingEditState = null; controllerRebindReady = false; renderControlsBindingList(); setControlsBindStatus(message || 'Select a control to rebind.'); fitControlsMenuToViewport(); }
+loadSavedBindings();
+resetDraftBindingsFromActive();
+updateControlsDisplay();
+renderControlsBindingList();
+let menuFocusIndex = 0;
+let optionsFocusIndex = 0;
+let pauseFocusIndex = 0;
+let optionsOpenedFromPause = false;
+let gpNavRepeat = { up:0, down:0, left:0, right:0 };
+let gpNavPrevAxis = { horizontal:0, vertical:0 };
+
+function focusControllerElement(el){
+  if (activeInputMode !== INPUT_MODE_CONTROLLER) {
+    clearControllerFocus();
+    return;
+  }
+  if (!el) return;
+  document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
+  el.classList.add('controllerFocus');
+  const optRow = el.closest('.optRow');
+  if (optRow) optRow.classList.add('controllerFocus');
+  const bindRow = el.closest('.controlsBindRow');
+  if (bindRow) bindRow.classList.add('controllerFocus');
+  if (typeof el.focus === 'function') { try{ el.focus({ preventScroll:true }); }catch(_){ try{ el.focus(); }catch(__){} } }
+  if (typeof el.scrollIntoView === 'function') {
+    try{ el.scrollIntoView({ block:'nearest', inline:'nearest' }); }catch(_){ }
+  }
+}
+
+function clearControllerFocus(){
+  document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
+}
+
+if (controlsModeKeyboard) controlsModeKeyboard.addEventListener('click', () => setControlsBindMode(INPUT_MODE_KEYBOARD));
+if (controlsModeController) controlsModeController.addEventListener('click', () => setControlsBindMode(INPUT_MODE_CONTROLLER));
+if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit('Draft reset to defaults. Press Apply to save.'); updateControlsDisplay(); renderControlsBindingList(); });
+if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit('Bindings applied and saved.'); updateControlsDisplay(); renderControlsBindingList(); if (pauseControlsOpen && isPaused) hidePauseControlsMenu(); });
+if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
+
+function getMenuControllerTargets(){
+  return [btnStart, btnOptions, btnControls].filter(Boolean);
+}
+
+function getOptionsControllerTargets(){
+  return [btnReturnToLevel1, btnSkipToLevel3, btnBack].filter(Boolean);
+}
+
+function getControlsControllerTargets(){
+  return [controlsModeKeyboard, controlsModeController, ...Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton')), controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
+}
+
+function getPauseControllerTargets(){
+  return [btnPauseResume, btnPauseOpenChat, btnPauseOptions, btnPauseQuit].filter(Boolean);
+}
+
+function syncMenuControllerFocus(){
+  const items = getMenuControllerTargets();
+  if (!items.length) return;
+  menuFocusIndex = Math.max(0, Math.min(menuFocusIndex, items.length - 1));
+  focusControllerElement(items[menuFocusIndex]);
+}
+
+function syncOptionsControllerFocus(){
+  const items = getOptionsControllerTargets();
+  if (!items.length) return;
+  optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
+  focusControllerElement(items[optionsFocusIndex]);
+}
+
+function syncPauseControllerFocus(){
+  const items = getPauseControllerTargets();
+  if (!items.length) return;
+  pauseFocusIndex = Math.max(0, Math.min(pauseFocusIndex, items.length - 1));
+  focusControllerElement(items[pauseFocusIndex]);
+}
+
+function syncControlsControllerFocus(){
+  const items = getControlsControllerTargets();
+  if (!items.length) return;
+  controlsFocusIndex = Math.max(0, Math.min(controlsFocusIndex, items.length - 1));
+  focusControllerElement(items[controlsFocusIndex]);
+}
+
+function moveMenuControllerFocus(delta){
+  const items = getMenuControllerTargets();
+  if (!items.length) return;
+  menuFocusIndex = (menuFocusIndex + delta + items.length) % items.length;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
+}
+
+function moveOptionsControllerFocus(delta){
+  const items = getOptionsControllerTargets();
+  if (!items.length) return;
+  optionsFocusIndex = (optionsFocusIndex + delta + items.length) % items.length;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
+}
+
+function movePauseControllerFocus(delta){
+  const items = getPauseControllerTargets();
+  if (!items.length) return;
+  pauseFocusIndex = (pauseFocusIndex + delta + items.length) % items.length;
+  syncPauseControllerFocus();
+}
+
+function moveControlsControllerFocus(delta){
+  const items = getControlsControllerTargets();
+  if (!items.length) return;
+  controlsFocusIndex = (controlsFocusIndex + delta + items.length) % items.length;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
+  else clearControllerFocus();
+  fitControlsMenuToViewport();
+}
+
+function cycleSelect(selectEl, delta){
+  if (!selectEl || !selectEl.options || !selectEl.options.length) return false;
+  const current = Math.max(0, selectEl.selectedIndex);
+  const next = Math.max(0, Math.min(selectEl.options.length - 1, current + delta));
+  if (next === current) return false;
+  selectEl.selectedIndex = next;
+  selectEl.dispatchEvent(new Event('change', { bubbles:true }));
+  return true;
+}
+
+function stepRange(rangeEl, delta){
+  if (!rangeEl) return false;
+  const step = parseFloat(rangeEl.step || '1') || 1;
+  const min = parseFloat(rangeEl.min || '0');
+  const max = parseFloat(rangeEl.max || '100');
+  const current = parseFloat(rangeEl.value || '0');
+  const next = Math.max(min, Math.min(max, current + (step * delta)));
+  if (next === current) return false;
+  rangeEl.value = String(next);
+  rangeEl.dispatchEvent(new Event('input', { bubbles:true }));
+  rangeEl.dispatchEvent(new Event('change', { bubbles:true }));
+  return true;
+}
+
+function openControllerSelect(selectEl){
+  if (!selectEl || selectEl.tagName !== 'SELECT') return false;
+  focusControllerElement(selectEl);
+  const forceTopOpen = selectEl.id === 'startWaveSelect';
+  const previousIndex = selectEl.selectedIndex;
+  if (forceTopOpen){
+    try{ selectEl.scrollTop = 0; }catch(_){ }
+    try{ selectEl.selectedIndex = 0; }catch(_){ }
+  }
+  let opened = false;
+  try{ if (typeof selectEl.showPicker === 'function'){ selectEl.showPicker(); opened = true; } }catch(_){}
+  if (!opened){
+    try{ selectEl.dispatchEvent(new MouseEvent('mousedown', { bubbles:true, cancelable:true, view:window })); opened = true; }catch(_){}
+  }
+  if (!opened){
+    try{ selectEl.dispatchEvent(new KeyboardEvent('keydown', { key:'ArrowDown', code:'ArrowDown', keyCode:40, which:40, altKey:true, bubbles:true })); opened = true; }catch(_){}
+  }
+  if (forceTopOpen){
+    const restoreSelection = () => {
+      try{ selectEl.scrollTop = 0; }catch(_){ }
+      try{ selectEl.selectedIndex = previousIndex; }catch(_){ }
+    };
+    setTimeout(restoreSelection, 0);
+    setTimeout(restoreSelection, 120);
+  }
+  return opened;
+}
+
+function activateControllerTarget(el){
+  if (!el) return;
+  if (el.dataset && el.dataset.action && el.dataset.scheme){
+    startBindingEdit(el.dataset.scheme, el.dataset.action);
+    return;
+  }
+  if (el === btnControls){
+    showControlsMenu();
+    return;
+  }
+  if (el.tagName === 'SELECT'){
+    openControllerSelect(el);
+    return;
+  }
+  if (el.type === 'checkbox'){
+    el.checked = !el.checked;
+    el.dispatchEvent(new Event('change', { bubbles:true }));
+    focusControllerElement(el);
+    return;
+  }
+  if (typeof el.click === 'function') el.click();
+}
+
+function adjustControllerOption(delta){
+  const items = getOptionsControllerTargets();
+  const el = items[optionsFocusIndex];
+  if (!el) return false;
+  if (el.tagName === 'SELECT') return cycleSelect(el, delta);
+  if (el.type === 'range') return stepRange(el, delta);
+  if (el.type === 'checkbox'){
+    el.checked = delta > 0;
+    el.dispatchEvent(new Event('change', { bubbles:true }));
+    focusControllerElement(el);
+    return true;
+  }
+  return false;
+}
+function showMenu(){
+  setPaused(false);
+  deathYellPlayed = false;
+  gameState = STATE.MENU;
+  gameWon = false;
+  mouseShieldHolding = false;
+  stopShield(false);
+
+  deathOverlay.style.display = "none";
+  if (winOverlay) winOverlay.style.display = "none";
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  mazeSummaryActive = false;
+  mazePendingNextWave = null;
+  livesSlot.style.display = "none";
+  powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "none";
+  { const heartsHud = document.getElementById("heartsHud"); if (heartsHud) heartsHud.style.display = "none"; }
+
+  startMenu.style.display = "block";
+  optionsMenu.style.display = "none";
+  if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
+  pauseControlsOpen = false;
+  if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
+  uiRoot.classList.remove("pauseControlsOpen");
+  uiRoot.style.display = "flex";
+  menuFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
+}
+
+function showWinOverlay(){
+  gameWon = true;
+  gameState = STATE.WIN;
+  if (winOverlay) winOverlay.style.display = "flex";
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  if (pauseOverlay) pauseOverlay.style.display = "none";
+  livesSlot.style.display = "none";
+  powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "none";
+  { const heartsHud = document.getElementById("heartsHud"); if (heartsHud) heartsHud.style.display = "none"; }
+  // keep music playing through the win/score screen
+}
+
+function restartRun(){
+  setPaused(false);
+  // Restart music immediately when restarting a run.
+  ensureMusicPlaying(true);
+  // v1.96: Hard reset from GAME OVER screen (full reset to beginning)
+  deathOverlay.style.display = "none";
+  bomb = null;
+  ufo = null;
+  powerupSlot.style.display = "none";
+  startGame();
+}
+function showControlsMenu(){
+  if (!controlsMenu || startMenu.style.display === "none") return;
+  setPaused(false);
+  pauseControlsOpen = false;
+  if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
+  uiRoot.classList.remove("pauseControlsOpen");
+  gameState = STATE.CONTROLS;
+  resetDraftBindingsFromActive();
+  startMenu.style.display = "none";
+  optionsMenu.style.display = "none";
+  controlsMenu.style.display = "block";
+  controlsMenu.classList.remove("pauseControlsMode");
+  uiRoot.style.display = "flex";
+  updateControlsDisplay();
+  renderControlsBindingList();
+  setControlsBindStatus('Select a control to rebind.');
+  fitControlsMenuToViewport();
+  controlsFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
+  else clearControllerFocus();
+}
+function hideControlsMenu(){
+  if (!controlsMenu) return;
+  resetDraftBindingsFromActive();
+  controlsMenu.style.display = "none";
+  controlsMenu.classList.remove("pauseControlsMode");
+  cancelBindingEdit('Select a control to rebind.');
+  if (pauseControlsOpen && isPaused){
+    hidePauseControlsMenu();
+    return;
+  }
+  showMenu();
+}
+
+function isPauseSelectLevelOpen(){
+  return !!(typeof optionsOpenedFromPause !== "undefined" && optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+}
+
+function showOptions(fromPause = false){
+  optionsOpenedFromPause = !!fromPause;
+  if (!fromPause) {
+    setPaused(false);
+    gameState = STATE.OPTIONS;
+  }
+
+  mouseShieldHolding = false;
+  stopShield(false);
+
+  livesSlot.style.display = "none";
+  powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "none";
+
+  startMenu.style.display = "none";
+  if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
+  pauseControlsOpen = false;
+  if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
+  uiRoot.classList.remove("pauseControlsOpen");
+  if (pauseOverlay) pauseOverlay.style.display = "none";
+  optionsMenu.style.display = "block";
+  uiRoot.style.display = "flex";
+  fitOptionsMenuToViewport();
+  optionsFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
+}
+function startGame(){
+  START_WAVE = Math.max(1, Math.min(21, START_WAVE || URL_START_WAVE || 1));
+  setPaused(false);
+  unlockAudioOnce();
+  // Start looping music exactly when the game starts.
+  ensureMusicPlaying(true);
+  gameState = STATE.PLAYING;
+  uiRoot.style.display = "none";
+  if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
+  pauseControlsOpen = false;
+  if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
+  uiRoot.classList.remove("pauseControlsOpen");
+  deathOverlay.style.display = "none";
+  if (winOverlay) winOverlay.style.display = "none";
+
+  // v1.96: show HUD only in-game
+  livesSlot.style.display = "flex";
+  powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "block";
+
+
+  // v1.96.x: Reset run timer at the start of each game
+  runTimer = 0;
+  updateTimerHUD();
+  score = 0;
+  frogKills = 0;
+  shotsFired = 0;
+  hitsConnected = 0;
+  damageDealt = 0;
+  // v1.96: Apply starting settings from OPTIONS menu
+  infiniteModeActive = !!INFINITE_MODE;
+  livesInfiniteActive = !!START_LIVES_INFINITE || !!INFINITE_MODE;
+  heartsInfiniteActive = !!START_HEARTS_INFINITE || !!INFINITE_MODE;
+  shieldsInfiniteActive = !!START_SHIELDS_INFINITE || !!INFINITE_MODE;
+  bombsInfiniteActive = !!START_BOMBS_INFINITE || !!INFINITE_MODE;
+
+  lives = livesInfiniteActive ? 100 : Math.max(0, parseInt(START_LIVES, 10) || 0);
+  livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
+
+  MAX_HEARTS = heartsInfiniteActive ? 100 : Math.max(1, parseInt(START_HEARTS, 10) || 4);
+  HIT_DAMAGE = 1 / MAX_HEARTS;
+
+  health = 1.0;
+
+  // Spawn player fixed in the center for maze traversal
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+
+  shieldPips = shieldsInfiniteActive ? 100 : Math.max(0, parseInt(START_SHIELDS, 10) || 0);
+
+  bombsCount = bombsInfiniteActive ? 100 : Math.max(0, parseInt(START_BOMBS, 10) || 0);
+  _syncBombHud();
+
+  health = 1.0;
+
+  // Spawn player fixed in the center for maze traversal
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+  bonusArmor = 0;
+  bonusArmorBrokenT = 0;
+  isDead = false;
+  deathTimer = 0;
+  deathGameOver = false;
+  deathYellPlayed = false;
+  deathParticles.length = 0;
+
+  wave = START_WAVE;
+  showWaveBanner(wave);
+bullets.length = 0;
+  enemyBullets.length = 0;
+  fireCooldown = 0;
+  bomb = null;
+  ufo = null;
+
+  resetFormation();
+  updateHearts();
+spawnEnemies();
+  trySpawnUFO();
+
+  clearControllerFocus();
+  window.focus();
+}
+
+if (AUTO_START_LEVEL){
+  window.addEventListener("load", () => {
+    requestAnimationFrame(() => startGame());
+  }, { once: true });
+}
+
+btnStart.addEventListener("click", startGame);
+btnOptions.addEventListener("click", () => showOptions(false));
+if (btnPauseOptions) btnPauseOptions.addEventListener("click", () => showOptions(true));
+if (btnControls) btnControls.addEventListener("click", showControlsMenu);
+btnBack.addEventListener("click", () => {
+  if (optionsOpenedFromPause && isPaused){
+    optionsMenu.style.display = "none";
+    uiRoot.style.display = "none";
+    if (pauseOverlay) pauseOverlay.style.display = "flex";
+    optionsOpenedFromPause = false;
+    gameState = STATE.PLAYING;
+    pauseFocusIndex = 2;
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
+    else clearControllerFocus();
+    return;
+  }
+  optionsOpenedFromPause = false;
+  showMenu();
+});
+if (controlsBack) controlsBack.addEventListener("click", hideControlsMenu);
+
+btnRestart.addEventListener("click", () => {
+  restartRun();
+});
+
+if (btnContinue){
+  btnContinue.addEventListener("click", () => {
+    // Hook this up later. For now it simply closes the overlay.
+    if (winOverlay) winOverlay.style.display = "none";
+  });
+}
+
+if (btnNextMaze){
+  btnNextMaze.addEventListener("click", () => {
+    advanceToNextMaze();
+  });
+}
+
+if (btnReturnToLevel1){
+  btnReturnToLevel1.addEventListener("click", () => {
+    if (window.parent && window.parent !== window){
+      try{
+        window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");
+        return;
+      }catch(err){
+        console.warn("Failed to notify parent iframe host about level transition.", err);
+      }
+    }
+
+window.location.href = "/legacy/games/shooter-game-legacy/levels/shooter-game-level1.html?reload=" + Date.now();
+  });
+}
+
+if (btnSkipToLevel3){
+  btnSkipToLevel3.addEventListener("click", () => {
+    const msg = "Level 3 is not built yet.";
+    setAssetStatus(msg);
+    const statusEl = document.getElementById("controlsBindStatus");
+    if (statusEl) statusEl.textContent = msg;
+  });
+}
+
+
+function setAssetStatus(msg){
+  if (!assetStatus) return;
+  assetStatus.textContent = msg || "";
+  assetStatus.style.display = msg ? "block" : "none";
+}
+
+/* =======================
    Player (v1.96 bigger)
 ======================= */
 // Keep the player GIF alive as an attached DOM image so canvas draws the current animated frame.
@@ -1970,6 +3546,293 @@ function updatePlayerGhosts(dt){
 const keys = {};
 let fireCooldown = 0;
 /* =======================
+   Gamepad (Xbox Controller) Support (v1.96)
+   - Uses the standard Gamepad API (works in modern Chromium/Firefox).
+   - Mappings (Xbox layout):
+     * Move: Left Stick X / D-Pad Left-Right
+     * Aim:  Right Stick (360°)
+     * Shoot: RT (hold) or A (hold)
+     * Bomb:  X (press) or RB (press)
+     * Shield: LB (hold) or LT (hold)
+     * Pause: START (press)
+     * HUD toggle: BACK/VIEW (press)
+     * Fullscreen: Right Stick Click (press)
+     * Menus:
+        - Main Menu: A = Start, Y = Options
+        - Options: A = Apply, B = Back
+        - Death Screen: A = Restart
+======================= */
+let gpIndex = 0;
+let gpPrev = null; // previous button pressed states
+let gpMoveX = 0;
+let gpMoveY = 0;
+let gpAimX = 0;
+let gpAimY = 0;
+let gpFireHeld = false;
+let gpShieldHeld = false;
+let gpSpeedBoostHeld = false;
+let gpHasAnyInput = false;
+let gpIsConnected = false;
+
+const GP_DEADZONE = 0.18;
+const GP_AIM_DEADZONE = 0.22;
+const GP_TRIGGER_DEADZONE = 0.35;
+
+function gpDead(v, dz){ return (Math.abs(v) < dz) ? 0 : v; }
+
+function getGamepad(){
+  const pads = (navigator.getGamepads && navigator.getGamepads()) ? navigator.getGamepads() : [];
+  if (!pads || !pads.length) return null;
+  // Prefer last known index, otherwise first non-null.
+  if (pads[gpIndex]) return pads[gpIndex];
+  for (let i = 0; i < pads.length; i++){
+    if (pads[i]){ gpIndex = i; return pads[i]; }
+  }
+  return null;
+}
+
+function gpBtn(gp, i){
+  if (!gp || !gp.buttons || !gp.buttons[i]) return { pressed:false, value:0 };
+  const b = gp.buttons[i];
+  return { pressed: !!b.pressed, value: (typeof b.value === "number" ? b.value : (b.pressed ? 1 : 0)) };
+}
+
+function gpEdge(i, nowPressed){
+  // true on rising edge
+  const was = gpPrev ? !!gpPrev[i] : false;
+  return (!!nowPressed && !was);
+}
+
+function consumeMenuAxis(direction, active, dt){
+  const repeatKey = direction;
+  if (!active){
+    gpNavRepeat[repeatKey] = 0;
+    return false;
+  }
+  if (gpNavRepeat[repeatKey] <= 0){
+    gpNavRepeat[repeatKey] = GP_MENU_REPEAT_DELAY;
+    return true;
+  }
+  gpNavRepeat[repeatKey] -= dt;
+  if (gpNavRepeat[repeatKey] <= 0){
+    gpNavRepeat[repeatKey] = GP_MENU_REPEAT_RATE;
+    return true;
+  }
+  return false;
+}
+
+function postChatControllerAction(action){
+  try{
+    if (window.parent && window.parent !== window){
+      window.parent.postMessage({ type: "tektite:chat-control", action }, "*");
+    }
+  }catch(e){}
+}
+
+function pollGamepad(dt){
+  const gp = getGamepad();
+  gpIsConnected = !!gp;
+  gpHasAnyInput = false;
+
+  gpMoveX = 0;
+  gpMoveY = 0;
+  gpAimX = 0;
+  gpAimY = 0;
+  gpFireHeld = false;
+  gpShieldHeld = false;
+  gpSpeedBoostHeld = false;
+
+  if (!gp){
+    gpPrev = null;
+    gpNavRepeat.up = gpNavRepeat.down = gpNavRepeat.left = gpNavRepeat.right = 0;
+    gpNavPrevAxis.horizontal = 0;
+    gpNavPrevAxis.vertical = 0;
+    return;
+  }
+
+  if (!gpPrev || gpPrev.length !== gp.buttons.length){
+    gpPrev = new Array(gp.buttons.length).fill(false);
+  }
+
+  const ax0 = gp.axes && gp.axes.length > 0 ? gp.axes[0] : 0;
+  const ax1 = gp.axes && gp.axes.length > 1 ? gp.axes[1] : 0;
+  const ax2 = gp.axes && gp.axes.length > 2 ? gp.axes[2] : 0;
+  const ax3 = gp.axes && gp.axes.length > 3 ? gp.axes[3] : 0;
+
+  const lx = gpDead(ax0, GP_DEADZONE);
+  const ly = gpDead(ax1, GP_DEADZONE);
+  const rx = gpDead(ax2, GP_AIM_DEADZONE);
+  const ry = gpDead(ax3, GP_AIM_DEADZONE);
+
+  const dUp = getGpActionPressed(gp, 'moveUp');
+  const dDown = getGpActionPressed(gp, 'moveDown');
+  const dLeft = getGpActionPressed(gp, 'moveLeft');
+  const dRight = getGpActionPressed(gp, 'moveRight');
+
+  gpMoveX = Math.max(-1, Math.min(1, lx + (dLeft ? -1 : 0) + (dRight ? 1 : 0)));
+  gpMoveY = Math.max(-1, Math.min(1, ly + (dUp ? -1 : 0) + (dDown ? 1 : 0)));
+  gpAimX = rx;
+  gpAimY = ry;
+
+  const lt = gpBtn(gp, 6).value;
+  const rt = gpBtn(gp, 7).value;
+  const a = gpBtn(gp, 0).pressed;
+  const b = gpBtn(gp, 1).pressed;
+  const x = gpBtn(gp, 2).pressed;
+  const y = gpBtn(gp, 3).pressed;
+  const lb = gpBtn(gp, 4).pressed;
+  const rb = gpBtn(gp, 5).pressed;
+  const back = gpBtn(gp, 8).pressed;
+  const start = gpBtn(gp, 9).pressed;
+  const lStick = gpBtn(gp, 10).pressed;
+  const rStick = gpBtn(gp, 11).pressed;
+
+  gpFireHeld = getGpActionPressed(gp, 'shoot');
+  gpShieldHeld = getGpActionPressed(gp, 'shield');
+  gpSpeedBoostHeld = lStick;
+
+  if (Math.abs(lx) > 0.01 || Math.abs(ly) > 0.01 || Math.abs(rx) > 0.01 || Math.abs(ry) > 0.01 || lt > 0.05 || rt > 0.05 || dUp || dDown || dLeft || dRight || a || b || x || y || lb || rb || back || start || lStick || rStick){
+    gpHasAnyInput = true;
+    setActiveInputMode(INPUT_MODE_CONTROLLER);
+  }
+
+  const pressPause = gpEdge(controllerBindings.pause, getGpActionPressed(gp, 'pause'));
+  const pressCommands = gpEdge(controllerBindings.commands, getGpActionPressed(gp, 'commands'));
+  const pressMenuBack = gpEdge(controllerBindings.menuBack, getGpActionPressed(gp, 'menuBack'));
+  const pressMenuSelect = gpEdge(controllerBindings.menuSelect, getGpActionPressed(gp, 'menuSelect'));
+  const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
+  const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
+  const pressMuteHud = false;
+  const pressY = gpEdge(3, y);
+
+  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
+    unlockAudioOnce();
+  }
+
+  const navUp = consumeMenuAxis('up', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt);
+  const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
+  const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
+  const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
+
+  if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
+    const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
+    if (!controllerRebindReady){
+      if (!anyPressedNow) controllerRebindReady = true;
+    } else {
+      for (let idx = 0; idx < gp.buttons.length && idx <= 15; idx++){
+        if (getGpButtonPressedByIndex(gp, idx)){
+          applyBindingValue(INPUT_MODE_CONTROLLER, bindingEditState.action, idx);
+          break;
+        }
+      }
+    }
+  } else {
+    if (pressFullscreen){
+      toggleFullscreen();
+    }
+    if (pressCommands){
+      requestOpenChat(false);
+    }
+    if (isPaused && parentChatVisible){
+      if (navUp) postChatControllerAction('cycleUp');
+      if (navDown) postChatControllerAction('cycleDown');
+      if (navLeft) postChatControllerAction('cycleLeft');
+      if (navRight) postChatControllerAction('cycleRight');
+      if (pressMenuSelect) postChatControllerAction('execute');
+      if (pressMenuBack){
+        postChatControllerAction('close');
+        togglePause();
+      }
+    } else if (isPauseSelectLevelOpen()){
+      if (navUp) moveOptionsControllerFocus(-1);
+      if (navDown) moveOptionsControllerFocus(1);
+      if (navLeft) moveOptionsControllerFocus(-1);
+      if (navRight) moveOptionsControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
+      if (pressMenuBack) activateControllerTarget(btnBack);
+      if (pressPause) activateControllerTarget(btnBack);
+    } else if (isPaused && gameState !== STATE.OPTIONS){
+      if (pauseControlsOpen){
+        if (navUp || navLeft) moveControlsControllerFocus(-1);
+        if (navDown || navRight) moveControlsControllerFocus(1);
+        if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
+        if (pressMenuBack){
+          if (bindingEditState) cancelBindingEdit('Binding cancelled.');
+          else hidePauseControlsMenu();
+        }
+        if (pressPause) togglePause();
+      } else {
+        if (navUp || navLeft) movePauseControllerFocus(-1);
+        if (navDown || navRight) movePauseControllerFocus(1);
+        if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
+        if (pressMenuBack) togglePause();
+        if (pressPause) togglePause();
+      }
+    } else if (gameState === STATE.MENU){
+      if (navLeft){
+        if (menuFocusIndex === 1) menuFocusIndex = 0;
+        else if (menuFocusIndex === 2) menuFocusIndex = 0;
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
+      }
+      if (navRight){
+        if (menuFocusIndex === 0) menuFocusIndex = 1;
+        else if (menuFocusIndex === 2) menuFocusIndex = 1;
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
+      }
+      if (navDown){
+        if (menuFocusIndex === 0 || menuFocusIndex === 1) menuFocusIndex = 2;
+        else menuFocusIndex = 0;
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
+      }
+      if (navUp){
+        if (menuFocusIndex === 2) menuFocusIndex = 0;
+        else menuFocusIndex = 2;
+        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
+      }
+      if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
+      if (pressMenuBack && bindingEditState) cancelBindingEdit('Binding cancelled.');
+      if (pressY) showOptions();
+    } else if (gameState === STATE.OPTIONS){
+      // Level 2 Select Level can be opened while paused. Keep controller focus on
+      // the visible Select Level buttons, not the hidden pause menu buttons.
+      if (navUp) moveOptionsControllerFocus(-1);
+      if (navDown) moveOptionsControllerFocus(1);
+      if (navLeft) moveOptionsControllerFocus(-1);
+      if (navRight) moveOptionsControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
+      if (pressMenuBack) activateControllerTarget(btnBack);
+    } else if (gameState === STATE.CONTROLS){
+      if (navUp || navLeft) moveControlsControllerFocus(-1);
+      if (navDown || navRight) moveControlsControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
+      if (pressMenuBack){
+        if (bindingEditState) cancelBindingEdit('Binding cancelled.');
+        else hideControlsMenu();
+      }
+    } else if (deathOverlay && deathOverlay.style.display === "flex"){
+      if (pressMenuSelect) restartRun();
+    } else if (gameState === STATE.PLAYING){
+      if (pressPause) togglePause();
+      if (pressBomb) dropBomb();
+    }
+  }
+
+  for (let i = 0; i < gp.buttons.length; i++){
+    gpPrev[i] = !!(gp.buttons[i] && gp.buttons[i].pressed);
+  }
+}
+
+window.addEventListener("gamepadconnected", (e) => {
+  try{
+    gpIndex = e.gamepad && typeof e.gamepad.index === "number" ? e.gamepad.index : gpIndex;
+  }catch(_){}
+});
+
+/* =======================
    Aim (v1.96: 360° aim)
    - Mouse / touch sets an aim point.
    - We smooth the aim angle so the triangle feels less twitchy.
@@ -1996,26 +3859,11 @@ function setAimFromClient(clientX, clientY){
    Enemy Images from enemy-webps.json
 ======================= */
 let enemyImages = [];
-let bossEnemyImg = null;
 let assetsReady = false;
 
 const FALLBACK_URLS = [
   BOSS_IMG_URL
 ];
-
-// Keep GIFs alive as real DOM images, then draw those same animated elements onto canvas.
-// Some browsers get weirdly "first-frame only" with unattached Image() objects, because apparently joy is optional.
-const enemyWebpRack = (() => {
-  let rack = document.getElementById("enemyWebpAnimationRack");
-  if (!rack){
-    rack = document.createElement("div");
-    rack.id = "enemyWebpAnimationRack";
-    rack.setAttribute("aria-hidden", "true");
-    rack.style.cssText = "position:fixed;left:-99999px;top:-99999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;";
-    document.body.appendChild(rack);
-  }
-  return rack;
-})();
 
 function preloadImages(urls){
   return new Promise((resolve) => {
@@ -2024,32 +3872,13 @@ function preloadImages(urls){
     if (!urls.length) resolve(imgs);
 
     urls.forEach((url) => {
-      const img = document.createElement("img");
-      img.decoding = "async";
-      img.loading = "eager";
-      img.alt = "";
-      img.style.cssText = "width:1px;height:1px;position:absolute;left:-99999px;top:-99999px;";
+      const img = new Image();
       img.onload = () => { done++; if (done === urls.length) resolve(imgs); };
       img.onerror = () => { done++; if (done === urls.length) resolve(imgs); };
       img.src = url;
-      enemyWebpRack.appendChild(img);
       imgs.push(img);
     });
   });
-}
-
-function getBossEnemyImg(){
-  if (bossEnemyImg && bossEnemyImg.naturalWidth > 0) return bossEnemyImg;
-  bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.webp")) || null;
-  if (bossEnemyImg) return bossEnemyImg;
-  bossEnemyImg = document.createElement("img");
-  bossEnemyImg.decoding = "async";
-  bossEnemyImg.loading = "eager";
-  bossEnemyImg.alt = "";
-  bossEnemyImg.style.cssText = "width:1px;height:1px;position:absolute;left:-99999px;top:-99999px;";
-  bossEnemyImg.src = BOSS_IMG_URL;
-  enemyWebpRack.appendChild(bossEnemyImg);
-  return bossEnemyImg;
 }
 
 async function loadEnemyImagesFromEnemyWebpsJson(){
@@ -2071,7 +3900,6 @@ async function loadEnemyImagesFromEnemyWebpsJson(){
     if (!imgs.length) throw new Error("All enemy images failed to load");
 
     enemyImages = imgs;
-    bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.webp")) || null;
     assetsReady = true;
     setAssetStatus("");
   }catch(err){
@@ -2079,7 +3907,6 @@ async function loadEnemyImagesFromEnemyWebpsJson(){
     setAssetStatus("Enemy WebPs failed to load. Using fallback enemy image.");
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
-    bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.webp")) || null;
     assetsReady = true;
   }
 }
@@ -2629,7 +4456,8 @@ function spawnBossWave11(additive=false){
     : Math.max(baseSize * 2.0, 65);   // smaller recurring boss
   firstBossSpawned = true;
 
-  const bossImg = getBossEnemyImg();
+  const bossImg = new Image();
+  bossImg.src = BOSS_IMG_URL;
 
   // Shared HP for core + orbiters (requested).
   const BOSS_HP = isFirstBoss
@@ -2954,6 +4782,106 @@ function damagePlayer(){
 }
 
 /* =======================
+   Input
+======================= */
+
+// Prevent right-click context menu so holding RMB can be used for shield.
+window.addEventListener("contextmenu", (e) => {
+  if (e.target === canvas) e.preventDefault();
+}, { passive:false });
+
+
+function requestHostFullscreen(action="toggle"){
+  if (window.parent && window.parent !== window){
+    try{
+      window.parent.postMessage({ type: "tektite:fullscreen", action }, "*");
+      return true;
+    }catch(e){}
+  }
+  return false;
+}
+
+function toggleFullscreen(){
+  if (requestHostFullscreen("toggle")) return;
+  const elem = document.documentElement;
+  if (!document.fullscreenElement){
+    if (elem.requestFullscreen) elem.requestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+  }
+}
+
+window.addEventListener("keydown", (e) => {
+  unlockAudioOnce();
+  if (bindingEditState && bindingEditState.scheme === INPUT_MODE_KEYBOARD){
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveInputMode(INPUT_MODE_KEYBOARD);
+    applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, e.code || e.key);
+    return;
+  }
+  if (e.code === "Space") e.preventDefault();
+  const target = e.target;
+  const typingIntoField = target && ((target.tagName === "INPUT") || (target.tagName === "TEXTAREA") || target.isContentEditable);
+  if (e.code === "Tab" && !typingIntoField){ triggerGlitchSpiral(); e.preventDefault(); }
+  const k = e.key.toLowerCase();
+  const code = e.code || e.key;
+  setActiveInputMode(INPUT_MODE_KEYBOARD);
+  keys[k] = true;
+  keys[code] = true;
+  if (!typingIntoField && code === keyboardBindings.commands){ e.preventDefault(); requestOpenChat(true); return; }
+  if (code === keyboardBindings.mute){ audioMuted = !audioMuted; applyMuteState(); if (!audioMuted) ensureMusicPlaying(); }
+  if (code === keyboardBindings.shoot && gameState === STATE.PLAYING) shoot();
+  if (code === keyboardBindings.fullscreen) toggleFullscreen();
+  if (code === keyboardBindings.bomb && gameState === STATE.PLAYING) dropBomb();
+  if (code === keyboardBindings.pause) togglePause();
+}, { passive:false });
+
+window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; keys[e.code || e.key] = false; });
+window.addEventListener("mousedown", (e) => {
+  if (!(bindingEditState && bindingEditState.scheme === INPUT_MODE_KEYBOARD)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  setActiveInputMode(INPUT_MODE_KEYBOARD);
+  applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, mouseButtonToBinding(e.button));
+}, true);
+
+canvas.addEventListener("pointermove", (e) => {
+  setActiveInputMode(INPUT_MODE_KEYBOARD);
+  // v1.96: aim follows pointer (mouse or touch)
+  setAimFromClient(e.clientX, e.clientY);
+});
+
+canvas.addEventListener("pointerdown", (e) => {
+  unlockAudioOnce();
+  // v1.96: clicking also aims and shoots
+  setAimFromClient(e.clientX, e.clientY);
+
+  // v1.96: RIGHT CLICK hold = shield
+  // Note: pointer events use button 2 for right mouse.
+  if (e.button === 2){
+    e.preventDefault();
+    mouseShieldHolding = true;
+    if (canActivateShield()) startShield();
+    return;
+  }
+
+  if (e.button === 0) mouseFireHolding = true; // v1.96: hold LMB to keep firing
+
+  if (gameState === STATE.PLAYING) shoot();
+});
+
+canvas.addEventListener("pointerup", (e) => {
+  if (keyboardBindings.shoot === mouseButtonToBinding(e.button)) mouseFireHolding = false;
+  // Release RMB shield
+  if (e.button === 2){
+    mouseShieldHolding = false;
+    // v1.96: Releasing it just deactivates; cooldown only happens if it BREAKS.
+    if (shieldActive) stopShield(false);
+  }
+});
+
+/* =======================
    Update + Draw
 ======================= */
 function update(dt){
@@ -3060,8 +4988,10 @@ function update(dt){
   const sprintHeld = !!keys["shift"] || !!gpSpeedBoostHeld;
   const moveSpeedMul = (sprintHeld ? 1.75 : 1.0);
   let moveY = 0;
-  if (keys["w"] || keys["arrowup"]) moveY -= 1;
-  if (keys["s"] || keys["arrowdown"]) moveY += 1;
+  if (isKeyboardActionHeld("moveUp") || keys["arrowup"]) moveY -= 1;
+  if (isKeyboardActionHeld("moveDown") || keys["arrowdown"]) moveY += 1;
+  moveY += gpMoveY || 0;
+  moveY = Math.max(-1, Math.min(1, moveY));
   const moveLen = Math.hypot(moveX, moveY) || 1;
 
   updatePlayerGhosts(dt);
@@ -3926,3 +5856,42 @@ draw();
   requestAnimationFrame(loop);
 }
 
+/* =======================
+   Boot
+======================= */
+player.x = canvas.width / 2;
+player.y = canvas.height / 2;
+
+// v1.96: default aim straight up until the player moves the pointer
+aimX = player.x;
+aimY = player.y - 200;
+aimAngle = -Math.PI/2;
+aimAngleSmoothed = -Math.PI/2;
+
+resetStarfield();
+resize(); // also resets starfield + anchors player
+startMenu.style.display = "none";
+optionsMenu.style.display = "none";
+uiRoot.style.display = "none";
+powerupSlot.style.display = "none";
+startGame();
+
+requestAnimationFrame(loop);
+</script>
+
+<div id="heartsHud" style="
+position:fixed;
+bottom:12px;
+left:50%;
+transform:translateX(-50%);
+font-size:28px;
+letter-spacing:6px;
+pointer-events:none;
+z-index:9999;
+display:none;
+white-space:nowrap;
+line-height:1;
+">❤️ ❤️ ❤️ ❤️</div>
+</body>
+
+</html>

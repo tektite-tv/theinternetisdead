@@ -1,7 +1,7 @@
     const tektiteFrame = document.getElementById('tektite-frame');
     const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
-    const LEVEL1_SRC = '/games/shooter-game/levels/shooter-game-level1.html';
-    const LEVEL2_SRC = '/games/shooter-game/levels/shooter-game-level2.html?autostart=1&startWave=1';
+    const LEVEL1_SRC = '/legacy/games/shooter-game-legacy/levels/shooter-game-level1.html';
+    const LEVEL2_SRC = '/legacy/games/shooter-game-legacy/levels/shooter-game-level2.html?autostart=1&startWave=1';
 
     function buildLevel2Src() {
       return `${LEVEL2_SRC}&reload=${Date.now()}`;

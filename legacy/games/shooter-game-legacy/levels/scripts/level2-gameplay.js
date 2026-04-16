@@ -4,6 +4,13 @@
 ========================================================================
 [REMOVAL LOG]
 
+- 2026-04-03 | v2.00
+  Changed: Core loop converted from bottom-row shooter into center-locked procedural maze traversal.
+  Kept: Player movement, aiming, shooting, bullet logic, timer, lives, health, and enemy damage systems.
+  Disabled: Regular enemy wave spawning for now while maze progression is prototyped.
+  Renamed: Bonus Mode -> Bonus Mode.
+
+
 - 2025-12-24 | v1.96
   Added: Pause commands /fullscreen (toggle fullscreen) and /help (lists commands alphabetically).
 
@@ -67,8 +74,8 @@
   Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
 
 - 2025-12-19 | v1.96
-  Changed: Bomb-killing a dragon.gif enemy no longer grants free armor.
-  Changed: Frog kills no longer heal the player or award free lives.
+  Added: Bomb-killing a dragon.gif enemy grants a one-time +25% "armor" pip next to the hearts HUD.
+  Behavior: The armor absorbs the next hit (any damage) and then flips to ❌ briefly.
 
 ====================================================================== */
 
@@ -76,9 +83,9 @@
 /* =======================
    Paths (EDIT IF NEEDED)
 ======================= */
-const ENEMY_WEBP_BASE = "/games/shooter-game/enemy-webps/";
-const ENEMY_WEBP_INDEX_URL = "/games/shooter-game/enemy-webps.json";
-const PLAYER_IMG_URL = "/games/shooter-game/bananarama.webp";
+const ENEMY_WEBP_BASE = "/legacy/games/shooter-game-legacy/enemy-webps/";
+const ENEMY_WEBP_INDEX_URL = "/legacy/games/shooter-game-legacy/enemy-webps.json";
+const PLAYER_IMG_URL = "/legacy/games/shooter-game-legacy/bananarama.webp";
 const BOSS_IMG_URL = ENEMY_WEBP_BASE + "180px-NO_U_cycle.webp";
 const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
@@ -88,14 +95,14 @@ const AUDIO_OOF = "/media/audio/oof.mp3";
 /* =======================
    Audio
 ======================= */
-const AUDIO_BG_MUSIC = "/media/audio/spaceinvaders.mp3";
+const AUDIO_BG_MUSIC = "/media/audio/do-that-there.mp3";
 const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
 musicBg.loop = true;
 musicBg.preload = "auto";
-musicBg.volume = 0.6;
+musicBg.volume = 0.5;
 
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
@@ -149,7 +156,7 @@ function ensureMusicPlaying(restart=false){
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
-    tryPlayWithRetry(musicBg, 30, 80);
+    musicBg.play().catch(()=>{});
   }catch(e){}
 }
 
@@ -217,7 +224,7 @@ const fxCtx = fxCanvas.getContext("2d");
 // v1.96: allow disabling post-processing via /video_fx
 let VIDEO_FX_ENABLED = false;
 
-// Screen-glitch spiral burst
+// v1.96: "Tab" key screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
 const GLITCH_SPIRAL_DUR = 2.8;
 function triggerGlitchSpiral(){
@@ -317,6 +324,14 @@ const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 const winOverlay = document.getElementById("winOverlay");
 const btnContinue = document.getElementById("btnContinue");
+const mazeSummaryOverlay = document.getElementById("mazeSummaryOverlay");
+const mazeSummaryCoverage = document.getElementById("mazeSummaryCoverage");
+const mazeSummaryMissed = document.getElementById("mazeSummaryMissed");
+const mazeSummaryBonus = document.getElementById("mazeSummaryBonus");
+const btnNextMaze = document.getElementById("btnNextMaze");
+const LEVEL_PARAMS = new URLSearchParams(window.location.search);
+const FORCE_MENU = LEVEL_PARAMS.get("menu") === "1" || LEVEL_PARAMS.get("autostart") === "0";
+const AUTO_START_LEVEL = !FORCE_MENU;
 
 let hudVisible = false;
 
@@ -342,9 +357,16 @@ let isPaused = false;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
   btnPauseQuit.addEventListener("click", () => {
-    // Unpause and return to start menu
+    // Unpause and return to the parent shell's reloaded level 1 when embedded.
     setPaused(false);
     stopMusic();
+    if (window.parent && window.parent !== window){
+      try {
+        window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");
+        return;
+      } catch (e) {}
+    }
+    // Fallback for standalone use.
     showMenu();
   });
 }
@@ -408,7 +430,7 @@ if (btnPauseOpenChat){
   });
 }
 
-// Temporary glitch spiral post effect (triggered by Tab)
+// v1.96: temporary "glitch spiral" post effect (triggered by Tab key)
 // Uses the existing fxCanvas as a scratch buffer.
 // strength: 0..1 (1 = strongest)
 function applyGlitchSpiral(strength){
@@ -724,18 +746,18 @@ function cycleBgChoice(dir){
 
 function execPauseCommand(cmd){
   const raw = String(cmd||"").trim();
-  if (!raw) return { ok:false, message:"No command provided" };
+  if (!raw) return;
 
   // v1.96: /help -> list commands alphabetically inside the pause panel
   if (raw === "/help"){
     showHelp();
-    return { ok:true, message:"/help executed" };
+    return;
   }
 
   // v1.96: /fullscreen -> toggle browser fullscreen
   if (raw === "/fullscreen"){
     toggleFullscreen();
-    return { ok:true, message:"/fullscreen executed" };
+    return;
   }
 
   // /video_fx -> toggle chromatic aberration + hue drift
@@ -789,33 +811,39 @@ function execPauseCommand(cmd){
     return { ok:false, message:"Usage: /bombs [0-99|100|MAX]" };
   }
 
+
+
   // /invert -> toggle invert colors mode (same as Options menu)
   if (raw === "/invert"){
     document.body.classList.toggle("invert-colors");
-    return { ok:true, message:"/invert executed" };
+    return;
   }
 
   if (raw.startsWith(BG_CMD)){
     const arg = raw.slice(BG_CMD.length).trim();
 
+    // v1.96: allow named colors OR any valid hex code (#RGB, #RRGGBB, #RRGGBBAA), with or without leading "#"
     if (!arg){
       starfieldBgOverride = null;
-      return { ok:true, message:"/background_color reset" };
+      return;
     }
 
     const hexMatch = arg.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
     if (hexMatch){
       starfieldBgOverride = "#" + hexMatch[1];
-      return { ok:true, message:`/background_color ${starfieldBgOverride}` };
+      return;
     }
 
+    // fall back to letting the browser try to interpret it as a CSS color name/value
     starfieldBgOverride = arg;
-    return { ok:true, message:`/background_color ${arg}` };
+    return;
   }
 
+  // future commands go here
   try{ console.log("[PAUSE CMD]", raw); }catch(e){}
-  return { ok:false, message:`${raw.split(/\s+/)[0]} is not a known command` };
 }
+
+
 
 window.addEventListener("message", (event) => {
   const data = event.data;
@@ -919,6 +947,7 @@ if (pauseCmdSuggest){
 
 function togglePause(){
   if (gameState !== STATE.PLAYING) return;
+  if (mazeSummaryActive) return;
   if (isDead) return; // don't pause during death freeze/respawn
   if (deathOverlay && deathOverlay.style.display === "flex") return; // don't pause on GAME OVER
   setPaused(!isPaused);
@@ -989,22 +1018,20 @@ let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
-let bombDragonKills = 0;
-let bombFrogKills = 0;
 // v1.96: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
 const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
 let lives = 0; // extra lives (decremented when health hits 0)
-let frogKills = 0; // legacy counter kept for reset compatibility; frog kills no longer award free lives
+let frogKills = 0; // counts frog kills; every 3 frogs awards +1 life
 let health = 1.0; // 0..1 (4 hits -> 0)
-let MAX_HEARTS = 3; // v1.96: configurable hearts per life
+let MAX_HEARTS = 4; // v1.96: configurable hearts per life
 let HIT_DAMAGE = 0.25; // 25% per hit (4 hearts = one life)
 
 // =======================
 // Dragon Bomb-Kill Armor (v1.96)
-// - Dragon bomb kills are tracked for the win screen, but no longer grant free armor.
+// - If a dragon.gif enemy is killed by the BOMB blast, grant a one-time +25% armor.
 // - Armor absorbs the next hit, then turns into an ❌ briefly next to the hearts HUD.
 // =======================
 let bonusArmor = 0;              // 0 or 0.25
@@ -1045,9 +1072,9 @@ let waveBanner = { text:"", t:0, color:"#00ff66" };
 function getWaveLabel(n){
   // Wave label rules:
   // - Waves 1-10: "Wave N"
-  // - Wave 11: "Boss Mode" (red)
+  // - Wave 11: "Bonus Mode" (red)
   // - Waves 12-21: "INSANITY WAVE: K" where K = n-11
-  if (n === 11) return { text:"Boss Mode", color:"#ff3333" };
+  if (n === 11) return { text:"Bonus Mode", color:"#7dff7d" };
   if (n >= 12 && n <= 21) return { text:"INSANITY WAVE: " + (n - 11), color:"#ffffff" };
   return { text:"Wave " + n, color:"#ffffff" };
 }
@@ -1194,16 +1221,22 @@ function enemyKill(e, source){
   // One-time kill side effects.
   if (!e._killAwarded){
     e._killAwarded = true;
-    if (source === "bomb" && isDragonEnemy(e)){
-      bombDragonKills += 1;
-    }
+    if (source === "bomb" && isDragonEnemy(e)) grantBonusArmor();
 
-    if (source === "bomb" && e.isFrog){
-      bombFrogKills += 1;
-    }
+    if (e.isFrog){
+      healPlayer(0.50);
 
-    // Frog kills no longer heal the player or award free lives.
-    awardScore(10);
+      // Extra life system: every 3 frog kills, award +1 life.
+      frogKills += 1;
+      if (frogKills % 3 === 0){
+        lives += 1;
+        livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
+        // Optional tiny feedback burst (kept simple and non-breaking).
+        if (typeof spawnFloatingText === 'function') spawnFloatingText(e.x, e.y - 18, "+1 LIFE", 0.85);
+        if (typeof playSfx === 'function') playSfx(sfxHit);
+      }
+    }
+awardScore(10);
     playSfx(sfxHit);
   }
 }
@@ -1243,26 +1276,71 @@ function shouldForceUFOForWave(w){
   return (w === 21);
 }
 
+function getRandomMazeUfoSpawnWorld(){
+  if (maze){
+    const walkable = getMazeWalkableCells();
+    if (walkable && walkable.length){
+      const farEnough = walkable.filter(cell => {
+        const wx = (cell.x + 0.5) * maze.cellSize;
+        const wy = (cell.y + 0.5) * maze.cellSize;
+        return Math.hypot(wx - playerWorldX, wy - playerWorldY) >= maze.cellSize * 2.2;
+      });
+      const pool = farEnough.length ? farEnough : walkable;
+      const cell = pool[Math.floor(Math.random() * pool.length)];
+      return {
+        x: (cell.x + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18),
+        y: (cell.y + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18)
+      };
+    }
+  }
+  return { x: playerWorldX + rand(-220, 220), y: playerWorldY + rand(-220, 220) };
+}
+
+function canUfoSeePlayer(worldX, worldY){
+  if (!maze) return true;
+  const dx = playerWorldX - worldX;
+  const dy = playerWorldY - worldY;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= 0.0001) return true;
+  const step = Math.max(10, maze.cellSize * 0.18);
+  const steps = Math.max(1, Math.ceil(dist / step));
+  for (let i = 1; i <= steps; i++){
+    const t = i / steps;
+    const sx = worldX + dx * t;
+    const sy = worldY + dy * t;
+    if (isWallAtWorld(sx, sy)) return false;
+  }
+  return true;
+}
+
 function trySpawnUFO(force=false){
   if (ufo) return; // only one at a time
   // v1.96: Force-spawn on wave 11 and 21 (or when explicitly forced).
   if (!force && !shouldForceUFOForWave(wave) && Math.random() > 0.25) return;
 
-  // Spawn near top area, tiny and fast.
+  const spawn = getRandomMazeUfoSpawnWorld();
+  const startAngle = rand(0, Math.PI * 2);
+  const startSpeed = rand(38, 72);
+
   ufo = {
-    x: rand(30, canvas.width - 30),
-    y: rand(40, 110),
-    vx: rand(-420, 420) / 60, // px/frame-ish
-    vy: rand(260, 520) / 60,
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    worldX: spawn.x,
+    worldY: spawn.y,
+    vx: Math.cos(startAngle) * startSpeed,
+    vy: Math.sin(startAngle) * startSpeed,
+    desiredVx: Math.cos(startAngle) * startSpeed,
+    desiredVy: Math.sin(startAngle) * startSpeed,
+    roamAngle: rand(0, Math.PI * 2),
+    roamTurnTimer: rand(0.35, 1.1),
+    seenPlayerLag: 0,
+    seesPlayer: false,
     r: 10,
     hits: 0,
     stage: 0, // 0 none, 1 red, 2 green, 3 blue
     fade: 0,
     strobeT: 0
   };
-
-  // Ensure it's actually moving.
-  if (Math.abs(ufo.vx) < 2) ufo.vx = (ufo.vx < 0 ? -2.5 : 2.5);
 }
 
 function ufoColorForStage(stage){
@@ -1278,6 +1356,10 @@ function updateUFO(dt){
   // If fading, just fade out and then grant powerup.
   if (ufo.fade > 0){
     ufo.fade += dt;
+    const camX = playerWorldX - canvas.width / 2;
+    const camY = playerWorldY - canvas.height / 2;
+    ufo.x = ufo.worldX - camX;
+    ufo.y = ufo.worldY - camY;
     if (ufo.fade >= 0.55){
       ufo = null;
       bombsCount += 1;
@@ -1286,30 +1368,86 @@ function updateUFO(dt){
     return;
   }
 
-  // Move + bounce around the top half.
-  ufo.x += ufo.vx;
-  ufo.y += ufo.vy;
-
-  const left = 16, right = canvas.width - 16, top = 30, bottom = canvas.height * 0.48;
-  if (ufo.x < left){ ufo.x = left; ufo.vx *= -1; }
-  if (ufo.x > right){ ufo.x = right; ufo.vx *= -1; }
-  if (ufo.y < top){ ufo.y = top; ufo.vy *= -1; }
-  if (ufo.y > bottom){ ufo.y = bottom; ufo.vy *= -1; }
-
-  // "Avoid the player's movement toward it": if player is moving toward UFO, add a shove away.
-  const movingLeft  = isKeyboardActionHeld("moveLeft");
-  const movingRight = isKeyboardActionHeld("moveRight");
-  const toward =
-    (movingLeft  && player.x > ufo.x) ||
-    (movingRight && player.x < ufo.x);
-
-  if (toward){
-    const away = Math.sign(ufo.x - player.x) || (Math.random() < 0.5 ? -1 : 1);
-    ufo.vx += away * (0.65 + 0.35 * FUNK);
-    // clamp
-    ufo.vx = Math.max(-9.5, Math.min(9.5, ufo.vx));
+  if (!maze){
+    ufo.x += ufo.vx * dt;
+    ufo.y += ufo.vy * dt;
+    ufo.strobeT += dt;
+    return;
   }
 
+  const radius = Math.max(10, ufo.r + 4);
+  const seesPlayer = canUfoSeePlayer(ufo.worldX, ufo.worldY);
+  ufo.seesPlayer = seesPlayer;
+
+  ufo.roamTurnTimer -= dt;
+  if (ufo.roamTurnTimer <= 0){
+    ufo.roamTurnTimer = rand(0.45, 1.35);
+    ufo.roamAngle += rand(-1.25, 1.25);
+  }
+
+  const roamSpeed = 54;
+  let targetVx = Math.cos(ufo.roamAngle) * roamSpeed;
+  let targetVy = Math.sin(ufo.roamAngle) * roamSpeed;
+
+  if (seesPlayer){
+    ufo.seenPlayerLag = Math.min(0.22, ufo.seenPlayerLag + dt);
+  } else {
+    ufo.seenPlayerLag = Math.max(0, ufo.seenPlayerLag - dt * 1.6);
+  }
+
+  if (ufo.seenPlayerLag >= 0.14){
+    const awayX = ufo.worldX - playerWorldX;
+    const awayY = ufo.worldY - playerWorldY;
+    const awayD = Math.hypot(awayX, awayY) || 0.0001;
+    const fleeSpeed = 78;
+    targetVx = (awayX / awayD) * fleeSpeed;
+    targetVy = (awayY / awayD) * fleeSpeed;
+  }
+
+  ufo.desiredVx += (targetVx - ufo.desiredVx) * Math.min(1, dt * 2.2);
+  ufo.desiredVy += (targetVy - ufo.desiredVy) * Math.min(1, dt * 2.2);
+  ufo.vx += (ufo.desiredVx - ufo.vx) * Math.min(1, dt * 4.6);
+  ufo.vy += (ufo.desiredVy - ufo.vy) * Math.min(1, dt * 4.6);
+
+  const maxSpeed = seesPlayer ? 88 : 72;
+  const speed = Math.hypot(ufo.vx, ufo.vy) || 0.0001;
+  if (speed > maxSpeed){
+    ufo.vx = (ufo.vx / speed) * maxSpeed;
+    ufo.vy = (ufo.vy / speed) * maxSpeed;
+  }
+
+  let bouncedX = false;
+  let bouncedY = false;
+  const nextX = ufo.worldX + ufo.vx * dt;
+  const nextY = ufo.worldY + ufo.vy * dt;
+
+  if (canOccupyWorld(nextX, ufo.worldY, radius)){
+    ufo.worldX = nextX;
+  } else {
+    bouncedX = true;
+    ufo.vx *= -0.72;
+    ufo.desiredVx *= -0.58;
+    ufo.roamAngle = Math.atan2(ufo.desiredVy || ufo.vy || 0, ufo.desiredVx || ufo.vx || 1) + rand(-0.75, 0.75);
+  }
+
+  if (canOccupyWorld(ufo.worldX, nextY, radius)){
+    ufo.worldY = nextY;
+  } else {
+    bouncedY = true;
+    ufo.vy *= -0.72;
+    ufo.desiredVy *= -0.58;
+    ufo.roamAngle = Math.atan2(ufo.desiredVy || ufo.vy || 1, ufo.desiredVx || ufo.vx || 0) + rand(-0.75, 0.75);
+  }
+
+  if (bouncedX || bouncedY){
+    ufo.worldX += ufo.vx * dt * 0.35;
+    ufo.worldY += ufo.vy * dt * 0.35;
+  }
+
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+  ufo.x = ufo.worldX - camX;
+  ufo.y = ufo.worldY - camY;
   ufo.strobeT += dt;
 }
 
@@ -1558,7 +1696,7 @@ function updateStarfield(dt, keys, playerSpeed){
     vxIntent = 0.15 * Math.sin(time * 0.6);
   }
 
-  const targetVx = vxIntent * playerSpeed * 55;
+  const targetVx = 0; // maze mode: starfield no longer reacts to player movement
   playerVxSmoothed += (targetVx - playerVxSmoothed) * Math.min(1, dt * 8);
 
   for (let li = 0; li < starLayers.length; li++){
@@ -1580,22 +1718,17 @@ function updateStarfield(dt, keys, playerSpeed){
 }
 
 function drawStarfield(){
-  // v1.96: Stage 2+ visual shift (wave >= 11)
-  const isStage2Plus = (gameState === STATE.PLAYING && wave >= 11);
-
-  // Background
-  ctx.fillStyle = (starfieldBgOverride ? starfieldBgOverride : (isStage2Plus ? "#300" : "#000"));
+  // v2.01: Maze mode uses a plain black void instead of the old starfield.
+  ctx.fillStyle = '#000';
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
+  if (gameState === STATE.PLAYING) return;
   if (!starfieldReady) return;
 
   for (let li = 0; li < starLayers.length; li++){
     const arr = stars[li];
-    const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
-
-    // v1.96: Keep stars white for maximum contrast (even in Stage 2+)
+    const alpha = li === 0 ? 0.20 : (li === 1 ? 0.32 : 0.48);
     ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-
     for (const st of arr){
       ctx.fillRect(st.x, st.y, st.s, st.s);
     }
@@ -1686,10 +1819,9 @@ function getHeartsTopInCanvas(){
 }
 
 function getPlayerAlignedY(gapPx = 6){
+  if (gameState === STATE.PLAYING) return canvas.height / 2;
   const heartsTop = getHeartsTopInCanvas();
-  // player.y is CENTER-based, so subtract half-height.
   let y = heartsTop - (player.h / 2) - gapPx;
-  // Clamp to canvas bounds
   y = Math.max(player.h/2, Math.min(canvas.height - player.h/2, y));
   return y;
 }
@@ -1705,7 +1837,6 @@ sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
 
 let audioUnlocked = false;
-let pendingWaveStartMusic = false;
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -1721,18 +1852,14 @@ function unlockAudioOnce(){
 
   // Prime music/death audio once the browser allows it.
   try{
-    // Prime the background music once the browser allows it.
-    musicBg.muted = true;
-    musicBg.play().then(()=>{ musicBg.pause(); musicBg.currentTime = 0; musicBg.muted = false; }).catch(()=>{ musicBg.muted = false; });
-
     // Prime the death yell audio once the browser allows it.
     sfxDeath.muted = true;
     sfxDeath.play().then(()=>{ sfxDeath.pause(); sfxDeath.currentTime = 0; sfxDeath.muted = false; }).catch(()=>{ sfxDeath.muted = false; });
   }catch(e){}
 
   applyMuteState();
+  ensureMusicPlaying();
 }
-
 function playSfx(a){
   if (audioMuted) return;
   try{
@@ -1765,91 +1892,6 @@ const playerImg = (() => {
   return img;
 })();
 
-// Animated GIF sprites are rendered as real DOM <img> elements positioned over the canvas.
-// drawImage() can freeze animated GIFs on a single frame in Chromium, because naturally the browser chose drama.
-const USE_DOM_ANIMATED_GIF_SPRITES = true;
-const animatedGifSpriteLayer = (() => {
-  let layer = document.getElementById("animatedGifSpriteLayer");
-  if (!layer){
-    layer = document.createElement("div");
-    layer.id = "animatedGifSpriteLayer";
-    layer.setAttribute("aria-hidden", "true");
-    layer.style.cssText = [
-      "position:fixed",
-      "left:0",
-      "top:0",
-      "width:100vw",
-      "height:100vh",
-      "pointer-events:none",
-      "overflow:hidden",
-      "z-index:12"
-    ].join(";");
-    const attach = () => { if (!layer.parentNode && document.body) document.body.appendChild(layer); };
-    if (document.body) attach();
-    else document.addEventListener("DOMContentLoaded", attach, { once:true });
-  }
-  return layer;
-})();
-
-const animatedGifSpriteMap = new WeakMap();
-const animatedGifSprites = new Set();
-let animatedGifSpritesActiveThisFrame = new Set();
-
-function beginAnimatedGifSpriteFrame(){
-  animatedGifSpritesActiveThisFrame = new Set();
-}
-
-function getAnimatedGifSprite(owner, img, className){
-  if (!owner || !img || !img.src || !USE_DOM_ANIMATED_GIF_SPRITES) return null;
-  let sprite = animatedGifSpriteMap.get(owner);
-  if (!sprite){
-    sprite = document.createElement("img");
-    sprite.decoding = "async";
-    sprite.loading = "eager";
-    sprite.alt = "";
-    sprite.className = "animated-gif-sprite " + (className || "");
-    sprite.draggable = false;
-    sprite.style.cssText = [
-      "position:fixed",
-      "left:0",
-      "top:0",
-      "pointer-events:none",
-      "user-select:none",
-      "image-rendering:auto",
-      "transform-origin:center center",
-      "will-change:transform,width,height,opacity,filter"
-    ].join(";");
-    animatedGifSpriteMap.set(owner, sprite);
-    animatedGifSprites.add(sprite);
-    animatedGifSpriteLayer.appendChild(sprite);
-  }
-  if (sprite.src !== img.src) sprite.src = img.src;
-  return sprite;
-}
-
-function syncAnimatedGifSprite(owner, img, x, y, w, h, opts = {}){
-  const sprite = getAnimatedGifSprite(owner, img, opts.className);
-  if (!sprite) return false;
-  const alpha = Number.isFinite(opts.alpha) ? Math.max(0, Math.min(1, opts.alpha)) : 1;
-  const hidden = !!opts.hidden || alpha <= 0;
-  sprite.style.display = hidden ? "none" : "block";
-  if (!hidden){
-    sprite.style.width = Math.max(1, w) + "px";
-    sprite.style.height = Math.max(1, h) + "px";
-    sprite.style.opacity = String(alpha);
-    sprite.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
-    sprite.style.filter = opts.hitFlash ? "brightness(1.7) sepia(1) saturate(5) hue-rotate(300deg)" : "none";
-  }
-  animatedGifSpritesActiveThisFrame.add(sprite);
-  return true;
-}
-
-function endAnimatedGifSpriteFrame(){
-  for (const sprite of animatedGifSprites){
-    if (!animatedGifSpritesActiveThisFrame.has(sprite)) sprite.style.display = "none";
-  }
-}
-
 // v1.96 sizing + anchoring
 const PLAYER_SIZE = 72;                 // was 48
 const PLAYER_BOTTOM_MARGIN = 100;
@@ -1864,6 +1906,66 @@ const player = {
   speed: 6,
   invuln: 0
 };
+
+// v2.04: faux-2.5D turn animation state
+let playerFacing = -1; // -1 = facing left/default, 1 = facing right
+let playerTurnT = 1;   // 0..1 progress through the current turn
+const PLAYER_TURN_DUR = 0.16;
+
+// v2.06: full-direction ghost trail. Up/down trail now works, and diagonal movement bends/warps.
+const playerGhosts = [];
+let playerGhostSpawnT = 0;
+const PLAYER_GHOST_MAX = 2;
+const PLAYER_GHOST_SPAWN_EVERY = 0.072;
+const PLAYER_GHOST_TTL = 0.18;
+
+function spawnPlayerGhost(moveVX, moveVY){
+  const mag = Math.hypot(moveVX || 0, moveVY || 0);
+  if (mag < 0.08) return;
+
+  const nx = moveVX / mag;
+  const ny = moveVY / mag;
+  const diagonal = Math.abs(nx) > 0.2 && Math.abs(ny) > 0.2;
+  const behindDist = rand(player.w * 0.62, player.w * 1.02);
+  const sideWarp = diagonal ? rand(-player.w * 0.14, player.w * 0.14) : rand(-player.w * 0.04, player.w * 0.04);
+  const bend = diagonal ? rand(-0.55, 0.55) : 0;
+
+  playerGhosts.push({
+    xOff: (-nx * behindDist) + (-ny * sideWarp),
+    yOff: (-ny * behindDist) + ( nx * sideWarp),
+    vxPull: nx,
+    vyPull: ny,
+    bend,
+    bendAmp: diagonal ? rand(player.w * 0.05, player.w * 0.11) : rand(player.w * 0.01, player.w * 0.03),
+    ttl: PLAYER_GHOST_TTL,
+    life: PLAYER_GHOST_TTL,
+    scaleY: diagonal ? rand(0.94, 1.06) : rand(0.97, 1.03),
+    widthScale: diagonal ? rand(0.82, 0.96) : rand(0.88, 0.97)
+  });
+  while (playerGhosts.length > PLAYER_GHOST_MAX) playerGhosts.shift();
+}
+
+function updatePlayerGhosts(dt){
+  for (let i = playerGhosts.length - 1; i >= 0; i--){
+    const g = playerGhosts[i];
+    g.life -= dt;
+    const t = Math.max(0, g.life / g.ttl);
+    const pull = Math.min(1, dt * 8.0);
+    const bendPhase = (1 - t) * Math.PI;
+    const perpX = -g.vyPull;
+    const perpY =  g.vxPull;
+    const warp = Math.sin(bendPhase) * g.bendAmp * g.bend;
+
+    g.xOff += (0 - g.xOff) * pull;
+    g.yOff += (0 - g.yOff) * pull;
+    g.xOff += perpX * warp * dt * 2.0;
+    g.yOff += perpY * warp * dt * 2.0;
+    g.widthScale += (1 - g.widthScale) * Math.min(1, dt * 4.2);
+    g.scaleY += (1 - g.scaleY) * Math.min(1, dt * 4.0);
+    if (g.life <= 0) playerGhosts.splice(i, 1);
+  }
+}
+
 
 const keys = {};
 let fireCooldown = 0;
@@ -1951,8 +2053,7 @@ function getBossEnemyImg(){
 }
 
 async function loadEnemyImagesFromEnemyWebpsJson(){
-  try{
-    const res = await fetch(ENEMY_WEBP_INDEX_URL, { cache: "no-store" });
+  try{    const res = await fetch(ENEMY_WEBP_INDEX_URL, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
 
     const list = await res.json();
@@ -1980,7 +2081,6 @@ async function loadEnemyImagesFromEnemyWebpsJson(){
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     bossEnemyImg = enemyImages.find(img => img && img.src && img.src.includes("180px-NO_U_cycle.webp")) || null;
     assetsReady = true;
-    setAssetStatus("");
   }
 }
 loadEnemyImagesFromEnemyWebpsJson();
@@ -2006,6 +2106,447 @@ function getSpacingY(){
 
 
 let enemies = [];
+
+// =======================
+// Procedural Maze Mode (v2.0 retrofit)
+// - Player stays visually fixed in the center while traversing a generated maze.
+// - Enemy systems, bullets, damage tracking, timer, and lives all remain in the build,
+//   but regular wave spawns are disabled for now.
+// =======================
+let maze = null;
+let mazeCompleted = false;
+let playerWorldX = 0;
+let playerWorldY = 0;
+let mazeExitPulse = 0;
+let mazeVisitedTiles = new Set();
+let mazeWalkableTileCount = 0;
+let mazeSummaryActive = false;
+let mazePendingNextWave = null;
+
+// v2.07: Maze enemies roam in world-space and only chase within a limited proximity.
+const MAZE_ENEMY_MIN = 5;
+const MAZE_ENEMY_MAX = 26;
+const MAZE_ENEMY_SAFE_CELLS_FROM_START = 2;
+const MAZE_ENEMY_SAFE_CELLS_FROM_EXIT = 2;
+
+function getMazeSpecForWave(w){
+  const clamped = Math.max(1, Math.min(21, w|0));
+  const tier = Math.max(1, Math.min(10, clamped));
+
+  // v2.03: Maze tiles are intentionally huge now.
+  // Each tile is about 5x the player size so the maze feels like oversized rooms/corridors,
+  // not a dense little grid crawling all over the screen.
+  const cellSize = Math.max(320, Math.round(player.w * 5));
+  const revealRadiusPx = Math.round(player.w * 3);
+
+  let cols = 7 + tier * 2;
+  let rows = 5 + tier * 2;
+
+  if (clamped === 11){
+    cols = 29; rows = 23;
+  } else if (clamped > 11){
+    const insanityTier = clamped - 11;
+    cols = 15 + insanityTier * 2;
+    rows = 11 + insanityTier * 2;
+  }
+
+  if (cols % 2 === 0) cols += 1;
+  if (rows % 2 === 0) rows += 1;
+
+  return { cols, rows, cellSize, revealRadiusPx };
+}
+
+function carveMazeGrid(cols, rows){
+  const grid = Array.from({ length: rows }, () => Array(cols).fill(1));
+  const stack = [];
+  const dirs = [[2,0],[-2,0],[0,2],[0,-2]];
+  const start = { x: 1, y: 1 };
+  grid[start.y][start.x] = 0;
+  stack.push(start);
+
+  while (stack.length){
+    const cur = stack[stack.length - 1];
+    const neighbors = [];
+    for (const [dx, dy] of dirs){
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (nx > 0 && nx < cols - 1 && ny > 0 && ny < rows - 1 && grid[ny][nx] === 1){
+        neighbors.push({ x: nx, y: ny, wx: cur.x + dx / 2, wy: cur.y + dy / 2 });
+      }
+    }
+    if (!neighbors.length){
+      stack.pop();
+      continue;
+    }
+    const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+    grid[next.wy][next.wx] = 0;
+    grid[next.y][next.x] = 0;
+    stack.push({ x: next.x, y: next.y });
+  }
+
+  return grid;
+}
+
+function openMazeLoops(grid, loops){
+  const rows = grid.length;
+  const cols = grid[0].length;
+  let opened = 0;
+  let attempts = 0;
+  while (opened < loops && attempts < loops * 24){
+    attempts += 1;
+    const x = 1 + Math.floor(Math.random() * (cols - 2));
+    const y = 1 + Math.floor(Math.random() * (rows - 2));
+    if (grid[y][x] !== 1) continue;
+    const horiz = (grid[y][x-1] === 0 && grid[y][x+1] === 0);
+    const vert = (grid[y-1][x] === 0 && grid[y+1][x] === 0);
+    if (horiz || vert){
+      grid[y][x] = 0;
+      opened += 1;
+    }
+  }
+}
+
+function getMazeTileKey(c, r){
+  return c + "," + r;
+}
+
+function markCurrentMazeTileStepped(){
+  if (!maze) return;
+  const c = Math.max(0, Math.min(maze.cols - 1, Math.floor(playerWorldX / maze.cellSize)));
+  const r = Math.max(0, Math.min(maze.rows - 1, Math.floor(playerWorldY / maze.cellSize)));
+  if (maze.grid[r] && maze.grid[r][c] === 0){
+    mazeVisitedTiles.add(getMazeTileKey(c, r));
+  }
+}
+
+function countMazeWalkableTiles(){
+  if (!maze) return 0;
+  let total = 0;
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      if (maze.grid[r][c] === 0) total += 1;
+    }
+  }
+  return total;
+}
+
+function showMazeSummaryAndPauseAdvance(){
+  if (!maze || mazeSummaryActive) return;
+  const stepped = mazeVisitedTiles.size;
+  const total = mazeWalkableTileCount || countMazeWalkableTiles();
+  const missed = Math.max(0, total - stepped);
+  const bonus = stepped * 10;
+  score += bonus;
+  updateAccuracyScoreHUD();
+
+  mazeSummaryActive = true;
+  mazePendingNextWave = wave + 1;
+  if (mazeSummaryCoverage) mazeSummaryCoverage.textContent = `Coverage: ${stepped} / ${total} tiles stepped on`;
+  if (mazeSummaryMissed) mazeSummaryMissed.textContent = `Unstepped tiles: ${missed}`;
+  if (mazeSummaryBonus) mazeSummaryBonus.textContent = `+${bonus} points`;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "flex";
+}
+
+function advanceToNextMaze(){
+  if (!mazeSummaryActive) return;
+  const nextWave = mazePendingNextWave;
+  mazeSummaryActive = false;
+  mazePendingNextWave = null;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+
+  if (typeof nextWave !== "number") return;
+  wave = nextWave;
+  showWaveBanner(wave);
+  resetFormation();
+  spawnEnemies();
+  trySpawnUFO();
+}
+
+function makeMazeForWave(w){
+  const spec = getMazeSpecForWave(w);
+  const grid = carveMazeGrid(spec.cols, spec.rows);
+  const loopCount = Math.max(3, Math.floor((Math.min(10, Math.max(1, w)) - 1) * 2.2));
+  openMazeLoops(grid, loopCount);
+  const startCell = { x: 1, y: 1 };
+  const exitCell = { x: spec.cols - 2, y: spec.rows - 2 };
+  grid[startCell.y][startCell.x] = 0;
+  grid[exitCell.y][exitCell.x] = 0;
+  return {
+    ...spec,
+    grid,
+    startCell,
+    exitCell,
+    wallColor: w === 11 ? 'rgba(0,255,102,0.30)' : 'rgba(0,255,102,0.18)',
+    floorColor: 'rgba(255,255,255,0.022)',
+    gridLineColor: 'rgba(255,255,255,0.028)'
+  };
+}
+
+function resetMazeForWave(w){
+  maze = makeMazeForWave(w);
+  mazeCompleted = false;
+  mazeExitPulse = 0;
+  mazeSummaryActive = false;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  enemies = [];
+  playerWorldX = (maze.startCell.x + 0.5) * maze.cellSize;
+  playerWorldY = (maze.startCell.y + 0.5) * maze.cellSize;
+  mazeVisitedTiles = new Set();
+  mazeWalkableTileCount = countMazeWalkableTiles();
+  markCurrentMazeTileStepped();
+}
+
+function getMazeWalkableCells(){
+  if (!maze) return [];
+  const out = [];
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      if (maze.grid[r][c] !== 0) continue;
+      const startDist = Math.abs(c - maze.startCell.x) + Math.abs(r - maze.startCell.y);
+      const exitDist = Math.abs(c - maze.exitCell.x) + Math.abs(r - maze.exitCell.y);
+      if (startDist <= MAZE_ENEMY_SAFE_CELLS_FROM_START) continue;
+      if (exitDist <= MAZE_ENEMY_SAFE_CELLS_FROM_EXIT) continue;
+      out.push({ x:c, y:r });
+    }
+  }
+  return out;
+}
+
+function spawnMazeEnemiesForWave(w){
+  if (!maze) return;
+  const walkable = getMazeWalkableCells();
+  if (!walkable.length) return;
+
+  const densityBase = Math.floor((maze.cols * maze.rows) / 20);
+  const desired = Math.max(MAZE_ENEMY_MIN, Math.min(MAZE_ENEMY_MAX, densityBase + Math.floor(Math.random() * 5) - 2 + Math.floor(w * 0.55)));
+  const shuffled = walkable.slice().sort(() => Math.random() - 0.5);
+  const used = [];
+  const minCellSeparation = Math.max(1, Math.min(4, Math.round(maze.cols / 10)));
+
+  for (const cell of shuffled){
+    if (used.length >= desired) break;
+    let tooClose = false;
+    for (const u of used){
+      const d = Math.abs(u.x - cell.x) + Math.abs(u.y - cell.y);
+      if (d < minCellSeparation){
+        tooClose = true;
+        break;
+      }
+    }
+    if (tooClose) continue;
+    used.push(cell);
+
+    const cx = (cell.x + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18);
+    const cy = (cell.y + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18);
+    const img = assetsReady && enemyImages.length ? randEnemyImg() : playerImg;
+    const size = Math.max(34, Math.min(72, player.w * rand(0.88, 1.18)));
+    const chaseRadius = maze.cellSize * rand(1.25, 1.9);
+    const dropRadius = chaseRadius * rand(1.2, 1.45);
+
+    enemies.push({
+      row: cell.y,
+      col: cell.x,
+      baseY: 0,
+      img,
+      isFrog: false,
+      size,
+      hp: 1,
+      hitFlash: 0,
+      dying: false,
+      fade: 1,
+      fadeRate: 0,
+      lockX: 0, lockY: 0, lockW: 0, lockH: 0,
+      _killAwarded: false,
+      x: -9999, y: -9999, w: size, h: size,
+      fx: 0, fy: 0,
+      swoop: null,
+      swoopCooldown: 9999,
+      mazeMob: true,
+      worldX: cx,
+      worldY: cy,
+      homeX: cx,
+      homeY: cy,
+      moveSpeed: rand(105, 175),
+      chaseRadius,
+      dropRadius,
+      chaseFalloff: rand(0.28, 0.58),
+      isChasing: false
+    });
+  }
+}
+
+function updateMazeEnemies(dt){
+  if (!(maze && enemies.length)) return;
+
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+
+  for (const e of enemies){
+    if (!e || !e.mazeMob || e.dying) continue;
+
+    const toPlayerX = playerWorldX - e.worldX;
+    const toPlayerY = playerWorldY - e.worldY;
+    const distToPlayer = Math.hypot(toPlayerX, toPlayerY) || 0.0001;
+
+    if (distToPlayer <= e.chaseRadius){
+      e.isChasing = true;
+    } else if (distToPlayer >= e.dropRadius){
+      e.isChasing = false;
+    }
+
+    let targetX = e.homeX;
+    let targetY = e.homeY;
+    let speedMul = 0.55;
+
+    if (e.isChasing){
+      const t = Math.max(0, 1 - (distToPlayer / e.chaseRadius));
+      const chaseStrength = Math.max(0.15, t * (1 - e.chaseFalloff) + 0.15);
+      targetX = playerWorldX;
+      targetY = playerWorldY;
+      speedMul = 0.62 + chaseStrength;
+    }
+
+    const dx = targetX - e.worldX;
+    const dy = targetY - e.worldY;
+    const d = Math.hypot(dx, dy) || 0.0001;
+    let step = e.moveSpeed * speedMul * dt;
+
+    if (!e.isChasing && d < 8){
+      step = 0;
+    }
+
+    if (step > 0){
+      const nx = dx / d;
+      const ny = dy / d;
+      const tryX = e.worldX + nx * step;
+      const tryY = e.worldY + ny * step;
+      const radius = Math.max(10, e.size * 0.22);
+
+      if (canOccupyWorld(tryX, e.worldY, radius)) e.worldX = tryX;
+      if (canOccupyWorld(e.worldX, tryY, radius)) e.worldY = tryY;
+    }
+
+    e.x = e.worldX - camX;
+    e.y = e.worldY - camY;
+    e.w = e.size;
+    e.h = e.size;
+    e.fx = e.x;
+    e.fy = e.y;
+  }
+}
+
+function isWallAtWorld(x, y){
+  if (!maze) return false;
+  const c = Math.floor(x / maze.cellSize);
+  const r = Math.floor(y / maze.cellSize);
+  if (r < 0 || r >= maze.rows || c < 0 || c >= maze.cols) return true;
+  return maze.grid[r][c] === 1;
+}
+
+function canOccupyWorld(x, y, radius){
+  if (!maze) return true;
+  const pts = [
+    [x - radius, y - radius], [x + radius, y - radius],
+    [x - radius, y + radius], [x + radius, y + radius],
+    [x, y - radius], [x, y + radius], [x - radius, y], [x + radius, y]
+  ];
+  return pts.every(([px, py]) => !isWallAtWorld(px, py));
+}
+
+function getMazePlayerRadius(){
+  return Math.max(8, Math.min(player.w, player.h) * 0.22);
+}
+
+function moveMazePlayer(dx, dy){
+  if (!maze) return;
+  const radius = getMazePlayerRadius();
+  const speed = player.speed * 60;
+  const stepX = dx * speed;
+  const stepY = dy * speed;
+  const nx = playerWorldX + stepX;
+  const ny = playerWorldY + stepY;
+
+  if (canOccupyWorld(nx, playerWorldY, radius)) playerWorldX = nx;
+  if (canOccupyWorld(playerWorldX, ny, radius)) playerWorldY = ny;
+  markCurrentMazeTileStepped();
+
+  const exitX = (maze.exitCell.x + 0.5) * maze.cellSize;
+  const exitY = (maze.exitCell.y + 0.5) * maze.cellSize;
+  if (Math.hypot(playerWorldX - exitX, playerWorldY - exitY) <= maze.cellSize * 0.35){
+    mazeCompleted = true;
+  }
+}
+
+function drawMaze(){
+  if (!(gameState === STATE.PLAYING && maze)) return;
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+  const currentCol = Math.max(0, Math.min(maze.cols - 1, Math.floor(playerWorldX / maze.cellSize)));
+  const currentRow = Math.max(0, Math.min(maze.rows - 1, Math.floor(playerWorldY / maze.cellSize)));
+  ctx.save();
+
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      const sx = c * maze.cellSize - camX;
+      const sy = r * maze.cellSize - camY;
+      if (sx > canvas.width || sy > canvas.height || sx + maze.cellSize < 0 || sy + maze.cellSize < 0) continue;
+
+      const isCurrentTile = (r === currentRow && c === currentCol);
+      const isExitTile = (r === maze.exitCell.y && c === maze.exitCell.x);
+      const isWall = maze.grid[r][c] === 1;
+
+      if (!isWall){
+        ctx.fillStyle = isCurrentTile ? 'rgba(140,255,170,0.20)' : maze.floorColor;
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = isCurrentTile ? 'rgba(180,255,200,0.42)' : maze.gridLineColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, maze.cellSize - 1, maze.cellSize - 1);
+        if (isCurrentTile){
+          ctx.fillStyle = 'rgba(180,255,200,0.08)';
+          ctx.fillRect(sx + 4, sy + 4, maze.cellSize - 8, maze.cellSize - 8);
+        }
+      } else {
+        ctx.fillStyle = maze.wallColor;
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = 'rgba(0,255,102,0.08)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, maze.cellSize - 1, maze.cellSize - 1);
+      }
+
+      if (isExitTile){
+        mazeExitPulse += 0.05;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,215,0,0.18)';
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = `rgba(255,215,0,${0.48 + 0.28 * Math.sin(mazeExitPulse)})`;
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(sx + 3, sy + 3, maze.cellSize - 6, maze.cellSize - 6);
+        ctx.restore();
+      }
+    }
+  }
+
+  // Soft spotlight / haze mask so only a circular region around the player is visible.
+  const revealRadius = (maze.revealRadiusPx || Math.round(player.w * 3));
+  const outerRadius = revealRadius * 1.65;
+  const fog = ctx.createRadialGradient(player.x, player.y, revealRadius * 0.48, player.x, player.y, outerRadius);
+  fog.addColorStop(0, 'rgba(0,0,0,0.00)');
+  fog.addColorStop(0.42, 'rgba(0,0,0,0.10)');
+  fog.addColorStop(0.72, 'rgba(0,0,0,0.56)');
+  fog.addColorStop(1, 'rgba(0,0,0,0.96)');
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // A faint inner haze ring to make the spotlight feel softer and less geometric.
+  const glow = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, revealRadius * 1.05);
+  glow.addColorStop(0, 'rgba(255,255,255,0.025)');
+  glow.addColorStop(0.5, 'rgba(255,255,255,0.010)');
+  glow.addColorStop(1, 'rgba(255,255,255,0.00)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.restore();
+}
+
 
 const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, descentSpeed:12, boundsPad:40 };
 
@@ -2174,62 +2715,10 @@ function spawnBossWave11(additive=false){
 
 
 function spawnEnemies(){
-  // v1.96+: Boss wave / additive boss waves
-  if (wave === 11){
-    spawnBossWave11(false);
-    return;
-  }
-
+  // Maze mode now spawns individual roaming enemies inside random open maze squares.
   enemies = [];
-  const baseY = 80; // start higher (top zone)
-
-  // v1.96: Wave sizing
-  // Wave 1 spawns 1 enemy, then doubles each wave (2x previous).
-  // We cap it to keep browsers from melting into a puddle.
-  const MAX_WAVE_ENEMIES = 128;
-// v1.96: Balanced wave sizing (requested):
-// Wave 1: 1 enemy
-// Wave 2: 2 enemies
-// Wave 3: 4 enemies
-// Wave 4+: add +2 each wave (6, 8, 10, ...)
-function getEnemyCountForWave(w){
-  if (w === 1) return 1;
-  if (w === 2) return 2;
-  if (w === 3) return 4;
-  return 4 + (w - 3) * 2;
-}
-const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
-
-  // v1.96: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
-  // Keep the "formation area" mostly in the top half.
-  const zoneW = canvas.width * 0.82;
-  const zoneH = canvas.height * 0.38;
-
-  // Choose columns/rows to fit the count into the zone with a roughly square-ish grid.
-  const idealCols = Math.ceil(Math.sqrt(count * (zoneW / Math.max(1, zoneH))));
-  formationCols = Math.max(1, Math.min(count, idealCols));
-  formationRows = Math.max(1, Math.ceil(count / formationCols));
-
-  // Compute a size that fits nicely in each cell.
-  const cellW = zoneW / formationCols;
-  const cellH = zoneH / formationRows;
-  const baseSize = Math.max(18, Math.min(56, Math.min(cellW, cellH) * 0.60));
-
-  for (let i = 0; i < count; i++){
-    const r = Math.floor(i / formationCols);
-    const c = i % formationCols;
-
-    const img = randEnemyImg();
-    const isFrog = (img && img.src && img.src.toLowerCase().includes("frog.gif"));
-
-    enemies.push({ row:r, col:c, baseY, img, isFrog, size:baseSize, hp:1, hitFlash:0, dying:false, fade:1, fadeRate:0, lockX:0, lockY:0, lockW:0, lockH:0, _killAwarded:false, x:0,y:0,w:0,h:0,
-      fx:0, fy:0, // formation-space position (computed each frame)
-      swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
-      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
-    });
-  }
-
-  if (wave > 11){ spawnBossWave11(true); }
+  resetMazeForWave(wave);
+  spawnMazeEnemiesForWave(wave);
 }
 
 /* =======================
@@ -2293,6 +2782,7 @@ function shoot(){
 
 let enemyShootTimer = 0;
 function enemyTryShoot(dt){
+  if (enemies.some(e => e && e.mazeMob && !e.dying)) return;
   enemyShootTimer -= dt;
   if (enemyShootTimer > 0) return;
 
@@ -2485,14 +2975,6 @@ function update(dt){
 
   if (gameState !== STATE.PLAYING) return;
 
-  if (pendingWaveStartMusic){
-    const waveIsLive = enemies.length > 0 || (wave === 11 && boss.active);
-    if (waveIsLive){
-      pendingWaveStartMusic = false;
-      if (!audioMuted) ensureMusicPlaying(true);
-    }
-  }
-
   // Run timer (seconds since Start Game)
   runTimer += dt;
 
@@ -2534,16 +3016,16 @@ function update(dt){
         playDeathYell();
         stopMusic();
       } else {
-        // Respawn for next life (keep wave/enemies as-is)
+        // Respawn for next life (keep wave/maze as-is)
         isDead = false;
         deathGameOver = false;
   deathYellPlayed = false;
         deathParticles.length = 0;
         health = 1.0;
 
-  // Spawn player mid-screen, above hearts HUD
+  // Spawn player fixed in the center for maze traversal
   player.x = canvas.width / 2;
-  player.y = getPlayerAlignedY();
+  player.y = canvas.height / 2;
         player.invuln = 1.25;
       }
     }
@@ -2563,11 +3045,43 @@ function update(dt){
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
 
-  player.x += moveX * player.speed * (gpSpeedBoostHeld ? 1.75 : 1.0);
-  player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
+  // v2.04: faux-2.5D turn animation when switching horizontal direction
+  if (moveX > 0.08 && playerFacing !== 1){
+    playerFacing = 1;
+    playerTurnT = 0;
+  } else if (moveX < -0.08 && playerFacing !== -1){
+    playerFacing = -1;
+    playerTurnT = 0;
+  }
+  if (playerTurnT < 1){
+    playerTurnT = Math.min(1, playerTurnT + dt / PLAYER_TURN_DUR);
+  }
 
-  // Keep player vertically aligned to the hearts HUD
-  player.y = getPlayerAlignedY();
+  const sprintHeld = !!keys["shift"] || !!gpSpeedBoostHeld;
+  const moveSpeedMul = (sprintHeld ? 1.75 : 1.0);
+  let moveY = 0;
+  if (keys["w"] || keys["arrowup"]) moveY -= 1;
+  if (keys["s"] || keys["arrowdown"]) moveY += 1;
+  const moveLen = Math.hypot(moveX, moveY) || 1;
+
+  updatePlayerGhosts(dt);
+  if (Math.abs(moveX) > 0.08 || Math.abs(moveY) > 0.08){
+    playerGhostSpawnT -= dt;
+    if (playerGhostSpawnT <= 0){
+      spawnPlayerGhost(moveX / moveLen, moveY / moveLen);
+      playerGhostSpawnT = PLAYER_GHOST_SPAWN_EVERY;
+    }
+  } else {
+    playerGhostSpawnT = 0;
+  }
+
+  moveMazePlayer((moveX / moveLen) * moveSpeedMul * dt, (moveY / moveLen) * moveSpeedMul * dt);
+
+  // Player remains fixed visually in the center while the maze scrolls underneath.
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+
+  updateMazeEnemies(dt);
 
 
 // v1.96: right stick aim (only when the stick is actually being pushed)
@@ -2630,10 +3144,24 @@ if (gpFireHeld) shoot();
   formation.yOffset += formation.descentSpeed * dt;
 
   // update bullets
+  // v2.03: bullets now collide with maze walls and vanish on impact.
+  // Bullets are still stored in screen-space, so we convert them into maze/world space
+  // using the current camera offset before testing against wall tiles.
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+
   for (let i = bullets.length - 1; i >= 0; i--){
     const b = bullets[i];
     b.x += b.vx;
     b.y += b.vy;
+
+    const bwx = b.x + camX;
+    const bwy = b.y + camY;
+    if (isWallAtWorld(bwx, bwy)){
+      bullets.splice(i, 1);
+      continue;
+    }
+
     if (b.x < -80 || b.x > canvas.width + 80 || b.y < -80 || b.y > canvas.height + 80) bullets.splice(i, 1);
   }
 
@@ -2641,6 +3169,14 @@ if (gpFireHeld) shoot();
     const b = enemyBullets[i];
     b.x += (b.vx || 0);
     b.y += b.vy;
+
+    const bwx = b.x + camX;
+    const bwy = b.y + camY;
+    if (isWallAtWorld(bwx, bwy)){
+      enemyBullets.splice(i, 1);
+      continue;
+    }
+
     if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
   }
 
@@ -2797,6 +3333,10 @@ if (bossCore){
 
   for (const e of enemies){
     if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
+
+    if (e.mazeMob){
+      continue;
+    }
 
     const scale = 1 + breath * 0.18;
     const size = e.size * scale;
@@ -2965,6 +3505,12 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         // Push enemy out to the ring boundary
         e.x = player.x + nx * (rr + 2);
         e.y = player.y + ny * (rr + 2);
+        if (e.mazeMob){
+          const camX = playerWorldX - canvas.width / 2;
+          const camY = playerWorldY - canvas.height / 2;
+          e.worldX = e.x + camX;
+          e.worldY = e.y + camY;
+        }
 
         // If it's swooping, cancel its swoop so it doesn't keep clipping the shield.
         if (e.swoop){
@@ -3023,20 +3569,18 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
   }
 
 
-  // wave clear
-  if (enemies.length === 0){
+  // wave clear now depends on reaching the maze exit
+  if (mazeCompleted){
     // If player beat INSANITY WAVE: 10 (wave 21), show a win screen.
     if (wave === 21){
       showWinOverlay();
       return;
     }
 
-    wave += 1;
-    showWaveBanner(wave);
-
-    resetFormation();
-    spawnEnemies();
-    trySpawnUFO();
+    if (!mazeSummaryActive){
+      showMazeSummaryAndPauseAdvance();
+    }
+    return;
   }
 }
 
@@ -3101,6 +3645,7 @@ function drawShieldRing(){
 
 function draw(){
   drawStarfield();
+  drawMaze();
 
   // v1.96+: draw player death particles
   if (deathParticles.length){
@@ -3142,20 +3687,34 @@ function draw(){
 
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  const shouldDrawPlayer = (gameState === STATE.PLAYING);
-  if (USE_DOM_ANIMATED_GIF_SPRITES) beginAnimatedGifSpriteFrame();
 
+  function drawPlayerSprite(alpha = 1, xOff = 0, yOff = 0, extraWidthScale = 1, extraScaleY = 1){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(player.x + xOff, player.y + yOff);
+
+    // v2.04: fake 2.5D turn by squeezing the sprite through a narrow midpoint.
+    const turnEase = Math.sin(Math.min(1, Math.max(0, playerTurnT)) * Math.PI);
+    const widthScale = (1 - turnEase * 0.82) * extraWidthScale;
+    const facingScale = playerFacing >= 0 ? -1 : 1; // right = flipped horizontally
+    ctx.scale(facingScale * Math.max(0.12, widthScale), extraScaleY);
+
+    ctx.drawImage(playerImg, -player.w/2, -player.h/2, player.w, player.h);
+    ctx.restore();
+  }
+
+  function drawPlayerGhosts(){
+    if (!playerGhosts.length) return;
+    for (const g of playerGhosts){
+      const t = Math.max(0, g.life / g.ttl);
+      drawPlayerSprite(0.12 * t, g.xOff, g.yOff, g.widthScale, g.scaleY);
+    }
+  }
+
+  const shouldDrawPlayer = (gameState === STATE.PLAYING);
   if (shouldDrawPlayer && !flicker){
-    const drewDomPlayer = syncAnimatedGifSprite(
-      player,
-      playerImg,
-      player.x - player.w/2,
-      player.y - player.h/2,
-      player.w,
-      player.h,
-      { className:"player-gif-sprite" }
-    );
-    if (!drewDomPlayer) ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+    drawPlayerGhosts();
+    drawPlayerSprite();
   }
 
     // v1.96: shield ring (RMB hold)
@@ -3227,16 +3786,7 @@ if (gameState === STATE.PLAYING){
     const alpha = (e.dying ? Math.max(0, Math.min(1, e.fade)) : 1);
     ctx.save();
     ctx.globalAlpha = alpha;
-    const drewDomEnemy = syncAnimatedGifSprite(
-      e,
-      e.img,
-      ex,
-      ey,
-      e.w,
-      e.h,
-      { className:"enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
-    );
-    if (!drewDomEnemy) ctx.drawImage(e.img, ex, ey, e.w, e.h);
+    ctx.drawImage(e.img, ex, ey, e.w, e.h);
 
 // Dragon marker: upside-down red equilateral triangle (because dragons deserve drama)
 if (isDragonEnemy(e)){
@@ -3256,8 +3806,6 @@ if (isDragonEnemy(e)){
     }
     ctx.restore();
   }
-
-  if (USE_DOM_ANIMATED_GIF_SPRITES) endAnimatedGifSpriteFrame();
 
   // bullets (player)
   // v1.96: draw as simple circles (no text/letter-like shapes)
@@ -3280,11 +3828,12 @@ if (isDragonEnemy(e)){
   ENEMY_COLS = formationCols;
 
   overlay.innerHTML =
-    `Bananaman Shooter<br>` +
+    `Bananaman Shooter v1.96<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
+    `Maze: ${maze ? (maze.cols + "x" + maze.rows + " @ " + maze.cellSize + "px tiles / light " + (maze.revealRadiusPx || 0) + "px") : "none"}${mazeCompleted ? " | EXIT" : ""}<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
     `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
@@ -3314,7 +3863,7 @@ if (isDragonEnemy(e)){
     applyChromaticAberration(beat);
   }
 
-  // Glitch spiral burst (Tab)
+  // v1.96: Glitch spiral burst (Tab key)
   if (GLITCH_SPIRAL_T > 0){
     const strength = Math.max(0, Math.min(1, GLITCH_SPIRAL_T / GLITCH_SPIRAL_DUR));
     applyGlitchSpiral(strength);
