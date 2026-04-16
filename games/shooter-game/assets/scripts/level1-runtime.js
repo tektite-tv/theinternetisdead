@@ -99,7 +99,7 @@ musicBg.volume = 0.6;
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
-sfxDeath.volume = 0.405;
+sfxDeath.volume = 0.10;
 
 // Global mute toggle (M key)
 let audioMuted = false;
