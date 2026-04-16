@@ -8,4 +8,11 @@ function formatKeyboardBinding(code){
   return code;
 }
 
+const CONTROLLER_BUTTON_LABELS = {
+  0: "A", 1: "B", 2: "X", 3: "Y", 4: "LB", 5: "RB", 6: "LT", 7: "RT",
+  8: "View", 9: "Menu", 10: "LS", 11: "RS", 12: "D-Pad Up", 13: "D-Pad Down", 14: "D-Pad Left", 15: "D-Pad Right"
+};
+
+function formatControllerBinding(index){ return typeof index === "number" ? (CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`) : "Unbound"; }
+
 function mouseButtonToBinding(button){ return `Mouse${Number(button) || 0}`; }

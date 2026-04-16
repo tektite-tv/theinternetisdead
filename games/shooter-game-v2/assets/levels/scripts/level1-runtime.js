@@ -1785,10 +1785,6 @@ const CONTROLLER_BIND_ACTIONS = [
   { key: "menuBack", label: "Menu Back / Close Chat", hint: "Menus and pause chat" },
   { key: "fullscreen", label: "Fullscreen", hint: "Whole shooter shell" }
 ];
-const CONTROLLER_BUTTON_LABELS = {
-  0: "A", 1: "B", 2: "X", 3: "Y", 4: "LB", 5: "RB", 6: "LT", 7: "RT",
-  8: "View", 9: "Menu", 10: "LS", 11: "RS", 12: "D-Pad Up", 13: "D-Pad Down", 14: "D-Pad Left", 15: "D-Pad Right"
-};
 let activeInputMode = INPUT_MODE_KEYBOARD;
 let controlsInputLockMode = null;
 let controlsBindMode = INPUT_MODE_KEYBOARD;
@@ -1824,7 +1820,6 @@ function applyDraftBindings(){
   controllerBindings = { ...draftControllerBindings };
   saveBindings();
 }
-function formatControllerBinding(index){ return typeof index === "number" ? (CONTROLLER_BUTTON_LABELS[index] || `Button ${index}`) : "Unbound"; }
 function formatCompactMoveBinding(value){
   if (controlsBindMode === INPUT_MODE_CONTROLLER){
     const map = {12:"D↑", 13:"D↓", 14:"D←", 15:"D→"};
