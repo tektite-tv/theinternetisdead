@@ -325,7 +325,13 @@ let hudVisible = false;
 // - Freezes gameplay updates and input-driven actions.
 // =======================
 const pauseOverlay = document.getElementById("pauseOverlay");
+const scoreStorePanel = document.getElementById("scoreStorePanel");
+const scoreStoreItemsEl = document.getElementById("scoreStoreItems");
+const scoreStoreCurrentScoreEl = document.getElementById("scoreStoreCurrentScore");
+const scoreStoreStatusEl = document.getElementById("scoreStoreStatus");
+const btnScoreStoreClose = document.getElementById("btnScoreStoreClose");
 
+const btnPauseOpenStore = document.getElementById("btnPauseOpenStore");
 const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
 const pauseCommand = null;
 const pauseCmdSuggest = null;
@@ -338,6 +344,8 @@ if (pauseCloseBtn){
   });
 }
 let isPaused = false;
+let isScoreStoreOpen = false;
+let scoreStoreFocusIndex = 0;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
   btnPauseQuit.addEventListener("click", () => {
@@ -354,6 +362,93 @@ if (btnPauseResume){
   btnPauseResume.addEventListener("click", () => {
     // Resume gameplay (same as pressing ESC)
     togglePause();
+  });
+}
+if (btnPauseOpenStore){
+  btnPauseOpenStore.addEventListener("click", () => {
+    if (!canOpenStore()) return;
+    openScoreStoreMenu();
+  });
+}
+function setScoreStoreOverlayVisible(visible){
+  isScoreStoreOpen = !!visible;
+  if (pauseOverlay) pauseOverlay.classList.toggle("scoreStoreVisible", isScoreStoreOpen);
+}
+function setScoreStoreStatus(message){
+  if (!scoreStoreStatusEl) return;
+  scoreStoreStatusEl.textContent = message || "Select an item to preview this score-spend slot.";
+}
+function renderScoreStoreMenu(){
+  if (scoreStoreCurrentScoreEl){
+    scoreStoreCurrentScoreEl.textContent = "Current Score: " + String(Math.floor(score)) + "pts";
+  }
+  setScoreStoreStatus("");
+  if (!scoreStoreItemsEl) return;
+  scoreStoreItemsEl.innerHTML = "";
+  SCORE_STORE_ITEMS.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "scoreStoreRow optRow";
+
+    const meta = document.createElement("div");
+    meta.className = "scoreStoreMeta";
+
+    const head = document.createElement("div");
+    head.className = "scoreStoreHead";
+
+    const title = document.createElement("div");
+    title.className = "scoreStoreItemTitle";
+    title.textContent = item.label;
+
+    const cost = document.createElement("div");
+    cost.className = "scoreStoreCost";
+    cost.textContent = String(item.cost) + " pts";
+
+    const detail = document.createElement("div");
+    detail.className = "scoreStoreItemDetail";
+    detail.textContent = item.description;
+
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "scoreStoreAction smallBtn";
+    action.dataset.scoreStoreItemId = item.id;
+    action.textContent = String(item.cost) + " pts";
+    action.addEventListener("click", () => {
+      const currentScore = Math.floor(score);
+      if (currentScore < item.cost){
+        setScoreStoreStatus(item.label + " costs " + item.cost + " pts. Purchase logic is still a placeholder.");
+        return;
+      }
+      setScoreStoreStatus(item.label + " is listed and selectable, but spending logic is still a placeholder.");
+    });
+
+    head.appendChild(title);
+    head.appendChild(cost);
+    meta.appendChild(head);
+    meta.appendChild(detail);
+    row.appendChild(meta);
+    row.appendChild(action);
+    scoreStoreItemsEl.appendChild(row);
+  });
+}
+function openScoreStoreMenu(){
+  if (!pauseOverlay || gameState !== STATE.PLAYING || isDead || !isStoreUnlocked()) return;
+  setPaused(true);
+  renderScoreStoreMenu();
+  setScoreStoreOverlayVisible(true);
+  scoreStoreFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncScoreStoreControllerFocus();
+  else clearControllerFocus();
+}
+function closeScoreStoreMenu(options = null){
+  if (!isScoreStoreOpen) return;
+  scoreStoreFocusIndex = 0;
+  setScoreStoreOverlayVisible(false);
+  if (activeInputMode === INPUT_MODE_CONTROLLER && isPaused) syncPauseControllerFocus();
+  else clearControllerFocus();
+}
+if (btnScoreStoreClose){
+  btnScoreStoreClose.addEventListener("click", () => {
+    closeScoreStoreMenu();
   });
 }
 
@@ -472,10 +567,13 @@ function applyGlitchSpiral(strength){
 function setPaused(p){
   isPaused = !!p;
   if (!isPaused && pauseControlsOpen) hidePauseControlsMenu();
+  if (!isPaused){
+    if (isScoreStoreOpen) setScoreStoreOverlayVisible(false);
+  }
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
   if (isPaused){
     pauseFocusIndex = 0;
-    if (!parentChatVisible && !pauseControlsOpen) syncPauseControllerFocus();
+    if (!parentChatVisible && !pauseControlsOpen && !isScoreStoreOpen) syncPauseControllerFocus();
   } else if (gameState !== STATE.MENU && gameState !== STATE.OPTIONS){
     clearControllerFocus();
   }
@@ -746,6 +844,10 @@ if (pauseCmdSuggest){
 
 function togglePause(){
   if (gameState !== STATE.PLAYING) return;
+  if (isScoreStoreOpen){
+    closeScoreStoreMenu();
+    return;
+  }
   if (isDead) return; // don't pause during death freeze/respawn
   if (deathOverlay && deathOverlay.style.display === "flex") return; // don't pause on GAME OVER
   setPaused(!isPaused);
@@ -816,6 +918,13 @@ let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
+const STORE_UNLOCK_SCORE_THRESHOLD = 100;
+const SCORE_STORE_ITEMS = [
+  { id: "hearts", label: "Hearts", cost: 25, description: "Foundation slot for future heart refills or max-heart upgrades." },
+  { id: "lives", label: "Lives", cost: 50, description: "Foundation slot for extra-life purchases tied to current score." },
+  { id: "shields", label: "Shields", cost: 40, description: "Foundation slot for shield charges or shield-capacity upgrades." },
+  { id: "bombs", label: "Bombs", cost: 35, description: "Foundation slot for bomb stock refills and future bomb upgrades." }
+];
 let totalEnemiesSpawned = 0;
 let bombDragonKills = 0;
 let bombFrogKills = 0;
@@ -915,7 +1024,17 @@ function awardScore(basePoints){
   score += Math.round(Math.max(0, basePoints) * getAccuracyMultiplier());
 }
 
+function isStoreUnlocked(){
+  return Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD;
+}
+
+function canOpenStore(){
+  return gameState === STATE.PLAYING && isStoreUnlocked();
+}
+
+const scoreStoreHud = document.getElementById("scoreStoreHud");
 const accuracyScoreEl = document.getElementById("accuracyScore");
+const storeUnlockedHudEl = document.getElementById("storeUnlockedHud");
 const timerHud = document.getElementById("timerHud");
 const winStatScoreEl = document.getElementById("winStatScore");
 const winStatKillsEl = document.getElementById("winStatKills");
@@ -925,13 +1044,32 @@ const winStatBonusEl = document.getElementById("winStatBonus");
 const winStatBonusDragonsEl = document.getElementById("winStatBonusDragons");
 const winStatBonusFrogsEl = document.getElementById("winStatBonusFrogs");
 const winStatTimeEl = document.getElementById("winStatTime");
+if (scoreStoreHud){
+  scoreStoreHud.addEventListener("click", () => {
+    if (!canOpenStore()) return;
+    openScoreStoreMenu();
+  });
+}
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
+  const isPlaying = gameState === STATE.PLAYING;
+  const storeUnlocked = isStoreUnlocked();
+  const canOpen = canOpenStore();
+  if (scoreStoreHud){
+    scoreStoreHud.style.display = isPlaying ? "flex" : "none";
+    scoreStoreHud.classList.toggle("storeReady", canOpen);
+    scoreStoreHud.disabled = !canOpen;
+    scoreStoreHud.tabIndex = canOpen ? 0 : -1;
+    scoreStoreHud.setAttribute("aria-disabled", canOpen ? "false" : "true");
+  }
+  if (btnPauseOpenStore) btnPauseOpenStore.style.display = storeUnlocked ? "block" : "none";
   if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
   else accuracyScoreEl.style.display = "none";
   accuracyScoreEl.textContent = "Score: " + String(Math.floor(score)) + "pts";
-  const storeUnlockedHudEl = document.getElementById("storeUnlockedHud");
-  if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = (gameState === STATE.PLAYING && Math.floor(score) >= 250) ? "block" : "none";
+  if (storeUnlockedHudEl){
+    storeUnlockedHudEl.style.display = (isPlaying && storeUnlocked) ? "block" : "none";
+    storeUnlockedHudEl.textContent = canOpen ? "Open Store" : "Store Unlocked";
+  }
 }
 
 function formatRunTime(seconds){
@@ -2100,7 +2238,11 @@ function getControlsControllerTargets(){
 }
 
 function getPauseControllerTargets(){
-  return [btnPauseResume, btnPauseOpenChat, btnPauseQuit].filter(Boolean);
+  return [btnPauseResume, (canOpenStore() ? btnPauseOpenStore : null), btnPauseOpenChat, btnPauseQuit].filter(Boolean);
+}
+
+function getScoreStoreControllerTargets(){
+  return [...Array.from(document.querySelectorAll('#scoreStoreItems .scoreStoreAction')), btnScoreStoreClose].filter(Boolean);
 }
 
 function getWinControllerTargets(){
@@ -2137,6 +2279,13 @@ function syncPauseControllerFocus(){
   focusControllerElement(items[pauseFocusIndex]);
 }
 
+function syncScoreStoreControllerFocus(){
+  const items = getScoreStoreControllerTargets();
+  if (!items.length) return;
+  scoreStoreFocusIndex = Math.max(0, Math.min(scoreStoreFocusIndex, items.length - 1));
+  focusControllerElement(items[scoreStoreFocusIndex]);
+}
+
 function syncWinControllerFocus(){
   const items = getWinControllerTargets();
   if (!items.length) return;
@@ -2153,6 +2302,10 @@ function syncControlsControllerFocus(){
 function syncControllerFocusForCurrentState(){
   if (activeInputMode !== INPUT_MODE_CONTROLLER || parentChatVisible){
     clearControllerFocus();
+    return;
+  }
+  if (isScoreStoreOpen && isPaused){
+    syncScoreStoreControllerFocus();
     return;
   }
   if (pauseControlsOpen && isPaused){
@@ -2221,6 +2374,13 @@ function movePauseControllerFocus(delta){
   if (!items.length) return;
   pauseFocusIndex = (pauseFocusIndex + delta + items.length) % items.length;
   syncPauseControllerFocus();
+}
+
+function moveScoreStoreControllerFocus(delta){
+  const items = getScoreStoreControllerTargets();
+  if (!items.length) return;
+  scoreStoreFocusIndex = (scoreStoreFocusIndex + delta + items.length) % items.length;
+  syncScoreStoreControllerFocus();
 }
 
 function moveControlsControllerFocus(delta){
@@ -3031,7 +3191,13 @@ function pollGamepad(dt){
         }
       }
     } else if (isPaused){
-      if (pauseControlsOpen){
+      if (isScoreStoreOpen){
+        if (navUp || navLeft) moveScoreStoreControllerFocus(-1);
+        if (navDown || navRight) moveScoreStoreControllerFocus(1);
+        if (pressMenuSelect) activateControllerTarget(getScoreStoreControllerTargets()[scoreStoreFocusIndex]);
+        if (pressMenuBack) closeScoreStoreMenu();
+        if (pressPause) togglePause();
+      } else if (pauseControlsOpen){
         if (navUp || navLeft) moveControlsControllerFocus(-1);
         if (navDown || navRight) moveControlsControllerFocus(1);
         if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);

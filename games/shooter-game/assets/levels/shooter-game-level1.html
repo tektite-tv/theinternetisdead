@@ -536,6 +536,110 @@
     border-color: rgba(0,255,0,0.9);
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
   }
+  #pauseOverlay.scoreStoreVisible #pausePanel{ display:block; }
+  #scoreStorePanel{
+    display:none;
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    z-index:1;
+    width:min(640px, 94vw);
+    border:3px solid rgba(0,255,0,0.65);
+    border-radius:16px;
+    background: rgba(75,0,118,0.72);
+    padding:12px 12px 10px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(0,255,0,0.14);
+    pointer-events:auto;
+    box-sizing:border-box;
+    max-height:min(88vh, 640px);
+    overflow:auto;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+  }
+  #scoreStorePanel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #pauseOverlay.scoreStoreVisible #scoreStorePanel{ display:block; }
+  #scoreStorePanel .title{
+    font-size:18px;
+    margin:1px 0 5px;
+  }
+  #scoreStoreHint{
+    margin:0 0 6px;
+    font-family:monospace;
+    font-size:11px;
+    line-height:1.3;
+    color:#d9ffe5;
+    opacity:0.9;
+  }
+  #scoreStoreCurrentScore{
+    margin:0 0 8px;
+    font-family:monospace;
+    font-size:14px;
+    font-weight:800;
+    color:#ffd400;
+    text-shadow:0 0 8px rgba(0,0,0,0.65);
+  }
+  #scoreStoreItems{
+    display:grid;
+    gap:6px;
+  }
+  #scoreStoreItems .scoreStoreRow{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    gap:8px;
+    align-items:center;
+    padding:8px 10px;
+    text-align:left;
+  }
+  #scoreStoreItems .scoreStoreMeta{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+  }
+  #scoreStoreItems .scoreStoreHead{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  #scoreStoreItems .scoreStoreItemTitle{
+    font-size:13px;
+    color:#ffffff;
+    white-space:nowrap;
+  }
+  #scoreStoreItems .scoreStoreCost{
+    font-size:10px;
+    font-weight:900;
+    color:#ffd400;
+    white-space:nowrap;
+  }
+  #scoreStoreItems .scoreStoreItemDetail{
+    font-size:10px;
+    line-height:1.2;
+    color:#b6ffcf;
+    opacity:0.82;
+  }
+  #scoreStoreItems .scoreStoreAction{
+    min-width:104px;
+    padding:6px 8px;
+    font-size:11px;
+    text-align:center;
+  }
+  #scoreStoreStatus{
+    min-height:1.3em;
+    margin-top:8px;
+    font-family:monospace;
+    font-size:10px;
+    line-height:1.2;
+    color:#d9ffe5;
+    opacity:0.82;
+  }
+  #btnScoreStoreClose{
+    margin-top:10px;
+    min-width:140px;
+  }
 
 
   /* v1.96: keep HUD off the menu and keep menu clickable */
@@ -560,36 +664,72 @@
 }
 
 /* Accuracy score (top-left, 2x wave counter) */
-#accuracyScore{
+#scoreStoreHud{
   position:absolute;
   top:10px;
   left:14px;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:0;
+  padding:0;
+  margin:0;
+  min-width:0;
+  border:2px solid transparent;
+  border-radius:12px;
+  background:transparent;
+  box-shadow:none;
+  appearance:none;
+  -webkit-appearance:none;
+  font:inherit;
+  text-align:left;
+  cursor:default;
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+#scoreStoreHud:hover{ background:transparent; }
+#scoreStoreHud:disabled{ opacity:1; }
+#scoreStoreHud.storeReady{
+  border-color:rgba(0,255,0,0.55);
+  background: rgba(0,0,0,0.55);
+  box-shadow: 0 0 18px rgba(0,255,0,0.10);
+  cursor:pointer;
+  pointer-events:auto;
+  animation:storeUnlockedHue 1.1s linear infinite;
+}
+#scoreStoreHud.storeReady:hover,
+body.controller-active #scoreStoreHud.storeReady.controllerFocus{
+  background: rgba(75,0,118,0.55) !important;
+  border-color: rgba(0,255,0,0.9) !important;
+  box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+}
+#accuracyScore{
+  position:static;
   font-family:monospace;
   font-weight:900;
   font-size:20px;
   color:#ffd400;
   text-shadow:0 0 8px rgba(0,0,0,0.65);
   pointer-events:none;
-  z-index:60;
   user-select:none;
   white-space:nowrap;
 }
 
 #storeUnlockedHud{
-  position:absolute;
-  top:34px;
-  left:14px;
+  position:static;
   font-family:monospace;
   font-weight:900;
   font-size:12px;
   color:#fff;
   text-shadow:0 0 8px rgba(0,0,0,0.75);
   pointer-events:none;
-  z-index:60;
   user-select:none;
   white-space:nowrap;
   display:none;
-  animation:storeUnlockedHue 1.1s linear infinite;
+  width:100%;
+  text-align:center;
 }
 
 @keyframes storeUnlockedHue{
@@ -775,8 +915,10 @@ body.invert-colors {
   pointer-events:none;
   z-index:20;
 "></div>
-<div id="accuracyScore">Score: 0pts</div>
-<div id="storeUnlockedHud">Store Unlocked</div>
+<button id="scoreStoreHud" type="button" disabled aria-label="Score HUD">
+  <div id="accuracyScore">Score: 0pts</div>
+  <div id="storeUnlockedHud">Store Unlocked</div>
+</button>
 <div id="timerHud">0.0s</div>
 
 
@@ -829,9 +971,18 @@ body.invert-colors {
     <div id="pauseTitle">PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
     <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
+    <button id="btnPauseOpenStore" class="pauseMenuBtn" type="button" style="font-size:18px; display:none;">Open Store</button>
     <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Controls</button>
     <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
 
+  </div>
+  <div id="scoreStorePanel" class="panel">
+    <div class="title">Score Store</div>
+    <div id="scoreStoreHint">Spend current score points on future upgrades and supplies.</div>
+    <div id="scoreStoreCurrentScore">Current Score: 0pts</div>
+    <div id="scoreStoreItems"></div>
+    <div id="scoreStoreStatus"></div>
+    <button id="btnScoreStoreClose" class="smallBtn" type="button">Back</button>
   </div>
 </div>
 
