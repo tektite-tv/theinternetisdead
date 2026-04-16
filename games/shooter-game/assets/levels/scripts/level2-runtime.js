@@ -3,6 +3,13 @@
 ========================================================================
 [REMOVAL LOG]
 
+- 2026-04-03 | v2.00
+  Changed: Core loop converted from bottom-row shooter into center-locked procedural maze traversal.
+  Kept: Player movement, aiming, shooting, bullet logic, timer, lives, health, and enemy damage systems.
+  Disabled: Regular enemy wave spawning for now while maze progression is prototyped.
+  Renamed: Bonus Mode -> Bonus Mode.
+
+
 - 2025-12-24 | v1.96
   Added: Pause commands /fullscreen (toggle fullscreen) and /help (lists commands alphabetically).
 
@@ -66,8 +73,8 @@
   Changed: Bomb detonates immediately on first enemy contact and can multi-kill enemies in the blast radius.
 
 - 2025-12-19 | v1.96
-  Changed: Bomb-killing a dragon.gif enemy no longer grants free armor.
-  Changed: Frog kills no longer heal the player or award free lives.
+  Added: Bomb-killing a dragon.gif enemy grants a one-time +25% "armor" pip next to the hearts HUD.
+  Behavior: The armor absorbs the next hit (any damage) and then flips to ❌ briefly.
 
 ====================================================================== */
 
@@ -75,9 +82,9 @@
 /* =======================
    Paths (EDIT IF NEEDED)
 ======================= */
-const ENEMY_WEBP_BASE = "/games/shooter-game-v2/assets/enemy-webps/";
-const ENEMY_WEBP_INDEX_URL = "/games/shooter-game-v2/assets/enemy-webps.json";
-const PLAYER_IMG_URL = "/games/shooter-game-v2/assets/bananarama.webp";
+const ENEMY_WEBP_BASE = "/games/shooter-game/assets/enemy-webps/";
+const ENEMY_WEBP_INDEX_URL = "/games/shooter-game/assets/enemy-webps.json";
+const PLAYER_IMG_URL = "/games/shooter-game/assets/bananarama.webp";
 const BOSS_IMG_URL = ENEMY_WEBP_BASE + "180px-NO_U_cycle.webp";
 const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code
 const AUDIO_HIT = "/media/audio/hitmarker.mp3";
@@ -87,14 +94,14 @@ const AUDIO_OOF = "/media/audio/oof.mp3";
 /* =======================
    Audio
 ======================= */
-const AUDIO_BG_MUSIC = "/media/audio/spaceinvaders.mp3";
+const AUDIO_BG_MUSIC = "/media/audio/do-that-there.mp3";
 const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
 musicBg.loop = true;
 musicBg.preload = "auto";
-musicBg.volume = 0.6;
+musicBg.volume = 0.5;
 
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
@@ -148,7 +155,7 @@ function ensureMusicPlaying(restart=false){
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
-    tryPlayWithRetry(musicBg, 30, 80);
+    musicBg.play().catch(()=>{});
   }catch(e){}
 }
 
@@ -216,7 +223,7 @@ const fxCtx = fxCanvas.getContext("2d");
 // v1.96: allow disabling post-processing via /video_fx
 let VIDEO_FX_ENABLED = false;
 
-// Screen-glitch spiral burst
+// v1.96: "Tab" key screen-glitch spiral burst
 let GLITCH_SPIRAL_T = 0;
 const GLITCH_SPIRAL_DUR = 2.8;
 function triggerGlitchSpiral(){
@@ -316,6 +323,15 @@ const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 const winOverlay = document.getElementById("winOverlay");
 const btnContinue = document.getElementById("btnContinue");
+const mazeSummaryOverlay = document.getElementById("mazeSummaryOverlay");
+const mazeSummaryCoverage = document.getElementById("mazeSummaryCoverage");
+const mazeSummaryMissed = document.getElementById("mazeSummaryMissed");
+const mazeSummaryBonus = document.getElementById("mazeSummaryBonus");
+const btnNextMaze = document.getElementById("btnNextMaze");
+const LEVEL_PARAMS = new URLSearchParams(window.location.search);
+const URL_START_WAVE = Math.max(1, Math.min(21, parseInt(LEVEL_PARAMS.get("startWave") || "1", 10) || 1));
+const FORCE_MENU = LEVEL_PARAMS.get("menu") === "1" || LEVEL_PARAMS.get("autostart") === "0";
+const AUTO_START_LEVEL = !FORCE_MENU;
 
 let hudVisible = false;
 
@@ -341,10 +357,16 @@ let isPaused = false;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
   btnPauseQuit.addEventListener("click", () => {
-    // Unpause and return to start menu
+    // Unpause and return to the parent shell's reloaded level 1 when embedded.
     setPaused(false);
     stopMusic();
     _resetStartResourceDefaults();
+    if (window.parent && window.parent !== window){
+      try {
+        if (requestReturnToLevel1()) return;
+      } catch (e) {}
+    }
+    // Fallback for standalone use.
     showMenu();
   });
 }
@@ -363,6 +385,7 @@ function requestOpenChatFromPause(){
 }
 function showPauseControlsMenu(){
   if (!controlsMenu || !isPaused) return;
+  syncInitialActiveInputModeFromMenuContext();
   pauseControlsOpen = true;
   resetDraftBindingsFromActive();
   pauseOverlay.classList.add("pauseControlsVisible");
@@ -373,8 +396,8 @@ function showPauseControlsMenu(){
   controlsMenu.style.display = "block";
   controlsMenu.classList.add("pauseControlsMode");
   uiRoot.style.display = "flex";
+  setControlsBindMode(activeInputMode);
   updateControlsDisplay();
-  renderControlsBindingList();
   fitControlsMenuToViewport();
   controlsFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
@@ -388,7 +411,6 @@ function hidePauseControlsMenu(){
   pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
   uiRoot.style.display = "none";
-  unlockControlsInputMode();
   cancelBindingEdit();
   pauseFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
@@ -400,7 +422,7 @@ if (btnPauseOpenChat){
   });
 }
 
-// Temporary glitch spiral post effect (triggered by Tab)
+// v1.96: temporary "glitch spiral" post effect (triggered by Tab key)
 // Uses the existing fxCanvas as a scratch buffer.
 // strength: 0..1 (1 = strongest)
 function applyGlitchSpiral(strength){
@@ -552,24 +574,23 @@ let bgSuggestList = [];
 
 function execPauseCommand(cmd){
   const raw = String(cmd||"").trim();
-  if (!raw) return { ok:false, message:"No command provided" };
+  if (!raw) return;
 
   // v1.96: /help -> list commands alphabetically inside the pause panel
   if (raw === "/help"){
     showHelp();
-    return { ok:true, message:"/help executed" };
+    return;
   }
 
   // v1.96: /fullscreen -> toggle browser fullscreen
   if (raw === "/fullscreen"){
     toggleFullscreen();
-    return { ok:true, message:"/fullscreen executed" };
+    return;
   }
 
   // /video_fx -> toggle chromatic aberration + hue drift
   if (raw === "/video_fx"){
     VIDEO_FX_ENABLED = !VIDEO_FX_ENABLED;
-    syncCheatsMenuState();
     return { ok:true, message:`Video FX ${VIDEO_FX_ENABLED ? "enabled" : "disabled"}` };
   }
 
@@ -618,35 +639,39 @@ function execPauseCommand(cmd){
     return { ok:false, message:"Usage: /bombs [0-99|100|MAX]" };
   }
 
+
+
   // /invert -> toggle invert colors mode (same as Options menu)
   if (raw === "/invert"){
-    INVERT_COLORS = !INVERT_COLORS;
-    applyInvertColors();
-    syncCheatsMenuState();
-    return { ok:true, message:`Invert colors ${INVERT_COLORS ? "enabled" : "disabled"}` };
+    document.body.classList.toggle("invert-colors");
+    return;
   }
 
   if (raw.startsWith(BG_CMD)){
     const arg = raw.slice(BG_CMD.length).trim();
 
+    // v1.96: allow named colors OR any valid hex code (#RGB, #RRGGBB, #RRGGBBAA), with or without leading "#"
     if (!arg){
       starfieldBgOverride = null;
-      return { ok:true, message:"/background_color reset" };
+      return;
     }
 
     const hexMatch = arg.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
     if (hexMatch){
       starfieldBgOverride = "#" + hexMatch[1];
-      return { ok:true, message:`/background_color ${starfieldBgOverride}` };
+      return;
     }
 
+    // fall back to letting the browser try to interpret it as a CSS color name/value
     starfieldBgOverride = arg;
-    return { ok:true, message:`/background_color ${arg}` };
+    return;
   }
 
+  // future commands go here
   try{ console.log("[PAUSE CMD]", raw); }catch(e){}
-  return { ok:false, message:`${raw.split(/\s+/)[0]} is not a known command` };
 }
+
+
 
 window.addEventListener("message", (event) => {
   const data = event.data;
@@ -745,6 +770,7 @@ if (pauseCmdSuggest){
 
 function togglePause(){
   if (gameState !== STATE.PLAYING) return;
+  if (mazeSummaryActive) return;
   if (isDead) return; // don't pause during death freeze/respawn
   if (deathOverlay && deathOverlay.style.display === "flex") return; // don't pause on GAME OVER
   setPaused(!isPaused);
@@ -815,23 +841,20 @@ let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
-let totalEnemiesSpawned = 0;
-let bombDragonKills = 0;
-let bombFrogKills = 0;
 // v1.96: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
 const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
 let lives = 0; // extra lives (decremented when health hits 0)
-let frogKills = 0; // legacy counter kept for reset compatibility; frog kills no longer award free lives
+let frogKills = 0; // counts frog kills; every 3 frogs awards +1 life
 let health = 1.0; // 0..1 (4 hits -> 0)
-let MAX_HEARTS = 3; // v1.96: configurable hearts per life
+let MAX_HEARTS = 4; // v1.96: configurable hearts per life
 let HIT_DAMAGE = 0.25; // 25% per hit (4 hearts = one life)
 
 // =======================
 // Dragon Bomb-Kill Armor (v1.96)
-// - Dragon bomb kills are tracked for the win screen, but no longer grant free armor.
+// - If a dragon.gif enemy is killed by the BOMB blast, grant a one-time +25% armor.
 // - Armor absorbs the next hit, then turns into an ❌ briefly next to the hearts HUD.
 // =======================
 let bonusArmor = 0;              // 0 or 0.25
@@ -860,9 +883,9 @@ let waveBanner = { text:"", t:0, color:"#00ff66" };
 function getWaveLabel(n){
   // Wave label rules:
   // - Waves 1-10: "Wave N"
-  // - Wave 11: "Boss Mode" (red)
+  // - Wave 11: "Bonus Mode" (red)
   // - Waves 12-21: "INSANITY WAVE: K" where K = n-11
-  if (n === 11) return { text:"Boss Mode", color:"#ff3333" };
+  if (n === 11) return { text:"Bonus Mode", color:"#7dff7d" };
   if (n >= 12 && n <= 21) return { text:"INSANITY WAVE: " + (n - 11), color:"#ffffff" };
   return { text:"Wave " + n, color:"#ffffff" };
 }
@@ -874,7 +897,7 @@ function showWaveBanner(n){
   waveBanner.t = 1.35;
 }
 
-const STATE = { MENU:"menu", OPTIONS:"options", CHEATS:"cheats", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
+const STATE = { MENU:"menu", OPTIONS:"options", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
 let gameWon = false;
 
@@ -916,14 +939,6 @@ function awardScore(basePoints){
 
 const accuracyScoreEl = document.getElementById("accuracyScore");
 const timerHud = document.getElementById("timerHud");
-const winStatScoreEl = document.getElementById("winStatScore");
-const winStatKillsEl = document.getElementById("winStatKills");
-const winStatBulletsEl = document.getElementById("winStatBullets");
-const winStatAccuracyEl = document.getElementById("winStatAccuracy");
-const winStatBonusEl = document.getElementById("winStatBonus");
-const winStatBonusDragonsEl = document.getElementById("winStatBonusDragons");
-const winStatBonusFrogsEl = document.getElementById("winStatBonusFrogs");
-const winStatTimeEl = document.getElementById("winStatTime");
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
@@ -931,29 +946,6 @@ function updateAccuracyScoreHUD(){
   accuracyScoreEl.textContent = "Score: " + String(Math.floor(score)) + "pts";
   const storeUnlockedHudEl = document.getElementById("storeUnlockedHud");
   if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = (gameState === STATE.PLAYING && Math.floor(score) >= 250) ? "block" : "none";
-}
-
-function formatRunTime(seconds){
-  return (Math.max(0, seconds || 0)).toFixed(1) + "s";
-}
-
-function clamp01(n){
-  return Math.max(0, Math.min(1, n));
-}
-
-
-function refreshWinStats(){
-  const accuracyPercent = Math.round(getAccuracy() * 100);
-  if (winStatTimeEl) winStatTimeEl.textContent = "Time: " + formatRunTime(runTimer);
-  if (winStatScoreEl) winStatScoreEl.textContent = "Score: " + Math.floor(score);
-  if (winStatKillsEl) winStatKillsEl.textContent = "Enemies Killed: " + totalEnemiesSpawned + " / " + totalEnemiesSpawned;
-  if (winStatBulletsEl) winStatBulletsEl.textContent = "Bullets Shot: " + shotsFired;
-  if (winStatAccuracyEl) winStatAccuracyEl.textContent = "Accuracy: " + accuracyPercent + "%";
-
-  const hasBombBonus = (bombDragonKills + bombFrogKills) > 0;
-  if (winStatBonusEl) winStatBonusEl.style.display = hasBombBonus ? "block" : "none";
-  if (winStatBonusDragonsEl) winStatBonusDragonsEl.textContent = "Dragons Bombed: +" + bombDragonKills;
-  if (winStatBonusFrogsEl) winStatBonusFrogsEl.textContent = "Frogs Bombed: +" + bombFrogKills;
 }
 
 function updateTimerHUD(){
@@ -1023,16 +1015,22 @@ function enemyKill(e, source){
   // One-time kill side effects.
   if (!e._killAwarded){
     e._killAwarded = true;
-    if (source === "bomb" && isDragonEnemy(e)){
-      bombDragonKills += 1;
-    }
+    if (source === "bomb" && isDragonEnemy(e)) grantBonusArmor();
 
-    if (source === "bomb" && e.isFrog){
-      bombFrogKills += 1;
-    }
+    if (e.isFrog){
+      healPlayer(0.50);
 
-    // Frog kills no longer heal the player or award free lives.
-    awardScore(10);
+      // Extra life system: every 3 frog kills, award +1 life.
+      frogKills += 1;
+      if (frogKills % 3 === 0){
+        lives += 1;
+        livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
+        // Optional tiny feedback burst (kept simple and non-breaking).
+        if (typeof spawnFloatingText === 'function') spawnFloatingText(e.x, e.y - 18, "+1 LIFE", 0.85);
+        if (typeof playSfx === 'function') playSfx(sfxHit);
+      }
+    }
+awardScore(10);
     playSfx(sfxHit);
   }
 }
@@ -1066,26 +1064,71 @@ function breakBonusArmor(){
    - Press Q drops a flashing + that explodes after 3 flashes (0.5s each)
 ======================= */
 
+function getRandomMazeUfoSpawnWorld(){
+  if (maze){
+    const walkable = getMazeWalkableCells();
+    if (walkable && walkable.length){
+      const farEnough = walkable.filter(cell => {
+        const wx = (cell.x + 0.5) * maze.cellSize;
+        const wy = (cell.y + 0.5) * maze.cellSize;
+        return Math.hypot(wx - playerWorldX, wy - playerWorldY) >= maze.cellSize * 2.2;
+      });
+      const pool = farEnough.length ? farEnough : walkable;
+      const cell = pool[Math.floor(Math.random() * pool.length)];
+      return {
+        x: (cell.x + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18),
+        y: (cell.y + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18)
+      };
+    }
+  }
+  return { x: playerWorldX + rand(-220, 220), y: playerWorldY + rand(-220, 220) };
+}
+
+function canUfoSeePlayer(worldX, worldY){
+  if (!maze) return true;
+  const dx = playerWorldX - worldX;
+  const dy = playerWorldY - worldY;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= 0.0001) return true;
+  const step = Math.max(10, maze.cellSize * 0.18);
+  const steps = Math.max(1, Math.ceil(dist / step));
+  for (let i = 1; i <= steps; i++){
+    const t = i / steps;
+    const sx = worldX + dx * t;
+    const sy = worldY + dy * t;
+    if (isWallAtWorld(sx, sy)) return false;
+  }
+  return true;
+}
+
 function trySpawnUFO(force=false){
   if (ufo) return; // only one at a time
   // v1.96: Force-spawn on wave 11 and 21 (or when explicitly forced).
   if (!force && !shouldForceUFOForWave(wave) && Math.random() > 0.25) return;
 
-  // Spawn near top area, tiny and fast.
+  const spawn = getRandomMazeUfoSpawnWorld();
+  const startAngle = rand(0, Math.PI * 2);
+  const startSpeed = rand(38, 72);
+
   ufo = {
-    x: rand(30, canvas.width - 30),
-    y: rand(40, 110),
-    vx: rand(-420, 420) / 60, // px/frame-ish
-    vy: rand(260, 520) / 60,
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    worldX: spawn.x,
+    worldY: spawn.y,
+    vx: Math.cos(startAngle) * startSpeed,
+    vy: Math.sin(startAngle) * startSpeed,
+    desiredVx: Math.cos(startAngle) * startSpeed,
+    desiredVy: Math.sin(startAngle) * startSpeed,
+    roamAngle: rand(0, Math.PI * 2),
+    roamTurnTimer: rand(0.35, 1.1),
+    seenPlayerLag: 0,
+    seesPlayer: false,
     r: 10,
     hits: 0,
     stage: 0, // 0 none, 1 red, 2 green, 3 blue
     fade: 0,
     strobeT: 0
   };
-
-  // Ensure it's actually moving.
-  if (Math.abs(ufo.vx) < 2) ufo.vx = (ufo.vx < 0 ? -2.5 : 2.5);
 }
 
 function updateUFO(dt){
@@ -1094,6 +1137,10 @@ function updateUFO(dt){
   // If fading, just fade out and then grant powerup.
   if (ufo.fade > 0){
     ufo.fade += dt;
+    const camX = playerWorldX - canvas.width / 2;
+    const camY = playerWorldY - canvas.height / 2;
+    ufo.x = ufo.worldX - camX;
+    ufo.y = ufo.worldY - camY;
     if (ufo.fade >= 0.55){
       ufo = null;
       bombsCount += 1;
@@ -1102,30 +1149,86 @@ function updateUFO(dt){
     return;
   }
 
-  // Move + bounce around the top half.
-  ufo.x += ufo.vx;
-  ufo.y += ufo.vy;
-
-  const left = 16, right = canvas.width - 16, top = 30, bottom = canvas.height * 0.48;
-  if (ufo.x < left){ ufo.x = left; ufo.vx *= -1; }
-  if (ufo.x > right){ ufo.x = right; ufo.vx *= -1; }
-  if (ufo.y < top){ ufo.y = top; ufo.vy *= -1; }
-  if (ufo.y > bottom){ ufo.y = bottom; ufo.vy *= -1; }
-
-  // "Avoid the player's movement toward it": if player is moving toward UFO, add a shove away.
-  const movingLeft  = isKeyboardActionHeld("moveLeft");
-  const movingRight = isKeyboardActionHeld("moveRight");
-  const toward =
-    (movingLeft  && player.x > ufo.x) ||
-    (movingRight && player.x < ufo.x);
-
-  if (toward){
-    const away = Math.sign(ufo.x - player.x) || (Math.random() < 0.5 ? -1 : 1);
-    ufo.vx += away * (0.65 + 0.35 * FUNK);
-    // clamp
-    ufo.vx = Math.max(-9.5, Math.min(9.5, ufo.vx));
+  if (!maze){
+    ufo.x += ufo.vx * dt;
+    ufo.y += ufo.vy * dt;
+    ufo.strobeT += dt;
+    return;
   }
 
+  const radius = Math.max(10, ufo.r + 4);
+  const seesPlayer = canUfoSeePlayer(ufo.worldX, ufo.worldY);
+  ufo.seesPlayer = seesPlayer;
+
+  ufo.roamTurnTimer -= dt;
+  if (ufo.roamTurnTimer <= 0){
+    ufo.roamTurnTimer = rand(0.45, 1.35);
+    ufo.roamAngle += rand(-1.25, 1.25);
+  }
+
+  const roamSpeed = 54;
+  let targetVx = Math.cos(ufo.roamAngle) * roamSpeed;
+  let targetVy = Math.sin(ufo.roamAngle) * roamSpeed;
+
+  if (seesPlayer){
+    ufo.seenPlayerLag = Math.min(0.22, ufo.seenPlayerLag + dt);
+  } else {
+    ufo.seenPlayerLag = Math.max(0, ufo.seenPlayerLag - dt * 1.6);
+  }
+
+  if (ufo.seenPlayerLag >= 0.14){
+    const awayX = ufo.worldX - playerWorldX;
+    const awayY = ufo.worldY - playerWorldY;
+    const awayD = Math.hypot(awayX, awayY) || 0.0001;
+    const fleeSpeed = 78;
+    targetVx = (awayX / awayD) * fleeSpeed;
+    targetVy = (awayY / awayD) * fleeSpeed;
+  }
+
+  ufo.desiredVx += (targetVx - ufo.desiredVx) * Math.min(1, dt * 2.2);
+  ufo.desiredVy += (targetVy - ufo.desiredVy) * Math.min(1, dt * 2.2);
+  ufo.vx += (ufo.desiredVx - ufo.vx) * Math.min(1, dt * 4.6);
+  ufo.vy += (ufo.desiredVy - ufo.vy) * Math.min(1, dt * 4.6);
+
+  const maxSpeed = seesPlayer ? 88 : 72;
+  const speed = Math.hypot(ufo.vx, ufo.vy) || 0.0001;
+  if (speed > maxSpeed){
+    ufo.vx = (ufo.vx / speed) * maxSpeed;
+    ufo.vy = (ufo.vy / speed) * maxSpeed;
+  }
+
+  let bouncedX = false;
+  let bouncedY = false;
+  const nextX = ufo.worldX + ufo.vx * dt;
+  const nextY = ufo.worldY + ufo.vy * dt;
+
+  if (canOccupyWorld(nextX, ufo.worldY, radius)){
+    ufo.worldX = nextX;
+  } else {
+    bouncedX = true;
+    ufo.vx *= -0.72;
+    ufo.desiredVx *= -0.58;
+    ufo.roamAngle = Math.atan2(ufo.desiredVy || ufo.vy || 0, ufo.desiredVx || ufo.vx || 1) + rand(-0.75, 0.75);
+  }
+
+  if (canOccupyWorld(ufo.worldX, nextY, radius)){
+    ufo.worldY = nextY;
+  } else {
+    bouncedY = true;
+    ufo.vy *= -0.72;
+    ufo.desiredVy *= -0.58;
+    ufo.roamAngle = Math.atan2(ufo.desiredVy || ufo.vy || 1, ufo.desiredVx || ufo.vx || 0) + rand(-0.75, 0.75);
+  }
+
+  if (bouncedX || bouncedY){
+    ufo.worldX += ufo.vx * dt * 0.35;
+    ufo.worldY += ufo.vy * dt * 0.35;
+  }
+
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+  ufo.x = ufo.worldX - camX;
+  ufo.y = ufo.worldY - camY;
   ufo.strobeT += dt;
 }
 
@@ -1374,7 +1477,7 @@ function updateStarfield(dt, keys, playerSpeed){
     vxIntent = 0.15 * Math.sin(time * 0.6);
   }
 
-  const targetVx = vxIntent * playerSpeed * 55;
+  const targetVx = 0; // maze mode: starfield no longer reacts to player movement
   playerVxSmoothed += (targetVx - playerVxSmoothed) * Math.min(1, dt * 8);
 
   for (let li = 0; li < starLayers.length; li++){
@@ -1396,22 +1499,17 @@ function updateStarfield(dt, keys, playerSpeed){
 }
 
 function drawStarfield(){
-  // v1.96: Stage 2+ visual shift (wave >= 11)
-  const isStage2Plus = (gameState === STATE.PLAYING && wave >= 11);
-
-  // Background
-  ctx.fillStyle = (starfieldBgOverride ? starfieldBgOverride : (isStage2Plus ? "#300" : "#000"));
+  // v2.01: Maze mode uses a plain black void instead of the old starfield.
+  ctx.fillStyle = '#000';
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
+  if (gameState === STATE.PLAYING) return;
   if (!starfieldReady) return;
 
   for (let li = 0; li < starLayers.length; li++){
     const arr = stars[li];
-    const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
-
-    // v1.96: Keep stars white for maximum contrast (even in Stage 2+)
+    const alpha = li === 0 ? 0.20 : (li === 1 ? 0.32 : 0.48);
     ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-
     for (const st of arr){
       ctx.fillRect(st.x, st.y, st.s, st.s);
     }
@@ -1433,7 +1531,6 @@ function resize(){
   resetStarfield();
   resizeFX();
   fitOptionsMenuToViewport();
-  fitCheatsMenuToViewport();
   fitControlsMenuToViewport();
 }
 window.addEventListener("resize", resize);
@@ -1456,26 +1553,6 @@ function fitOptionsMenuToViewport(){
     const slack = Math.max(0, availableH - scaledHeight);
     optionsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
   }
-}
-
-function fitCheatsMenuToViewport(){
-  if (!cheatsMenu) return;
-  cheatsMenu.style.transform = "scale(1)";
-  cheatsMenu.style.margin = "0";
-  cheatsMenu.style.transformOrigin = "center center";
-  if (cheatsMenu.style.display === "none" || cheatsMenu.offsetParent === null) return;
-
-  const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
-  const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
-  const rect = cheatsMenu.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
-  const scaleX = (viewportW - 24) / rect.width;
-  const scaleY = (viewportH - 24) / rect.height;
-  const scale = Math.max(0.78, Math.min(1, scaleX, scaleY));
-  cheatsMenu.style.transform = `scale(${scale})`;
-  const scaledHeight = rect.height * scale;
-  const slack = Math.max(0, viewportH - scaledHeight);
-  if (slack > 6){ cheatsMenu.style.margin = `${Math.floor(slack / 2)}px 0`; }
 }
 
 function fitControlsMenuToViewport(){
@@ -1514,10 +1591,9 @@ function fitControlsMenuToViewport(){
      regardless of fullscreen, browser chrome, or embedding under a site banner.
 ======================= */
 function getPlayerAlignedY(gapPx = 6){
+  if (gameState === STATE.PLAYING) return canvas.height / 2;
   const heartsTop = getHeartsTopInCanvas();
-  // player.y is CENTER-based, so subtract half-height.
   let y = heartsTop - (player.h / 2) - gapPx;
-  // Clamp to canvas bounds
   y = Math.max(player.h/2, Math.min(canvas.height - player.h/2, y));
   return y;
 }
@@ -1533,7 +1609,6 @@ sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
 
 let audioUnlocked = false;
-let pendingWaveStartMusic = false;
 function unlockAudioOnce(){
   if (audioUnlocked) return;
   audioUnlocked = true;
@@ -1549,18 +1624,14 @@ function unlockAudioOnce(){
 
   // Prime music/death audio once the browser allows it.
   try{
-    // Prime the background music once the browser allows it.
-    musicBg.muted = true;
-    musicBg.play().then(()=>{ musicBg.pause(); musicBg.currentTime = 0; musicBg.muted = false; }).catch(()=>{ musicBg.muted = false; });
-
     // Prime the death yell audio once the browser allows it.
     sfxDeath.muted = true;
     sfxDeath.play().then(()=>{ sfxDeath.pause(); sfxDeath.currentTime = 0; sfxDeath.muted = false; }).catch(()=>{ sfxDeath.muted = false; });
   }catch(e){}
 
   applyMuteState();
+  ensureMusicPlaying();
 }
-
 function playSfx(a){
   if (audioMuted) return;
   try{
@@ -1577,14 +1648,10 @@ function playSfx(a){
 const uiRoot = document.getElementById("uiRoot");
 const startMenu = document.getElementById("startMenu");
 const optionsMenu = document.getElementById("optionsMenu");
-const cheatsMenu = document.getElementById("cheatsMenu");
 const assetStatus = document.getElementById("assetStatus");
-function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 
 const btnStart = document.getElementById("btnStart");
 const btnOptions = document.getElementById("btnOptions");
-const startMenuTitle = document.getElementById("startMenuTitle");
-const titleHoverReveal = document.getElementById("titleHoverReveal");
 const btnControls = document.getElementById("btnControls");
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
@@ -1594,11 +1661,9 @@ const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
-const btnCheats = document.getElementById("btnCheats");
-const btnCheatsBack = document.getElementById("btnCheatsBack");
 
   // =======================
-  // Start Options (v1.96)
+  // Level 2 navigation menu
   // =======================
   const livesSlider = document.getElementById("livesSlider");
   const heartsSlider = document.getElementById("heartsSlider");
@@ -1607,7 +1672,8 @@ const btnCheatsBack = document.getElementById("btnCheatsBack");
   const speedSlider = document.getElementById("speedSlider");
   const infiniteToggle = document.getElementById("infiniteToggle");
   const startWaveSelect = document.getElementById("startWaveSelect");
-const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
+const btnReturnToLevel1 = document.getElementById("btnReturnToLevel1");
+const btnSkipToLevel3 = document.getElementById("btnSkipToLevel3");
   const startWaveLabel = document.getElementById("startWaveLabel");
 
   const livesVal = document.getElementById("livesVal");
@@ -1616,117 +1682,59 @@ const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
   const bombsVal = document.getElementById("bombsVal");
 
   const speedVal = document.getElementById("speedVal");
-  // Saved settings (persist for the session)
   let START_LIVES = 1;
   let START_HEARTS = 3;
   let START_SHIELDS = 0;
   let START_BOMBS = 0;
-  // v1.97: each resource can independently use 100 as INFINITE.
+  // v1.97: 100 in a resource box means INFINITE for that resource only.
   let START_LIVES_INFINITE = false;
   let START_HEARTS_INFINITE = false;
   let START_SHIELDS_INFINITE = false;
   let START_BOMBS_INFINITE = false;
-  // v1.96: game speed slider (1-10). 5 = 1.0x.
   let START_GAME_SPEED = 5;
   let GAME_SPEED_MULT = 1.0;
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   let INFINITE_MODE = false;
   
-let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-10
+let START_WAVE = 1;
 
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
-const videoFxCheckbox = document.getElementById("videoFxCheckbox");
-const infiniteToggleStatus = document.getElementById("infiniteToggleStatus");
-const invertColorsStatus = document.getElementById("invertColorsStatus");
-const videoFxStatus = document.getElementById("videoFxStatus");
 
 function applyInvertColors(){
   document.body.classList.toggle("invert-colors", INVERT_COLORS);
-}
-
-function syncCheatsMenuState(){
-  if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
-  if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
-  if (videoFxCheckbox) videoFxCheckbox.checked = !!VIDEO_FX_ENABLED;
-  if (infiniteToggleStatus) infiniteToggleStatus.textContent = INFINITE_MODE ? "Enabled" : "Disabled";
-  if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
-  if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
-}
-
-if (infiniteToggle){
-  infiniteToggle.addEventListener("change", () => {
-    INFINITE_MODE = !!infiniteToggle.checked;
-    infiniteModeActive = !!INFINITE_MODE;
-    syncCheatsMenuState();
-  });
 }
 
 if (invertColorsCheckbox){
   invertColorsCheckbox.addEventListener("change", () => {
     INVERT_COLORS = invertColorsCheckbox.checked;
     applyInvertColors();
-    syncCheatsMenuState();
-  });
-}
-
-if (videoFxCheckbox){
-  videoFxCheckbox.addEventListener("change", () => {
-    VIDEO_FX_ENABLED = !!videoFxCheckbox.checked;
-    syncCheatsMenuState();
   });
 }
 
 
   function getStartWaveText(v){
     const n = parseInt(v, 10) || 1;
-    if (n === 11) return "Boss Mode";
+    if (n === 11) return "Bonus Mode";
     if (n >= 12 && n <= 21) return "Insanity " + (n - 11);
-    return String(n);
+    return "Wave " + n;
   }
-
-  function clampNumericInput(inputEl){
-    if (!inputEl) return;
-    const min = Number(inputEl.min);
-    const max = Number(inputEl.max);
-    let value = parseInt(inputEl.value, 10);
-    if (!Number.isFinite(value)) value = Number.isFinite(min) ? min : 0;
-    if (Number.isFinite(min)) value = Math.max(min, value);
-    if (Number.isFinite(max)) value = Math.min(max, value);
-    inputEl.value = String(value);
-  }
-
-  function syncRangeProgress(rangeEl){
-  if (!rangeEl) return;
-  const min = parseFloat(rangeEl.min || '0');
-  const max = parseFloat(rangeEl.max || '100');
-  const value = parseFloat(rangeEl.value || '0');
-  const span = max - min;
-  const progress = span ? ((value - min) / span) * 100 : 0;
-  rangeEl.style.setProperty('--range-progress', Math.max(0, Math.min(100, progress)) + '%');
-}
 
 function syncStartOptionsLabels(){
-    clampNumericInput(livesSlider);
-    clampNumericInput(heartsSlider);
-    clampNumericInput(shieldsSlider);
-    clampNumericInput(bombsSlider);
     if (livesVal && livesSlider) livesVal.textContent = formatResourceOptionValue(livesSlider);
     if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
     if (shieldsVal && shieldsSlider) shieldsVal.textContent = formatResourceOptionValue(shieldsSlider);
     if (bombsVal && bombsSlider) bombsVal.textContent = formatResourceOptionValue(bombsSlider);
     if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
-    syncRangeProgress(speedSlider);
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
 
-  [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].forEach(s => {
+  [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].filter(Boolean).forEach(s => {
     s.addEventListener("input", syncStartOptionsLabels);
-    s.addEventListener("change", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
+  if (infiniteToggle) infiniteToggle.addEventListener("change", () => {});
   syncStartOptionsLabels();
-  syncCheatsMenuState();
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
 const INPUT_MODE_CONTROLLER = "controller";
@@ -1786,10 +1794,11 @@ const CONTROLLER_BIND_ACTIONS = [
   { key: "fullscreen", label: "Fullscreen", hint: "Whole shooter shell" }
 ];
 let activeInputMode = INPUT_MODE_KEYBOARD;
-let controlsInputLockMode = null;
 let controlsBindMode = INPUT_MODE_KEYBOARD;
 let controlsFocusIndex = 0;
 let controlsMoveFocusIndex = 0;
+let controlsInputLockMode = null;
+let sawKeyboardMouseInput = false;
 let bindingEditState = null;
 let controllerRebindReady = false;
 let pauseControlsOpen = false;
@@ -1865,6 +1874,13 @@ function lockControlsInputMode(mode){
 }
 function unlockControlsInputMode(){
   controlsInputLockMode = null;
+}
+function syncInitialActiveInputModeFromMenuContext(){
+  if (sawKeyboardMouseInput) return;
+  if (activeInputMode !== INPUT_MODE_KEYBOARD) return;
+  const gp = getGamepad();
+  if (!gp || gp.connected === false) return;
+  setActiveInputMode(INPUT_MODE_CONTROLLER);
 }
 function getCurrentBindingDefs(){ return controlsBindMode === INPUT_MODE_CONTROLLER ? CONTROLLER_BIND_ACTIONS : KEYBOARD_BIND_ACTIONS; }
 function getCurrentBindingValue(action){ return controlsBindMode === INPUT_MODE_CONTROLLER ? draftControllerBindings[action] : draftKeyboardBindings[action]; }
@@ -2035,9 +2051,8 @@ updateControlsDisplay();
 renderControlsBindingList();
 let menuFocusIndex = 0;
 let optionsFocusIndex = 0;
-let cheatsFocusIndex = 0;
-let startingStatFocusIndex = 0;
 let pauseFocusIndex = 0;
+let optionsOpenedFromPause = false;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
 
@@ -2068,27 +2083,11 @@ if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { app
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnControls].filter(Boolean);
-}
-
-function isTitleHoverRevealFocused(){
-  return getMenuControllerTargets()[menuFocusIndex] === titleHoverReveal;
-}
-
-function getStartingStatInputs(){
-  return [heartsSlider, shieldsSlider, livesSlider, bombsSlider].filter(Boolean);
+  return [btnStart, btnOptions, btnControls].filter(Boolean);
 }
 
 function getOptionsControllerTargets(){
-  // Treat the four starting-stat number boxes as one vertical controller row.
-  // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
-  const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [startWaveSelect, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
-}
-
-function getCheatsControllerTargets(){
-  const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
-  return [infiniteToggle, invertColorsCheckbox, videoFxCheckbox, skipTarget, btnCheatsBack].filter(Boolean);
+  return [btnReturnToLevel1, btnSkipToLevel3, btnBack].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -2099,11 +2098,7 @@ function getControlsControllerTargets(){
 }
 
 function getPauseControllerTargets(){
-  return [btnPauseResume, btnPauseOpenChat, btnPauseQuit].filter(Boolean);
-}
-
-function getWinControllerTargets(){
-  return [btnContinue].filter(Boolean);
+  return [btnPauseResume, btnPauseOpenChat, btnPauseOptions, btnPauseQuit].filter(Boolean);
 }
 
 function syncMenuControllerFocus(){
@@ -2114,19 +2109,10 @@ function syncMenuControllerFocus(){
 }
 
 function syncOptionsControllerFocus(){
-  const statInputs = getStartingStatInputs();
-  if (statInputs.length) startingStatFocusIndex = Math.max(0, Math.min(startingStatFocusIndex, statInputs.length - 1));
   const items = getOptionsControllerTargets();
   if (!items.length) return;
   optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
   focusControllerElement(items[optionsFocusIndex]);
-}
-
-function syncCheatsControllerFocus(){
-  const items = getCheatsControllerTargets();
-  if (!items.length) return;
-  cheatsFocusIndex = Math.max(0, Math.min(cheatsFocusIndex, items.length - 1));
-  focusControllerElement(items[cheatsFocusIndex]);
 }
 
 function syncPauseControllerFocus(){
@@ -2134,12 +2120,6 @@ function syncPauseControllerFocus(){
   if (!items.length) return;
   pauseFocusIndex = Math.max(0, Math.min(pauseFocusIndex, items.length - 1));
   focusControllerElement(items[pauseFocusIndex]);
-}
-
-function syncWinControllerFocus(){
-  const items = getWinControllerTargets();
-  if (!items.length) return;
-  focusControllerElement(items[0]);
 }
 
 function syncControlsControllerFocus(){
@@ -2158,24 +2138,10 @@ function moveMenuControllerFocus(delta){
 }
 
 function moveOptionsControllerFocus(delta){
-  const previous = getOptionsControllerTargets()[optionsFocusIndex];
   const items = getOptionsControllerTargets();
   if (!items.length) return;
   optionsFocusIndex = (optionsFocusIndex + delta + items.length) % items.length;
-  const next = getOptionsControllerTargets()[optionsFocusIndex];
-  const statInputs = getStartingStatInputs();
-  if (statInputs.includes(next) && !statInputs.includes(previous)){
-    startingStatFocusIndex = 0; // Entering the stat row lands on Hearts. Humanity survives.
-  }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
-  else clearControllerFocus();
-}
-
-function moveCheatsControllerFocus(delta){
-  const items = getCheatsControllerTargets();
-  if (!items.length) return;
-  cheatsFocusIndex = (cheatsFocusIndex + delta + items.length) % items.length;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncCheatsControllerFocus();
   else clearControllerFocus();
 }
 
@@ -2201,49 +2167,6 @@ function moveControlsControllerFocus(delta){
   fitControlsMenuToViewport();
 }
 
-function moveStartingStatFocus(delta){
-  const statInputs = getStartingStatInputs();
-  if (!statInputs.length) return false;
-  startingStatFocusIndex = Math.max(0, Math.min(statInputs.length - 1, startingStatFocusIndex + delta));
-  syncOptionsControllerFocus();
-  return true;
-}
-
-function isStartingStatFocused(){
-  const statInputs = getStartingStatInputs();
-  return statInputs.includes(getOptionsControllerTargets()[optionsFocusIndex]);
-}
-
-function isOptionsBottomButtonFocused(){
-  const items = getOptionsControllerTargets();
-  const current = items[optionsFocusIndex];
-  return current === btnBack || current === btnApply;
-}
-
-function moveOptionsBottomButtonsHorizontally(delta){
-  const items = getOptionsControllerTargets();
-  const current = items[optionsFocusIndex];
-  if (current !== btnBack && current !== btnApply) return false;
-  if (delta < 0 && current === btnApply && btnBack){
-    optionsFocusIndex = Math.max(0, items.indexOf(btnBack));
-  } else if (delta > 0 && current === btnBack && btnApply){
-    optionsFocusIndex = Math.max(0, items.indexOf(btnApply));
-  } else {
-    return false;
-  }
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
-  else clearControllerFocus();
-  return true;
-}
-
-function wrapOptionsBottomButtonsToTop(){
-  if (!isOptionsBottomButtonFocused()) return false;
-  optionsFocusIndex = 0;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
-  else clearControllerFocus();
-  return true;
-}
-
 function cycleSelect(selectEl, delta){
   if (!selectEl || !selectEl.options || !selectEl.options.length) return false;
   const current = Math.max(0, selectEl.selectedIndex);
@@ -2265,24 +2188,6 @@ function stepRange(rangeEl, delta){
   rangeEl.value = String(next);
   rangeEl.dispatchEvent(new Event('input', { bubbles:true }));
   rangeEl.dispatchEvent(new Event('change', { bubbles:true }));
-  return true;
-}
-
-function stepNumberInput(inputEl, delta){
-  if (!inputEl) return false;
-  const step = parseInt(inputEl.step || '1', 10) || 1;
-  const min = parseInt(inputEl.min || '0', 10);
-  const max = parseInt(inputEl.max || '999', 10);
-  const raw = String(inputEl.value || '').trim().toLowerCase();
-  const isInfinite = raw === 'infinite' || raw === 'inf' || raw === '∞';
-  const current = isInfinite ? max : parseInt(raw || '0', 10);
-  const safeCurrent = Number.isFinite(current) ? current : min;
-  const next = Math.max(min, Math.min(max, safeCurrent + (step * delta)));
-  if (next === safeCurrent) return false;
-  inputEl.value = String(next >= 100 ? 100 : next);
-  inputEl.dispatchEvent(new Event('input', { bubbles:true }));
-  inputEl.dispatchEvent(new Event('change', { bubbles:true }));
-  focusControllerElement(inputEl);
   return true;
 }
 
@@ -2343,7 +2248,6 @@ function adjustControllerOption(delta){
   if (!el) return false;
   if (el.tagName === 'SELECT') return cycleSelect(el, delta);
   if (el.type === 'range') return stepRange(el, delta);
-  if (el.type === 'number') return stepNumberInput(el, delta);
   if (el.type === 'checkbox'){
     el.checked = delta > 0;
     el.dispatchEvent(new Event('change', { bubbles:true }));
@@ -2352,37 +2256,28 @@ function adjustControllerOption(delta){
   }
   return false;
 }
-
-function adjustControllerCheat(delta){
-  const items = getCheatsControllerTargets();
-  const el = items[cheatsFocusIndex];
-  if (!el || el.type !== 'checkbox') return false;
-  el.checked = delta > 0;
-  el.dispatchEvent(new Event('change', { bubbles:true }));
-  focusControllerElement(el);
-  return true;
-}
 function showMenu(){
   setPaused(false);
+  syncInitialActiveInputModeFromMenuContext();
   deathYellPlayed = false;
   gameState = STATE.MENU;
   gameWon = false;
-  // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
   stopShield(false);
 
   deathOverlay.style.display = "none";
   if (winOverlay) winOverlay.style.display = "none";
-  // v1.96: HUD should not appear on the menu
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  mazeSummaryActive = false;
+  mazePendingNextWave = null;
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
+  { const heartsHud = document.getElementById("heartsHud"); if (heartsHud) heartsHud.style.display = "none"; }
 
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
-  if (cheatsMenu) cheatsMenu.style.display = "none";
   pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
@@ -2392,11 +2287,36 @@ function showMenu(){
   else clearControllerFocus();
 }
 
+function showWinOverlay(){
+  gameWon = true;
+  gameState = STATE.WIN;
+  if (winOverlay) winOverlay.style.display = "flex";
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  if (pauseOverlay) pauseOverlay.style.display = "none";
+  livesSlot.style.display = "none";
+  powerupSlot.style.display = "none";
+  if (timerHud) timerHud.style.display = "none";
+  { const heartsHud = document.getElementById("heartsHud"); if (heartsHud) heartsHud.style.display = "none"; }
+  // keep music playing through the win/score screen
+}
+
+function restartRun(){
+  setPaused(false);
+  // Restart music immediately when restarting a run.
+  ensureMusicPlaying(true);
+  // v1.96: Hard reset from GAME OVER screen (full reset to beginning)
+  deathOverlay.style.display = "none";
+  bomb = null;
+  ufo = null;
+  powerupSlot.style.display = "none";
+  startGame();
+}
 function showControlsMenu(){
   if (!controlsMenu || startMenu.style.display === "none") return;
   setPaused(false);
+  syncInitialActiveInputModeFromMenuContext();
   pauseControlsOpen = false;
-  pauseOverlay.classList.remove("pauseControlsVisible");
+  if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
   gameState = STATE.CONTROLS;
   resetDraftBindingsFromActive();
@@ -2428,87 +2348,32 @@ function hideControlsMenu(){
   showMenu();
 }
 
-function showWinOverlay(){
-  gameWon = true;
-  gameState = STATE.WIN;
-  if (winOverlay) winOverlay.style.display = "flex";
-  if (pauseOverlay) pauseOverlay.style.display = "none";
-  refreshWinStats();
-  livesSlot.style.display = "none";
-  powerupSlot.style.display = "none";
-  if (timerHud) timerHud.style.display = "none";
-  { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
-  stopMusic();
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncWinControllerFocus();
-  else clearControllerFocus();
+function isPauseSelectLevelOpen(){
+  return !!(typeof optionsOpenedFromPause !== "undefined" && optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
 }
 
-function restartRun(){
-  setPaused(false);
-  // Restart music immediately when restarting a run.
-  ensureMusicPlaying(true);
-  // v1.96: Hard reset from GAME OVER screen (full reset to beginning)
-  deathOverlay.style.display = "none";
-  bomb = null;
-  ufo = null;
-  powerupSlot.style.display = "none";
-  startGame();
-}
-function showCheats(){
-  setPaused(false);
-  gameState = STATE.CHEATS;
-  syncCheatsMenuState();
-  startMenu.style.display = "none";
-  if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
-  optionsMenu.style.display = "none";
-  if (cheatsMenu) cheatsMenu.style.display = "block";
-  uiRoot.style.display = "flex";
-  fitCheatsMenuToViewport();
-  cheatsFocusIndex = 0;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncCheatsControllerFocus();
-  else clearControllerFocus();
-}
+function showOptions(fromPause = false){
+  syncInitialActiveInputModeFromMenuContext();
+  optionsOpenedFromPause = !!fromPause;
+  if (!fromPause) {
+    setPaused(false);
+    gameState = STATE.OPTIONS;
+  }
 
-function hideCheats(){
-  gameState = STATE.OPTIONS;
-  if (cheatsMenu) cheatsMenu.style.display = "none";
-  optionsMenu.style.display = "block";
-  fitOptionsMenuToViewport();
-  optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
-  else clearControllerFocus();
-}
-
-function showOptions(){
-  setPaused(false);
-  gameState = STATE.OPTIONS;
-    // v1.96: populate start options UI with saved settings
-  livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
-  heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
-  shieldsSlider.value = START_SHIELDS_INFINITE ? 100 : START_SHIELDS;
-  bombsSlider.value = START_BOMBS_INFINITE ? 100 : START_BOMBS;
-  if (speedSlider) speedSlider.value = START_GAME_SPEED;
-  if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
-  syncStartOptionsLabels();
-  syncCheatsMenuState();
-
-// v1.96: drop shield when entering menus
   mouseShieldHolding = false;
   stopShield(false);
 
-  // v1.96: hide HUD in menus
   livesSlot.style.display = "none";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "none";
-  { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
 
   startMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
+  if (pauseOverlay) pauseOverlay.style.display = "none";
   optionsMenu.style.display = "block";
-  if (cheatsMenu) cheatsMenu.style.display = "none";
   uiRoot.style.display = "flex";
   fitOptionsMenuToViewport();
   optionsFocusIndex = 0;
@@ -2516,8 +2381,11 @@ function showOptions(){
   else clearControllerFocus();
 }
 function startGame(){
+  START_WAVE = Math.max(1, Math.min(21, START_WAVE || URL_START_WAVE || 1));
   setPaused(false);
   unlockAudioOnce();
+  // Start looping music exactly when the game starts.
+  ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
   uiRoot.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
@@ -2531,7 +2399,7 @@ function startGame(){
   livesSlot.style.display = "flex";
   powerupSlot.style.display = "none";
   if (timerHud) timerHud.style.display = "block";
-  { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "block"; }
+
 
   // v1.96.x: Reset run timer at the start of each game
   runTimer = 0;
@@ -2541,9 +2409,6 @@ function startGame(){
   shotsFired = 0;
   hitsConnected = 0;
   damageDealt = 0;
-  totalEnemiesSpawned = 0;
-  bombDragonKills = 0;
-  bombFrogKills = 0;
   // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
   livesInfiniteActive = !!START_LIVES_INFINITE || !!INFINITE_MODE;
@@ -2559,9 +2424,9 @@ function startGame(){
 
   health = 1.0;
 
-  // Spawn player mid-screen, above hearts HUD
+  // Spawn player fixed in the center for maze traversal
   player.x = canvas.width / 2;
-  player.y = getPlayerAlignedY();
+  player.y = canvas.height / 2;
 
   shieldPips = shieldsInfiniteActive ? 100 : Math.max(0, parseInt(START_SHIELDS, 10) || 0);
 
@@ -2570,9 +2435,9 @@ function startGame(){
 
   health = 1.0;
 
-  // Spawn player mid-screen, above hearts HUD
+  // Spawn player fixed in the center for maze traversal
   player.x = canvas.width / 2;
-  player.y = getPlayerAlignedY();
+  player.y = canvas.height / 2;
   bonusArmor = 0;
   bonusArmorBrokenT = 0;
   isDead = false;
@@ -2594,45 +2459,36 @@ bullets.length = 0;
 spawnEnemies();
   trySpawnUFO();
 
-  // Only begin the level music after Wave 1 gameplay has actually spawned.
-  pendingWaveStartMusic = true;
-
   clearControllerFocus();
   window.focus();
 }
 
-btnStart.addEventListener("click", startGame);
-btnOptions.addEventListener("click", showOptions);
-if (btnControls) btnControls.addEventListener("click", showControlsMenu);
-if (btnCheats) btnCheats.addEventListener("click", showCheats);
-if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
-btnBack.addEventListener("click", showMenu);
-btnApply.addEventListener("click", () => {
-  // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
-  {
-    const livesOpt = parseResourceOption(livesSlider, 0);
-    const heartsOpt = parseResourceOption(heartsSlider, 1);
-    const shieldsOpt = parseResourceOption(shieldsSlider, 0);
-    const bombsOpt = parseResourceOption(bombsSlider, 0);
-    START_LIVES = livesOpt.value;
-    START_HEARTS = heartsOpt.value;
-    START_SHIELDS = shieldsOpt.value;
-    START_BOMBS = bombsOpt.value;
-    START_LIVES_INFINITE = livesOpt.infinite;
-    START_HEARTS_INFINITE = heartsOpt.infinite;
-    START_SHIELDS_INFINITE = shieldsOpt.infinite;
-    START_BOMBS_INFINITE = bombsOpt.infinite;
-  }
-  // v1.96: Save game speed (1-10), where 5 = normal.
-  START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
-  GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
-  START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
-  syncCheatsMenuState();
+if (AUTO_START_LEVEL){
+  window.addEventListener("load", () => {
+    requestAnimationFrame(() => startGame());
+  }, { once: true });
+}
 
-  // Keep the UI labels in sync and return to the main menu.
-  syncStartOptionsLabels();
+btnStart.addEventListener("click", startGame);
+btnOptions.addEventListener("click", () => showOptions(false));
+if (btnPauseOptions) btnPauseOptions.addEventListener("click", () => showOptions(true));
+if (btnControls) btnControls.addEventListener("click", showControlsMenu);
+btnBack.addEventListener("click", () => {
+  if (optionsOpenedFromPause && isPaused){
+    optionsMenu.style.display = "none";
+    uiRoot.style.display = "none";
+    if (pauseOverlay) pauseOverlay.style.display = "flex";
+    optionsOpenedFromPause = false;
+    gameState = STATE.PLAYING;
+    pauseFocusIndex = 2;
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
+    else clearControllerFocus();
+    return;
+  }
+  optionsOpenedFromPause = false;
   showMenu();
 });
+if (controlsBack) controlsBack.addEventListener("click", hideControlsMenu);
 
 btnRestart.addEventListener("click", () => {
   restartRun();
@@ -2640,29 +2496,35 @@ btnRestart.addEventListener("click", () => {
 
 if (btnContinue){
   btnContinue.addEventListener("click", () => {
-    if (window.parent && window.parent !== window){
-      try{
-        if (requestContinueToLevel2()) return;
-      }catch(err){
-        console.warn("Failed to notify parent iframe host about level transition.", err);
-      }
-    }
-
+    // Hook this up later. For now it simply closes the overlay.
     if (winOverlay) winOverlay.style.display = "none";
   });
 }
 
-if (btnSkipToLevel2){
-  btnSkipToLevel2.addEventListener("click", () => {
+if (btnNextMaze){
+  btnNextMaze.addEventListener("click", () => {
+    advanceToNextMaze();
+  });
+}
+
+if (btnReturnToLevel1){
+  btnReturnToLevel1.addEventListener("click", () => {
     if (window.parent && window.parent !== window){
       try{
-        if (requestContinueToLevel2()) return;
+        if (requestReturnToLevel1()) return;
       }catch(err){
         console.warn("Failed to notify parent iframe host about level transition.", err);
       }
     }
 
-      window.location.href = "/games/shooter-game-v2/assets/levels/shooter-game-level2.html?autostart=1&startWave=1";
+window.location.href = "/games/shooter-game/assets/levels/shooter-game-level1.html?reload=" + Date.now();
+  });
+}
+
+if (btnSkipToLevel3){
+  btnSkipToLevel3.addEventListener("click", () => {
+    const msg = "Level 3 is not built yet.";
+    setAssetStatus(msg);
   });
 }
 
@@ -2695,91 +2557,6 @@ const playerImg = (() => {
   return img;
 })();
 
-// Animated GIF sprites are rendered as real DOM <img> elements positioned over the canvas.
-// drawImage() can freeze animated GIFs on a single frame in Chromium, because naturally the browser chose drama.
-const USE_DOM_ANIMATED_GIF_SPRITES = true;
-const animatedGifSpriteLayer = (() => {
-  let layer = document.getElementById("animatedGifSpriteLayer");
-  if (!layer){
-    layer = document.createElement("div");
-    layer.id = "animatedGifSpriteLayer";
-    layer.setAttribute("aria-hidden", "true");
-    layer.style.cssText = [
-      "position:fixed",
-      "left:0",
-      "top:0",
-      "width:100vw",
-      "height:100vh",
-      "pointer-events:none",
-      "overflow:hidden",
-      "z-index:12"
-    ].join(";");
-    const attach = () => { if (!layer.parentNode && document.body) document.body.appendChild(layer); };
-    if (document.body) attach();
-    else document.addEventListener("DOMContentLoaded", attach, { once:true });
-  }
-  return layer;
-})();
-
-const animatedGifSpriteMap = new WeakMap();
-const animatedGifSprites = new Set();
-let animatedGifSpritesActiveThisFrame = new Set();
-
-function beginAnimatedGifSpriteFrame(){
-  animatedGifSpritesActiveThisFrame = new Set();
-}
-
-function getAnimatedGifSprite(owner, img, className){
-  if (!owner || !img || !img.src || !USE_DOM_ANIMATED_GIF_SPRITES) return null;
-  let sprite = animatedGifSpriteMap.get(owner);
-  if (!sprite){
-    sprite = document.createElement("img");
-    sprite.decoding = "async";
-    sprite.loading = "eager";
-    sprite.alt = "";
-    sprite.className = "animated-gif-sprite " + (className || "");
-    sprite.draggable = false;
-    sprite.style.cssText = [
-      "position:fixed",
-      "left:0",
-      "top:0",
-      "pointer-events:none",
-      "user-select:none",
-      "image-rendering:auto",
-      "transform-origin:center center",
-      "will-change:transform,width,height,opacity,filter"
-    ].join(";");
-    animatedGifSpriteMap.set(owner, sprite);
-    animatedGifSprites.add(sprite);
-    animatedGifSpriteLayer.appendChild(sprite);
-  }
-  if (sprite.src !== img.src) sprite.src = img.src;
-  return sprite;
-}
-
-function syncAnimatedGifSprite(owner, img, x, y, w, h, opts = {}){
-  const sprite = getAnimatedGifSprite(owner, img, opts.className);
-  if (!sprite) return false;
-  const alpha = Number.isFinite(opts.alpha) ? Math.max(0, Math.min(1, opts.alpha)) : 1;
-  const hidden = !!opts.hidden || alpha <= 0;
-  sprite.style.display = hidden ? "none" : "block";
-  if (!hidden){
-    sprite.style.width = Math.max(1, w) + "px";
-    sprite.style.height = Math.max(1, h) + "px";
-    sprite.style.opacity = String(alpha);
-    sprite.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
-    sprite.style.filter = opts.hitFlash ? "brightness(1.7) sepia(1) saturate(5) hue-rotate(300deg)" : "none";
-  }
-  animatedGifSpritesActiveThisFrame.add(sprite);
-  return true;
-}
-
-function endAnimatedGifSpriteFrame(){
-  for (const sprite of animatedGifSprites){
-    if (!animatedGifSpritesActiveThisFrame.has(sprite)) sprite.style.display = "none";
-  }
-}
-
 // v1.96 sizing + anchoring
 const PLAYER_SIZE = 72;                 // was 48
 const PLAYER_BOTTOM_MARGIN = 100;
@@ -2794,6 +2571,66 @@ const player = {
   speed: 6,
   invuln: 0
 };
+
+// v2.04: faux-2.5D turn animation state
+let playerFacing = -1; // -1 = facing left/default, 1 = facing right
+let playerTurnT = 1;   // 0..1 progress through the current turn
+const PLAYER_TURN_DUR = 0.16;
+
+// v2.06: full-direction ghost trail. Up/down trail now works, and diagonal movement bends/warps.
+const playerGhosts = [];
+let playerGhostSpawnT = 0;
+const PLAYER_GHOST_MAX = 2;
+const PLAYER_GHOST_SPAWN_EVERY = 0.072;
+const PLAYER_GHOST_TTL = 0.18;
+
+function spawnPlayerGhost(moveVX, moveVY){
+  const mag = Math.hypot(moveVX || 0, moveVY || 0);
+  if (mag < 0.08) return;
+
+  const nx = moveVX / mag;
+  const ny = moveVY / mag;
+  const diagonal = Math.abs(nx) > 0.2 && Math.abs(ny) > 0.2;
+  const behindDist = rand(player.w * 0.62, player.w * 1.02);
+  const sideWarp = diagonal ? rand(-player.w * 0.14, player.w * 0.14) : rand(-player.w * 0.04, player.w * 0.04);
+  const bend = diagonal ? rand(-0.55, 0.55) : 0;
+
+  playerGhosts.push({
+    xOff: (-nx * behindDist) + (-ny * sideWarp),
+    yOff: (-ny * behindDist) + ( nx * sideWarp),
+    vxPull: nx,
+    vyPull: ny,
+    bend,
+    bendAmp: diagonal ? rand(player.w * 0.05, player.w * 0.11) : rand(player.w * 0.01, player.w * 0.03),
+    ttl: PLAYER_GHOST_TTL,
+    life: PLAYER_GHOST_TTL,
+    scaleY: diagonal ? rand(0.94, 1.06) : rand(0.97, 1.03),
+    widthScale: diagonal ? rand(0.82, 0.96) : rand(0.88, 0.97)
+  });
+  while (playerGhosts.length > PLAYER_GHOST_MAX) playerGhosts.shift();
+}
+
+function updatePlayerGhosts(dt){
+  for (let i = playerGhosts.length - 1; i >= 0; i--){
+    const g = playerGhosts[i];
+    g.life -= dt;
+    const t = Math.max(0, g.life / g.ttl);
+    const pull = Math.min(1, dt * 8.0);
+    const bendPhase = (1 - t) * Math.PI;
+    const perpX = -g.vyPull;
+    const perpY =  g.vxPull;
+    const warp = Math.sin(bendPhase) * g.bendAmp * g.bend;
+
+    g.xOff += (0 - g.xOff) * pull;
+    g.yOff += (0 - g.yOff) * pull;
+    g.xOff += perpX * warp * dt * 2.0;
+    g.yOff += perpY * warp * dt * 2.0;
+    g.widthScale += (1 - g.widthScale) * Math.min(1, dt * 4.2);
+    g.scaleY += (1 - g.scaleY) * Math.min(1, dt * 4.0);
+    if (g.life <= 0) playerGhosts.splice(i, 1);
+  }
+}
+
 
 const keys = {};
 let fireCooldown = 0;
@@ -2957,9 +2794,6 @@ function pollGamepad(dt){
   const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
-  // Options menu: right stick changes number values without dragging focus around like a caffeinated raccoon.
-  const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt);
-  const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt);
 
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
     const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
@@ -2990,7 +2824,15 @@ function pollGamepad(dt){
         postChatControllerAction('close');
         togglePause();
       }
-    } else if (isPaused){
+    } else if (isPauseSelectLevelOpen()){
+      if (navUp) moveOptionsControllerFocus(-1);
+      if (navDown) moveOptionsControllerFocus(1);
+      if (navLeft) moveOptionsControllerFocus(-1);
+      if (navRight) moveOptionsControllerFocus(1);
+      if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
+      if (pressMenuBack) activateControllerTarget(btnBack);
+      if (pressPause) activateControllerTarget(btnBack);
+    } else if (isPaused && gameState !== STATE.OPTIONS){
       if (pauseControlsOpen){
         if (navUp || navLeft) moveControlsControllerFocus(-1);
         if (navDown || navRight) moveControlsControllerFocus(1);
@@ -3009,66 +2851,41 @@ function pollGamepad(dt){
       }
     } else if (gameState === STATE.MENU){
       if (navLeft){
-        if (!isTitleHoverRevealFocused()){
-          if (menuFocusIndex === 3) menuFocusIndex = 2;
-          else if (menuFocusIndex === 2) menuFocusIndex = 1;
-        }
+        if (menuFocusIndex === 1) menuFocusIndex = 0;
+        else if (menuFocusIndex === 2) menuFocusIndex = 0;
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-        else clearControllerFocus();
+  else clearControllerFocus();
       }
       if (navRight){
-        if (!isTitleHoverRevealFocused()){
-          if (menuFocusIndex === 1) menuFocusIndex = 2;
-          else if (menuFocusIndex === 2) menuFocusIndex = 3;
-        }
+        if (menuFocusIndex === 0) menuFocusIndex = 1;
+        else if (menuFocusIndex === 2) menuFocusIndex = 1;
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-        else clearControllerFocus();
+  else clearControllerFocus();
       }
       if (navDown){
-        if (menuFocusIndex === 0) menuFocusIndex = 1;
-        else if (menuFocusIndex === 1) menuFocusIndex = 2;
-        else if (menuFocusIndex === 2 || menuFocusIndex === 3) menuFocusIndex = 4;
+        if (menuFocusIndex === 0 || menuFocusIndex === 1) menuFocusIndex = 2;
         else menuFocusIndex = 0;
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-        else clearControllerFocus();
+  else clearControllerFocus();
       }
       if (navUp){
-        if (menuFocusIndex === 2 || menuFocusIndex === 3) menuFocusIndex = 1;
-        else if (menuFocusIndex === 1) menuFocusIndex = 0;
-        else if (menuFocusIndex === 0) menuFocusIndex = 4;
+        if (menuFocusIndex === 2) menuFocusIndex = 0;
         else menuFocusIndex = 2;
         if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-        else clearControllerFocus();
+  else clearControllerFocus();
       }
-      const menuTarget = getMenuControllerTargets()[menuFocusIndex];
-      if (pressMenuSelect && menuTarget && menuTarget !== titleHoverReveal && menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
+      if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
       if (pressY) showOptions();
     } else if (gameState === STATE.OPTIONS){
+      // Level 2 Select Level can be opened while paused. Keep controller focus on
+      // the visible Select Level buttons, not the hidden pause menu buttons.
       if (navUp) moveOptionsControllerFocus(-1);
-      if (navDown){
-        if (!wrapOptionsBottomButtonsToTop()) moveOptionsControllerFocus(1);
-      }
-      if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
-        if (navLeft) moveStartingStatFocus(-1);
-        if (navRight) moveStartingStatFocus(1);
-        if (rNavUp) adjustControllerOption(1);
-        if (rNavDown) adjustControllerOption(-1);
-      } else {
-        if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
-        if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
-        if (rNavUp) adjustControllerOption(1);
-        if (rNavDown) adjustControllerOption(-1);
-      }
+      if (navDown) moveOptionsControllerFocus(1);
+      if (navLeft) moveOptionsControllerFocus(-1);
+      if (navRight) moveOptionsControllerFocus(1);
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
-      if (pressMenuBack) showMenu();
-    } else if (gameState === STATE.CHEATS){
-      if (navUp) moveCheatsControllerFocus(-1);
-      if (navDown) moveCheatsControllerFocus(1);
-      if (navLeft) adjustControllerCheat(-1);
-      if (navRight) adjustControllerCheat(1);
-      if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
-      if (pressMenuBack) hideCheats();
+      if (pressMenuBack) activateControllerTarget(btnBack);
     } else if (gameState === STATE.CONTROLS){
       if (navUp) moveControlsControllerFocus(-1);
       if (navDown) moveControlsControllerFocus(1);
@@ -3084,10 +2901,6 @@ function pollGamepad(dt){
         if (bindingEditState) cancelBindingEdit();
         else hideControlsMenu();
       }
-    } else if (gameState === STATE.WIN){
-      if (activeInputMode === INPUT_MODE_CONTROLLER) syncWinControllerFocus();
-      if (pressMenuSelect) activateControllerTarget(getWinControllerTargets()[0]);
-      if (pressMenuBack) activateControllerTarget(getWinControllerTargets()[0]);
     } else if (deathOverlay && deathOverlay.style.display === "flex"){
       if (pressMenuSelect) restartRun();
     } else if (gameState === STATE.PLAYING){
@@ -3151,8 +2964,7 @@ function preloadImages(urls){
 }
 
 async function loadEnemyImagesFromEnemyWebpsJson(){
-  try{
-    const res = await fetch(ENEMY_WEBP_INDEX_URL, { cache: "no-store" });
+  try{    const res = await fetch(ENEMY_WEBP_INDEX_URL, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
 
     const list = await res.json();
@@ -3178,7 +2990,6 @@ async function loadEnemyImagesFromEnemyWebpsJson(){
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     assetsReady = true;
-    setAssetStatus("");
   }
 }
 loadEnemyImagesFromEnemyWebpsJson();
@@ -3189,6 +3000,447 @@ loadEnemyImagesFromEnemyWebpsJson();
 const BASE_SPACING_X = 105;
 
 let enemies = [];
+
+// =======================
+// Procedural Maze Mode (v2.0 retrofit)
+// - Player stays visually fixed in the center while traversing a generated maze.
+// - Enemy systems, bullets, damage tracking, timer, and lives all remain in the build,
+//   but regular wave spawns are disabled for now.
+// =======================
+let maze = null;
+let mazeCompleted = false;
+let playerWorldX = 0;
+let playerWorldY = 0;
+let mazeExitPulse = 0;
+let mazeVisitedTiles = new Set();
+let mazeWalkableTileCount = 0;
+let mazeSummaryActive = false;
+let mazePendingNextWave = null;
+
+// v2.07: Maze enemies roam in world-space and only chase within a limited proximity.
+const MAZE_ENEMY_MIN = 5;
+const MAZE_ENEMY_MAX = 26;
+const MAZE_ENEMY_SAFE_CELLS_FROM_START = 2;
+const MAZE_ENEMY_SAFE_CELLS_FROM_EXIT = 2;
+
+function getMazeSpecForWave(w){
+  const clamped = Math.max(1, Math.min(21, w|0));
+  const tier = Math.max(1, Math.min(10, clamped));
+
+  // v2.03: Maze tiles are intentionally huge now.
+  // Each tile is about 5x the player size so the maze feels like oversized rooms/corridors,
+  // not a dense little grid crawling all over the screen.
+  const cellSize = Math.max(320, Math.round(player.w * 5));
+  const revealRadiusPx = Math.round(player.w * 3);
+
+  let cols = 7 + tier * 2;
+  let rows = 5 + tier * 2;
+
+  if (clamped === 11){
+    cols = 29; rows = 23;
+  } else if (clamped > 11){
+    const insanityTier = clamped - 11;
+    cols = 15 + insanityTier * 2;
+    rows = 11 + insanityTier * 2;
+  }
+
+  if (cols % 2 === 0) cols += 1;
+  if (rows % 2 === 0) rows += 1;
+
+  return { cols, rows, cellSize, revealRadiusPx };
+}
+
+function carveMazeGrid(cols, rows){
+  const grid = Array.from({ length: rows }, () => Array(cols).fill(1));
+  const stack = [];
+  const dirs = [[2,0],[-2,0],[0,2],[0,-2]];
+  const start = { x: 1, y: 1 };
+  grid[start.y][start.x] = 0;
+  stack.push(start);
+
+  while (stack.length){
+    const cur = stack[stack.length - 1];
+    const neighbors = [];
+    for (const [dx, dy] of dirs){
+      const nx = cur.x + dx, ny = cur.y + dy;
+      if (nx > 0 && nx < cols - 1 && ny > 0 && ny < rows - 1 && grid[ny][nx] === 1){
+        neighbors.push({ x: nx, y: ny, wx: cur.x + dx / 2, wy: cur.y + dy / 2 });
+      }
+    }
+    if (!neighbors.length){
+      stack.pop();
+      continue;
+    }
+    const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+    grid[next.wy][next.wx] = 0;
+    grid[next.y][next.x] = 0;
+    stack.push({ x: next.x, y: next.y });
+  }
+
+  return grid;
+}
+
+function openMazeLoops(grid, loops){
+  const rows = grid.length;
+  const cols = grid[0].length;
+  let opened = 0;
+  let attempts = 0;
+  while (opened < loops && attempts < loops * 24){
+    attempts += 1;
+    const x = 1 + Math.floor(Math.random() * (cols - 2));
+    const y = 1 + Math.floor(Math.random() * (rows - 2));
+    if (grid[y][x] !== 1) continue;
+    const horiz = (grid[y][x-1] === 0 && grid[y][x+1] === 0);
+    const vert = (grid[y-1][x] === 0 && grid[y+1][x] === 0);
+    if (horiz || vert){
+      grid[y][x] = 0;
+      opened += 1;
+    }
+  }
+}
+
+function getMazeTileKey(c, r){
+  return c + "," + r;
+}
+
+function markCurrentMazeTileStepped(){
+  if (!maze) return;
+  const c = Math.max(0, Math.min(maze.cols - 1, Math.floor(playerWorldX / maze.cellSize)));
+  const r = Math.max(0, Math.min(maze.rows - 1, Math.floor(playerWorldY / maze.cellSize)));
+  if (maze.grid[r] && maze.grid[r][c] === 0){
+    mazeVisitedTiles.add(getMazeTileKey(c, r));
+  }
+}
+
+function countMazeWalkableTiles(){
+  if (!maze) return 0;
+  let total = 0;
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      if (maze.grid[r][c] === 0) total += 1;
+    }
+  }
+  return total;
+}
+
+function showMazeSummaryAndPauseAdvance(){
+  if (!maze || mazeSummaryActive) return;
+  const stepped = mazeVisitedTiles.size;
+  const total = mazeWalkableTileCount || countMazeWalkableTiles();
+  const missed = Math.max(0, total - stepped);
+  const bonus = stepped * 10;
+  score += bonus;
+  updateAccuracyScoreHUD();
+
+  mazeSummaryActive = true;
+  mazePendingNextWave = wave + 1;
+  if (mazeSummaryCoverage) mazeSummaryCoverage.textContent = `Coverage: ${stepped} / ${total} tiles stepped on`;
+  if (mazeSummaryMissed) mazeSummaryMissed.textContent = `Unstepped tiles: ${missed}`;
+  if (mazeSummaryBonus) mazeSummaryBonus.textContent = `+${bonus} points`;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "flex";
+}
+
+function advanceToNextMaze(){
+  if (!mazeSummaryActive) return;
+  const nextWave = mazePendingNextWave;
+  mazeSummaryActive = false;
+  mazePendingNextWave = null;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+
+  if (typeof nextWave !== "number") return;
+  wave = nextWave;
+  showWaveBanner(wave);
+  resetFormation();
+  spawnEnemies();
+  trySpawnUFO();
+}
+
+function makeMazeForWave(w){
+  const spec = getMazeSpecForWave(w);
+  const grid = carveMazeGrid(spec.cols, spec.rows);
+  const loopCount = Math.max(3, Math.floor((Math.min(10, Math.max(1, w)) - 1) * 2.2));
+  openMazeLoops(grid, loopCount);
+  const startCell = { x: 1, y: 1 };
+  const exitCell = { x: spec.cols - 2, y: spec.rows - 2 };
+  grid[startCell.y][startCell.x] = 0;
+  grid[exitCell.y][exitCell.x] = 0;
+  return {
+    ...spec,
+    grid,
+    startCell,
+    exitCell,
+    wallColor: w === 11 ? 'rgba(0,255,102,0.30)' : 'rgba(0,255,102,0.18)',
+    floorColor: 'rgba(255,255,255,0.022)',
+    gridLineColor: 'rgba(255,255,255,0.028)'
+  };
+}
+
+function resetMazeForWave(w){
+  maze = makeMazeForWave(w);
+  mazeCompleted = false;
+  mazeExitPulse = 0;
+  mazeSummaryActive = false;
+  if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
+  enemies = [];
+  playerWorldX = (maze.startCell.x + 0.5) * maze.cellSize;
+  playerWorldY = (maze.startCell.y + 0.5) * maze.cellSize;
+  mazeVisitedTiles = new Set();
+  mazeWalkableTileCount = countMazeWalkableTiles();
+  markCurrentMazeTileStepped();
+}
+
+function getMazeWalkableCells(){
+  if (!maze) return [];
+  const out = [];
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      if (maze.grid[r][c] !== 0) continue;
+      const startDist = Math.abs(c - maze.startCell.x) + Math.abs(r - maze.startCell.y);
+      const exitDist = Math.abs(c - maze.exitCell.x) + Math.abs(r - maze.exitCell.y);
+      if (startDist <= MAZE_ENEMY_SAFE_CELLS_FROM_START) continue;
+      if (exitDist <= MAZE_ENEMY_SAFE_CELLS_FROM_EXIT) continue;
+      out.push({ x:c, y:r });
+    }
+  }
+  return out;
+}
+
+function spawnMazeEnemiesForWave(w){
+  if (!maze) return;
+  const walkable = getMazeWalkableCells();
+  if (!walkable.length) return;
+
+  const densityBase = Math.floor((maze.cols * maze.rows) / 20);
+  const desired = Math.max(MAZE_ENEMY_MIN, Math.min(MAZE_ENEMY_MAX, densityBase + Math.floor(Math.random() * 5) - 2 + Math.floor(w * 0.55)));
+  const shuffled = walkable.slice().sort(() => Math.random() - 0.5);
+  const used = [];
+  const minCellSeparation = Math.max(1, Math.min(4, Math.round(maze.cols / 10)));
+
+  for (const cell of shuffled){
+    if (used.length >= desired) break;
+    let tooClose = false;
+    for (const u of used){
+      const d = Math.abs(u.x - cell.x) + Math.abs(u.y - cell.y);
+      if (d < minCellSeparation){
+        tooClose = true;
+        break;
+      }
+    }
+    if (tooClose) continue;
+    used.push(cell);
+
+    const cx = (cell.x + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18);
+    const cy = (cell.y + 0.5) * maze.cellSize + rand(-maze.cellSize * 0.18, maze.cellSize * 0.18);
+    const img = assetsReady && enemyImages.length ? randEnemyImg() : playerImg;
+    const size = Math.max(34, Math.min(72, player.w * rand(0.88, 1.18)));
+    const chaseRadius = maze.cellSize * rand(1.25, 1.9);
+    const dropRadius = chaseRadius * rand(1.2, 1.45);
+
+    enemies.push({
+      row: cell.y,
+      col: cell.x,
+      baseY: 0,
+      img,
+      isFrog: false,
+      size,
+      hp: 1,
+      hitFlash: 0,
+      dying: false,
+      fade: 1,
+      fadeRate: 0,
+      lockX: 0, lockY: 0, lockW: 0, lockH: 0,
+      _killAwarded: false,
+      x: -9999, y: -9999, w: size, h: size,
+      fx: 0, fy: 0,
+      swoop: null,
+      swoopCooldown: 9999,
+      mazeMob: true,
+      worldX: cx,
+      worldY: cy,
+      homeX: cx,
+      homeY: cy,
+      moveSpeed: rand(105, 175),
+      chaseRadius,
+      dropRadius,
+      chaseFalloff: rand(0.28, 0.58),
+      isChasing: false
+    });
+  }
+}
+
+function updateMazeEnemies(dt){
+  if (!(maze && enemies.length)) return;
+
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+
+  for (const e of enemies){
+    if (!e || !e.mazeMob || e.dying) continue;
+
+    const toPlayerX = playerWorldX - e.worldX;
+    const toPlayerY = playerWorldY - e.worldY;
+    const distToPlayer = Math.hypot(toPlayerX, toPlayerY) || 0.0001;
+
+    if (distToPlayer <= e.chaseRadius){
+      e.isChasing = true;
+    } else if (distToPlayer >= e.dropRadius){
+      e.isChasing = false;
+    }
+
+    let targetX = e.homeX;
+    let targetY = e.homeY;
+    let speedMul = 0.55;
+
+    if (e.isChasing){
+      const t = Math.max(0, 1 - (distToPlayer / e.chaseRadius));
+      const chaseStrength = Math.max(0.15, t * (1 - e.chaseFalloff) + 0.15);
+      targetX = playerWorldX;
+      targetY = playerWorldY;
+      speedMul = 0.62 + chaseStrength;
+    }
+
+    const dx = targetX - e.worldX;
+    const dy = targetY - e.worldY;
+    const d = Math.hypot(dx, dy) || 0.0001;
+    let step = e.moveSpeed * speedMul * dt;
+
+    if (!e.isChasing && d < 8){
+      step = 0;
+    }
+
+    if (step > 0){
+      const nx = dx / d;
+      const ny = dy / d;
+      const tryX = e.worldX + nx * step;
+      const tryY = e.worldY + ny * step;
+      const radius = Math.max(10, e.size * 0.22);
+
+      if (canOccupyWorld(tryX, e.worldY, radius)) e.worldX = tryX;
+      if (canOccupyWorld(e.worldX, tryY, radius)) e.worldY = tryY;
+    }
+
+    e.x = e.worldX - camX;
+    e.y = e.worldY - camY;
+    e.w = e.size;
+    e.h = e.size;
+    e.fx = e.x;
+    e.fy = e.y;
+  }
+}
+
+function isWallAtWorld(x, y){
+  if (!maze) return false;
+  const c = Math.floor(x / maze.cellSize);
+  const r = Math.floor(y / maze.cellSize);
+  if (r < 0 || r >= maze.rows || c < 0 || c >= maze.cols) return true;
+  return maze.grid[r][c] === 1;
+}
+
+function canOccupyWorld(x, y, radius){
+  if (!maze) return true;
+  const pts = [
+    [x - radius, y - radius], [x + radius, y - radius],
+    [x - radius, y + radius], [x + radius, y + radius],
+    [x, y - radius], [x, y + radius], [x - radius, y], [x + radius, y]
+  ];
+  return pts.every(([px, py]) => !isWallAtWorld(px, py));
+}
+
+function getMazePlayerRadius(){
+  return Math.max(8, Math.min(player.w, player.h) * 0.22);
+}
+
+function moveMazePlayer(dx, dy){
+  if (!maze) return;
+  const radius = getMazePlayerRadius();
+  const speed = player.speed * 60;
+  const stepX = dx * speed;
+  const stepY = dy * speed;
+  const nx = playerWorldX + stepX;
+  const ny = playerWorldY + stepY;
+
+  if (canOccupyWorld(nx, playerWorldY, radius)) playerWorldX = nx;
+  if (canOccupyWorld(playerWorldX, ny, radius)) playerWorldY = ny;
+  markCurrentMazeTileStepped();
+
+  const exitX = (maze.exitCell.x + 0.5) * maze.cellSize;
+  const exitY = (maze.exitCell.y + 0.5) * maze.cellSize;
+  if (Math.hypot(playerWorldX - exitX, playerWorldY - exitY) <= maze.cellSize * 0.35){
+    mazeCompleted = true;
+  }
+}
+
+function drawMaze(){
+  if (!(gameState === STATE.PLAYING && maze)) return;
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+  const currentCol = Math.max(0, Math.min(maze.cols - 1, Math.floor(playerWorldX / maze.cellSize)));
+  const currentRow = Math.max(0, Math.min(maze.rows - 1, Math.floor(playerWorldY / maze.cellSize)));
+  ctx.save();
+
+  for (let r = 0; r < maze.rows; r++){
+    for (let c = 0; c < maze.cols; c++){
+      const sx = c * maze.cellSize - camX;
+      const sy = r * maze.cellSize - camY;
+      if (sx > canvas.width || sy > canvas.height || sx + maze.cellSize < 0 || sy + maze.cellSize < 0) continue;
+
+      const isCurrentTile = (r === currentRow && c === currentCol);
+      const isExitTile = (r === maze.exitCell.y && c === maze.exitCell.x);
+      const isWall = maze.grid[r][c] === 1;
+
+      if (!isWall){
+        ctx.fillStyle = isCurrentTile ? 'rgba(140,255,170,0.20)' : maze.floorColor;
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = isCurrentTile ? 'rgba(180,255,200,0.42)' : maze.gridLineColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, maze.cellSize - 1, maze.cellSize - 1);
+        if (isCurrentTile){
+          ctx.fillStyle = 'rgba(180,255,200,0.08)';
+          ctx.fillRect(sx + 4, sy + 4, maze.cellSize - 8, maze.cellSize - 8);
+        }
+      } else {
+        ctx.fillStyle = maze.wallColor;
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = 'rgba(0,255,102,0.08)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx + 0.5, sy + 0.5, maze.cellSize - 1, maze.cellSize - 1);
+      }
+
+      if (isExitTile){
+        mazeExitPulse += 0.05;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255,215,0,0.18)';
+        ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+        ctx.strokeStyle = `rgba(255,215,0,${0.48 + 0.28 * Math.sin(mazeExitPulse)})`;
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(sx + 3, sy + 3, maze.cellSize - 6, maze.cellSize - 6);
+        ctx.restore();
+      }
+    }
+  }
+
+  // Soft spotlight / haze mask so only a circular region around the player is visible.
+  const revealRadius = (maze.revealRadiusPx || Math.round(player.w * 3));
+  const outerRadius = revealRadius * 1.65;
+  const fog = ctx.createRadialGradient(player.x, player.y, revealRadius * 0.48, player.x, player.y, outerRadius);
+  fog.addColorStop(0, 'rgba(0,0,0,0.00)');
+  fog.addColorStop(0.42, 'rgba(0,0,0,0.10)');
+  fog.addColorStop(0.72, 'rgba(0,0,0,0.56)');
+  fog.addColorStop(1, 'rgba(0,0,0,0.96)');
+  ctx.fillStyle = fog;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // A faint inner haze ring to make the spotlight feel softer and less geometric.
+  const glow = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, revealRadius * 1.05);
+  glow.addColorStop(0, 'rgba(255,255,255,0.025)');
+  glow.addColorStop(0.5, 'rgba(255,255,255,0.010)');
+  glow.addColorStop(1, 'rgba(255,255,255,0.00)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.restore();
+}
+
 
 const formation = { xOffset:0, yOffset:0, dir:1, speed:1.2, stepDown:18, descentSpeed:12, boundsPad:40 };
 
@@ -3314,7 +3566,6 @@ function spawnBossWave11(additive=false){
     shieldsAlive: 4
   };
   enemies.push(boss);
-  totalEnemiesSpawned += 1;
 
   // Shields: 4 copies of the same GIF orbiting around the boss.
   // They do NOT move independently; their x/y is forced each frame.
@@ -3346,7 +3597,6 @@ function spawnBossWave11(additive=false){
       shootTimer: i * 0.25
     };
     enemies.push(shield);
-    totalEnemiesSpawned += 1;
   }
 
   // Restore formation settings if we were additive.
@@ -3360,63 +3610,10 @@ function spawnBossWave11(additive=false){
 
 
 function spawnEnemies(){
-  // v1.96+: Boss wave / additive boss waves
-  if (wave === 11){
-    spawnBossWave11(false);
-    return;
-  }
-
+  // Maze mode now spawns individual roaming enemies inside random open maze squares.
   enemies = [];
-  const baseY = 80; // start higher (top zone)
-
-  // v1.96: Wave sizing
-  // Wave 1 spawns 1 enemy, then doubles each wave (2x previous).
-  // We cap it to keep browsers from melting into a puddle.
-  const MAX_WAVE_ENEMIES = 128;
-// v1.96: Balanced wave sizing (requested):
-// Wave 1: 1 enemy
-// Wave 2: 2 enemies
-// Wave 3: 4 enemies
-// Wave 4+: add +2 each wave (6, 8, 10, ...)
-function getEnemyCountForWave(w){
-  if (w === 1) return 1;
-  if (w === 2) return 2;
-  if (w === 3) return 4;
-  return 4 + (w - 3) * 2;
-}
-const count = Math.min(MAX_WAVE_ENEMIES, getEnemyCountForWave(wave));
-  totalEnemiesSpawned += count;
-
-  // v1.96: Dynamically pack the formation into the enemy zone by shrinking spacing + size.
-  // Keep the "formation area" mostly in the top half.
-  const zoneW = canvas.width * 0.82;
-  const zoneH = canvas.height * 0.38;
-
-  // Choose columns/rows to fit the count into the zone with a roughly square-ish grid.
-  const idealCols = Math.ceil(Math.sqrt(count * (zoneW / Math.max(1, zoneH))));
-  formationCols = Math.max(1, Math.min(count, idealCols));
-  formationRows = Math.max(1, Math.ceil(count / formationCols));
-
-  // Compute a size that fits nicely in each cell.
-  const cellW = zoneW / formationCols;
-  const cellH = zoneH / formationRows;
-  const baseSize = Math.max(18, Math.min(56, Math.min(cellW, cellH) * 0.60));
-
-  for (let i = 0; i < count; i++){
-    const r = Math.floor(i / formationCols);
-    const c = i % formationCols;
-
-    const img = randEnemyImg();
-    const isFrog = (img && img.src && img.src.toLowerCase().includes("frog.gif"));
-
-    enemies.push({ row:r, col:c, baseY, img, isFrog, size:baseSize, hp:1, hitFlash:0, dying:false, fade:1, fadeRate:0, lockX:0, lockY:0, lockW:0, lockH:0, _killAwarded:false, x:0,y:0,w:0,h:0,
-      fx:0, fy:0, // formation-space position (computed each frame)
-      swoop:null, // {t,dur,phase, sx,sy, c1x,c1y, ex,ey}
-      swoopCooldown: rand(1.0, 3.0) // seconds until eligible to swoop
-    });
-  }
-
-  if (wave > 11){ spawnBossWave11(true); }
+  resetMazeForWave(wave);
+  spawnMazeEnemiesForWave(wave);
 }
 
 /* =======================
@@ -3480,6 +3677,7 @@ function shoot(){
 
 let enemyShootTimer = 0;
 function enemyTryShoot(dt){
+  if (enemies.some(e => e && e.mazeMob && !e.dying)) return;
   enemyShootTimer -= dt;
   if (enemyShootTimer > 0) return;
 
@@ -3662,10 +3860,15 @@ window.addEventListener("contextmenu", (e) => {
 
 window.addEventListener("keydown", (e) => {
   unlockAudioOnce();
+  sawKeyboardMouseInput = true;
+  if (controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) {
+    unlockControlsInputMode();
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+  }
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_KEYBOARD){
     e.preventDefault();
     e.stopPropagation();
-    setActiveInputMode(INPUT_MODE_KEYBOARD);
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
     applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, e.code || e.key);
     return;
   }
@@ -3688,6 +3891,7 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; keys[e.code || e.key] = false; });
 window.addEventListener("mousedown", (e) => {
+  sawKeyboardMouseInput = true;
   if (controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) {
     unlockControlsInputMode();
     setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
@@ -3700,27 +3904,36 @@ window.addEventListener("mousedown", (e) => {
 }, true);
 
 canvas.addEventListener("pointermove", (e) => {
+  sawKeyboardMouseInput = true;
   setActiveInputMode(INPUT_MODE_KEYBOARD);
   // v1.96: aim follows pointer (mouse or touch)
   setAimFromClient(e.clientX, e.clientY);
 });
 
 canvas.addEventListener("pointerdown", (e) => {
+  sawKeyboardMouseInput = true;
   if (controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) {
     unlockControlsInputMode();
     setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
   } else {
     setActiveInputMode(INPUT_MODE_KEYBOARD);
   }
+  unlockAudioOnce();
+  // v1.96: clicking also aims and shoots
   setAimFromClient(e.clientX, e.clientY);
-  if (e.button === 2 && keyboardBindings.shield === 'Mouse2'){
+
+  // v1.96: RIGHT CLICK hold = shield
+  // Note: pointer events use button 2 for right mouse.
+  if (e.button === 2){
     e.preventDefault();
     mouseShieldHolding = true;
     if (canActivateShield()) startShield();
     return;
   }
-  if (keyboardBindings.shoot === mouseButtonToBinding(e.button)) mouseFireHolding = true;
-  if (gameState === STATE.PLAYING && keyboardBindings.shoot === mouseButtonToBinding(e.button)) shoot();
+
+  if (e.button === 0) mouseFireHolding = true; // v1.96: hold LMB to keep firing
+
+  if (gameState === STATE.PLAYING) shoot();
 });
 
 canvas.addEventListener("pointerup", (e) => {
@@ -3754,14 +3967,6 @@ function update(dt){
   if (gameState === STATE.PLAYING && isPaused) return;
 
   if (gameState !== STATE.PLAYING) return;
-
-  if (pendingWaveStartMusic){
-    const waveIsLive = enemies.length > 0 || (wave === 11 && boss.active);
-    if (waveIsLive){
-      pendingWaveStartMusic = false;
-      if (!audioMuted) ensureMusicPlaying(true);
-    }
-  }
 
   // Run timer (seconds since Start Game)
   runTimer += dt;
@@ -3804,16 +4009,16 @@ function update(dt){
         playDeathYell();
         stopMusic();
       } else {
-        // Respawn for next life (keep wave/enemies as-is)
+        // Respawn for next life (keep wave/maze as-is)
         isDead = false;
         deathGameOver = false;
   deathYellPlayed = false;
         deathParticles.length = 0;
         health = 1.0;
 
-  // Spawn player mid-screen, above hearts HUD
+  // Spawn player fixed in the center for maze traversal
   player.x = canvas.width / 2;
-  player.y = getPlayerAlignedY();
+  player.y = canvas.height / 2;
         player.invuln = 1.25;
       }
     }
@@ -3833,11 +4038,45 @@ function update(dt){
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
 
-  player.x += moveX * player.speed * (gpSpeedBoostHeld ? 1.75 : 1.0);
-  player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
+  // v2.04: faux-2.5D turn animation when switching horizontal direction
+  if (moveX > 0.08 && playerFacing !== 1){
+    playerFacing = 1;
+    playerTurnT = 0;
+  } else if (moveX < -0.08 && playerFacing !== -1){
+    playerFacing = -1;
+    playerTurnT = 0;
+  }
+  if (playerTurnT < 1){
+    playerTurnT = Math.min(1, playerTurnT + dt / PLAYER_TURN_DUR);
+  }
 
-  // Keep player vertically aligned to the hearts HUD
-  player.y = getPlayerAlignedY();
+  const sprintHeld = !!keys["shift"] || !!gpSpeedBoostHeld;
+  const moveSpeedMul = (sprintHeld ? 1.75 : 1.0);
+  let moveY = 0;
+  if (isKeyboardActionHeld("moveUp") || keys["arrowup"]) moveY -= 1;
+  if (isKeyboardActionHeld("moveDown") || keys["arrowdown"]) moveY += 1;
+  moveY += gpMoveY || 0;
+  moveY = Math.max(-1, Math.min(1, moveY));
+  const moveLen = Math.hypot(moveX, moveY) || 1;
+
+  updatePlayerGhosts(dt);
+  if (Math.abs(moveX) > 0.08 || Math.abs(moveY) > 0.08){
+    playerGhostSpawnT -= dt;
+    if (playerGhostSpawnT <= 0){
+      spawnPlayerGhost(moveX / moveLen, moveY / moveLen);
+      playerGhostSpawnT = PLAYER_GHOST_SPAWN_EVERY;
+    }
+  } else {
+    playerGhostSpawnT = 0;
+  }
+
+  moveMazePlayer((moveX / moveLen) * moveSpeedMul * dt, (moveY / moveLen) * moveSpeedMul * dt);
+
+  // Player remains fixed visually in the center while the maze scrolls underneath.
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+
+  updateMazeEnemies(dt);
 
 
 // v1.96: right stick aim (only when the stick is actually being pushed)
@@ -3900,10 +4139,24 @@ if (gpFireHeld) shoot();
   formation.yOffset += formation.descentSpeed * dt;
 
   // update bullets
+  // v2.03: bullets now collide with maze walls and vanish on impact.
+  // Bullets are still stored in screen-space, so we convert them into maze/world space
+  // using the current camera offset before testing against wall tiles.
+  const camX = playerWorldX - canvas.width / 2;
+  const camY = playerWorldY - canvas.height / 2;
+
   for (let i = bullets.length - 1; i >= 0; i--){
     const b = bullets[i];
     b.x += b.vx;
     b.y += b.vy;
+
+    const bwx = b.x + camX;
+    const bwy = b.y + camY;
+    if (isWallAtWorld(bwx, bwy)){
+      bullets.splice(i, 1);
+      continue;
+    }
+
     if (b.x < -80 || b.x > canvas.width + 80 || b.y < -80 || b.y > canvas.height + 80) bullets.splice(i, 1);
   }
 
@@ -3911,6 +4164,14 @@ if (gpFireHeld) shoot();
     const b = enemyBullets[i];
     b.x += (b.vx || 0);
     b.y += b.vy;
+
+    const bwx = b.x + camX;
+    const bwy = b.y + camY;
+    if (isWallAtWorld(bwx, bwy)){
+      enemyBullets.splice(i, 1);
+      continue;
+    }
+
     if (enemyBullets[i].y > canvas.height + 60) enemyBullets.splice(i, 1);
   }
 
@@ -4067,6 +4328,10 @@ if (bossCore){
 
   for (const e of enemies){
     if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
+
+    if (e.mazeMob){
+      continue;
+    }
 
     const scale = 1 + breath * 0.18;
     const size = e.size * scale;
@@ -4235,6 +4500,12 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         // Push enemy out to the ring boundary
         e.x = player.x + nx * (rr + 2);
         e.y = player.y + ny * (rr + 2);
+        if (e.mazeMob){
+          const camX = playerWorldX - canvas.width / 2;
+          const camY = playerWorldY - canvas.height / 2;
+          e.worldX = e.x + camX;
+          e.worldY = e.y + camY;
+        }
 
         // If it's swooping, cancel its swoop so it doesn't keep clipping the shield.
         if (e.swoop){
@@ -4293,20 +4564,18 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
   }
 
 
-  // wave clear
-  if (enemies.length === 0){
+  // wave clear now depends on reaching the maze exit
+  if (mazeCompleted){
     // If player beat INSANITY WAVE: 10 (wave 21), show a win screen.
     if (wave === 21){
       showWinOverlay();
       return;
     }
 
-    wave += 1;
-    showWaveBanner(wave);
-
-    resetFormation();
-    spawnEnemies();
-    trySpawnUFO();
+    if (!mazeSummaryActive){
+      showMazeSummaryAndPauseAdvance();
+    }
+    return;
   }
 }
 
@@ -4371,6 +4640,7 @@ function drawShieldRing(){
 
 function draw(){
   drawStarfield();
+  drawMaze();
 
   // v1.96+: draw player death particles
   if (deathParticles.length){
@@ -4412,20 +4682,34 @@ function draw(){
 
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  const shouldDrawPlayer = (gameState === STATE.PLAYING);
-  if (USE_DOM_ANIMATED_GIF_SPRITES) beginAnimatedGifSpriteFrame();
 
+  function drawPlayerSprite(alpha = 1, xOff = 0, yOff = 0, extraWidthScale = 1, extraScaleY = 1){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(player.x + xOff, player.y + yOff);
+
+    // v2.04: fake 2.5D turn by squeezing the sprite through a narrow midpoint.
+    const turnEase = Math.sin(Math.min(1, Math.max(0, playerTurnT)) * Math.PI);
+    const widthScale = (1 - turnEase * 0.82) * extraWidthScale;
+    const facingScale = playerFacing >= 0 ? -1 : 1; // right = flipped horizontally
+    ctx.scale(facingScale * Math.max(0.12, widthScale), extraScaleY);
+
+    ctx.drawImage(playerImg, -player.w/2, -player.h/2, player.w, player.h);
+    ctx.restore();
+  }
+
+  function drawPlayerGhosts(){
+    if (!playerGhosts.length) return;
+    for (const g of playerGhosts){
+      const t = Math.max(0, g.life / g.ttl);
+      drawPlayerSprite(0.12 * t, g.xOff, g.yOff, g.widthScale, g.scaleY);
+    }
+  }
+
+  const shouldDrawPlayer = (gameState === STATE.PLAYING);
   if (shouldDrawPlayer && !flicker){
-    const drewDomPlayer = syncAnimatedGifSprite(
-      player,
-      playerImg,
-      player.x - player.w/2,
-      player.y - player.h/2,
-      player.w,
-      player.h,
-      { className:"player-gif-sprite" }
-    );
-    if (!drewDomPlayer) ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+    drawPlayerGhosts();
+    drawPlayerSprite();
   }
 
     // v1.96: shield ring (RMB hold)
@@ -4497,16 +4781,7 @@ if (gameState === STATE.PLAYING){
     const alpha = (e.dying ? Math.max(0, Math.min(1, e.fade)) : 1);
     ctx.save();
     ctx.globalAlpha = alpha;
-    const drewDomEnemy = syncAnimatedGifSprite(
-      e,
-      e.img,
-      ex,
-      ey,
-      e.w,
-      e.h,
-      { className:"enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
-    );
-    if (!drewDomEnemy) ctx.drawImage(e.img, ex, ey, e.w, e.h);
+    ctx.drawImage(e.img, ex, ey, e.w, e.h);
 
 // Dragon marker: upside-down red equilateral triangle (because dragons deserve drama)
 if (isDragonEnemy(e)){
@@ -4526,8 +4801,6 @@ if (isDragonEnemy(e)){
     }
     ctx.restore();
   }
-
-  if (USE_DOM_ANIMATED_GIF_SPRITES) endAnimatedGifSpriteFrame();
 
   // bullets (player)
   // v1.96: draw as simple circles (no text/letter-like shapes)
@@ -4550,11 +4823,12 @@ if (isDragonEnemy(e)){
   ENEMY_COLS = formationCols;
 
   overlay.innerHTML =
-    `Bananaman Shooter<br>` +
+    `Bananaman Shooter v1.96<br>` +
     `State: ${gameState}<br>` +
     `Score: ${score} | Health: ${Math.round(health*100)}% | Wave: ${wave}<br>` +
     `Shield: ${shieldActive ? (Math.round((shieldHP/SHIELD_HP_MAX)*100) + "%") : "off"} | CD: ${shieldCooldown.toFixed(1)}s<br>` +
     `Enemies: ${enemies.length} (${ENEMY_ROWS}x${ENEMY_COLS})<br>` +
+    `Maze: ${maze ? (maze.cols + "x" + maze.rows + " @ " + maze.cellSize + "px tiles / light " + (maze.revealRadiusPx || 0) + "px") : "none"}${mazeCompleted ? " | EXIT" : ""}<br>` +
     `Enemy pool: ${enemyImages.length || 0} images<br>` +
     `Bullets: ${bullets.length} | Enemy Bullets: ${enemyBullets.length}<br>` +
     `Fire CD: ${fireCooldown.toFixed(2)}s (target ${getPlayerFireCooldown().toFixed(2)}s)<br>` +
@@ -4584,7 +4858,7 @@ if (isDragonEnemy(e)){
     applyChromaticAberration(beat);
   }
 
-  // Glitch spiral burst (Tab)
+  // v1.96: Glitch spiral burst (Tab key)
   if (GLITCH_SPIRAL_T > 0){
     const strength = Math.max(0, Math.min(1, GLITCH_SPIRAL_T / GLITCH_SPIRAL_DUR));
     applyGlitchSpiral(strength);
@@ -4651,7 +4925,7 @@ draw();
    Boot
 ======================= */
 player.x = canvas.width / 2;
-player.y = getPlayerAlignedY();
+player.y = canvas.height / 2;
 
 // v1.96: default aim straight up until the player moves the pointer
 aimX = player.x;
@@ -4661,9 +4935,10 @@ aimAngleSmoothed = -Math.PI/2;
 
 resetStarfield();
 resize(); // also resets starfield + anchors player
-showMenu();
+startMenu.style.display = "none";
+optionsMenu.style.display = "none";
+uiRoot.style.display = "none";
 powerupSlot.style.display = "none";
-spawnEnemies();
-updateHearts();
+startGame();
 
 requestAnimationFrame(loop);

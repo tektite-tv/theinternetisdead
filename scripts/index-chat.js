@@ -165,9 +165,9 @@
 
       if (commandName === '/games/shooter-game') {
         try {
-          window.location.href = '/legacy/games/shooter-game-legacy/';
+          window.location.href = '/games/shooter-game/';
         } catch (error) {
-          window.location.assign('/legacy/games/shooter-game-legacy/');
+          window.location.assign('/games/shooter-game/');
         }
         return true;
       }
