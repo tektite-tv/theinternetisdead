@@ -3039,6 +3039,34 @@ const playerImg = (() => {
   return img;
 })();
 
+// Active player sprite freeze (v2.03): keep menu/lives/enemy animation behavior intact,
+// but render the gameplay player from a one-time canvas snapshot so animated banana assets
+// do not keep animating while the player is alive. Browser animation rules: still a circus.
+let staticPlayerFrameCanvas = null;
+let staticPlayerFrameSource = "";
+
+function getStaticPlayerFrame(){
+  if (!playerImg || !playerImg.complete || !playerImg.naturalWidth || !playerImg.naturalHeight) return playerImg;
+  if (staticPlayerFrameCanvas && staticPlayerFrameSource === playerImg.currentSrc) return staticPlayerFrameCanvas;
+
+  const frozen = document.createElement("canvas");
+  frozen.width = playerImg.naturalWidth;
+  frozen.height = playerImg.naturalHeight;
+  const frozenCtx = frozen.getContext("2d");
+  if (!frozenCtx) return playerImg;
+
+  frozenCtx.drawImage(playerImg, 0, 0, frozen.width, frozen.height);
+  staticPlayerFrameCanvas = frozen;
+  staticPlayerFrameSource = playerImg.currentSrc;
+  return staticPlayerFrameCanvas;
+}
+
+function drawStaticPlayerSprite(){
+  const source = getStaticPlayerFrame();
+  if (!source) return;
+  ctx.drawImage(source, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+}
+
 // Animated GIF sprites are rendered as real DOM <img> elements positioned over the canvas.
 // drawImage() can freeze animated GIFs on a single frame in Chromium, because naturally the browser chose drama.
 const USE_DOM_ANIMATED_GIF_SPRITES = true;
@@ -4786,16 +4814,11 @@ function draw(){
   if (USE_DOM_ANIMATED_GIF_SPRITES) beginAnimatedGifSpriteFrame();
 
   if (shouldDrawPlayer && !flicker){
-    const drewDomPlayer = syncAnimatedGifSprite(
-      player,
-      playerImg,
-      player.x - player.w/2,
-      player.y - player.h/2,
-      player.w,
-      player.h,
-      { className:"player-gif-sprite" }
-    );
-    if (!drewDomPlayer) ctx.drawImage(playerImg, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+    // Keep the active player static even when PLAYER_IMG_URL points at an animated GIF/WebP.
+    // Enemies can still use the DOM animated sprite layer below.
+    const oldDomPlayer = animatedGifSpriteMap.get(player);
+    if (oldDomPlayer) oldDomPlayer.style.display = "none";
+    drawStaticPlayerSprite();
   }
 
     // v1.96: shield ring (RMB hold)
