@@ -3217,6 +3217,27 @@ function isGameSpeedFrozen(){
   return clampGameSpeedValue(START_GAME_SPEED) === 0 || GAME_SPEED_MULT === 0;
 }
 
+window.TektiteLevel1SpeedZero = {
+  isFrozen(){
+    try{
+      return gameState === STATE.PLAYING && isGameSpeedFrozen() && !isPaused;
+    }catch(e){
+      return false;
+    }
+  },
+  resetToSpeedOneAndMenu(){
+    try{
+      applyGameSpeedValue(1, true);
+      setPaused(false);
+      stopMusic();
+      showMenu();
+      syncStartOptionsLabels();
+    }catch(e){
+      try{ console.warn("Speed-zero easter egg reset failed", e); }catch(_){}
+    }
+  }
+};
+
 function normalizeHexColor(value){
   const raw = String(value || "").trim();
   const withHash = raw.startsWith("#") ? raw : "#" + raw;
