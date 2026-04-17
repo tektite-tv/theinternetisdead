@@ -1540,7 +1540,30 @@ const focusSink = document.getElementById('focusSink');
     const settingsLoadInput = document.getElementById('settingsLoadInput');
     const scriptLoadInput = document.getElementById('scriptLoadInput');
 
-    let currentNickname = 'User';
+    const CHAT_NICKNAME_STORAGE_KEY = 'tektiteChatNickname';
+
+    function loadSavedNickname() {
+      try {
+        const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
+        return savedNickname && savedNickname.trim() ? savedNickname.trim() : 'User';
+      } catch (error) {
+        return 'User';
+      }
+    }
+
+    function saveNickname(value) {
+      try {
+        if (value && value.trim()) {
+          window.localStorage.setItem(CHAT_NICKNAME_STORAGE_KEY, value.trim());
+        } else {
+          window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
+        }
+      } catch (error) {
+        // Ignore localStorage write failures.
+      }
+    }
+
+    let currentNickname = loadSavedNickname();
     let showSystemPrefix = true;
     let debugMode = false;
     let scriptRunCounter = 0;
@@ -5637,6 +5660,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const newNickname = trimmed.slice(parts[0].length).trim();
         if (newNickname) {
           currentNickname = newNickname;
+          saveNickname(newNickname);
           addSystemMessage(formatCommandExecutionMessage('/nickname', 'executed', newNickname));
         }
         return true;
@@ -6376,6 +6400,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (event.data.type === 'pageChatResult') {
         if (typeof event.data.nickname === 'string' && event.data.nickname.trim()) {
           currentNickname = event.data.nickname.trim();
+          saveNickname(currentNickname);
         }
 
         const message = event.data.message || `${event.data.command || 'Page command'} executed`;

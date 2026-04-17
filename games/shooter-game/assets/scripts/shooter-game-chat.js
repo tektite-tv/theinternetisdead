@@ -647,6 +647,17 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         else await setIframeFullscreen(!document.fullscreenElement);
         return;
       }
+      if (data.type === 'tektite:set-nickname') {
+        const nextNickname = String(data.nickname || '').trim() || 'User';
+        postToChatSandbox({
+          type: 'pageChatResult',
+          command: '/nickname',
+          message: `/nickname executed by ${nextNickname}`,
+          nickname: nextNickname,
+          announce: data.announce === true
+        });
+        return;
+      }
       if (data.type === 'tektite:command-result') {
         postToChatSandbox({
           type: 'pageChatResult',

@@ -2164,6 +2164,7 @@ const controlsListScroll = document.getElementById("controlsListScroll");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
+const nicknameInput = document.getElementById("nicknameInput");
 const backgroundColorHex = document.getElementById("backgroundColorHex");
 const backgroundColorPicker = document.getElementById("backgroundColorPicker");
 const muteCheckbox = document.getElementById("muteCheckbox");
@@ -2780,7 +2781,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [nicknameInput, btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -3246,6 +3247,11 @@ function activateControllerTarget(el){
     showControlsMenu();
     return;
   }
+  if (el === nicknameInput){
+    el.focus();
+    focusControllerElement(el);
+    return;
+  }
   if (el.tagName === 'SELECT'){
     openControllerSelect(el);
     return;
@@ -3287,7 +3293,7 @@ function adjustControllerOption(delta){
   if (el.tagName === 'SELECT') return cycleSelect(el, delta);
   if (el.type === 'range') return stepRange(el, delta);
   if (el === backgroundColorPicker) return stepColorInput(el, delta);
-  if (el === backgroundColorHex) return false;
+  if (el === backgroundColorHex || el === nicknameInput) return false;
   if (isStartingStatInputEl(el)) return stepNumberInput(el, delta);
   if (el.type === 'checkbox'){
     el.checked = delta > 0;
@@ -3807,6 +3813,46 @@ function getStaticFrameForImage(img){
   return staticImg.complete ? staticImg : img;
 }
 
+const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
+
+function loadSavedChatNickname(){
+  try{
+    const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
+    return savedNickname && savedNickname.trim() ? savedNickname.trim() : "User";
+  }catch(error){
+    return "User";
+  }
+}
+
+function saveChatNickname(value){
+  const normalized = String(value || "").trim();
+  try{
+    if (normalized) window.localStorage.setItem(CHAT_NICKNAME_STORAGE_KEY, normalized);
+    else window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
+  }catch(error){}
+  return normalized || "User";
+}
+
+function syncNicknameControl(){
+  if (!nicknameInput) return;
+  nicknameInput.value = loadSavedChatNickname();
+}
+
+function applyNicknameFromControls(value, announce=false){
+  const normalized = saveChatNickname(value);
+  if (nicknameInput) nicknameInput.value = normalized;
+  try{
+    if (window.parent && window.parent !== window){
+      window.parent.postMessage({
+        type: "tektite:set-nickname",
+        nickname: normalized,
+        announce: !!announce
+      }, "*");
+    }
+  }catch(error){}
+  return true;
+}
+
 function normalizeHexColor(value){
   const raw = String(value || "").trim();
   const withHash = raw.startsWith("#") ? raw : "#" + raw;
@@ -3852,6 +3898,7 @@ function showOptions(){
   normalizeStartStatInput(bombsSlider);
   syncStartOptionsLabels();
   syncCheatsMenuState();
+  syncNicknameControl();
 
 // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
@@ -4065,6 +4112,19 @@ if (btnMysteryLink){
       window.top.location.href = "https://honestlythomas.com";
     }catch(e){
       window.location.href = "https://honestlythomas.com";
+    }
+  });
+}
+
+if (nicknameInput){
+  nicknameInput.addEventListener("change", () => {
+    applyNicknameFromControls(nicknameInput.value, false);
+  });
+  nicknameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter"){
+      event.preventDefault();
+      applyNicknameFromControls(nicknameInput.value, false);
+      try{ nicknameInput.blur(); }catch(e){}
     }
   });
 }
