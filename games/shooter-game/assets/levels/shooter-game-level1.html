@@ -1364,6 +1364,35 @@ body.invert-colors {
     animation:statsTitleHueShift 2.4s linear infinite;
   }
 
+
+  #cheatsMenu .gameSpeedCommandRow{
+    text-align:left;
+  }
+  #cheatsMenu .gameSpeedCommandRow .cheatCommand{
+    font-size:10px;
+    line-height:1.15;
+  }
+  #cheatsMenu .cheatStatusText{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:34px;
+    min-height:28px;
+    padding:3px 8px;
+    border:1px solid rgba(0,255,102,0.45);
+    border-radius:9px;
+    background:rgba(0,0,0,0.45);
+    color:#fff;
+    font-family:monospace;
+    font-size:13px;
+    font-weight:900;
+  }
+  #cheatsMenu .gameSpeedCommandRow input[type="range"]{
+    width:100%;
+    box-sizing:border-box;
+    margin-top:8px;
+  }
+
 </style>
 
 <style>
@@ -1556,7 +1585,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 5:24 AM)</a></div>
+<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 8:54 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1613,11 +1642,7 @@ body.invert-colors {
       </div>
 
 
-<div class="optRow">
-        <div class="optLabel"><span>Game Speed</span><span id="speedVal">5</span></div>
-        <input id="speedSlider" type="range" min="0" max="25" value="6" step="1" />
-        <div class="hint">0 = static Wave 1/UFO staring contest. 1 = normal. Right side = 2 to 20 chaos.</div>
-      </div>
+
       
           
 
@@ -1679,7 +1704,19 @@ body.invert-colors {
 
       <div id="cheatsScroll" class="menuMiddleScroll">
         <div class="cheatsGrid">
-          <div class="optRow fullRow">
+                <div class="optRow cheatRow commandOptionRow gameSpeedCommandRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Game Speed</div>
+            <div class="cheatCommand">/game_speed # (-5 slowest / 1 normal / 20 fastest)</div>
+          </div>
+          <span id="speedVal" class="cheatStatusText">1</span>
+        </div>
+        <input id="speedSlider" type="range" min="0" max="25" value="6" step="1" />
+        <div class="hint">0 = static Wave 1/UFO staring contest. 1 = normal. Right side = 2 to 20 chaos.</div>
+      </div>
+
+<div class="optRow fullRow">
             <div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
             <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
               <option value="1">Wave 1</option>

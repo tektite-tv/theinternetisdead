@@ -2615,13 +2615,13 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [btnControls, btnFullscreenOption, speedSlider, backgroundColorHex, backgroundColorPicker, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [btnControls, btnFullscreenOption, backgroundColorHex, backgroundColorPicker, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
   const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
+  return [speedSlider, startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -3254,6 +3254,7 @@ function showCheats(){
   normalizeStartStatInput(heartsSlider);
   normalizeStartStatInput(shieldsSlider);
   normalizeStartStatInput(bombsSlider);
+  setSpeedSliderPositionFromSpeed(START_GAME_SPEED);
   syncStartOptionsLabels();
   syncCheatsMenuState();
   markCheatsClean(false);
@@ -3704,8 +3705,8 @@ function startGame(){
 
 
 if (speedSlider){
-  speedSlider.addEventListener("input", markOptionsDirty);
-  speedSlider.addEventListener("change", markOptionsDirty);
+  speedSlider.addEventListener("input", markCheatsDirty);
+  speedSlider.addEventListener("change", markCheatsDirty);
 }
 
 
@@ -3840,10 +3841,10 @@ function applyStartSettingsFromControls(){
   START_SHIELDS_INFINITE = shieldsOpt.infinite;
   START_BOMBS_INFINITE = bombsOpt.infinite;
   START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
+  applyGameSpeedValue(getSpeedValueFromSlider(), false);
 }
 
 function applyOptionsChanges(){
-  applyGameSpeedValue(getSpeedValueFromSlider(), false);
   syncStartOptionsLabels();
   markOptionsClean(true);
 }
