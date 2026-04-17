@@ -1142,6 +1142,29 @@ body.invert-colors {
     opacity:var(--video-fx-overlay-opacity, 0.18);
   }
 
+
+  #btnMysteryLink.mysteryBtn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:160px;
+    box-sizing:border-box;
+    font-family:monospace;
+    color:#0f0;
+    background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    text-decoration:none;
+  }
+  #btnMysteryLink.mysteryBtn:hover,
+  body.controller-active #btnMysteryLink.mysteryBtn.controllerFocus{
+    background:rgba(75,0,118,0.55);
+    border-color:rgba(0,255,0,0.9);
+    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+  }
+
 </style>
 
 
@@ -1338,7 +1361,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 2:38 AM)</a></div>
+<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 2:44 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1347,7 +1370,7 @@ body.invert-colors {
       <button id="btnOptions">Options</button>
     </div>
     <div class="btnRow btnRowBottom">
-      <button id="btnControlsPlaceholder" class="smallBtn menuPlaceholderBtn" type="button" aria-hidden="true" tabindex="-1">&nbsp;</button>
+      <a id="btnMysteryLink" class="smallBtn mysteryBtn" href="https://honestlythomas.com" target="_top" aria-label="Open Honestly Thomas">???</a>
     </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>

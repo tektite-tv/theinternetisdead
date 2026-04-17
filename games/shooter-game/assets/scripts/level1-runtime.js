@@ -1840,6 +1840,7 @@ const btnOptions = document.getElementById("btnOptions");
 const startMenuTitle = document.getElementById("startMenuTitle");
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const btnControls = document.getElementById("btnControls");
+const btnMysteryLink = document.getElementById("btnMysteryLink");
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
@@ -2415,7 +2416,7 @@ function markControlsClean(applied=false){
 }
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnMysteryLink].filter(Boolean);
 }
 
 function isTitleHoverRevealFocused(){
@@ -2740,6 +2741,11 @@ function stepNumberInput(inputEl, delta){
 }
 
 function activateControllerTarget(el){
+  if (target && target.tagName === "A"){
+    target.click();
+    return true;
+  }
+
   if (!el) return;
   if (el.dataset && el.dataset.action && el.dataset.scheme){
     startBindingEdit(el.dataset.scheme, el.dataset.action);
@@ -3294,6 +3300,17 @@ if (titleHoverReveal){
     if (event.key === "Enter" || event.key === " "){
       event.preventDefault();
       refreshEntireShooterPage();
+    }
+  });
+}
+
+if (btnMysteryLink){
+  btnMysteryLink.addEventListener("click", (event) => {
+    event.preventDefault();
+    try{
+      window.top.location.href = "https://honestlythomas.com";
+    }catch(e){
+      window.location.href = "https://honestlythomas.com";
     }
   });
 }
