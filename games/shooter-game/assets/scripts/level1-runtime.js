@@ -3374,6 +3374,9 @@ function startGame(){
   spawnEnemies();
 
   if (frozenStaringContest){
+    // Position the Wave 1 enemy immediately so speed 0 makes the cut on the first drawn frame.
+    positionFrozenStaringContestEnemies();
+
     // Keep the scene absolutely inert: one Wave 1 enemy, optional frozen UFO, no music start trigger.
     // Force-spawn the UFO so speed 0 can become a static staring contest bonus tableau.
     trySpawnUFO(true);
@@ -4431,6 +4434,41 @@ function spawnBossWave11(additive=false){
     formationRows = prevRows;
     // ensure we're still writing into the live enemies array reference
     enemies = prevEnemies;
+  }
+}
+
+
+function positionFrozenStaringContestEnemies(){
+  if (!enemies || !enemies.length) return;
+
+  const breath = 0.5;
+  const spacingX = getSpacingX() * (1 + breath * 0.25);
+  const spacingY = getSpacingY() * (1 + breath * 0.15);
+  const formationWidth = (formationCols - 1) * spacingX;
+  const formationHeight = (formationRows - 1) * spacingY;
+  const startX = canvas.width / 2 - formationWidth / 2 + formation.xOffset;
+
+  const TOP_SAFE_MARGIN = 60;
+  const ENEMY_ZONE_MAX_Y = canvas.height * 0.48;
+  let baseY = 80 + formation.yOffset;
+
+  if (baseY < TOP_SAFE_MARGIN) baseY = TOP_SAFE_MARGIN;
+
+  const maxBaseY = ENEMY_ZONE_MAX_Y - formationHeight;
+  if (baseY > maxBaseY){
+    baseY = Math.max(TOP_SAFE_MARGIN, maxBaseY);
+  }
+
+  for (const e of enemies){
+    if (!e) continue;
+    const size = e.size;
+    e.fx = startX + e.col * spacingX;
+    e.fy = baseY + e.row * spacingY;
+    e.x = e.fx;
+    e.y = e.fy;
+    e.w = size;
+    e.h = size;
+    e.swoop = null;
   }
 }
 
