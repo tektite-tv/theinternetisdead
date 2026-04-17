@@ -3227,8 +3227,40 @@ window.TektiteLevel1SpeedZero = {
       return false;
     }
   },
+  getPlayerState(){
+    try{
+      return {
+        x: player.x,
+        y: player.y,
+        w: player.w,
+        h: player.h,
+        facing: playerFacing,
+        imageUrl: "/games/shooter-game/assets/bananarama.gif"
+      };
+    }catch(e){
+      return null;
+    }
+  },
+  setPlayerX(nextX){
+    try{
+      const n = Number(nextX);
+      if (!Number.isFinite(n)) return;
+      player.x = Math.max(player.w / 2, Math.min(canvas.width - player.w / 2, n));
+    }catch(e){}
+  },
+  hideCanvasPlayer(hidden){
+    try{
+      document.body.classList.toggle("speedZeroMeltHideCanvasPlayer", !!hidden);
+    }catch(e){}
+  },
+  forceDraw(){
+    try{
+      draw();
+    }catch(e){}
+  },
   resetToSpeedOneAndMenu(){
     try{
+      this.hideCanvasPlayer(false);
       applyGameSpeedValue(1, true);
       setPaused(false);
       stopMusic();
@@ -5693,7 +5725,7 @@ function draw(){
 
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  const shouldDrawPlayer = (gameState === STATE.PLAYING);
+  const shouldDrawPlayer = (gameState === STATE.PLAYING && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer"));
   if (USE_DOM_ANIMATED_GIF_SPRITES) beginAnimatedGifSpriteFrame();
 
   if (shouldDrawPlayer && !flicker){
@@ -5709,7 +5741,7 @@ function draw(){
   drawShieldRing();
 
 // v1.96: always-on health bar under the player
-  if (gameState === STATE.PLAYING){
+  if (gameState === STATE.PLAYING && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer")){
     const barW = player.w;
     const barH = 7;
     const bx = player.x - barW/2;
@@ -5732,7 +5764,7 @@ function draw(){
   }
 
 // v1.96: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
-if (gameState === STATE.PLAYING){
+if (gameState === STATE.PLAYING && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer")){
   const a = aimAngleSmoothed;
   const orbitR = player.w * 0.62;
   const tx = player.x + Math.cos(a) * orbitR;

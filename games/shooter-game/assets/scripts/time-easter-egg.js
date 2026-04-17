@@ -1,12 +1,12 @@
 // time-easter-egg.js
 // Speed-0 staring contest timeout.
-// If the player stays on the frozen speed-0 Level 1 screen for 2 minutes,
-// melt the whole viewport off the page, reset speed to 1, and kick back to Start Menu.
+// After 2 minutes, the screen melts while Bananarama "wins" and pushes toward the fourth wall.
 
 (() => {
   const REQUIRED_MS = 120000;
-  const MELT_MS = 3600;
+  const MELT_MS = 4200;
   const CHECK_MS = 250;
+  const PLAYER_URL = "/games/shooter-game/assets/bananarama.gif";
 
   let frozenStartedAt = 0;
   let melting = false;
@@ -15,11 +15,19 @@
   let ctx = null;
   let sourceCanvas = null;
   let sourceCtx = null;
+  let playerImg = null;
   let columns = [];
   let startTime = 0;
+  let lastFrameTime = 0;
+  let escapePlayer = { x:0, y:0, w:72, h:72, facing:-1, vx:0 };
+  const heldKeys = Object.create(null);
 
   function api(){
     return window.TektiteLevel1SpeedZero || null;
+  }
+
+  function dpr(){
+    return Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   }
 
   function isFrozenScene(){
@@ -34,29 +42,15 @@
   function makeOverlay(){
     overlay = document.createElement("div");
     overlay.id = "speedZeroMeltOverlay";
-    overlay.style.cssText = [
-      "position:fixed",
-      "inset:0",
-      "z-index:2147483647",
-      "pointer-events:none",
-      "overflow:hidden",
-      "background:transparent",
-      "mix-blend-mode:normal"
-    ].join(";");
+    overlay.style.cssText = "position:fixed;inset:0;z-index:2147483647;pointer-events:none;overflow:hidden;background:transparent;";
 
     canvas = document.createElement("canvas");
     canvas.id = "speedZeroMeltCanvas";
-    canvas.style.cssText = [
-      "position:absolute",
-      "inset:0",
-      "width:100%",
-      "height:100%",
-      "display:block",
-      "image-rendering:auto"
-    ].join(";");
+    canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:block;image-rendering:auto;";
 
     overlay.appendChild(canvas);
     document.body.appendChild(overlay);
+
     ctx = canvas.getContext("2d");
     sourceCanvas = document.createElement("canvas");
     sourceCtx = sourceCanvas.getContext("2d");
@@ -64,30 +58,61 @@
   }
 
   function resizeCanvases(){
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    const w = Math.max(1, Math.floor(window.innerWidth * dpr));
-    const h = Math.max(1, Math.floor(window.innerHeight * dpr));
-
-    canvas.width = w;
-    canvas.height = h;
-    sourceCanvas.width = w;
-    sourceCanvas.height = h;
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    sourceCtx.setTransform(1, 0, 0, 1, 0, 0);
+    const scale = dpr();
+    const w = Math.max(1, Math.floor(window.innerWidth * scale));
+    const h = Math.max(1, Math.floor(window.innerHeight * scale));
+    if (canvas){
+      canvas.width = w;
+      canvas.height = h;
+    }
+    if (sourceCanvas){
+      sourceCanvas.width = w;
+      sourceCanvas.height = h;
+    }
   }
 
-  function captureScene(){
+  function readPlayerState(){
+    const a = api();
+    const state = a && typeof a.getPlayerState === "function" ? a.getPlayerState() : null;
+    const scale = dpr();
+    if (state){
+      escapePlayer.x = state.x * scale;
+      escapePlayer.y = state.y * scale;
+      escapePlayer.w = state.w * scale;
+      escapePlayer.h = state.h * scale;
+      escapePlayer.facing = state.facing || -1;
+    } else {
+      escapePlayer.x = sourceCanvas.width / 2;
+      escapePlayer.y = sourceCanvas.height * 0.82;
+      escapePlayer.w = 72 * scale;
+      escapePlayer.h = 72 * scale;
+      escapePlayer.facing = -1;
+    }
+    escapePlayer.vx = 0;
+  }
+
+  function hideRuntimePlayer(hidden){
+    const a = api();
+    if (a && typeof a.hideCanvasPlayer === "function") a.hideCanvasPlayer(hidden);
+  }
+
+  function forceRuntimeDraw(){
+    const a = api();
+    if (a && typeof a.forceDraw === "function") a.forceDraw();
+  }
+
+  function captureSceneWithoutPlayer(){
     const mainCanvas = document.getElementById("game");
-    if (!mainCanvas) return;
+    if (!mainCanvas || !sourceCtx) return;
+
+    hideRuntimePlayer(true);
+    forceRuntimeDraw();
 
     sourceCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
     try{
       sourceCtx.drawImage(mainCanvas, 0, 0, sourceCanvas.width, sourceCanvas.height);
     }catch(e){}
 
-    // Pull a few DOM/HUD elements into the melt as crude text silhouettes.
-    // Not a perfect screenshot, but enough to make the page look like it is sliding into the drain.
     sourceCtx.save();
     sourceCtx.scale(sourceCanvas.width / Math.max(1, window.innerWidth), sourceCanvas.height / Math.max(1, window.innerHeight));
     sourceCtx.font = "16px monospace";
@@ -110,17 +135,25 @@
     sourceCtx.restore();
   }
 
+  function initPlayerImage(){
+    playerImg = new Image();
+    playerImg.decoding = "async";
+    playerImg.loading = "eager";
+    // Cache-bust so the animated GIF starts visibly moving during the victory zoom.
+    playerImg.src = PLAYER_URL + "?staring-contest-winner=" + Date.now();
+  }
+
   function initColumns(){
-    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    const colW = Math.max(3, Math.floor(6 * dpr));
+    const scale = dpr();
+    const colW = Math.max(3, Math.floor(6 * scale));
     const count = Math.ceil(sourceCanvas.width / colW);
-    columns = Array.from({ length: count }, (_, i) => ({
-      x: i * colW,
-      w: colW + 1,
-      delay: Math.random() * 0.38,
-      speed: 0.52 + Math.random() * 1.8,
-      wobble: Math.random() * Math.PI * 2,
-      tear: Math.random() * 0.26
+    columns = Array.from({ length:count }, (_, i) => ({
+      x:i * colW,
+      w:colW + 1,
+      delay:Math.random() * 0.38,
+      speed:0.52 + Math.random() * 1.8,
+      wobble:Math.random() * Math.PI * 2,
+      tear:Math.random() * 0.26
     }));
   }
 
@@ -128,28 +161,49 @@
     if (melting) return;
     melting = true;
     makeOverlay();
-    captureScene();
+    readPlayerState();
+    initPlayerImage();
+    captureSceneWithoutPlayer();
     initColumns();
     startTime = performance.now();
+    lastFrameTime = startTime;
     requestAnimationFrame(animateMelt);
   }
 
-  function animateMelt(now){
-    if (!melting || !ctx || !sourceCanvas) return;
+  function updateEscapingPlayer(progress, now){
+    const scale = dpr();
+    const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
+    let input = 0;
 
-    const elapsed = now - startTime;
-    const p = Math.max(0, Math.min(1, elapsed / MELT_MS));
+    if (heldKeys.ArrowLeft || heldKeys.KeyA) input -= 1;
+    if (heldKeys.ArrowRight || heldKeys.KeyD) input += 1;
 
+    // A tiny autopilot wobble so the banana still looks alive if the user does nothing.
+    const drift = Math.sin(now * 0.0022) * 0.18;
+    const speed = (300 + progress * 190) * scale;
+
+    escapePlayer.vx = escapePlayer.vx * 0.82 + (input + drift) * speed * 0.18;
+    escapePlayer.x += escapePlayer.vx * dt;
+    escapePlayer.x = Math.max(escapePlayer.w * 0.35, Math.min(sourceCanvas.width - escapePlayer.w * 0.35, escapePlayer.x));
+
+    if (input > 0.1) escapePlayer.facing = 1;
+    else if (input < -0.1) escapePlayer.facing = -1;
+
+    const a = api();
+    if (a && typeof a.setPlayerX === "function") a.setPlayerX(escapePlayer.x / scale);
+  }
+
+  function drawMelt(progress, now){
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Darkening background, because the page has made a choice.
-    ctx.fillStyle = `rgba(0,0,0,${0.08 + p * 0.78})`;
+    ctx.fillStyle = `rgba(0,0,0,${0.08 + progress * 0.78})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const h = sourceCanvas.height;
-    const wave = Math.sin(p * Math.PI);
+    const wave = Math.sin(progress * Math.PI);
+
     for (const c of columns){
-      const local = Math.max(0, Math.min(1, (p - c.delay) / Math.max(0.12, 1 - c.delay)));
+      const local = Math.max(0, Math.min(1, (progress - c.delay) / Math.max(0.12, 1 - c.delay)));
       const fall = Math.pow(local, 1.45) * h * (0.45 + c.speed * 1.2);
       const wobbleX = Math.sin(now * 0.008 + c.wobble) * wave * 18 * c.tear;
       const stretch = 1 + local * (2.4 + c.speed);
@@ -157,31 +211,69 @@
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - Math.pow(local, 2.2) * 0.92);
       ctx.filter = `hue-rotate(${Math.round(local * 240)}deg) saturate(${1 + local * 2.2}) blur(${local * 2.2}px)`;
-      ctx.drawImage(
-        sourceCanvas,
-        c.x, 0, c.w, h,
-        c.x + wobbleX, fall, c.w, h * stretch
-      );
+      ctx.drawImage(sourceCanvas, c.x, 0, c.w, h, c.x + wobbleX, fall, c.w, h * stretch);
       ctx.restore();
 
-      // Slime trail, naturally. Humans made CSS gradients, so here we are.
       if (local > 0.05){
         ctx.fillStyle = `rgba(0,255,102,${0.08 * (1 - local)})`;
         ctx.fillRect(c.x + wobbleX, 0, c.w, Math.min(h, fall + 40));
       }
     }
 
-    // Scanline crumble.
     ctx.save();
-    ctx.globalAlpha = 0.12 + p * 0.18;
+    ctx.globalAlpha = 0.12 + progress * 0.18;
     ctx.fillStyle = "rgba(255,255,255,0.6)";
     for (let y = 0; y < canvas.height; y += 14){
-      const dx = Math.sin(y * 0.05 + now * 0.012) * 18 * p;
+      const dx = Math.sin(y * 0.05 + now * 0.012) * 18 * progress;
       ctx.fillRect(dx, y, canvas.width, 1);
     }
     ctx.restore();
+  }
 
-    if (p < 1){
+  function drawEscapingPlayer(progress, now){
+    if (!playerImg || !playerImg.complete) return;
+
+    const scale = dpr();
+    const zoom = 1 + Math.pow(progress, 1.65) * 9.5;
+    const bob = Math.sin(now * 0.01) * 5 * scale * (1 - Math.min(1, progress * 1.4));
+    const yLift = Math.pow(progress, 1.3) * sourceCanvas.height * 0.18;
+    const w = escapePlayer.w * zoom;
+    const h = escapePlayer.h * zoom;
+    const centerPull = Math.pow(progress, 1.8);
+    const x = escapePlayer.x * (1 - centerPull) + (sourceCanvas.width / 2) * centerPull;
+    const y = escapePlayer.y - yLift + bob;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(escapePlayer.facing >= 0 ? -1 : 1, 1);
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = "rgba(0,255,102,0.55)";
+    ctx.shadowBlur = 18 + progress * 60;
+    ctx.filter = `drop-shadow(0 0 ${Math.round(8 + progress * 36)}px rgba(0,255,102,0.45)) saturate(${1.05 + progress * 0.6}) contrast(${1.02 + progress * 0.25})`;
+    ctx.drawImage(playerImg, -w / 2, -h / 2, w, h);
+
+    if (progress > 0.58){
+      ctx.globalAlpha = Math.min(0.55, (progress - 0.58) * 1.4);
+      ctx.filter = "none";
+      ctx.strokeStyle = "rgba(255,255,255,0.72)";
+      ctx.lineWidth = Math.max(2, 5 * scale);
+      ctx.strokeRect(-w / 2, -h / 2, w, h);
+    }
+
+    ctx.restore();
+  }
+
+  function animateMelt(now){
+    if (!melting || !ctx || !sourceCanvas) return;
+    const progress = Math.max(0, Math.min(1, (now - startTime) / MELT_MS));
+
+    updateEscapingPlayer(progress, now);
+    drawMelt(progress, now);
+    drawEscapingPlayer(progress, now);
+
+    lastFrameTime = now;
+
+    if (progress < 1){
       requestAnimationFrame(animateMelt);
       return;
     }
@@ -191,9 +283,7 @@
 
   function finishMelt(){
     const a = api();
-    if (a && typeof a.resetToSpeedOneAndMenu === "function"){
-      a.resetToSpeedOneAndMenu();
-    }
+    if (a && typeof a.resetToSpeedOneAndMenu === "function") a.resetToSpeedOneAndMenu();
 
     setTimeout(() => {
       if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -202,6 +292,7 @@
       ctx = null;
       sourceCanvas = null;
       sourceCtx = null;
+      playerImg = null;
       columns = [];
       melting = false;
       resetTimer();
@@ -221,10 +312,16 @@
       return;
     }
 
-    if (performance.now() - frozenStartedAt >= REQUIRED_MS){
-      startMelt();
-    }
+    if (performance.now() - frozenStartedAt >= REQUIRED_MS) startMelt();
   }
+
+  window.addEventListener("keydown", (event) => {
+    heldKeys[event.code] = true;
+  });
+
+  window.addEventListener("keyup", (event) => {
+    heldKeys[event.code] = false;
+  });
 
   window.addEventListener("resize", () => {
     if (melting && canvas) resizeCanvases();
