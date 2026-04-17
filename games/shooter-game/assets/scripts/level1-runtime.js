@@ -1831,6 +1831,7 @@ const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
 const btnCheatsBack = document.getElementById("btnCheatsBack");
+const btnCheatsApply = document.getElementById("btnCheatsApply");
 
   // =======================
   // Start Options (v1.96)
@@ -1880,6 +1881,25 @@ function applyInvertColors(){
   document.body.classList.toggle("invert-colors", INVERT_COLORS);
 }
 
+function updateCheatsApplyButtonState(){
+  if (!btnCheatsApply) return;
+  if (cheatsHavePendingChanges) setStateApplyButton(btnCheatsApply, "dirty");
+  else if (cheatsJustApplied) setStateApplyButton(btnCheatsApply, "applied");
+  else setStateApplyButton(btnCheatsApply, "hidden");
+}
+
+function markCheatsDirty(){
+  cheatsHavePendingChanges = true;
+  cheatsJustApplied = false;
+  updateCheatsApplyButtonState();
+}
+
+function markCheatsClean(applied=false){
+  cheatsHavePendingChanges = false;
+  cheatsJustApplied = !!applied;
+  updateCheatsApplyButtonState();
+}
+
 function syncCheatsMenuState(){
   if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
   if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
@@ -1891,23 +1911,21 @@ function syncCheatsMenuState(){
 
 if (infiniteToggle){
   infiniteToggle.addEventListener("change", () => {
-    INFINITE_MODE = !!infiniteToggle.checked;
-    infiniteModeActive = !!INFINITE_MODE;
+    markCheatsDirty();
     syncCheatsMenuState();
   });
 }
 
 if (invertColorsCheckbox){
   invertColorsCheckbox.addEventListener("change", () => {
-    INVERT_COLORS = invertColorsCheckbox.checked;
-    applyInvertColors();
+    markCheatsDirty();
     syncCheatsMenuState();
   });
 }
 
 if (videoFxCheckbox){
   videoFxCheckbox.addEventListener("change", () => {
-    VIDEO_FX_ENABLED = !!videoFxCheckbox.checked;
+    markCheatsDirty();
     syncCheatsMenuState();
   });
 }
@@ -2313,6 +2331,8 @@ let optionsFocusIndex = 0;
 let optionsHavePendingChanges = false;
 let optionsJustApplied = false;
 let cheatsFocusIndex = 0;
+let cheatsHavePendingChanges = false;
+let cheatsJustApplied = false;
 let startingStatFocusIndex = 0;
 let pauseFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
@@ -2379,12 +2399,13 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [btnControls, startWaveSelect, statRowTarget, speedSlider, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [btnControls, speedSlider, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
   const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
-  return [infiniteToggle, invertColorsCheckbox, videoFxCheckbox, skipTarget, btnCheatsBack].filter(Boolean);
+  const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
+  return [startWaveSelect, statRowTarget, infiniteToggle, invertColorsCheckbox, videoFxCheckbox, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -2559,13 +2580,14 @@ function moveStartingStatFocus(delta){
   const statInputs = getStartingStatInputs();
   if (!statInputs.length) return false;
   startingStatFocusIndex = Math.max(0, Math.min(statInputs.length - 1, startingStatFocusIndex + delta));
-  syncOptionsControllerFocus();
+  if (gameState === STATE.CHEATS) syncCheatsControllerFocus();
+  else syncOptionsControllerFocus();
   return true;
 }
 
 function isStartingStatFocused(){
   const statInputs = getStartingStatInputs();
-  return statInputs.includes(getOptionsControllerTargets()[optionsFocusIndex]);
+  return statInputs.includes(getCheatsControllerTargets()[cheatsFocusIndex]);
 }
 
 function isOptionsBottomButtonFocused(){
@@ -2733,11 +2755,16 @@ function adjustControllerOption(delta){
 function adjustControllerCheat(delta){
   const items = getCheatsControllerTargets();
   const el = items[cheatsFocusIndex];
-  if (!el || el.type !== 'checkbox') return false;
-  el.checked = delta > 0;
-  el.dispatchEvent(new Event('change', { bubbles:true }));
-  focusControllerElement(el);
-  return true;
+  if (!el) return false;
+  if (el.tagName === 'SELECT') return cycleSelect(el, delta);
+  if (isStartingStatInputEl(el)) return stepNumberInput(el, delta);
+  if (el.type === 'checkbox'){
+    el.checked = delta > 0;
+    el.dispatchEvent(new Event('change', { bubbles:true }));
+    focusControllerElement(el);
+    return true;
+  }
+  return false;
 }
 function showMenu(){
   setPaused(false);
@@ -2954,7 +2981,18 @@ function restartRun(){
 function showCheats(){
   setPaused(false);
   gameState = STATE.CHEATS;
+  if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
+  livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
+  heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
+  shieldsSlider.value = START_SHIELDS_INFINITE ? 100 : START_SHIELDS;
+  bombsSlider.value = START_BOMBS_INFINITE ? 100 : START_BOMBS;
+  normalizeStartStatInput(livesSlider);
+  normalizeStartStatInput(heartsSlider);
+  normalizeStartStatInput(shieldsSlider);
+  normalizeStartStatInput(bombsSlider);
+  syncStartOptionsLabels();
   syncCheatsMenuState();
+  markCheatsClean(false);
   startMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   optionsMenu.style.display = "none";
@@ -3155,28 +3193,12 @@ spawnEnemies();
 }
 
 
-if (livesSlider){
-  livesSlider.addEventListener("input", markOptionsDirty);
-  livesSlider.addEventListener("change", markOptionsDirty);
-}
 
 
-if (heartsSlider){
-  heartsSlider.addEventListener("input", markOptionsDirty);
-  heartsSlider.addEventListener("change", markOptionsDirty);
-}
 
 
-if (shieldsSlider){
-  shieldsSlider.addEventListener("input", markOptionsDirty);
-  shieldsSlider.addEventListener("change", markOptionsDirty);
-}
 
 
-if (bombsSlider){
-  bombsSlider.addEventListener("input", markOptionsDirty);
-  bombsSlider.addEventListener("change", markOptionsDirty);
-}
 
 
 if (speedSlider){
@@ -3185,55 +3207,99 @@ if (speedSlider){
 }
 
 
-if (startWaveSelect){
-  startWaveSelect.addEventListener("input", markOptionsDirty);
-  startWaveSelect.addEventListener("change", markOptionsDirty);
+
+
+
+
+
+
+
+
+if (typeof livesSlider !== "undefined" && livesSlider){
+  livesSlider.addEventListener("input", markCheatsDirty);
+  livesSlider.addEventListener("change", markCheatsDirty);
+}
+
+
+if (typeof heartsSlider !== "undefined" && heartsSlider){
+  heartsSlider.addEventListener("input", markCheatsDirty);
+  heartsSlider.addEventListener("change", markCheatsDirty);
+}
+
+
+if (typeof shieldsSlider !== "undefined" && shieldsSlider){
+  shieldsSlider.addEventListener("input", markCheatsDirty);
+  shieldsSlider.addEventListener("change", markCheatsDirty);
+}
+
+
+if (typeof bombsSlider !== "undefined" && bombsSlider){
+  bombsSlider.addEventListener("input", markCheatsDirty);
+  bombsSlider.addEventListener("change", markCheatsDirty);
+}
+
+
+if (typeof startWaveSelect !== "undefined" && startWaveSelect){
+  startWaveSelect.addEventListener("input", markCheatsDirty);
+  startWaveSelect.addEventListener("change", markCheatsDirty);
 }
 
 
 if (typeof infiniteToggle !== "undefined" && infiniteToggle){
-  infiniteToggle.addEventListener("change", markOptionsDirty);
+  infiniteToggle.addEventListener("input", markCheatsDirty);
+  infiniteToggle.addEventListener("change", markCheatsDirty);
 }
 
 
 if (typeof invertColorsCheckbox !== "undefined" && invertColorsCheckbox){
-  invertColorsCheckbox.addEventListener("change", markOptionsDirty);
+  invertColorsCheckbox.addEventListener("input", markCheatsDirty);
+  invertColorsCheckbox.addEventListener("change", markCheatsDirty);
 }
 
 
 if (typeof videoFxCheckbox !== "undefined" && videoFxCheckbox){
-  videoFxCheckbox.addEventListener("change", markOptionsDirty);
+  videoFxCheckbox.addEventListener("input", markCheatsDirty);
+  videoFxCheckbox.addEventListener("change", markCheatsDirty);
 }
 
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", showCheats);
+function applyCheatsChanges(){
+  applyStartSettingsFromControls();
+  INFINITE_MODE = !!(infiniteToggle && infiniteToggle.checked);
+  infiniteModeActive = !!INFINITE_MODE;
+  INVERT_COLORS = !!(invertColorsCheckbox && invertColorsCheckbox.checked);
+  VIDEO_FX_ENABLED = !!(videoFxCheckbox && videoFxCheckbox.checked);
+  applyInvertColors();
+  syncStartOptionsLabels();
+  syncCheatsMenuState();
+  markCheatsClean(true);
+}
+
 if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
+if (btnCheatsApply) btnCheatsApply.addEventListener("click", () => { if (cheatsHavePendingChanges) applyCheatsChanges(); });
 btnBack.addEventListener("click", showMenu);
+function applyStartSettingsFromControls(){
+  const livesOpt = parseResourceOption(livesSlider, 0);
+  const heartsOpt = parseResourceOption(heartsSlider, 1);
+  const shieldsOpt = parseResourceOption(shieldsSlider, 0);
+  const bombsOpt = parseResourceOption(bombsSlider, 0);
+  START_LIVES = livesOpt.value;
+  START_HEARTS = heartsOpt.value;
+  START_SHIELDS = shieldsOpt.value;
+  START_BOMBS = bombsOpt.value;
+  START_LIVES_INFINITE = livesOpt.infinite;
+  START_HEARTS_INFINITE = heartsOpt.infinite;
+  START_SHIELDS_INFINITE = shieldsOpt.infinite;
+  START_BOMBS_INFINITE = bombsOpt.infinite;
+  START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
+}
+
 function applyOptionsChanges(){
-  // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
-  {
-    const livesOpt = parseResourceOption(livesSlider, 0);
-    const heartsOpt = parseResourceOption(heartsSlider, 1);
-    const shieldsOpt = parseResourceOption(shieldsSlider, 0);
-    const bombsOpt = parseResourceOption(bombsSlider, 0);
-    START_LIVES = livesOpt.value;
-    START_HEARTS = heartsOpt.value;
-    START_SHIELDS = shieldsOpt.value;
-    START_BOMBS = bombsOpt.value;
-    START_LIVES_INFINITE = livesOpt.infinite;
-    START_HEARTS_INFINITE = heartsOpt.infinite;
-    START_SHIELDS_INFINITE = shieldsOpt.infinite;
-    START_BOMBS_INFINITE = bombsOpt.infinite;
-  }
-  // v1.96: Save game speed (1-10), where 5 = normal.
   START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
-  START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
-  syncCheatsMenuState();
-
-  // Keep the UI labels in sync and leave the menu open.
   syncStartOptionsLabels();
   markOptionsClean(true);
 }
@@ -3799,8 +3865,17 @@ function pollGamepad(dt){
     } else if (gameState === STATE.CHEATS){
       if (navUp) moveCheatsControllerFocus(-1);
       if (navDown) moveCheatsControllerFocus(1);
-      if (navLeft) adjustControllerCheat(-1);
-      if (navRight) adjustControllerCheat(1);
+      if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
+        if (navLeft) moveStartingStatFocus(-1);
+        if (navRight) moveStartingStatFocus(1);
+        if (rNavUp) adjustControllerCheat(1);
+        if (rNavDown) adjustControllerCheat(-1);
+      } else {
+        if (navLeft) adjustControllerCheat(-1);
+        if (navRight) adjustControllerCheat(1);
+        if (rNavUp) adjustControllerCheat(1);
+        if (rNavDown) adjustControllerCheat(-1);
+      }
       if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
       if (pressMenuBack) hideCheats();
     } else if (gameState === STATE.CONTROLS){
