@@ -15,6 +15,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/infinite', desc: 'Toggle global infinite mode, or set one resource to infinite', usage: '/infinite', suggestions: ['hearts', 'shields', 'lives', 'bombs'] },
       { name: '/color_invert', desc: 'Toggle invert colors', usage: '/color_invert' },
       { name: '/lives', desc: 'Set lives to 0-99, or 100/INFINITE', usage: '/lives [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'] },
+      { name: '/log', desc: 'Show the visible Last updated timestamp for the current level', usage: '/log' },
       { name: '/mute', desc: 'Toggle all shooter audio on or off', usage: '/mute' },
       { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'] },
       { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
