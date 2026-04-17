@@ -1654,16 +1654,46 @@ function fitCheatsMenuToViewport(){
   sizeMenuLikeStartMenu(cheatsMenu, cheatsMenuInner, cheatsScroll);
 }
 
+function rememberStartMenuPanelRect(){
+  if (!startMenu) return;
+  try{
+    if (startMenu.style.display !== "none" && startMenu.offsetParent !== null){
+      const rect = startMenu.getBoundingClientRect();
+      if (rect && rect.width && rect.height) startMenuPanelRect = rect;
+    }
+  }catch(e){}
+}
+
+function getFallbackMenuRect(){
+  if (startMenuPanelRect && startMenuPanelRect.width && startMenuPanelRect.height) return startMenuPanelRect;
+  if (startMenu){
+    try{
+      const previousDisplay = startMenu.style.display;
+      const previousVisibility = startMenu.style.visibility;
+      const previousPointerEvents = startMenu.style.pointerEvents;
+      startMenu.style.visibility = "hidden";
+      startMenu.style.pointerEvents = "none";
+      startMenu.style.display = "block";
+  rememberStartMenuPanelRect();
+      const rect = startMenu.getBoundingClientRect();
+      startMenu.style.display = previousDisplay;
+      startMenu.style.visibility = previousVisibility;
+      startMenu.style.pointerEvents = previousPointerEvents;
+      if (rect && rect.width && rect.height){
+        startMenuPanelRect = rect;
+        return rect;
+      }
+    }catch(e){}
+  }
+  return null;
+}
+
 function sizeMenuLikeStartMenu(menuEl, innerEl=null, scrollEl=null){
   if (!menuEl) return;
   menuEl.style.transform = "scale(1)";
   menuEl.style.margin = "0";
   menuEl.style.transformOrigin = "center center";
   menuEl.style.boxSizing = "border-box";
-  menuEl.style.width = "";
-  menuEl.style.height = "";
-  menuEl.style.minHeight = "";
-  menuEl.style.maxHeight = "";
 
   if (innerEl){
     innerEl.style.transform = "none";
@@ -1673,9 +1703,10 @@ function sizeMenuLikeStartMenu(menuEl, innerEl=null, scrollEl=null){
 
   if (menuEl.style.display === "none" || menuEl.offsetParent === null) return;
 
-  if (startMenuPanelRect && startMenuPanelRect.width && startMenuPanelRect.height){
-    const panelW = Math.round(startMenuPanelRect.width);
-    const panelH = Math.round(startMenuPanelRect.height);
+  const sourceRect = getFallbackMenuRect();
+  if (sourceRect && sourceRect.width && sourceRect.height){
+    const panelW = Math.round(sourceRect.width);
+    const panelH = Math.round(sourceRect.height);
     menuEl.style.width = `${panelW}px`;
     menuEl.style.height = `${panelH}px`;
     menuEl.style.minHeight = `${panelH}px`;
@@ -2761,7 +2792,7 @@ function showMenu(){
   if (winOverlay) winOverlay.style.display = "none";
 
   startMenu.style.display = "block";
-  try{ startMenuPanelRect = startMenu.getBoundingClientRect(); }catch(e){}
+  rememberStartMenuPanelRect();
   optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   if (cheatsMenu) cheatsMenu.style.display = "none";
@@ -2781,9 +2812,10 @@ function showControlsMenu(){
   const fromMenu = startMenu && startMenu.style.display !== "none";
   if (!fromOptions && !fromMenu && !pauseControlsOpen) return;
 
+  if (fromMenu) rememberStartMenuPanelRect();
+  else getFallbackMenuRect();
+
   controlsReturnState = fromOptions ? STATE.OPTIONS : STATE.MENU;
-  const sourcePanel = fromOptions ? optionsMenu : startMenu;
-  if (sourcePanel) startMenuPanelRect = sourcePanel.getBoundingClientRect();
 
   setPaused(false);
   pauseControlsOpen = false;
@@ -2796,6 +2828,7 @@ function showControlsMenu(){
   setControlsBindMode(activeInputMode);
   startMenu.style.display = "none";
   optionsMenu.style.display = "none";
+  if (cheatsMenu) cheatsMenu.style.display = "none";
   controlsMenu.style.display = "block";
   controlsMenu.classList.remove("pauseControlsMode");
   uiRoot.style.display = "flex";
@@ -2961,7 +2994,8 @@ function restartRun(){
   startGame();
 }
 function showCheats(){
-  if (startMenu && startMenu.style.display !== "none") startMenuPanelRect = startMenu.getBoundingClientRect();
+  if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
+  else getFallbackMenuRect();
   setPaused(false);
   gameState = STATE.CHEATS;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
@@ -3048,7 +3082,8 @@ function markOptionsClean(applied=false){
 }
 
 function showOptions(){
-  if (startMenu && startMenu.style.display !== "none") startMenuPanelRect = startMenu.getBoundingClientRect();
+  if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
+  else getFallbackMenuRect();
   setPaused(false);
   gameState = STATE.OPTIONS;
   markOptionsClean(false);

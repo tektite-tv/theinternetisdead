@@ -257,7 +257,7 @@
     #controlsMenu .controlsAimButton{ min-width:104px; padding:6px 7px; font-size:10px; }
   }
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
-  #optionsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
+  #optionsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
   #optionsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #optionsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #optionsMenu .optionsGrid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; align-items:start; }
@@ -271,7 +271,7 @@
   #optionsMenu .startStatField{ display:flex; flex-direction:column; gap:4px; }
   #optionsMenu .startStatField label{ font-size:11px; opacity:0.9; }
   #optionsMenu .startStatField input[type="number"]{ width:100%; }
-  #cheatsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
+  #cheatsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
   #cheatsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #cheatsMenu .cheatsGrid{ display:grid; grid-template-columns:1fr; gap:6px; margin-top:10px; }
   #cheatsMenu .cheatRow{ padding:10px 12px; }
@@ -993,6 +993,15 @@ body.invert-colors {
     opacity:1;
   }
 
+
+  #optionsMenu .optionsGrid,
+  #cheatsMenu .cheatsGrid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:6px;
+    align-items:start;
+  }
+
 </style>
 
 
@@ -1189,7 +1198,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 1:54 AM)</a></div>
+<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 1:58 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
