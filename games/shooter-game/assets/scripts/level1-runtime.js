@@ -2060,6 +2060,7 @@ let controlsInputLockMode = null;
 let controlsBindMode = INPUT_MODE_KEYBOARD;
 let controlsFocusIndex = 0;
 let controlsMoveFocusIndex = 0;
+let controlsReturnState = STATE.MENU;
 let startMenuPanelRect = null;
 let bindingEditState = null;
 let controllerRebindReady = false;
@@ -2339,7 +2340,7 @@ if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { app
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnControls].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions].filter(Boolean);
 }
 
 function isTitleHoverRevealFocused(){
@@ -2354,7 +2355,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [startWaveSelect, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
+  return [btnControls, startWaveSelect, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -2742,8 +2743,15 @@ function showMenu(){
 }
 
 function showControlsMenu(){
-  if (!controlsMenu || startMenu.style.display === "none") return;
-  startMenuPanelRect = startMenu.getBoundingClientRect();
+  if (!controlsMenu) return;
+  const fromOptions = optionsMenu && optionsMenu.style.display !== "none";
+  const fromMenu = startMenu && startMenu.style.display !== "none";
+  if (!fromOptions && !fromMenu && !pauseControlsOpen) return;
+
+  controlsReturnState = fromOptions ? STATE.OPTIONS : STATE.MENU;
+  const sourcePanel = fromOptions ? optionsMenu : startMenu;
+  if (sourcePanel) startMenuPanelRect = sourcePanel.getBoundingClientRect();
+
   setPaused(false);
   pauseControlsOpen = false;
   pauseOverlay.classList.remove("pauseControlsVisible");
@@ -2775,6 +2783,10 @@ function hideControlsMenu(){
   cancelBindingEdit();
   if (pauseControlsOpen && isPaused){
     hidePauseControlsMenu();
+    return;
+  }
+  if (controlsReturnState === STATE.OPTIONS){
+    showOptions();
     return;
   }
   showMenu();
