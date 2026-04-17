@@ -661,6 +661,48 @@ function _applyBombs(n, forceInfinite){
   _syncStartResourceControls();
   _syncBombHud();
 }
+
+function refreshInfiniteModeUi(){
+  if (typeof syncCheatsMenuState === "function") syncCheatsMenuState();
+  if (typeof renderMenuHudPreview === "function") renderMenuHudPreview();
+}
+
+function applyGlobalInfiniteMode(enabled){
+  INFINITE_MODE = !!enabled;
+  infiniteModeActive = !!INFINITE_MODE;
+  _applyLives((START_LIVES_INFINITE || INFINITE_MODE) ? 100 : START_LIVES, !!(START_LIVES_INFINITE || INFINITE_MODE));
+  _applyHearts((START_HEARTS_INFINITE || INFINITE_MODE) ? 100 : START_HEARTS, !!(START_HEARTS_INFINITE || INFINITE_MODE));
+  _applyShields((START_SHIELDS_INFINITE || INFINITE_MODE) ? 100 : START_SHIELDS, !!(START_SHIELDS_INFINITE || INFINITE_MODE));
+  _applyBombs((START_BOMBS_INFINITE || INFINITE_MODE) ? 100 : START_BOMBS, !!(START_BOMBS_INFINITE || INFINITE_MODE));
+  refreshInfiniteModeUi();
+}
+
+function setIndividualInfiniteResource(resourceName){
+  switch (resourceName){
+    case "lives":
+      START_LIVES_INFINITE = true;
+      _applyLives(100, true);
+      refreshInfiniteModeUi();
+      return "Lives set to infinite";
+    case "hearts":
+      START_HEARTS_INFINITE = true;
+      _applyHearts(100, true);
+      refreshInfiniteModeUi();
+      return "Hearts set to infinite";
+    case "shields":
+      START_SHIELDS_INFINITE = true;
+      _applyShields(100, true);
+      refreshInfiniteModeUi();
+      return "Shields set to infinite";
+    case "bombs":
+      START_BOMBS_INFINITE = true;
+      _applyBombs(100, true);
+      refreshInfiniteModeUi();
+      return "Bombs set to infinite";
+    default:
+      return "";
+  }
+}
 function renderMenuHudPreview(){
   const heartsHud = getHeartsHudEl();
   const previewLivesInfinite = !!(START_LIVES_INFINITE || INFINITE_MODE);
@@ -733,7 +775,7 @@ function execPauseCommand(cmd){
   // v1.96: /help -> list commands alphabetically inside the pause panel
   if (raw === "/help"){
     showHelp();
-    return { ok:true, message:"/help executed" };
+    return { ok:true, suppressChatResult:true };
   }
 
   // v1.96: /fullscreen -> toggle browser fullscreen
@@ -775,6 +817,18 @@ function execPauseCommand(cmd){
   if (raw === "/video_fx"){
     setVideoFxEnabled(!VIDEO_FX_ENABLED);
     return { ok:true, message:`Video FX ${VIDEO_FX_ENABLED ? "enabled" : "disabled"}` };
+  }
+
+  // /infinite -> toggle global infinite mode, or set one resource to infinite
+  if (raw.startsWith("/infinite")){
+    const arg = raw.slice("/infinite".length).trim().toLowerCase();
+    if (!arg){
+      applyGlobalInfiniteMode(!INFINITE_MODE);
+      return { ok:true, message:`Infinite mode ${INFINITE_MODE ? "enabled" : "disabled"} for all resources` };
+    }
+    const resourceMessage = setIndividualInfiniteResource(arg);
+    if (resourceMessage) return { ok:true, message: resourceMessage };
+    return { ok:false, message:"Usage: /infinite [hearts|shields|lives|bombs]" };
   }
 
 
@@ -822,8 +876,8 @@ function execPauseCommand(cmd){
     return { ok:false, message:"Usage: /bombs [0-99|100|MAX]" };
   }
 
-  // /invert -> toggle invert colors mode (same as Options menu)
-  if (raw === "/invert"){
+  // /color_invert -> toggle invert colors mode (same as Options menu)
+  if (raw === "/color_invert"){
     INVERT_COLORS = !INVERT_COLORS;
     applyInvertColors();
     syncCheatsMenuState();
@@ -870,12 +924,17 @@ window.addEventListener("message", (event) => {
     return;
   }
 
+  if (data.type === "tektite:fullscreen-state"){
+    syncFullscreenOptionState(!!data.active);
+    return;
+  }
+
   if (data.type !== "tektite:execute-command") return;
 
   const command = String(data.command || "").trim();
   const result = execPauseCommand(command);
 
-  if (window.parent && window.parent !== window) {
+  if (window.parent && window.parent !== window && !(result && result.suppressChatResult)) {
     postCommandResult(command, result);
   }
 });
@@ -1093,6 +1152,7 @@ function renderLifetimeStats(){
 
   const statsList = document.getElementById("statsList");
   const lockedDetails = document.getElementById("statsLockedDetails");
+  const lockedToggle = document.getElementById("btnStatsLockedToggle");
   const lockedList = document.getElementById("statsLockedList");
   let lockedCount = 0;
 
@@ -1104,9 +1164,13 @@ function renderLifetimeStats(){
 
     if (value > 0){
       row.style.display = "flex";
+      row.classList.remove("statsSelectableRow");
+      row.removeAttribute("tabindex");
       if (statsList && row.parentNode !== statsList) statsList.appendChild(row);
     } else {
       row.style.display = "flex";
+      row.classList.add("statsSelectableRow");
+      row.tabIndex = -1;
       if (lockedList && row.parentNode !== lockedList) lockedList.appendChild(row);
       lockedCount += 1;
     }
@@ -1114,19 +1178,36 @@ function renderLifetimeStats(){
 
   if (lockedDetails){
     lockedDetails.hidden = lockedCount <= 0;
-    const summary = lockedDetails.querySelector("summary");
-    if (summary) summary.textContent = lockedCount > 0
-      ? `Play More To Unlock (${lockedCount})`
-      : "Play More To Unlock";
+    if (lockedCount <= 0 && lockedList) lockedList.hidden = true;
+    if (lockedToggle){
+      lockedToggle.textContent = lockedCount > 0
+        ? `Play More To Unlock (${lockedCount})`
+        : "Play More To Unlock";
+      if (lockedCount <= 0) lockedToggle.setAttribute("aria-expanded", "false");
+    }
+    syncStatsLockedSummaryState();
   }
 }
 
 function openStatsPanel(){
   renderLifetimeStats();
+  if (btnStatsLockedToggle){
+    btnStatsLockedToggle.setAttribute("aria-expanded", "false");
+    syncStatsLockedSummaryState();
+  }
+  const statsTargets = getStatsControllerTargets();
+  const defaultStatsFocusIndex = statsTargets.indexOf(btnStatsClose);
+  statsFocusIndex = defaultStatsFocusIndex >= 0 ? defaultStatsFocusIndex : 0;
+  setStartMenuInteractive(false);
   if (statsPanel){
     statsPanel.style.display = "flex";
     statsPanel.setAttribute("aria-hidden", "false");
+    statsPanel.setAttribute("aria-modal", "true");
     fitStatsPanelToStartMenu();
+  }
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
+  else if (btnStatsClose && typeof btnStatsClose.focus === "function"){
+    try{ btnStatsClose.focus({ preventScroll:true }); }catch(_){ try{ btnStatsClose.focus(); }catch(__){} }
   }
 }
 
@@ -1134,12 +1215,38 @@ function closeStatsPanel(){
   if (statsPanel){
     statsPanel.style.display = "none";
     statsPanel.setAttribute("aria-hidden", "true");
+    statsPanel.removeAttribute("aria-modal");
+  }
+  setStartMenuInteractive(true);
+  const menuTargets = getMenuControllerTargets();
+  const statsIndex = menuTargets.indexOf(btnStats);
+  if (statsIndex !== -1) menuFocusIndex = statsIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else if (btnStats && typeof btnStats.focus === "function"){
+    try{ btnStats.focus({ preventScroll:true }); }catch(_){ try{ btnStats.focus(); }catch(__){} }
   }
 }
 
 function resetLifetimeStats(){
   writeLifetimeStats(getDefaultLifetimeStats());
   renderLifetimeStats();
+}
+
+function isStatsPanelOpen(){
+  return !!(statsPanel && statsPanel.style.display !== "none" && statsPanel.getAttribute("aria-hidden") !== "true");
+}
+
+function setStartMenuInteractive(isInteractive){
+  if (!startMenu) return;
+  const enabled = !!isInteractive;
+  startMenu.style.pointerEvents = enabled ? "" : "none";
+  if (enabled){
+    startMenu.removeAttribute("inert");
+    startMenu.removeAttribute("aria-hidden");
+    return;
+  }
+  startMenu.setAttribute("inert", "");
+  startMenu.setAttribute("aria-hidden", "true");
 }
 
 function commitRunLifetimeStats({won=false, died=false} = {}){
@@ -2014,6 +2121,9 @@ const btnMysteryLink = document.getElementById("btnMysteryLink");
 const btnStats = document.getElementById("btnStats");
 const statsPanel = document.getElementById("statsPanel");
 const statsPanelInner = document.getElementById("statsPanelInner");
+const statsScroll = document.getElementById("statsScroll");
+const statsLockedDetails = document.getElementById("statsLockedDetails");
+const btnStatsLockedToggle = document.getElementById("btnStatsLockedToggle");
 const btnStatsClose = document.getElementById("btnStatsClose");
 const btnStatsReset = document.getElementById("btnStatsReset");
 const statLifetimeScore = document.getElementById("statLifetimeScore");
@@ -2033,9 +2143,9 @@ const controlsListScroll = document.getElementById("controlsListScroll");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
-const btnFullscreenOption = document.getElementById("btnFullscreenOption");
 const backgroundColorHex = document.getElementById("backgroundColorHex");
 const backgroundColorPicker = document.getElementById("backgroundColorPicker");
+const fullscreenCheckbox = document.getElementById("fullscreenCheckbox");
 const btnCheatsBack = document.getElementById("btnCheatsBack");
 const btnCheatsApply = document.getElementById("btnCheatsApply");
 
@@ -2076,6 +2186,8 @@ const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
 let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-10
 
 let INVERT_COLORS = false;
+let fullscreenOptionEnabled = !!document.fullscreenElement;
+const fullscreenStatus = document.getElementById("fullscreenStatus");
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
 const videoFxCheckbox = document.getElementById("videoFxCheckbox");
 const infiniteToggleStatus = document.getElementById("infiniteToggleStatus");
@@ -2084,6 +2196,35 @@ const videoFxStatus = document.getElementById("videoFxStatus");
 
 function applyInvertColors(){
   document.body.classList.toggle("invert-colors", INVERT_COLORS);
+}
+
+function syncFullscreenOptionState(nextState = null){
+  fullscreenOptionEnabled = typeof nextState === "boolean" ? nextState : !!document.fullscreenElement;
+  if (fullscreenCheckbox) fullscreenCheckbox.checked = !!fullscreenOptionEnabled;
+  if (fullscreenStatus) fullscreenStatus.textContent = fullscreenOptionEnabled ? "Enabled" : "Disabled";
+}
+
+function setFullscreenOptionEnabled(shouldEnable){
+  const nextState = !!shouldEnable;
+  if (requestHostFullscreen(nextState ? "enter" : "exit")){
+    syncFullscreenOptionState(nextState);
+    return;
+  }
+  const elem = document.documentElement;
+  if (nextState){
+    if (!document.fullscreenElement && elem.requestFullscreen){
+      const request = elem.requestFullscreen();
+      if (request && typeof request.catch === "function"){
+        request.catch(() => syncFullscreenOptionState(false));
+      }
+    }
+  } else if (document.fullscreenElement && document.exitFullscreen){
+    const request = document.exitFullscreen();
+    if (request && typeof request.catch === "function"){
+      request.catch(() => syncFullscreenOptionState(!!document.fullscreenElement));
+    }
+  }
+  syncFullscreenOptionState(nextState ? !!document.fullscreenElement : false);
 }
 
 function updateCheatsApplyButtonState(){
@@ -2116,9 +2257,7 @@ function syncCheatsMenuState(){
 
 if (infiniteToggle){
   infiniteToggle.addEventListener("change", () => {
-    INFINITE_MODE = !!infiniteToggle.checked;
-    infiniteModeActive = !!INFINITE_MODE;
-    syncCheatsMenuState();
+    applyGlobalInfiniteMode(!!infiniteToggle.checked);
   });
 }
 
@@ -2541,6 +2680,7 @@ let cheatsFocusIndex = 0;
 let cheatsHavePendingChanges = false;
 let cheatsJustApplied = false;
 let startingStatFocusIndex = 0;
+let statsFocusIndex = 0;
 let pauseFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
@@ -2615,7 +2755,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [btnControls, btnFullscreenOption, backgroundColorHex, backgroundColorPicker, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [btnControls, backgroundColorHex, backgroundColorPicker, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -2644,6 +2784,43 @@ function getPauseControllerTargets(){
 
 function getScoreStoreControllerTargets(){
   return [...Array.from(document.querySelectorAll('#scoreStoreItems .scoreStoreAction')), btnScoreStoreClose].filter(Boolean);
+}
+
+function getStatsControllerTargets(){
+  const lockedSummary = getStatsLockedSummaryTarget();
+  return [lockedSummary, ...getStatsLockedRowTargets(), btnStatsClose, btnStatsReset].filter(Boolean);
+}
+
+function getStatsLockedSummaryTarget(){
+  if (!btnStatsLockedToggle || !statsLockedDetails || statsLockedDetails.hidden) return null;
+  return btnStatsLockedToggle;
+}
+
+function getStatsLockedRowTargets(){
+  if (!statsLockedList || statsLockedList.hidden) return [];
+  return Array.from(statsLockedList.querySelectorAll(".statsSelectableRow"));
+}
+
+function syncStatsLockedSummaryState(){
+  if (!statsLockedDetails || !btnStatsLockedToggle || !statsLockedList) return;
+  const isOpen = btnStatsLockedToggle.getAttribute("aria-expanded") === "true";
+  statsLockedList.hidden = !isOpen;
+}
+
+function toggleStatsLockedSummary(){
+  if (!btnStatsLockedToggle || !statsLockedDetails || statsLockedDetails.hidden) return false;
+  const nextOpen = btnStatsLockedToggle.getAttribute("aria-expanded") !== "true";
+  btnStatsLockedToggle.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+  syncStatsLockedSummaryState();
+  focusControllerElement(btnStatsLockedToggle);
+  return true;
+}
+
+function scrollStatsPanelBy(delta){
+  if (!statsScroll || !delta) return false;
+  const previous = statsScroll.scrollTop;
+  statsScroll.scrollTop = Math.max(0, previous + delta);
+  return statsScroll.scrollTop !== previous;
 }
 
 function getWinControllerTargets(){
@@ -2687,6 +2864,13 @@ function syncScoreStoreControllerFocus(){
   focusControllerElement(items[scoreStoreFocusIndex]);
 }
 
+function syncStatsControllerFocus(){
+  const items = getStatsControllerTargets();
+  if (!items.length) return;
+  statsFocusIndex = Math.max(0, Math.min(statsFocusIndex, items.length - 1));
+  focusControllerElement(items[statsFocusIndex]);
+}
+
 function syncWinControllerFocus(){
   const items = getWinControllerTargets();
   if (!items.length) return;
@@ -2703,6 +2887,10 @@ function syncControlsControllerFocus(){
 function syncControllerFocusForCurrentState(){
   if (activeInputMode !== INPUT_MODE_CONTROLLER || parentChatVisible){
     clearControllerFocus();
+    return;
+  }
+  if (isStatsPanelOpen()){
+    syncStatsControllerFocus();
     return;
   }
   if (isScoreStoreOpen && isPaused){
@@ -2748,6 +2936,44 @@ function moveMenuControllerFocus(delta){
   else clearControllerFocus();
 }
 
+function moveMenuControllerFocusDirectional(direction){
+  const items = getMenuControllerTargets();
+  if (!items.length) return false;
+  const titleIndex = items.indexOf(startMenuTitle);
+  const revealIndex = items.indexOf(titleHoverReveal);
+  const startIndex = items.indexOf(btnStart);
+  const optionsIndex = items.indexOf(btnOptions);
+  const mysteryIndex = items.indexOf(btnMysteryLink);
+  const statsIndex = items.indexOf(btnStats);
+  let nextIndex = menuFocusIndex;
+
+  if (direction === "left"){
+    if (menuFocusIndex === optionsIndex && startIndex !== -1) nextIndex = startIndex;
+    else if (menuFocusIndex === statsIndex && mysteryIndex !== -1) nextIndex = mysteryIndex;
+  } else if (direction === "right"){
+    if (menuFocusIndex === startIndex && optionsIndex !== -1) nextIndex = optionsIndex;
+    else if (menuFocusIndex === mysteryIndex && statsIndex !== -1) nextIndex = statsIndex;
+  } else if (direction === "down"){
+    if (menuFocusIndex === titleIndex && revealIndex !== -1) nextIndex = revealIndex;
+    else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
+    else if (menuFocusIndex === startIndex && mysteryIndex !== -1) nextIndex = mysteryIndex;
+    else if (menuFocusIndex === optionsIndex && statsIndex !== -1) nextIndex = statsIndex;
+    else if ((menuFocusIndex === mysteryIndex || menuFocusIndex === statsIndex) && titleIndex !== -1) nextIndex = titleIndex;
+  } else if (direction === "up"){
+    if (menuFocusIndex === mysteryIndex && startIndex !== -1) nextIndex = startIndex;
+    else if (menuFocusIndex === statsIndex && optionsIndex !== -1) nextIndex = optionsIndex;
+    else if ((menuFocusIndex === startIndex || menuFocusIndex === optionsIndex) && revealIndex !== -1) nextIndex = revealIndex;
+    else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
+    else if (menuFocusIndex === titleIndex && mysteryIndex !== -1) nextIndex = mysteryIndex;
+  }
+
+  if (nextIndex === menuFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
+  menuFocusIndex = nextIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
+  return true;
+}
+
 function moveOptionsControllerFocus(delta){
   const previous = getOptionsControllerTargets()[optionsFocusIndex];
   const items = getOptionsControllerTargets();
@@ -2782,6 +3008,49 @@ function moveScoreStoreControllerFocus(delta){
   if (!items.length) return;
   scoreStoreFocusIndex = (scoreStoreFocusIndex + delta + items.length) % items.length;
   syncScoreStoreControllerFocus();
+}
+
+function moveStatsControllerFocus(delta){
+  const items = getStatsControllerTargets();
+  if (!items.length) return;
+  statsFocusIndex = (statsFocusIndex + delta + items.length) % items.length;
+  syncStatsControllerFocus();
+}
+
+function moveStatsControllerFocusDirectional(direction){
+  const items = getStatsControllerTargets();
+  if (!items.length) return false;
+  const current = items[statsFocusIndex];
+  const lockedSummary = getStatsLockedSummaryTarget();
+  const lockedRows = getStatsLockedRowTargets();
+  const currentLockedRowIndex = lockedRows.indexOf(current);
+  const firstLockedRow = lockedRows[0] || null;
+  const lastLockedRow = lockedRows.length ? lockedRows[lockedRows.length - 1] : null;
+  const backIndex = items.indexOf(btnStatsClose);
+  const resetIndex = items.indexOf(btnStatsReset);
+  const summaryIndex = lockedSummary ? items.indexOf(lockedSummary) : -1;
+  let nextIndex = statsFocusIndex;
+
+  if (direction === "up"){
+    if ((current === btnStatsClose || current === btnStatsReset) && lastLockedRow) nextIndex = items.indexOf(lastLockedRow);
+    else if ((current === btnStatsClose || current === btnStatsReset) && summaryIndex !== -1) nextIndex = summaryIndex;
+    else if (currentLockedRowIndex > 0) nextIndex = items.indexOf(lockedRows[currentLockedRowIndex - 1]);
+    else if (currentLockedRowIndex === 0 && summaryIndex !== -1) nextIndex = summaryIndex;
+  } else if (direction === "down"){
+    if (current === lockedSummary && firstLockedRow) nextIndex = items.indexOf(firstLockedRow);
+    else if (current === lockedSummary && backIndex !== -1) nextIndex = backIndex;
+    else if (currentLockedRowIndex >= 0 && currentLockedRowIndex < lockedRows.length - 1) nextIndex = items.indexOf(lockedRows[currentLockedRowIndex + 1]);
+    else if (currentLockedRowIndex === lockedRows.length - 1 && backIndex !== -1) nextIndex = backIndex;
+  } else if (direction === "left"){
+    if (current === btnStatsReset && backIndex !== -1) nextIndex = backIndex;
+  } else if (direction === "right"){
+    if (current === btnStatsClose && resetIndex !== -1) nextIndex = resetIndex;
+  }
+
+  if (nextIndex === statsFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
+  statsFocusIndex = nextIndex;
+  syncStatsControllerFocus();
+  return true;
 }
 
 function moveControlsControllerFocus(delta){
@@ -3034,6 +3303,7 @@ function showMenu(){
   if (winOverlay) winOverlay.style.display = "none";
 
   startMenu.style.display = "block";
+  setStartMenuInteractive(true);
   rememberStartMenuPanelRect();
   optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
@@ -3811,12 +4081,23 @@ if (statsPanel){
     if (event.target === statsPanel) closeStatsPanel();
   });
 }
+if (btnStatsLockedToggle){
+  btnStatsLockedToggle.addEventListener("click", () => {
+    toggleStatsLockedSummary();
+  });
+}
 
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
-if (btnFullscreenOption) btnFullscreenOption.addEventListener("click", toggleFullscreen);
 if (btnCheats) btnCheats.addEventListener("click", showCheats);
+if (fullscreenCheckbox){
+  fullscreenCheckbox.addEventListener("change", () => {
+    setFullscreenOptionEnabled(!!fullscreenCheckbox.checked);
+  });
+}
+document.addEventListener("fullscreenchange", () => syncFullscreenOptionState());
+syncFullscreenOptionState();
 function applyCheatsChanges(){
   applyStartSettingsFromControls();
   syncStartOptionsLabels();
@@ -4214,17 +4495,25 @@ function gpEdge(i, nowPressed){
   return (!!nowPressed && !was);
 }
 
+function syncGpPrevButtons(gp){
+  if (!gp || !gp.buttons || !gpPrev) return;
+  for (let i = 0; i < gp.buttons.length; i++){
+    gpPrev[i] = !!(gp.buttons[i] && gp.buttons[i].pressed);
+  }
+}
+
 function consumeMenuAxis(direction, active, dt, repeatDelay = GP_MENU_REPEAT_DELAY, repeatRate = GP_MENU_REPEAT_RATE){
   const repeatKey = direction;
   if (!active){
     gpNavRepeat[repeatKey] = 0;
     return false;
   }
-  if (gpNavRepeat[repeatKey] <= 0){
+  const currentRepeat = Number(gpNavRepeat[repeatKey]) || 0;
+  if (currentRepeat <= 0){
     gpNavRepeat[repeatKey] = repeatDelay;
     return true;
   }
-  gpNavRepeat[repeatKey] -= dt;
+  gpNavRepeat[repeatKey] = currentRepeat - dt;
   if (gpNavRepeat[repeatKey] <= 0){
     gpNavRepeat[repeatKey] = repeatRate;
     return true;
@@ -4316,19 +4605,32 @@ function pollGamepad(dt){
   const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
+  const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
+  const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
 
   if (deathOverlay && deathOverlay.style.display === "flex"){
     if (navUp) moveDeathControllerFocus(-1);
     if (navDown) moveDeathControllerFocus(1);
     if (pressMenuSelect) activateDeathControllerFocus();
     // B/back intentionally does nothing on the death screen to avoid accidental menu quits.
+    syncGpPrevButtons(gp);
+    return;
+  }
+
+  if (isStatsPanelOpen()){
+    if (navUp) moveStatsControllerFocusDirectional("up");
+    if (navDown) moveStatsControllerFocusDirectional("down");
+    if (navLeft) moveStatsControllerFocusDirectional("left");
+    if (navRight) moveStatsControllerFocusDirectional("right");
+    if (rNavUp) scrollStatsPanelBy(-72);
+    if (rNavDown) scrollStatsPanelBy(72);
+    if (pressMenuSelect) activateControllerTarget(getStatsControllerTargets()[statsFocusIndex]);
+    if (pressMenuBack || pressPause) closeStatsPanel();
+    syncGpPrevButtons(gp);
     return;
   }
 
   // Options menu: right stick changes number values without dragging focus around like a caffeinated raccoon.
-  const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
-  const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
-
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
     const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
     if (!controllerRebindReady){
@@ -4396,36 +4698,16 @@ function pollGamepad(dt){
       }
     } else if (gameState === STATE.MENU){
       if (navLeft){
-        if (!isTitleHoverRevealFocused()){
-          if (menuFocusIndex === 3) menuFocusIndex = 2;
-          else if (menuFocusIndex === 2) menuFocusIndex = 1;
-        }
-        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-        else clearControllerFocus();
+        moveMenuControllerFocusDirectional("left");
       }
       if (navRight){
-        if (!isTitleHoverRevealFocused()){
-          if (menuFocusIndex === 1) menuFocusIndex = 2;
-          else if (menuFocusIndex === 2) menuFocusIndex = 3;
-        }
-        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-        else clearControllerFocus();
+        moveMenuControllerFocusDirectional("right");
       }
       if (navDown){
-        if (menuFocusIndex === 0) menuFocusIndex = 1;
-        else if (menuFocusIndex === 1) menuFocusIndex = 2;
-        else if (menuFocusIndex === 2 || menuFocusIndex === 3) menuFocusIndex = 4;
-        else menuFocusIndex = 0;
-        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-        else clearControllerFocus();
+        moveMenuControllerFocusDirectional("down");
       }
       if (navUp){
-        if (menuFocusIndex === 2 || menuFocusIndex === 3) menuFocusIndex = 1;
-        else if (menuFocusIndex === 1) menuFocusIndex = 0;
-        else if (menuFocusIndex === 0) menuFocusIndex = 4;
-        else menuFocusIndex = 2;
-        if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-        else clearControllerFocus();
+        moveMenuControllerFocusDirectional("up");
       }
       const menuTarget = getMenuControllerTargets()[menuFocusIndex];
       if (pressMenuSelect && menuTarget){
@@ -4495,9 +4777,7 @@ function pollGamepad(dt){
     }
   }
 
-  for (let i = 0; i < gp.buttons.length; i++){
-    gpPrev[i] = !!(gp.buttons[i] && gp.buttons[i].pressed);
-  }
+  syncGpPrevButtons(gp);
 }
 
 window.addEventListener("gamepadconnected", (e) => {
@@ -5130,6 +5410,18 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") e.preventDefault();
   const target = e.target;
   const typingIntoField = target && ((target.tagName === "INPUT") || (target.tagName === "TEXTAREA") || target.isContentEditable);
+
+  if (isStatsPanelOpen() && (e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "Enter" || e.code === "Space" || e.code === "Escape" || e.code === "Tab")){
+    setActiveInputMode(INPUT_MODE_KEYBOARD);
+    if (e.code === "ArrowUp" || (e.code === "Tab" && e.shiftKey)) moveStatsControllerFocusDirectional("up");
+    else if (e.code === "ArrowDown" || e.code === "Tab") moveStatsControllerFocusDirectional("down");
+    else if (e.code === "ArrowLeft") moveStatsControllerFocusDirectional("left");
+    else if (e.code === "ArrowRight") moveStatsControllerFocusDirectional("right");
+    else if (e.code === "Enter" || e.code === "Space") activateControllerTarget(getStatsControllerTargets()[statsFocusIndex]);
+    else if (e.code === "Escape") closeStatsPanel();
+    e.preventDefault();
+    return;
+  }
 
   if (deathOverlay && deathOverlay.style.display === "flex" && (e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "Enter" || e.code === "Space" || e.code === "Escape")){
     if (e.code === "ArrowUp") moveDeathControllerFocus(-1);

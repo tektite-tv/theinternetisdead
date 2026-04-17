@@ -1195,15 +1195,6 @@ body.invert-colors {
   }
 
 
-  #optionsMenu #btnFullscreenOption{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:34px;
-    box-sizing:border-box;
-  }
-
-
   #optionsMenu .backgroundColorControls{
     display:flex;
     align-items:center;
@@ -1287,6 +1278,9 @@ body.invert-colors {
     text-align:left;
     box-sizing:border-box;
     overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
   }
   #statsPanelInner .statsTitle{
     text-align:center;
@@ -1294,6 +1288,32 @@ body.invert-colors {
     font-weight:900;
     letter-spacing:2px;
     margin-bottom:12px;
+  }
+  #statsPanel .menuMiddleScroll{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    box-sizing:border-box;
+    overflow:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+    padding:0 8px 8px;
+  }
+  #statsPanel .menuMiddleScroll::-webkit-scrollbar{
+    width:6px;
+    height:6px;
+  }
+  #statsPanel .menuMiddleScroll::-webkit-scrollbar-track{
+    background:rgba(0,0,0,0.22);
+    border-radius:999px;
+  }
+  #statsPanel .menuMiddleScroll::-webkit-scrollbar-thumb{
+    background:#00ff66;
+    border-radius:999px;
+    box-shadow:0 0 8px rgba(0,255,102,0.35);
+  }
+  #statsPanel .menuMiddleScroll::-webkit-scrollbar-thumb:hover{
+    background:#7dff7d;
   }
   #statsList{
     display:grid;
@@ -1315,10 +1335,11 @@ body.invert-colors {
     font-weight:900;
   }
   #statsPanelButtons{
-    display:flex;
-    gap:10px;
-    justify-content:center;
-    flex-wrap:wrap;
+    flex:0 0 auto;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 8px;
+    margin-top:14px;
   }
 
 
@@ -1328,30 +1349,33 @@ body.invert-colors {
     border-radius:12px;
     background:rgba(0,0,0,0.26);
     overflow:hidden;
+    padding:10px;
   }
   #statsLockedDetails[hidden]{
     display:none !important;
   }
-  #statsLockedDetails summary{
-    cursor:pointer;
-    padding:9px 11px;
-    color:#00ff66;
-    font-weight:900;
-    text-align:center;
-    list-style-position:inside;
-    user-select:none;
-  }
-  #statsLockedDetails summary:hover{
-    background:rgba(75,0,118,0.42);
+  #statsLockedDetails .statsToggleBtn{
+    display:block;
+    width:100%;
+    margin:0;
   }
   #statsLockedList{
     display:grid;
     gap:7px;
-    padding:0 10px 10px;
+    padding-top:10px;
+  }
+  #statsLockedList[hidden]{
+    display:none !important;
   }
   #statsLockedList .statsRow{
     opacity:0.62;
     filter:saturate(0.55);
+  }
+  body.controller-active #statsLockedList .statsRow.controllerFocus{
+    opacity:1;
+    filter:none;
+    background:rgba(75,0,118,0.55);
+    box-shadow:0 0 0 2px rgba(0,255,102,0.55) inset;
   }
 
 
@@ -1603,19 +1627,21 @@ body.invert-colors {
   <div id="statsPanel" aria-hidden="true">
     <div id="statsPanelInner">
       <div class="statsTitle">⭐ Lifetime Stats ⭐</div>
-      <div id="statsList">
-        <div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score Earned</span><span id="statLifetimeScore" class="statsValue">0</span></div>
-        <div class="statsRow" data-stat-row="lifetimeEnemiesKilled"><span>Lifetime Enemies Killed</span><span id="statLifetimeEnemies" class="statsValue">0</span></div>
-        <div class="statsRow" data-stat-row="lifetimeUfosKilled"><span>Lifetime UFOs Killed</span><span id="statLifetimeUfos" class="statsValue">0</span></div>
-        <div class="statsRow" data-stat-row="lifetimeGamesWon"><span>Lifetime Games Won</span><span id="statLifetimeWins" class="statsValue">0</span></div>
-        <div class="statsRow" data-stat-row="lifetimeTotalDeaths"><span>Lifetime Total Deaths</span><span id="statLifetimeDeaths" class="statsValue">0</span></div>
-        <div class="statsRow" data-stat-row="lifetimeBulletsFired"><span>Lifetime Bullets Fired</span><span id="statLifetimeBullets" class="statsValue">0</span></div>
+      <div id="statsScroll" class="menuMiddleScroll">
+        <div id="statsList">
+          <div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score Earned</span><span id="statLifetimeScore" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeEnemiesKilled"><span>Lifetime Enemies Killed</span><span id="statLifetimeEnemies" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeUfosKilled"><span>Lifetime UFOs Killed</span><span id="statLifetimeUfos" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeGamesWon"><span>Lifetime Games Won</span><span id="statLifetimeWins" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeTotalDeaths"><span>Lifetime Total Deaths</span><span id="statLifetimeDeaths" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeBulletsFired"><span>Lifetime Bullets Fired</span><span id="statLifetimeBullets" class="statsValue">0</span></div>
+        </div>
+        <div id="statsLockedDetails" hidden>
+          <button id="btnStatsLockedToggle" class="smallBtn statsToggleBtn" type="button" aria-expanded="false">Play More To Unlock</button>
+          <div id="statsLockedList" hidden></div>
+        </div>
       </div>
-      <details id="statsLockedDetails" hidden>
-        <summary>Play More To Unlock</summary>
-        <div id="statsLockedList"></div>
-      </details>
-      <div id="statsPanelButtons">
+      <div id="statsPanelButtons" class="btnRow menuBottomRow">
         <button id="btnStatsClose" class="smallBtn" type="button">Back</button>
         <button id="btnStatsReset" class="smallBtn" type="button">Reset Stats</button>
       </div>
@@ -1630,25 +1656,6 @@ body.invert-colors {
       <div class="optRow fullRow buttonOnlyRow">
         <button id="btnControls" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Controls</button>
       </div>
-      <div class="optRow cheatRow commandOptionRow">
-        <div class="cheatHeader">
-          <div>
-            <div class="cheatTitle">Fullscreen</div>
-            <div class="cheatCommand">/fullscreen</div>
-          </div>
-          <button id="btnFullscreenOption" class="smallBtn" type="button" style="min-width:120px;">Toggle</button>
-        </div>
-        <div class="hint">Toggle browser fullscreen for the whole shooter shell.</div>
-      </div>
-
-
-
-      
-          
-
-          
-
-
             <div class="optRow cheatRow commandOptionRow backgroundColorRow">
         <div class="cheatHeader">
           <div>
@@ -1663,11 +1670,22 @@ body.invert-colors {
         <div class="hint">Set the starfield background color with a hex code.</div>
       </div>
 
-<div class="optRow cheatRow commandOptionRow">
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Fullscreen</div>
+            <div class="cheatCommand">/fullscreen</div>
+          </div>
+          <label><input id="fullscreenCheckbox" type="checkbox" /><span id="fullscreenStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Toggle browser fullscreen for the whole shooter shell.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
         <div class="cheatHeader">
           <div>
             <div class="cheatTitle">Invert Colors</div>
-            <div class="cheatCommand">/invert</div>
+            <div class="cheatCommand">/color_invert</div>
           </div>
           <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:0;">Disabled</span></label>
         </div>
