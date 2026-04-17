@@ -3213,6 +3213,10 @@ function applyGameSpeedValue(value, syncSlider=true){
   const speed = clampGameSpeedValue(value);
   START_GAME_SPEED = speed;
   GAME_SPEED_MULT = gameSpeedToMultiplier(speed);
+  if (speed === 0){
+    pendingWaveStartMusic = false;
+    stopMusic();
+  }
   if (syncSlider) setSpeedSliderPositionFromSpeed(speed);
   syncStartOptionsLabels();
   syncSpeedZeroStaticImages();
@@ -3277,9 +3281,9 @@ window.TektiteLevel1SpeedZero = {
       this.hideCanvasPlayer(false);
       applyGameSpeedValue(1, true);
       setPaused(false);
-      stopMusic();
       showMenu();
       syncStartOptionsLabels();
+      ensureMusicPlaying(true);
     }catch(e){
       try{ console.warn("Speed-zero easter egg reset failed", e); }catch(_){}
     }
