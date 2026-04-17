@@ -354,8 +354,8 @@ const btnScoreStoreClose = document.getElementById("btnScoreStoreClose");
 
 const btnPauseOpenStore = document.getElementById("btnPauseOpenStore");
 const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
-const pauseCommand = null;
-const pauseCmdSuggest = null;
+const pauseCommand = document.getElementById("pauseCommand");
+const pauseCmdSuggest = document.getElementById("pauseCmdSuggest");
 let parentChatVisible = false;
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){

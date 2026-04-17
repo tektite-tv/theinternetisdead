@@ -12,7 +12,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/fullscreen', desc: 'Toggle fullscreen', usage: '/fullscreen' },
       { name: '/game_speed', desc: 'Set game speed -5..20. 0 starts frozen staring-contest mode, 1 is normal', usage: '/game_speed [-5..20]', suggestions: ['-5', '0', '1', '5', '10', '20'] },
       { name: '/hearts', desc: 'Set max hearts to 1-99, or 100/MAX', usage: '/hearts [1-99|100|MAX]', suggestions: ['1', '4', '8', '99', '100', 'MAX'] },
-      { name: '/invert', desc: 'Toggle invert colors', usage: '/invert' },
+      { name: '/infinite', desc: 'Toggle global infinite mode, or set one resource to infinite', usage: '/infinite [hearts|shields|lives|bombs]', suggestions: ['hearts', 'shields', 'lives', 'bombs'] },
+      { name: '/color_invert', desc: 'Toggle invert colors', usage: '/color_invert' },
       { name: '/lives', desc: 'Set lives to 0-99, or 100/MAX', usage: '/lives [0-99|100|MAX]', suggestions: ['0', '3', '5', '99', '100', 'MAX'] },
       { name: '/shields', desc: 'Set shields to 0-99, or 100/MAX', usage: '/shields [0-99|100|MAX]', suggestions: ['0', '1', '3', '99', '100', 'MAX'] },
       { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
@@ -39,6 +40,17 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           tektiteFrame.contentWindow.postMessage({
             type: 'tektite:chat-visibility',
             visible: !!chatSandboxVisible
+          }, '*');
+        }
+      } catch (error) {}
+    }
+
+    function notifyChildFullscreenState() {
+      try {
+        if (tektiteFrame && tektiteFrame.contentWindow) {
+          tektiteFrame.contentWindow.postMessage({
+            type: 'tektite:fullscreen-state',
+            active: !!document.fullscreenElement
           }, '*');
         }
       } catch (error) {}
@@ -391,26 +403,16 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     }
 
     function runChatCommand(command) {
-      const input = getChatInput();
-      if (!input) return false;
       const normalizedCommand = String(command || '').trim();
-      try {
-        input.focus();
-        input.click();
-      } catch (error) {}
+      if (!normalizedCommand || !chatSandboxReady || !getChatWindow()) return false;
       chatControllerTargetIndex = -1;
-      if (!setChatInputValue(input, normalizedCommand)) return false;
-      const didDispatch = dispatchChatKey('Enter', 'Enter');
-      if (didDispatch && normalizedCommand.toLowerCase() === '/help') {
-        const focusHelpTargets = (attempt = 0) => {
-          if (focusFirstChatInteractiveTarget()) return true;
-          if (attempt >= 15) return false;
-          window.setTimeout(() => focusHelpTargets(attempt + 1), 40);
-          return false;
-        };
-        window.setTimeout(() => focusHelpTargets(0), 50);
-      }
-      return didDispatch;
+      postToChatSandbox({
+        type: 'chatSandboxExecuteCommand',
+        command: normalizedCommand,
+        openChat: true,
+        focus: true
+      });
+      return true;
     }
 
     function primeChatSlashSuggestion() {
@@ -497,6 +499,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         }
       } catch (error) {
         console.warn('Fullscreen request failed.', error);
+      } finally {
+        notifyChildFullscreenState();
       }
     }
 
@@ -578,7 +582,10 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     tektiteFrame.addEventListener('load', () => {
       bindChatShortcutToFrame(tektiteFrame);
       registerPageCommands();
+      notifyChildFullscreenState();
     });
+
+    document.addEventListener('fullscreenchange', notifyChildFullscreenState);
 
     window.addEventListener('message', async (event) => {
       const data = event.data;
