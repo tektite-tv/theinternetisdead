@@ -2679,12 +2679,12 @@ function performDeathQuitToMenu(){
 function armDeathQuitConfirmCountdown(){
   deathQuitConfirmArmed = true;
   deathQuitConfirmReady = false;
-  deathQuitConfirmRemaining = 5;
+  deathQuitConfirmRemaining = 3;
   if (deathQuitConfirmTimer){
     clearInterval(deathQuitConfirmTimer);
     deathQuitConfirmTimer = null;
   }
-  if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Really, Quit? (5s)";
+  if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Really, Quit? (3s)";
   deathQuitConfirmTimer = setInterval(() => {
     deathQuitConfirmRemaining = Math.max(0, deathQuitConfirmRemaining - 1);
     if (btnDeathQuitToMenu){

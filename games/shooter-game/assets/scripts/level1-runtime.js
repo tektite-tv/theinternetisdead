@@ -1211,7 +1211,6 @@ function renderLifetimeStats(){
 }
 
 function openStatsPanel(){
-  syncNicknameStatsLabels();
   renderLifetimeStats();
   if (btnStatsLockedToggle){
     btnStatsLockedToggle.setAttribute("aria-expanded", "false");
@@ -2142,7 +2141,6 @@ const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const btnStats = document.getElementById("btnStats");
 const statsPanel = document.getElementById("statsPanel");
-const statsPanelTitle = document.getElementById("statsPanelTitle");
 const statsPanelInner = document.getElementById("statsPanelInner");
 const statsScroll = document.getElementById("statsScroll");
 const statsLockedDetails = document.getElementById("statsLockedDetails");
@@ -2166,7 +2164,6 @@ const controlsListScroll = document.getElementById("controlsListScroll");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
-const nicknameInput = document.getElementById("nicknameInput");
 const backgroundColorHex = document.getElementById("backgroundColorHex");
 const backgroundColorPicker = document.getElementById("backgroundColorPicker");
 const muteCheckbox = document.getElementById("muteCheckbox");
@@ -2783,7 +2780,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [nicknameInput, btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -3249,11 +3246,6 @@ function activateControllerTarget(el){
     showControlsMenu();
     return;
   }
-  if (el === nicknameInput){
-    el.focus();
-    focusControllerElement(el);
-    return;
-  }
   if (el.tagName === 'SELECT'){
     openControllerSelect(el);
     return;
@@ -3295,7 +3287,7 @@ function adjustControllerOption(delta){
   if (el.tagName === 'SELECT') return cycleSelect(el, delta);
   if (el.type === 'range') return stepRange(el, delta);
   if (el === backgroundColorPicker) return stepColorInput(el, delta);
-  if (el === backgroundColorHex || el === nicknameInput) return false;
+  if (el === backgroundColorHex) return false;
   if (isStartingStatInputEl(el)) return stepNumberInput(el, delta);
   if (el.type === 'checkbox'){
     el.checked = delta > 0;
@@ -3351,7 +3343,6 @@ function showMenu(){
   rememberStartMenuPanelRect();
   renderMenuHudPreview();
   syncSpeedZeroStaticImages();
-  syncNicknameStatsLabels();
   renderLifetimeStats();
   fitStatsPanelToStartMenu();
 }
@@ -3497,12 +3488,12 @@ function performDeathQuitToMenu(){
 function armDeathQuitConfirmCountdown(){
   deathQuitConfirmArmed = true;
   deathQuitConfirmReady = false;
-  deathQuitConfirmRemaining = 5;
+  deathQuitConfirmRemaining = 3;
   if (deathQuitConfirmTimer){
     clearInterval(deathQuitConfirmTimer);
     deathQuitConfirmTimer = null;
   }
-  if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Really, Quit? (5s)";
+  if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Really, Quit? (3s)";
   deathQuitConfirmTimer = setInterval(() => {
     deathQuitConfirmRemaining = Math.max(0, deathQuitConfirmRemaining - 1);
     if (btnDeathQuitToMenu){
@@ -3816,66 +3807,6 @@ function getStaticFrameForImage(img){
   return staticImg.complete ? staticImg : img;
 }
 
-const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
-
-function getSavedChatNicknameValue(){
-  try{
-    const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
-    return savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
-  }catch(error){
-    return "";
-  }
-}
-
-function loadSavedChatNickname(){
-  return getSavedChatNicknameValue() || "User";
-}
-
-function saveChatNickname(value){
-  const normalized = String(value || "").trim();
-  try{
-    if (normalized) window.localStorage.setItem(CHAT_NICKNAME_STORAGE_KEY, normalized);
-    else window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
-  }catch(error){}
-  return normalized || "User";
-}
-
-function syncNicknameControl(){
-  if (!nicknameInput) return;
-  nicknameInput.value = getSavedChatNicknameValue();
-}
-
-function syncNicknameStatsLabels(){
-  const savedNickname = getSavedChatNicknameValue();
-  if (btnStats) btnStats.textContent = savedNickname ? `${savedNickname}'s Stats` : "Stats";
-  if (statsPanelTitle){
-    if (savedNickname){
-      statsPanelTitle.textContent = `⭐ ${savedNickname}'s Lifetime Stats ⭐`;
-    } else {
-      statsPanelTitle.textContent = "⭐ Lifetime Stats ⭐";
-    }
-  }
-}
-
-function applyNicknameFromControls(value, announce=false){
-  const normalized = saveChatNickname(value);
-  if (nicknameInput) nicknameInput.value = normalized;
-  syncNicknameStatsLabels();
-  try{
-    if (window.parent && window.parent !== window){
-      window.parent.postMessage({
-        type: "tektite:set-nickname",
-        nickname: normalized,
-        announce: !!announce
-      }, "*");
-    }
-  }catch(error){}
-  return true;
-}
-
-syncNicknameControl();
-syncNicknameStatsLabels();
-
 function normalizeHexColor(value){
   const raw = String(value || "").trim();
   const withHash = raw.startsWith("#") ? raw : "#" + raw;
@@ -3921,15 +3852,6 @@ function showOptions(){
   normalizeStartStatInput(bombsSlider);
   syncStartOptionsLabels();
   syncCheatsMenuState();
-  syncNicknameControl();
-  syncNicknameStatsLabels();
-  try{
-    window.addEventListener("storage", (event) => {
-      if (event.key !== CHAT_NICKNAME_STORAGE_KEY) return;
-      syncNicknameControl();
-      syncNicknameStatsLabels();
-    });
-  }catch(error){}
 
 // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
@@ -4143,19 +4065,6 @@ if (btnMysteryLink){
       window.top.location.href = "https://honestlythomas.com";
     }catch(e){
       window.location.href = "https://honestlythomas.com";
-    }
-  });
-}
-
-if (nicknameInput){
-  nicknameInput.addEventListener("change", () => {
-    applyNicknameFromControls(nicknameInput.value, false);
-  });
-  nicknameInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter"){
-      event.preventDefault();
-      applyNicknameFromControls(nicknameInput.value, false);
-      try{ nicknameInput.blur(); }catch(e){}
     }
   });
 }
