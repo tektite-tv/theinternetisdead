@@ -1036,6 +1036,10 @@ let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
+// IMPORTANT: Do not rename this localStorage key or change the stored stat property names casually.
+// Players' lifetime stats depend on this exact schema surviving future updates.
+// If the schema ever changes, migrate old values forward instead of resetting them.
+// Yes, even for a joke browser game. People get attached to numbers. Humanity is weird like that.
 const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
 let currentRunStatsCommitted = false;
 
@@ -1043,6 +1047,7 @@ function getDefaultLifetimeStats(){
   return {
     lifetimeScoreEarned: 0,
     lifetimeEnemiesKilled: 0,
+    lifetimeUfosKilled: 0,
     lifetimeGamesWon: 0,
     lifetimeTotalDeaths: 0,
     lifetimeBulletsFired: 0
@@ -1077,11 +1082,43 @@ function formatLifetimeNumber(value){
 
 function renderLifetimeStats(){
   const stats = readLifetimeStats();
-  if (statLifetimeScore) statLifetimeScore.textContent = formatLifetimeNumber(stats.lifetimeScoreEarned);
-  if (statLifetimeEnemies) statLifetimeEnemies.textContent = formatLifetimeNumber(stats.lifetimeEnemiesKilled);
-  if (statLifetimeWins) statLifetimeWins.textContent = formatLifetimeNumber(stats.lifetimeGamesWon);
-  if (statLifetimeDeaths) statLifetimeDeaths.textContent = formatLifetimeNumber(stats.lifetimeTotalDeaths);
-  if (statLifetimeBullets) statLifetimeBullets.textContent = formatLifetimeNumber(stats.lifetimeBulletsFired);
+  const statBindings = [
+    ["lifetimeScoreEarned", statLifetimeScore],
+    ["lifetimeEnemiesKilled", statLifetimeEnemies],
+    ["lifetimeUfosKilled", statLifetimeUfos],
+    ["lifetimeGamesWon", statLifetimeWins],
+    ["lifetimeTotalDeaths", statLifetimeDeaths],
+    ["lifetimeBulletsFired", statLifetimeBullets]
+  ];
+
+  const statsList = document.getElementById("statsList");
+  const lockedDetails = document.getElementById("statsLockedDetails");
+  const lockedList = document.getElementById("statsLockedList");
+  let lockedCount = 0;
+
+  for (const [key, el] of statBindings){
+    const value = Math.max(0, Number(stats[key] || 0));
+    const row = document.querySelector(`[data-stat-row="${key}"]`);
+    if (el) el.textContent = formatLifetimeNumber(value);
+    if (!row) continue;
+
+    if (value > 0){
+      row.style.display = "flex";
+      if (statsList && row.parentNode !== statsList) statsList.appendChild(row);
+    } else {
+      row.style.display = "flex";
+      if (lockedList && row.parentNode !== lockedList) lockedList.appendChild(row);
+      lockedCount += 1;
+    }
+  }
+
+  if (lockedDetails){
+    lockedDetails.hidden = lockedCount <= 0;
+    const summary = lockedDetails.querySelector("summary");
+    if (summary) summary.textContent = lockedCount > 0
+      ? `Play More To Unlock (${lockedCount})`
+      : "Play More To Unlock";
+  }
 }
 
 function openStatsPanel(){
@@ -1968,6 +2005,7 @@ const btnStatsClose = document.getElementById("btnStatsClose");
 const btnStatsReset = document.getElementById("btnStatsReset");
 const statLifetimeScore = document.getElementById("statLifetimeScore");
 const statLifetimeEnemies = document.getElementById("statLifetimeEnemies");
+const statLifetimeUfos = document.getElementById("statLifetimeUfos");
 const statLifetimeWins = document.getElementById("statLifetimeWins");
 const statLifetimeDeaths = document.getElementById("statLifetimeDeaths");
 const statLifetimeBullets = document.getElementById("statLifetimeBullets");
@@ -5611,6 +5649,7 @@ if (!e.swoop){
         ufo.hits += 1;
         ufo.stage = Math.min(3, ufo.hits); // 1 red, 2 green, 3 blue
         if (ufo.hits >= 3){
+          if (ufo.fade === 0) incrementLifetimeStat("lifetimeUfosKilled", 1);
           ufo.fade = 0.001; // start fade-out
         }
         playSfx(sfxHit);
