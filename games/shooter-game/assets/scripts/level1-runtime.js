@@ -2061,6 +2061,8 @@ let controlsBindMode = INPUT_MODE_KEYBOARD;
 let controlsFocusIndex = 0;
 let controlsMoveFocusIndex = 0;
 let controlsReturnState = STATE.MENU;
+let controlsHavePendingChanges = false;
+let controlsJustApplied = false;
 let startMenuPanelRect = null;
 let bindingEditState = null;
 let controllerRebindReady = false;
@@ -2291,6 +2293,7 @@ function applyBindingValue(scheme, action, value){
   updateControlsDisplay();
   renderControlsBindingList();
   fitControlsMenuToViewport();
+  markControlsDirty();
 }
 function startBindingEdit(scheme, action){
   controlsBindMode = scheme === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
@@ -2337,9 +2340,28 @@ function clearControllerFocus(){
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
 }
 
-if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); });
-if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { applyDraftBindings(); cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); if (pauseControlsOpen && isPaused) hidePauseControlsMenu(); });
+if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); markControlsDirty(); });
+if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { if (!controlsHavePendingChanges) return; applyDraftBindings(); cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); markControlsClean(true); });
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
+
+function updateControlsApplyButtonState(){
+  if (!controlsApplyBinds) return;
+  if (controlsHavePendingChanges) setStateApplyButton(controlsApplyBinds, "dirty");
+  else if (controlsJustApplied) setStateApplyButton(controlsApplyBinds, "applied");
+  else setStateApplyButton(controlsApplyBinds, "hidden");
+}
+
+function markControlsDirty(){
+  controlsHavePendingChanges = true;
+  controlsJustApplied = false;
+  updateControlsApplyButtonState();
+}
+
+function markControlsClean(applied=false){
+  controlsHavePendingChanges = false;
+  controlsJustApplied = !!applied;
+  updateControlsApplyButtonState();
+}
 
 function getMenuControllerTargets(){
   return [startMenuTitle, titleHoverReveal, btnStart, btnOptions].filter(Boolean);
@@ -2357,7 +2379,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [btnControls, startWaveSelect, statRowTarget, speedSlider, btnCheats, btnBack, btnApply].filter(Boolean);
+  return [btnControls, startWaveSelect, statRowTarget, speedSlider, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -2369,7 +2391,7 @@ function getControlsControllerTargets(){
   const moveButtons = getControlsMoveButtons();
   const moveTarget = moveButtons[controlsMoveFocusIndex] || moveButtons[0];
   const otherBindButtons = Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton:not(.controlsMoveButton)'));
-  return [moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, controlsApplyBinds].filter(Boolean);
+  return [moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, (controlsApplyBinds && controlsApplyBinds.style.display !== 'none' ? controlsApplyBinds : null)].filter(Boolean);
 }
 
 function getPauseControllerTargets(){
@@ -2760,6 +2782,7 @@ function showControlsMenu(){
   uiRoot.classList.remove("pauseControlsOpen");
   gameState = STATE.CONTROLS;
   resetDraftBindingsFromActive();
+  markControlsClean(false);
   lockControlsInputMode(activeInputMode);
   setControlsBindMode(activeInputMode);
   startMenu.style.display = "none";
@@ -2955,18 +2978,40 @@ function hideCheats(){
   renderMenuHudPreview();
 }
 
+function setStateApplyButton(button, state){
+  if (!button) return;
+  if (button._applyHideTimer){
+    clearTimeout(button._applyHideTimer);
+    button._applyHideTimer = null;
+  }
+  if (state === "dirty"){
+    button.style.display = "";
+    button.innerHTML = 'Apply? <span class="applyX">(✕)</span>';
+    button.title = "Apply pending changes";
+    return;
+  }
+  if (state === "applied"){
+    button.style.display = "";
+    button.innerHTML = 'Applied! <span class="applyCheck">(✓)</span>';
+    button.title = "Changes applied";
+    button._applyHideTimer = setTimeout(() => {
+      button.style.display = "none";
+      button.innerHTML = 'Apply? <span class="applyX">(✕)</span>';
+      button.title = "Apply pending changes";
+      button._applyHideTimer = null;
+    }, 3000);
+    return;
+  }
+  button.style.display = "none";
+  button.innerHTML = 'Apply? <span class="applyX">(✕)</span>';
+  button.title = "Apply pending changes";
+}
+
 function updateOptionsApplyButtonState(){
   if (!btnApply) return;
-  if (optionsHavePendingChanges){
-    btnApply.textContent = "Apply (✕)";
-    btnApply.title = "Apply pending option changes";
-  } else if (optionsJustApplied){
-    btnApply.textContent = "Back (✓)";
-    btnApply.title = "Changes applied. Return to the start menu.";
-  } else {
-    btnApply.textContent = "Back";
-    btnApply.title = "Return to the start menu.";
-  }
+  if (optionsHavePendingChanges) setStateApplyButton(btnApply, "dirty");
+  else if (optionsJustApplied) setStateApplyButton(btnApply, "applied");
+  else setStateApplyButton(btnApply, "hidden");
 }
 
 function markOptionsDirty(){
@@ -3188,18 +3233,13 @@ function applyOptionsChanges(){
   START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
   syncCheatsMenuState();
 
-  // Keep the UI labels in sync and return to the main menu.
+  // Keep the UI labels in sync and leave the menu open.
   syncStartOptionsLabels();
-  showMenu();
   markOptionsClean(true);
 }
 
 btnApply.addEventListener("click", () => {
-  if (optionsHavePendingChanges){
-    applyOptionsChanges();
-    return;
-  }
-  showMenu();
+  if (optionsHavePendingChanges) applyOptionsChanges();
 });
 
 btnRestart.addEventListener("click", () => {
