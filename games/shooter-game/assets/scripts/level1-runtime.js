@@ -2894,6 +2894,7 @@ function showMenu(){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
   else clearControllerFocus();
   renderMenuHudPreview();
+  syncSpeedZeroStaticImages();
 }
 
 function showControlsMenu(){
@@ -3210,6 +3211,7 @@ function applyGameSpeedValue(value, syncSlider=true){
   GAME_SPEED_MULT = gameSpeedToMultiplier(speed);
   if (syncSlider) setSpeedSliderPositionFromSpeed(speed);
   syncStartOptionsLabels();
+  syncSpeedZeroStaticImages();
   return speed;
 }
 
@@ -3237,6 +3239,75 @@ window.TektiteLevel1SpeedZero = {
     }
   }
 };
+
+const frozenStaticImageUrlCache = new Map();
+
+function getFrozenStaticImageUrlFromImage(img){
+  if (!img) return null;
+  const src = img.currentSrc || img.src || "";
+  if (!src) return null;
+  if (src.startsWith("data:image/")) return src;
+  if (frozenStaticImageUrlCache.has(src)) return frozenStaticImageUrlCache.get(src);
+
+  try{
+    if (!img.complete || !img.naturalWidth || !img.naturalHeight) return null;
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const cctx = c.getContext("2d");
+    if (!cctx) return null;
+    cctx.drawImage(img, 0, 0, c.width, c.height);
+    const url = c.toDataURL("image/png");
+    frozenStaticImageUrlCache.set(src, url);
+    return url;
+  }catch(e){
+    return null;
+  }
+}
+
+function setDomImageFrozen(img, freeze){
+  if (!img) return;
+  if (!img.dataset.originalAnimatedSrc){
+    img.dataset.originalAnimatedSrc = img.currentSrc || img.src || "";
+  }
+
+  if (freeze){
+    const frozenUrl = getFrozenStaticImageUrlFromImage(img);
+    if (frozenUrl && img.src !== frozenUrl) img.src = frozenUrl;
+  } else {
+    const original = img.dataset.originalAnimatedSrc;
+    if (original && img.src !== original) img.src = original;
+  }
+}
+
+function syncSpeedZeroStaticImages(){
+  const freeze = isGameSpeedFrozen();
+
+  // Start-menu Bananarama + lives counter Bananarama. Any Bananarama DOM img gets frozen
+  // into a one-frame PNG while speed is 0, then restored afterward.
+  const domImgs = Array.from(document.querySelectorAll('img[src*="bananarama."], img[data-original-animated-src*="bananarama."]'));
+  for (const img of domImgs) setDomImageFrozen(img, freeze);
+
+  document.body.classList.toggle("speedZeroStaticImages", freeze);
+}
+
+function getStaticFrameForImage(img){
+  if (!img) return null;
+  const src = img.currentSrc || img.src || "";
+  if (!src) return img;
+
+  const cachedUrl = getFrozenStaticImageUrlFromImage(img);
+  if (!cachedUrl) return img;
+
+  let cached = frozenStaticImageUrlCache.get(cachedUrl);
+  if (cached && cached.__isFrozenStaticImageElement) return cached;
+
+  const staticImg = new Image();
+  staticImg.__isFrozenStaticImageElement = true;
+  staticImg.src = cachedUrl;
+  frozenStaticImageUrlCache.set(cachedUrl, staticImg);
+  return staticImg.complete ? staticImg : img;
+}
 
 function normalizeHexColor(value){
   const raw = String(value || "").trim();
@@ -3412,6 +3483,7 @@ function startGame(){
   }
 
   clearControllerFocus();
+  syncSpeedZeroStaticImages();
   window.focus();
 }
 
@@ -3756,7 +3828,13 @@ function getAnimatedGifSprite(owner, img, className){
     animatedGifSprites.add(sprite);
     animatedGifSpriteLayer.appendChild(sprite);
   }
-  if (sprite.src !== img.src) sprite.src = img.src;
+  const shouldFreezeSprite = isGameSpeedFrozen() && className && String(className).includes("enemy");
+  if (shouldFreezeSprite){
+    const frozenUrl = getFrozenStaticImageUrlFromImage(img);
+    if (frozenUrl && sprite.src !== frozenUrl) sprite.src = frozenUrl;
+  } else if (sprite.src !== img.src) {
+    sprite.src = img.src;
+  }
   return sprite;
 }
 
@@ -5708,7 +5786,10 @@ if (gameState === STATE.PLAYING){
       e.h,
       { className:"enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
     );
-    if (!drewDomEnemy) ctx.drawImage(e.img, ex, ey, e.w, e.h);
+    if (!drewDomEnemy){
+      const enemySource = isGameSpeedFrozen() ? (getStaticFrameForImage(e.img) || e.img) : e.img;
+      ctx.drawImage(enemySource, ex, ey, e.w, e.h);
+    }
 
 // Dragon marker: upside-down red equilateral triangle (because dragons deserve drama)
 if (isDragonEnemy(e)){
@@ -5897,3 +5978,7 @@ spawnEnemies();
 updateHearts();
 
 requestAnimationFrame(loop);
+
+
+document.addEventListener("DOMContentLoaded", syncSpeedZeroStaticImages);
+window.addEventListener("load", syncSpeedZeroStaticImages);
