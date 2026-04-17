@@ -3536,7 +3536,18 @@ function syncAnimatedGifSprite(owner, img, x, y, w, h, opts = {}){
     sprite.style.height = Math.max(1, h) + "px";
     sprite.style.opacity = String(alpha);
     sprite.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
-    sprite.style.filter = opts.hitFlash ? "brightness(1.7) sepia(1) saturate(5) hue-rotate(300deg)" : "none";
+
+    const filters = [];
+    if (VIDEO_FX_ENABLED){
+      const beat = Math.max(0, Math.min(1, beatLevel || 0));
+      const hue = (time * 10 + beat * 55) % 360;
+      const glow = 1.05 + beat * 0.18;
+      filters.push(`hue-rotate(${hue}deg)`, `saturate(${1.28 + beat * 0.25})`, `contrast(${glow})`, `drop-shadow(0 0 ${Math.round(4 + beat * 8)}px rgba(0,255,102,0.32))`);
+    }
+    if (opts.hitFlash){
+      filters.push("brightness(1.7)", "sepia(1)", "saturate(5)", "hue-rotate(300deg)");
+    }
+    sprite.style.filter = filters.length ? filters.join(" ") : "none";
   }
   animatedGifSpritesActiveThisFrame.add(sprite);
   return true;
