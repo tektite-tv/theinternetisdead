@@ -1698,10 +1698,16 @@ function fitControlsMenuToViewport(){
   controlsMenu.style.height = "";
   controlsMenu.style.minHeight = "";
   controlsMenu.style.maxHeight = "";
+
   if (controlsMenuInner){
-    controlsMenuInner.style.transform = "scale(1)";
+    controlsMenuInner.style.transform = "none";
     controlsMenuInner.style.marginBottom = "0";
   }
+  if (controlsListScale){
+    controlsListScale.style.transform = "scale(1)";
+    controlsListScale.style.height = "";
+  }
+
   if (controlsMenu.style.display === "none" || controlsMenu.offsetParent === null) return;
 
   if (startMenuPanelRect && startMenuPanelRect.width && startMenuPanelRect.height){
@@ -1718,6 +1724,7 @@ function fitControlsMenuToViewport(){
   const availableH = Math.max(240, window.innerHeight - margin * 2);
   const rect = controlsMenu.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
+
   const panelScale = Math.min(1, availableW / rect.width, availableH / rect.height);
   controlsMenu.style.transform = `scale(${panelScale})`;
   if (panelScale < 1) {
@@ -1726,18 +1733,21 @@ function fitControlsMenuToViewport(){
     controlsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
   }
 
-  if (!controlsMenuInner) return;
-  controlsMenuInner.style.transform = "scale(1)";
-  controlsMenuInner.style.marginBottom = "0";
-  const innerRect = controlsMenuInner.getBoundingClientRect();
-  const panelClientW = Math.max(1, controlsMenu.clientWidth);
-  const panelClientH = Math.max(1, controlsMenu.clientHeight);
-  if (!innerRect.width || !innerRect.height) return;
-  const contentScale = Math.min(1, panelClientW / innerRect.width, panelClientH / innerRect.height);
-  controlsMenuInner.style.transform = `scale(${contentScale})`;
-  if (contentScale < 1){
-    const heightLoss = innerRect.height * (1 - contentScale);
-    controlsMenuInner.style.marginBottom = `${-Math.ceil(heightLoss)}px`;
+  if (!controlsListScale || !controlsBindList) return;
+
+  controlsListScale.style.transform = "scale(1)";
+  controlsListScale.style.height = "";
+
+  const scaleRect = controlsListScale.getBoundingClientRect();
+  const listRect = controlsBindList.getBoundingClientRect();
+  if (!scaleRect.width || !scaleRect.height || !listRect.width || !listRect.height) return;
+
+  const listScale = Math.min(1, scaleRect.width / listRect.width, scaleRect.height / listRect.height);
+  controlsListScale.style.transform = `scale(${listScale})`;
+
+  if (listScale < 1){
+    const adjustedHeight = Math.ceil(scaleRect.height / listScale);
+    controlsListScale.style.height = `${adjustedHeight}px`;
   }
 }
 
@@ -1834,6 +1844,7 @@ const controlsResetBinds = document.getElementById("controlsResetBinds");
 const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
 const controlsMenuInner = document.getElementById("controlsMenuInner");
+const controlsListScale = document.getElementById("controlsListScale");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
