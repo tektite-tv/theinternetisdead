@@ -2572,12 +2572,7 @@ function syncDeathControllerFocus(){
 function moveDeathControllerFocus(delta){
   const buttons = getDeathButtons();
   if (!buttons.length) return;
-  const previousButton = buttons[Math.max(0, Math.min(deathFocusIndex, buttons.length - 1))];
   deathFocusIndex = (deathFocusIndex + delta + buttons.length) % buttons.length;
-  const nextButton = buttons[Math.max(0, Math.min(deathFocusIndex, buttons.length - 1))];
-  if (previousButton !== nextButton && nextButton !== btnDeathQuitToMenu){
-    resetDeathQuitConfirm();
-  }
   syncDeathControllerFocus();
 }
 
@@ -2850,8 +2845,6 @@ if (btnDeathQuitToMenu){
 }
 
 if (btnRestart){
-  btnRestart.addEventListener("focus", resetDeathQuitConfirm);
-  btnRestart.addEventListener("click", resetDeathQuitConfirm);
 }
 
 
