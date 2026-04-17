@@ -10,6 +10,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'] },
       { name: '/bombs', desc: 'Set bombs to 0-99, or 100/MAX', usage: '/bombs [0-99|100|MAX]', suggestions: ['0', '3', '5', '99', '100', 'MAX'] },
       { name: '/fullscreen', desc: 'Toggle fullscreen', usage: '/fullscreen' },
+      { name: '/game_speed', desc: 'Set game speed -5..20. 0 starts frozen staring-contest mode, 1 is normal', usage: '/game_speed [-5..20]', suggestions: ['-5', '0', '1', '5', '10', '20'] },
       { name: '/hearts', desc: 'Set max hearts to 1-99, or 100/MAX', usage: '/hearts [1-99|100|MAX]', suggestions: ['1', '4', '8', '99', '100', 'MAX'] },
       { name: '/invert', desc: 'Toggle invert colors', usage: '/invert' },
       { name: '/lives', desc: 'Set lives to 0-99, or 100/MAX', usage: '/lives [0-99|100|MAX]', suggestions: ['0', '3', '5', '99', '100', 'MAX'] },
