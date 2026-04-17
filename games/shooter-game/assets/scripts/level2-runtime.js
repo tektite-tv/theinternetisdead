@@ -1034,6 +1034,10 @@ let deathGameOver = false;
 let deathYellPlayed = false;
 const deathParticles = [];
 
+let deathFocusIndex = 0;
+const deathButtons = [];
+
+
 
 let wave = 1;
 let firstBossSpawned = false; // track first boss size
@@ -2489,6 +2493,7 @@ function showMenu(){
   stopShield(false);
 
   deathOverlay.style.display = "none";
+  clearDeathControllerFocus();
   if (winOverlay) winOverlay.style.display = "none";
   if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
   mazeSummaryActive = false;
@@ -2521,8 +2526,49 @@ function showWinOverlay(){
 }
 
 
+
+function getDeathButtons(){
+  const buttons = [];
+  if (btnRestart) buttons.push(btnRestart);
+  if (btnDeathQuitToMenu) buttons.push(btnDeathQuitToMenu);
+  return buttons.filter((button) => !!button);
+}
+
+function clearDeathControllerFocus(){
+  getDeathButtons().forEach((button) => button.classList.remove("controllerFocus"));
+}
+
+function syncDeathControllerFocus(){
+  const buttons = getDeathButtons();
+  if (!buttons.length) return;
+  document.body.classList.add("controller-active");
+  deathFocusIndex = Math.max(0, Math.min(deathFocusIndex, buttons.length - 1));
+  buttons.forEach((button, index) => {
+    button.classList.toggle("controllerFocus", index === deathFocusIndex);
+    if (index === deathFocusIndex){
+      try{ button.focus({ preventScroll:true }); }catch(e){ try{ button.focus(); }catch(_){} }
+    }
+  });
+}
+
+function moveDeathControllerFocus(delta){
+  const buttons = getDeathButtons();
+  if (!buttons.length) return;
+  deathFocusIndex = (deathFocusIndex + delta + buttons.length) % buttons.length;
+  syncDeathControllerFocus();
+}
+
+function activateDeathControllerFocus(){
+  const buttons = getDeathButtons();
+  if (!buttons.length) return false;
+  const button = buttons[Math.max(0, Math.min(deathFocusIndex, buttons.length - 1))];
+  if (!button) return false;
+  try{ button.click(); return true; }catch(e){ return false; }
+}
+
 function quitDeathToMenu(){
   deathOverlay.style.display = "none";
+  clearDeathControllerFocus();
   setPaused(false);
   stopMusic();
   _resetStartResourceDefaults();
@@ -2540,6 +2586,7 @@ function restartRun(){
   ensureMusicPlaying(true);
   // v1.96: Hard reset from GAME OVER screen (full reset to beginning)
   deathOverlay.style.display = "none";
+  clearDeathControllerFocus();
   bomb = null;
   ufo = null;
   powerupSlot.style.display = "none";
@@ -2629,6 +2676,7 @@ function startGame(){
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
   deathOverlay.style.display = "none";
+  clearDeathControllerFocus();
   if (winOverlay) winOverlay.style.display = "none";
 
   // v1.96: show HUD only in-game
@@ -4050,6 +4098,8 @@ function spawnPlayerDeath(isGameOver){
   if (deathGameOver){
     triggerGlitchSpiral();
     deathOverlay.style.display = "flex";
+    deathFocusIndex = 0;
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncDeathControllerFocus();
   }
 
   const n = 160;
@@ -4145,6 +4195,16 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") e.preventDefault();
   const target = e.target;
   const typingIntoField = target && ((target.tagName === "INPUT") || (target.tagName === "TEXTAREA") || target.isContentEditable);
+
+  if (deathOverlay && deathOverlay.style.display === "flex" && (e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "Enter" || e.code === "Space" || e.code === "Escape")){
+    if (e.code === "ArrowUp") moveDeathControllerFocus(-1);
+    else if (e.code === "ArrowDown") moveDeathControllerFocus(1);
+    else if (e.code === "Enter" || e.code === "Space") activateDeathControllerFocus();
+    else if (e.code === "Escape" && btnDeathQuitToMenu) btnDeathQuitToMenu.click();
+    e.preventDefault();
+    return;
+  }
+
   // Tab no longer triggers the glitch spiral; prevent browser focus-stealing during gameplay.
   if (e.code === "Tab" && !typingIntoField){ e.preventDefault(); }
   const k = e.key.toLowerCase();
