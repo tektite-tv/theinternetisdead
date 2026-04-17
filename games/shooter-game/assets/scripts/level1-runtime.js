@@ -1703,9 +1703,8 @@ function fitControlsMenuToViewport(){
     controlsMenuInner.style.transform = "none";
     controlsMenuInner.style.marginBottom = "0";
   }
-  if (controlsListScale){
-    controlsListScale.style.transform = "scale(1)";
-    controlsListScale.style.height = "";
+  if (controlsListScroll){
+    controlsListScroll.scrollTop = 0;
   }
 
   if (controlsMenu.style.display === "none" || controlsMenu.offsetParent === null) return;
@@ -1731,23 +1730,6 @@ function fitControlsMenuToViewport(){
     const scaledHeight = rect.height * panelScale;
     const slack = Math.max(0, availableH - scaledHeight);
     controlsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
-  }
-
-  if (!controlsListScale || !controlsBindList) return;
-
-  controlsListScale.style.transform = "scale(1)";
-  controlsListScale.style.height = "";
-
-  const scaleRect = controlsListScale.getBoundingClientRect();
-  const listRect = controlsBindList.getBoundingClientRect();
-  if (!scaleRect.width || !scaleRect.height || !listRect.width || !listRect.height) return;
-
-  const listScale = Math.min(1, scaleRect.width / listRect.width, scaleRect.height / listRect.height);
-  controlsListScale.style.transform = `scale(${listScale})`;
-
-  if (listScale < 1){
-    const adjustedHeight = Math.ceil(scaleRect.height / listScale);
-    controlsListScale.style.height = `${adjustedHeight}px`;
   }
 }
 
@@ -1844,7 +1826,7 @@ const controlsResetBinds = document.getElementById("controlsResetBinds");
 const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
 const controlsMenuInner = document.getElementById("controlsMenuInner");
-const controlsListScale = document.getElementById("controlsListScale");
+const controlsListScroll = document.getElementById("controlsListScroll");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
