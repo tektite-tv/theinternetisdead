@@ -2431,13 +2431,13 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [btnControls, speedSlider, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [btnControls, speedSlider, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
   const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [startWaveSelect, statRowTarget, infiniteToggle, invertColorsCheckbox, videoFxCheckbox, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
+  return [startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
 }
 
 function getControlsControllerTargets(){

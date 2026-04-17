@@ -13,7 +13,6 @@
    display:none; /* HUD hidden by default (toggle with /) */
   }
 
-
   #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   #uiRoot.pauseControlsOpen{ z-index:10001; }
   #controlsMenu.pauseControlsMode{ display:block; position:relative; z-index:10002; background: rgba(75,0,118,0.88); }
@@ -329,7 +328,6 @@
     image-rendering:pixelated;
     filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
   }
-
 
   .livesButton{
     flex-direction:row;
@@ -660,7 +658,6 @@
     min-width:140px;
   }
 
-
   /* v1.96: keep HUD off the menu and keep menu clickable */
   #uiRoot{ z-index: 50; }
   #deathOverlay{ z-index: 100; }
@@ -674,7 +671,6 @@
   transform:scale(0.5);
   transform-origin:right bottom;
 }
-
 
 /* Centered wave label (replaces old Stage/Waves HUD) */
 /* Centered wave label (final) */
@@ -789,7 +785,6 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
   text-transform:none;
 }
 
-
 /* =======================
    Invert Colors Mode
 ======================= */
@@ -880,16 +875,13 @@ body.invert-colors {
     padding:0 8px 0;
   }
 
-
   .menuPlaceholderBtn{
     visibility:hidden;
     pointer-events:none;
   }
 
-
   .applyStateBtn .applyX{ color:#ff4444; font-weight:900; }
   .applyStateBtn .applyCheck{ color:#00ff66; font-weight:900; }
-
 
   /* Unified fixed-size menu panels: Options, Cheats, and Controls match the Start menu shell. */
   #optionsMenu,
@@ -973,7 +965,6 @@ body.invert-colors {
   }
   /* End unified fixed-size menu panels */
 
-
   #titleHoverReveal .titleSubHover{
     color:inherit;
     text-decoration:none;
@@ -982,7 +973,6 @@ body.invert-colors {
     color:#00ff66;
     text-decoration:none;
   }
-
 
   body.controller-active #titleHoverReveal.controllerFocus .titleSubDefault,
   #titleHoverReveal:focus .titleSubDefault{
@@ -993,7 +983,6 @@ body.invert-colors {
     opacity:1;
   }
 
-
   #optionsMenu .optionsGrid,
   #cheatsMenu .cheatsGrid{
     display:grid;
@@ -1001,7 +990,6 @@ body.invert-colors {
     gap:6px;
     align-items:start;
   }
-
 
   #cheatsMenuInner{
     height:100%;
@@ -1038,7 +1026,6 @@ body.invert-colors {
     box-sizing:border-box;
     padding:0 8px;
   }
-
 
   /* Compact Cheats rows: make Infinite / Invert / Video FX match the rest of the menu. */
   #cheatsMenu .cheatRow{
@@ -1088,7 +1075,6 @@ body.invert-colors {
     transform:scale(1);
   }
 
-
   #cheatsMenu .cheatsSkipRow{
     width:100%;
     box-sizing:border-box;
@@ -1106,7 +1092,6 @@ body.invert-colors {
     font-size:16px;
     margin:0;
   }
-
 
   /* /video_fx whole-screen DOM coverage */
   body.videoFxActive #uiRoot,
@@ -1140,7 +1125,6 @@ body.invert-colors {
     opacity:var(--video-fx-overlay-opacity, 0.18);
   }
 
-
   #btnMysteryLink.mysteryBtn{
     display:inline-flex;
     align-items:center;
@@ -1163,9 +1147,55 @@ body.invert-colors {
     box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
   }
 
+
+  #optionsMenu .commandOptionRow{
+    padding:6px 8px;
+    text-align:left;
+  }
+  #optionsMenu .commandOptionRow .cheatHeader{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center;
+    gap:8px;
+  }
+  #optionsMenu .commandOptionRow .cheatHeader > div:first-child{
+    min-width:0;
+    text-align:left;
+  }
+  #optionsMenu .commandOptionRow .cheatTitle{
+    font-size:12px;
+    line-height:1.15;
+    text-align:left;
+    margin:0;
+  }
+  #optionsMenu .commandOptionRow .cheatCommand{
+    font-size:10px;
+    line-height:1.1;
+    opacity:0.7;
+    text-align:left;
+    margin:2px 0 0;
+    padding-left:0;
+  }
+  #optionsMenu .commandOptionRow .hint{
+    margin-top:4px;
+    line-height:1.15;
+    font-size:10px;
+    text-align:left;
+    padding-left:0;
+  }
+  #optionsMenu .commandOptionRow label{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    white-space:nowrap;
+    text-align:right;
+  }
+  #optionsMenu .commandOptionRow input[type="checkbox"]{
+    transform:scale(1);
+  }
+
 </style>
-
-
 
 <style>
 /* YOU WIN CLEAN FIT PATCH */
@@ -1287,7 +1317,6 @@ body.invert-colors {
 </button>
 <div id="timerHud">0.0s</div>
 
-
 <div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
   <span class="livesLabel">LIVES:</span>
 <img src="/games/shooter-game/assets/bananarama.webp" alt="lives"/>
@@ -1353,13 +1382,12 @@ body.invert-colors {
   </div>
 </div>
 
-
 <div id="uiRoot">
   <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 2:55 AM)</a></div>
+<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 3:01 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1386,7 +1414,22 @@ body.invert-colors {
         <input id="speedSlider" type="range" min="1" max="10" value="5" step="1" />
         <div class="hint">5 = normal. 1 = slow-mo. 10 = turbo.</div>
       </div>
-      <div class="optRow fullRow buttonOnlyRow">
+      
+          <div class="optRow commandOptionRow">
+<div>
+                <div class="cheatTitle">Invert Colors</div>
+                <div class="cheatCommand">/invert</div>
+              </div>
+          </div>
+
+          <div class="optRow commandOptionRow">
+<div>
+                <div class="cheatTitle">Video FX</div>
+                <div class="cheatCommand">/video_fx</div>
+              </div>
+          </div>
+
+<div class="optRow fullRow buttonOnlyRow">
         <button id="btnCheats" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Cheats</button>
       </div>
         </div>
@@ -1469,10 +1512,7 @@ body.invert-colors {
 
           <div class="optRow cheatRow">
             <div class="cheatHeader">
-              <div>
-                <div class="cheatTitle">Invert Colors</div>
-                <div class="cheatCommand">/invert</div>
-              </div>
+              
               <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:0;">Disabled</span></label>
             </div>
             <div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
@@ -1480,10 +1520,7 @@ body.invert-colors {
 
           <div class="optRow cheatRow">
             <div class="cheatHeader">
-              <div>
-                <div class="cheatTitle">Video FX</div>
-                <div class="cheatCommand">/video_fx</div>
-              </div>
+              
               <label><input id="videoFxCheckbox" type="checkbox" /><span id="videoFxStatus" style="margin-left:0;">Disabled</span></label>
             </div>
             <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
@@ -1501,7 +1538,6 @@ body.invert-colors {
       </div>
     </div>
   </div>
-
 
   <div id="controlsMenu" class="panel" style="display:none;">
     <div id="controlsMenuInner">
