@@ -926,8 +926,10 @@ if (pauseCmdSuggest){
     // v1.96: Click-to-fill for /help command list.
     const cmdRow = ev.target && ev.target.closest ? ev.target.closest("[data-cmd]") : null;
     if (cmdRow && pauseCommand){
-      const cmd = cmdRow.getAttribute("data-cmd") || "";
-      pauseCommand.value = cmd ? (cmd + " ") : "";
+      const cmd = (typeof getPauseHelpCommandFromNode === "function")
+        ? getPauseHelpCommandFromNode(cmdRow)
+        : (cmdRow.getAttribute("data-cmd") || "");
+      pauseCommand.value = cmd ? (cmd + (cmd.includes(" ") ? "" : " ")) : "";
       try{ pauseCommand.focus(); }catch(e){}
       // If background suggestions were open, close them (help list is the focus now).
       closeBgSuggest();
@@ -2480,7 +2482,14 @@ function getControlsControllerTargets(){
   return [moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, (controlsApplyBinds && controlsApplyBinds.style.display !== 'none' ? controlsApplyBinds : null)].filter(Boolean);
 }
 
+function getPauseHelpControllerTargets(){
+  if (!pauseCmdSuggest || pauseCmdSuggest.style.display === "none") return [];
+  return Array.from(pauseCmdSuggest.querySelectorAll("[data-cmd]"));
+}
+
 function getPauseControllerTargets(){
+  const helpTargets = getPauseHelpControllerTargets();
+  if (helpTargets.length) return helpTargets;
   return [btnPauseResume, (canOpenStore() ? btnPauseOpenStore : null), btnPauseOpenChat, btnPauseQuit].filter(Boolean);
 }
 
@@ -2774,12 +2783,18 @@ function stepNumberInput(inputEl, delta){
 }
 
 function activateControllerTarget(el){
-  if (target && target.tagName === "A"){
-    target.click();
+  if (!el) return;
+  if (el.tagName === "A"){
+    el.click();
     return true;
   }
-
-  if (!el) return;
+  if (el.dataset && el.dataset.cmd){
+    const command = (typeof getPauseHelpCommandFromNode === "function")
+      ? getPauseHelpCommandFromNode(el)
+      : (el.dataset.cmd || "");
+    if (command) execPauseCommand(command);
+    return true;
+  }
   if (el.dataset && el.dataset.action && el.dataset.scheme){
     startBindingEdit(el.dataset.scheme, el.dataset.action);
     return;
@@ -3216,7 +3231,7 @@ function showOptions(){
   heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
   shieldsSlider.value = START_SHIELDS_INFINITE ? 100 : START_SHIELDS;
   bombsSlider.value = START_BOMBS_INFINITE ? 100 : START_BOMBS;
-  if (speedSlider) speedSlider.value = String(clampGameSpeedValue(START_GAME_SPEED));
+  if (speedSlider) speedSlider.value = START_GAME_SPEED;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   syncStartOptionsLabels();
   normalizeStartStatInput(livesSlider);
@@ -3471,7 +3486,8 @@ function applyStartSettingsFromControls(){
 }
 
 function applyOptionsChanges(){
-  applyGameSpeedValue(speedSlider ? speedSlider.value : 1);
+  START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
+  GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   syncStartOptionsLabels();
   markOptionsClean(true);
 }
@@ -3999,8 +4015,18 @@ function pollGamepad(dt){
         }
         if (pressPause) togglePause();
       } else {
-        if (navUp || navLeft) movePauseControllerFocus(-1);
-        if (navDown || navRight) movePauseControllerFocus(1);
+        const pauseTargets = getPauseControllerTargets();
+        const pauseTarget = pauseTargets[pauseFocusIndex];
+        const helpRowFocused = !!(pauseTarget && pauseTarget.dataset && pauseTarget.dataset.cmd);
+        if (helpRowFocused){
+          if (navLeft && typeof updatePauseHelpCommandNode === "function") updatePauseHelpCommandNode(pauseTarget, -1);
+          if (navRight && typeof updatePauseHelpCommandNode === "function") updatePauseHelpCommandNode(pauseTarget, 1);
+          if (navUp) movePauseControllerFocus(-1);
+          if (navDown) movePauseControllerFocus(1);
+        } else {
+          if (navUp || navLeft) movePauseControllerFocus(-1);
+          if (navDown || navRight) movePauseControllerFocus(1);
+        }
         if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
         if (pressMenuBack) togglePause();
         if (pressPause) togglePause();
