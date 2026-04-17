@@ -2924,6 +2924,9 @@ function startGame(){
   deathGameOver = false;
   deathYellPlayed = false;
   deathParticles.length = 0;
+  playerGhosts.length = 0;
+  playerGhostSpawnT = 0;
+  playerTurnT = 1;
 
   wave = START_WAVE;
   showWaveBanner(wave);
@@ -3061,10 +3064,30 @@ function getStaticPlayerFrame(){
   return staticPlayerFrameCanvas;
 }
 
-function drawStaticPlayerSprite(){
+function drawStaticPlayerSprite(alpha = 1, xOff = 0, yOff = 0, extraWidthScale = 1, extraScaleY = 1){
   const source = getStaticPlayerFrame();
   if (!source) return;
-  ctx.drawImage(source, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(player.x + xOff, player.y + yOff);
+
+  // Fake 2.5D turn by squeezing through a narrow midpoint during left/right flips.
+  const turnEase = Math.sin(Math.min(1, Math.max(0, playerTurnT)) * Math.PI);
+  const widthScale = (1 - turnEase * 0.82) * extraWidthScale;
+  const facingScale = playerFacing >= 0 ? -1 : 1; // right = flipped horizontally
+
+  ctx.scale(facingScale * Math.max(0.12, widthScale), extraScaleY);
+  ctx.drawImage(source, -player.w/2, -player.h/2, player.w, player.h);
+  ctx.restore();
+}
+
+function drawPlayerGhosts(){
+  if (!playerGhosts.length) return;
+  for (const g of playerGhosts){
+    const t = Math.max(0, g.life / g.ttl);
+    drawStaticPlayerSprite(0.12 * t, g.xOff, g.yOff, g.widthScale, g.scaleY);
+  }
 }
 
 // Animated GIF sprites are rendered as real DOM <img> elements positioned over the canvas.
@@ -3166,6 +3189,51 @@ const player = {
   speed: 6,
   invuln: 0
 };
+
+// v2.07: Level 1 player turn + ghost trail.
+// Level 1 only moves left/right, so this intentionally ignores vertical movement.
+let playerFacing = -1; // -1 = facing left/default, 1 = facing right
+let playerTurnT = 1;   // 0..1 progress through the current turn
+const PLAYER_TURN_DUR = 0.16;
+
+const playerGhosts = [];
+let playerGhostSpawnT = 0;
+const PLAYER_GHOST_MAX = 2;
+const PLAYER_GHOST_SPAWN_EVERY = 0.072;
+const PLAYER_GHOST_TTL = 0.18;
+
+function spawnPlayerGhost(moveX){
+  if (Math.abs(moveX || 0) < 0.08) return;
+  const nx = moveX > 0 ? 1 : -1;
+  const behindDist = rand(player.w * 0.62, player.w * 1.02);
+
+  playerGhosts.push({
+    xOff: -nx * behindDist,
+    yOff: rand(-player.h * 0.035, player.h * 0.035),
+    vxPull: nx,
+    ttl: PLAYER_GHOST_TTL,
+    life: PLAYER_GHOST_TTL,
+    scaleY: rand(0.97, 1.03),
+    widthScale: rand(0.88, 0.97)
+  });
+
+  while (playerGhosts.length > PLAYER_GHOST_MAX) playerGhosts.shift();
+}
+
+function updatePlayerGhosts(dt){
+  for (let i = playerGhosts.length - 1; i >= 0; i--){
+    const g = playerGhosts[i];
+    g.life -= dt;
+    const pull = Math.min(1, dt * 8.0);
+
+    g.xOff += (0 - g.xOff) * pull;
+    g.yOff += (0 - g.yOff) * pull;
+    g.widthScale += (1 - g.widthScale) * Math.min(1, dt * 4.2);
+    g.scaleY += (1 - g.scaleY) * Math.min(1, dt * 4.0);
+
+    if (g.life <= 0) playerGhosts.splice(i, 1);
+  }
+}
 
 const keys = {};
 let fireCooldown = 0;
@@ -3974,6 +4042,8 @@ function circleRect(cx, cy, cr, rx, ry, rw, rh){
 
 function spawnPlayerDeath(isGameOver){
   // v1.96+: violent pixel-dust death
+  playerGhosts.length = 0;
+  playerGhostSpawnT = 0;
   isDead = true;
   deathGameOver = !!isGameOver;
   deathTimer = deathGameOver ? 1.2 : 0.85;
@@ -4230,6 +4300,29 @@ function update(dt){
   // add analog movement from Xbox pad
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
+
+  // v2.07: left/right flip and ghost trail for Level 1.
+  if (moveX > 0.08 && playerFacing !== 1){
+    playerFacing = 1;
+    playerTurnT = 0;
+  } else if (moveX < -0.08 && playerFacing !== -1){
+    playerFacing = -1;
+    playerTurnT = 0;
+  }
+  if (playerTurnT < 1){
+    playerTurnT = Math.min(1, playerTurnT + dt / PLAYER_TURN_DUR);
+  }
+
+  updatePlayerGhosts(dt);
+  if (Math.abs(moveX) > 0.08){
+    playerGhostSpawnT -= dt;
+    if (playerGhostSpawnT <= 0){
+      spawnPlayerGhost(moveX);
+      playerGhostSpawnT = PLAYER_GHOST_SPAWN_EVERY;
+    }
+  } else {
+    playerGhostSpawnT = 0;
+  }
 
   player.x += moveX * player.speed * (gpSpeedBoostHeld ? 1.75 : 1.0);
   player.x = Math.max(player.w/2, Math.min(canvas.width - player.w/2, player.x));
@@ -4818,6 +4911,7 @@ function draw(){
     // Enemies can still use the DOM animated sprite layer below.
     const oldDomPlayer = animatedGifSpriteMap.get(player);
     if (oldDomPlayer) oldDomPlayer.style.display = "none";
+    drawPlayerGhosts();
     drawStaticPlayerSprite();
   }
 
