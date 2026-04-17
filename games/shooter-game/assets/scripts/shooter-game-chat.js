@@ -17,6 +17,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/lives', desc: 'Set lives to 0-99, or 100/INFINITE', usage: '/lives [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'] },
       { name: '/log', desc: 'Show the visible Last updated timestamp for the current level', usage: '/log' },
       { name: '/mute', desc: 'Toggle all shooter audio on or off', usage: '/mute' },
+      { name: '/nickname', desc: 'Set the displayed username used by system messages', usage: '/nickname ', suggestions: ['Tektite', 'Guest', 'User'] },
       { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'] },
       { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
     ];
@@ -608,10 +609,22 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           return;
         }
         if (data.type === 'pageChatExecute') {
+          const rawCommand = String(data.raw || data.command || '').trim();
+          const commandName = String(data.command || '').trim().toLowerCase();
+          if (commandName === '/nickname') {
+            const nextNickname = rawCommand.slice('/nickname'.length).trim();
+            postToChatSandbox({
+              type: 'pageChatResult',
+              command: '/nickname',
+              message: nextNickname ? `/nickname executed by ${nextNickname}` : 'Usage: /nickname [name]',
+              announce: true
+            });
+            return;
+          }
           if (tektiteFrame && tektiteFrame.contentWindow) {
             tektiteFrame.contentWindow.postMessage({
               type: 'tektite:execute-command',
-              command: String(data.raw || data.command || '').trim()
+              command: rawCommand
             }, '*');
           }
           return;

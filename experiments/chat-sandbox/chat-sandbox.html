@@ -2597,6 +2597,7 @@ const focusSink = document.getElementById('focusSink');
     }
 
     function addMessage(content, role = 'user', isHtml = false) {
+      const wasPinnedToBottom = isNearBottom();
       const line = document.createElement('div');
       line.className = 'message';
       line.dataset.role = role;
@@ -2674,8 +2675,8 @@ const focusSink = document.getElementById('focusSink');
       line.appendChild(row);
       messages.appendChild(line);
       updateMessagesVisibility();
-      if (role !== 'system' || isNearBottom()) {
-        requestAnimationFrame(scrollToBottomIfPinned);
+      if (wasPinnedToBottom || role !== 'system') {
+        requestAnimationFrame(scrollToBottom);
       }
       return line;
     }
