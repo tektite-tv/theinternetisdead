@@ -2141,6 +2141,7 @@ const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const btnStats = document.getElementById("btnStats");
 const statsPanel = document.getElementById("statsPanel");
+const statsPanelTitle = document.getElementById("statsPanelTitle");
 const statsPanelInner = document.getElementById("statsPanelInner");
 const statsScroll = document.getElementById("statsScroll");
 const statsLockedDetails = document.getElementById("statsLockedDetails");
@@ -3815,13 +3816,17 @@ function getStaticFrameForImage(img){
 
 const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
 
-function loadSavedChatNickname(){
+function getSavedChatNicknameValue(){
   try{
     const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
-    return savedNickname && savedNickname.trim() ? savedNickname.trim() : "User";
+    return savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
   }catch(error){
-    return "User";
+    return "";
   }
+}
+
+function loadSavedChatNickname(){
+  return getSavedChatNicknameValue() || "User";
 }
 
 function saveChatNickname(value){
@@ -3838,9 +3843,16 @@ function syncNicknameControl(){
   nicknameInput.value = loadSavedChatNickname();
 }
 
+function syncNicknameStatsLabels(){
+  const savedNickname = getSavedChatNicknameValue();
+  if (btnStats) btnStats.textContent = savedNickname ? `${savedNickname}'s Stats` : "Stats";
+  if (statsPanelTitle) statsPanelTitle.textContent = savedNickname ? `⭐ ${savedNickname}'s Lifetime Stats ⭐` : "⭐ Lifetime Stats ⭐";
+}
+
 function applyNicknameFromControls(value, announce=false){
   const normalized = saveChatNickname(value);
   if (nicknameInput) nicknameInput.value = normalized;
+  syncNicknameStatsLabels();
   try{
     if (window.parent && window.parent !== window){
       window.parent.postMessage({
@@ -3899,6 +3911,7 @@ function showOptions(){
   syncStartOptionsLabels();
   syncCheatsMenuState();
   syncNicknameControl();
+  syncNicknameStatsLabels();
 
 // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
