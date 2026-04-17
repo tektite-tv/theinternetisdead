@@ -1911,7 +1911,8 @@ const focusSink = document.getElementById('focusSink');
       if (window.parent && window.parent !== window) {
         window.parent.postMessage({
           type: 'chatSandboxState',
-          visible: chatBarWrap.classList.contains('visible')
+          visible: chatBarWrap.classList.contains('visible'),
+          valuePickerActive: !!activeCommandPicker
         }, '*');
       }
     }
@@ -4018,6 +4019,26 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return 0;
     }
 
+    function getShooterNumberPickerConfig(commandName = '') {
+      const normalized = String(commandName || '').trim().toLowerCase();
+      if (normalized === '/hearts') {
+        return { min: 1, max: 100, step: 1, infiniteValue: 100 };
+      }
+      if (normalized === '/bombs' || normalized === '/lives' || normalized === '/shields') {
+        return { min: 0, max: 100, step: 1, infiniteValue: 100 };
+      }
+      return { min: 0, max: 999, step: 1, infiniteValue: null };
+    }
+
+    function formatShooterNumberPickerValue(commandName = '', value = 0) {
+      const config = getShooterNumberPickerConfig(commandName);
+      const safeValue = Math.max(config.min, Math.min(config.max, Number(value) || 0));
+      if (config.infiniteValue !== null && safeValue >= config.infiniteValue) {
+        return '∞';
+      }
+      return String(safeValue);
+    }
+
     function clampShooterColorValue(value, min, max) {
       return Math.max(min, Math.min(max, Number(value)));
     }
@@ -4119,6 +4140,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     function closeActiveCommandPicker() {
       if (!activeCommandPicker || !activeCommandPicker.item) {
         activeCommandPicker = null;
+        notifyParentChatSandboxState();
         return;
       }
       const { item, picker } = activeCommandPicker;
@@ -4129,17 +4151,20 @@ function createHomepageCustomizeMessageNode(result = {}) {
       item.removeAttribute('data-color-picker-command');
       if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
       activeCommandPicker = null;
+      notifyParentChatSandboxState();
     }
 
     function updateActiveCommandPicker(delta = 0) {
       if (!activeCommandPicker) return false;
       if (activeCommandPicker.kind === 'number') {
         if (!activeCommandPicker.valueNode) return false;
+        const config = activeCommandPicker.config || getShooterNumberPickerConfig(activeCommandPicker.command);
         if (delta) {
-          const nextValue = Math.max(0, Math.min(999, Number(activeCommandPicker.value || 0) + Number(delta)));
+          const stepAmount = Number(config.step || 1) * Number(delta);
+          const nextValue = Math.max(config.min, Math.min(config.max, Number(activeCommandPicker.value || 0) + stepAmount));
           activeCommandPicker.value = nextValue;
         }
-        activeCommandPicker.valueNode.textContent = String(activeCommandPicker.value);
+        activeCommandPicker.valueNode.textContent = formatShooterNumberPickerValue(activeCommandPicker.command, activeCommandPicker.value);
         return true;
       }
       if (activeCommandPicker.kind === 'color') {
@@ -4171,7 +4196,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (!activeCommandPicker || !activeCommandPicker.command) return false;
       let rawCommand = activeCommandPicker.command;
       if (activeCommandPicker.kind === 'number') {
-        rawCommand = `${activeCommandPicker.command} ${activeCommandPicker.value}`;
+        const config = activeCommandPicker.config || getShooterNumberPickerConfig(activeCommandPicker.command);
+        const submittedValue = (config.infiniteValue !== null && Number(activeCommandPicker.value || 0) >= config.infiniteValue)
+          ? config.infiniteValue
+          : activeCommandPicker.value;
+        rawCommand = `${activeCommandPicker.command} ${submittedValue}`;
       } else if (activeCommandPicker.kind === 'color') {
         const currentHex = activeCommandPicker.valueNode && activeCommandPicker.valueNode.dataset
           ? activeCommandPicker.valueNode.dataset.hexValue
@@ -4219,9 +4248,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
         picker,
         command: normalized,
         value: getShooterNumberPickerDefaultValue(normalized),
+        config: getShooterNumberPickerConfig(normalized),
         valueNode
       };
       updateActiveCommandPicker(0);
+      notifyParentChatSandboxState();
 
       if (typeof item.focus === 'function') {
         try { item.focus(); } catch (error) {}
@@ -4271,6 +4302,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         pendingAxis: null
       };
       updateActiveCommandPicker(0);
+      notifyParentChatSandboxState();
 
       if (typeof item.focus === 'function') {
         try { item.focus(); } catch (error) {}

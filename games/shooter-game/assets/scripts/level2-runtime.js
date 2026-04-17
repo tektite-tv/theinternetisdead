@@ -119,6 +119,12 @@ function applyMuteState(){
   sfxOof.muted = m;
 }
 
+function setMuteOptionEnabled(shouldEnable){
+  audioMuted = !!shouldEnable;
+  applyMuteState();
+  if (!audioMuted) ensureMusicPlaying();
+}
+
 function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
   if (!audioEl || audioMuted) return;
   try{
@@ -354,6 +360,7 @@ const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
 const pauseCommand = null;
 const pauseCmdSuggest = null;
 let parentChatVisible = false;
+let parentChatValuePickerActive = false;
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -780,6 +787,11 @@ function execPauseCommand(cmd){
     return { ok:true, suppressChatResult:true };
   }
 
+  if (raw === "/mute"){
+    setMuteOptionEnabled(!audioMuted);
+    return { ok:true, message:`Mute ${audioMuted ? "enabled" : "disabled"}` };
+  }
+
   // v1.96: /fullscreen -> toggle browser fullscreen
   if (raw === "/fullscreen"){
     toggleFullscreen();
@@ -889,6 +901,7 @@ window.addEventListener("message", (event) => {
 
   if (data.type === "tektite:chat-visibility"){
     parentChatVisible = !!data.visible;
+    parentChatValuePickerActive = !!data.valuePickerActive;
     if (isPaused && !parentChatVisible) syncPauseControllerFocus();
     return;
   }
@@ -1007,6 +1020,8 @@ let shieldHolding = false; // combined (mouse OR gamepad)
 const GP_MENU_AXIS_THRESHOLD = 0.55;
 const GP_MENU_REPEAT_DELAY = 0.24;
 const GP_MENU_REPEAT_RATE = 0.12;
+const GP_CHAT_VALUE_REPEAT_DELAY = 0.06;
+const GP_CHAT_VALUE_REPEAT_RATE = 0.045;
 // HP model (more sane than "3 hits" when bullets are flying)
 let shieldHP = 0;
 const SHIELD_HP_MAX = 120;             // "reasonable amount" of damage before it breaks
@@ -3207,6 +3222,12 @@ function pollGamepad(dt){
   const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
+  const chatRepeatDelay = parentChatValuePickerActive ? GP_CHAT_VALUE_REPEAT_DELAY : GP_MENU_REPEAT_DELAY;
+  const chatRepeatRate = parentChatValuePickerActive ? GP_CHAT_VALUE_REPEAT_RATE : GP_MENU_REPEAT_RATE;
+  const chatNavUp = consumeMenuAxis('chatUp', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
+  const chatNavDown = consumeMenuAxis('chatDown', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
+  const chatNavLeft = consumeMenuAxis('chatLeft', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
+  const chatNavRight = consumeMenuAxis('chatRight', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
 
   if (deathOverlay && deathOverlay.style.display === "flex"){
     if (navUp) moveDeathControllerFocus(-1);
@@ -3237,10 +3258,10 @@ function pollGamepad(dt){
       requestOpenChat(false, "/help");
     }
     if (isPaused && parentChatVisible){
-      if (navUp) postChatControllerAction('cycleUp');
-      if (navDown) postChatControllerAction('cycleDown');
-      if (navLeft) postChatControllerAction('cycleLeft');
-      if (navRight) postChatControllerAction('cycleRight');
+      if (chatNavUp) postChatControllerAction('cycleUp');
+      if (chatNavDown) postChatControllerAction('cycleDown');
+      if (chatNavLeft) postChatControllerAction('cycleLeft');
+      if (chatNavRight) postChatControllerAction('cycleRight');
       if (pressMenuSelect) postChatControllerAction('execute');
       if (pressMenuBack){
         postChatControllerAction('close');
@@ -4341,7 +4362,7 @@ window.addEventListener("keydown", (e) => {
   keys[k] = true;
   keys[code] = true;
   if (!typingIntoField && code === keyboardBindings.commands){ e.preventDefault(); requestOpenChat(false, "/help"); return; }
-  if (code === keyboardBindings.mute){ audioMuted = !audioMuted; applyMuteState(); if (!audioMuted) ensureMusicPlaying(); }
+  if (code === keyboardBindings.mute){ setMuteOptionEnabled(!audioMuted); }
   if (code === keyboardBindings.shoot && gameState === STATE.PLAYING) shoot();
   if (code === keyboardBindings.fullscreen) toggleFullscreen();
   if (code === keyboardBindings.bomb && gameState === STATE.PLAYING) dropBomb();

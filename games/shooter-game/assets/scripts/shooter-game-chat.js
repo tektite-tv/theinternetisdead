@@ -8,19 +8,21 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     }
     const shooterPageCommands = [
       { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'] },
-      { name: '/bombs', desc: 'Set bombs to 0-99, or 100/MAX', usage: '/bombs [0-99|100|MAX]', suggestions: ['0', '3', '5', '99', '100', 'MAX'] },
+      { name: '/bombs', desc: 'Set bombs to 0-99, or 100/INFINITE', usage: '/bombs [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'] },
       { name: '/fullscreen', desc: 'Toggle fullscreen', usage: '/fullscreen' },
       { name: '/game_speed', desc: 'Set game speed -5..20. 0 starts frozen staring-contest mode, 1 is normal', usage: '/game_speed [-5..20]', suggestions: ['-5', '0', '1', '5', '10', '20'] },
-      { name: '/hearts', desc: 'Set max hearts to 1-99, or 100/MAX', usage: '/hearts [1-99|100|MAX]', suggestions: ['1', '4', '8', '99', '100', 'MAX'] },
-      { name: '/infinite', desc: 'Toggle global infinite mode, or set one resource to infinite', usage: '/infinite [hearts|shields|lives|bombs]', suggestions: ['hearts', 'shields', 'lives', 'bombs'] },
+      { name: '/hearts', desc: 'Set max hearts to 1-99, or 100/INFINITE', usage: '/hearts [1-99|100|INFINITE]', suggestions: ['1', '4', '8', '99', '100', 'INFINITE'] },
+      { name: '/infinite', desc: 'Toggle global infinite mode, or set one resource to infinite', usage: '/infinite', suggestions: ['hearts', 'shields', 'lives', 'bombs'] },
       { name: '/color_invert', desc: 'Toggle invert colors', usage: '/color_invert' },
-      { name: '/lives', desc: 'Set lives to 0-99, or 100/MAX', usage: '/lives [0-99|100|MAX]', suggestions: ['0', '3', '5', '99', '100', 'MAX'] },
-      { name: '/shields', desc: 'Set shields to 0-99, or 100/MAX', usage: '/shields [0-99|100|MAX]', suggestions: ['0', '1', '3', '99', '100', 'MAX'] },
+      { name: '/lives', desc: 'Set lives to 0-99, or 100/INFINITE', usage: '/lives [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'] },
+      { name: '/mute', desc: 'Toggle all shooter audio on or off', usage: '/mute' },
+      { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'] },
       { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
     ];
     let hasSwitchedToLevel2 = false;
     let chatSandboxVisible = false;
     let chatSandboxReady = false;
+    let chatValuePickerActive = false;
     let pendingChatOpenOptions = null;
     let chatControllerTargetIndex = -1;
 
@@ -39,7 +41,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         if (tektiteFrame && tektiteFrame.contentWindow) {
           tektiteFrame.contentWindow.postMessage({
             type: 'tektite:chat-visibility',
-            visible: !!chatSandboxVisible
+            visible: !!chatSandboxVisible,
+            valuePickerActive: !!chatValuePickerActive
           }, '*');
         }
       } catch (error) {}
@@ -597,6 +600,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       if (event.source === getChatWindow()) {
         if (data.type === 'chatSandboxState') {
           chatSandboxReady = true;
+          chatValuePickerActive = !!data.valuePickerActive;
           flushPendingChatOpen();
           setChatFrameVisible(!!data.visible);
           registerPageCommands();
@@ -672,6 +676,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         } else if (action === 'close') {
           closeChatFromParent();
         }
+        chatValuePickerActive = hasActiveChatValuePicker();
+        notifyChildChatVisibility();
         return;
       }
     });

@@ -12,15 +12,16 @@ const BG_COLORS = [
 // v1.96: Pause command registry for /help output (kept alphabetizable)
 const PAUSE_COMMANDS = {
   "/background_color": "Set starfield background color (name or hex)",
-  "/bombs": "Set bombs to 0-99, or 100/MAX (e.g. /bombs 5 or /bombs 100)",
+  "/bombs": "Set bombs to 0-99, or 100/INFINITE (e.g. /bombs 5 or /bombs 100)",
   "/color_invert": "Toggle inverted colors",
   "/fullscreen": "Toggle fullscreen mode",
   "/game_speed": "Set game speed from -5 to 20. 0 loads static Wave 1/UFO staring contest; 1 is normal.",
-  "/hearts": "Set max hearts to 1-99, or 100/MAX (e.g. /hearts 6 or /hearts 100)",
+  "/hearts": "Set max hearts to 1-99, or 100/INFINITE (e.g. /hearts 6 or /hearts 100)",
   "/help": "List all available commands",
   "/infinite": "Toggle global infinite mode, or set hearts/shields/lives/bombs to infinite",
-  "/lives": "Set lives to 0-99, or 100/MAX (e.g. /lives 3 or /lives 100)",
-  "/shields": "Set shields to 0-99, or 100/MAX (e.g. /shields 2 or /shields 100)",
+  "/lives": "Set lives to 0-99, or 100/INFINITE (e.g. /lives 3 or /lives 100)",
+  "/mute": "Toggle all game audio on/off",
+  "/shields": "Set shields to 0-99, or 100/INFINITE (e.g. /shields 2 or /shields 100)",
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
 };
 
@@ -28,11 +29,11 @@ const PAUSE_COMMANDS = {
 // 100 still formats as MAX for inventory-style commands.
 // /game_speed keeps literal 20 as max and allows -5..20.
 const PAUSE_COMMAND_CONTROLS = {
-  "/bombs": { type:"number", min:0, max:100, step:1, defaultValue:5, maxLabel:"MAX", note:"100 = MAX" },
+"/bombs": { type:"number", min:0, max:100, step:1, defaultValue:5, maxLabel:"INFINITE", note:"100 = INFINITE" },
   "/game_speed": { type:"number", min:-5, max:20, step:1, defaultValue:1, note:"0 = static UFO tableau, 1 = normal" },
-  "/hearts": { type:"number", min:1, max:100, step:1, defaultValue:3, maxLabel:"MAX", note:"100 = MAX" },
-  "/lives": { type:"number", min:0, max:100, step:1, defaultValue:1, maxLabel:"MAX", note:"100 = MAX" },
-  "/shields": { type:"number", min:0, max:100, step:1, defaultValue:2, maxLabel:"MAX", note:"100 = MAX" }
+"/hearts": { type:"number", min:1, max:100, step:1, defaultValue:3, maxLabel:"INFINITE", note:"100 = INFINITE" },
+"/lives": { type:"number", min:0, max:100, step:1, defaultValue:1, maxLabel:"INFINITE", note:"100 = INFINITE" },
+"/shields": { type:"number", min:0, max:100, step:1, defaultValue:2, maxLabel:"INFINITE", note:"100 = INFINITE" }
 };
 
 function _parseCountOrInfinite(arg){

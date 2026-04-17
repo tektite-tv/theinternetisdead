@@ -112,6 +112,13 @@ function applyMuteState(){
   sfxOof.muted = m;
 }
 
+function setMuteOptionEnabled(shouldEnable){
+  audioMuted = !!shouldEnable;
+  applyMuteState();
+  if (!audioMuted) ensureMusicPlaying();
+  syncCheatsMenuState();
+}
+
 function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
   if (!audioEl || audioMuted) return;
   try{
@@ -357,6 +364,7 @@ const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
 const pauseCommand = document.getElementById("pauseCommand");
 const pauseCmdSuggest = document.getElementById("pauseCmdSuggest");
 let parentChatVisible = false;
+let parentChatValuePickerActive = false;
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -778,6 +786,11 @@ function execPauseCommand(cmd){
     return { ok:true, suppressChatResult:true };
   }
 
+  if (raw === "/mute"){
+    setMuteOptionEnabled(!audioMuted);
+    return { ok:true, message:`Mute ${audioMuted ? "enabled" : "disabled"}` };
+  }
+
   // v1.96: /fullscreen -> toggle browser fullscreen
   if (raw === "/fullscreen"){
     toggleFullscreen();
@@ -912,6 +925,7 @@ window.addEventListener("message", (event) => {
 
   if (data.type === "tektite:chat-visibility"){
     parentChatVisible = !!data.visible;
+    parentChatValuePickerActive = !!data.valuePickerActive;
     if (parentChatVisible) clearControllerFocus();
     else syncControllerFocusForCurrentState();
     return;
@@ -1041,6 +1055,8 @@ let shieldHolding = false; // combined (mouse OR gamepad)
 const GP_MENU_AXIS_THRESHOLD = 0.55;
 const GP_MENU_REPEAT_DELAY = 0.24;
 const GP_MENU_REPEAT_RATE = 0.12;
+const GP_CHAT_VALUE_REPEAT_DELAY = 0.06;
+const GP_CHAT_VALUE_REPEAT_RATE = 0.045;
 const GP_OPTION_REPEAT_DELAY = 0.06;
 const GP_OPTION_REPEAT_RATE = 0.06;
 // HP model (more sane than "3 hits" when bullets are flying)
@@ -2145,6 +2161,8 @@ const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
 const backgroundColorHex = document.getElementById("backgroundColorHex");
 const backgroundColorPicker = document.getElementById("backgroundColorPicker");
+const muteCheckbox = document.getElementById("muteCheckbox");
+const muteStatus = document.getElementById("muteStatus");
 const fullscreenCheckbox = document.getElementById("fullscreenCheckbox");
 const btnCheatsBack = document.getElementById("btnCheatsBack");
 const btnCheatsApply = document.getElementById("btnCheatsApply");
@@ -2248,9 +2266,11 @@ function markCheatsClean(applied=false){
 
 function syncCheatsMenuState(){
   if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
+  if (muteCheckbox) muteCheckbox.checked = !!audioMuted;
   if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
   if (videoFxCheckbox) videoFxCheckbox.checked = !!VIDEO_FX_ENABLED;
   if (infiniteToggleStatus) infiniteToggleStatus.textContent = INFINITE_MODE ? "Enabled" : "Disabled";
+  if (muteStatus) muteStatus.textContent = audioMuted ? "Enabled" : "Disabled";
   if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
   if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
 }
@@ -2755,7 +2775,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [btnControls, backgroundColorHex, backgroundColorPicker, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -4091,6 +4111,11 @@ btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", showCheats);
+if (muteCheckbox){
+  muteCheckbox.addEventListener("change", () => {
+    setMuteOptionEnabled(!!muteCheckbox.checked);
+  });
+}
 if (fullscreenCheckbox){
   fullscreenCheckbox.addEventListener("change", () => {
     setFullscreenOptionEnabled(!!fullscreenCheckbox.checked);
@@ -4605,6 +4630,12 @@ function pollGamepad(dt){
   const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
+  const chatRepeatDelay = parentChatValuePickerActive ? GP_CHAT_VALUE_REPEAT_DELAY : GP_MENU_REPEAT_DELAY;
+  const chatRepeatRate = parentChatValuePickerActive ? GP_CHAT_VALUE_REPEAT_RATE : GP_MENU_REPEAT_RATE;
+  const chatNavUp = consumeMenuAxis('chatUp', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
+  const chatNavDown = consumeMenuAxis('chatDown', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
+  const chatNavLeft = consumeMenuAxis('chatLeft', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
+  const chatNavRight = consumeMenuAxis('chatRight', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
   const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
   const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
 
@@ -4654,10 +4685,10 @@ function pollGamepad(dt){
     const chatOwnsControllerInput = parentChatVisible || pressCommands;
     if (chatOwnsControllerInput){
       if (parentChatVisible){
-        if (navUp) postChatControllerAction('cycleUp');
-        if (navDown) postChatControllerAction('cycleDown');
-        if (navLeft) postChatControllerAction('cycleLeft');
-        if (navRight) postChatControllerAction('cycleRight');
+        if (chatNavUp) postChatControllerAction('cycleUp');
+        if (chatNavDown) postChatControllerAction('cycleDown');
+        if (chatNavLeft) postChatControllerAction('cycleLeft');
+        if (chatNavRight) postChatControllerAction('cycleRight');
         if (pressMenuSelect) postChatControllerAction('execute');
         if (pressMenuBack){
           postChatControllerAction('close');
@@ -5440,7 +5471,7 @@ window.addEventListener("keydown", (e) => {
   keys[k] = true;
   keys[code] = true;
   if (!typingIntoField && code === keyboardBindings.commands){ e.preventDefault(); requestOpenChat(false, "/help"); return; }
-  if (code === keyboardBindings.mute){ audioMuted = !audioMuted; applyMuteState(); if (!audioMuted) ensureMusicPlaying(); }
+  if (code === keyboardBindings.mute){ setMuteOptionEnabled(!audioMuted); }
   if (code === keyboardBindings.shoot && gameState === STATE.PLAYING) shoot();
   if (code === keyboardBindings.fullscreen) toggleFullscreen();
   if (code === keyboardBindings.bomb && gameState === STATE.PLAYING) dropBomb();
