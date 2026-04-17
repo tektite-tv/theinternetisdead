@@ -1914,21 +1914,23 @@ function syncCheatsMenuState(){
 
 if (infiniteToggle){
   infiniteToggle.addEventListener("change", () => {
-    markCheatsDirty();
+    INFINITE_MODE = !!infiniteToggle.checked;
+    infiniteModeActive = !!INFINITE_MODE;
     syncCheatsMenuState();
   });
 }
 
 if (invertColorsCheckbox){
   invertColorsCheckbox.addEventListener("change", () => {
-    markCheatsDirty();
+    INVERT_COLORS = !!invertColorsCheckbox.checked;
+    applyInvertColors();
     syncCheatsMenuState();
   });
 }
 
 if (videoFxCheckbox){
   videoFxCheckbox.addEventListener("change", () => {
-    markCheatsDirty();
+    VIDEO_FX_ENABLED = !!videoFxCheckbox.checked;
     syncCheatsMenuState();
   });
 }
@@ -3264,22 +3266,10 @@ if (typeof startWaveSelect !== "undefined" && startWaveSelect){
 }
 
 
-if (typeof infiniteToggle !== "undefined" && infiniteToggle){
-  infiniteToggle.addEventListener("input", markCheatsDirty);
-  infiniteToggle.addEventListener("change", markCheatsDirty);
-}
 
 
-if (typeof invertColorsCheckbox !== "undefined" && invertColorsCheckbox){
-  invertColorsCheckbox.addEventListener("input", markCheatsDirty);
-  invertColorsCheckbox.addEventListener("change", markCheatsDirty);
-}
 
 
-if (typeof videoFxCheckbox !== "undefined" && videoFxCheckbox){
-  videoFxCheckbox.addEventListener("input", markCheatsDirty);
-  videoFxCheckbox.addEventListener("change", markCheatsDirty);
-}
 
 if (titleHoverReveal){
   titleHoverReveal.addEventListener("click", refreshEntireShooterPage);
@@ -3297,11 +3287,6 @@ if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", showCheats);
 function applyCheatsChanges(){
   applyStartSettingsFromControls();
-  INFINITE_MODE = !!(infiniteToggle && infiniteToggle.checked);
-  infiniteModeActive = !!INFINITE_MODE;
-  INVERT_COLORS = !!(invertColorsCheckbox && invertColorsCheckbox.checked);
-  VIDEO_FX_ENABLED = !!(videoFxCheckbox && videoFxCheckbox.checked);
-  applyInvertColors();
   syncStartOptionsLabels();
   syncCheatsMenuState();
   markCheatsClean(true);
