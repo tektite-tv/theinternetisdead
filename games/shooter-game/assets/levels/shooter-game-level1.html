@@ -1002,6 +1002,43 @@ body.invert-colors {
     align-items:start;
   }
 
+
+  #cheatsMenuInner{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+    min-height:0;
+  }
+  #cheatsScroll{
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;
+    box-sizing:border-box;
+    padding:0 8px 8px;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+  }
+  #cheatsScroll::-webkit-scrollbar{
+    width:6px;
+    height:6px;
+  }
+  #cheatsScroll::-webkit-scrollbar-track{
+    background:rgba(0,0,0,0.22);
+    border-radius:999px;
+  }
+  #cheatsScroll::-webkit-scrollbar-thumb{
+    background:#00ff66;
+    border-radius:999px;
+    box-shadow:0 0 8px rgba(0,255,102,0.35);
+  }
+  #cheatsMenu .menuBottomRow{
+    flex:0 0 auto;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 8px;
+  }
+
 </style>
 
 
@@ -1198,7 +1235,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 1:58 AM)</a></div>
+<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 2:03 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1241,132 +1278,96 @@ body.invert-colors {
   <div id="cheatsMenu" class="panel" style="display:none;">
     <div id="cheatsMenuInner">
       <div class="title">CHEATS</div>
+
       <div id="cheatsScroll" class="menuMiddleScroll">
         <div class="cheatsGrid">
-
-
-
-      <div class="optRow fullRow">
-        <div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
-        <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
-          <option value="1">Wave 1</option>
-          <option value="2">Wave 2</option>
-          <option value="3">Wave 3</option>
-          <option value="4">Wave 4</option>
-          <option value="5">Wave 5</option>
-          <option value="6">Wave 6</option>
-          <option value="7">Wave 7</option>
-          <option value="8">Wave 8</option>
-          <option value="9">Wave 9</option>
-          <option value="10">Wave 10</option>
-          <option value="11">Boss Mode</option>
-          <option value="12">Insanity 1</option>
-          <option value="13">Insanity 2</option>
-          <option value="14">Insanity 3</option>
-          <option value="15">Insanity 4</option>
-          <option value="16">Insanity 5</option>
-          <option value="17">Insanity 6</option>
-          <option value="18">Insanity 7</option>
-          <option value="19">Insanity 8</option>
-          <option value="20">Insanity 9</option>
-          <option value="21">Insanity 10</option>
-        </select>
-        <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Boss Mode, or Insanity 1-10.</div>
-      </div>
-
-
-      
-
-      <div class="optRow fullRow">
-        <div class="optLabel"><span>Starting Hearts / Shields / Lives / Bombs</span></div>
-        <div class="startStatsRow">
-          <div class="startStatField">
-            <label for="heartsSlider">Hearts</label>
-            <input id="heartsSlider" class="resourceNumberInput" type="text" min="1" max="100" value="3" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="startStatField">
-            <label for="shieldsSlider">Shields</label>
-            <input id="shieldsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="startStatField">
-            <label for="livesSlider">Lives</label>
-            <input id="livesSlider" class="resourceNumberInput" type="text" min="0" max="100" value="1" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
-          </div>
-          <div class="startStatField">
-            <label for="bombsSlider">Bombs</label>
-            <input id="bombsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
-          </div>
-        </div>
-        <div class="hint">Use 0-99 for exact values. 100 = INFINITE</div>
-      </div>
-
-
-
-      
-      <div class="optRow cheatRow">
-        <div class="cheatHeader">
-          <div>
-            <div class="cheatTitle">Infinite Mode</div>
-            <div class="cheatCommand">Starting state + live gameplay</div>
+          <div class="optRow fullRow">
+            <div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
+            <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
+              <option value="1">Wave 1</option>
+              <option value="2">Wave 2</option>
+              <option value="3">Wave 3</option>
+              <option value="4">Wave 4</option>
+              <option value="5">Wave 5</option>
+              <option value="6">Wave 6</option>
+              <option value="7">Wave 7</option>
+              <option value="8">Wave 8</option>
+              <option value="9">Wave 9</option>
+              <option value="10">Wave 10</option>
+              <option value="11">Boss Mode</option>
+              <option value="12">Insanity 1</option>
+              <option value="13">Insanity 2</option>
+              <option value="14">Insanity 3</option>
+              <option value="15">Insanity 4</option>
+              <option value="16">Insanity 5</option>
+              <option value="17">Insanity 6</option>
+              <option value="18">Insanity 7</option>
+              <option value="19">Insanity 8</option>
+              <option value="20">Insanity 9</option>
+              <option value="21">Insanity 10</option>
+            </select>
+            <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Boss Mode, or Insanity 1-10.</div>
           </div>
 
-
-
-      
-      <div class="optRow cheatRow">
-        <div class="cheatHeader">
-          <div>
-            <div class="cheatTitle">Infinite Mode</div>
-            <div class="cheatCommand">Starting state + live gameplay</div>
-          </div>
-          <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:0;">Disabled</span></label>
-        </div>
-        <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
-      </div>
-
-      <div class="optRow cheatRow">
-        <div class="cheatHeader">
-          <div>
-            <div class="cheatTitle">Invert Colors</div>
-            <div class="cheatCommand">/invert</div>
-          </div>
-
-
-
-      
-      <div class="optRow cheatRow">
-        <div class="cheatHeader">
-          <div>
-            <div class="cheatTitle">Infinite Mode</div>
-            <div class="cheatCommand">Starting state + live gameplay</div>
-          </div>
-          <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:0;">Disabled</span></label>
-        </div>
-        <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
-      </div>
-
-      <div class="optRow cheatRow">
-        <div class="cheatHeader">
-          <div>
-            <div class="cheatTitle">Invert Colors</div>
-            <div class="cheatCommand">/invert</div>
-          </div>
-          <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:0;">Disabled</span></label>
-        </div>
-        <div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
-      </div>
-
-      <div class="optRow cheatRow">
-        <div class="cheatHeader">
-          <div>
-            <div class="cheatTitle">Video FX</div>
-            <div class="cheatCommand">/video_fx</div>
+          <div class="optRow fullRow">
+            <div class="optLabel"><span>Starting Hearts / Shields / Lives / Bombs</span></div>
+            <div class="startStatsRow">
+              <div class="startStatField">
+                <label for="heartsSlider">Hearts</label>
+                <input id="heartsSlider" class="resourceNumberInput" type="text" min="1" max="100" value="3" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="shieldsSlider">Shields</label>
+                <input id="shieldsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="livesSlider">Lives</label>
+                <input id="livesSlider" class="resourceNumberInput" type="text" min="0" max="100" value="1" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="bombsSlider">Bombs</label>
+                <input id="bombsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+            </div>
+            <div class="hint">Use 0-99 for exact values. 100 = INFINITE</div>
           </div>
 
+          <div class="optRow cheatRow">
+            <div class="cheatHeader">
+              <div>
+                <div class="cheatTitle">Infinite Mode</div>
+                <div class="cheatCommand">Starting state + live gameplay</div>
+              </div>
+              <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:0;">Disabled</span></label>
+            </div>
+            <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
+          </div>
 
-      <div class="optRow fullRow">
-        <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
-      </div>
+          <div class="optRow cheatRow">
+            <div class="cheatHeader">
+              <div>
+                <div class="cheatTitle">Invert Colors</div>
+                <div class="cheatCommand">/invert</div>
+              </div>
+              <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:0;">Disabled</span></label>
+            </div>
+            <div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
+          </div>
+
+          <div class="optRow cheatRow">
+            <div class="cheatHeader">
+              <div>
+                <div class="cheatTitle">Video FX</div>
+                <div class="cheatCommand">/video_fx</div>
+              </div>
+              <label><input id="videoFxCheckbox" type="checkbox" /><span id="videoFxStatus" style="margin-left:0;">Disabled</span></label>
+            </div>
+            <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
+          </div>
+
+          <div class="optRow fullRow">
+            <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
+          </div>
         </div>
       </div>
 
@@ -1377,7 +1378,8 @@ body.invert-colors {
     </div>
   </div>
 
-<div id="controlsMenu" class="panel" style="display:none;">
+
+  <div id="controlsMenu" class="panel" style="display:none;">
     <div id="controlsMenuInner">
       <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
       <div class="controlsGrid">
