@@ -617,6 +617,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
               type: 'pageChatResult',
               command: '/nickname',
               message: nextNickname ? `/nickname executed by ${nextNickname}` : 'Usage: /nickname [name]',
+              nickname: nextNickname || '',
               announce: true
             });
             return;

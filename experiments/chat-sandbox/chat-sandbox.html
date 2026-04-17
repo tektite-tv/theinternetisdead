@@ -6374,6 +6374,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       if (event.data.type === 'pageChatResult') {
+        if (typeof event.data.nickname === 'string' && event.data.nickname.trim()) {
+          currentNickname = event.data.nickname.trim();
+        }
+
         const message = event.data.message || `${event.data.command || 'Page command'} executed`;
         if (event.data.panel === 'homepageCustomize') {
           const shouldAnnounce = event.data.announce !== false;
