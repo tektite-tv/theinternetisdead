@@ -792,6 +792,10 @@ function execPauseCommand(cmd){
     return { ok:true, message:`Mute ${audioMuted ? "enabled" : "disabled"}` };
   }
 
+  if (raw === "/log") {
+    return { ok: true, message: getLastUpdatedLogMessage() };
+  }
+
   // v1.96: /fullscreen -> toggle browser fullscreen
   if (raw === "/fullscreen"){
     toggleFullscreen();

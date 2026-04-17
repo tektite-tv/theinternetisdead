@@ -20,6 +20,7 @@ const PAUSE_COMMANDS = {
   "/help": "List all available commands",
   "/infinite": "Toggle global infinite mode, or set hearts/shields/lives/bombs to infinite",
   "/lives": "Set lives to 0-99, or 100/INFINITE (e.g. /lives 3 or /lives 100)",
+  "/log": "Show the visible Last updated timestamp for this level",
   "/mute": "Toggle all game audio on/off",
   "/shields": "Set shields to 0-99, or 100/INFINITE (e.g. /shields 2 or /shields 100)",
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
@@ -85,6 +86,14 @@ function updatePauseHelpCommandNode(node, delta){
   const strong = node.querySelector("strong");
   if (strong) strong.textContent = `${cmd} ${formatPauseCommandNumber(cmd, next)}`;
   return true;
+}
+
+function getLastUpdatedLogMessage(){
+  const hoverNode = document.querySelector("#titleHoverReveal .titleSubHover, .titleSub .titleSubHover");
+  if (!hoverNode) return "Last updated: unavailable";
+  const raw = String(hoverNode.textContent || "").trim();
+  if (!raw) return "Last updated: unavailable";
+  return raw.replace(/^\(+|\)+$/g, "").trim();
 }
 
 // v1.96: Help UI (lists commands in the pause suggestion panel)
