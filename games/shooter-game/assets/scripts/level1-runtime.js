@@ -1921,7 +1921,6 @@ const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
   // v1.96: game speed slider (1-10). 5 = 1.0x.
   let START_GAME_SPEED = 1;
   let GAME_SPEED_MULT = 1;
-  GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   let INFINITE_MODE = false;
   
 let START_WAVE = 1; // 1-10 = normal waves, 11 = Boss Mode, 12-21 = Insanity 1-10
@@ -2036,7 +2035,7 @@ function syncStartOptionsLabels(){
     if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
     if (shieldsVal && shieldsSlider) shieldsVal.textContent = formatResourceOptionValue(shieldsSlider);
     if (bombsVal && bombsSlider) bombsVal.textContent = formatResourceOptionValue(bombsSlider);
-    if (speedVal && speedSlider) speedVal.textContent = speedSlider.value;
+    if (speedVal && speedSlider) speedVal.textContent = String(getSpeedValueFromSlider());
     syncRangeProgress(speedSlider);
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
@@ -3186,11 +3185,30 @@ function gameSpeedToMultiplier(value){
   return speed;
 }
 
-function applyGameSpeedValue(value){
+function speedToSliderPosition(value){
+  const speed = clampGameSpeedValue(value);
+  return speed <= 0 ? speed + 5 : speed + 5;
+}
+
+function sliderPositionToSpeed(value){
+  const pos = Math.max(0, Math.min(25, Math.round(Number(value))));
+  return pos <= 5 ? pos - 5 : pos - 5;
+}
+
+function setSpeedSliderPositionFromSpeed(value){
+  if (!speedSlider) return;
+  speedSlider.value = String(speedToSliderPosition(value));
+}
+
+function getSpeedValueFromSlider(){
+  return speedSlider ? sliderPositionToSpeed(speedSlider.value) : 1;
+}
+
+function applyGameSpeedValue(value, syncSlider=true){
   const speed = clampGameSpeedValue(value);
   START_GAME_SPEED = speed;
   GAME_SPEED_MULT = gameSpeedToMultiplier(speed);
-  if (speedSlider) speedSlider.value = String(speed);
+  if (syncSlider) setSpeedSliderPositionFromSpeed(speed);
   syncStartOptionsLabels();
   return speed;
 }
@@ -3231,7 +3249,7 @@ function showOptions(){
   heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
   shieldsSlider.value = START_SHIELDS_INFINITE ? 100 : START_SHIELDS;
   bombsSlider.value = START_BOMBS_INFINITE ? 100 : START_BOMBS;
-  if (speedSlider) speedSlider.value = START_GAME_SPEED;
+  setSpeedSliderPositionFromSpeed(START_GAME_SPEED);
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   syncStartOptionsLabels();
   normalizeStartStatInput(livesSlider);
@@ -3486,8 +3504,7 @@ function applyStartSettingsFromControls(){
 }
 
 function applyOptionsChanges(){
-  START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
-  GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
+  applyGameSpeedValue(getSpeedValueFromSlider(), false);
   syncStartOptionsLabels();
   markOptionsClean(true);
 }
