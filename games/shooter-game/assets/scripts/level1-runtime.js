@@ -998,8 +998,12 @@ const SHIELD_RADIUS_MULT = 0.78;       // relative to player size
 let shieldHoldGrace = 0;
 const SHIELD_HOLD_GRACE_SECS = 0.25;
 
+function hasActivePlayer(){
+  return gameState === STATE.PLAYING && !playerSpectatorMode;
+}
+
 function canActivateShield(){
-  return (gameState === STATE.PLAYING && !isGameSpeedFrozen() && !isDead && shieldCooldown <= 0 && !shieldActive);
+  return (hasActivePlayer() && !isGameSpeedFrozen() && !isDead && shieldCooldown <= 0 && !shieldActive);
 }
 function startShield(){
   shieldActive = true;
@@ -1048,6 +1052,7 @@ const SPECTRAL_FUNK = 1000;
 const FUNK = Math.max(0.25, Math.min(2.5, SPECTRAL_FUNK / 1000));
 
 let lives = 0; // extra lives (decremented when health hits 0)
+let playerSpectatorMode = false; // true when Starting Lives is 0: no player spawn, enemies run unattended
 let frogKills = 0; // legacy counter kept for reset compatibility; frog kills no longer award free lives
 let health = 1.0; // 0..1 (4 hits -> 0)
 let MAX_HEARTS = 3; // v1.96: configurable hearts per life
@@ -1423,7 +1428,7 @@ function drawUFO(){
 }
 
 function dropBomb(){
-  if (isPaused || isGameSpeedFrozen()) return;
+  if (isPaused || isGameSpeedFrozen() || playerSpectatorMode) return;
   if (!infiniteModeActive && !bombsInfiniteActive && bombsCount <= 0) return;
   if (bomb) return; // only one active
 
@@ -2874,6 +2879,8 @@ function adjustControllerCheat(delta){
 }
 function showMenu(){
   setPaused(false);
+  playerSpectatorMode = false;
+  try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
   deathYellPlayed = false;
   gameState = STATE.MENU;
   gameWon = false;
@@ -3462,7 +3469,10 @@ function startGame(){
   bombsInfiniteActive = !!START_BOMBS_INFINITE || !!INFINITE_MODE;
 
   lives = livesInfiniteActive ? 100 : Math.max(0, parseInt(START_LIVES, 10) || 0);
+  playerSpectatorMode = !livesInfiniteActive && lives <= 0;
+  try{ document.body.classList.toggle("zeroLivesSpectatorMode", playerSpectatorMode); }catch(e){}
   livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
+  if (playerSpectatorMode && livesSlot) livesSlot.style.display = "none";
 
   MAX_HEARTS = heartsInfiniteActive ? 100 : Math.max(1, parseInt(START_HEARTS, 10) || 4);
   HIT_DAMAGE = 1 / MAX_HEARTS;
@@ -4321,7 +4331,7 @@ function pollGamepad(dt){
       if (pressMenuSelect) restartRun();
     } else if (gameState === STATE.PLAYING){
       if (pressPause) togglePause();
-      if (!isGameSpeedFrozen() && pressBomb) dropBomb();
+      if (!isGameSpeedFrozen() && !playerSpectatorMode && pressBomb) dropBomb();
     }
   }
 
@@ -4696,7 +4706,7 @@ const MAX_PLAYER_BULLETS = 90;
 const MAX_ENEMY_BULLETS  = 140;
 
 function shoot(){
-  if (isPaused || isGameSpeedFrozen()) return;
+  if (isPaused || isGameSpeedFrozen() || playerSpectatorMode) return;
   if (fireCooldown > 0) return;
 
   // v1.96: fire in the current aim direction (defaults upward if aim is unset)
@@ -4886,7 +4896,7 @@ function spawnPlayerDeath(isGameOver){
 }
 
 function damagePlayer(){
-  if (player.invuln > 0 || isDead) return;
+  if (playerSpectatorMode || player.invuln > 0 || isDead) return;
 
   // v1.96: Infinite mode means consequences are cancelled.
   if (infiniteModeActive || heartsInfiniteActive){
@@ -5143,6 +5153,7 @@ function update(dt){
   // add analog movement from Xbox pad
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
+  if (playerSpectatorMode) moveX = 0;
 
   // v2.07: left/right flip and ghost trail for Level 1.
   if (moveX > 0.08 && playerFacing !== 1){
@@ -5176,7 +5187,7 @@ function update(dt){
 
 // v1.96: right stick aim (only when the stick is actually being pushed)
 const aimMag = Math.hypot(gpAimX || 0, gpAimY || 0);
-if (aimMag > GP_AIM_DEADZONE){
+if (!playerSpectatorMode && aimMag > GP_AIM_DEADZONE){
   const nx = (gpAimX / aimMag);
   const ny = (gpAimY / aimMag);
   // Convert stick direction into an aim point in front of the player.
@@ -5186,16 +5197,17 @@ if (aimMag > GP_AIM_DEADZONE){
 }
 
 // v1.96: shield (LS click hold) and fire (RT/A hold); LT = speed boost
-gamepadShieldHolding = !!gpShieldHeld;
-shieldHolding = (mouseShieldHolding || gamepadShieldHolding);
+gamepadShieldHolding = playerSpectatorMode ? false : !!gpShieldHeld;
+shieldHolding = playerSpectatorMode ? false : (mouseShieldHolding || gamepadShieldHolding);
 if (shieldHolding && canActivateShield()) startShield();
+if (playerSpectatorMode) stopShield(false);
 
-if (gpFireHeld) shoot();
+if (!playerSpectatorMode && gpFireHeld) shoot();
 
   
   // v1.96: Held-fire (LMB) should keep shooting even while the shield is held.
   // shoot() already respects cooldown, pause, and state.
-  if (gameState === STATE.PLAYING && !isPaused && mouseFireHolding){
+  if (gameState === STATE.PLAYING && !isPaused && !playerSpectatorMode && mouseFireHolding){
     shoot();
   }
 
@@ -5527,31 +5539,33 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
   const prx = player.x - player.w/2, pry = player.y - player.h/2;
   const shieldR = player.w * SHIELD_RADIUS_MULT;
 
-  for (let i = enemyBullets.length - 1; i >= 0; i--){
-    const b = enemyBullets[i];
+  if (!playerSpectatorMode){
+    for (let i = enemyBullets.length - 1; i >= 0; i--){
+      const b = enemyBullets[i];
 
-    // v1.96: shield blocks bullets (counts as a "hit" on the shield)
-    if (shieldActive){
-      const dx = b.x - player.x;
-      const dy = b.y - player.y;
-      const rr = (shieldR + b.r);
-      if (dx*dx + dy*dy <= rr*rr){
-        enemyBullets.splice(i, 1);
-        shieldApplyDamage(SHIELD_BULLET_DMG);
-        continue;
+      // v1.96: shield blocks bullets (counts as a "hit" on the shield)
+      if (shieldActive){
+        const dx = b.x - player.x;
+        const dy = b.y - player.y;
+        const rr = (shieldR + b.r);
+        if (dx*dx + dy*dy <= rr*rr){
+          enemyBullets.splice(i, 1);
+          shieldApplyDamage(SHIELD_BULLET_DMG);
+          continue;
+        }
       }
-    }
 
-    if (circleRect(b.x, b.y, b.r, prx, pry, player.w, player.h)){
-      enemyBullets.splice(i, 1);
-      damagePlayer();
+      if (circleRect(b.x, b.y, b.r, prx, pry, player.w, player.h)){
+        enemyBullets.splice(i, 1);
+        damagePlayer();
+      }
     }
   }
 
   // enemy contact damage
 
   // v1.96: shield makes enemies bounce off the player (and consumes shield hits on impact)
-  if (shieldActive){
+  if (!playerSpectatorMode && shieldActive){
     const shieldR = player.w * SHIELD_RADIUS_MULT;
     for (const e of enemies){
       const dx = e.x - player.x;
@@ -5586,7 +5600,7 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
     }
   }
 
-  if (player.invuln <= 0){
+  if (!playerSpectatorMode && player.invuln <= 0){
     for (const e of enemies){
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
       const overlap =
@@ -5746,7 +5760,7 @@ function draw(){
 
   // player flicker on invulnerability
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
-  const shouldDrawPlayer = (gameState === STATE.PLAYING && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer"));
+  const shouldDrawPlayer = (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer"));
   if (USE_DOM_ANIMATED_GIF_SPRITES) beginAnimatedGifSpriteFrame();
 
   if (shouldDrawPlayer && !flicker){
@@ -5762,7 +5776,7 @@ function draw(){
   drawShieldRing();
 
 // v1.96: always-on health bar under the player
-  if (gameState === STATE.PLAYING && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer")){
+  if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer")){
     const barW = player.w;
     const barH = 7;
     const bx = player.x - barW/2;
@@ -5785,7 +5799,7 @@ function draw(){
   }
 
 // v1.96: aim indicator (yellow triangle orbiting around player, pointing where you're aiming)
-if (gameState === STATE.PLAYING && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer")){
+if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCanvasPlayer")){
   const a = aimAngleSmoothed;
   const orbitR = player.w * 0.62;
   const tx = player.x + Math.cos(a) * orbitR;
