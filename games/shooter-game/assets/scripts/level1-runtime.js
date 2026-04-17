@@ -995,7 +995,7 @@ let shieldHoldGrace = 0;
 const SHIELD_HOLD_GRACE_SECS = 0.25;
 
 function canActivateShield(){
-  return (gameState === STATE.PLAYING && !isDead && shieldCooldown <= 0 && !shieldActive);
+  return (gameState === STATE.PLAYING && !isGameSpeedFrozen() && !isDead && shieldCooldown <= 0 && !shieldActive);
 }
 function startShield(){
   shieldActive = true;
@@ -1419,7 +1419,7 @@ function drawUFO(){
 }
 
 function dropBomb(){
-  if (isPaused) return;
+  if (isPaused || isGameSpeedFrozen()) return;
   if (!infiniteModeActive && !bombsInfiniteActive && bombsCount <= 0) return;
   if (bomb) return; // only one active
 
@@ -3213,6 +3213,10 @@ function applyGameSpeedValue(value, syncSlider=true){
   return speed;
 }
 
+function isGameSpeedFrozen(){
+  return clampGameSpeedValue(START_GAME_SPEED) === 0 || GAME_SPEED_MULT === 0;
+}
+
 function normalizeHexColor(value){
   const raw = String(value || "").trim();
   const withHash = raw.startsWith("#") ? raw : "#" + raw;
@@ -3348,9 +3352,18 @@ function startGame(){
   playerGhostSpawnT = 0;
   playerTurnT = 1;
 
-  wave = START_WAVE;
-  showWaveBanner(wave);
-bullets.length = 0;
+  const frozenStaringContest = isGameSpeedFrozen();
+
+  // Speed 0 is an intentional static tableau: Wave 1 player vs one enemy, no progress.
+  wave = frozenStaringContest ? 1 : START_WAVE;
+  if (frozenStaringContest){
+    waveBanner.t = 0;
+    waveBanner.text = "";
+  } else {
+    showWaveBanner(wave);
+  }
+
+  bullets.length = 0;
   enemyBullets.length = 0;
   fireCooldown = 0;
   bomb = null;
@@ -3358,11 +3371,21 @@ bullets.length = 0;
 
   resetFormation();
   updateHearts();
-spawnEnemies();
-  trySpawnUFO();
+  spawnEnemies();
 
-  // Only begin the level music after Wave 1 gameplay has actually spawned.
-  pendingWaveStartMusic = true;
+  if (frozenStaringContest){
+    // Keep the scene absolutely inert: one Wave 1 enemy, optional frozen UFO, no music start trigger.
+    // Force-spawn the UFO so speed 0 can become a static staring contest bonus tableau.
+    trySpawnUFO(true);
+    pendingWaveStartMusic = false;
+    stopMusic();
+    runTimer = 0;
+    updateTimerHUD();
+  } else {
+    trySpawnUFO();
+    // Only begin the level music after Wave 1 gameplay has actually spawned.
+    pendingWaveStartMusic = true;
+  }
 
   clearControllerFocus();
   window.focus();
@@ -4145,7 +4168,7 @@ function pollGamepad(dt){
       if (pressMenuSelect) restartRun();
     } else if (gameState === STATE.PLAYING){
       if (pressPause) togglePause();
-      if (pressBomb) dropBomb();
+      if (!isGameSpeedFrozen() && pressBomb) dropBomb();
     }
   }
 
@@ -4485,7 +4508,7 @@ const MAX_PLAYER_BULLETS = 90;
 const MAX_ENEMY_BULLETS  = 140;
 
 function shoot(){
-  if (isPaused) return;
+  if (isPaused || isGameSpeedFrozen()) return;
   if (fireCooldown > 0) return;
 
   // v1.96: fire in the current aim direction (defaults upward if aim is unset)
@@ -4823,6 +4846,20 @@ canvas.addEventListener("pointerup", (e) => {
    Update + Draw
 ======================= */
 function update(dt){
+  // v1.96: gamepad input (Xbox controller) must still work in frozen speed-0 mode
+  // so the player can pause and quit the static staring contest.
+  pollGamepad(dt);
+
+  // Speed 0 intentionally loads a static Wave 1 tableau:
+  // static player, static single enemy, static background, no progress, no win/death.
+  if (gameState === STATE.PLAYING && isGameSpeedFrozen()){
+    if (!isPaused){
+      runTimer = 0;
+      updateTimerHUD();
+    }
+    return;
+  }
+
   time += dt;
 
   // v1.96: update glitch spiral timer
@@ -4832,9 +4869,6 @@ function update(dt){
 
   // starfield updates always
   updateStarfield(dt, keys, player.speed);
-
-  // v1.96: gamepad input (Xbox controller)
-  pollGamepad(dt);
 
   // PAUSE_GUARD_v1_51: freeze gameplay updates while paused
   if (gameState === STATE.PLAYING && isPaused) return;
@@ -5774,7 +5808,8 @@ function loop(t){
   // v1.96: Game speed knob. We cap raw dt to prevent big frame hitch jumps,
   // then multiply by GAME_SPEED_MULT (5 = 1.0x, 1 = 0.2x, 10 = 2.0x).
   const rawDt = Math.min(0.033, (t - lastT) / 1000);
-  const dt = rawDt * (GAME_SPEED_MULT || 1.0);
+  const speedMult = Number.isFinite(GAME_SPEED_MULT) ? GAME_SPEED_MULT : 1.0;
+  const dt = rawDt * speedMult;
   window._dt = dt;
   lastT = t;
   update(dt);

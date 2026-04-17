@@ -14,7 +14,7 @@ const PAUSE_COMMANDS = {
   "/background_color": "Set starfield background color (name or hex)",
   "/bombs": "Set bombs to 0-99, or 100/MAX (e.g. /bombs 5 or /bombs 100)",
   "/fullscreen": "Toggle fullscreen mode",
-  "/game_speed": "Set game speed from -5 to 20. 0 freezes; 1 is normal.",
+  "/game_speed": "Set game speed from -5 to 20. 0 loads static Wave 1/UFO staring contest; 1 is normal.",
   "/hearts": "Set max hearts to 1-99, or 100/MAX (e.g. /hearts 6 or /hearts 100)",
   "/help": "List all available commands",
   "/invert": "Toggle inverted colors",
@@ -28,7 +28,7 @@ const PAUSE_COMMANDS = {
 // /game_speed keeps literal 20 as max and allows -5..20.
 const PAUSE_COMMAND_CONTROLS = {
   "/bombs": { type:"number", min:0, max:100, step:1, defaultValue:5, maxLabel:"MAX", note:"100 = MAX" },
-  "/game_speed": { type:"number", min:-5, max:20, step:1, defaultValue:1, note:"0 = frozen, 1 = normal" },
+  "/game_speed": { type:"number", min:-5, max:20, step:1, defaultValue:1, note:"0 = static UFO tableau, 1 = normal" },
   "/hearts": { type:"number", min:1, max:100, step:1, defaultValue:3, maxLabel:"MAX", note:"100 = MAX" },
   "/lives": { type:"number", min:0, max:100, step:1, defaultValue:1, maxLabel:"MAX", note:"100 = MAX" },
   "/shields": { type:"number", min:0, max:100, step:1, defaultValue:2, maxLabel:"MAX", note:"100 = MAX" }
