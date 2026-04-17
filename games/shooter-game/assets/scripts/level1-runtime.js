@@ -4048,6 +4048,7 @@ function spawnPlayerDeath(isGameOver){
   deathGameOver = !!isGameOver;
   deathTimer = deathGameOver ? 1.2 : 0.85;
   if (deathGameOver){
+    triggerGlitchSpiral();
     deathOverlay.style.display = "flex";
   }
 
@@ -4139,7 +4140,8 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space") e.preventDefault();
   const target = e.target;
   const typingIntoField = target && ((target.tagName === "INPUT") || (target.tagName === "TEXTAREA") || target.isContentEditable);
-  if (e.code === "Tab" && !typingIntoField){ triggerGlitchSpiral(); e.preventDefault(); }
+  // Tab no longer triggers the glitch spiral; prevent browser focus-stealing during gameplay.
+  if (e.code === "Tab" && !typingIntoField){ e.preventDefault(); }
   const k = e.key.toLowerCase();
   const code = e.code || e.key;
   setActiveInputMode(INPUT_MODE_KEYBOARD);
