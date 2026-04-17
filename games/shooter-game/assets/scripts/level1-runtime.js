@@ -307,6 +307,25 @@ function applyChromaticAberration(beat){
   ctx.drawImage(fxCanvas, 0, 0);
 }
 
+function syncWholeScreenVideoFx(beat=0){
+  const enabled = !!VIDEO_FX_ENABLED;
+  document.body.classList.toggle("videoFxActive", enabled);
+  if (!enabled) return;
+  const hue = (time * 10 + beat * 55) % 360;
+  const shift = 1.2 + beat * 2.8;
+  const overlayOpacity = Math.max(0.10, Math.min(0.28, 0.13 + beat * 0.14));
+  document.documentElement.style.setProperty("--video-fx-hue", `${hue}deg`);
+  document.documentElement.style.setProperty("--video-fx-shift", `${shift}px`);
+  document.documentElement.style.setProperty("--video-fx-overlay-opacity", String(overlayOpacity));
+}
+
+function setVideoFxEnabled(enabled){
+  VIDEO_FX_ENABLED = !!enabled;
+  syncWholeScreenVideoFx(getBeat());
+  syncCheatsMenuState();
+}
+
+
 const overlay = document.getElementById("overlay");
 const livesSlot = document.getElementById("livesSlot");
 const livesText = document.getElementById("livesText");
@@ -725,8 +744,7 @@ function execPauseCommand(cmd){
 
   // /video_fx -> toggle chromatic aberration + hue drift
   if (raw === "/video_fx"){
-    VIDEO_FX_ENABLED = !VIDEO_FX_ENABLED;
-    syncCheatsMenuState();
+    setVideoFxEnabled(!VIDEO_FX_ENABLED);
     return { ok:true, message:`Video FX ${VIDEO_FX_ENABLED ? "enabled" : "disabled"}` };
   }
 
@@ -1930,8 +1948,7 @@ if (invertColorsCheckbox){
 
 if (videoFxCheckbox){
   videoFxCheckbox.addEventListener("change", () => {
-    VIDEO_FX_ENABLED = !!videoFxCheckbox.checked;
-    syncCheatsMenuState();
+    setVideoFxEnabled(!!videoFxCheckbox.checked);
   });
 }
 
@@ -5468,10 +5485,13 @@ if (isDragonEnemy(e)){
     document.getElementById("stageHud").textContent = "";
   }
 
-  // Post FX pass (subtle)
+  // Post FX pass: canvas + visible DOM/HUD/menu layers.
   if (VIDEO_FX_ENABLED){
     const beat = getBeat();
     applyChromaticAberration(beat);
+    syncWholeScreenVideoFx(beat);
+  } else if (document.body.classList.contains("videoFxActive")){
+    syncWholeScreenVideoFx(0);
   }
 
   // Glitch spiral burst (Tab)
