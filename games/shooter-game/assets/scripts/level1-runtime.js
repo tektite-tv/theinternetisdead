@@ -1647,90 +1647,58 @@ function resize(){
 window.addEventListener("resize", resize);
 
 function fitOptionsMenuToViewport(){
-  if (!optionsMenu) return;
-  const baseScale = 0.975;
-  optionsMenu.style.transform = `scale(${baseScale})`;
-  optionsMenu.style.margin = "0";
-  optionsMenu.style.transformOrigin = "center center";
-  if (optionsMenu.style.display === "none" || optionsMenu.offsetParent === null) return;
-  const margin = 12;
-  const availableW = Math.max(320, window.innerWidth - margin * 2);
-  const availableH = Math.max(240, window.innerHeight - margin * 2);
-  const rect = optionsMenu.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
-  const fitScale = Math.min(1, availableW / rect.width, availableH / rect.height);
-  const scale = baseScale * fitScale;
-  optionsMenu.style.transform = `scale(${scale})`;
-  if (fitScale < 1) {
-    const scaledHeight = rect.height * scale;
-    const slack = Math.max(0, availableH - scaledHeight);
-    optionsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
-  }
+  sizeMenuLikeStartMenu(optionsMenu, optionsMenuInner, optionsScroll);
 }
 
 function fitCheatsMenuToViewport(){
-  if (!cheatsMenu) return;
-  cheatsMenu.style.transform = "scale(1)";
-  cheatsMenu.style.margin = "0";
-  cheatsMenu.style.transformOrigin = "center center";
-  if (cheatsMenu.style.display === "none" || cheatsMenu.offsetParent === null) return;
-
-  const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
-  const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
-  const rect = cheatsMenu.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
-  const scaleX = (viewportW - 24) / rect.width;
-  const scaleY = (viewportH - 24) / rect.height;
-  const scale = Math.max(0.78, Math.min(1, scaleX, scaleY));
-  cheatsMenu.style.transform = `scale(${scale})`;
-  const scaledHeight = rect.height * scale;
-  const slack = Math.max(0, viewportH - scaledHeight);
-  if (slack > 6){ cheatsMenu.style.margin = `${Math.floor(slack / 2)}px 0`; }
+  sizeMenuLikeStartMenu(cheatsMenu, cheatsMenuInner, cheatsScroll);
 }
 
-function fitControlsMenuToViewport(){
-  if (!controlsMenu) return;
-  controlsMenu.style.transform = "scale(1)";
-  controlsMenu.style.margin = "0";
-  controlsMenu.style.transformOrigin = "center center";
-  controlsMenu.style.boxSizing = "border-box";
-  controlsMenu.style.width = "";
-  controlsMenu.style.height = "";
-  controlsMenu.style.minHeight = "";
-  controlsMenu.style.maxHeight = "";
+function sizeMenuLikeStartMenu(menuEl, innerEl=null, scrollEl=null){
+  if (!menuEl) return;
+  menuEl.style.transform = "scale(1)";
+  menuEl.style.margin = "0";
+  menuEl.style.transformOrigin = "center center";
+  menuEl.style.boxSizing = "border-box";
+  menuEl.style.width = "";
+  menuEl.style.height = "";
+  menuEl.style.minHeight = "";
+  menuEl.style.maxHeight = "";
 
-  if (controlsMenuInner){
-    controlsMenuInner.style.transform = "none";
-    controlsMenuInner.style.marginBottom = "0";
+  if (innerEl){
+    innerEl.style.transform = "none";
+    innerEl.style.marginBottom = "0";
   }
-  if (controlsListScroll){
-    controlsListScroll.scrollTop = 0;
-  }
+  if (scrollEl) scrollEl.scrollTop = 0;
 
-  if (controlsMenu.style.display === "none" || controlsMenu.offsetParent === null) return;
+  if (menuEl.style.display === "none" || menuEl.offsetParent === null) return;
 
   if (startMenuPanelRect && startMenuPanelRect.width && startMenuPanelRect.height){
     const panelW = Math.round(startMenuPanelRect.width);
     const panelH = Math.round(startMenuPanelRect.height);
-    controlsMenu.style.width = `${panelW}px`;
-    controlsMenu.style.height = `${panelH}px`;
-    controlsMenu.style.minHeight = `${panelH}px`;
-    controlsMenu.style.maxHeight = `${panelH}px`;
+    menuEl.style.width = `${panelW}px`;
+    menuEl.style.height = `${panelH}px`;
+    menuEl.style.minHeight = `${panelH}px`;
+    menuEl.style.maxHeight = `${panelH}px`;
   }
 
   const margin = 12;
   const availableW = Math.max(320, window.innerWidth - margin * 2);
   const availableH = Math.max(240, window.innerHeight - margin * 2);
-  const rect = controlsMenu.getBoundingClientRect();
+  const rect = menuEl.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
 
   const panelScale = Math.min(1, availableW / rect.width, availableH / rect.height);
-  controlsMenu.style.transform = `scale(${panelScale})`;
+  menuEl.style.transform = `scale(${panelScale})`;
   if (panelScale < 1) {
     const scaledHeight = rect.height * panelScale;
     const slack = Math.max(0, availableH - scaledHeight);
-    controlsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
+    menuEl.style.margin = `${Math.floor(slack / 2)}px 0`;
   }
+}
+
+function fitControlsMenuToViewport(){
+  sizeMenuLikeStartMenu(controlsMenu, controlsMenuInner, controlsListScroll);
 }
 
 /* =======================
@@ -1810,7 +1778,11 @@ function playSfxImmediate(a){
 const uiRoot = document.getElementById("uiRoot");
 const startMenu = document.getElementById("startMenu");
 const optionsMenu = document.getElementById("optionsMenu");
+const optionsMenuInner = document.getElementById("optionsMenuInner");
+const optionsScroll = document.getElementById("optionsScroll");
 const cheatsMenu = document.getElementById("cheatsMenu");
+const cheatsMenuInner = document.getElementById("cheatsMenuInner");
+const cheatsScroll = document.getElementById("cheatsScroll");
 const assetStatus = document.getElementById("assetStatus");
 function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 
@@ -2780,6 +2752,7 @@ function showMenu(){
   if (winOverlay) winOverlay.style.display = "none";
 
   startMenu.style.display = "block";
+  try{ startMenuPanelRect = startMenu.getBoundingClientRect(); }catch(e){}
   optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   if (cheatsMenu) cheatsMenu.style.display = "none";
@@ -2979,6 +2952,7 @@ function restartRun(){
   startGame();
 }
 function showCheats(){
+  if (startMenu && startMenu.style.display !== "none") startMenuPanelRect = startMenu.getBoundingClientRect();
   setPaused(false);
   gameState = STATE.CHEATS;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
@@ -3065,6 +3039,7 @@ function markOptionsClean(applied=false){
 }
 
 function showOptions(){
+  if (startMenu && startMenu.style.display !== "none") startMenuPanelRect = startMenu.getBoundingClientRect();
   setPaused(false);
   gameState = STATE.OPTIONS;
   markOptionsClean(false);
