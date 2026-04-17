@@ -742,6 +742,20 @@ function execPauseCommand(cmd){
     return { ok:true, message:"/fullscreen executed" };
   }
 
+  // /game_speed [#] -> set gameplay speed scale. 0 freezes, 1 normal, -5 slowest, 20 fastest.
+  if (raw.startsWith("/game_speed")){
+    const arg = raw.slice("/game_speed".length).trim();
+    if (!arg){
+      return { ok:true, message:`Game speed is ${clampGameSpeedValue(START_GAME_SPEED)} (${GAME_SPEED_MULT === 0 ? "frozen" : GAME_SPEED_MULT + "x"})` };
+    }
+    const parsed = Number(arg);
+    if (!Number.isFinite(parsed)){
+      return { ok:false, message:"Usage: /game_speed [-5..20], where 0 freezes and 1 is normal" };
+    }
+    const speed = applyGameSpeedValue(parsed);
+    return { ok:true, message:`Game speed set to ${speed}${speed === 0 ? " (frozen)" : ""}` };
+  }
+
   // /background_color [#RRGGBB] -> set starfield background color
   if (raw.startsWith("/background_color")){
     const arg = raw.slice("/background_color".length).trim();
@@ -1903,8 +1917,8 @@ const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
   let START_SHIELDS_INFINITE = false;
   let START_BOMBS_INFINITE = false;
   // v1.96: game speed slider (1-10). 5 = 1.0x.
-  let START_GAME_SPEED = 5;
-  let GAME_SPEED_MULT = 1.0;
+  let START_GAME_SPEED = 1;
+  let GAME_SPEED_MULT = 1;
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   let INFINITE_MODE = false;
   
@@ -3143,6 +3157,29 @@ function markOptionsClean(applied=false){
   updateOptionsApplyButtonState();
 }
 
+function clampGameSpeedValue(value){
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 1;
+  return Math.max(-5, Math.min(20, Math.round(n)));
+}
+
+function gameSpeedToMultiplier(value){
+  const speed = clampGameSpeedValue(value);
+  if (speed === 0) return 0;
+  if (speed === 1) return 1;
+  if (speed < 0) return Math.max(0.05, (speed + 6) / 6);
+  return speed;
+}
+
+function applyGameSpeedValue(value){
+  const speed = clampGameSpeedValue(value);
+  START_GAME_SPEED = speed;
+  GAME_SPEED_MULT = gameSpeedToMultiplier(speed);
+  if (speedSlider) speedSlider.value = String(speed);
+  syncStartOptionsLabels();
+  return speed;
+}
+
 function normalizeHexColor(value){
   const raw = String(value || "").trim();
   const withHash = raw.startsWith("#") ? raw : "#" + raw;
@@ -3179,7 +3216,7 @@ function showOptions(){
   heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
   shieldsSlider.value = START_SHIELDS_INFINITE ? 100 : START_SHIELDS;
   bombsSlider.value = START_BOMBS_INFINITE ? 100 : START_BOMBS;
-  if (speedSlider) speedSlider.value = START_GAME_SPEED;
+  if (speedSlider) speedSlider.value = String(clampGameSpeedValue(START_GAME_SPEED));
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   syncStartOptionsLabels();
   normalizeStartStatInput(livesSlider);
@@ -3434,8 +3471,7 @@ function applyStartSettingsFromControls(){
 }
 
 function applyOptionsChanges(){
-  START_GAME_SPEED = (speedSlider ? parseInt(speedSlider.value, 10) : 5);
-  GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
+  applyGameSpeedValue(speedSlider ? speedSlider.value : 1);
   syncStartOptionsLabels();
   markOptionsClean(true);
 }
