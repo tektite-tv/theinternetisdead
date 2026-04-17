@@ -3472,6 +3472,20 @@ function drawStaticPlayerSprite(alpha = 1, xOff = 0, yOff = 0, extraWidthScale =
   ctx.restore();
 }
 
+function redrawPlayerSpriteAfterVideoFx(){
+  if (gameState !== STATE.PLAYING) return;
+  if (isDead || gameWon) return;
+  const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
+  if (flicker) return;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  ctx.filter = "none";
+  ctx.globalAlpha = 1;
+  drawStaticPlayerSprite();
+  ctx.restore();
+}
+
 function drawPlayerGhosts(){
   if (!playerGhosts.length) return;
   for (const g of playerGhosts){
@@ -5515,9 +5529,11 @@ if (isDragonEnemy(e)){
   }
 
   // Post FX pass: canvas + visible DOM/HUD/menu layers.
+  // Redraw the active player afterward so /video_fx does not hue-shift the player icon.
   if (VIDEO_FX_ENABLED){
     const beat = getBeat();
     applyChromaticAberration(beat);
+    redrawPlayerSpriteAfterVideoFx();
     syncWholeScreenVideoFx(beat);
   } else if (document.body.classList.contains("videoFxActive")){
     syncWholeScreenVideoFx(0);
