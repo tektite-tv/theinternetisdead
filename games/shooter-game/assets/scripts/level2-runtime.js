@@ -3234,7 +3234,7 @@ function pollGamepad(dt){
       toggleFullscreen();
     }
     if (pressCommands){
-      requestOpenChat(false);
+      requestOpenChat(false, "/help");
     }
     if (isPaused && parentChatVisible){
       if (navUp) postChatControllerAction('cycleUp');
@@ -4340,7 +4340,7 @@ window.addEventListener("keydown", (e) => {
   setActiveInputMode(INPUT_MODE_KEYBOARD);
   keys[k] = true;
   keys[code] = true;
-  if (!typingIntoField && code === keyboardBindings.commands){ e.preventDefault(); requestOpenChat(true); return; }
+  if (!typingIntoField && code === keyboardBindings.commands){ e.preventDefault(); requestOpenChat(false, "/help"); return; }
   if (code === keyboardBindings.mute){ audioMuted = !audioMuted; applyMuteState(); if (!audioMuted) ensureMusicPlaying(); }
   if (code === keyboardBindings.shoot && gameState === STATE.PLAYING) shoot();
   if (code === keyboardBindings.fullscreen) toggleFullscreen();

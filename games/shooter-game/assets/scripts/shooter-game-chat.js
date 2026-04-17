@@ -442,7 +442,9 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         focus: options.focus !== false,
         seedSlash: !!options.seedSlash
       });
-      if (options.autoSuggestSlash) {
+      if (options.runCommand) {
+        withChatInputReady(() => runChatCommand(options.runCommand));
+      } else if (options.autoSuggestSlash) {
         withChatInputReady(primeChatSlashSuggestion);
       }
     }
@@ -460,7 +462,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       pendingChatOpenOptions = {
         focus: options.focus !== false,
         seedSlash: !!options.seedSlash,
-        autoSuggestSlash: !!options.autoSuggestSlash
+        autoSuggestSlash: !!options.autoSuggestSlash,
+        runCommand: options.runCommand ? String(options.runCommand).trim() : ''
       };
       flushPendingChatOpen();
     }
@@ -546,7 +549,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         if (shouldIgnoreChatShortcutFromEvent(event)) return;
         event.preventDefault();
         event.stopPropagation();
-        openChatFromParent({ focus: true, seedSlash: true });
+        openChatFromParent({ focus: true, runCommand: '/help' });
         return;
       }
 
@@ -638,11 +641,9 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         openChatFromParent({
           focus: true,
           seedSlash: !!data.seedSlash,
-          autoSuggestSlash: !!data.autoSuggestSlash
+          autoSuggestSlash: !!data.autoSuggestSlash,
+          runCommand: data.runCommand ? String(data.runCommand) : ''
         });
-        if (data.runCommand) {
-          withChatInputReady(() => runChatCommand(data.runCommand));
-        }
         return;
       }
       if (data.type === 'closeChatFromChild') {
