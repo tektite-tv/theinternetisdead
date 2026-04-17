@@ -1189,7 +1189,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 1:51 AM)</a></div>
+<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 1:54 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1204,21 +1204,22 @@ body.invert-colors {
   </div>
 
   <div id="optionsMenu" class="panel" style="display:none;">
-    <div class="title">OPTIONS</div>
-
-    
-    <div class="optionsGrid">
+    <div id="optionsMenuInner">
+      <div class="title">OPTIONS</div>
+      <div id="optionsScroll" class="menuMiddleScroll">
+        <div class="optionsGrid">
       <div class="optRow fullRow buttonOnlyRow">
         <button id="btnControls" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Controls</button>
-      </div><div class="optRow">
+      </div>
+<div class="optRow">
         <div class="optLabel"><span>Game Speed</span><span id="speedVal">5</span></div>
         <input id="speedSlider" type="range" min="1" max="10" value="5" step="1" />
         <div class="hint">5 = normal. 1 = slow-mo. 10 = turbo.</div>
       </div>
-
       <div class="optRow fullRow buttonOnlyRow">
         <button id="btnCheats" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Cheats</button>
-      </div></div>
+      </div>
+        </div>
       </div>
 
       <div class="btnRow menuBottomRow" style="margin-top:14px;">
@@ -1233,6 +1234,7 @@ body.invert-colors {
       <div class="title">CHEATS</div>
       <div id="cheatsScroll" class="menuMiddleScroll">
         <div class="cheatsGrid">
+
 
 
       <div class="optRow fullRow">
@@ -1263,6 +1265,7 @@ body.invert-colors {
         <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Boss Mode, or Insanity 1-10.</div>
       </div>
 
+
       
 
       <div class="optRow fullRow">
@@ -1287,6 +1290,38 @@ body.invert-colors {
         </div>
         <div class="hint">Use 0-99 for exact values. 100 = INFINITE</div>
       </div>
+
+
+
+      
+      <div class="optRow cheatRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Infinite Mode</div>
+            <div class="cheatCommand">Starting state + live gameplay</div>
+          </div>
+
+
+
+      
+      <div class="optRow cheatRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Infinite Mode</div>
+            <div class="cheatCommand">Starting state + live gameplay</div>
+          </div>
+          <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
+      </div>
+
+      <div class="optRow cheatRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Invert Colors</div>
+            <div class="cheatCommand">/invert</div>
+          </div>
+
 
 
       
@@ -1318,16 +1353,12 @@ body.invert-colors {
             <div class="cheatTitle">Video FX</div>
             <div class="cheatCommand">/video_fx</div>
           </div>
-          <label><input id="videoFxCheckbox" type="checkbox" /><span id="videoFxStatus" style="margin-left:0;">Disabled</span></label>
-        </div>
-        <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
-      </div>
-    </div>
+
 
       <div class="optRow fullRow">
         <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
       </div>
-
+        </div>
       </div>
 
       <div class="btnRow menuBottomRow" style="margin-top:14px;">
@@ -1337,7 +1368,7 @@ body.invert-colors {
     </div>
   </div>
 
-  <div id="controlsMenu" class="panel" style="display:none;">
+<div id="controlsMenu" class="panel" style="display:none;">
     <div id="controlsMenuInner">
       <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
       <div class="controlsGrid">
@@ -1355,7 +1386,6 @@ body.invert-colors {
     </div>
   </div>
 </div>
-
 <script src="/games/shooter-game/assets/scripts/level-frame-bridge.js"></script>
 <script src="/games/shooter-game/assets/scripts/level-shared-commands.js"></script>
 <script src="/games/shooter-game/assets/scripts/level-bg-suggest.js"></script>
