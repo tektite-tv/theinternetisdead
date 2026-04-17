@@ -886,13 +886,17 @@ if (pauseCommand){
     // Prevent gameplay binds while typing
     ev.stopPropagation();
 
-    // Autocomplete cycling when suggestions are open
-    if (bgSuggestOpen && (ev.key === "Tab" || ev.key === "ArrowDown" || ev.key === "ArrowUp")){
-      if (ev.key === "ArrowUp") cycleBgChoice(-1);
-      else cycleBgChoice(1);
-      applyBgChoiceToInput();
-      ev.preventDefault();
-      return;
+    // Autocomplete cycling for slash commands and /background_color values.
+    if (ev.key === "Tab" || ev.key === "ArrowDown" || ev.key === "ArrowUp"){
+      const currentValue = pauseCommand.value || "";
+      if (!bgSuggestOpen && bgPrefix(currentValue)) openBgSuggestFromValue(currentValue);
+      if (bgSuggestOpen){
+        if (ev.key === "ArrowUp") cycleBgChoice(-1);
+        else cycleBgChoice(1);
+        applyBgChoiceToInput();
+        ev.preventDefault();
+        return;
+      }
     }
 
     if (ev.key === "Enter"){

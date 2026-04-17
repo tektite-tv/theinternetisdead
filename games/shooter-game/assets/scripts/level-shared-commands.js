@@ -105,3 +105,129 @@ function showHelp(){
     </div>`;
   }).join("");
 }
+
+
+// Generic pause command autocomplete/suggestions.
+// This backs Tab/Arrow cycling for the pause command input and includes /game_speed.
+let pauseCommandSuggestMode = "command";
+
+function getPauseCommandList(){
+  try{
+    return Object.keys(PAUSE_COMMANDS || {}).sort((a,b)=>a.localeCompare(b));
+  }catch(e){
+    return [];
+  }
+}
+
+function pauseCommandPrefix(value){
+  const raw = String(value || "");
+  const trimmed = raw.trim();
+  if (!trimmed || !trimmed.startsWith("/")) return false;
+  // Only command-name autocomplete before the first argument.
+  return !/\s/.test(trimmed);
+}
+
+function bgPrefix(value){
+  const raw = String(value || "");
+  const trimmed = raw.trim();
+  if (pauseCommandPrefix(trimmed)) return true;
+  return trimmed.startsWith(BG_CMD + " ");
+}
+
+function getCommandSuggestions(value){
+  const raw = String(value || "").trim();
+  if (!raw.startsWith("/") || /\s/.test(raw)) return [];
+  const matches = getPauseCommandList().filter(cmd => cmd.startsWith(raw));
+  return matches.length ? matches : getPauseCommandList();
+}
+
+function openBgSuggestFromValue(value){
+  if (!pauseCmdSuggest) return;
+  const raw = String(value || "");
+  const trimmed = raw.trim();
+
+  if (pauseCommandPrefix(trimmed)){
+    pauseCommandSuggestMode = "command";
+    bgSuggestList = getCommandSuggestions(trimmed);
+    bgSuggestIndex = 0;
+    renderBgSuggest();
+    return;
+  }
+
+  if (trimmed.startsWith(BG_CMD + " ")){
+    pauseCommandSuggestMode = "background";
+    const q = trimmed.slice(BG_CMD.length).trim().toLowerCase();
+    bgSuggestList = BG_COLORS.filter(color => !q || color.toLowerCase().includes(q));
+    if (!bgSuggestList.length) bgSuggestList = BG_COLORS.slice();
+    bgSuggestIndex = 0;
+    renderBgSuggest();
+    return;
+  }
+
+  closeBgSuggest();
+}
+
+function closeBgSuggest(){
+  bgSuggestOpen = false;
+  bgSuggestList = [];
+  bgSuggestIndex = 0;
+  pauseCommandSuggestMode = "command";
+  if (pauseCmdSuggest){
+    pauseCmdSuggest.style.display = "none";
+    pauseCmdSuggest.innerHTML = "";
+  }
+}
+
+function renderBgSuggest(){
+  if (!pauseCmdSuggest) return;
+  if (!bgSuggestList || !bgSuggestList.length){
+    closeBgSuggest();
+    return;
+  }
+
+  bgSuggestOpen = true;
+  pauseCmdSuggest.style.display = "block";
+
+  if (pauseCommandSuggestMode === "command"){
+    pauseCmdSuggest.innerHTML = bgSuggestList.map((cmd, i) => {
+      const active = i === bgSuggestIndex;
+      const desc = (PAUSE_COMMANDS && PAUSE_COMMANDS[cmd]) ? PAUSE_COMMANDS[cmd] : "";
+      const cfg = PAUSE_COMMAND_CONTROLS && PAUSE_COMMAND_CONTROLS[cmd];
+      const label = cfg ? `${cmd} ${formatPauseCommandNumber(cmd, cfg.defaultValue)}` : cmd;
+      const valueAttr = cfg ? ` data-value="${cfg.defaultValue}"` : "";
+      return `<div data-cmd="${cmd}"${valueAttr} data-i="${i}" style="padding:6px 8px;border-radius:8px;margin-bottom:4px;background:${active ? "rgba(0,255,102,0.22)" : "rgba(0,255,102,0.08)"};outline:1px solid ${active ? "rgba(0,255,102,0.75)" : "rgba(0,255,102,0.18)"};cursor:pointer;">
+        <strong>${label}</strong>
+        <div style="font-size:12px;opacity:0.85;">${desc}</div>
+        ${cfg ? `<div style="font-size:11px;opacity:0.72;">Range: ${cfg.min}..${cfg.max}${cfg.note ? " • " + cfg.note : ""}</div>` : ""}
+      </div>`;
+    }).join("");
+    return;
+  }
+
+  pauseCmdSuggest.innerHTML = bgSuggestList.map((color, i) => {
+    const active = i === bgSuggestIndex;
+    const swatch = /^#/.test(color) ? color : color;
+    return `<div data-i="${i}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;margin-bottom:4px;background:${active ? "rgba(0,255,102,0.22)" : "rgba(0,255,102,0.08)"};outline:1px solid ${active ? "rgba(0,255,102,0.75)" : "rgba(0,255,102,0.18)"};cursor:pointer;">
+      <span style="width:14px;height:14px;border-radius:3px;border:1px solid rgba(255,255,255,0.35);background:${swatch};display:inline-block;"></span>
+      <strong>${color}</strong>
+    </div>`;
+  }).join("");
+}
+
+function cycleBgChoice(delta){
+  if (!bgSuggestList || !bgSuggestList.length) return;
+  bgSuggestIndex = (bgSuggestIndex + delta + bgSuggestList.length) % bgSuggestList.length;
+  renderBgSuggest();
+}
+
+function applyBgChoiceToInput(){
+  if (!pauseCommand || !bgSuggestList || !bgSuggestList.length) return;
+  const choice = bgSuggestList[bgSuggestIndex];
+  if (pauseCommandSuggestMode === "command"){
+    const cfg = PAUSE_COMMAND_CONTROLS && PAUSE_COMMAND_CONTROLS[choice];
+    pauseCommand.value = cfg ? buildPauseCommand(choice, cfg.defaultValue) : (choice + " ");
+    return;
+  }
+  pauseCommand.value = BG_CMD + " " + choice;
+}
+
