@@ -742,6 +742,21 @@ function execPauseCommand(cmd){
     return { ok:true, message:"/fullscreen executed" };
   }
 
+  // /background_color [#RRGGBB] -> set starfield background color
+  if (raw.startsWith("/background_color")){
+    const arg = raw.slice("/background_color".length).trim();
+    if (!arg){
+      return { ok:true, message:`Background color is ${normalizeHexColor(starfieldBgOverride || "#000000") || "#000000"}` };
+    }
+    const normalized = normalizeHexColor(arg);
+    if (!normalized){
+      return { ok:false, message:"Usage: /background_color #000000" };
+    }
+    starfieldBgOverride = normalized;
+    syncBackgroundColorControls();
+    return { ok:true, message:`Background color set to ${normalized}` };
+  }
+
   // /video_fx -> toggle chromatic aberration + hue drift
   if (raw === "/video_fx"){
     setVideoFxEnabled(!VIDEO_FX_ENABLED);
@@ -1852,6 +1867,9 @@ const controlsListScroll = document.getElementById("controlsListScroll");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
+const btnFullscreenOption = document.getElementById("btnFullscreenOption");
+const backgroundColorHex = document.getElementById("backgroundColorHex");
+const backgroundColorPicker = document.getElementById("backgroundColorPicker");
 const btnCheatsBack = document.getElementById("btnCheatsBack");
 const btnCheatsApply = document.getElementById("btnCheatsApply");
 
@@ -2038,6 +2056,7 @@ function syncStartOptionsLabels(){
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
   syncStartOptionsLabels();
   syncCheatsMenuState();
+  syncBackgroundColorControls();
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
 const INPUT_MODE_CONTROLLER = "controller";
@@ -2431,7 +2450,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [btnControls, speedSlider, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [btnControls, btnFullscreenOption, speedSlider, backgroundColorHex, backgroundColorPicker, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -2773,12 +2792,30 @@ function activateControllerTarget(el){
   if (typeof el.click === 'function') el.click();
 }
 
+function stepColorInput(inputEl, delta){
+  if (!inputEl) return false;
+  const current = normalizeHexColor(inputEl.value || starfieldBgOverride || "#000000") || "#000000";
+  const n = parseInt(current.slice(1), 16);
+  let r = (n >> 16) & 255;
+  let g = (n >> 8) & 255;
+  let b = n & 255;
+  const step = delta > 0 ? 16 : -16;
+  r = Math.max(0, Math.min(255, r + step));
+  g = Math.max(0, Math.min(255, g + step));
+  b = Math.max(0, Math.min(255, b + step));
+  const next = "#" + [r,g,b].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+  applyBackgroundColorFromControls(next);
+  return true;
+}
+
 function adjustControllerOption(delta){
   const items = getOptionsControllerTargets();
   const el = items[optionsFocusIndex];
   if (!el) return false;
   if (el.tagName === 'SELECT') return cycleSelect(el, delta);
   if (el.type === 'range') return stepRange(el, delta);
+  if (el === backgroundColorPicker) return stepColorInput(el, delta);
+  if (el === backgroundColorHex) return false;
   if (isStartingStatInputEl(el)) return stepNumberInput(el, delta);
   if (el.type === 'checkbox'){
     el.checked = delta > 0;
@@ -3106,6 +3143,31 @@ function markOptionsClean(applied=false){
   updateOptionsApplyButtonState();
 }
 
+function normalizeHexColor(value){
+  const raw = String(value || "").trim();
+  const withHash = raw.startsWith("#") ? raw : "#" + raw;
+  if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash.toUpperCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(withHash)){
+    return "#" + withHash.slice(1).split("").map(ch => ch + ch).join("").toUpperCase();
+  }
+  return null;
+}
+
+function syncBackgroundColorControls(){
+  const current = normalizeHexColor(starfieldBgOverride || "#000000") || "#000000";
+  if (backgroundColorHex) backgroundColorHex.value = current;
+  if (backgroundColorPicker) backgroundColorPicker.value = current;
+}
+
+function applyBackgroundColorFromControls(value){
+  const normalized = normalizeHexColor(value);
+  if (!normalized) return false;
+  starfieldBgOverride = normalized;
+  if (backgroundColorHex) backgroundColorHex.value = normalized;
+  if (backgroundColorPicker) backgroundColorPicker.value = normalized;
+  return true;
+}
+
 function showOptions(){
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
@@ -3315,9 +3377,35 @@ if (btnMysteryLink){
   });
 }
 
+if (backgroundColorHex){
+  backgroundColorHex.addEventListener("input", () => {
+    const normalized = normalizeHexColor(backgroundColorHex.value);
+    if (normalized && backgroundColorPicker) backgroundColorPicker.value = normalized;
+  });
+  backgroundColorHex.addEventListener("change", () => {
+    applyBackgroundColorFromControls(backgroundColorHex.value);
+  });
+  backgroundColorHex.addEventListener("keydown", (event) => {
+    if (event.key === "Enter"){
+      event.preventDefault();
+      applyBackgroundColorFromControls(backgroundColorHex.value);
+      try{ backgroundColorHex.blur(); }catch(e){}
+    }
+  });
+}
+if (backgroundColorPicker){
+  backgroundColorPicker.addEventListener("input", () => {
+    applyBackgroundColorFromControls(backgroundColorPicker.value);
+  });
+  backgroundColorPicker.addEventListener("change", () => {
+    applyBackgroundColorFromControls(backgroundColorPicker.value);
+  });
+}
+
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
+if (btnFullscreenOption) btnFullscreenOption.addEventListener("click", toggleFullscreen);
 if (btnCheats) btnCheats.addEventListener("click", showCheats);
 function applyCheatsChanges(){
   applyStartSettingsFromControls();

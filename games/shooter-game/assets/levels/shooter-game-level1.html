@@ -1194,6 +1194,47 @@ body.invert-colors {
     transform:scale(1);
   }
 
+
+  #optionsMenu #btnFullscreenOption{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:34px;
+    box-sizing:border-box;
+  }
+
+
+  #optionsMenu .backgroundColorControls{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    min-width:170px;
+  }
+  #optionsMenu .backgroundColorHex{
+    width:92px;
+    box-sizing:border-box;
+    font-family:monospace;
+    font-size:12px;
+    color:#00ff66;
+    background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    border-radius:9px;
+    padding:7px 8px;
+    outline:none;
+    text-transform:uppercase;
+  }
+  #optionsMenu .backgroundColorPicker{
+    width:38px;
+    height:34px;
+    box-sizing:border-box;
+    border:1px solid rgba(0,255,0,0.45);
+    border-radius:9px;
+    background:rgba(0,0,0,0.55);
+    padding:2px;
+    cursor:pointer;
+  }
+
 </style>
 
 <style>
@@ -1386,7 +1427,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 3:05 AM)</a></div>
+<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 3:14 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1408,6 +1449,18 @@ body.invert-colors {
       <div class="optRow fullRow buttonOnlyRow">
         <button id="btnControls" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Controls</button>
       </div>
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Fullscreen</div>
+            <div class="cheatCommand">/fullscreen</div>
+          </div>
+          <button id="btnFullscreenOption" class="smallBtn" type="button" style="min-width:120px;">Toggle</button>
+        </div>
+        <div class="hint">Toggle browser fullscreen for the whole shooter shell.</div>
+      </div>
+
+
 <div class="optRow">
         <div class="optLabel"><span>Game Speed</span><span id="speedVal">5</span></div>
         <input id="speedSlider" type="range" min="1" max="10" value="5" step="1" />
@@ -1419,7 +1472,21 @@ body.invert-colors {
           
 
 
-      <div class="optRow cheatRow commandOptionRow">
+            <div class="optRow cheatRow commandOptionRow backgroundColorRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Background Color</div>
+            <div class="cheatCommand">/background_color</div>
+          </div>
+          <div class="backgroundColorControls">
+            <input id="backgroundColorHex" class="backgroundColorHex" type="text" value="#000000" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Background color hex code" />
+            <input id="backgroundColorPicker" class="backgroundColorPicker" type="color" value="#000000" aria-label="Background color picker" />
+          </div>
+        </div>
+        <div class="hint">Set the starfield background color with a hex code.</div>
+      </div>
+
+<div class="optRow cheatRow commandOptionRow">
         <div class="cheatHeader">
           <div>
             <div class="cheatTitle">Invert Colors</div>
