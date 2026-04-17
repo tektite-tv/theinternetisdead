@@ -3351,6 +3351,7 @@ function showMenu(){
   rememberStartMenuPanelRect();
   renderMenuHudPreview();
   syncSpeedZeroStaticImages();
+  syncNicknameStatsLabels();
   renderLifetimeStats();
   fitStatsPanelToStartMenu();
 }
@@ -3847,7 +3848,13 @@ function syncNicknameControl(){
 function syncNicknameStatsLabels(){
   const savedNickname = getSavedChatNicknameValue();
   if (btnStats) btnStats.textContent = savedNickname ? `${savedNickname}'s Stats` : "Stats";
-  if (statsPanelTitle) statsPanelTitle.textContent = savedNickname ? `⭐ ${savedNickname}'s Lifetime Stats ⭐` : "⭐ Lifetime Stats ⭐";
+  if (statsPanelTitle){
+    if (savedNickname){
+      statsPanelTitle.innerHTML = `⭐ <span class="statsTitleNickname">${savedNickname}'s</span><span class="statsTitleLabel">Lifetime Stats ⭐</span>`;
+    } else {
+      statsPanelTitle.textContent = "⭐ Lifetime Stats ⭐";
+    }
+  }
 }
 
 function applyNicknameFromControls(value, announce=false){
@@ -3865,6 +3872,9 @@ function applyNicknameFromControls(value, announce=false){
   }catch(error){}
   return true;
 }
+
+syncNicknameControl();
+syncNicknameStatsLabels();
 
 function normalizeHexColor(value){
   const raw = String(value || "").trim();
