@@ -2310,6 +2310,15 @@ let pauseFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
 
+function refreshEntireShooterPage(){
+  try{
+    if (window.top && window.top.location) window.top.location.reload();
+    else window.location.reload();
+  }catch(e){
+    window.location.reload();
+  }
+}
+
 function focusControllerElement(el){
   if (activeInputMode !== INPUT_MODE_CONTROLLER) {
     clearControllerFocus();
@@ -3237,6 +3246,16 @@ if (typeof videoFxCheckbox !== "undefined" && videoFxCheckbox){
   videoFxCheckbox.addEventListener("change", markCheatsDirty);
 }
 
+if (titleHoverReveal){
+  titleHoverReveal.addEventListener("click", refreshEntireShooterPage);
+  titleHoverReveal.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " "){
+      event.preventDefault();
+      refreshEntireShooterPage();
+    }
+  });
+}
+
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
@@ -3816,7 +3835,10 @@ function pollGamepad(dt){
         else clearControllerFocus();
       }
       const menuTarget = getMenuControllerTargets()[menuFocusIndex];
-      if (pressMenuSelect && menuTarget && menuTarget !== titleHoverReveal && menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
+      if (pressMenuSelect && menuTarget){
+        if (menuTarget === titleHoverReveal) refreshEntireShooterPage();
+        else if (menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
+      }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
       if (pressY) showOptions();
     } else if (gameState === STATE.OPTIONS){
