@@ -1126,6 +1126,7 @@ function openStatsPanel(){
   if (statsPanel){
     statsPanel.style.display = "flex";
     statsPanel.setAttribute("aria-hidden", "false");
+    fitStatsPanelToStartMenu();
   }
 }
 
@@ -1819,6 +1820,7 @@ function resize(){
   fitOptionsMenuToViewport();
   fitCheatsMenuToViewport();
   fitControlsMenuToViewport();
+  fitStatsPanelToStartMenu();
 }
 window.addEventListener("resize", resize);
 
@@ -1828,6 +1830,16 @@ function fitOptionsMenuToViewport(){
 
 function fitCheatsMenuToViewport(){
   sizeMenuLikeStartMenu(cheatsMenu, cheatsMenuInner, cheatsScroll);
+}
+
+function fitStatsPanelToStartMenu(){
+  if (!statsPanelInner) return;
+  const sourceRect = getFallbackMenuRect();
+  if (!sourceRect || !sourceRect.width || !sourceRect.height) return;
+  statsPanelInner.style.width = `${Math.round(sourceRect.width)}px`;
+  statsPanelInner.style.height = `${Math.round(sourceRect.height)}px`;
+  statsPanelInner.style.maxWidth = `${Math.round(sourceRect.width)}px`;
+  statsPanelInner.style.maxHeight = `${Math.round(sourceRect.height)}px`;
 }
 
 function rememberStartMenuPanelRect(){
@@ -2001,6 +2013,7 @@ const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const btnStats = document.getElementById("btnStats");
 const statsPanel = document.getElementById("statsPanel");
+const statsPanelInner = document.getElementById("statsPanelInner");
 const btnStatsClose = document.getElementById("btnStatsClose");
 const btnStatsReset = document.getElementById("btnStatsReset");
 const statLifetimeScore = document.getElementById("statLifetimeScore");
@@ -3032,9 +3045,11 @@ function showMenu(){
   menuFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
   else clearControllerFocus();
+  rememberStartMenuPanelRect();
   renderMenuHudPreview();
   syncSpeedZeroStaticImages();
   renderLifetimeStats();
+  fitStatsPanelToStartMenu();
 }
 
 function showControlsMenu(){
