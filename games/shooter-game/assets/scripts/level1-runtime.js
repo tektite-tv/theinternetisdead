@@ -2307,6 +2307,8 @@ updateControlsDisplay();
 renderControlsBindingList();
 let menuFocusIndex = 0;
 let optionsFocusIndex = 0;
+let optionsHavePendingChanges = false;
+let optionsJustApplied = false;
 let cheatsFocusIndex = 0;
 let startingStatFocusIndex = 0;
 let pauseFocusIndex = 0;
@@ -2953,9 +2955,36 @@ function hideCheats(){
   renderMenuHudPreview();
 }
 
+function updateOptionsApplyButtonState(){
+  if (!btnApply) return;
+  if (optionsHavePendingChanges){
+    btnApply.textContent = "Apply (✕)";
+    btnApply.title = "Apply pending option changes";
+  } else if (optionsJustApplied){
+    btnApply.textContent = "Back (✓)";
+    btnApply.title = "Changes applied. Return to the start menu.";
+  } else {
+    btnApply.textContent = "Back";
+    btnApply.title = "Return to the start menu.";
+  }
+}
+
+function markOptionsDirty(){
+  optionsHavePendingChanges = true;
+  optionsJustApplied = false;
+  updateOptionsApplyButtonState();
+}
+
+function markOptionsClean(applied=false){
+  optionsHavePendingChanges = false;
+  optionsJustApplied = !!applied;
+  updateOptionsApplyButtonState();
+}
+
 function showOptions(){
   setPaused(false);
   gameState = STATE.OPTIONS;
+  markOptionsClean(false);
     // v1.96: populate start options UI with saved settings
   livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
   heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
@@ -3080,13 +3109,64 @@ spawnEnemies();
   window.focus();
 }
 
+
+if (livesSlider){
+  livesSlider.addEventListener("input", markOptionsDirty);
+  livesSlider.addEventListener("change", markOptionsDirty);
+}
+
+
+if (heartsSlider){
+  heartsSlider.addEventListener("input", markOptionsDirty);
+  heartsSlider.addEventListener("change", markOptionsDirty);
+}
+
+
+if (shieldsSlider){
+  shieldsSlider.addEventListener("input", markOptionsDirty);
+  shieldsSlider.addEventListener("change", markOptionsDirty);
+}
+
+
+if (bombsSlider){
+  bombsSlider.addEventListener("input", markOptionsDirty);
+  bombsSlider.addEventListener("change", markOptionsDirty);
+}
+
+
+if (speedSlider){
+  speedSlider.addEventListener("input", markOptionsDirty);
+  speedSlider.addEventListener("change", markOptionsDirty);
+}
+
+
+if (startWaveSelect){
+  startWaveSelect.addEventListener("input", markOptionsDirty);
+  startWaveSelect.addEventListener("change", markOptionsDirty);
+}
+
+
+if (typeof infiniteToggle !== "undefined" && infiniteToggle){
+  infiniteToggle.addEventListener("change", markOptionsDirty);
+}
+
+
+if (typeof invertColorsCheckbox !== "undefined" && invertColorsCheckbox){
+  invertColorsCheckbox.addEventListener("change", markOptionsDirty);
+}
+
+
+if (typeof videoFxCheckbox !== "undefined" && videoFxCheckbox){
+  videoFxCheckbox.addEventListener("change", markOptionsDirty);
+}
+
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", showCheats);
 if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
 btnBack.addEventListener("click", showMenu);
-btnApply.addEventListener("click", () => {
+function applyOptionsChanges(){
   // v1.96: Save start settings (lives/hearts/shields/bombs + infinite)
   {
     const livesOpt = parseResourceOption(livesSlider, 0);
@@ -3110,6 +3190,15 @@ btnApply.addEventListener("click", () => {
 
   // Keep the UI labels in sync and return to the main menu.
   syncStartOptionsLabels();
+  showMenu();
+  markOptionsClean(true);
+}
+
+btnApply.addEventListener("click", () => {
+  if (optionsHavePendingChanges){
+    applyOptionsChanges();
+    return;
+  }
   showMenu();
 });
 
