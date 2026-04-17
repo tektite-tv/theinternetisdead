@@ -3555,7 +3555,8 @@ function syncAnimatedGifSprite(owner, img, x, y, w, h, opts = {}){
     sprite.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
 
     const filters = [];
-    if (VIDEO_FX_ENABLED){
+    const allowVideoFx = opts.videoFx !== false;
+    if (VIDEO_FX_ENABLED && allowVideoFx){
       const beat = Math.max(0, Math.min(1, beatLevel || 0));
       const hue = (time * 10 + beat * 55) % 360;
       const glow = 1.05 + beat * 0.18;
