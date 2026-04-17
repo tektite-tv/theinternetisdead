@@ -1211,6 +1211,7 @@ function renderLifetimeStats(){
 }
 
 function openStatsPanel(){
+  syncNicknameStatsLabels();
   renderLifetimeStats();
   if (btnStatsLockedToggle){
     btnStatsLockedToggle.setAttribute("aria-expanded", "false");
@@ -3840,7 +3841,7 @@ function saveChatNickname(value){
 
 function syncNicknameControl(){
   if (!nicknameInput) return;
-  nicknameInput.value = loadSavedChatNickname();
+  nicknameInput.value = getSavedChatNicknameValue();
 }
 
 function syncNicknameStatsLabels(){
@@ -3912,6 +3913,13 @@ function showOptions(){
   syncCheatsMenuState();
   syncNicknameControl();
   syncNicknameStatsLabels();
+  try{
+    window.addEventListener("storage", (event) => {
+      if (event.key !== CHAT_NICKNAME_STORAGE_KEY) return;
+      syncNicknameControl();
+      syncNicknameStatsLabels();
+    });
+  }catch(error){}
 
 // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
