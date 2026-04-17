@@ -663,6 +663,63 @@ function _applyBombs(n, forceInfinite){
   _syncStartResourceControls();
   _syncBombHud();
 }
+function renderMenuHudPreview(){
+  const heartsHud = document.getElementById("heartsHud");
+  const previewLivesInfinite = !!(START_LIVES_INFINITE || INFINITE_MODE);
+  const previewHeartsInfinite = !!(START_HEARTS_INFINITE || INFINITE_MODE);
+  const previewShieldsInfinite = !!(START_SHIELDS_INFINITE || INFINITE_MODE);
+  const previewBombsInfinite = !!(START_BOMBS_INFINITE || INFINITE_MODE);
+  const previewLives = previewLivesInfinite ? 100 : Math.max(0, parseInt(START_LIVES, 10) || 0);
+  const previewHearts = previewHeartsInfinite ? 100 : Math.max(1, parseInt(START_HEARTS, 10) || 1);
+  const previewShields = previewShieldsInfinite ? 100 : Math.max(0, parseInt(START_SHIELDS, 10) || 0);
+  const previewBombs = previewBombsInfinite ? 100 : Math.max(0, parseInt(START_BOMBS, 10) || 0);
+  const maxVisibleHudIcons = 5;
+
+  if (livesSlot) livesSlot.style.display = (previewLivesInfinite || previewLives > 0) ? "flex" : "none";
+  if (livesText) livesText.textContent = previewLivesInfinite ? "x∞" : ("x" + previewLives);
+
+  if (powerupSlot) powerupSlot.style.display = (previewBombsInfinite || previewBombs > 0) ? "flex" : "none";
+  if (powerupHint){
+    if (previewBombsInfinite) powerupHint.textContent = "Press Q (∞)";
+    else powerupHint.textContent = "Press Q" + (previewBombs > 1 ? (" x" + previewBombs) : "");
+  }
+
+  if (scoreStoreHud){
+    scoreStoreHud.style.display = "flex";
+    scoreStoreHud.classList.remove("storeReady");
+    scoreStoreHud.disabled = true;
+    scoreStoreHud.tabIndex = -1;
+    scoreStoreHud.setAttribute("aria-disabled", "true");
+  }
+  if (accuracyScoreEl){
+    accuracyScoreEl.style.display = "block";
+    accuracyScoreEl.textContent = "Score: 0pts";
+  }
+  if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
+  if (timerHud){
+    timerHud.style.display = "block";
+    timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div>0.0s</div>';
+  }
+  if (!heartsHud) return;
+
+  let out = "";
+  if (previewHeartsInfinite) out += "❤️x♾️";
+  else {
+    const visibleHearts = Math.min(maxVisibleHudIcons, previewHearts);
+    for (let i = 0; i < visibleHearts; i++) out += "❤️ ";
+    if (previewHearts > maxVisibleHudIcons) out += `<span class="heartsExtra">+${previewHearts - maxVisibleHudIcons}</span> `;
+  }
+
+  if (previewShieldsInfinite) out += "  🛡️x♾️";
+  else if (previewShields > 0){
+    const visibleShields = Math.min(maxVisibleHudIcons, previewShields);
+    out += "  " + "🛡️ ".repeat(visibleShields);
+    if (previewShields > maxVisibleHudIcons) out += "+" + (previewShields - maxVisibleHudIcons) + " ";
+  }
+
+  heartsHud.innerHTML = out.trim();
+  heartsHud.style.display = out.trim() ? "block" : "none";
+}
 
 
 
@@ -2435,10 +2492,6 @@ function showMenu(){
   if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
   mazeSummaryActive = false;
   mazePendingNextWave = null;
-  livesSlot.style.display = "none";
-  powerupSlot.style.display = "none";
-  if (timerHud) timerHud.style.display = "none";
-  { const heartsHud = document.getElementById("heartsHud"); if (heartsHud) heartsHud.style.display = "none"; }
 
   startMenu.style.display = "block";
   optionsMenu.style.display = "none";
@@ -2450,6 +2503,7 @@ function showMenu(){
   menuFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
   else clearControllerFocus();
+  renderMenuHudPreview();
 }
 
 function showWinOverlay(){
@@ -2498,6 +2552,7 @@ function showControlsMenu(){
   controlsFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
+  renderMenuHudPreview();
 }
 function hideControlsMenu(){
   if (!controlsMenu) return;
@@ -2532,10 +2587,6 @@ function showOptions(fromPause = false){
   mouseShieldHolding = false;
   stopShield(false);
 
-  livesSlot.style.display = "none";
-  powerupSlot.style.display = "none";
-  if (timerHud) timerHud.style.display = "none";
-
   startMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   pauseControlsOpen = false;
@@ -2548,6 +2599,7 @@ function showOptions(fromPause = false){
   optionsFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   else clearControllerFocus();
+  renderMenuHudPreview();
 }
 function startGame(){
   START_WAVE = Math.max(1, Math.min(21, START_WAVE || URL_START_WAVE || 1));
@@ -5034,8 +5086,12 @@ if (isDragonEnemy(e)){
   updateTimerHUD();
 
   // v1.96: corner HUD updates
-  livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
-  _syncBombHud();
+  if (gameState === STATE.PLAYING){
+    livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
+    _syncBombHud();
+  } else if (gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS){
+    renderMenuHudPreview();
+  }
   if (gameState === STATE.PLAYING){
     const info = getStageInfo(wave);
     const clampedWave = Math.min(wave, info.end);
@@ -5043,6 +5099,10 @@ if (isDragonEnemy(e)){
     const stageHudEl = document.getElementById("stageHud");
     stageHudEl.textContent = lab.text;
     stageHudEl.style.color = lab.color;
+  } else if (gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS){
+    const stageHudEl = document.getElementById("stageHud");
+    stageHudEl.textContent = "Start Menu";
+      stageHudEl.style.color = "#ffffff";
   } else {
     document.getElementById("stageHud").textContent = "";
   }
@@ -5067,6 +5127,10 @@ function updateHearts(){
   // v1.96: Hearts are configurable (MAX_HEARTS), and shields/bomb-armor show here too.
   const maxH = Math.max(1, MAX_HEARTS|0);
   const currentHearts = Math.max(0, Math.min(maxH, health * maxH));
+  const heartsAreInfinite = !!(infiniteModeActive || heartsInfiniteActive);
+  const shieldsAreInfinite = !!(infiniteModeActive || shieldsInfiniteActive);
+  const infinityLabel = "x♾️";
+  const maxVisibleHudIcons = 5;
 
   // Convert 0..1 health into "filled hearts" count.
   const hearts = Math.max(0, Math.min(maxH, Math.ceil(currentHearts - 0.000001)));
@@ -5074,17 +5138,23 @@ function updateHearts(){
   const full = "❤️";
   const empty = "❌";
   let out = "";
-  const visibleMaxH = Math.min(10, maxH);
-  for (let i = 0; i < visibleMaxH; i++){
-    out += (i < hearts ? full : empty) + " ";
+  if (heartsAreInfinite){
+    out += `${full}${infinityLabel}`;
+  } else {
+    const visibleMaxH = Math.min(maxVisibleHudIcons, maxH);
+    for (let i = 0; i < visibleMaxH; i++){
+      out += (i < hearts ? full : empty) + " ";
+    }
+    if (hearts > maxVisibleHudIcons) out += `<span class="heartsExtra">+${hearts - maxVisibleHudIcons}</span> `;
   }
-  if (maxH > 10) out += `<span class="heartsExtra">+${maxH - 10}</span> `;
 
   // v1.96: shield pips (one-hit armor) next to hearts
-  if (shieldPips > 0){
-    const show = Math.min(10, shieldPips);
+  if (shieldsAreInfinite){
+    out += "  🛡️" + infinityLabel;
+  } else if (shieldPips > 0){
+    const show = Math.min(maxVisibleHudIcons, shieldPips);
     out += "  " + "🛡️ ".repeat(show);
-    if (shieldPips > 10) out += "+" + (shieldPips - 10) + " ";
+    if (shieldPips > maxVisibleHudIcons) out += "+" + (shieldPips - maxVisibleHudIcons) + " ";
   }
 
   // v1.96: bonus armor indicator next to hearts
@@ -5094,12 +5164,12 @@ function updateHearts(){
   if (armorIcon) out += "  " + armorIcon;
 
   // v1.96: infinite marker so you remember you're cheating
-  if (infiniteModeActive || heartsInfiniteActive || shieldsInfiniteActive || bombsInfiniteActive || livesInfiniteActive) out += "  ♾️";
+  if (!heartsAreInfinite && !shieldsAreInfinite && (infiniteModeActive || heartsInfiniteActive || shieldsInfiniteActive || bombsInfiniteActive || livesInfiniteActive)) out += "  ♾️";
 
   const el = document.getElementById("heartsHud");
   if (el){
     el.innerHTML = out.trim();
-    el.style.display = (gameState === STATE.PLAYING) ? "block" : "none";
+    el.style.display = (gameState === STATE.PLAYING || gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS) ? "block" : "none";
   }
 }
 
