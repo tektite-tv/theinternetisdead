@@ -13,11 +13,12 @@ const BG_COLORS = [
 const PAUSE_COMMANDS = {
   "/background_color": "Set starfield background color (name or hex)",
   "/bombs": "Set bombs to 0-99, or 100/MAX (e.g. /bombs 5 or /bombs 100)",
+  "/color_invert": "Toggle inverted colors",
   "/fullscreen": "Toggle fullscreen mode",
   "/game_speed": "Set game speed from -5 to 20. 0 loads static Wave 1/UFO staring contest; 1 is normal.",
   "/hearts": "Set max hearts to 1-99, or 100/MAX (e.g. /hearts 6 or /hearts 100)",
   "/help": "List all available commands",
-  "/invert": "Toggle inverted colors",
+  "/infinite": "Toggle global infinite mode, or set hearts/shields/lives/bombs to infinite",
   "/lives": "Set lives to 0-99, or 100/MAX (e.g. /lives 3 or /lives 100)",
   "/shields": "Set shields to 0-99, or 100/MAX (e.g. /shields 2 or /shields 100)",
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"

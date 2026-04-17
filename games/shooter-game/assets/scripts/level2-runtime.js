@@ -664,6 +664,47 @@ function _applyBombs(n, forceInfinite){
   _syncStartResourceControls();
   _syncBombHud();
 }
+
+function refreshInfiniteModeUi(){
+  if (typeof renderMenuHudPreview === "function") renderMenuHudPreview();
+}
+
+function applyGlobalInfiniteMode(enabled){
+  INFINITE_MODE = !!enabled;
+  infiniteModeActive = !!INFINITE_MODE;
+  _applyLives((START_LIVES_INFINITE || INFINITE_MODE) ? 100 : START_LIVES, !!(START_LIVES_INFINITE || INFINITE_MODE));
+  _applyHearts((START_HEARTS_INFINITE || INFINITE_MODE) ? 100 : START_HEARTS, !!(START_HEARTS_INFINITE || INFINITE_MODE));
+  _applyShields((START_SHIELDS_INFINITE || INFINITE_MODE) ? 100 : START_SHIELDS, !!(START_SHIELDS_INFINITE || INFINITE_MODE));
+  _applyBombs((START_BOMBS_INFINITE || INFINITE_MODE) ? 100 : START_BOMBS, !!(START_BOMBS_INFINITE || INFINITE_MODE));
+  refreshInfiniteModeUi();
+}
+
+function setIndividualInfiniteResource(resourceName){
+  switch (resourceName){
+    case "lives":
+      START_LIVES_INFINITE = true;
+      _applyLives(100, true);
+      refreshInfiniteModeUi();
+      return "Lives set to infinite";
+    case "hearts":
+      START_HEARTS_INFINITE = true;
+      _applyHearts(100, true);
+      refreshInfiniteModeUi();
+      return "Hearts set to infinite";
+    case "shields":
+      START_SHIELDS_INFINITE = true;
+      _applyShields(100, true);
+      refreshInfiniteModeUi();
+      return "Shields set to infinite";
+    case "bombs":
+      START_BOMBS_INFINITE = true;
+      _applyBombs(100, true);
+      refreshInfiniteModeUi();
+      return "Bombs set to infinite";
+    default:
+      return "";
+  }
+}
 function renderMenuHudPreview(){
   const heartsHud = document.getElementById("heartsHud");
   const previewLivesInfinite = !!(START_LIVES_INFINITE || INFINITE_MODE);
@@ -736,7 +777,7 @@ function execPauseCommand(cmd){
   // v1.96: /help -> list commands alphabetically inside the pause panel
   if (raw === "/help"){
     showHelp();
-    return;
+    return { ok:true, suppressChatResult:true };
   }
 
   // v1.96: /fullscreen -> toggle browser fullscreen
@@ -749,6 +790,18 @@ function execPauseCommand(cmd){
   if (raw === "/video_fx"){
     VIDEO_FX_ENABLED = !VIDEO_FX_ENABLED;
     return { ok:true, message:`Video FX ${VIDEO_FX_ENABLED ? "enabled" : "disabled"}` };
+  }
+
+  // /infinite -> toggle global infinite mode, or set one resource to infinite
+  if (raw.startsWith("/infinite")){
+    const arg = raw.slice("/infinite".length).trim().toLowerCase();
+    if (!arg){
+      applyGlobalInfiniteMode(!INFINITE_MODE);
+      return { ok:true, message:`Infinite mode ${INFINITE_MODE ? "enabled" : "disabled"} for all resources` };
+    }
+    const resourceMessage = setIndividualInfiniteResource(arg);
+    if (resourceMessage) return { ok:true, message: resourceMessage };
+    return { ok:false, message:"Usage: /infinite [hearts|shields|lives|bombs]" };
   }
 
 
@@ -798,8 +851,8 @@ function execPauseCommand(cmd){
 
 
 
-  // /invert -> toggle invert colors mode (same as Options menu)
-  if (raw === "/invert"){
+  // /color_invert -> toggle invert colors mode (same as Options menu)
+  if (raw === "/color_invert"){
     document.body.classList.toggle("invert-colors");
     return;
   }
@@ -852,7 +905,7 @@ window.addEventListener("message", (event) => {
   const command = String(data.command || "").trim();
   const result = execPauseCommand(command);
 
-  if (window.parent && window.parent !== window) {
+  if (window.parent && window.parent !== window && !(result && result.suppressChatResult)) {
     postCommandResult(command, result);
   }
 });
@@ -1946,7 +1999,7 @@ function syncStartOptionsLabels(){
     s.addEventListener("input", syncStartOptionsLabels);
   });
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
-  if (infiniteToggle) infiniteToggle.addEventListener("change", () => {});
+  if (infiniteToggle) infiniteToggle.addEventListener("change", () => applyGlobalInfiniteMode(!!infiniteToggle.checked));
   syncStartOptionsLabels();
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
