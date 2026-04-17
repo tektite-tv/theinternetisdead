@@ -1016,6 +1016,9 @@ const deathParticles = [];
 
 let deathFocusIndex = 0;
 let deathQuitConfirmArmed = false;
+let deathQuitConfirmReady = false;
+let deathQuitConfirmTimer = null;
+let deathQuitConfirmRemaining = 0;
 const deathButtons = [];
 
 
@@ -2795,6 +2798,12 @@ function showWinOverlay(){
 
 function resetDeathQuitConfirm(){
   deathQuitConfirmArmed = false;
+  deathQuitConfirmReady = false;
+  deathQuitConfirmRemaining = 0;
+  if (deathQuitConfirmTimer){
+    clearInterval(deathQuitConfirmTimer);
+    deathQuitConfirmTimer = null;
+  }
   if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Quit to Menu";
 }
 
@@ -2846,6 +2855,11 @@ function activateDeathControllerFocus(){
 }
 
 function performDeathQuitToMenu(){
+  if (deathQuitConfirmTimer){
+    clearInterval(deathQuitConfirmTimer);
+    deathQuitConfirmTimer = null;
+  }
+
   deathOverlay.style.display = "none";
     clearDeathControllerFocus();
     setPaused(false);
@@ -2854,10 +2868,37 @@ function performDeathQuitToMenu(){
     showMenu();
 }
 
+function armDeathQuitConfirmCountdown(){
+  deathQuitConfirmArmed = true;
+  deathQuitConfirmReady = false;
+  deathQuitConfirmRemaining = 5;
+  if (deathQuitConfirmTimer){
+    clearInterval(deathQuitConfirmTimer);
+    deathQuitConfirmTimer = null;
+  }
+  if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Really, Quit? (5s)";
+  deathQuitConfirmTimer = setInterval(() => {
+    deathQuitConfirmRemaining = Math.max(0, deathQuitConfirmRemaining - 1);
+    if (btnDeathQuitToMenu){
+      btnDeathQuitToMenu.textContent = deathQuitConfirmRemaining > 0
+        ? "Really, Quit? (" + deathQuitConfirmRemaining + "s)"
+        : "Really, Quit?";
+    }
+    if (deathQuitConfirmRemaining <= 0){
+      clearInterval(deathQuitConfirmTimer);
+      deathQuitConfirmTimer = null;
+      deathQuitConfirmReady = true;
+    }
+  }, 1000);
+}
+
 function quitDeathToMenu(){
   if (!deathQuitConfirmArmed){
-    deathQuitConfirmArmed = true;
-    if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Really, Quit?";
+    armDeathQuitConfirmCountdown();
+    syncDeathControllerFocus();
+    return;
+  }
+  if (!deathQuitConfirmReady){
     syncDeathControllerFocus();
     return;
   }
