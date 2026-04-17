@@ -122,7 +122,8 @@ function applyMuteState(){
 function setMuteOptionEnabled(shouldEnable){
   audioMuted = !!shouldEnable;
   applyMuteState();
-  if (!audioMuted) ensureMusicPlaying();
+  // Only resume music when gameplay is actually running.
+  if (!audioMuted && gameState === STATE.PLAYING) ensureMusicPlaying();
 }
 
 function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
@@ -1903,7 +1904,7 @@ function unlockAudioOnce(){
   }catch(e){}
 
   applyMuteState();
-  ensureMusicPlaying();
+  if (gameState === STATE.PLAYING) ensureMusicPlaying();
 }
 function playSfx(a){
   if (audioMuted) return;

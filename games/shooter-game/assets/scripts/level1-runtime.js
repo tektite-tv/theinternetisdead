@@ -115,7 +115,8 @@ function applyMuteState(){
 function setMuteOptionEnabled(shouldEnable){
   audioMuted = !!shouldEnable;
   applyMuteState();
-  if (!audioMuted) ensureMusicPlaying();
+  // Only resume music when gameplay is actually running.
+  if (!audioMuted && gameState === STATE.PLAYING) ensureMusicPlaying();
   syncCheatsMenuState();
 }
 
