@@ -315,6 +315,7 @@ const powerupHint = document.getElementById("powerupHint");
 ;
 const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
+const btnDeathQuitToMenu = document.getElementById("btnDeathQuitToMenu");
 const winOverlay = document.getElementById("winOverlay");
 const btnContinue = document.getElementById("btnContinue");
 
@@ -2784,6 +2785,15 @@ function showWinOverlay(){
   else clearControllerFocus();
 }
 
+
+function quitDeathToMenu(){
+  deathOverlay.style.display = "none";
+  setPaused(false);
+  stopMusic();
+  _resetStartResourceDefaults();
+  showMenu();
+}
+
 function restartRun(){
   setPaused(false);
   // Restart music immediately when restarting a run.
@@ -2985,6 +2995,11 @@ btnRestart.addEventListener("click", () => {
   restartRun();
 });
 
+
+if (btnDeathQuitToMenu){
+  btnDeathQuitToMenu.addEventListener("click", quitDeathToMenu);
+}
+
 if (btnContinue){
   btnContinue.addEventListener("click", () => {
     if (window.parent && window.parent !== window){
@@ -3013,6 +3028,12 @@ window.location.href = "/games/shooter-game/assets/levels/shooter-game-level2.ht
   });
 }
 
+
+function requestContinueToLevel2(){
+  if (!window.parent || window.parent === window) return false;
+  window.parent.postMessage({ type: "tektite:continue-to-level2" }, "*");
+  return true;
+}
 
 function setAssetStatus(msg){
   if (!assetStatus) return;

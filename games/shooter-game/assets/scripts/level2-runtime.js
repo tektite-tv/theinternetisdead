@@ -322,6 +322,7 @@ const powerupHint = document.getElementById("powerupHint");
 ;
 const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
+const btnDeathQuitToMenu = document.getElementById("btnDeathQuitToMenu");
 const winOverlay = document.getElementById("winOverlay");
 const btnContinue = document.getElementById("btnContinue");
 const mazeSummaryOverlay = document.getElementById("mazeSummaryOverlay");
@@ -2519,6 +2520,20 @@ function showWinOverlay(){
   // keep music playing through the win/score screen
 }
 
+
+function quitDeathToMenu(){
+  deathOverlay.style.display = "none";
+  setPaused(false);
+  stopMusic();
+  _resetStartResourceDefaults();
+  if (window.parent && window.parent !== window){
+    try {
+      if (requestReturnToLevel1()) return;
+    } catch (e) {}
+  }
+  showMenu();
+}
+
 function restartRun(){
   setPaused(false);
   // Restart music immediately when restarting a run.
@@ -2715,6 +2730,11 @@ btnRestart.addEventListener("click", () => {
   restartRun();
 });
 
+
+if (btnDeathQuitToMenu){
+  btnDeathQuitToMenu.addEventListener("click", quitDeathToMenu);
+}
+
 if (btnContinue){
   btnContinue.addEventListener("click", () => {
     // Hook this up later. For now it simply closes the overlay.
@@ -2749,6 +2769,12 @@ if (btnSkipToLevel3){
   });
 }
 
+
+function requestReturnToLevel1(){
+  if (!window.parent || window.parent === window) return false;
+  window.parent.postMessage({ type: "tektite:return-to-level1" }, "*");
+  return true;
+}
 
 function setAssetStatus(msg){
   if (!assetStatus) return;
