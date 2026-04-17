@@ -1693,7 +1693,9 @@ function fitControlsMenuToViewport(){
   controlsMenu.style.transform = "scale(1)";
   controlsMenu.style.margin = "0";
   controlsMenu.style.transformOrigin = "center center";
+  controlsMenu.style.boxSizing = "border-box";
   controlsMenu.style.width = "";
+  controlsMenu.style.height = "";
   controlsMenu.style.minHeight = "";
   controlsMenu.style.maxHeight = "";
   if (controlsMenuInner){
@@ -1701,11 +1703,16 @@ function fitControlsMenuToViewport(){
     controlsMenuInner.style.marginBottom = "0";
   }
   if (controlsMenu.style.display === "none" || controlsMenu.offsetParent === null) return;
+
   if (startMenuPanelRect && startMenuPanelRect.width && startMenuPanelRect.height){
-    controlsMenu.style.width = `${Math.round(startMenuPanelRect.width)}px`;
-    controlsMenu.style.minHeight = `${Math.round(startMenuPanelRect.height)}px`;
-    controlsMenu.style.maxHeight = `${Math.round(startMenuPanelRect.height)}px`;
+    const panelW = Math.round(startMenuPanelRect.width);
+    const panelH = Math.round(startMenuPanelRect.height);
+    controlsMenu.style.width = `${panelW}px`;
+    controlsMenu.style.height = `${panelH}px`;
+    controlsMenu.style.minHeight = `${panelH}px`;
+    controlsMenu.style.maxHeight = `${panelH}px`;
   }
+
   const margin = 12;
   const availableW = Math.max(320, window.innerWidth - margin * 2);
   const availableH = Math.max(240, window.innerHeight - margin * 2);
@@ -1718,6 +1725,7 @@ function fitControlsMenuToViewport(){
     const slack = Math.max(0, availableH - scaledHeight);
     controlsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
   }
+
   if (!controlsMenuInner) return;
   controlsMenuInner.style.transform = "scale(1)";
   controlsMenuInner.style.marginBottom = "0";
