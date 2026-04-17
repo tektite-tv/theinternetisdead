@@ -1035,6 +1035,7 @@ let deathYellPlayed = false;
 const deathParticles = [];
 
 let deathFocusIndex = 0;
+let deathQuitConfirmArmed = false;
 const deathButtons = [];
 
 
@@ -2527,6 +2528,11 @@ function showWinOverlay(){
 
 
 
+function resetDeathQuitConfirm(){
+  deathQuitConfirmArmed = false;
+  if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Quit to Menu";
+}
+
 function getDeathButtons(){
   const buttons = [];
   if (btnRestart) buttons.push(btnRestart);
@@ -2535,7 +2541,10 @@ function getDeathButtons(){
 }
 
 function clearDeathControllerFocus(){
-  getDeathButtons().forEach((button) => button.classList.remove("controllerFocus"));
+  getDeathButtons().forEach((button) => {
+    button.classList.remove("controllerFocus");
+    try{ button.blur(); }catch(e){}
+  });
 }
 
 function syncDeathControllerFocus(){
@@ -2554,7 +2563,12 @@ function syncDeathControllerFocus(){
 function moveDeathControllerFocus(delta){
   const buttons = getDeathButtons();
   if (!buttons.length) return;
+  const previousButton = buttons[Math.max(0, Math.min(deathFocusIndex, buttons.length - 1))];
   deathFocusIndex = (deathFocusIndex + delta + buttons.length) % buttons.length;
+  const nextButton = buttons[Math.max(0, Math.min(deathFocusIndex, buttons.length - 1))];
+  if (previousButton !== nextButton && nextButton !== btnDeathQuitToMenu){
+    resetDeathQuitConfirm();
+  }
   syncDeathControllerFocus();
 }
 
@@ -2566,21 +2580,32 @@ function activateDeathControllerFocus(){
   try{ button.click(); return true; }catch(e){ return false; }
 }
 
-function quitDeathToMenu(){
+function performDeathQuitToMenu(){
   deathOverlay.style.display = "none";
-  clearDeathControllerFocus();
-  setPaused(false);
-  stopMusic();
-  _resetStartResourceDefaults();
-  if (window.parent && window.parent !== window){
-    try {
-      if (requestReturnToLevel1()) return;
-    } catch (e) {}
+    clearDeathControllerFocus();
+    setPaused(false);
+    stopMusic();
+    _resetStartResourceDefaults();
+    if (window.parent && window.parent !== window){
+      try {
+        if (requestReturnToLevel1()) return;
+      } catch (e) {}
+    }
+    showMenu();
+}
+
+function quitDeathToMenu(){
+  if (!deathQuitConfirmArmed){
+    deathQuitConfirmArmed = true;
+    if (btnDeathQuitToMenu) btnDeathQuitToMenu.textContent = "Really, Quit?";
+    syncDeathControllerFocus();
+    return;
   }
-  showMenu();
+  performDeathQuitToMenu();
 }
 
 function restartRun(){
+  resetDeathQuitConfirm();
   setPaused(false);
   // Restart music immediately when restarting a run.
   ensureMusicPlaying(true);
@@ -2782,6 +2807,12 @@ btnRestart.addEventListener("click", () => {
 if (btnDeathQuitToMenu){
   btnDeathQuitToMenu.addEventListener("click", quitDeathToMenu);
 }
+
+if (btnRestart){
+  btnRestart.addEventListener("focus", resetDeathQuitConfirm);
+  btnRestart.addEventListener("click", resetDeathQuitConfirm);
+}
+
 
 if (btnContinue){
   btnContinue.addEventListener("click", () => {
@@ -3089,6 +3120,15 @@ function pollGamepad(dt){
   const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
+
+  if (deathOverlay && deathOverlay.style.display === "flex"){
+    if (navUp) moveDeathControllerFocus(-1);
+    if (navDown) moveDeathControllerFocus(1);
+    if (pressMenuSelect) activateDeathControllerFocus();
+    // B/back intentionally does nothing on the death screen to avoid accidental menu quits.
+    return;
+  }
+
 
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
     const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
@@ -4098,8 +4138,9 @@ function spawnPlayerDeath(isGameOver){
   if (deathGameOver){
     triggerGlitchSpiral();
     deathOverlay.style.display = "flex";
+    resetDeathQuitConfirm();
     deathFocusIndex = 0;
-    if (activeInputMode === INPUT_MODE_CONTROLLER) syncDeathControllerFocus();
+    syncDeathControllerFocus();
   }
 
   const n = 160;
