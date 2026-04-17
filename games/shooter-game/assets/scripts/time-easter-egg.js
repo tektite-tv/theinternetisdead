@@ -96,6 +96,11 @@
     if (a && typeof a.hideCanvasPlayer === "function") a.hideCanvasPlayer(hidden);
   }
 
+  function setNegativeTimeTravel(seconds){
+    const a = api();
+    if (a && typeof a.setNegativeTimeTravel === "function") a.setNegativeTimeTravel(seconds);
+  }
+
   function forceRuntimeDraw(){
     const a = api();
     if (a && typeof a.forceDraw === "function") a.forceDraw();
@@ -162,6 +167,7 @@
     melting = true;
     makeOverlay();
     readPlayerState();
+    setNegativeTimeTravel(REQUIRED_MS / 1000);
     initPlayerImage();
     captureSceneWithoutPlayer();
     initColumns();
@@ -265,7 +271,9 @@
 
   function animateMelt(now){
     if (!melting || !ctx || !sourceCanvas) return;
+    const elapsedSeconds = ((now - startTime) / 1000);
     const progress = Math.max(0, Math.min(1, (now - startTime) / MELT_MS));
+    setNegativeTimeTravel((REQUIRED_MS / 1000) + elapsedSeconds);
 
     updateEscapingPlayer(progress, now);
     drawMelt(progress, now);
@@ -283,7 +291,16 @@
 
   function finishMelt(){
     const a = api();
+    const finalNegativeSeconds = (REQUIRED_MS / 1000) + (MELT_MS / 1000);
     if (a && typeof a.resetToSpeedOneAndMenu === "function") a.resetToSpeedOneAndMenu();
+    setNegativeTimeTravel(finalNegativeSeconds);
+
+    // Keep the lore clock visible briefly after the kickout, then let normal menu HUD reclaim reality.
+    setTimeout(() => {
+      try{
+        document.body.classList.remove("speedZeroTimeTravel");
+      }catch(e){}
+    }, 5000);
 
     setTimeout(() => {
       if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);

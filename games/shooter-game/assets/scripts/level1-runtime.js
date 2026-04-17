@@ -3258,6 +3258,16 @@ window.TektiteLevel1SpeedZero = {
       draw();
     }catch(e){}
   },
+  setNegativeTimeTravel(seconds){
+    try{
+      const value = Math.max(0, Number(seconds) || 0);
+      document.body.classList.add("speedZeroTimeTravel");
+      if (timerHud){
+        timerHud.style.display = "block";
+        timerHud.innerHTML = '<div class="timerHudLabel">Time Travel</div><div>-' + value.toFixed(1) + 's</div>';
+      }
+    }catch(e){}
+  },
   resetToSpeedOneAndMenu(){
     try{
       this.hideCanvasPlayer(false);
@@ -3507,7 +3517,8 @@ function startGame(){
     pendingWaveStartMusic = false;
     stopMusic();
     runTimer = 0;
-    updateTimerHUD();
+    document.body.classList.remove("speedZeroTimeTravel");
+    if (timerHud) timerHud.style.display = "none";
   } else {
     trySpawnUFO();
     // Only begin the level music after Wave 1 gameplay has actually spawned.
@@ -5024,7 +5035,9 @@ function update(dt){
   if (gameState === STATE.PLAYING && isGameSpeedFrozen()){
     if (!isPaused){
       runTimer = 0;
-      updateTimerHUD();
+      if (timerHud && !document.body.classList.contains("speedZeroTimeTravel")){
+        timerHud.style.display = "none";
+      }
     }
     return;
   }
