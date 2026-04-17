@@ -1036,6 +1036,84 @@ let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
+const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
+let currentRunStatsCommitted = false;
+
+function getDefaultLifetimeStats(){
+  return {
+    lifetimeScoreEarned: 0,
+    lifetimeEnemiesKilled: 0,
+    lifetimeGamesWon: 0,
+    lifetimeTotalDeaths: 0,
+    lifetimeBulletsFired: 0
+  };
+}
+
+function readLifetimeStats(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(LIFETIME_STATS_KEY) || "null");
+    return Object.assign(getDefaultLifetimeStats(), parsed || {});
+  }catch(e){
+    return getDefaultLifetimeStats();
+  }
+}
+
+function writeLifetimeStats(stats){
+  try{
+    localStorage.setItem(LIFETIME_STATS_KEY, JSON.stringify(Object.assign(getDefaultLifetimeStats(), stats || {})));
+  }catch(e){}
+}
+
+function incrementLifetimeStat(key, amount=1){
+  const stats = readLifetimeStats();
+  stats[key] = Math.max(0, Number(stats[key] || 0) + Math.max(0, Number(amount) || 0));
+  writeLifetimeStats(stats);
+  renderLifetimeStats();
+}
+
+function formatLifetimeNumber(value){
+  return Math.floor(Number(value) || 0).toLocaleString();
+}
+
+function renderLifetimeStats(){
+  const stats = readLifetimeStats();
+  if (statLifetimeScore) statLifetimeScore.textContent = formatLifetimeNumber(stats.lifetimeScoreEarned);
+  if (statLifetimeEnemies) statLifetimeEnemies.textContent = formatLifetimeNumber(stats.lifetimeEnemiesKilled);
+  if (statLifetimeWins) statLifetimeWins.textContent = formatLifetimeNumber(stats.lifetimeGamesWon);
+  if (statLifetimeDeaths) statLifetimeDeaths.textContent = formatLifetimeNumber(stats.lifetimeTotalDeaths);
+  if (statLifetimeBullets) statLifetimeBullets.textContent = formatLifetimeNumber(stats.lifetimeBulletsFired);
+}
+
+function openStatsPanel(){
+  renderLifetimeStats();
+  if (statsPanel){
+    statsPanel.style.display = "flex";
+    statsPanel.setAttribute("aria-hidden", "false");
+  }
+}
+
+function closeStatsPanel(){
+  if (statsPanel){
+    statsPanel.style.display = "none";
+    statsPanel.setAttribute("aria-hidden", "true");
+  }
+}
+
+function resetLifetimeStats(){
+  writeLifetimeStats(getDefaultLifetimeStats());
+  renderLifetimeStats();
+}
+
+function commitRunLifetimeStats({won=false, died=false} = {}){
+  if (currentRunStatsCommitted) return;
+  currentRunStatsCommitted = true;
+  const stats = readLifetimeStats();
+  if (won) stats.lifetimeGamesWon += 1;
+  if (died) stats.lifetimeTotalDeaths += 1;
+  writeLifetimeStats(stats);
+  renderLifetimeStats();
+}
+
 const STORE_UNLOCK_SCORE_THRESHOLD = 100;
 const SCORE_STORE_ITEMS = [
   { id: "hearts", label: "Hearts", cost: 25, description: "Foundation slot for future heart refills or max-heart upgrades." },
@@ -1148,7 +1226,9 @@ function getAccuracyMultiplier(){
 }
 
 function awardScore(basePoints){
-  score += Math.round(Math.max(0, basePoints) * getAccuracyMultiplier());
+  const awarded = Math.round(Math.max(0, basePoints) * getAccuracyMultiplier());
+  score += awarded;
+  incrementLifetimeStat("lifetimeScoreEarned", awarded);
 }
 
 function isStoreUnlocked(){
@@ -1299,6 +1379,7 @@ function enemyKill(e, source){
 
     // Frog kills no longer heal the player or award free lives.
     awardScore(10);
+    incrementLifetimeStat("lifetimeEnemiesKilled", 1);
     playSfx(sfxHit);
   }
 }
@@ -1881,6 +1962,15 @@ const startMenuTitle = document.getElementById("startMenuTitle");
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
+const btnStats = document.getElementById("btnStats");
+const statsPanel = document.getElementById("statsPanel");
+const btnStatsClose = document.getElementById("btnStatsClose");
+const btnStatsReset = document.getElementById("btnStatsReset");
+const statLifetimeScore = document.getElementById("statLifetimeScore");
+const statLifetimeEnemies = document.getElementById("statLifetimeEnemies");
+const statLifetimeWins = document.getElementById("statLifetimeWins");
+const statLifetimeDeaths = document.getElementById("statLifetimeDeaths");
+const statLifetimeBullets = document.getElementById("statLifetimeBullets");
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
@@ -2459,7 +2549,7 @@ function markControlsClean(applied=false){
 }
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnMysteryLink].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnMysteryLink, btnStats].filter(Boolean);
 }
 
 function isTitleHoverRevealFocused(){
@@ -2906,6 +2996,7 @@ function showMenu(){
   else clearControllerFocus();
   renderMenuHudPreview();
   syncSpeedZeroStaticImages();
+  renderLifetimeStats();
 }
 
 function showControlsMenu(){
@@ -2962,6 +3053,7 @@ function hideControlsMenu(){
 }
 
 function showWinOverlay(){
+  commitRunLifetimeStats({ won:true });
   gameWon = true;
   gameState = STATE.WIN;
   if (winOverlay) winOverlay.style.display = "flex";
@@ -3453,6 +3545,7 @@ function startGame(){
   // v1.96.x: Reset run timer at the start of each game
   runTimer = 0;
   updateTimerHUD();
+  currentRunStatsCommitted = false;
   score = 0;
   frogKills = 0;
   shotsFired = 0;
@@ -3649,6 +3742,19 @@ if (backgroundColorPicker){
   });
   backgroundColorPicker.addEventListener("change", () => {
     applyBackgroundColorFromControls(backgroundColorPicker.value);
+  });
+}
+
+if (btnStats) btnStats.addEventListener("click", openStatsPanel);
+if (btnStatsClose) btnStatsClose.addEventListener("click", closeStatsPanel);
+if (btnStatsReset){
+  btnStatsReset.addEventListener("click", () => {
+    resetLifetimeStats();
+  });
+}
+if (statsPanel){
+  statsPanel.addEventListener("click", (event) => {
+    if (event.target === statsPanel) closeStatsPanel();
   });
 }
 
@@ -4747,6 +4853,7 @@ function shoot(){
 
   
   shotsFired += 1;
+  incrementLifetimeStat("lifetimeBulletsFired", 1);
 // v1.96: faster firing as waves increase
   fireCooldown = getPlayerFireCooldown();
 }
@@ -4931,6 +5038,7 @@ function damagePlayer(){
     if (!livesInfiniteActive) lives = Math.max(0, lives - 1);
     const deathIsGameOver = !livesInfiniteActive && lives <= 0;
     if (deathIsGameOver && !deathYellPlayed){
+      commitRunLifetimeStats({ died:true });
       playSfxImmediate(sfxOof);
       deathYellPlayed = true;
       setTimeout(() => {
@@ -6049,3 +6157,6 @@ requestAnimationFrame(loop);
 
 document.addEventListener("DOMContentLoaded", syncSpeedZeroStaticImages);
 window.addEventListener("load", syncSpeedZeroStaticImages);
+
+
+document.addEventListener("DOMContentLoaded", renderLifetimeStats);

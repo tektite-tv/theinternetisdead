@@ -1257,6 +1257,68 @@ body.invert-colors {
     display:none !important;
   }
 
+
+  #btnStats{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:160px;
+    box-sizing:border-box;
+  }
+  #statsPanel{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:120;
+    background:rgba(0,0,0,0.42);
+    pointer-events:auto;
+  }
+  #statsPanelInner{
+    width:min(520px, 92vw);
+    border:2px solid rgba(0,255,102,0.65);
+    border-radius:18px;
+    background:rgba(12,0,24,0.92);
+    color:#00ff66;
+    font-family:"Courier New", monospace;
+    padding:18px;
+    box-shadow:0 0 28px rgba(0,255,102,0.20);
+    text-align:left;
+  }
+  #statsPanelInner .statsTitle{
+    text-align:center;
+    font-size:24px;
+    font-weight:900;
+    letter-spacing:2px;
+    margin-bottom:12px;
+  }
+  #statsList{
+    display:grid;
+    gap:8px;
+    margin:12px 0 16px;
+  }
+  .statsRow{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    border:1px solid rgba(0,255,102,0.22);
+    border-radius:10px;
+    padding:8px 10px;
+    background:rgba(0,0,0,0.35);
+  }
+  .statsValue{
+    color:#fff;
+    text-align:right;
+    font-weight:900;
+  }
+  #statsPanelButtons{
+    display:flex;
+    gap:10px;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
 </style>
 
 <style>
@@ -1449,7 +1511,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 4:41 AM)</a></div>
+<div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 17, 2026 5:04 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1459,8 +1521,26 @@ body.invert-colors {
     </div>
     <div class="btnRow btnRowBottom">
       <a id="btnMysteryLink" class="smallBtn mysteryBtn" href="https://honestlythomas.com" target="_top" aria-label="Open Honestly Thomas">???</a>
+      <button id="btnStats" class="smallBtn" type="button">Stats</button>
     </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
+  </div>
+
+  <div id="statsPanel" aria-hidden="true">
+    <div id="statsPanelInner">
+      <div class="statsTitle">Lifetime Stats</div>
+      <div id="statsList">
+        <div class="statsRow"><span>Lifetime Score Earned</span><span id="statLifetimeScore" class="statsValue">0</span></div>
+        <div class="statsRow"><span>Lifetime Enemies Killed</span><span id="statLifetimeEnemies" class="statsValue">0</span></div>
+        <div class="statsRow"><span>Lifetime Games Won</span><span id="statLifetimeWins" class="statsValue">0</span></div>
+        <div class="statsRow"><span>Lifetime Total Deaths</span><span id="statLifetimeDeaths" class="statsValue">0</span></div>
+        <div class="statsRow"><span>Lifetime Bullets Fired</span><span id="statLifetimeBullets" class="statsValue">0</span></div>
+      </div>
+      <div id="statsPanelButtons">
+        <button id="btnStatsClose" class="smallBtn" type="button">Back</button>
+        <button id="btnStatsReset" class="smallBtn" type="button">Reset Stats</button>
+      </div>
+    </div>
   </div>
 
   <div id="optionsMenu" class="panel" style="display:none;">
