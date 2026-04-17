@@ -685,14 +685,14 @@ function renderMenuHudPreview(){
   else {
     const visibleHearts = Math.min(maxVisibleHudIcons, previewHearts);
     for (let i = 0; i < visibleHearts; i++) out += "❤️ ";
-    if (previewHearts > maxVisibleHudIcons) out += `<span class="heartsExtra">+${previewHearts - maxVisibleHudIcons}</span> `;
+    if (previewHearts > maxVisibleHudIcons) out += `<span class="hudExtra">+${previewHearts - maxVisibleHudIcons}</span> `;
   }
 
   if (previewShieldsInfinite) out += "  🛡️x♾️";
   else if (previewShields > 0){
     const visibleShields = Math.min(maxVisibleHudIcons, previewShields);
     out += "  " + "🛡️ ".repeat(visibleShields);
-    if (previewShields > maxVisibleHudIcons) out += "+" + (previewShields - maxVisibleHudIcons) + " ";
+    if (previewShields > maxVisibleHudIcons) out += `<span class="hudExtra">+${previewShields - maxVisibleHudIcons}</span> `;
   }
 
   heartsHud.innerHTML = out.trim();
@@ -928,6 +928,8 @@ let shieldHolding = false; // combined (mouse OR gamepad)
 const GP_MENU_AXIS_THRESHOLD = 0.55;
 const GP_MENU_REPEAT_DELAY = 0.24;
 const GP_MENU_REPEAT_RATE = 0.12;
+const GP_OPTION_REPEAT_DELAY = 0.06;
+const GP_OPTION_REPEAT_RATE = 0.06;
 // HP model (more sane than "3 hits" when bullets are flying)
 let shieldHP = 0;
 const SHIELD_HP_MAX = 120;             // "reasonable amount" of damage before it breaks
@@ -1637,7 +1639,8 @@ window.addEventListener("resize", resize);
 
 function fitOptionsMenuToViewport(){
   if (!optionsMenu) return;
-  optionsMenu.style.transform = "scale(1)";
+  const baseScale = 0.975;
+  optionsMenu.style.transform = `scale(${baseScale})`;
   optionsMenu.style.margin = "0";
   optionsMenu.style.transformOrigin = "center center";
   if (optionsMenu.style.display === "none" || optionsMenu.offsetParent === null) return;
@@ -1646,9 +1649,10 @@ function fitOptionsMenuToViewport(){
   const availableH = Math.max(240, window.innerHeight - margin * 2);
   const rect = optionsMenu.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
-  const scale = Math.min(1, availableW / rect.width, availableH / rect.height);
+  const fitScale = Math.min(1, availableW / rect.width, availableH / rect.height);
+  const scale = baseScale * fitScale;
   optionsMenu.style.transform = `scale(${scale})`;
-  if (scale < 1) {
+  if (fitScale < 1) {
     const scaledHeight = rect.height * scale;
     const slack = Math.max(0, availableH - scaledHeight);
     optionsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
@@ -1680,29 +1684,44 @@ function fitControlsMenuToViewport(){
   controlsMenu.style.transform = "scale(1)";
   controlsMenu.style.margin = "0";
   controlsMenu.style.transformOrigin = "center center";
+  controlsMenu.style.width = "";
+  controlsMenu.style.minHeight = "";
+  controlsMenu.style.maxHeight = "";
+  if (controlsMenuInner){
+    controlsMenuInner.style.transform = "scale(1)";
+    controlsMenuInner.style.marginBottom = "0";
+  }
   if (controlsMenu.style.display === "none" || controlsMenu.offsetParent === null) return;
-  const prevMaxHeight = controlsMenu.style.maxHeight;
-  const prevOverflow = controlsMenu.style.overflow;
-  controlsMenu.style.maxHeight = "none";
-  controlsMenu.style.overflow = "visible";
+  if (startMenuPanelRect && startMenuPanelRect.width && startMenuPanelRect.height){
+    controlsMenu.style.width = `${Math.round(startMenuPanelRect.width)}px`;
+    controlsMenu.style.minHeight = `${Math.round(startMenuPanelRect.height)}px`;
+    controlsMenu.style.maxHeight = `${Math.round(startMenuPanelRect.height)}px`;
+  }
   const margin = 12;
   const availableW = Math.max(320, window.innerWidth - margin * 2);
   const availableH = Math.max(240, window.innerHeight - margin * 2);
   const rect = controlsMenu.getBoundingClientRect();
-  if (!rect.width || !rect.height) {
-    controlsMenu.style.maxHeight = prevMaxHeight;
-    controlsMenu.style.overflow = prevOverflow;
-    return;
-  }
-  const scale = Math.min(1, availableW / rect.width, availableH / rect.height);
-  controlsMenu.style.transform = `scale(${scale})`;
-  if (scale < 1) {
-    const scaledHeight = rect.height * scale;
+  if (!rect.width || !rect.height) return;
+  const panelScale = Math.min(1, availableW / rect.width, availableH / rect.height);
+  controlsMenu.style.transform = `scale(${panelScale})`;
+  if (panelScale < 1) {
+    const scaledHeight = rect.height * panelScale;
     const slack = Math.max(0, availableH - scaledHeight);
     controlsMenu.style.margin = `${Math.floor(slack / 2)}px 0`;
   }
-  controlsMenu.style.maxHeight = prevMaxHeight;
-  controlsMenu.style.overflow = prevOverflow;
+  if (!controlsMenuInner) return;
+  controlsMenuInner.style.transform = "scale(1)";
+  controlsMenuInner.style.marginBottom = "0";
+  const innerRect = controlsMenuInner.getBoundingClientRect();
+  const panelClientW = Math.max(1, controlsMenu.clientWidth);
+  const panelClientH = Math.max(1, controlsMenu.clientHeight);
+  if (!innerRect.width || !innerRect.height) return;
+  const contentScale = Math.min(1, panelClientW / innerRect.width, panelClientH / innerRect.height);
+  controlsMenuInner.style.transform = `scale(${contentScale})`;
+  if (contentScale < 1){
+    const heightLoss = innerRect.height * (1 - contentScale);
+    controlsMenuInner.style.marginBottom = `${-Math.ceil(heightLoss)}px`;
+  }
 }
 
 /* =======================
@@ -1797,6 +1816,7 @@ const controlsBindList = document.getElementById("controlsBindList");
 const controlsResetBinds = document.getElementById("controlsResetBinds");
 const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
+const controlsMenuInner = document.getElementById("controlsMenuInner");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
@@ -1901,6 +1921,21 @@ if (videoFxCheckbox){
     inputEl.value = String(value);
   }
 
+  function isStartingStatInputEl(inputEl){
+    return !!inputEl && getStartingStatInputs().includes(inputEl);
+  }
+
+  function normalizeStartStatInput(inputEl){
+    if (!inputEl) return;
+    const min = Number(inputEl.min);
+    const max = Number(inputEl.max);
+    const parsed = parseResourceOption(inputEl, Number.isFinite(min) ? min : 0);
+    let nextValue = parsed.infinite ? 100 : parsed.value;
+    if (Number.isFinite(min)) nextValue = Math.max(min, nextValue);
+    if (Number.isFinite(max)) nextValue = Math.min(max, nextValue);
+    inputEl.value = parsed.infinite ? "\u221e" : String(nextValue);
+  }
+
   function syncRangeProgress(rangeEl){
   if (!rangeEl) return;
   const min = parseFloat(rangeEl.min || '0');
@@ -1912,10 +1947,6 @@ if (videoFxCheckbox){
 }
 
 function syncStartOptionsLabels(){
-    clampNumericInput(livesSlider);
-    clampNumericInput(heartsSlider);
-    clampNumericInput(shieldsSlider);
-    clampNumericInput(bombsSlider);
     if (livesVal && livesSlider) livesVal.textContent = formatResourceOptionValue(livesSlider);
     if (heartsVal && heartsSlider) heartsVal.textContent = formatResourceOptionValue(heartsSlider);
     if (shieldsVal && shieldsSlider) shieldsVal.textContent = formatResourceOptionValue(shieldsSlider);
@@ -1925,10 +1956,34 @@ function syncStartOptionsLabels(){
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
   }
 
-  [livesSlider, heartsSlider, shieldsSlider, bombsSlider, speedSlider].forEach(s => {
-    s.addEventListener("input", syncStartOptionsLabels);
-    s.addEventListener("change", syncStartOptionsLabels);
+  [livesSlider, heartsSlider, shieldsSlider, bombsSlider].forEach(inputEl => {
+    if (!inputEl) return;
+    inputEl.addEventListener("focus", () => {
+      if (activeInputMode !== INPUT_MODE_CONTROLLER) inputEl.select();
+    });
+    inputEl.addEventListener("click", () => {
+      if (activeInputMode !== INPUT_MODE_CONTROLLER) inputEl.select();
+    });
+    inputEl.addEventListener("input", syncStartOptionsLabels);
+    inputEl.addEventListener("change", () => {
+      normalizeStartStatInput(inputEl);
+      syncStartOptionsLabels();
+    });
+    inputEl.addEventListener("blur", () => {
+      normalizeStartStatInput(inputEl);
+      syncStartOptionsLabels();
+    });
+    inputEl.addEventListener("wheel", (e) => {
+      if (activeInputMode === INPUT_MODE_CONTROLLER) return;
+      e.preventDefault();
+      setActiveInputMode(INPUT_MODE_KEYBOARD);
+      stepNumberInput(inputEl, e.deltaY < 0 ? 1 : -1);
+    }, { passive:false });
   });
+  if (speedSlider){
+    speedSlider.addEventListener("input", syncStartOptionsLabels);
+    speedSlider.addEventListener("change", syncStartOptionsLabels);
+  }
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
   syncStartOptionsLabels();
   syncCheatsMenuState();
@@ -1995,6 +2050,7 @@ let controlsInputLockMode = null;
 let controlsBindMode = INPUT_MODE_KEYBOARD;
 let controlsFocusIndex = 0;
 let controlsMoveFocusIndex = 0;
+let startMenuPanelRect = null;
 let bindingEditState = null;
 let controllerRebindReady = false;
 let pauseControlsOpen = false;
@@ -2577,6 +2633,24 @@ function openControllerSelect(selectEl){
   return opened;
 }
 
+function stepNumberInput(inputEl, delta){
+  if (!inputEl) return false;
+  const step = parseInt(inputEl.step || '1', 10) || 1;
+  const min = parseInt(inputEl.min || '0', 10);
+  const max = parseInt(inputEl.max || '999', 10);
+  const raw = String(inputEl.value || '').trim().toLowerCase();
+  const isInfinite = raw === 'infinite' || raw === 'inf' || raw === '\u221e';
+  const current = isInfinite ? max : parseInt(raw || '0', 10);
+  const safeCurrent = Number.isFinite(current) ? current : min;
+  const next = Math.max(min, Math.min(max, safeCurrent + (step * delta)));
+  if (next === safeCurrent) return false;
+  inputEl.value = next >= 100 ? "\u221e" : String(next);
+  inputEl.dispatchEvent(new Event('input', { bubbles:true }));
+  inputEl.dispatchEvent(new Event('change', { bubbles:true }));
+  focusControllerElement(inputEl);
+  return true;
+}
+
 function activateControllerTarget(el){
   if (!el) return;
   if (el.dataset && el.dataset.action && el.dataset.scheme){
@@ -2597,6 +2671,11 @@ function activateControllerTarget(el){
     focusControllerElement(el);
     return;
   }
+  if (isStartingStatInputEl(el)){
+    el.focus();
+    focusControllerElement(el);
+    return;
+  }
   if (typeof el.click === 'function') el.click();
 }
 
@@ -2606,7 +2685,7 @@ function adjustControllerOption(delta){
   if (!el) return false;
   if (el.tagName === 'SELECT') return cycleSelect(el, delta);
   if (el.type === 'range') return stepRange(el, delta);
-  if (el.type === 'number') return stepNumberInput(el, delta);
+  if (isStartingStatInputEl(el)) return stepNumberInput(el, delta);
   if (el.type === 'checkbox'){
     el.checked = delta > 0;
     el.dispatchEvent(new Event('change', { bubbles:true }));
@@ -2653,6 +2732,7 @@ function showMenu(){
 
 function showControlsMenu(){
   if (!controlsMenu || startMenu.style.display === "none") return;
+  startMenuPanelRect = startMenu.getBoundingClientRect();
   setPaused(false);
   pauseControlsOpen = false;
   pauseOverlay.classList.remove("pauseControlsVisible");
@@ -2673,6 +2753,7 @@ function showControlsMenu(){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
   renderMenuHudPreview();
+  updateHearts();
 }
 function hideControlsMenu(){
   if (!controlsMenu) return;
@@ -2752,6 +2833,11 @@ function showOptions(){
   if (speedSlider) speedSlider.value = START_GAME_SPEED;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   syncStartOptionsLabels();
+  normalizeStartStatInput(livesSlider);
+  normalizeStartStatInput(heartsSlider);
+  normalizeStartStatInput(shieldsSlider);
+  normalizeStartStatInput(bombsSlider);
+  syncStartOptionsLabels();
   syncCheatsMenuState();
 
 // v1.96: drop shield when entering menus
@@ -2771,6 +2857,7 @@ function showOptions(){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   else clearControllerFocus();
   renderMenuHudPreview();
+  updateHearts();
 }
 function startGame(){
   setPaused(false);
@@ -3112,19 +3199,19 @@ function gpEdge(i, nowPressed){
   return (!!nowPressed && !was);
 }
 
-function consumeMenuAxis(direction, active, dt){
+function consumeMenuAxis(direction, active, dt, repeatDelay = GP_MENU_REPEAT_DELAY, repeatRate = GP_MENU_REPEAT_RATE){
   const repeatKey = direction;
   if (!active){
     gpNavRepeat[repeatKey] = 0;
     return false;
   }
   if (gpNavRepeat[repeatKey] <= 0){
-    gpNavRepeat[repeatKey] = GP_MENU_REPEAT_DELAY;
+    gpNavRepeat[repeatKey] = repeatDelay;
     return true;
   }
   gpNavRepeat[repeatKey] -= dt;
   if (gpNavRepeat[repeatKey] <= 0){
-    gpNavRepeat[repeatKey] = GP_MENU_REPEAT_RATE;
+    gpNavRepeat[repeatKey] = repeatRate;
     return true;
   }
   return false;
@@ -3215,8 +3302,8 @@ function pollGamepad(dt){
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
   // Options menu: right stick changes number values without dragging focus around like a caffeinated raccoon.
-  const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt);
-  const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt);
+  const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
+  const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
 
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
     const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
@@ -4889,6 +4976,10 @@ if (isDragonEnemy(e)){
 let lastT = performance.now();
 
 function updateHearts(){
+  if (gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
+    renderMenuHudPreview();
+    return;
+  }
   // v1.96: Hearts are configurable (MAX_HEARTS), and shields/bomb-armor show here too.
   const maxH = Math.max(1, MAX_HEARTS|0);
   const currentHearts = Math.max(0, Math.min(maxH, health * maxH));
@@ -4910,7 +5001,7 @@ function updateHearts(){
     for (let i = 0; i < visibleMaxH; i++){
       out += (i < hearts ? full : empty) + " ";
     }
-    if (hearts > maxVisibleHudIcons) out += `<span class="heartsExtra">+${hearts - maxVisibleHudIcons}</span> `;
+    if (hearts > maxVisibleHudIcons) out += `<span class="hudExtra">+${hearts - maxVisibleHudIcons}</span> `;
   }
 
   // v1.96: shield pips (one-hit armor) next to hearts
@@ -4919,7 +5010,7 @@ function updateHearts(){
   } else if (shieldPips > 0){
     const show = Math.min(maxVisibleHudIcons, shieldPips);
     out += "  " + "🛡️ ".repeat(show);
-    if (shieldPips > maxVisibleHudIcons) out += "+" + (shieldPips - maxVisibleHudIcons) + " ";
+    if (shieldPips > maxVisibleHudIcons) out += `<span class="hudExtra">+${shieldPips - maxVisibleHudIcons}</span> `;
   }
 
   // v1.96: bonus armor indicator next to hearts

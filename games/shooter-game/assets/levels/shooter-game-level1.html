@@ -182,6 +182,7 @@
   }
   .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:center; margin-top:10px; }
   .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
+  #optionsMenu .optRow.buttonOnlyRow{ border:none; background:transparent; padding:0; }
   .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
   #optionsMenu select,
   #optionsMenu input[type="range"],
@@ -192,14 +193,16 @@
   .startStatsRow{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; align-items:start; }
   .startStatField{ display:flex; flex-direction:column; gap:6px; min-width:0; }
   .startStatField label{ font-size:13px; color:#00ff66; }
-  .startStatField input[type="number"]{ width:100%; padding:10px 12px; font-family:monospace; font-size:18px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none; box-sizing:border-box; text-align:center; }
-  .startStatField input[type="number"]:focus{ border-color:#00ff66; box-shadow:0 0 0 2px rgba(0,255,102,0.2); }
+  .startStatField .resourceNumberInput{ width:100%; padding:10px 12px; font-family:monospace; font-size:18px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none; box-sizing:border-box; text-align:center; }
+  .startStatField .resourceNumberInput:focus{ border-color:#00ff66; box-shadow:0 0 0 2px rgba(0,255,102,0.2); }
+  .startStatField .resourceNumberInput::selection{ background:rgba(128,0,255,0.72); color:#ffffff; }
+  .startStatField .resourceNumberInput::-moz-selection{ background:rgba(128,0,255,0.72); color:#ffffff; }
   /* v2.02: plain centered resource number boxes. No native or custom arrows. */
-  .startStatField input[type="number"]{ -moz-appearance:textfield; appearance:textfield; padding-right:12px; text-align:center; }
-  .startStatField input[type="number"]::-webkit-outer-spin-button,
-  .startStatField input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; display:none; }
+  .startStatField .resourceNumberInput{ -moz-appearance:textfield; appearance:textfield; padding-right:12px; text-align:center; }
+  .startStatField .resourceNumberInput::-webkit-outer-spin-button,
+  .startStatField .resourceNumberInput::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; display:none; }
   .resourceNumberWrap{ position:relative; width:100%; }
-  .resourceNumberWrap input[type="number"]{ width:100%; }
+  .resourceNumberWrap .resourceNumberInput{ width:100%; }
   .resourceStepperButtons{ display:none !important; }
   .startStatField.statInfinite::after{ display:none; }
   .startStatField.statInfinite .resourceNumberWrap::after{ content:"MAX"; position:absolute; left:12px; right:12px; top:50%; transform:translateY(-50%); height:22px; line-height:22px; text-align:center; color:#00ff66; font-family:monospace; font-size:18px; pointer-events:none; }
@@ -211,8 +214,9 @@
     font-size: 13px;
     line-height: 1.5;
   }
-  #controlsMenu.panel{ width:min(640px, 94vw); padding:12px 12px 10px; background: rgba(75,0,118,0.72); max-height:none; overflow:visible; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
+  #controlsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; }
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #controlsMenuInner{ width:100%; transform-origin:top center; }
   #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:center; width:100%; min-width:0; }
   #controlsMenu .optRow{ padding:6px 0; background:transparent; border:none; border-radius:0; box-shadow:none; }
@@ -237,7 +241,7 @@
   #controlsMenu .controlsFixedBindButton:focus{ outline:none; }
 
   @media (max-width: 640px), (max-height: 760px){
-    #controlsMenu.panel{ width:min(520px, 94vw); padding:10px; max-height:none; }
+    #controlsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; max-height:none; }
     #controlsMenu .title{ font-size:17px; }
     #controlsMenu .controlsGrid{ gap:5px; }
     #controlsMenu .optRow{ padding:6px 8px; }
@@ -904,10 +908,11 @@ body.invert-colors {
   line-height: 1.05 !important;
 }
 
+#heartsHud .hudExtra,
 #heartsHud .heartsExtra{
   display:inline-block;
   letter-spacing:0;
-  margin-left:2px;
+  margin-left:0;
   vertical-align:middle;
 }
 </style>
@@ -1001,7 +1006,7 @@ body.invert-colors {
 
 
 <div id="uiRoot">
-  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px;">
+  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
@@ -1058,19 +1063,19 @@ body.invert-colors {
         <div class="startStatsRow">
           <div class="startStatField">
             <label for="heartsSlider">Hearts</label>
-            <input id="heartsSlider" type="number" min="1" max="100" value="3" step="1" inputmode="numeric" />
+            <input id="heartsSlider" class="resourceNumberInput" type="text" min="1" max="100" value="3" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
           </div>
           <div class="startStatField">
             <label for="shieldsSlider">Shields</label>
-            <input id="shieldsSlider" type="number" min="0" max="100" value="0" step="1" inputmode="numeric" />
+            <input id="shieldsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
           </div>
           <div class="startStatField">
             <label for="livesSlider">Lives</label>
-            <input id="livesSlider" type="number" min="0" max="100" value="1" step="1" inputmode="numeric" />
+            <input id="livesSlider" class="resourceNumberInput" type="text" min="0" max="100" value="1" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
           </div>
           <div class="startStatField">
             <label for="bombsSlider">Bombs</label>
-            <input id="bombsSlider" type="number" min="0" max="100" value="0" step="1" inputmode="numeric" />
+            <input id="bombsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
           </div>
         </div>
         <div class="hint">Use 0-99 for exact values. 100 = INFINITE</div>
@@ -1083,7 +1088,7 @@ body.invert-colors {
         <div class="hint">5 = normal. 1 = slow-mo. 10 = turbo.</div>
       </div>
 
-      <div class="optRow fullRow">
+      <div class="optRow fullRow buttonOnlyRow">
         <button id="btnCheats" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Cheats</button>
       </div></div>
 
@@ -1140,16 +1145,18 @@ body.invert-colors {
   </div>
 
   <div id="controlsMenu" class="panel" style="display:none;">
-    <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
-    <div class="controlsGrid">
-      <div class="optRow">
-        <div id="controlsBindList" class="controlsBindList"></div>
+    <div id="controlsMenuInner">
+      <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
+      <div class="controlsGrid">
+        <div class="optRow">
+          <div id="controlsBindList" class="controlsBindList"></div>
+        </div>
       </div>
-    </div>
-    <div class="btnRow" style="margin-top:14px;">
-      <button id="controlsBack" class="smallBtn" type="button">Back</button>
-      <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
-      <button id="controlsApplyBinds" class="smallBtn" type="button">Apply</button>
+      <div class="btnRow" style="margin-top:14px;">
+        <button id="controlsBack" class="smallBtn" type="button">Back</button>
+        <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
+        <button id="controlsApplyBinds" class="smallBtn" type="button">Apply</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1170,11 +1177,12 @@ body.invert-colors {
 position:fixed;
 bottom:12px;
 left:50%;
-transform:translateX(-50%);
+transform:translateX(-50%) scale(0.75);
+transform-origin:center bottom;
 font-size:28px;
-letter-spacing:6px;
+letter-spacing:2px;
 pointer-events:none;
-z-index:9999;
+z-index:40;
 display:none;
 white-space:nowrap;
 line-height:1;
