@@ -182,10 +182,18 @@ function playDeathYell(){
 ======================= */
 const BASE_PLAYER_FIRE_COOLDOWN = 0.26; // seconds (wave scaling reduces this)
 const PLAYER_BULLET_SPEED  = 8.0; // pixels per frame-ish (magnitude); direction comes from aim
+const BIG_BULLET_FIRE_COOLDOWN_MULTIPLIER = 0.7;
+const BIG_BULLET_BRANCH_ANGLE = 0.24;
+const BIG_BULLET_BRANCH_RADIUS_MULTIPLIER = 0.72;
+const BIG_BULLET_BRANCH_SPEED_MULTIPLIER = 0.94;
+const BIG_BULLET_LIGHTNING_TRAIL_LEN = 26;
 
 function getPlayerFireCooldown(){
   // v1.96: player shoots faster every wave (lower cooldown)
-  return Math.max(0.14, BASE_PLAYER_FIRE_COOLDOWN * Math.pow(0.94, (wave-1)));
+  const baseCooldown = Math.max(0.14, BASE_PLAYER_FIRE_COOLDOWN * Math.pow(0.94, (wave-1)));
+  return (typeof bigBulletBuffEndTime === "number" && bigBulletBuffEndTime > time)
+    ? Math.max(0.09, baseCooldown * BIG_BULLET_FIRE_COOLDOWN_MULTIPLIER)
+    : baseCooldown;
 }
 
 /* =======================
@@ -447,6 +455,13 @@ function renderScoreStoreHeartsPreviewMarkup(){
   if (!heartsAreInfinite && !shieldsAreInfinite && (infiniteModeActive || heartsInfiniteActive || shieldsInfiniteActive || bombsInfiniteActive || livesInfiniteActive)) out += "  ♾️";
   return out.trim();
 }
+function getScoreStoreItemDescription(item){
+  if (!item) return "";
+  if (item.id !== "big_bullets") return item.description || "";
+  const remainingSeconds = Math.max(0, bigBulletBuffEndTime - time);
+  if (!remainingSeconds) return item.description || "";
+  return `${item.description} ${Math.ceil(remainingSeconds)}s remaining.`;
+}
 function spendScoreStoreItem(item){
   if (!item) return false;
   const price = Math.abs(Number(item.cost) || 0);
@@ -477,14 +492,20 @@ function spendScoreStoreItem(item){
   } else if (item.id === "bombs"){
     bombsCount = Math.max(0, Math.floor(bombsCount || 0) + 1);
     if (typeof _syncBombHud === "function") _syncBombHud();
+  } else if (item.id === "big_bullets"){
+    bigBulletBuffEndTime = Math.max(bigBulletBuffEndTime, time) + BIG_BULLET_DURATION_SECS;
   }
 
   updateAccuracyScoreHUD();
   if (scoreStoreCurrentScoreEl){
     scoreStoreCurrentScoreEl.textContent = "Current Score: " + String(Math.floor(score)) + "pts";
   }
-  if (item.id === "full_health_restore" && typeof renderScoreStoreMenu === "function") renderScoreStoreMenu();
-  setScoreStoreStatus("Purchased " + item.label + " for " + String(item.cost) + " pts.");
+  if ((item.id === "full_health_restore" || item.id === "big_bullets") && typeof renderScoreStoreMenu === "function") renderScoreStoreMenu();
+  if (item.id === "big_bullets"){
+    setScoreStoreStatus("Purchased " + item.label + " for " + String(item.cost) + " pts. " + String(Math.ceil(Math.max(0, bigBulletBuffEndTime - time))) + "s active.");
+  } else {
+    setScoreStoreStatus("Purchased " + item.label + " for " + String(item.cost) + " pts.");
+  }
   return true;
 }
 function renderScoreStoreMenu(){
@@ -514,7 +535,7 @@ function renderScoreStoreMenu(){
 
     const detail = document.createElement("div");
     detail.className = "scoreStoreItemDetail";
-    detail.textContent = item.description;
+    detail.textContent = getScoreStoreItemDescription(item);
 
     let preview = null;
     if (item.id === "full_health_restore"){
@@ -1211,6 +1232,7 @@ let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
+let bigBulletBuffEndTime = 0;
 // IMPORTANT: Do not rename this localStorage key or change the stored stat property names casually.
 // Players' lifetime stats depend on this exact schema surviving future updates.
 // If the schema ever changes, migrate old values forward instead of resetting them.
@@ -1416,12 +1438,16 @@ function commitRunLifetimeStats({won=false, died=false} = {}){
 }
 
 const STORE_UNLOCK_SCORE_THRESHOLD = 100;
+const PLAYER_BULLET_RADIUS = 5;
+const BIG_BULLET_RADIUS_MULTIPLIER = 2;
+const BIG_BULLET_DURATION_SECS = 30;
 const SCORE_STORE_ITEMS = [
   { id: "hearts", label: "Extra Heart", cost: -250, description: "Spend score to add 1 heart to your total hearts." },
   { id: "lives", label: "Extra Life", cost: -250, description: "Spend score to add 1 extra life." },
   { id: "full_health_restore", label: "Full Health Restore", cost: -150, description: "Spend score to refill your current hearts to full." },
   { id: "shields", label: "Shield", cost: -125, description: "Spend score to add 1 shield pip." },
-  { id: "bombs", label: "Bomb", cost: -100, description: "Spend score to add 1 bomb." }
+  { id: "bombs", label: "Bomb", cost: -100, description: "Spend score to add 1 bomb." },
+  { id: "big_bullets", label: "Big Bullets", cost: -500, description: "Spend score to fire 2x bigger lightning-branch bullets for 30 seconds." }
 ];
 let totalEnemiesSpawned = 0;
 let bombKills = 0;
@@ -4412,6 +4438,7 @@ function startGame(){
   currentRunStatsCommitted = false;
   score = 0;
   scoreStoreUnlockedThisRun = false;
+  bigBulletBuffEndTime = 0;
   frogKills = 0;
   shotsFired = 0;
   hitsConnected = 0;
@@ -5734,6 +5761,31 @@ const enemyBullets = [];
 const MAX_PLAYER_BULLETS = 90;
 const MAX_ENEMY_BULLETS  = 140;
 
+function pushPlayerBullet(x, y, vx, vy, r, lightningBranchIndex = null){
+  if (bullets.length >= MAX_PLAYER_BULLETS){
+    bullets.splice(0, bullets.length - MAX_PLAYER_BULLETS + 1);
+  }
+  const bullet = { x, y, vx, vy, r };
+  if (lightningBranchIndex !== null) bullet.lightningBranchIndex = lightningBranchIndex;
+  bullets.push(bullet);
+}
+
+function spawnLightningBranchBullets(x, y, dx, dy, baseRadius){
+  pushPlayerBullet(x, y, dx * PLAYER_BULLET_SPEED, dy * PLAYER_BULLET_SPEED, baseRadius, 0);
+  const aimAngle = Math.atan2(dy, dx);
+  for (const branchDir of [-1, 1]){
+    const branchAngle = aimAngle + (BIG_BULLET_BRANCH_ANGLE * branchDir);
+    pushPlayerBullet(
+      x,
+      y,
+      Math.cos(branchAngle) * PLAYER_BULLET_SPEED * BIG_BULLET_BRANCH_SPEED_MULTIPLIER,
+      Math.sin(branchAngle) * PLAYER_BULLET_SPEED * BIG_BULLET_BRANCH_SPEED_MULTIPLIER,
+      baseRadius * BIG_BULLET_BRANCH_RADIUS_MULTIPLIER,
+      branchDir
+    );
+  }
+}
+
 function shoot(){
   if (isPaused || isGameSpeedFrozen() || playerSpectatorMode) return;
   if (fireCooldown > 0) return;
@@ -5761,18 +5813,15 @@ function shoot(){
 
 
   }
-  // v1.96: cap bullets to prevent performance spikes
-  if (bullets.length >= MAX_PLAYER_BULLETS){
-    bullets.splice(0, bullets.length - MAX_PLAYER_BULLETS + 1);
+  const hasBigBulletCharge = bigBulletBuffEndTime > time;
+  const bulletX = player.x + dx * spawnDist;
+  const bulletY = player.y + dy * spawnDist;
+  const bulletRadius = PLAYER_BULLET_RADIUS * (hasBigBulletCharge ? BIG_BULLET_RADIUS_MULTIPLIER : 1);
+  if (hasBigBulletCharge){
+    spawnLightningBranchBullets(bulletX, bulletY, dx, dy, bulletRadius);
+  } else {
+    pushPlayerBullet(bulletX, bulletY, dx * PLAYER_BULLET_SPEED, dy * PLAYER_BULLET_SPEED, bulletRadius);
   }
-  bullets.push({
-
-    x: player.x + dx * spawnDist,
-    y: player.y + dy * spawnDist,
-    vx: dx * PLAYER_BULLET_SPEED,
-    vy: dy * PLAYER_BULLET_SPEED,
-    r: 5
-  });
 
   
   shotsFired += 1;
@@ -6940,9 +6989,61 @@ if (isDragonEnemy(e)){
   if (USE_DOM_ANIMATED_GIF_SPRITES) endAnimatedGifSpriteFrame();
 
   // bullets (player)
-  // v1.96: draw as simple circles (no text/letter-like shapes)
-  ctx.fillStyle = "#ff0";
   for (const b of bullets){
+    if (typeof b.lightningBranchIndex === "number"){
+      const speed = Math.hypot(b.vx, b.vy) || 1;
+      const dirX = b.vx / speed;
+      const dirY = b.vy / speed;
+      const perpX = -dirY;
+      const perpY = dirX;
+      const boltLen = BIG_BULLET_LIGHTNING_TRAIL_LEN + (b.r * 1.9);
+      const tipX = b.x + dirX * (b.r * 0.9);
+      const tipY = b.y + dirY * (b.r * 0.9);
+      const baseX = b.x - dirX * (b.r * 1.8);
+      const baseY = b.y - dirY * (b.r * 1.8);
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.strokeStyle = b.lightningBranchIndex === 0 ? "rgba(110,220,255,0.45)" : "rgba(80,170,255,0.38)";
+      ctx.lineWidth = Math.max(2.2, b.r * 0.95);
+      ctx.lineCap = "butt";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      for (let i = 0; i <= 5; i++){
+        const t = i / 5;
+        const sway = (i === 0 || i === 4)
+          ? 0
+          : Math.sin((time * 34) + (b.x * 0.05) + (b.y * 0.03) + (i * 1.7) + (b.lightningBranchIndex * 1.9)) * (b.r * 0.55);
+        const px = b.x + dirX * (boltLen * (0.28 - t)) + perpX * sway;
+        const py = b.y + dirY * (boltLen * (0.28 - t)) + perpY * sway;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = b.lightningBranchIndex === 0 ? "rgba(255,252,210,0.98)" : "rgba(175,245,255,0.94)";
+      ctx.lineWidth = Math.max(1.1, b.r * 0.38);
+      ctx.beginPath();
+      for (let i = 0; i <= 5; i++){
+        const t = i / 5;
+        const sway = (i === 0 || i === 5)
+          ? 0
+          : Math.sin((time * 34) + (b.x * 0.05) + (b.y * 0.03) + (i * 1.7) + (b.lightningBranchIndex * 1.9)) * (b.r * 0.38);
+        const px = b.x + dirX * (boltLen * (0.28 - t)) + perpX * sway;
+        const py = b.y + dirY * (boltLen * (0.28 - t)) + perpY * sway;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.fillStyle = b.lightningBranchIndex === 0 ? "#fff6a0" : "#9fe8ff";
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(baseX + perpX * (b.r * 0.72), baseY + perpY * (b.r * 0.72));
+      ctx.lineTo(baseX - perpX * (b.r * 0.72), baseY - perpY * (b.r * 0.72));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      continue;
+    }
+    ctx.fillStyle = "#ff0";
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fill();
