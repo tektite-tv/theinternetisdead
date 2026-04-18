@@ -419,6 +419,7 @@ function spendScoreStoreItem(item){
     return false;
   }
 
+  scoreStoreUnlockedThisRun = true;
   score = Math.max(0, score - price);
 
   if (item.id === "hearts"){
@@ -1112,6 +1113,7 @@ let time = 0;
 let score = 0;
 let scoreTrackingDisabled = false;
 let scoreTrackingLocked = false;
+let scoreStoreUnlockedThisRun = false;
 let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
@@ -1267,11 +1269,14 @@ function awardScore(basePoints){
   if (scoreTrackingDisabled) return 0;
   const awarded = Math.round(Math.max(0, basePoints) * getAccuracyMultiplier());
   score += awarded;
+  if (Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD) scoreStoreUnlockedThisRun = true;
   return awarded;
 }
 
 function isStoreUnlocked(){
-  return !scoreTrackingDisabled && Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD;
+  if (scoreTrackingDisabled) return false;
+  if (Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD) scoreStoreUnlockedThisRun = true;
+  return scoreStoreUnlockedThisRun;
 }
 
 function canOpenStore(){
@@ -2929,6 +2934,7 @@ function startGame(){
   runTimer = 0;
   updateTimerHUD();
   score = 0;
+  scoreStoreUnlockedThisRun = false;
   frogKills = 0;
   shotsFired = 0;
   hitsConnected = 0;
@@ -3694,7 +3700,10 @@ function showMazeSummaryAndPauseAdvance(){
   const total = mazeWalkableTileCount || countMazeWalkableTiles();
   const missed = Math.max(0, total - stepped);
   const bonus = stepped * 10;
-  if (!scoreTrackingDisabled) score += bonus;
+  if (!scoreTrackingDisabled){
+    score += bonus;
+    if (Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD) scoreStoreUnlockedThisRun = true;
+  }
   updateAccuracyScoreHUD();
 
   mazeSummaryActive = true;
