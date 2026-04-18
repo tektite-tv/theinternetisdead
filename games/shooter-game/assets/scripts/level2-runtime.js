@@ -410,6 +410,44 @@ function setScoreStoreStatus(message){
   if (!scoreStoreStatusEl) return;
   scoreStoreStatusEl.textContent = message || "Select an item to preview this score-spend slot.";
 }
+function renderScoreStoreHeartsPreviewMarkup(){
+  const maxH = Math.max(1, MAX_HEARTS|0);
+  const currentHearts = Math.max(0, Math.min(maxH, health * maxH));
+  const heartsAreInfinite = !!(infiniteModeActive || heartsInfiniteActive);
+  const shieldsAreInfinite = !!(infiniteModeActive || shieldsInfiniteActive);
+  const infinityLabel = "x♾️";
+  const maxVisibleHudIcons = 5;
+  const hearts = Math.max(0, Math.min(maxH, Math.ceil(currentHearts - 0.000001)));
+  const full = "❤️";
+  const empty = "❌";
+  let out = "";
+
+  if (heartsAreInfinite){
+    out += `${full}${infinityLabel}`;
+  } else {
+    const visibleMaxH = Math.min(maxVisibleHudIcons, maxH);
+    for (let i = 0; i < visibleMaxH; i++){
+      out += (i < hearts ? full : empty) + " ";
+    }
+    if (hearts > maxVisibleHudIcons) out += `<span class="hudExtra heartsExtra">+${hearts - maxVisibleHudIcons}</span> `;
+  }
+
+  if (shieldsAreInfinite){
+    out += "  🛡️" + infinityLabel;
+  } else if (shieldPips > 0){
+    const show = Math.min(maxVisibleHudIcons, shieldPips);
+    out += "  " + "🛡️ ".repeat(show);
+    if (shieldPips > maxVisibleHudIcons) out += `<span class="hudExtra heartsExtra">+${shieldPips - maxVisibleHudIcons}</span> `;
+  }
+
+  let armorIcon = "";
+  if (bonusArmor > 0) armorIcon = "🛡️";
+  else if (bonusArmorBrokenT > 0) armorIcon = "❌";
+  if (armorIcon) out += "  " + armorIcon;
+
+  if (!heartsAreInfinite && !shieldsAreInfinite && (infiniteModeActive || heartsInfiniteActive || shieldsInfiniteActive || bombsInfiniteActive || livesInfiniteActive)) out += "  ♾️";
+  return out.trim();
+}
 function spendScoreStoreItem(item){
   if (!item) return false;
   const price = Math.abs(Number(item.cost) || 0);
@@ -428,6 +466,9 @@ function spendScoreStoreItem(item){
     health = Math.min(1, Math.max(0, health || 0) + HIT_DAMAGE);
     if (typeof updateHearts === "function") updateHearts();
     try{ player.y = getPlayerAlignedY(); }catch(e){}
+  } else if (item.id === "full_health_restore"){
+    health = 1;
+    if (typeof updateHearts === "function") updateHearts();
   } else if (item.id === "lives"){
     lives = Math.max(0, Math.floor(lives || 0) + 1);
     if (livesText) livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
@@ -443,6 +484,7 @@ function spendScoreStoreItem(item){
   if (scoreStoreCurrentScoreEl){
     scoreStoreCurrentScoreEl.textContent = "Current Score: " + String(Math.floor(score)) + "pts";
   }
+  if (item.id === "full_health_restore" && typeof renderScoreStoreMenu === "function") renderScoreStoreMenu();
   setScoreStoreStatus("Purchased " + item.label + " for " + String(item.cost) + " pts.");
   return true;
 }
@@ -475,6 +517,13 @@ function renderScoreStoreMenu(){
     detail.className = "scoreStoreItemDetail";
     detail.textContent = item.description;
 
+    let preview = null;
+    if (item.id === "full_health_restore"){
+      preview = document.createElement("div");
+      preview.className = "scoreStoreHeartsPreview";
+      preview.innerHTML = renderScoreStoreHeartsPreviewMarkup();
+    }
+
     const action = document.createElement("button");
     action.type = "button";
     action.className = "scoreStoreAction smallBtn";
@@ -488,6 +537,7 @@ function renderScoreStoreMenu(){
     head.appendChild(cost);
     meta.appendChild(head);
     meta.appendChild(detail);
+    if (preview) meta.appendChild(preview);
     row.appendChild(meta);
     row.appendChild(action);
     scoreStoreItemsEl.appendChild(row);
@@ -1122,6 +1172,7 @@ const STORE_UNLOCK_SCORE_THRESHOLD = 100;
 const SCORE_STORE_ITEMS = [
   { id: "hearts", label: "Extra Heart", cost: -250, description: "Spend score to add 1 heart to your total hearts." },
   { id: "lives", label: "Extra Life", cost: -250, description: "Spend score to add 1 extra life." },
+  { id: "full_health_restore", label: "Full Health Restore", cost: -150, description: "Spend score to refill your current hearts to full." },
   { id: "shields", label: "Shield", cost: -125, description: "Spend score to add 1 shield pip." },
   { id: "bombs", label: "Bomb", cost: -100, description: "Spend score to add 1 bomb." }
 ];
