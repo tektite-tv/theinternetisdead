@@ -410,6 +410,41 @@ function setScoreStoreStatus(message){
   if (!scoreStoreStatusEl) return;
   scoreStoreStatusEl.textContent = message || "Select an item to preview this score-spend slot.";
 }
+function spendScoreStoreItem(item){
+  if (!item) return false;
+  const price = Math.abs(Number(item.cost) || 0);
+  const currentScore = Math.floor(score);
+  if (currentScore < price){
+    setScoreStoreStatus(item.label + " costs " + String(item.cost) + " pts. You only have " + currentScore + " pts.");
+    return false;
+  }
+
+  score = Math.max(0, score - price);
+
+  if (item.id === "hearts"){
+    MAX_HEARTS = Math.max(1, Math.floor(MAX_HEARTS || 1) + 1);
+    HIT_DAMAGE = 1 / MAX_HEARTS;
+    health = Math.min(1, Math.max(0, health || 0) + HIT_DAMAGE);
+    if (typeof updateHearts === "function") updateHearts();
+    try{ player.y = getPlayerAlignedY(); }catch(e){}
+  } else if (item.id === "lives"){
+    lives = Math.max(0, Math.floor(lives || 0) + 1);
+    if (livesText) livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
+  } else if (item.id === "shields"){
+    shieldPips = Math.max(0, Math.floor(shieldPips || 0) + 1);
+    if (typeof updateHearts === "function") updateHearts();
+  } else if (item.id === "bombs"){
+    bombsCount = Math.max(0, Math.floor(bombsCount || 0) + 1);
+    if (typeof _syncBombHud === "function") _syncBombHud();
+  }
+
+  updateAccuracyScoreHUD();
+  if (scoreStoreCurrentScoreEl){
+    scoreStoreCurrentScoreEl.textContent = "Current Score: " + String(Math.floor(score)) + "pts";
+  }
+  setScoreStoreStatus("Purchased " + item.label + " for " + String(item.cost) + " pts.");
+  return true;
+}
 function renderScoreStoreMenu(){
   if (scoreStoreCurrentScoreEl){
     scoreStoreCurrentScoreEl.textContent = "Current Score: " + String(Math.floor(score)) + "pts";
@@ -445,12 +480,7 @@ function renderScoreStoreMenu(){
     action.dataset.scoreStoreItemId = item.id;
     action.textContent = String(item.cost) + " pts";
     action.addEventListener("click", () => {
-      const currentScore = Math.floor(score);
-      if (currentScore < item.cost){
-        setScoreStoreStatus(item.label + " costs " + item.cost + " pts. Purchase logic is still a placeholder.");
-        return;
-      }
-      setScoreStoreStatus(item.label + " is listed and selectable, but spending logic is still a placeholder.");
+      spendScoreStoreItem(item);
     });
 
     head.appendChild(title);
@@ -1088,10 +1118,10 @@ let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
 const STORE_UNLOCK_SCORE_THRESHOLD = 100;
 const SCORE_STORE_ITEMS = [
-  { id: "hearts", label: "Hearts", cost: 25, description: "Foundation slot for future heart refills or max-heart upgrades." },
-  { id: "lives", label: "Lives", cost: 50, description: "Foundation slot for extra-life purchases tied to current score." },
-  { id: "shields", label: "Shields", cost: 40, description: "Foundation slot for shield charges or shield-capacity upgrades." },
-  { id: "bombs", label: "Bombs", cost: 35, description: "Foundation slot for bomb stock refills and future bomb upgrades." }
+  { id: "hearts", label: "Extra Heart", cost: -250, description: "Spend score to add 1 heart to your total hearts." },
+  { id: "lives", label: "Extra Life", cost: -250, description: "Spend score to add 1 extra life." },
+  { id: "shields", label: "Shield", cost: -125, description: "Spend score to add 1 shield pip." },
+  { id: "bombs", label: "Bomb", cost: -100, description: "Spend score to add 1 bomb." }
 ];
 // v1.96: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
