@@ -7,21 +7,22 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       return `${LEVEL2_SRC}&reload=${Date.now()}`;
     }
     const shooterPageCommands = [
-      { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'] },
-      { name: '/bombs', desc: 'Set bombs to 0-99, or 100/INFINITE', usage: '/bombs [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'] },
+      { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'], cheatOnly: true },
+      { name: '/bombs', desc: 'Set bombs to 0-99, or 100/INFINITE', usage: '/bombs [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'], cheatOnly: true },
       { name: '/fullscreen', desc: 'Toggle fullscreen', usage: '/fullscreen' },
-      { name: '/game_speed', desc: 'Set game speed -5..20. 0 starts frozen staring-contest mode, 1 is normal', usage: '/game_speed [-5..20]', suggestions: ['-5', '0', '1', '5', '10', '20'] },
-      { name: '/hearts', desc: 'Set max hearts to 1-99, or 100/INFINITE', usage: '/hearts [1-99|100|INFINITE]', suggestions: ['1', '4', '8', '99', '100', 'INFINITE'] },
-      { name: '/infinite', desc: 'Toggle global infinite mode, or set one resource to infinite', usage: '/infinite', suggestions: ['hearts', 'shields', 'lives', 'bombs'] },
-      { name: '/color_invert', desc: 'Toggle invert colors', usage: '/color_invert' },
-      { name: '/lives', desc: 'Set lives to 0-99, or 100/INFINITE', usage: '/lives [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'] },
+      { name: '/game_speed', desc: 'Set game speed -5..20. 0 starts frozen staring-contest mode, 1 is normal', usage: '/game_speed [-5..20]', suggestions: ['-5', '0', '1', '5', '10', '20'], cheatOnly: true },
+      { name: '/hearts', desc: 'Set max hearts to 1-99, or 100/INFINITE', usage: '/hearts [1-99|100|INFINITE]', suggestions: ['1', '4', '8', '99', '100', 'INFINITE'], cheatOnly: true },
+      { name: '/infinite', desc: 'Toggle global infinite mode, or set one resource to infinite', usage: '/infinite', suggestions: ['hearts', 'shields', 'lives', 'bombs'], cheatOnly: true },
+      { name: '/color_invert', desc: 'Toggle invert colors', usage: '/color_invert', cheatOnly: true },
+      { name: '/lives', desc: 'Set lives to 0-99, or 100/INFINITE', usage: '/lives [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'], cheatOnly: true },
       { name: '/log', desc: 'Show the visible Last updated timestamp for the current level', usage: '/log' },
       { name: '/mute', desc: 'Toggle all shooter audio on or off', usage: '/mute' },
       { name: '/nickname', desc: 'Set the displayed username used by system messages', usage: '/nickname ', suggestions: ['Tektite', 'Guest', 'User'] },
-      { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'] },
-      { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
+      { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'], cheatOnly: true },
+      { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx', cheatOnly: true }
     ];
     let hasSwitchedToLevel2 = false;
+    let shooterCheatsUnlocked = false;
     let chatSandboxVisible = false;
     let chatSandboxReady = false;
     let chatValuePickerActive = false;
@@ -531,14 +532,19 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       try { tektiteFrame.contentWindow.focus(); } catch (error) {}
     }
 
+    function getVisibleShooterPageCommands() {
+      return shooterPageCommands.filter((command) => shooterCheatsUnlocked || command.cheatOnly !== true);
+    }
+
     function registerPageCommands() {
       postToChatSandbox({
         type: 'pageChatRegister',
-        commands: shooterPageCommands,
+        commands: getVisibleShooterPageCommands(),
         pageOnly: true,
         pageId: hasSwitchedToLevel2 ? 'shooter-game-level2' : 'shooter-game-level1',
         title: 'Tektite Shooter',
         sourceKey: 'shooter-game',
+        cheatsUnlocked: shooterCheatsUnlocked,
         welcomeMessage: "System: Welcome to Tektite's Shooter Game..."
       });
     }
@@ -680,6 +686,12 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           }
           return;
         }
+      }
+
+      if (data.type === 'tektite:cheats-unlocked-state') {
+        shooterCheatsUnlocked = !!data.unlocked;
+        registerPageCommands();
+        return;
       }
 
       if (data.type === 'tektite:continue-to-level2') {

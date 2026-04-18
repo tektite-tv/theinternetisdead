@@ -17,7 +17,7 @@ const PAUSE_COMMANDS = {
   "/fullscreen": "Toggle fullscreen mode",
   "/game_speed": "Set game speed from -5 to 20. 0 loads static Wave 1/UFO staring contest; 1 is normal.",
   "/hearts": "Set max hearts to 1-99, or 100/INFINITE (e.g. /hearts 6 or /hearts 100)",
-  "/help": "List all available commands",
+  "/help": "List available commands",
   "/infinite": "Toggle global infinite mode, or set hearts/shields/lives/bombs to infinite",
   "/lives": "Set lives to 0-99, or 100/INFINITE (e.g. /lives 3 or /lives 100)",
   "/log": "Show the visible Last updated timestamp for this level",
@@ -25,6 +25,30 @@ const PAUSE_COMMANDS = {
   "/shields": "Set shields to 0-99, or 100/INFINITE (e.g. /shields 2 or /shields 100)",
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
 };
+
+const PAUSE_CHEAT_COMMANDS = new Set([
+  "/background_color",
+  "/bombs",
+  "/color_invert",
+  "/game_speed",
+  "/hearts",
+  "/infinite",
+  "/lives",
+  "/shields",
+  "/video_fx"
+]);
+
+function areCheatCommandsUnlocked(){
+  try{
+    return typeof cheatsUnlockedByPassphrase !== "undefined" && !!cheatsUnlockedByPassphrase;
+  }catch(error){
+    return false;
+  }
+}
+
+function isPauseCommandVisibleInHelp(command){
+  return areCheatCommandsUnlocked() || !PAUSE_CHEAT_COMMANDS.has(String(command || "").toLowerCase());
+}
 
 // Controller-editable /help command arguments.
 // 100 still formats as MAX for inventory-style commands.
@@ -100,7 +124,7 @@ function getLastUpdatedLogMessage(){
 function showHelp(){
   if (!pauseCmdSuggest) return;
 
-  const cmds = Object.keys(PAUSE_COMMANDS).sort((a,b)=>a.localeCompare(b));
+  const cmds = Object.keys(PAUSE_COMMANDS).filter(isPauseCommandVisibleInHelp).sort((a,b)=>a.localeCompare(b));
   pauseCmdSuggest.style.display = "block";
   pauseCmdSuggest.innerHTML = cmds.map(cmd => {
     const desc = PAUSE_COMMANDS[cmd] || "";
@@ -124,7 +148,7 @@ let pauseCommandSuggestMode = "command";
 
 function getPauseCommandList(){
   try{
-    return Object.keys(PAUSE_COMMANDS || {}).sort((a,b)=>a.localeCompare(b));
+    return Object.keys(PAUSE_COMMANDS || {}).filter(isPauseCommandVisibleInHelp).sort((a,b)=>a.localeCompare(b));
   }catch(e){
     return [];
   }

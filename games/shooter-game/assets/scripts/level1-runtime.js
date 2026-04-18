@@ -2474,10 +2474,11 @@ function resetCheatsUnlockGate(){
   clearCheatsUnlockCountdown();
   cheatsUnlockRemaining = 0;
   cheatsUnlockInputReady = false;
+  const unlocked = !!cheatsUnlockedByPassphrase;
   if (btnCheats){
     btnCheats.style.display = "block";
     btnCheats.disabled = false;
-    btnCheats.textContent = "Cheats";
+    btnCheats.textContent = unlocked ? "Cheats (Unlocked)" : "Cheats";
   }
   if (btnCheatsUnlockInput){
     btnCheatsUnlockInput.style.display = "none";
@@ -2487,6 +2488,11 @@ function resetCheatsUnlockGate(){
 }
 
 function armCheatsUnlockCountdown(){
+  if (cheatsUnlockedByPassphrase){
+    if (btnCheats) btnCheats.textContent = "Cheats (Unlocked)";
+    showCheats();
+    return;
+  }
   if (!btnCheats || cheatsUnlockTimer || cheatsUnlockInputReady) return;
   cheatsUnlockRemaining = 3;
   btnCheats.textContent = "Really, cheat? (3)";
@@ -2525,6 +2531,13 @@ function activateCheatsUnlockInput(){
   }
 }
 
+function restoreCheatsUnlockPromptIfEmpty(){
+  if (!btnCheatsUnlockInput) return;
+  if (String(btnCheatsUnlockInput.value || "").trim() !== "") return;
+  btnCheatsUnlockInput.readOnly = true;
+  btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+}
+
 function submitCheatsUnlockInput(){
   if (!btnCheatsUnlockInput) return;
   const typed = String(btnCheatsUnlockInput.value || "").trim().toLowerCase();
@@ -2532,6 +2545,13 @@ function submitCheatsUnlockInput(){
   cheatsUnlockedByPassphrase = true;
   lockScoreTrackingState();
   clearCheatsUnlockCountdown();
+  btnCheatsUnlockInput.style.display = "none";
+  btnCheatsUnlockInput.readOnly = true;
+  btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+  if (btnCheats){
+    btnCheats.style.display = "block";
+    btnCheats.textContent = "Cheats (Unlocked)";
+  }
   showCheats();
 }
 
@@ -2999,6 +3019,17 @@ let cheatsUnlockTimer = null;
 let cheatsUnlockRemaining = 0;
 let cheatsUnlockInputReady = false;
 let cheatsUnlockedByPassphrase = false;
+
+function notifyCheatsUnlockedState(){
+  try{
+    if (window.parent && window.parent !== window){
+      window.parent.postMessage({
+        type: "tektite:cheats-unlocked-state",
+        unlocked: !!cheatsUnlockedByPassphrase
+      }, "*");
+    }
+  }catch(error){}
+}
 let startingStatFocusIndex = 0;
 let statsFocusIndex = 0;
 let pauseFocusIndex = 0;
@@ -4600,6 +4631,8 @@ if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", armCheatsUnlockCountdown);
 if (btnCheatsUnlockInput){
   btnCheatsUnlockInput.addEventListener("click", activateCheatsUnlockInput);
+  btnCheatsUnlockInput.addEventListener("focus", activateCheatsUnlockInput);
+  btnCheatsUnlockInput.addEventListener("blur", restoreCheatsUnlockPromptIfEmpty);
   btnCheatsUnlockInput.addEventListener("input", submitCheatsUnlockInput);
   btnCheatsUnlockInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter"){
@@ -5944,9 +5977,15 @@ window.addEventListener("keydown", (e) => {
     applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, e.code || e.key);
     return;
   }
-  if (e.code === "Space") e.preventDefault();
   const target = e.target;
   const typingIntoField = target && ((target.tagName === "INPUT") || (target.tagName === "TEXTAREA") || target.isContentEditable);
+
+  if (typingIntoField){
+    if (e.code === "Escape" && target && typeof target.blur === "function") target.blur();
+    return;
+  }
+
+  if (e.code === "Space") e.preventDefault();
 
   if (isStatsPanelOpen() && (e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "Enter" || e.code === "Space" || e.code === "Escape" || e.code === "Tab")){
     setActiveInputMode(INPUT_MODE_KEYBOARD);
