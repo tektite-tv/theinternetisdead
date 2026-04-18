@@ -2555,6 +2555,8 @@ function submitCheatsUnlockInput(){
   const typed = String(btnCheatsUnlockInput.value || "").trim().toLowerCase();
   if (typed !== "cheatermode") return;
   cheatsUnlockedByPassphrase = true;
+  notifyCheatsUnlockedState();
+  if (pauseCmdSuggest && pauseCmdSuggest.style.display !== "none") showHelp();
   lockScoreTrackingState();
   clearCheatsUnlockCountdown();
   cheatsUnlockInputReady = false;
