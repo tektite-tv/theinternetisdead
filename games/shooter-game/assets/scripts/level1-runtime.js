@@ -4284,9 +4284,9 @@ function syncNicknameStatsLabels(){
   if (btnStats) btnStats.textContent = savedNickname ? `${savedNickname}'s Stats` : "Stats";
   if (statsPanelTitle){
     if (savedNickname){
-      statsPanelTitle.textContent = `⭐ ${savedNickname}'s Lifetime Stats ⭐`;
+      statsPanelTitle.textContent = `${savedNickname}'s Lifetime Stats`;
     } else {
-      statsPanelTitle.textContent = "⭐ Lifetime Stats ⭐";
+      statsPanelTitle.textContent = "Lifetime Stats";
     }
   }
 }
