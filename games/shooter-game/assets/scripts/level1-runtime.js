@@ -825,15 +825,16 @@ function renderMenuHudPreview(){
   }
 
   if (scoreStoreHud){
-    scoreStoreHud.style.display = scoreTrackingDisabled ? "none" : "flex";
+    scoreStoreHud.style.display = "flex";
     scoreStoreHud.classList.remove("storeReady");
     scoreStoreHud.disabled = true;
     scoreStoreHud.tabIndex = -1;
     scoreStoreHud.setAttribute("aria-disabled", "true");
   }
   if (accuracyScoreEl){
-    accuracyScoreEl.style.display = scoreTrackingDisabled ? "none" : "block";
-    accuracyScoreEl.textContent = "Score: 0pts";
+    accuracyScoreEl.style.display = "block";
+    accuracyScoreEl.style.color = scoreTrackingDisabled ? "#00ff66" : "";
+    accuracyScoreEl.textContent = scoreTrackingDisabled ? "Cheats: Enabled" : "Score: 0pts";
   }
   if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
   if (timerHud){
@@ -1572,19 +1573,21 @@ function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   const isPlaying = gameState === STATE.PLAYING;
   const scoreVisible = isPlaying && !scoreTrackingDisabled;
+  const cheatsVisible = isPlaying && scoreTrackingDisabled;
+  const hudVisible = scoreVisible || cheatsVisible;
   const storeUnlocked = scoreVisible && isStoreUnlocked();
   const canOpen = scoreVisible && canOpenStore();
   if (scoreStoreHud){
-    scoreStoreHud.style.display = scoreVisible ? "flex" : "none";
+    scoreStoreHud.style.display = hudVisible ? "flex" : "none";
     scoreStoreHud.classList.toggle("storeReady", canOpen);
     scoreStoreHud.disabled = !canOpen;
     scoreStoreHud.tabIndex = canOpen ? 0 : -1;
     scoreStoreHud.setAttribute("aria-disabled", canOpen ? "false" : "true");
   }
   if (btnPauseOpenStore) btnPauseOpenStore.style.display = storeUnlocked ? "block" : "none";
-  if (scoreVisible) accuracyScoreEl.style.display = "block";
-  else accuracyScoreEl.style.display = "none";
-  accuracyScoreEl.textContent = "Score: " + String(Math.floor(score)) + "pts";
+  accuracyScoreEl.style.display = hudVisible ? "block" : "none";
+  accuracyScoreEl.style.color = cheatsVisible ? "#00ff66" : "";
+  accuracyScoreEl.textContent = cheatsVisible ? "Cheats: Enabled" : ("Score: " + String(Math.floor(score)) + "pts");
   if (storeUnlockedHudEl){
     storeUnlockedHudEl.style.display = scoreVisible && storeUnlocked ? "block" : "none";
     storeUnlockedHudEl.textContent = canOpen ? "Open Store" : "Store Unlocked";
