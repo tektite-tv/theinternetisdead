@@ -2396,8 +2396,8 @@ const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
   const bombsVal = document.getElementById("bombsVal");
 
   const speedVal = document.getElementById("speedVal");
-  const DEFAULT_START_LIVES = 1;
-  const DEFAULT_START_HEARTS = 3;
+  const DEFAULT_START_LIVES = 3;
+  const DEFAULT_START_HEARTS = 5;
   const DEFAULT_START_SHIELDS = 0;
   const DEFAULT_START_BOMBS = 0;
   const DEFAULT_START_GAME_SPEED = 1;
