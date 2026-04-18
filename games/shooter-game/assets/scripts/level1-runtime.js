@@ -2531,6 +2531,15 @@ function activateCheatsUnlockInput(){
   }
 }
 
+function focusCheatsUnlockInput(){
+  if (!btnCheatsUnlockInput) return;
+  // Controller focus should highlight the fake input without erasing its visible prompt.
+  // The player still has to click/select it before typing, because apparently even cheating gets UX rules.
+  if (String(btnCheatsUnlockInput.value || "").trim() === ""){
+    btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+  }
+}
+
 function restoreCheatsUnlockPromptIfEmpty(){
   if (!btnCheatsUnlockInput) return;
   if (String(btnCheatsUnlockInput.value || "").trim() !== "") return;
@@ -2545,14 +2554,19 @@ function submitCheatsUnlockInput(){
   cheatsUnlockedByPassphrase = true;
   lockScoreTrackingState();
   clearCheatsUnlockCountdown();
+  cheatsUnlockInputReady = false;
   btnCheatsUnlockInput.style.display = "none";
   btnCheatsUnlockInput.readOnly = true;
   btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
   if (btnCheats){
     btnCheats.style.display = "block";
+    btnCheats.disabled = false;
     btnCheats.textContent = "Cheats (Unlocked)";
   }
-  showCheats();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) {
+    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
+    syncOptionsControllerFocus();
+  }
 }
 
 function getCheatsUnlockOptionTarget(){
@@ -4631,7 +4645,7 @@ if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", armCheatsUnlockCountdown);
 if (btnCheatsUnlockInput){
   btnCheatsUnlockInput.addEventListener("click", activateCheatsUnlockInput);
-  btnCheatsUnlockInput.addEventListener("focus", activateCheatsUnlockInput);
+  btnCheatsUnlockInput.addEventListener("focus", focusCheatsUnlockInput);
   btnCheatsUnlockInput.addEventListener("blur", restoreCheatsUnlockPromptIfEmpty);
   btnCheatsUnlockInput.addEventListener("input", submitCheatsUnlockInput);
   btnCheatsUnlockInput.addEventListener("keydown", (event) => {
