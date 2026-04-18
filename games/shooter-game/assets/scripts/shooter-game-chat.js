@@ -86,6 +86,56 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       }
     }
 
+    function canScrollChatNode(node) {
+      if (!node || typeof node.scrollTop !== 'number') return false;
+      const maxScrollTop = Math.max(0, (node.scrollHeight || 0) - (node.clientHeight || 0));
+      if (maxScrollTop <= 0) return false;
+      const style = node.ownerDocument && node.ownerDocument.defaultView ? node.ownerDocument.defaultView.getComputedStyle(node) : null;
+      if (!style) return true;
+      return style.overflowY !== 'hidden' && style.overflow !== 'hidden';
+    }
+
+    function getChatScrollTarget() {
+      const chatDoc = getChatDocument();
+      if (!chatDoc) return null;
+      const visited = new Set();
+      const addCandidate = (node, collection) => {
+        if (!node || visited.has(node)) return;
+        visited.add(node);
+        collection.push(node);
+      };
+      const active = chatDoc.activeElement && chatDoc.activeElement !== chatDoc.body ? chatDoc.activeElement : null;
+      const controllerTargets = getChatInteractiveTargets();
+      const selectedTarget = chatControllerTargetIndex >= 0 && chatControllerTargetIndex < controllerTargets.length
+        ? controllerTargets[chatControllerTargetIndex]
+        : null;
+      const candidates = [];
+
+      [active, selectedTarget, getChatInput()].forEach((node) => {
+        let current = node;
+        while (current && current !== chatDoc.body) {
+          addCandidate(current, candidates);
+          current = current.parentElement;
+        }
+      });
+
+      const messagesWrap = chatDoc.getElementById('messagesWrap');
+      addCandidate(messagesWrap, candidates);
+
+      return candidates.find((node) => canScrollChatNode(node)) || null;
+    }
+
+    function scrollChatBy(delta) {
+      const amount = Number(delta) || 0;
+      if (!amount) return false;
+      const target = getChatScrollTarget();
+      if (!target) return false;
+      const previous = target.scrollTop;
+      const maxScrollTop = Math.max(0, (target.scrollHeight || 0) - (target.clientHeight || 0));
+      target.scrollTop = Math.max(0, Math.min(maxScrollTop, previous + amount));
+      return target.scrollTop !== previous;
+    }
+
     function isVisibleChatTarget(node) {
       if (!node) return false;
       const style = node.ownerDocument && node.ownerDocument.defaultView ? node.ownerDocument.defaultView.getComputedStyle(node) : null;
@@ -701,6 +751,10 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           withChatInputReady(primeChatSlashSuggestion);
         } else if (action === 'close') {
           closeChatFromParent();
+        } else if (action === 'scrollUp') {
+          scrollChatBy(-72);
+        } else if (action === 'scrollDown') {
+          scrollChatBy(72);
         }
         chatValuePickerActive = hasActiveChatValuePicker();
         notifyChildChatVisibility();

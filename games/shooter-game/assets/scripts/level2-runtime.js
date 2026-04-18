@@ -3233,6 +3233,8 @@ function pollGamepad(dt){
   const chatNavDown = consumeMenuAxis('chatDown', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
   const chatNavLeft = consumeMenuAxis('chatLeft', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
   const chatNavRight = consumeMenuAxis('chatRight', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
+  const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
+  const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
 
   if (deathOverlay && deathOverlay.style.display === "flex"){
     if (navUp) moveDeathControllerFocus(-1);
@@ -3267,6 +3269,8 @@ function pollGamepad(dt){
       if (chatNavDown) postChatControllerAction('cycleDown');
       if (chatNavLeft) postChatControllerAction('cycleLeft');
       if (chatNavRight) postChatControllerAction('cycleRight');
+      if (rNavUp) postChatControllerAction('scrollUp');
+      if (rNavDown) postChatControllerAction('scrollDown');
       if (pressMenuSelect) postChatControllerAction('execute');
       if (pressMenuBack){
         postChatControllerAction('close');

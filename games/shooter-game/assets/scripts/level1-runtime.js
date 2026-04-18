@@ -4785,6 +4785,8 @@ function pollGamepad(dt){
         if (chatNavDown) postChatControllerAction('cycleDown');
         if (chatNavLeft) postChatControllerAction('cycleLeft');
         if (chatNavRight) postChatControllerAction('cycleRight');
+        if (rNavUp) postChatControllerAction('scrollUp');
+        if (rNavDown) postChatControllerAction('scrollDown');
         if (pressMenuSelect) postChatControllerAction('execute');
         if (pressMenuBack){
           postChatControllerAction('close');
