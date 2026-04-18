@@ -378,7 +378,7 @@ if (btnPauseQuit){
     // Unpause and return to the parent shell's reloaded level 1 when embedded.
     setPaused(false);
     stopMusic();
-    _resetStartResourceDefaults();
+    resetScoreTrackedStartOptionsToDefaults();
     if (window.parent && window.parent !== window){
       try {
         if (requestReturnToLevel1()) return;
@@ -642,6 +642,7 @@ function _applyLives(n, forceInfinite){
   livesInfiniteActive = !!forceInfinite;
   lives = nextLives;
   _syncStartResourceControls();
+  if (gameState === STATE.PLAYING) lockScoreTrackingState();
   if (livesText) livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
 }
 
@@ -655,6 +656,7 @@ function _applyHearts(n, forceInfinite){
   if (typeof updateHearts === "function") updateHearts();
   // Re-anchor the player in case the hearts HUD size changes.
   try{ player.y = getPlayerAlignedY(); }catch(e){}
+  if (gameState === STATE.PLAYING) lockScoreTrackingState();
 }
 
 function _applyShields(n, forceInfinite){
@@ -663,6 +665,7 @@ function _applyShields(n, forceInfinite){
   shieldPips = nextShields;
   _syncStartResourceControls();
   if (typeof updateHearts === "function") updateHearts();
+  if (gameState === STATE.PLAYING) lockScoreTrackingState();
 }
 
 function _applyBombs(n, forceInfinite){
@@ -671,6 +674,7 @@ function _applyBombs(n, forceInfinite){
   bombsCount = nextBombs;
   _syncStartResourceControls();
   _syncBombHud();
+  if (gameState === STATE.PLAYING) lockScoreTrackingState();
 }
 
 function refreshInfiniteModeUi(){
@@ -685,33 +689,38 @@ function applyGlobalInfiniteMode(enabled){
   _applyShields((START_SHIELDS_INFINITE || INFINITE_MODE) ? 100 : START_SHIELDS, !!(START_SHIELDS_INFINITE || INFINITE_MODE));
   _applyBombs((START_BOMBS_INFINITE || INFINITE_MODE) ? 100 : START_BOMBS, !!(START_BOMBS_INFINITE || INFINITE_MODE));
   refreshInfiniteModeUi();
+  if (gameState !== STATE.PLAYING) syncScoreTrackingState();
 }
 
 function setIndividualInfiniteResource(resourceName){
+  let message = "";
   switch (resourceName){
     case "lives":
       START_LIVES_INFINITE = true;
       _applyLives(100, true);
-      refreshInfiniteModeUi();
-      return "Lives set to infinite";
+      message = "Lives set to infinite";
+      break;
     case "hearts":
       START_HEARTS_INFINITE = true;
       _applyHearts(100, true);
-      refreshInfiniteModeUi();
-      return "Hearts set to infinite";
+      message = "Hearts set to infinite";
+      break;
     case "shields":
       START_SHIELDS_INFINITE = true;
       _applyShields(100, true);
-      refreshInfiniteModeUi();
-      return "Shields set to infinite";
+      message = "Shields set to infinite";
+      break;
     case "bombs":
       START_BOMBS_INFINITE = true;
       _applyBombs(100, true);
-      refreshInfiniteModeUi();
-      return "Bombs set to infinite";
+      message = "Bombs set to infinite";
+      break;
     default:
       return "";
   }
+  refreshInfiniteModeUi();
+  if (gameState !== STATE.PLAYING) syncScoreTrackingState();
+  return message;
 }
 function renderMenuHudPreview(){
   const heartsHud = document.getElementById("heartsHud");
@@ -735,14 +744,14 @@ function renderMenuHudPreview(){
   }
 
   if (scoreStoreHud){
-    scoreStoreHud.style.display = "flex";
+    scoreStoreHud.style.display = scoreTrackingDisabled ? "none" : "flex";
     scoreStoreHud.classList.remove("storeReady");
     scoreStoreHud.disabled = true;
     scoreStoreHud.tabIndex = -1;
     scoreStoreHud.setAttribute("aria-disabled", "true");
   }
   if (accuracyScoreEl){
-    accuracyScoreEl.style.display = "block";
+    accuracyScoreEl.style.display = scoreTrackingDisabled ? "none" : "block";
     accuracyScoreEl.textContent = "Score: 0pts";
   }
   if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
@@ -1071,6 +1080,8 @@ function shieldApplyDamage(dmg){
 
 let time = 0;
 let score = 0;
+let scoreTrackingDisabled = false;
+let scoreTrackingLocked = false;
 let shotsFired = 0;
 let hitsConnected = 0;
 let damageDealt = 0;
@@ -1182,16 +1193,59 @@ function getAccuracyMultiplier(){
   return 0.55 + a * 1.20;
 }
 
+function getConfiguredStartWave(){
+  return Math.max(1, Math.min(21, parseInt(START_WAVE, 10) || URL_START_WAVE || DEFAULT_START_WAVE));
+}
+
+function hasScoreDisqualifyingSettings(){
+  return !!(
+    INFINITE_MODE ||
+    START_LIVES_INFINITE ||
+    START_HEARTS_INFINITE ||
+    START_SHIELDS_INFINITE ||
+    START_BOMBS_INFINITE ||
+    Math.max(0, parseInt(START_LIVES, 10) || 0) !== DEFAULT_START_LIVES ||
+    Math.max(1, parseInt(START_HEARTS, 10) || 1) !== DEFAULT_START_HEARTS ||
+    Math.max(0, parseInt(START_SHIELDS, 10) || 0) !== DEFAULT_START_SHIELDS ||
+    Math.max(0, parseInt(START_BOMBS, 10) || 0) !== DEFAULT_START_BOMBS ||
+    Math.round(Number(START_GAME_SPEED) || DEFAULT_START_GAME_SPEED) !== DEFAULT_START_GAME_SPEED ||
+    getConfiguredStartWave() !== DEFAULT_START_WAVE
+  );
+}
+
+function syncScoreTrackingState(){
+  const nextDisabled = !!(scoreTrackingLocked || hasScoreDisqualifyingSettings());
+  scoreTrackingDisabled = nextDisabled;
+  if (nextDisabled && isScoreStoreOpen && typeof closeScoreStoreMenu === "function"){
+    closeScoreStoreMenu();
+  }
+  if (typeof updateAccuracyScoreHUD === "function") updateAccuracyScoreHUD();
+  if (typeof renderMenuHudPreview === "function") renderMenuHudPreview();
+}
+
+function lockScoreTrackingState(){
+  scoreTrackingLocked = true;
+  syncScoreTrackingState();
+}
+
+function resetScoreTrackingState(){
+  scoreTrackingLocked = false;
+  syncScoreTrackingState();
+}
+
 function awardScore(basePoints){
-  score += Math.round(Math.max(0, basePoints) * getAccuracyMultiplier());
+  if (scoreTrackingDisabled) return 0;
+  const awarded = Math.round(Math.max(0, basePoints) * getAccuracyMultiplier());
+  score += awarded;
+  return awarded;
 }
 
 function isStoreUnlocked(){
-  return Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD;
+  return !scoreTrackingDisabled && Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD;
 }
 
 function canOpenStore(){
-  return gameState === STATE.PLAYING && isStoreUnlocked();
+  return !scoreTrackingDisabled && gameState === STATE.PLAYING && isStoreUnlocked();
 }
 
 const scoreStoreHud = document.getElementById("scoreStoreHud");
@@ -1207,21 +1261,22 @@ if (scoreStoreHud){
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
   const isPlaying = gameState === STATE.PLAYING;
-  const storeUnlocked = isStoreUnlocked();
-  const canOpen = canOpenStore();
+  const scoreVisible = isPlaying && !scoreTrackingDisabled;
+  const storeUnlocked = scoreVisible && isStoreUnlocked();
+  const canOpen = scoreVisible && canOpenStore();
   if (scoreStoreHud){
-    scoreStoreHud.style.display = isPlaying ? "flex" : "none";
+    scoreStoreHud.style.display = scoreVisible ? "flex" : "none";
     scoreStoreHud.classList.toggle("storeReady", canOpen);
     scoreStoreHud.disabled = !canOpen;
     scoreStoreHud.tabIndex = canOpen ? 0 : -1;
     scoreStoreHud.setAttribute("aria-disabled", canOpen ? "false" : "true");
   }
   if (btnPauseOpenStore) btnPauseOpenStore.style.display = storeUnlocked ? "block" : "none";
-  if (gameState === STATE.PLAYING) accuracyScoreEl.style.display = "block";
+  if (scoreVisible) accuracyScoreEl.style.display = "block";
   else accuracyScoreEl.style.display = "none";
   accuracyScoreEl.textContent = "Score: " + String(Math.floor(score)) + "pts";
   if (storeUnlockedHudEl){
-    storeUnlockedHudEl.style.display = (isPlaying && storeUnlocked) ? "block" : "none";
+    storeUnlockedHudEl.style.display = scoreVisible && storeUnlocked ? "block" : "none";
     storeUnlockedHudEl.textContent = canOpen ? "Open Store" : "Store Unlocked";
   }
 }
@@ -1968,21 +2023,27 @@ const btnSkipToLevel3 = document.getElementById("btnSkipToLevel3");
   const bombsVal = document.getElementById("bombsVal");
 
   const speedVal = document.getElementById("speedVal");
-  let START_LIVES = 1;
-  let START_HEARTS = 3;
-  let START_SHIELDS = 0;
-  let START_BOMBS = 0;
+  const DEFAULT_START_LIVES = 1;
+  const DEFAULT_START_HEARTS = 3;
+  const DEFAULT_START_SHIELDS = 0;
+  const DEFAULT_START_BOMBS = 0;
+  const DEFAULT_START_GAME_SPEED = 5;
+  const DEFAULT_START_WAVE = 1;
+  let START_LIVES = DEFAULT_START_LIVES;
+  let START_HEARTS = DEFAULT_START_HEARTS;
+  let START_SHIELDS = DEFAULT_START_SHIELDS;
+  let START_BOMBS = DEFAULT_START_BOMBS;
   // v1.97: 100 in a resource box means INFINITE for that resource only.
   let START_LIVES_INFINITE = false;
   let START_HEARTS_INFINITE = false;
   let START_SHIELDS_INFINITE = false;
   let START_BOMBS_INFINITE = false;
-  let START_GAME_SPEED = 5;
+  let START_GAME_SPEED = DEFAULT_START_GAME_SPEED;
   let GAME_SPEED_MULT = 1.0;
   GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
   let INFINITE_MODE = false;
   
-let START_WAVE = 1;
+let START_WAVE = DEFAULT_START_WAVE;
 
 let INVERT_COLORS = false;
 const invertColorsCheckbox = document.getElementById("invertColorsCheckbox");
@@ -2021,6 +2082,20 @@ function syncStartOptionsLabels(){
   if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
   if (infiniteToggle) infiniteToggle.addEventListener("change", () => applyGlobalInfiniteMode(!!infiniteToggle.checked));
   syncStartOptionsLabels();
+  syncScoreTrackingState();
+
+function resetScoreTrackedStartOptionsToDefaults(){
+  _resetStartResourceDefaults();
+  START_WAVE = DEFAULT_START_WAVE;
+  if (startWaveSelect) startWaveSelect.value = String(DEFAULT_START_WAVE);
+  START_GAME_SPEED = DEFAULT_START_GAME_SPEED;
+  GAME_SPEED_MULT = Math.max(0.1, Math.min(3.0, START_GAME_SPEED / 5));
+  INFINITE_MODE = false;
+  infiniteModeActive = false;
+  if (infiniteToggle) infiniteToggle.checked = false;
+  syncStartOptionsLabels();
+  resetScoreTrackingState();
+}
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
 const INPUT_MODE_CONTROLLER = "controller";
@@ -2667,7 +2742,7 @@ function performDeathQuitToMenu(){
     clearDeathControllerFocus();
     setPaused(false);
     stopMusic();
-    _resetStartResourceDefaults();
+    resetScoreTrackedStartOptionsToDefaults();
     if (window.parent && window.parent !== window){
       try {
         if (requestReturnToLevel1()) return;
@@ -2804,6 +2879,7 @@ function startGame(){
   // Start looping music exactly when the game starts.
   ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
+  scoreTrackingLocked = hasScoreDisqualifyingSettings();
   uiRoot.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   pauseControlsOpen = false;
@@ -2827,6 +2903,7 @@ function startGame(){
   shotsFired = 0;
   hitsConnected = 0;
   damageDealt = 0;
+  syncScoreTrackingState();
   // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
   livesInfiniteActive = !!START_LIVES_INFINITE || !!INFINITE_MODE;
@@ -3587,14 +3664,14 @@ function showMazeSummaryAndPauseAdvance(){
   const total = mazeWalkableTileCount || countMazeWalkableTiles();
   const missed = Math.max(0, total - stepped);
   const bonus = stepped * 10;
-  score += bonus;
+  if (!scoreTrackingDisabled) score += bonus;
   updateAccuracyScoreHUD();
 
   mazeSummaryActive = true;
   mazePendingNextWave = wave + 1;
   if (mazeSummaryCoverage) mazeSummaryCoverage.textContent = `Coverage: ${stepped} / ${total} tiles stepped on`;
   if (mazeSummaryMissed) mazeSummaryMissed.textContent = `Unstepped tiles: ${missed}`;
-  if (mazeSummaryBonus) mazeSummaryBonus.textContent = `+${bonus} points`;
+  if (mazeSummaryBonus) mazeSummaryBonus.textContent = scoreTrackingDisabled ? "Score disabled for this run" : `+${bonus} points`;
   if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "flex";
 }
 
