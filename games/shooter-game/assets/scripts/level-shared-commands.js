@@ -27,15 +27,12 @@ const PAUSE_COMMANDS = {
 };
 
 const PAUSE_CHEAT_COMMANDS = new Set([
-  "/background_color",
   "/bombs",
-  "/color_invert",
   "/game_speed",
   "/hearts",
   "/infinite",
   "/lives",
-  "/shields",
-  "/video_fx"
+  "/shields"
 ]);
 
 function areCheatCommandsUnlocked(){
