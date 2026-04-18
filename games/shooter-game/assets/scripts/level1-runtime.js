@@ -344,6 +344,7 @@ const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 const btnDeathQuitToMenu = document.getElementById("btnDeathQuitToMenu");
 const winOverlay = document.getElementById("winOverlay");
+const winPanel = document.getElementById("winPanel");
 const btnContinue = document.getElementById("btnContinue");
 
 let hudVisible = false;
@@ -1339,6 +1340,7 @@ const SCORE_STORE_ITEMS = [
 let totalEnemiesSpawned = 0;
 let bombDragonKills = 0;
 let bombFrogKills = 0;
+let enemyKillCounts = new Map();
 // v1.96: "Spectral Funk" tuning knob (because humans love naming sliders like they're mixtapes).
 // 1000 = baseline. Higher = spicier enemies (faster patterns + smarter shots). Lower = chill mode.
 const SPECTRAL_FUNK = 1000;
@@ -1464,6 +1466,8 @@ const winStatScoreEl = document.getElementById("winStatScore");
 const winStatKillsEl = document.getElementById("winStatKills");
 const winStatBulletsEl = document.getElementById("winStatBullets");
 const winStatAccuracyEl = document.getElementById("winStatAccuracy");
+const winStatKillBreakdownEl = document.getElementById("winStatKillBreakdown");
+const winStatKillBreakdownListEl = document.getElementById("winStatKillBreakdownList");
 const winStatBonusEl = document.getElementById("winStatBonus");
 const winStatBonusDragonsEl = document.getElementById("winStatBonusDragons");
 const winStatBonusFrogsEl = document.getElementById("winStatBonusFrogs");
@@ -1505,6 +1509,52 @@ function clamp01(n){
   return Math.max(0, Math.min(1, n));
 }
 
+function getEnemyKillFilename(enemy){
+  const src = enemy && enemy.img && (enemy.img.currentSrc || enemy.img.src);
+  if (!src) return "unknown";
+  try{
+    const parsed = new URL(src, window.location.href);
+    const pathname = parsed.pathname || "";
+    const filename = decodeURIComponent(pathname.slice(pathname.lastIndexOf("/") + 1));
+    return filename || "unknown";
+  }catch(err){
+    const cleanSrc = String(src).split("?")[0].split("#")[0];
+    const parts = cleanSrc.split("/");
+    return parts[parts.length - 1] || "unknown";
+  }
+}
+
+function recordEnemyKill(enemy){
+  const filename = getEnemyKillFilename(enemy);
+  enemyKillCounts.set(filename, (enemyKillCounts.get(filename) || 0) + 1);
+}
+
+function getEnemyKillBreakdownEntries(){
+  if (!(enemyKillCounts instanceof Map) || enemyKillCounts.size === 0) return [];
+  return Array.from(enemyKillCounts.entries())
+    .sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0].localeCompare(b[0]);
+    });
+}
+
+function renderWinKillBreakdown(){
+  if (!winStatKillBreakdownEl || !winStatKillBreakdownListEl) return;
+  const entries = getEnemyKillBreakdownEntries();
+  winStatKillBreakdownEl.style.display = entries.length ? "block" : "none";
+  winStatKillBreakdownListEl.textContent = "";
+  if (!entries.length) return;
+  const fragment = document.createDocumentFragment();
+  for (const [filename, kills] of entries){
+    const line = document.createElement("div");
+    line.className = "winStatBreakdownLine winControllerTarget";
+    line.tabIndex = -1;
+    line.textContent = filename + ": " + kills;
+    fragment.appendChild(line);
+  }
+  winStatKillBreakdownListEl.appendChild(fragment);
+}
+
 
 function refreshWinStats(){
   const accuracyPercent = Math.round(getAccuracy() * 100);
@@ -1516,6 +1566,7 @@ function refreshWinStats(){
   if (winStatKillsEl) winStatKillsEl.textContent = "Enemies Killed: " + totalEnemiesSpawned + " / " + totalEnemiesSpawned;
   if (winStatBulletsEl) winStatBulletsEl.textContent = "Bullets Shot: " + shotsFired;
   if (winStatAccuracyEl) winStatAccuracyEl.textContent = "Accuracy: " + accuracyPercent + "%";
+  renderWinKillBreakdown();
 
   const hasBombBonus = (bombDragonKills + bombFrogKills) > 0;
   if (winStatBonusEl) winStatBonusEl.style.display = hasBombBonus ? "block" : "none";
@@ -1590,6 +1641,7 @@ function enemyKill(e, source){
   // One-time kill side effects.
   if (!e._killAwarded){
     e._killAwarded = true;
+    recordEnemyKill(e);
     if (source === "bomb" && isDragonEnemy(e)){
       bombDragonKills += 1;
     }
@@ -2771,6 +2823,7 @@ let cheatsJustApplied = false;
 let startingStatFocusIndex = 0;
 let statsFocusIndex = 0;
 let pauseFocusIndex = 0;
+let winFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
 let gpNavPrevAxis = { horizontal:0, vertical:0 };
 
@@ -2913,7 +2966,15 @@ function scrollStatsPanelBy(delta){
 }
 
 function getWinControllerTargets(){
-  return [btnContinue].filter(Boolean);
+  if (!winPanel) return [btnContinue].filter(Boolean);
+  return Array.from(winPanel.querySelectorAll(".winControllerTarget")).filter((el) => {
+    if (!el || !el.isConnected) return false;
+    if (el.hidden) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    if (el.getClientRects && el.getClientRects().length === 0) return false;
+    return true;
+  });
 }
 
 function syncMenuControllerFocus(){
@@ -2963,7 +3024,42 @@ function syncStatsControllerFocus(){
 function syncWinControllerFocus(){
   const items = getWinControllerTargets();
   if (!items.length) return;
-  focusControllerElement(items[0]);
+  winFocusIndex = Math.max(0, Math.min(winFocusIndex, items.length - 1));
+  focusControllerElement(items[winFocusIndex]);
+}
+
+function moveWinControllerFocus(delta){
+  const items = getWinControllerTargets();
+  if (!items.length) return false;
+  winFocusIndex = (winFocusIndex + delta + items.length) % items.length;
+  syncWinControllerFocus();
+  return true;
+}
+
+function jumpWinControllerFocusToBottom(){
+  const items = getWinControllerTargets();
+  if (!items.length) return false;
+  winFocusIndex = items.length - 1;
+  syncWinControllerFocus();
+  return true;
+}
+
+function scrollWinPanelBy(delta){
+  if (!winPanel || !delta) return false;
+  const previous = winPanel.scrollTop;
+  winPanel.scrollTop = Math.max(0, previous + delta);
+  return winPanel.scrollTop !== previous;
+}
+
+function syncWinFocusIndexFromElement(target){
+  if (!target) return false;
+  const items = getWinControllerTargets();
+  const item = target.closest ? target.closest(".winControllerTarget") : null;
+  if (!item) return false;
+  const index = items.indexOf(item);
+  if (index === -1) return false;
+  winFocusIndex = index;
+  return true;
 }
 
 function syncControlsControllerFocus(){
@@ -3482,8 +3578,35 @@ function showWinOverlay(){
   if (timerHud) timerHud.style.display = "none";
   { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
   stopMusic();
+  if (winPanel) winPanel.scrollTop = 0;
+  winFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncWinControllerFocus();
   else clearControllerFocus();
+}
+
+if (winOverlay){
+  winOverlay.addEventListener("pointermove", (e) => {
+    if (gameState !== STATE.WIN) return;
+    setActiveInputMode(INPUT_MODE_KEYBOARD);
+    syncWinFocusIndexFromElement(e.target);
+  });
+
+  winOverlay.addEventListener("pointerdown", (e) => {
+    if (gameState !== STATE.WIN) return;
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+    syncWinFocusIndexFromElement(e.target);
+  });
+
+  winOverlay.addEventListener("wheel", (e) => {
+    if (gameState !== STATE.WIN) return;
+    setActiveInputMode(INPUT_MODE_KEYBOARD);
+  }, { passive:true });
+
+  winOverlay.addEventListener("focusin", (e) => {
+    if (gameState !== STATE.WIN) return;
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+    syncWinFocusIndexFromElement(e.target);
+  });
 }
 
 
@@ -4063,6 +4186,7 @@ function startGame(){
   totalEnemiesSpawned = 0;
   bombDragonKills = 0;
   bombFrogKills = 0;
+  enemyKillCounts = new Map();
   syncScoreTrackingState();
   // v1.96: Apply starting settings from OPTIONS menu
   infiniteModeActive = !!INFINITE_MODE;
@@ -4981,8 +5105,13 @@ function pollGamepad(dt){
       }
     } else if (gameState === STATE.WIN){
       if (activeInputMode === INPUT_MODE_CONTROLLER) syncWinControllerFocus();
-      if (pressMenuSelect) activateControllerTarget(getWinControllerTargets()[0]);
-      if (pressMenuBack) activateControllerTarget(getWinControllerTargets()[0]);
+      if (navUp || navLeft) moveWinControllerFocus(-1);
+      if (navDown || navRight) moveWinControllerFocus(1);
+      if (rNavUp) scrollWinPanelBy(-72);
+      if (rNavDown) scrollWinPanelBy(72);
+      if (pressPause) jumpWinControllerFocusToBottom();
+      if (pressMenuSelect) activateControllerTarget(getWinControllerTargets()[winFocusIndex]);
+      if (pressMenuBack) activateControllerTarget(btnContinue || getWinControllerTargets()[winFocusIndex]);
     } else if (deathOverlay && deathOverlay.style.display === "flex"){
       if (pressMenuSelect) restartRun();
     } else if (gameState === STATE.PLAYING){
@@ -5642,6 +5771,16 @@ window.addEventListener("keydown", (e) => {
     else if (e.code === "ArrowDown") moveDeathControllerFocus(1);
     else if (e.code === "Enter" || e.code === "Space") activateDeathControllerFocus();
     else if (e.code === "Escape" && btnDeathQuitToMenu) btnDeathQuitToMenu.click();
+    e.preventDefault();
+    return;
+  }
+
+  if (gameState === STATE.WIN && (e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "Enter" || e.code === "Space" || e.code === "Escape" || e.code === "Tab")){
+    setActiveInputMode(INPUT_MODE_KEYBOARD);
+    if (e.code === "ArrowUp" || e.code === "ArrowLeft" || (e.code === "Tab" && e.shiftKey)) moveWinControllerFocus(-1);
+    else if (e.code === "ArrowDown" || e.code === "ArrowRight" || e.code === "Tab") moveWinControllerFocus(1);
+    else if (e.code === "Enter" || e.code === "Space") activateControllerTarget(getWinControllerTargets()[winFocusIndex]);
+    else if (e.code === "Escape") activateControllerTarget(btnContinue || getWinControllerTargets()[winFocusIndex]);
     e.preventDefault();
     return;
   }

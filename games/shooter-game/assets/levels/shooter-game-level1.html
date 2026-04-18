@@ -416,7 +416,10 @@
     box-shadow: 0 0 36px rgba(0,255,0,0.18);
     box-sizing:border-box;
     overflow-y:auto;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
   }
+  #winPanel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #winTitle{
     font-family: "Cooper Std", "Cooper Black", "Bookman Old Style", serif;
     font-weight:900;
@@ -424,6 +427,24 @@
     letter-spacing:1px;
     color:#7dff7d;
     text-shadow: 0 0 12px rgba(0,255,0,0.28);
+  }
+  .winControllerTarget{
+    display:block;
+    width:100%;
+    box-sizing:border-box;
+    border-radius:12px;
+    border:1px solid transparent;
+    padding:4px 10px;
+    outline:none;
+    transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  body.controller-active #winPanel .winControllerTarget.controllerFocus{
+    background: rgba(255,255,255,0.18);
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.16);
+  }
+  body.controller-active #winPanel .winControllerTarget.controllerFocus *{
+    box-shadow:none !important;
   }
   #btnContinue{
     margin-top:10px;
@@ -464,6 +485,23 @@
   #winStatKills{ color: #ff4d4d; }
   #winStatBullets{ color: #5ab6ff; }
   #winStatAccuracy{ color: #00ff66; }
+  #winStatKillBreakdown{
+    display:none;
+    color:#dfffe2;
+    font-size:14px;
+    line-height:1.3;
+  }
+  .winStatBreakdownTitle{
+    color:#dfffe2;
+    font-size:15px;
+    margin-bottom:2px;
+  }
+  .winStatBreakdownLine{
+    padding-left: 1.25em;
+  }
+  #winStatKillBreakdownList{
+    color:#8fe7ff;
+  }
   #winStatBonus{ color: #ffffff; display:none; }
   .winStatBonusTitle{ color:#ffffff; }
   .winStatBonusLine{ padding-left: 1.25em; }
@@ -1586,18 +1624,22 @@ body.invert-colors {
 
 <div id="winOverlay" hidden aria-hidden="true">
   <div id="winPanel">
-    <div id="winTitle">You Win!</div>
-    <div id="winStatsTitle">Level 1 Completion Stats</div>
+    <div id="winTitle" class="winControllerTarget" tabindex="-1">You Win!</div>
+    <div id="winStatsTitle" class="winControllerTarget" tabindex="-1">Level 1 Completion Stats</div>
     <div id="winStatsList">
-      <div id="winStatTime" class="winStatRow">Time: 0.0s</div>
-      <div id="winStatScore" class="winStatRow">Score: 0</div>
-      <div id="winStatKills" class="winStatRow">Enemies Killed: 0 / 0</div>
-      <div id="winStatBullets" class="winStatRow">Bullets Shot: 0</div>
-      <div id="winStatAccuracy" class="winStatRow">Accuracy: 0%</div>
+      <div id="winStatTime" class="winStatRow winControllerTarget" tabindex="-1">Time: 0.0s</div>
+      <div id="winStatScore" class="winStatRow winControllerTarget" tabindex="-1">Score: 0</div>
+      <div id="winStatKills" class="winStatRow winControllerTarget" tabindex="-1">Enemies Killed: 0 / 0</div>
+      <div id="winStatBullets" class="winStatRow winControllerTarget" tabindex="-1">Bullets Shot: 0</div>
+      <div id="winStatAccuracy" class="winStatRow winControllerTarget" tabindex="-1">Accuracy: 0%</div>
+      <div id="winStatKillBreakdown" class="winStatRow">
+        <div class="winStatBreakdownTitle winControllerTarget" tabindex="-1">Kills By Enemy</div>
+        <div id="winStatKillBreakdownList"></div>
+      </div>
       <div id="winStatBonus" class="winStatRow">
-        <div class="winStatBonusTitle">BONUS POINTS</div>
-        <div id="winStatBonusDragons" class="winStatBonusLine">Dragons Bombed: +0</div>
-        <div id="winStatBonusFrogs" class="winStatBonusLine">Frogs Bombed: +0</div>
+        <div class="winStatBonusTitle winControllerTarget" tabindex="-1">BONUS POINTS</div>
+        <div id="winStatBonusDragons" class="winStatBonusLine winControllerTarget" tabindex="-1">Dragons Bombed: +0</div>
+        <div id="winStatBonusFrogs" class="winStatBonusLine winControllerTarget" tabindex="-1">Frogs Bombed: +0</div>
       </div>
     </div>
     <div class="level2-win-action-stack">
@@ -1605,7 +1647,7 @@ body.invert-colors {
 <img src="/games/shooter-game/assets/bananarama.webp" alt="Level 2 player icon">
   <span class="bananarama-level2-number">2</span>
 </a>
-<button id="btnContinue">Continue to Level 2</button>
+<button id="btnContinue" class="winControllerTarget">Continue to Level 2</button>
 </div>
   </div>
 </div>
