@@ -2368,6 +2368,7 @@ const controlsListScroll = document.getElementById("controlsListScroll");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
+const btnCheatsUnlockInput = document.getElementById("btnCheatsUnlockInput");
 const nicknameInput = document.getElementById("nicknameInput");
 const backgroundColorHex = document.getElementById("backgroundColorHex");
 const backgroundColorPicker = document.getElementById("backgroundColorPicker");
@@ -2459,6 +2460,84 @@ function setFullscreenOptionEnabled(shouldEnable){
     }
   }
   syncFullscreenOptionState(nextState ? !!document.fullscreenElement : false);
+}
+
+
+function clearCheatsUnlockCountdown(){
+  if (cheatsUnlockTimer){
+    clearInterval(cheatsUnlockTimer);
+    cheatsUnlockTimer = null;
+  }
+}
+
+function resetCheatsUnlockGate(){
+  clearCheatsUnlockCountdown();
+  cheatsUnlockRemaining = 0;
+  cheatsUnlockInputReady = false;
+  if (btnCheats){
+    btnCheats.style.display = "block";
+    btnCheats.disabled = false;
+    btnCheats.textContent = "Cheats";
+  }
+  if (btnCheatsUnlockInput){
+    btnCheatsUnlockInput.style.display = "none";
+    btnCheatsUnlockInput.readOnly = true;
+    btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+  }
+}
+
+function armCheatsUnlockCountdown(){
+  if (!btnCheats || cheatsUnlockTimer || cheatsUnlockInputReady) return;
+  cheatsUnlockRemaining = 3;
+  btnCheats.textContent = "Really, cheat? (3)";
+  cheatsUnlockTimer = setInterval(() => {
+    cheatsUnlockRemaining = Math.max(0, cheatsUnlockRemaining - 1);
+    if (btnCheats){
+      btnCheats.textContent = cheatsUnlockRemaining > 0
+        ? "Really, cheat? (" + cheatsUnlockRemaining + ")"
+        : "Really, cheat?";
+    }
+    if (cheatsUnlockRemaining <= 0){
+      clearCheatsUnlockCountdown();
+      showCheatsUnlockInput();
+    }
+  }, 1000);
+}
+
+function showCheatsUnlockInput(){
+  cheatsUnlockInputReady = true;
+  if (btnCheats){
+    btnCheats.style.display = "none";
+  }
+  if (btnCheatsUnlockInput){
+    btnCheatsUnlockInput.style.display = "block";
+    btnCheatsUnlockInput.readOnly = true;
+    btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+  }
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+}
+
+function activateCheatsUnlockInput(){
+  if (!btnCheatsUnlockInput) return;
+  btnCheatsUnlockInput.readOnly = false;
+  if (btnCheatsUnlockInput.value === "Type cheatermode here to cheat."){
+    btnCheatsUnlockInput.value = "";
+  }
+}
+
+function submitCheatsUnlockInput(){
+  if (!btnCheatsUnlockInput) return;
+  const typed = String(btnCheatsUnlockInput.value || "").trim().toLowerCase();
+  if (typed !== "cheatermode") return;
+  cheatsUnlockedByPassphrase = true;
+  lockScoreTrackingState();
+  clearCheatsUnlockCountdown();
+  showCheats();
+}
+
+function getCheatsUnlockOptionTarget(){
+  if (btnCheatsUnlockInput && btnCheatsUnlockInput.style.display !== "none") return btnCheatsUnlockInput;
+  return btnCheats;
 }
 
 function updateCheatsApplyButtonState(){
@@ -2916,6 +2995,10 @@ let optionsJustApplied = false;
 let cheatsFocusIndex = 0;
 let cheatsHavePendingChanges = false;
 let cheatsJustApplied = false;
+let cheatsUnlockTimer = null;
+let cheatsUnlockRemaining = 0;
+let cheatsUnlockInputReady = false;
+let cheatsUnlockedByPassphrase = false;
 let startingStatFocusIndex = 0;
 let statsFocusIndex = 0;
 let pauseFocusIndex = 0;
@@ -2993,7 +3076,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [nicknameInput, btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, btnCheats, btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [nicknameInput, btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, getCheatsUnlockOptionTarget(), btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -3594,6 +3677,7 @@ function showMenu(){
   optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   if (cheatsMenu) cheatsMenu.style.display = "none";
+  resetCheatsUnlockGate();
   pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
@@ -3858,6 +3942,7 @@ function hideCheats(){
   gameState = STATE.OPTIONS;
   if (cheatsMenu) cheatsMenu.style.display = "none";
   optionsMenu.style.display = "block";
+  resetCheatsUnlockGate();
   fitOptionsMenuToViewport();
   optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
@@ -4220,6 +4305,7 @@ function showOptions(){
   normalizeStartStatInput(bombsSlider);
   syncStartOptionsLabels();
   syncCheatsMenuState();
+  resetCheatsUnlockGate();
   syncNicknameControl();
   syncNicknameStatsLabels();
   try{
@@ -4253,7 +4339,7 @@ function startGame(){
   setPaused(false);
   unlockAudioOnce();
   gameState = STATE.PLAYING;
-  scoreTrackingLocked = hasScoreDisqualifyingSettings();
+  scoreTrackingLocked = !!(cheatsUnlockedByPassphrase || hasScoreDisqualifyingSettings());
   syncScoreTrackingState();
   uiRoot.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
@@ -4511,7 +4597,17 @@ if (btnStatsLockedToggle){
 btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
-if (btnCheats) btnCheats.addEventListener("click", showCheats);
+if (btnCheats) btnCheats.addEventListener("click", armCheatsUnlockCountdown);
+if (btnCheatsUnlockInput){
+  btnCheatsUnlockInput.addEventListener("click", activateCheatsUnlockInput);
+  btnCheatsUnlockInput.addEventListener("input", submitCheatsUnlockInput);
+  btnCheatsUnlockInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter"){
+      event.preventDefault();
+      submitCheatsUnlockInput();
+    }
+  });
+}
 if (muteCheckbox){
   muteCheckbox.addEventListener("change", () => {
     setMuteOptionEnabled(!!muteCheckbox.checked);
