@@ -1338,6 +1338,7 @@ const SCORE_STORE_ITEMS = [
   { id: "bombs", label: "Bombs", cost: 35, description: "Foundation slot for bomb stock refills and future bomb upgrades." }
 ];
 let totalEnemiesSpawned = 0;
+let bombKills = 0;
 let bombDragonKills = 0;
 let bombFrogKills = 0;
 let enemyKillCounts = new Map();
@@ -1466,6 +1467,7 @@ const winStatScoreEl = document.getElementById("winStatScore");
 const winStatKillsEl = document.getElementById("winStatKills");
 const winStatBulletsEl = document.getElementById("winStatBullets");
 const winStatAccuracyEl = document.getElementById("winStatAccuracy");
+const winStatBombKillsEl = document.getElementById("winStatBombKills");
 const winStatKillBreakdownEl = document.getElementById("winStatKillBreakdown");
 const winStatKillBreakdownListEl = document.getElementById("winStatKillBreakdownList");
 const winStatBonusEl = document.getElementById("winStatBonus");
@@ -1566,6 +1568,7 @@ function refreshWinStats(){
   if (winStatKillsEl) winStatKillsEl.textContent = "Enemies Killed: " + totalEnemiesSpawned + " / " + totalEnemiesSpawned;
   if (winStatBulletsEl) winStatBulletsEl.textContent = "Bullets Shot: " + shotsFired;
   if (winStatAccuracyEl) winStatAccuracyEl.textContent = "Accuracy: " + accuracyPercent + "%";
+  if (winStatBombKillsEl) winStatBombKillsEl.textContent = "Bomb Kills: " + bombKills;
   renderWinKillBreakdown();
 
   const hasBombBonus = (bombDragonKills + bombFrogKills) > 0;
@@ -1642,6 +1645,9 @@ function enemyKill(e, source){
   if (!e._killAwarded){
     e._killAwarded = true;
     recordEnemyKill(e);
+    if (source === "bomb"){
+      bombKills += 1;
+    }
     if (source === "bomb" && isDragonEnemy(e)){
       bombDragonKills += 1;
     }
@@ -4184,6 +4190,7 @@ function startGame(){
   hitsConnected = 0;
   damageDealt = 0;
   totalEnemiesSpawned = 0;
+  bombKills = 0;
   bombDragonKills = 0;
   bombFrogKills = 0;
   enemyKillCounts = new Map();
