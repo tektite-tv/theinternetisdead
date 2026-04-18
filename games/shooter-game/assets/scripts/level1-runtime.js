@@ -1142,7 +1142,8 @@ function getDefaultLifetimeStats(){
     lifetimeUfosKilled: 0,
     lifetimeGamesWon: 0,
     lifetimeTotalDeaths: 0,
-    lifetimeBulletsFired: 0
+    lifetimeBulletsFired: 0,
+    lifetimeBombKills: 0
   };
 }
 
@@ -1217,7 +1218,8 @@ function renderLifetimeStats(){
     ["lifetimeUfosKilled", statLifetimeUfos],
     ["lifetimeGamesWon", statLifetimeWins],
     ["lifetimeTotalDeaths", statLifetimeDeaths],
-    ["lifetimeBulletsFired", statLifetimeBullets]
+    ["lifetimeBulletsFired", statLifetimeBullets],
+    ["lifetimeBombKills", statLifetimeBombKills]
   ];
 
   const statsList = document.getElementById("statsList");
@@ -1647,6 +1649,7 @@ function enemyKill(e, source){
     recordEnemyKill(e);
     if (source === "bomb"){
       bombKills += 1;
+      incrementLifetimeStat("lifetimeBombKills", 1);
     }
     if (source === "bomb" && isDragonEnemy(e)){
       bombDragonKills += 1;
@@ -2267,6 +2270,7 @@ const statLifetimeUfos = document.getElementById("statLifetimeUfos");
 const statLifetimeWins = document.getElementById("statLifetimeWins");
 const statLifetimeDeaths = document.getElementById("statLifetimeDeaths");
 const statLifetimeBullets = document.getElementById("statLifetimeBullets");
+const statLifetimeBombKills = document.getElementById("statLifetimeBombKills");
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
