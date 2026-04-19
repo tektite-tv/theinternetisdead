@@ -1524,6 +1524,7 @@ const ENEMY_HIT_FLASH_SECS = 0.24;   // how long the red flash lasts after damag
 const ENEMY_HIT_FLASH_ALPHA = 0.58;  // red overlay strength; still masked to opaque sprite pixels
 const ENEMY_DEATH_FADE_SECS = 0.35;  // how long the death fade lasts
 const ENEMY_DEATH_FLASH_SECS = 0.28; // keep fresh kills visibly red into the fadeout
+const ENEMY_DEATH_GROW_SCALE = 0.14; // visual-only corpse swell while fading; hitboxes stay unchanged
 
 
 const enemyHitFlashTintCanvas = document.createElement("canvas");
@@ -6226,14 +6227,18 @@ if (gameState === STATE.PLAYING){
       ctx.restore();
     }
     // v1.96: enemy flash red on hit + fade out on death
-    const ex = e.x - e.w/2, ey = e.y - e.h/2;
     const alpha = (e.dying ? Math.max(0, Math.min(1, e.fade)) : 1);
+    // Visual-only death swell. Keep e.x/e.y/e.w/e.h untouched so bullet and contact hitboxes stay rectangular and unchanged.
+    const deathGrow = e.dying ? (1 + (1 - alpha) * ENEMY_DEATH_GROW_SCALE) : 1;
+    const drawW = e.w * deathGrow;
+    const drawH = e.h * deathGrow;
+    const ex = e.x - drawW/2, ey = e.y - drawH/2;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.drawImage(e.img, ex, ey, e.w, e.h);
+    ctx.drawImage(e.img, ex, ey, drawW, drawH);
     if (e.hitFlash > 0){
       const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
-      drawEnemyPixelMaskedHitFlash(ctx, e.img, ex, ey, e.w, e.h, p, alpha);
+      drawEnemyPixelMaskedHitFlash(ctx, e.img, ex, ey, drawW, drawH, p, alpha);
     }
 
 // Dragon marker: upside-down red equilateral triangle (because dragons deserve drama)
