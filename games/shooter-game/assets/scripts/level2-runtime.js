@@ -3599,6 +3599,7 @@ let fireCooldown = 0;
 ======================= */
 let gpIndex = 0;
 let gpPrev = null; // previous button pressed states
+let gpYViewScreenshotComboHeld = false; // Y is a combo modifier; Y + View saves a screenshot once per hold.
 let gpMoveX = 0;
 let gpMoveY = 0;
 let gpAimX = 0;
@@ -3671,6 +3672,7 @@ function pollGamepad(dt){
 
   if (!gp){
     gpPrev = null;
+    gpYViewScreenshotComboHeld = false;
     gpNavRepeat.up = gpNavRepeat.down = gpNavRepeat.left = gpNavRepeat.right = 0;
     gpNavPrevAxis.horizontal = 0;
     gpNavPrevAxis.vertical = 0;
@@ -3730,20 +3732,29 @@ function pollGamepad(dt){
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
   const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
   const pressMuteHud = false;
-  const rawYEdge = gpEdge(3, y);
-  const rawViewEdge = gpEdge(8, back);
-  const pressY = rawYEdge;
-  const viewSuppressedByY = y;
-  // Screenshot combo is hard-wired to Y + View, not the rebindable Commands action.
-  // This lets Y suppress View/chat while still firing once when either side of the combo is pressed last.
-  const pressScreenshotCombo = y && back && (rawYEdge || rawViewEdge);
+  const yComboModifierHeld = y;
+  const pressY = false;
+  const viewSuppressedByY = yComboModifierHeld;
+  // Y is reserved as a combo modifier. Y alone does nothing.
+  // Y + View saves a screenshot once per hold. Future Y + D-pad combos can hook into yComboModifierHeld here.
+  const yViewScreenshotComboHeld = yComboModifierHeld && back;
+  const pressScreenshotCombo = yViewScreenshotComboHeld && !gpYViewScreenshotComboHeld;
+  gpYViewScreenshotComboHeld = yViewScreenshotComboHeld;
 
   if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressScreenshotCombo || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
   }
 
   if (pressScreenshotCombo){
-    if (typeof requestShooterGameScreenshot === "function") requestShooterGameScreenshot();
+    if (typeof requestShooterGameScreenshot === "function") {
+      requestShooterGameScreenshot();
+    } else if (window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({ type: "tektite:save-screenshot" }, "*");
+      } catch (error) {
+        console.error("Screenshot request failed:", error);
+      }
+    }
   }
 
   const navUp = consumeMenuAxis('up', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt);

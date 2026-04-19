@@ -207,6 +207,29 @@
       window.addEventListener('load', () => resetGameLoopWatch({ clearForced: true }), { once: true });
     })();
   </script>
+
+  <script>
+    (function(){
+      window.addEventListener('message', (event) => {
+        const data = event && event.data ? event.data : null;
+        if (!data || data.type !== 'tektite:save-screenshot') return;
+
+        if (window.parent && window.parent !== window){
+          try{
+            window.parent.postMessage({ type: 'tektite:save-screenshot' }, '*');
+            return;
+          }catch(error){
+            console.error('Screenshot forward failed:', error);
+          }
+        }
+
+        if (typeof window.tektiteSaveScreenshot === 'function'){
+          window.tektiteSaveScreenshot();
+        }
+      });
+    })();
+  </script>
+  <script src="/games/shooter-game/assets/scripts/screenshot-shortcut.js"></script>
   <script src="/games/shooter-game/assets/scripts/shooter-game-chat.js"></script>
 </body>
 </html>
