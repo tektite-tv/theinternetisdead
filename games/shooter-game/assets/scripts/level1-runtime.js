@@ -2896,9 +2896,10 @@ if (cheatermodeToggle){
       cheatermodeToggle.disabled = true;
       if (cheatermodeToggleStatus) cheatermodeToggleStatus.textContent = "Resetting...";
       try{
-        window.location.reload();
+        const reloadTarget = (window.top && window.top !== window) ? window.top : window;
+        reloadTarget.location.reload();
       }catch(_){
-        try{ window.top.location.reload(); }catch(__){}
+        try{ window.location.reload(); }catch(__){}
       }
       return;
     }
@@ -3504,11 +3505,28 @@ function toggleStatsLockedSummary(){
   return true;
 }
 
+function scrollMenuContainerBy(container, delta){
+  if (!container || !delta) return false;
+  const previous = container.scrollTop;
+  const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+  container.scrollTop = Math.max(0, Math.min(maxScroll, previous + delta));
+  return container.scrollTop !== previous;
+}
+
 function scrollStatsPanelBy(delta){
-  if (!statsScroll || !delta) return false;
-  const previous = statsScroll.scrollTop;
-  statsScroll.scrollTop = Math.max(0, previous + delta);
-  return statsScroll.scrollTop !== previous;
+  return scrollMenuContainerBy(statsScroll, delta);
+}
+
+function scrollOptionsMenuBy(delta){
+  return scrollMenuContainerBy(optionsScroll, delta);
+}
+
+function scrollCheatsMenuBy(delta){
+  return scrollMenuContainerBy(cheatsScroll, delta);
+}
+
+function scrollControlsMenuBy(delta){
+  return scrollMenuContainerBy(controlsListScroll, delta);
 }
 
 function getWinControllerTargets(){
@@ -5668,7 +5686,7 @@ function pollGamepad(dt){
     return;
   }
 
-  // Options menu: right stick changes number values without dragging focus around like a caffeinated raccoon.
+  // Right stick scrolls active scrollable menus instead of changing focused values.
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
     const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
     if (!controllerRebindReady){
@@ -5764,14 +5782,12 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
-        if (rNavUp) adjustControllerOption(1);
-        if (rNavDown) adjustControllerOption(-1);
       } else {
         if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
         if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
-        if (rNavUp) adjustControllerOption(1);
-        if (rNavDown) adjustControllerOption(-1);
       }
+      if (rNavUp) scrollOptionsMenuBy(-72);
+      if (rNavDown) scrollOptionsMenuBy(72);
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) showMenu();
     } else if (gameState === STATE.CHEATS){
@@ -5780,14 +5796,12 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
-        if (rNavUp) adjustControllerCheat(1);
-        if (rNavDown) adjustControllerCheat(-1);
       } else {
         if (navLeft) adjustControllerCheat(-1);
         if (navRight) adjustControllerCheat(1);
-        if (rNavUp) adjustControllerCheat(1);
-        if (rNavDown) adjustControllerCheat(-1);
       }
+      if (rNavUp) scrollCheatsMenuBy(-72);
+      if (rNavDown) scrollCheatsMenuBy(72);
       if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
       if (pressMenuBack) hideCheats();
     } else if (gameState === STATE.CONTROLS){
@@ -5800,6 +5814,8 @@ function pollGamepad(dt){
         if (navLeft) moveControlsControllerFocus(-1);
         if (navRight) moveControlsControllerFocus(1);
       }
+      if (rNavUp) scrollControlsMenuBy(-72);
+      if (rNavDown) scrollControlsMenuBy(72);
       if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
       if (pressMenuBack){
         if (bindingEditState) cancelBindingEdit();
