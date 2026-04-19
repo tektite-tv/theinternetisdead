@@ -3107,9 +3107,8 @@ function updateCheatsApplyButtonState(){
 }
 
 function markCheatsDirty(){
-  cheatsHavePendingChanges = true;
-  cheatsJustApplied = false;
-  updateCheatsApplyButtonState();
+  // Cheats menu controls now apply immediately on change; the old Apply button is gone.
+  applyCheatsChanges(false);
 }
 
 function markCheatsClean(applied=false){
@@ -3714,7 +3713,7 @@ function getOptionsControllerTargets(){
 function getCheatsControllerTargets(){
   const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [speedSlider, startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
+  return [speedSlider, startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -5477,16 +5476,15 @@ if (fullscreenCheckbox){
 }
 document.addEventListener("fullscreenchange", () => syncFullscreenOptionState());
 syncFullscreenOptionState();
-function applyCheatsChanges(){
+function applyCheatsChanges(showAppliedState=false){
   applyStartSettingsFromControls();
   syncStartOptionsLabels();
   syncCheatsMenuState();
   syncScoreTrackingState();
-  markCheatsClean(true);
+  markCheatsClean(!!showAppliedState);
 }
 
 if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
-if (btnCheatsApply) btnCheatsApply.addEventListener("click", () => { if (cheatsHavePendingChanges) applyCheatsChanges(); });
 btnBack.addEventListener("click", showMenu);
 function applyStartSettingsFromControls(){
   const livesOpt = parseResourceOption(livesSlider, 0);
@@ -5503,6 +5501,13 @@ function applyStartSettingsFromControls(){
   START_BOMBS_INFINITE = bombsOpt.infinite;
   START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
   applyGameSpeedValue(getSpeedValueFromSlider(), false);
+
+  // Apply resource changes to the current run too, not just the next start state.
+  _applyLives((START_LIVES_INFINITE || INFINITE_MODE) ? 100 : START_LIVES, !!(START_LIVES_INFINITE || INFINITE_MODE));
+  _applyHearts((START_HEARTS_INFINITE || INFINITE_MODE) ? 100 : START_HEARTS, !!(START_HEARTS_INFINITE || INFINITE_MODE));
+  _applyShields((START_SHIELDS_INFINITE || INFINITE_MODE) ? 100 : START_SHIELDS, !!(START_SHIELDS_INFINITE || INFINITE_MODE));
+  _applyBombs((START_BOMBS_INFINITE || INFINITE_MODE) ? 100 : START_BOMBS, !!(START_BOMBS_INFINITE || INFINITE_MODE));
+
   syncScoreTrackingState();
 }
 
@@ -5872,7 +5877,7 @@ let fireCooldown = 0;
      * Fullscreen: Right Stick Click (press)
      * Menus:
         - Main Menu: A = Start, Y = Options
-        - Options: A = Apply, B = Back
+        - Options: changes apply immediately; B = Back
         - Death Screen: A = Restart
 ======================= */
 let gpIndex = 0;
