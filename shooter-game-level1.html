@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tektite's Bananaman Shooter Game</title>
+<style>
+  html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
+  canvas { display:block; }
+  #starfieldFailBackground{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    user-select:none;
+    color:rgba(255,0,0,0.72);
+    font-family:Impact, Haettenschweiler, "Arial Black", sans-serif;
+    font-size:clamp(120px, 38vw, 560px);
+    font-weight:900;
+    letter-spacing:0.06em;
+    line-height:0.85;
+    text-shadow:0 0 18px rgba(255,0,0,0.75), 0 0 42px rgba(128,0,255,0.55), 8px 8px 0 rgba(0,0,0,0.75);
+    opacity:1;
+  }
+  #starfieldFailBackground::after{
+    content:"STARFIELD FAILED TO LOAD";
+    position:absolute;
+    left:50%;
+    top:calc(50% + min(22vw, 210px));
+    transform:translateX(-50%);
+    color:#00ff66;
+    font-family:"Courier New", monospace;
+    font-size:clamp(14px, 2.8vw, 36px);
+    letter-spacing:0.12em;
+    text-shadow:0 0 8px rgba(0,255,102,0.85), 2px 2px 0 #000;
+    white-space:nowrap;
+  }
+  #game{ position:relative; z-index:1; }
+  #overlay{
+    position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
+    text-shadow:0 0 6px rgba(0,255,0,0.35);
+   display:none; /* HUD hidden by default (toggle with /) */
+  }
+
+  #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  #uiRoot.pauseControlsOpen{ z-index:10001; }
+  #controlsMenu.pauseControlsMode{ display:block; position:relative; z-index:10002; background: rgba(75,0,118,0.88); }
+  #pauseOverlay.pauseControlsVisible #pausePanel{ display:none; }
+  .panel{
+    pointer-events:auto;
+    width:min(520px, 92vw);
+    border:1px solid rgba(0,255,0,0.35);
+    border-radius:14px;
+    background: rgba(0,0,0,0.72);
+    box-shadow: 0 0 28px rgba(0,255,0,0.08);
+    padding: 18px 18px 16px;
+    text-align:center;
+  }
+  .title{ font-size:26px; letter-spacing:1px; margin:4px 0 10px; }
+  #startMenuTitle{ font-size:22px; }
+  #startMenuTitle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:max-content;
+    max-width:100%;
+    min-height:46px;
+    margin:4px auto 10px;
+    padding:10px 10px;
+    white-space:nowrap;
+    border-radius:12px;
+    border:1px solid rgba(0,255,0,0.45);
+    background:rgba(0,0,0,0.55);
+    box-sizing:border-box;
+    cursor:default;
+    color:#0f0;
+  }
+  #startMenuTitle .titleText{
+    display:block;
+    white-space:nowrap;
+  }
+  #startMenuTitle:hover,
+  body.controller-active #startMenuTitle.controllerFocus{
+    background: rgba(75,0,118,0.55);
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+  }
+  @keyframes titleTextHueShift{
+    from{ filter:hue-rotate(0deg) saturate(1.2) brightness(1.05); }
+    to{ filter:hue-rotate(360deg) saturate(1.2) brightness(1.05); }
+  }
+  #startMenuTitle:hover .titleText,
+  body.controller-active #startMenuTitle.controllerFocus .titleText{
+    animation:titleTextHueShift 1.4s linear infinite;
+  }
+  .titleSubWrap{ display:flex; justify-content:center; align-items:center; width:100%; margin:-4px auto 10px; }
+  .titleSub{ position:relative; display:inline-grid; place-items:center; width:max-content; max-width:100%; min-height:18px; box-sizing:border-box; font-size:17px; font-weight:bold; opacity:0.82; cursor:default; text-align:center; justify-self:center; }
+  .titleSubDefault, .titleSubHover{ grid-area:1 / 1; display:block; white-space:nowrap; transition:opacity 120ms ease; }
+  .titleSubHover{ opacity:0; pointer-events:none; }
+  .titleSub:hover .titleSubDefault,
+  body.controller-active .titleSub.controllerFocus .titleSubDefault{ opacity:0; }
+  .titleSub:hover .titleSubHover,
+  body.controller-active .titleSub.controllerFocus .titleSubHover{ opacity:1; }
+  .titleSub:hover .titleSubHover,
+  body.controller-active .titleSub.controllerFocus .titleSubHover{
+    animation:titleTextHueShift 1.4s linear infinite;
+  }
+  body.controller-active .titleSub.controllerFocus{
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0;
+    padding: 0;
+  }
+  .subimg{
+    width:120px; height:120px; display:block; margin:0 auto 10px;
+    image-rendering:pixelated; filter: drop-shadow(0 0 8px rgba(0,255,0,0.18));
+  }
+  .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+  .btnRowTop{ margin-top:12px; }
+  .btnRowBottom{ margin-top:10px; }
+  #btnControls{ min-width:160px; }
+  button{
+    font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    padding:10px 14px; border-radius:12px; cursor:pointer; min-width:160px;
+  }
+  button:hover,
+  body.controller-active button.controllerFocus,
+  body.controller-active .smallBtn.controllerFocus{ background: rgba(75,0,118,0.55); }
+  .smallBtn{ min-width:120px; padding:8px 12px; border-radius:10px; }
+  .cheatsUnlockInput{ box-sizing:border-box; color:#fff; background:rgba(75,0,118,0.55); border:2px solid #00ff66; font-family:inherit; }
+  .cheatsUnlockInput:focus{ outline:2px solid #ff00ff; outline-offset:2px; }
+  .cheatermodeComboButton{ font-weight:900; text-shadow:0 0 8px currentColor; }
+  .cheatermodeComboButton.comboNone{ color:#ff3b3b; }
+  .cheatermodeComboButton.comboPartial{ color:#ffd84d; }
+  .cheatermodeComboButton.comboBoth{ color:#00ff66; }
+  .cheatermodeCountdown{ color:#fff; font-weight:900; text-shadow:0 0 8px #fff; }
+  body.controller-active button.controllerFocus,
+  body.controller-active .smallBtn.controllerFocus{
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+  }
+  body.controller-active .optRow.controllerFocus,
+  body.controller-active .controlsBindRow.controllerFocus{
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+    background: rgba(75,0,118,0.52);
+  }
+  body.controller-active .optRow .controllerFocus,
+  body.controller-active .controlsBindRow .controllerFocus{
+    border-color: rgba(0,255,0,0.95) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.38), 0 0 12px rgba(0,255,0,0.22);
+    outline: none;
+    background-color: rgba(75,0,118,0.45);
+  }
+  body.controller-active input[type="range"].controllerFocus{
+    filter: drop-shadow(0 0 6px rgba(0,255,0,0.45));
+    background-color: transparent;
+  }
+  body.controller-active input[type="range"].controllerFocus::-webkit-slider-runnable-track{
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #00ff66 0%, #00ff66 var(--range-progress, 44%), rgba(75,0,118,0.78) var(--range-progress, 44%), rgba(75,0,118,0.78) 100%);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.55), 0 0 12px rgba(0,255,0,0.22);
+  }
+  body.controller-active input[type="range"].controllerFocus::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #00ff66;
+    border: 2px solid rgba(0,0,0,0.82);
+    margin-top: -5px;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.58), 0 0 16px rgba(0,255,0,0.30);
+  }
+  body.controller-active input[type="range"].controllerFocus::-moz-range-track{
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(75,0,118,0.78);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.55), 0 0 12px rgba(0,255,0,0.22);
+  }
+  body.controller-active input[type="range"].controllerFocus::-moz-range-progress{
+    height: 8px;
+    border-radius: 999px;
+    background: #00ff66;
+  }
+  body.controller-active input[type="range"].controllerFocus::-moz-range-thumb{
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #00ff66;
+    border: 2px solid rgba(0,0,0,0.82);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.58), 0 0 16px rgba(0,255,0,0.30);
+  }
+  body.controller-active input[type="number"].controllerFocus{
+    border-color:#00ff66 !important;
+    box-shadow:0 0 0 2px rgba(0,255,102,0.4), 0 0 18px rgba(0,255,102,0.22) !important;
+    background:rgba(0,0,0,0.72) !important;
+  }
+
+  body.controller-active input[type="checkbox"].controllerFocus{
+    outline: 2px solid rgba(0,255,0,0.95);
+    outline-offset: 2px;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0,255,0,0.24);
+    background-color: transparent;
+  }
+  body.controller-active #optionsMenu label:has(input[type="checkbox"].controllerFocus){
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(75,0,118,0.45);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 12px rgba(0,255,0,0.22);
+  }
+  .optionsGrid{ display:grid; grid-template-columns:1fr; gap:12px; text-align:center; margin-top:10px; }
+  .optRow{ border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:10px 12px; background: rgba(0,0,0,0.35); }
+  #optionsMenu .optRow.buttonOnlyRow{ border:none; background:transparent; padding:0; }
+  .optLabel{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:14px; }
+  #optionsMenu select,
+  #optionsMenu input[type="range"],
+  #optionsMenu input[type="checkbox"]{ transition: box-shadow 120ms ease, border-color 120ms ease, outline-color 120ms ease, filter 120ms ease, background-color 120ms ease; }
+  #optionsMenu select{ scrollbar-width:none; -ms-overflow-style:none; }
+  #optionsMenu select::-webkit-scrollbar{ width:0; height:0; display:none; }
+  input[type="range"]{ width:100%; accent-color:#00ff66; }
+  .startStatsRow{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; align-items:start; }
+  .startStatField{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .startStatField label{ font-size:13px; color:#00ff66; }
+  .startStatField .resourceNumberInput{ width:100%; padding:10px 12px; font-family:monospace; font-size:18px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none; box-sizing:border-box; text-align:center; }
+  .startStatField .resourceNumberInput:focus{ border-color:#00ff66; box-shadow:0 0 0 2px rgba(0,255,102,0.2); }
+  .startStatField .resourceNumberInput::selection{ background:rgba(128,0,255,0.72); color:#ffffff; }
+  .startStatField .resourceNumberInput::-moz-selection{ background:rgba(128,0,255,0.72); color:#ffffff; }
+  /* v2.02: plain centered resource number boxes. No native or custom arrows. */
+  .startStatField .resourceNumberInput{ -moz-appearance:textfield; appearance:textfield; padding-right:12px; text-align:center; }
+  .startStatField .resourceNumberInput::-webkit-outer-spin-button,
+  .startStatField .resourceNumberInput::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; display:none; }
+  .resourceNumberWrap{ position:relative; width:100%; }
+  .resourceNumberWrap .resourceNumberInput{ width:100%; }
+  .resourceStepperButtons{ display:none !important; }
+  .startStatField.statInfinite::after{ display:none; }
+  .startStatField.statInfinite .resourceNumberWrap::after{ content:"MAX"; position:absolute; left:12px; right:12px; top:50%; transform:translateY(-50%); height:22px; line-height:22px; text-align:center; color:#00ff66; font-family:monospace; font-size:18px; pointer-events:none; }
+  .hint{ opacity:0.8; font-size:12px; margin-top:10px; line-height:1.35; }
+  .menuBlurb{
+    max-width: 440px;
+    margin: 0 auto 4px;
+    opacity: 0.9;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  #controlsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
+  #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #controlsMenuInner{ width:100%; transform-origin:top center; }
+  #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
+  #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:center; width:100%; min-width:0; }
+  #controlsMenu .optRow{ padding:6px 0; background:transparent; border:none; border-radius:0; box-shadow:none; }
+  #controlsMenu .controlsBindList{ display:grid; grid-template-columns:minmax(0, 1fr); gap:6px; margin-top:4px; width:100%; min-width:0; }
+  #controlsMenu .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:6px 8px; background: rgba(0,0,0,0.35); }
+  #controlsMenu .controlsBindRow:hover,
+  #controlsMenu .controlsBindRow:focus-within{ border-color: rgba(0,255,0,0.9); box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22); background: rgba(75,0,118,0.52); }
+  #controlsMenu .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; align-items:flex-start; text-align:left; }
+  #controlsMenu .controlsBindTitle{ font-size:12px; }
+  #controlsMenu .controlsBindHint{ opacity:0.7; font-size:9px; line-height:1.15; }
+  #controlsMenu .controlsBindButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; }
+  #controlsMenu .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
+  #controlsMenu .controlsMoveRow{ grid-template-columns:minmax(120px, 0.92fr) minmax(0, 1.08fr); }
+  #controlsMenu .controlsMoveButtonGroup{ display:grid; grid-template-columns:repeat(4, 58px); gap:0; align-items:stretch; justify-content:end; min-width:0; width:100%; max-width:100%; }
+  #controlsMenu .controlsMoveButton{ min-width:58px; width:58px; max-width:58px; min-height:0; padding:6px 0; font-size:10px; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:clip; display:flex; align-items:center; justify-content:center; gap:2px; text-align:center; box-sizing:border-box; }
+  #controlsMenu .controlsMoveButton .moveBindLabel{ display:inline-block; font-size:15px; line-height:1.0; }
+  #controlsMenu .controlsMoveButton .moveBindValue{ display:inline-block; font-size:8px; line-height:1.0; opacity:0.95; white-space:nowrap; overflow:hidden; text-overflow:clip; }
+  #controlsMenu .controlsAimRow{ grid-template-columns:minmax(120px, 0.92fr) auto; }
+  #controlsMenu .controlsAimButtonGroup{ display:flex; justify-content:end; align-items:stretch; min-width:0; width:100%; max-width:100%; }
+  #controlsMenu .controlsAimButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
+  #controlsMenu .controlsFixedBindButton{ cursor:default; }
+  #controlsMenu .controlsFixedBindButton:focus{ outline:none; }
+
+  @media (max-width: 640px), (max-height: 760px){
+    #controlsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; max-height:none; }
+    #controlsMenu .title{ font-size:17px; }
+    #controlsMenu .controlsGrid{ gap:5px; }
+    #controlsMenu .optRow{ padding:6px 8px; }
+    #controlsMenu .controlsBindList{ gap:5px; }
+    #controlsMenu .controlsBindRow{ padding:6px 8px; gap:5px; }
+    #controlsMenu .controlsBindTitle{ font-size:11px; }
+    #controlsMenu .controlsBindHint{ font-size:8px; }
+    #controlsMenu .controlsBindButton{ min-width:104px; padding:6px 7px; font-size:10px; }
+    #controlsMenu .controlsMoveButtonGroup{ grid-template-columns:repeat(4, 52px); gap:0; }
+    #controlsMenu .controlsMoveButton{ min-width:52px; width:52px; max-width:52px; padding:6px 0; }
+    #controlsMenu .controlsMoveButton .moveBindLabel{ font-size:14px; }
+    #controlsMenu .controlsMoveButton .moveBindValue{ font-size:8px; }
+    #controlsMenu .controlsAimButton{ min-width:104px; padding:6px 7px; font-size:10px; }
+  }
+  /* OPTIONS MENU: keep it on-screen, scroll if needed */
+  #optionsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
+  #optionsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #optionsMenu .title{ font-size:18px; margin:1px 0 5px; }
+  #optionsMenu .optionsGrid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; align-items:start; }
+  #optionsMenu .optRow.fullRow,
+  #optionsMenu .optRow.checkboxGroup{ grid-column:1 / -1; }
+  #optionsMenu .optRow{ padding:6px 8px; }
+  #optionsMenu .optLabel{ margin-bottom:3px; font-size:12px; }
+  #optionsMenu .hint{ margin-top:3px; line-height:1.15; font-size:10px; }
+  #optionsMenu .checkboxGroup{ display:flex; flex-direction:column; gap:7px; }
+  #optionsMenu .startStatsRow{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
+  #optionsMenu .startStatField{ display:flex; flex-direction:column; gap:4px; }
+  #optionsMenu .startStatField label{ font-size:11px; opacity:0.9; }
+  #optionsMenu .startStatField input[type="number"]{ width:100%; }
+  #cheatsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
+  #cheatsMenu .title{ font-size:18px; margin:1px 0 5px; }
+  #cheatsMenu .cheatsGrid{ display:grid; grid-template-columns:1fr; gap:6px; margin-top:10px; }
+  #cheatsMenu .cheatRow{ padding:10px 12px; }
+  #cheatsMenu .cheatHeader{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  #cheatsMenu .cheatTitle{ font-size:14px; }
+  #cheatsMenu .cheatCommand{ font-size:10px; opacity:0.7; }
+  #cheatsMenu input[type="checkbox"]{ transform:scale(1.2); }
+  #optionsMenu .checkOption{ display:flex; flex-direction:column; gap:4px; }
+  #optionsMenu .checkOption label{ display:flex; align-items:center; gap:8px; font-size:12px; opacity:0.95; cursor:pointer; }
+  #optionsMenu .checkOption .hint{ margin-top:0; padding-left:0; }
+
+  @media (max-width: 640px), (max-height: 760px){
+    #optionsMenu.panel{ width:min(520px, 94vw); padding:10px; max-height:none; }
+    #optionsMenu .title{ font-size:17px; }
+    #optionsMenu .optionsGrid{ grid-template-columns:1fr; gap:5px; }
+    #optionsMenu .optRow{ padding:6px 8px; }
+    #optionsMenu .hint{ font-size:9px; }
+  }
+
+  .statusLine{ margin-top:10px; font-size:12px; opacity:0.9; }
+
+  /* =======================
+     HUD Corner Slots (v1.96)
+  ======================= */
+  .cornerSlot{
+    position:absolute;
+    min-width:120px;
+    height:76px;
+    padding:6px;
+    border:2px solid rgba(0,255,0,0.55);
+    border-radius:12px;
+    background: rgba(0,0,0,0.55);
+    box-shadow: 0 0 18px rgba(0,255,0,0.10);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:4px;
+    pointer-events:none;
+  }
+  .cornerSlot .subtxt{
+    font-family: "Courier New", monospace;
+    font-size:12px;
+    font-weight:700;
+    line-height:1;
+    opacity:0.95;
+    color:#0f0;
+    text-align:center;
+  }
+  #powerupHint{
+    font-weight:700;
+  }
+  #livesSlot img{
+    width:40px; height:40px;
+    image-rendering:pixelated;
+    filter: drop-shadow(0 0 8px rgba(0,255,0,0.20));
+  }
+
+  .livesButton{
+    flex-direction:row;
+    justify-content:center;
+    gap:8px;
+  }
+  .livesLabel{
+    font-family:"Courier New", monospace;
+    font-size:12px;
+    font-weight:700;
+    color:#00ff66;
+    opacity:0.95;
+    white-space:nowrap;
+  }
+
+  #deathOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(255,0,0,0.22);
+    pointer-events:auto;
+  }
+  #deathPanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(255,0,0,0.65);
+    border-radius:16px;
+    background: rgba(0,0,0,0.72);
+    padding: 18px 18px 16px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(255,0,0,0.14);
+  }
+  #deathTitle{
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:2px;
+    color:#ff4444;
+    text-shadow: 0 0 10px rgba(255,0,0,0.25);
+  }
+  #deathPanel .deathBtn{
+    display:block;
+    width:min(460px, 78vw);
+    min-width:0;
+    margin:14px auto 0;
+    box-sizing:border-box;
+    font-family:"Courier New", monospace;
+    font-size:20px;
+    font-weight:800;
+    color:#ffdddd;
+    background: rgba(0,0,0,0.55);
+    border:2px solid rgba(255,0,0,0.55);
+    padding:10px 18px;
+    border-radius:14px;
+    cursor:pointer;
+    text-align:center;
+  }
+  #deathPanel .deathBtn:hover,
+  body.controller-active #deathPanel .deathBtn.controllerFocus{
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+    background: rgba(75,0,118,0.55);
+  }
+
+  #winOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,255,0,0.22);
+    pointer-events:auto;
+    z-index: 110;
+  }
+  #winPanel{
+    width:min(84vmin, 440px);
+    max-width:84vw;
+    max-height:84vh;
+    aspect-ratio:1 / 1;
+    border:3px solid rgba(0,255,0,0.75);
+    border-radius:16px;
+    background: rgba(0,0,0,0.82);
+    padding: 16px 16px 14px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(0,255,0,0.18);
+    box-sizing:border-box;
+    overflow-y:auto;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+  }
+  #winPanel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #winTitle{
+    font-family: "Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-weight:900;
+    font-size:44px;
+    letter-spacing:1px;
+    color:#7dff7d;
+    text-shadow: 0 0 12px rgba(0,255,0,0.28);
+  }
+  .winControllerTarget{
+    display:block;
+    width:100%;
+    box-sizing:border-box;
+    border-radius:12px;
+    border:1px solid transparent;
+    padding:4px 10px;
+    outline:none;
+    transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  body.controller-active #winPanel .winControllerTarget.controllerFocus{
+    background: rgba(255,255,255,0.18);
+    border-color: rgba(255,255,255,0.3);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.16);
+  }
+  body.controller-active #winPanel .winControllerTarget.controllerFocus *{
+    box-shadow:none !important;
+  }
+  #btnContinue{
+    margin-top:10px;
+    font-family:"Cooper Std", "Cooper Black", "Bookman Old Style", serif;
+    font-size:18px;
+    font-weight:800;
+    color:#dfffe2;
+    background: rgba(0,40,0,0.65);
+    border:2px solid rgba(0,255,0,0.60);
+    padding:10px 18px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  #btnContinue:hover{ background: rgba(0,255,0,0.12); }
+  #winStatsTitle{
+    margin-top: 8px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 18px;
+    font-weight: 800;
+    color: #dfffe2;
+  }
+  #winStatsList{
+    margin: 8px auto 0;
+    width: min(330px, 76vw);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+  }
+  .winStatRow{
+    font-family: "Courier New", Courier, monospace;
+    font-weight: 700;
+    font-size: 19px;
+    line-height: 1.12;
+  }
+  #winStatTime{ color: #ffffff; }
+  #winStatScore{ color: #ffe866; }
+  #winStatKills{ color: #ff4d4d; }
+  #winStatBullets{ color: #5ab6ff; }
+  #winStatAccuracy{ color: #00ff66; }
+  #winStatBombKills{ color: #5ab6ff; }
+  #winStatKillBreakdown{
+    display:none;
+    color:#dfffe2;
+    font-size:14px;
+    line-height:1.3;
+  }
+  .winStatBreakdownTitle{
+    color:#dfffe2;
+    font-size:15px;
+    margin-bottom:2px;
+  }
+  .winStatBreakdownLine{
+    padding-left: 1.25em;
+  }
+  #winStatKillBreakdownList{
+    color:#8fe7ff;
+  }
+  #winStatBonus{ color: #ffffff; display:none; }
+  .winStatBonusTitle{ color:#ffffff; }
+  .winStatBonusLine{ padding-left: 1.25em; }
+  #winStatBonusDragons{ color:#ff4d4d; }
+  #winStatBonusFrogs{ color:#00ff66; }
+
+  @media (max-height: 620px), (max-width: 460px){
+    #winPanel{ width:min(90vmin, 400px); max-width:90vw; max-height:90vh; padding:12px; }
+    #winTitle{ font-size:36px; }
+    #winStatsTitle{ font-size:16px; margin-top:6px; }
+    .winStatRow{ font-size:16px; }
+    #winStatsList{ gap:4px; margin-top:6px; width:min(300px, 78vw); }
+    #btnContinue{ font-size:16px; padding:8px 12px; margin-top:8px; }
+  }
+
+  #pauseOverlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,0.55);
+    pointer-events:none;
+    z-index: 90;
+  }
+  #pausePanel{
+    width:min(520px, 92vw);
+    border:3px solid rgba(0,255,0,0.65);
+    border-radius:16px;
+    background: rgba(0,0,0,0.72);
+    padding: 18px 18px 16px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(0,255,0,0.14);
+  
+  box-sizing: border-box;
+  max-width: min(520px, 92vw);
+  width: min(520px, 92vw);
+
+  position: relative;
+
+  pointer-events: auto;
+}
+  #pauseTitle{
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    font-size:56px;
+    letter-spacing:2px;
+    color:#00ff66;
+    text-shadow: 0 0 10px rgba(0,255,0,0.25);
+  }
+  #pauseHint{
+    margin-top:10px;
+    margin-bottom:16px; /* Added to match the spacing below the command button */
+    font-family:monospace;
+    font-size:14px;
+    opacity:0.9;
+    color:#b6ffcf;
+  }
+  #pauseCmdSuggest{
+    width:100%;
+    max-width:420px;
+    box-sizing:border-box;
+    display:none;
+    margin:0 auto 10px;
+    text-align:left;
+    font-family:"Courier New", monospace;
+    color:#b6ffcf;
+    background:rgba(0,0,0,0.28);
+    border:1px solid rgba(0,255,0,0.18);
+    border-radius:12px;
+    padding:8px;
+    max-height:220px;
+    overflow:auto;
+  }
+  .pauseMenuBtn{
+    width:100%;
+    max-width:420px;
+    box-sizing:border-box;
+    display:block;
+    margin-left:auto;
+    margin-right:auto;
+    font-family:"Courier New", monospace;
+    font-weight:800;
+    color:#0f0;
+    background: rgba(0,0,0,0.55);
+    border:2px solid rgba(0,255,0,0.55);
+    padding:12px 14px;
+    border-radius:14px;
+    cursor:pointer;
+    pointer-events:auto;
+    transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .pauseMenuBtn + .pauseMenuBtn{ margin-top:10px; }
+  /* Quit to Menu now uses the same stacked spacing as the rest of the pause menu. */
+  body.controller-active #pausePanel .pauseMenuBtn.controllerFocus{
+    background: rgba(75,0,118,0.55) !important;
+    border-color: rgba(0,255,0,0.95) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+  }
+  body.controller-active #pausePanel .pauseMenuBtn.controllerFocus *{ box-shadow:none !important; }
+  #pausePanel .pauseMenuBtn:hover{
+    background: rgba(75,0,118,0.55);
+    border-color: rgba(0,255,0,0.9);
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+  }
+  #pauseOverlay.scoreStoreVisible #pausePanel{ display:block; }
+  #scoreStorePanel{
+    display:none;
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%, -50%);
+    z-index:1;
+    width:min(640px, 94vw);
+    border:3px solid rgba(0,255,0,0.65);
+    border-radius:16px;
+    background: rgba(75,0,118,0.72);
+    padding:12px 12px 10px;
+    text-align:center;
+    box-shadow: 0 0 36px rgba(0,255,0,0.14);
+    pointer-events:auto;
+    box-sizing:border-box;
+    max-height:min(88vh, 640px);
+    overflow:auto;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+  }
+  #scoreStorePanel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #pauseOverlay.scoreStoreVisible #scoreStorePanel{ display:block; }
+  #scoreStorePanel .title{
+    font-size:18px;
+    margin:1px 0 5px;
+  }
+  #scoreStoreHint{
+    margin:0 0 6px;
+    font-family:monospace;
+    font-size:11px;
+    line-height:1.3;
+    color:#d9ffe5;
+    opacity:0.9;
+  }
+  #scoreStoreCurrentScore{
+    margin:0 0 8px;
+    font-family:monospace;
+    font-size:14px;
+    font-weight:800;
+    color:#ffd400;
+    text-shadow:0 0 8px rgba(0,0,0,0.65);
+  }
+  #scoreStoreItems{
+    display:grid;
+    gap:6px;
+  }
+  #scoreStoreItems .scoreStoreRow{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    gap:8px;
+    align-items:center;
+    padding:8px 10px;
+    text-align:left;
+  }
+  #scoreStoreItems .scoreStoreMeta{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+  }
+  #scoreStoreItems .scoreStoreHead{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+  }
+  #scoreStoreItems .scoreStoreItemTitle{
+    font-size:13px;
+    color:#ffffff;
+    white-space:nowrap;
+  }
+  #scoreStoreItems .scoreStoreCost{
+    font-size:10px;
+    font-weight:900;
+    color:#ffd400;
+    white-space:nowrap;
+  }
+  #scoreStoreItems .scoreStoreItemDetail{
+    font-size:10px;
+    line-height:1.2;
+    color:#b6ffcf;
+    opacity:0.82;
+  }
+
+  #scoreStoreItems .scoreStoreHeartsPreview{
+    display:block;
+    width:max-content;
+    max-width:100%;
+    margin-top:3px;
+    padding:3px 5px;
+    border:1px solid rgba(0,255,0,0.38);
+    border-radius:8px;
+    background:rgba(0,0,0,0.28);
+    color:#ffffff;
+    font-family:monospace;
+    font-size:18px;
+    line-height:1;
+    letter-spacing:1px;
+    white-space:nowrap;
+    text-shadow:0 0 6px rgba(0,0,0,0.75);
+  }
+  #scoreStoreItems .scoreStoreHeartsPreview .hudExtra,
+  #scoreStoreItems .scoreStoreHeartsPreview .heartsExtra{
+    display:inline-block;
+    letter-spacing:0;
+    margin-left:0;
+    vertical-align:middle;
+    font-size:0.78em;
+    color:#ffd400;
+  }
+  #scoreStoreItems .scoreStoreAction{
+    min-width:104px;
+    padding:6px 8px;
+    font-size:11px;
+    text-align:center;
+  }
+  #scoreStoreStatus{
+    min-height:1.3em;
+    margin-top:8px;
+    font-family:monospace;
+    font-size:10px;
+    line-height:1.2;
+    color:#d9ffe5;
+    opacity:0.82;
+  }
+  #btnScoreStoreClose{
+    margin-top:10px;
+    min-width:140px;
+  }
+
+  /* v1.96: keep HUD off the menu and keep menu clickable */
+  #uiRoot{ z-index: 50; }
+  #deathOverlay{ z-index: 100; }
+#livesSlot{
+  display:none;
+  transform:scale(0.5);
+  transform-origin:left bottom;
+}
+#powerupSlot{
+  display:none;
+  transform:scale(0.5);
+  transform-origin:right bottom;
+}
+
+/* Centered wave label (replaces old Stage/Waves HUD) */
+/* Centered wave label (final) */
+#stageHud{
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font: bold 20px monospace;
+  z-index: 50;
+  text-shadow: 0 0 8px rgba(0,0,0,0.65);
+  pointer-events: none;
+}
+
+/* Accuracy score (top-left, 2x wave counter) */
+#scoreStoreHud{
+  position:absolute;
+  top:10px;
+  left:14px;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:4px;
+  padding:6px;
+  margin:0;
+  min-width:0;
+  border:2px solid transparent;
+  border-radius:12px;
+  background:transparent;
+  box-shadow:none;
+  appearance:none;
+  -webkit-appearance:none;
+  font:inherit;
+  text-align:left;
+  cursor:default;
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+#scoreStoreHud:hover{ background:transparent; }
+#scoreStoreHud:disabled{ opacity:1; }
+#scoreStoreHud.storeReady{
+  border-color:rgba(0,255,0,0.55);
+  background: rgba(0,0,0,0.55);
+  box-shadow: 0 0 18px rgba(0,255,0,0.10);
+  cursor:pointer;
+  pointer-events:auto;
+  animation:storeUnlockedHue 1.1s linear infinite;
+}
+#scoreStoreHud.storeReady:hover,
+body.controller-active #scoreStoreHud.storeReady.controllerFocus{
+  background: rgba(75,0,118,0.55) !important;
+  border-color: rgba(0,255,0,0.9) !important;
+  box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+}
+#accuracyScore{
+  position:static;
+  font-family:monospace;
+  font-weight:900;
+  font-size:20px;
+  color:#ffd400;
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  pointer-events:none;
+  user-select:none;
+  white-space:nowrap;
+}
+
+#storeUnlockedHud{
+  position:static;
+  font-family:monospace;
+  font-weight:900;
+  font-size:12px;
+  color:#fff;
+  text-shadow:0 0 8px rgba(0,0,0,0.75);
+  pointer-events:none;
+  user-select:none;
+  white-space:nowrap;
+  display:none;
+  width:100%;
+  text-align:center;
+}
+
+@keyframes storeUnlockedHue{
+  0%{filter:hue-rotate(0deg);}
+  100%{filter:hue-rotate(360deg);}
+}
+
+#timerHud{
+  position:absolute;
+  top:10px;
+  right:14px;
+  font-family:monospace;
+  font-weight:800;
+  font-size:18px;
+  color:#ffffff;
+  opacity:0.95;
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  pointer-events:none;
+  z-index:60;
+  user-select:none;
+  text-align:center;
+  line-height:1.05;
+  white-space:nowrap;
+}
+.timerHudLabel{
+  display:block;
+  font-size:14px;
+  line-height:1;
+  margin-bottom:2px;
+  text-transform:none;
+}
+
+/* =======================
+   Invert Colors Mode
+======================= */
+body.invert-colors {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+  /* Kill browser click-flash / focus indicator artifacts */
+  html, body, canvas, button, select, input, textarea, label, div, iframe {
+    -webkit-tap-highlight-color: transparent;
+  }
+  *:focus,
+  *:focus-visible,
+  *:active{
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  body{
+    caret-color: transparent;
+  }
+
+  /* Keep lime menu highlight scoped to real hover or active controller navigation only */
+  button:hover,
+  .smallBtn:hover{
+    border-color: rgba(0,255,0,0.9) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+  }
+  body:not(.controller-active) .controllerFocus{
+    border-color: inherit !important;
+    box-shadow: none !important;
+  }
+  canvas, .panel, button, select, label, #main-content, #app-shell, #overlay-container, #shooter-game-frame, #tektite-frame{
+    user-select:none;
+    -webkit-user-select:none;
+  }
+
+  /* Controls menu fixed shell: middle list scrolls invisibly, bottom buttons stay normal. */
+  #controlsMenuInner{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+    min-height:0;
+  }
+  #controlsMenu .controlsGrid{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 8px 8px;
+    overflow:hidden;
+  }
+  #controlsMenu #controlsListScroll{
+    width:100%;
+    height:100%;
+    overflow:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+    box-sizing:border-box;
+    padding:0 8px 8px;
+  }
+  #controlsMenu #controlsListScroll::-webkit-scrollbar{
+    width:6px;
+    height:6px;
+  }
+  #controlsMenu #controlsListScroll::-webkit-scrollbar-track{
+    background:rgba(0,0,0,0.22);
+    border-radius:999px;
+  }
+  #controlsMenu #controlsListScroll::-webkit-scrollbar-thumb{
+    background:#00ff66;
+    border-radius:999px;
+    box-shadow:0 0 8px rgba(0,255,102,0.35);
+  }
+  #controlsMenu #controlsListScroll::-webkit-scrollbar-thumb:hover{
+    background:#7dff7d;
+  }
+  #controlsMenu .controlsListPanel{
+    width:100%;
+    box-sizing:border-box;
+    padding:6px 8px 8px;
+    overflow:visible;
+  }
+  #controlsMenu .btnRow{
+    flex:0 0 auto;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 8px 0;
+  }
+
+  .menuPlaceholderBtn{
+    visibility:hidden;
+    pointer-events:none;
+  }
+
+  .applyStateBtn .applyX{ color:#ff4444; font-weight:900; }
+  .applyStateBtn .applyCheck{ color:#00ff66; font-weight:900; }
+
+  /* Unified fixed-size menu panels: Options, Cheats, and Controls match the Start menu shell. */
+  #optionsMenu,
+  #cheatsMenu,
+  #controlsMenu{
+    box-sizing:border-box;
+    overflow:hidden;
+  }
+  #optionsMenuInner,
+  #cheatsMenuInner,
+  #controlsMenuInner{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+    min-height:0;
+  }
+  #optionsMenu .menuMiddleScroll,
+  #cheatsMenu .menuMiddleScroll,
+  #controlsMenu .controlsGrid{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    box-sizing:border-box;
+    overflow:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+    padding:0 8px 8px;
+  }
+  #optionsMenu .menuMiddleScroll::-webkit-scrollbar,
+  #cheatsMenu .menuMiddleScroll::-webkit-scrollbar,
+  #controlsMenu .controlsGrid::-webkit-scrollbar{
+    width:6px;
+    height:6px;
+  }
+  #optionsMenu .menuMiddleScroll::-webkit-scrollbar-track,
+  #cheatsMenu .menuMiddleScroll::-webkit-scrollbar-track,
+  #controlsMenu .controlsGrid::-webkit-scrollbar-track{
+    background:rgba(0,0,0,0.22);
+    border-radius:999px;
+  }
+  #optionsMenu .menuMiddleScroll::-webkit-scrollbar-thumb,
+  #cheatsMenu .menuMiddleScroll::-webkit-scrollbar-thumb,
+  #controlsMenu .controlsGrid::-webkit-scrollbar-thumb{
+    background:#00ff66;
+    border-radius:999px;
+    box-shadow:0 0 8px rgba(0,255,102,0.35);
+  }
+  #optionsMenu .menuMiddleScroll::-webkit-scrollbar-thumb:hover,
+  #cheatsMenu .menuMiddleScroll::-webkit-scrollbar-thumb:hover,
+  #controlsMenu .controlsGrid::-webkit-scrollbar-thumb:hover{
+    background:#7dff7d;
+  }
+  #optionsMenu .optionsGrid,
+  #cheatsMenu .cheatsGrid{
+    width:100%;
+    box-sizing:border-box;
+  }
+  #controlsMenu .controlsGrid{
+    padding:0 8px 8px;
+  }
+  #controlsMenu #controlsListScroll{
+    overflow:visible;
+    height:auto;
+    padding:0;
+    scrollbar-width:auto;
+  }
+  #controlsMenu .controlsListPanel{
+    width:100%;
+    box-sizing:border-box;
+    padding:6px 8px 8px;
+    overflow:visible;
+  }
+  #optionsMenu .menuBottomRow,
+  #cheatsMenu .menuBottomRow,
+  #controlsMenu .menuBottomRow{
+    flex:0 0 auto;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 8px;
+  }
+  /* End unified fixed-size menu panels */
+
+  #titleHoverReveal .titleSubHover{
+    color:inherit;
+    text-decoration:none;
+  }
+  #titleHoverReveal .titleSubHover:hover{
+    color:#00ff66;
+    text-decoration:none;
+  }
+
+  body.controller-active #titleHoverReveal.controllerFocus .titleSubDefault,
+  #titleHoverReveal:focus .titleSubDefault{
+    opacity:0;
+  }
+  body.controller-active #titleHoverReveal.controllerFocus .titleSubHover,
+  #titleHoverReveal:focus .titleSubHover{
+    opacity:1;
+  }
+
+  #optionsMenu .optionsGrid,
+  #cheatsMenu .cheatsGrid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:6px;
+    align-items:start;
+  }
+
+  #cheatsMenuInner{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+    min-height:0;
+  }
+  #cheatsScroll{
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;
+    box-sizing:border-box;
+    padding:0 8px 8px;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+  }
+  #cheatsScroll::-webkit-scrollbar{
+    width:6px;
+    height:6px;
+  }
+  #cheatsScroll::-webkit-scrollbar-track{
+    background:rgba(0,0,0,0.22);
+    border-radius:999px;
+  }
+  #cheatsScroll::-webkit-scrollbar-thumb{
+    background:#00ff66;
+    border-radius:999px;
+    box-shadow:0 0 8px rgba(0,255,102,0.35);
+  }
+  #cheatsMenu .menuBottomRow{
+    flex:0 0 auto;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 8px;
+  }
+
+  /* Compact Cheats rows: make Infinite / Invert / Video FX match the rest of the menu. */
+  #cheatsMenu .cheatRow{
+    padding:6px 8px;
+    text-align:left;
+  }
+  #cheatsMenu .cheatHeader{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center;
+    gap:8px;
+  }
+  #cheatsMenu .cheatHeader > div:first-child{
+    min-width:0;
+    text-align:left;
+  }
+  #cheatsMenu .cheatTitle{
+    font-size:12px;
+    line-height:1.15;
+    text-align:left;
+    margin:0;
+  }
+  #cheatsMenu .cheatCommand{
+    font-size:10px;
+    line-height:1.1;
+    opacity:0.7;
+    text-align:left;
+    margin:2px 0 0;
+    padding-left:0;
+  }
+  #cheatsMenu .cheatRow .hint{
+    margin-top:4px;
+    line-height:1.15;
+    font-size:10px;
+    text-align:left;
+    padding-left:0;
+  }
+  #cheatsMenu .cheatRow label{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    white-space:nowrap;
+    text-align:right;
+  }
+  #cheatsMenu .cheatRow input[type="checkbox"]{
+    transform:scale(1);
+  }
+
+  #cheatsMenu .cheatsSkipRow{
+    width:100%;
+    box-sizing:border-box;
+    padding:0;
+    margin:0;
+    background:transparent;
+    border:none;
+    box-shadow:none;
+  }
+  #cheatsMenu #btnSkipToLevel2{
+    display:block;
+    width:100% !important;
+    min-height:46px;
+    box-sizing:border-box;
+    font-size:16px;
+    margin:0;
+  }
+
+  /* /video_fx whole-screen DOM coverage */
+  body.videoFxActive #uiRoot,
+  body.videoFxActive #hud,
+  body.videoFxActive #stageHud,
+  body.videoFxActive #scoreHud,
+  body.videoFxActive #timerHud,
+  body.videoFxActive #livesSlot,
+  body.videoFxActive #powerupSlot,
+  body.videoFxActive #heartsHud,
+  body.videoFxActive #deathOverlay,
+  body.videoFxActive #winOverlay,
+  body.videoFxActive #pauseOverlay,
+  body.videoFxActive #scoreStoreOverlay{
+    filter:hue-rotate(var(--video-fx-hue, 0deg)) saturate(1.22) contrast(1.05);
+    text-shadow:
+      calc(var(--video-fx-shift, 1px) * -1) 0 rgba(255,0,120,0.45),
+      var(--video-fx-shift, 1px) 0 rgba(0,255,255,0.38),
+      0 0 8px rgba(0,255,102,0.18);
+  }
+  body.videoFxActive #uiRoot::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:999;
+    mix-blend-mode:screen;
+    background:
+      linear-gradient(90deg, rgba(255,0,120,0.08), rgba(0,255,255,0.05), transparent 52%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px);
+    opacity:var(--video-fx-overlay-opacity, 0.18);
+  }
+
+  #btnMysteryLink.mysteryBtn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:160px;
+    box-sizing:border-box;
+    font-family:monospace;
+    font-size:13.3333px;
+    line-height:normal;
+    color:#0f0;
+    background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    padding:8px 12px;
+    border-radius:10px;
+    cursor:pointer;
+    text-decoration:none;
+  }
+  #btnMysteryLink.mysteryBtn:hover,
+  body.controller-active #btnMysteryLink.mysteryBtn.controllerFocus{
+    background:rgba(75,0,118,0.55);
+    border-color:rgba(0,255,0,0.9);
+    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+  }
+
+  #optionsMenu .commandOptionRow{
+    padding:6px 8px;
+    text-align:left;
+  }
+  #optionsMenu .commandOptionRow .cheatHeader{
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto;
+    align-items:center;
+    gap:8px;
+  }
+  #optionsMenu .commandOptionRow .cheatHeader > div:first-child{
+    min-width:0;
+    text-align:left;
+  }
+  #optionsMenu .commandOptionRow .cheatTitle{
+    font-size:12px;
+    line-height:1.15;
+    text-align:left;
+    margin:0;
+  }
+  #optionsMenu .commandOptionRow .cheatCommand{
+    font-size:10px;
+    line-height:1.1;
+    opacity:0.7;
+    text-align:left;
+    margin:2px 0 0;
+    padding-left:0;
+  }
+  #optionsMenu .commandOptionRow .hint{
+    margin-top:4px;
+    line-height:1.15;
+    font-size:10px;
+    text-align:left;
+    padding-left:0;
+  }
+  #optionsMenu .commandOptionRow label{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    white-space:nowrap;
+    text-align:right;
+  }
+  #optionsMenu .commandOptionRow input[type="checkbox"]{
+    transform:scale(1);
+  }
+
+
+  #optionsMenu .nicknameControls,
+  #optionsMenu .backgroundColorControls{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    min-width:170px;
+  }
+  #optionsMenu .nicknameInput,
+  #optionsMenu .backgroundColorHex{
+    width:92px;
+    box-sizing:border-box;
+    font-family:monospace;
+    font-size:12px;
+    color:#00ff66;
+    background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,0,0.45);
+    border-radius:9px;
+    padding:7px 8px;
+    outline:none;
+  }
+  #optionsMenu .nicknameInput{
+    width:132px;
+    text-transform:none;
+  }
+  #optionsMenu .backgroundColorHex{
+    text-transform:uppercase;
+  }
+  #optionsMenu .backgroundColorPicker{
+    width:38px;
+    height:34px;
+    box-sizing:border-box;
+    border:1px solid rgba(0,255,0,0.45);
+    border-radius:9px;
+    background:rgba(0,0,0,0.55);
+    padding:2px;
+    cursor:pointer;
+  }
+
+
+  body.speedZeroStaticImages img[src*="bananarama"],
+  body.speedZeroStaticImages img[data-original-animated-src*="bananarama"]{
+    image-rendering:pixelated;
+  }
+
+
+  body.speedZeroTimeTravel #timerHud{
+    display:block !important;
+    color:#ff66ff !important;
+    border-color:rgba(255,0,255,0.7) !important;
+    box-shadow:0 0 18px rgba(255,0,255,0.22), 0 0 40px rgba(0,255,255,0.12) !important;
+    text-shadow:0 0 8px rgba(255,0,255,0.65);
+  }
+
+
+  body.zeroLivesSpectatorMode #livesSlot,
+  body.zeroLivesSpectatorMode #heartsHud,
+  body.zeroLivesSpectatorMode #powerupSlot{
+    display:none !important;
+  }
+
+
+  #btnStats{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:160px;
+    box-sizing:border-box;
+  }
+  #statsPanel{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:120;
+    background:rgba(0,0,0,0.42);
+    pointer-events:auto;
+  }
+  #statsPanelInner{
+    width:min(520px, 92vw);
+    border:2px solid rgba(0,255,102,0.65);
+    border-radius:18px;
+    background:rgba(12,0,24,0.92);
+    color:#00ff66;
+    font-family:"Courier New", monospace;
+    padding:18px;
+    box-shadow:0 0 28px rgba(0,255,102,0.20);
+    text-align:left;
+    box-sizing:border-box;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  #statsPanelInner .statsTitle{
+    text-align:center;
+    font-size:24px;
+    font-weight:900;
+    letter-spacing:2px;
+    margin-bottom:12px;
+  }
+  #statsPanel .menuMiddleScroll{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    box-sizing:border-box;
+    overflow:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+    padding:0 8px 8px;
+  }
+  #statsPanel .menuMiddleScroll::-webkit-scrollbar{
+    width:6px;
+    height:6px;
+  }
+  #statsPanel .menuMiddleScroll::-webkit-scrollbar-track{
+    background:rgba(0,0,0,0.22);
+    border-radius:999px;
+  }
+  #statsPanel .menuMiddleScroll::-webkit-scrollbar-thumb{
+    background:#00ff66;
+    border-radius:999px;
+    box-shadow:0 0 8px rgba(0,255,102,0.35);
+  }
+  #statsPanel .menuMiddleScroll::-webkit-scrollbar-thumb:hover{
+    background:#7dff7d;
+  }
+  #statsList{
+    display:grid;
+    gap:8px;
+    margin:12px 0 16px;
+  }
+  .statsRow{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    border:1px solid rgba(0,255,102,0.22);
+    border-radius:10px;
+    padding:8px 10px;
+    background:rgba(0,0,0,0.35);
+  }
+  .statsValue{
+    color:#fff;
+    text-align:right;
+    font-weight:900;
+  }
+  #statsPanelButtons{
+    flex:0 0 auto;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 8px;
+    margin-top:14px;
+  }
+
+
+  #statsLockedDetails{
+    margin:6px 0 14px;
+    border:1px dashed rgba(0,255,102,0.34);
+    border-radius:12px;
+    background:rgba(0,0,0,0.26);
+    overflow:hidden;
+    padding:10px;
+  }
+  #statsLockedDetails[hidden]{
+    display:none !important;
+  }
+  #statsLockedDetails .statsToggleBtn{
+    display:block;
+    width:100%;
+    margin:0;
+  }
+  #statsLockedList{
+    display:grid;
+    gap:7px;
+    padding-top:10px;
+  }
+  #statsLockedList[hidden]{
+    display:none !important;
+  }
+  #statsLockedList .statsRow{
+    opacity:0.62;
+    filter:saturate(0.55);
+  }
+  body.controller-active #statsLockedList .statsRow.controllerFocus{
+    opacity:1;
+    filter:none;
+    background:rgba(75,0,118,0.55);
+    box-shadow:0 0 0 2px rgba(0,255,102,0.55) inset;
+  }
+
+
+  @keyframes statsTitleHueShift{
+    0%{ filter:hue-rotate(0deg); text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(255,255,0,0.20); }
+    50%{ filter:hue-rotate(180deg); text-shadow:0 0 10px rgba(255,0,255,0.55), 0 0 24px rgba(0,255,255,0.24); }
+    100%{ filter:hue-rotate(360deg); text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(255,255,0,0.20); }
+  }
+  #statsPanelInner .statsTitle{
+    animation:statsTitleHueShift 2.4s linear infinite;
+  }
+
+
+  #cheatsMenu .gameSpeedCommandRow{
+    text-align:left;
+  }
+  #cheatsMenu .gameSpeedCommandRow .cheatCommand{
+    font-size:10px;
+    line-height:1.15;
+  }
+  #cheatsMenu .cheatStatusText{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:34px;
+    min-height:28px;
+    padding:3px 8px;
+    border:1px solid rgba(0,255,102,0.45);
+    border-radius:9px;
+    background:rgba(0,0,0,0.45);
+    color:#fff;
+    font-family:monospace;
+    font-size:13px;
+    font-weight:900;
+  }
+  #cheatsMenu .gameSpeedCommandRow input[type="range"]{
+    width:100%;
+    box-sizing:border-box;
+    margin-top:8px;
+  }
+
+</style>
+
+<style>
+/* YOU WIN CLEAN FIT PATCH */
+#levelCompleteOverlay,
+#winOverlay {
+  overflow: hidden !important;
+}
+
+#levelCompleteModal,
+#winModal,
+.completion-stats-modal,
+.win-screen,
+.level-complete-modal {
+  width: min(88vw, 520px) !important;
+  max-width: min(88vw, 520px) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc(100vh - 150px) !important;
+  padding: 12px 18px !important;
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  
+}
+
+#levelCompleteModal *,
+#winModal *,
+.completion-stats-modal *,
+.win-screen *,
+.level-complete-modal * {
+  text-align: center !important;
+  box-sizing: border-box !important;
+}
+
+.level2-win-action-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  margin: 6px auto 0 auto !important;
+  padding: 0 !important;
+}
+
+.bananarama-level2-link {
+  display: flex !important;
+  position: relative !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: min(11vw, 62px) !important;
+  height: min(11vw, 62px) !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  text-decoration: none !important;
+  line-height: 0 !important;
+  cursor: pointer !important;
+  flex: 0 0 auto !important;
+}
+
+.bananarama-level2-link img {
+  display: block !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+.bananarama-level2-number {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  color: #ff2020 !important;
+  font-family: "Courier New", monospace !important;
+  font-size: clamp(18px, 2.6vw, 30px) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  padding-bottom: 0 !important;
+  text-shadow: 0 0 3px #000, 0 0 7px #000, 2px 2px 0 #000, -2px -2px 0 #000 !important;
+  pointer-events: none !important;
+}
+
+.level2-win-action-stack button {
+  display: block !important;
+  margin: 0 auto !important;
+  padding: 8px 18px !important;
+  line-height: 1.05 !important;
+}
+
+#heartsHud .hudExtra,
+#heartsHud .heartsExtra{
+  display:inline-block;
+  letter-spacing:0;
+  margin-left:0;
+  vertical-align:middle;
+}
+</style>
+
+</head>
+<body>
+<div id="starfieldFailBackground" aria-hidden="true">404</div>
+<canvas id="game"></canvas>
+<div id="overlay" hidden aria-hidden="true" style="display:none !important;"></div>
+
+<div id="stageHud" style="
+  position:absolute;
+  top:10px;
+  left:10px;
+  font-family:monospace;
+  font-size:14px;
+  color:#00ff66;
+  text-shadow:0 0 6px rgba(0,255,0,0.35);
+  pointer-events:none;
+  z-index:20;
+"></div>
+<button id="scoreStoreHud" type="button" disabled aria-label="Score HUD">
+  <div id="accuracyScore">Score: 0pts</div>
+  <div id="storeUnlockedHud">Store Unlocked</div>
+</button>
+<div id="timerHud">0.0s</div>
+
+<div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
+  <span class="livesLabel">LIVES:</span>
+<img src="/games/shooter-game/assets/bananarama.webp" alt="lives"/>
+  <div id="livesText" class="subtxt">x1</div>
+</div>
+
+<div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
+  <div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
+  <div id="powerupHint" class="subtxt">Press Q</div>
+</div>
+
+<div id="deathOverlay">
+  <div id="deathPanel">
+    <div id="deathTitle">YOU DIED</div>
+    <button id="btnRestart" class="deathBtn">Restart</button>
+    <button id="btnDeathQuitToMenu" class="deathBtn">Quit to Menu</button>
+</div>
+</div>
+
+<div id="winOverlay" hidden aria-hidden="true">
+  <div id="winPanel">
+    <div id="winTitle" class="winControllerTarget" tabindex="-1">You Win!</div>
+    <div id="winStatsTitle" class="winControllerTarget" tabindex="-1">Level 1 Completion Stats</div>
+    <div id="winStatsList">
+      <div id="winStatTime" class="winStatRow winControllerTarget" tabindex="-1">Time: 0.0s</div>
+      <div id="winStatScore" class="winStatRow winControllerTarget" tabindex="-1">Score: 0</div>
+      <div id="winStatKills" class="winStatRow winControllerTarget" tabindex="-1">Enemies Killed: 0 / 0</div>
+      <div id="winStatBullets" class="winStatRow winControllerTarget" tabindex="-1">Bullets Shot: 0</div>
+      <div id="winStatAccuracy" class="winStatRow winControllerTarget" tabindex="-1">Accuracy: 0%</div>
+      <div id="winStatBombKills" class="winStatRow winControllerTarget" tabindex="-1">Bomb Kills: 0</div>
+      <div id="winStatKillBreakdown" class="winStatRow">
+        <div class="winStatBreakdownTitle winControllerTarget" tabindex="-1">Kills By Enemy</div>
+        <div id="winStatKillBreakdownList"></div>
+      </div>
+      <div id="winStatBonus" class="winStatRow">
+        <div class="winStatBonusTitle winControllerTarget" tabindex="-1">BONUS POINTS</div>
+        <div id="winStatBonusDragons" class="winStatBonusLine winControllerTarget" tabindex="-1">Dragons Bombed: +0</div>
+        <div id="winStatBonusFrogs" class="winStatBonusLine winControllerTarget" tabindex="-1">Frogs Bombed: +0</div>
+      </div>
+    </div>
+    <div class="level2-win-action-stack">
+<a class="bananarama-level2-link" href="javascript:void(0);" aria-label="Continue to Level 2">
+<img src="/games/shooter-game/assets/bananarama.webp" alt="Level 2 player icon">
+  <span class="bananarama-level2-number">2</span>
+</a>
+<button id="btnContinue" class="winControllerTarget">Continue to Level 2</button>
+</div>
+  </div>
+</div>
+
+<div id="pauseOverlay">
+  <div id="pausePanel">
+    <div id="pauseTitle">PAUSED</div>
+    <div id="pauseHint">Press ESC to resume</div>
+    <div id="pauseCmdSuggest" aria-live="polite"></div>
+    <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
+    <button id="btnPauseOpenStore" class="pauseMenuBtn" type="button" style="font-size:18px; display:none;">Open Store</button>
+    <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Controls</button>
+    <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
+
+  </div>
+  <div id="scoreStorePanel" class="panel">
+    <div class="title">Score Store</div>
+    <div id="scoreStoreHint">Spend current score points on future upgrades and supplies.</div>
+    <div id="scoreStoreCurrentScore">Current Score: 0pts</div>
+    <div id="scoreStoreItems"></div>
+    <div id="scoreStoreStatus"></div>
+    <button id="btnScoreStoreClose" class="smallBtn" type="button">Back</button>
+  </div>
+</div>
+
+<div id="uiRoot">
+  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
+    <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
+    <div class="titleSubWrap">
+      <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
+    <div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 19, 2026 12:22 AM)</a></div>
+    </div>
+<img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
+    <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
+    <div class="btnRow btnRowTop">
+      <button id="btnStart">Start Game</button>
+      <button id="btnOptions">Options</button>
+    </div>
+    <div class="btnRow btnRowBottom">
+      <a id="btnMysteryLink" class="smallBtn mysteryBtn" href="https://honestlythomas.com" target="_top" aria-label="Open Honestly Thomas">Who Made This?</a>
+      <button id="btnStats" class="smallBtn" type="button">Stats</button>
+    </div>
+    <div id="assetStatus" class="statusLine" style="display:none;"></div>
+  </div>
+
+  <div id="statsPanel" aria-hidden="true">
+    <div id="statsPanelInner">
+      <div id="statsPanelTitle" class="statsTitle">Lifetime Stats</div>
+      <div id="statsScroll" class="menuMiddleScroll">
+        <div id="statsList">
+          <div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score Earned</span><span id="statLifetimeScore" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeEnemiesKilled"><span>Lifetime Enemies Killed</span><span id="statLifetimeEnemies" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeUfosKilled"><span>Lifetime UFOs Killed</span><span id="statLifetimeUfos" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeGamesWon"><span>Lifetime Games Won</span><span id="statLifetimeWins" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeTotalDeaths"><span>Lifetime Total Deaths</span><span id="statLifetimeDeaths" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeBulletsFired"><span>Lifetime Bullets Fired</span><span id="statLifetimeBullets" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeBombKills"><span>Lifetime Bomb Kills</span><span id="statLifetimeBombKills" class="statsValue">0</span></div>
+        </div>
+        <div id="statsLockedDetails" hidden>
+          <button id="btnStatsLockedToggle" class="smallBtn statsToggleBtn" type="button" aria-expanded="false">Play More To Unlock</button>
+          <div id="statsLockedList" hidden></div>
+        </div>
+      </div>
+      <div id="statsPanelButtons" class="btnRow menuBottomRow">
+        <button id="btnStatsClose" class="smallBtn" type="button">Back</button>
+        <button id="btnStatsReset" class="smallBtn" type="button">Reset Stats</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="optionsMenu" class="panel" style="display:none;">
+    <div id="optionsMenuInner">
+      <div class="title">OPTIONS</div>
+      <div id="optionsScroll" class="menuMiddleScroll">
+        <div class="optionsGrid">
+      <div class="optRow cheatRow commandOptionRow nicknameRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Nickname</div>
+            <div class="cheatCommand">/nickname</div>
+          </div>
+          <div class="nicknameControls">
+            <input id="nicknameInput" class="nicknameInput" type="text" value="User" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Nickname" />
+          </div>
+        </div>
+        <div class="hint">Set the name shown before your chat messages.</div>
+      </div>
+      <div class="optRow fullRow buttonOnlyRow">
+        <button id="btnControls" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Controls</button>
+      </div>
+      <div class="optRow cheatRow commandOptionRow backgroundColorRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Background Color</div>
+            <div class="cheatCommand">/background_color</div>
+          </div>
+          <div class="backgroundColorControls">
+            <input id="backgroundColorHex" class="backgroundColorHex" type="text" value="#000000" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Background color hex code" />
+            <input id="backgroundColorPicker" class="backgroundColorPicker" type="color" value="#000000" aria-label="Background color picker" />
+          </div>
+        </div>
+        <div class="hint">Set the starfield background color with a hex code.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Mute</div>
+            <div class="cheatCommand">/mute</div>
+          </div>
+          <label><input id="muteCheckbox" type="checkbox" /><span id="muteStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Toggle all shooter music and sound effects on or off.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Fullscreen</div>
+            <div class="cheatCommand">/fullscreen</div>
+          </div>
+          <label><input id="fullscreenCheckbox" type="checkbox" /><span id="fullscreenStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Toggle browser fullscreen for the whole shooter shell.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Invert Colors</div>
+            <div class="cheatCommand">/color_invert</div>
+          </div>
+          <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Video FX</div>
+            <div class="cheatCommand">/video_fx</div>
+          </div>
+          <label><input id="videoFxCheckbox" type="checkbox" /><span id="videoFxStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
+      </div>
+
+<div class="optRow fullRow buttonOnlyRow">
+        <button id="btnCheats" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Cheats</button>
+        <input id="btnCheatsUnlockInput" class="smallBtn cheatsUnlockInput" type="text" value="Type cheatermode here to cheat." spellcheck="false" autocomplete="off" readonly aria-label="Type cheatermode here to cheat" style="display:none; width:100%; min-height:46px; font-size:16px; text-align:center;" />
+      </div>
+        </div>
+      </div>
+
+      <div class="btnRow menuBottomRow" style="margin-top:14px;">
+        <button id="btnBack" class="smallBtn">Back</button>
+        <button id="btnApply" class="smallBtn applyStateBtn" type="button" style="display:none;">Apply? <span class="applyX">(✕)</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cheatsMenu" class="panel" style="display:none;">
+    <div id="cheatsMenuInner">
+      <div class="title">CHEATS</div>
+
+      <div id="cheatsScroll" class="menuMiddleScroll">
+        <div class="cheatsGrid">
+                <div class="optRow cheatRow commandOptionRow gameSpeedCommandRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Game Speed</div>
+            <div class="cheatCommand">/game_speed # (-5 slowest / 1 normal / 20 fastest)</div>
+          </div>
+          <span id="speedVal" class="cheatStatusText">1</span>
+        </div>
+        <input id="speedSlider" type="range" min="0" max="25" value="6" step="1" />
+        <div class="hint">0 = static Wave 1/UFO staring contest. 1 = normal. Right side = 2 to 20 chaos.</div>
+      </div>
+
+<div class="optRow fullRow">
+            <div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
+            <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
+              <option value="1">Wave 1</option>
+              <option value="2">Wave 2</option>
+              <option value="3">Wave 3</option>
+              <option value="4">Wave 4</option>
+              <option value="5">Wave 5</option>
+              <option value="6">Wave 6</option>
+              <option value="7">Wave 7</option>
+              <option value="8">Wave 8</option>
+              <option value="9">Wave 9</option>
+              <option value="10">Wave 10</option>
+              <option value="11">Boss Mode</option>
+              <option value="12">Insanity 1</option>
+              <option value="13">Insanity 2</option>
+              <option value="14">Insanity 3</option>
+              <option value="15">Insanity 4</option>
+              <option value="16">Insanity 5</option>
+              <option value="17">Insanity 6</option>
+              <option value="18">Insanity 7</option>
+              <option value="19">Insanity 8</option>
+              <option value="20">Insanity 9</option>
+              <option value="21">Insanity 10</option>
+            </select>
+            <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Boss Mode, or Insanity 1-10.</div>
+          </div>
+
+          <div class="optRow fullRow">
+            <div class="optLabel"><span>Starting Hearts / Shields / Lives / Bombs</span></div>
+            <div class="startStatsRow">
+              <div class="startStatField">
+                <label for="heartsSlider">Hearts</label>
+                <input id="heartsSlider" class="resourceNumberInput" type="text" min="1" max="100" value="5" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="shieldsSlider">Shields</label>
+                <input id="shieldsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="livesSlider">Lives</label>
+                <input id="livesSlider" class="resourceNumberInput" type="text" min="0" max="100" value="3" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="bombsSlider">Bombs</label>
+                <input id="bombsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+            </div>
+            <div class="hint">Use 0-99 for exact values. 100 = INFINITE</div>
+          </div>
+
+          <div class="optRow cheatRow">
+            <div class="cheatHeader">
+              <div>
+                <div class="cheatTitle">Infinite Mode</div>
+                <div class="cheatCommand">Starting state + live gameplay</div>
+              </div>
+              <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:0;">Disabled</span></label>
+            </div>
+            <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
+          </div>
+
+          
+
+          
+
+          <div class="fullRow buttonOnlyRow cheatsSkipRow">
+            <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="btnRow menuBottomRow" style="margin-top:14px;">
+        <button id="btnCheatsBack" class="smallBtn">Back</button>
+        <button id="btnCheatsApply" class="smallBtn applyStateBtn" type="button" style="display:none;">Apply? <span class="applyX">(✕)</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="controlsMenu" class="panel" style="display:none;">
+    <div id="controlsMenuInner">
+      <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
+      <div class="controlsGrid">
+        <div id="controlsListScroll">
+          <div class="optRow controlsListPanel">
+            <div id="controlsBindList" class="controlsBindList"></div>
+          </div>
+        </div>
+      </div>
+      <div class="btnRow menuBottomRow" style="margin-top:14px;">
+        <button id="controlsBack" class="smallBtn" type="button">Back</button>
+        <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
+        <button id="controlsApplyBinds" class="smallBtn applyStateBtn" type="button" style="display:none;">Apply? <span class="applyX">(✕)</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/games/shooter-game/assets/scripts/level-frame-bridge.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-shared-commands.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-bg-suggest.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-resource-hud.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-math.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-layout.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-stage.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-ufo.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-controls-formatters.js"></script>
+<script src="/games/shooter-game/assets/scripts/level1-runtime.js"></script>
+<script src="/games/shooter-game/assets/scripts/time-easter-egg.js"></script>
+<script src="/games/shooter-game/assets/scripts/level1-win-fallbacks.js"></script>
+
+<div id="heartsHud" style="
+position:fixed;
+bottom:12px;
+left:50%;
+transform:translateX(-50%) scale(0.75);
+transform-origin:center bottom;
+font-size:28px;
+letter-spacing:2px;
+pointer-events:none;
+z-index:40;
+display:none;
+white-space:nowrap;
+line-height:1;
+">❤️ ❤️ ❤️ ❤️</div>
+</body>
+
+</html>
