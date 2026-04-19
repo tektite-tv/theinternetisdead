@@ -16,6 +16,23 @@ function postChatControllerAction(action){
   }catch(e){}
 }
 
+
+function requestShooterGameScreenshot(){
+  if (window.parent && window.parent !== window){
+    try{
+      window.parent.postMessage({ type: "tektite:save-screenshot" }, "*");
+      return true;
+    }catch(e){}
+  }
+  if (typeof window.tektiteSaveScreenshot === "function"){
+    try{
+      window.tektiteSaveScreenshot();
+      return true;
+    }catch(e){}
+  }
+  return false;
+}
+
 function requestOpenChat(focusSlash, runCommand){
   try{
     if (window.parent && window.parent !== window){

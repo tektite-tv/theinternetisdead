@@ -3731,9 +3731,15 @@ function pollGamepad(dt){
   const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
   const pressMuteHud = false;
   const pressY = gpEdge(3, y);
+  const viewSuppressedByY = y;
+  const pressScreenshotCombo = y && back && (pressY || pressCommands);
 
-  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
+  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressScreenshotCombo || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
+  }
+
+  if (pressScreenshotCombo){
+    if (typeof requestShooterGameScreenshot === "function") requestShooterGameScreenshot();
   }
 
   const navUp = consumeMenuAxis('up', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt);
@@ -3778,7 +3784,7 @@ function pollGamepad(dt){
     if (pressFullscreen){
       toggleFullscreen();
     }
-    if (pressCommands){
+    if (pressCommands && !viewSuppressedByY){
       requestOpenChat(false, "/help");
     }
     if (isPaused && parentChatVisible){
@@ -3851,7 +3857,7 @@ function pollGamepad(dt){
       }
       if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
-      if (pressY) showOptions();
+      if (pressY && !pressScreenshotCombo) showOptions();
     } else if (gameState === STATE.OPTIONS){
       // Level 2 Select Level can be opened while paused. Keep controller focus on
       // the visible Select Level buttons, not the hidden pause menu buttons.
