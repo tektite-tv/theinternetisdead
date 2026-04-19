@@ -2128,8 +2128,10 @@ function isDragonEnemy(e){
 // - fade out when killed (instead of instantly vanishing)
 // NOTE: This only touches canvas drawing + enemy objects; it will not mess with menus.
 // =======================
-const ENEMY_HIT_FLASH_SECS = 0.12;   // how long the red flash lasts
+const ENEMY_HIT_FLASH_SECS = 0.24;   // how long the red flash lasts after damage
+const ENEMY_HIT_FLASH_ALPHA = 0.58;  // red overlay strength; still masked to opaque sprite pixels
 const ENEMY_DEATH_FADE_SECS = 0.35;  // how long the death fade lasts
+const ENEMY_DEATH_FLASH_SECS = 0.28; // keep fresh kills visibly red into the fadeout
 
 
 const enemyHitFlashTintCanvas = document.createElement("canvas");
@@ -2152,7 +2154,7 @@ function drawEnemyPixelMaskedHitFlash(ctx, img, x, y, w, h, flashProgress, alpha
     enemyHitFlashTintCtx.globalAlpha = 1;
     enemyHitFlashTintCtx.drawImage(img, 0, 0, tw, th);
     enemyHitFlashTintCtx.globalCompositeOperation = "source-in";
-    enemyHitFlashTintCtx.fillStyle = `rgba(255,0,0,${0.32 * p})`;
+    enemyHitFlashTintCtx.fillStyle = `rgba(255,0,0,${ENEMY_HIT_FLASH_ALPHA * p})`;
     enemyHitFlashTintCtx.fillRect(0, 0, tw, th);
     enemyHitFlashTintCtx.restore();
 
@@ -2201,6 +2203,7 @@ function enemyKill(e, source){
   e.dying = true;
   e.fade = 1;
   e.fadeRate = 1 / ENEMY_DEATH_FADE_SECS;
+  e.hitFlash = Math.max(e.hitFlash || 0, ENEMY_DEATH_FLASH_SECS);
 
   // Freeze where it died so the formation doesn't yoink it around while fading.
   e.lockX = e.x; e.lockY = e.y;
