@@ -2881,6 +2881,15 @@ function formatTypedCheatermodeCountdown(remaining){
   return "(" + seconds + " " + (seconds === 1 ? "second" : "seconds") + ")";
 }
 
+function renderTypedCheatermodeCountdown(){
+  if (!cheatermodeCountdownDisplay) return;
+  cheatermodeCountdownDisplay.innerHTML = '<button type="button" class="cheatermodeCountdownCancel" aria-label="Cancel cheatermode countdown" title="Cancel countdown">❌</button><span>' + escapeCheatermodeHtml(formatTypedCheatermodeCountdown(cheatsUnlockRemaining)) + '</span>';
+}
+
+function cancelTypedCheatermodeCountdown(){
+  resetCheatsUnlockGate();
+}
+
 function resetCheatsUnlockGate(){
   clearCheatsUnlockCountdown();
   cheatermodeControllerHoldMs = 0;
@@ -3001,7 +3010,7 @@ function startTypedCheatermodeCountdown(){
   btnCheatsUnlockInput.style.display = "none";
   if (cheatermodeCountdownDisplay){
     cheatermodeCountdownDisplay.hidden = false;
-    cheatermodeCountdownDisplay.textContent = formatTypedCheatermodeCountdown(cheatsUnlockRemaining);
+    renderTypedCheatermodeCountdown();
   }
   btnCheatsUnlockInput.setAttribute("aria-label", "Cheatermode activation countdown");
   cheatsUnlockTimer = setInterval(() => {
@@ -3010,7 +3019,7 @@ function startTypedCheatermodeCountdown(){
       clearCheatsUnlockCountdown();
       unlockCheatermode("typed-countdown");
     } else if (cheatermodeCountdownDisplay) {
-      cheatermodeCountdownDisplay.textContent = formatTypedCheatermodeCountdown(cheatsUnlockRemaining);
+      renderTypedCheatermodeCountdown();
     }
   }, 1000);
   updateCheatsUnlockModeHint();
@@ -5416,6 +5425,15 @@ if (btnCheatsUnlockInput){
       event.preventDefault();
       submitCheatsUnlockInput();
     }
+  });
+}
+if (cheatermodeCountdownDisplay){
+  cheatermodeCountdownDisplay.addEventListener("click", (event) => {
+    const cancelButton = event.target && event.target.closest ? event.target.closest(".cheatermodeCountdownCancel") : null;
+    if (!cancelButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    cancelTypedCheatermodeCountdown();
   });
 }
 if (cheatermodeUnlockedCheckbox){
