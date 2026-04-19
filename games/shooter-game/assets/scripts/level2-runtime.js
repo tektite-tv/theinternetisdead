@@ -2200,7 +2200,7 @@ sfxOof.preload = "auto";
 sfxUiHover.preload = "auto";
 sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
-sfxUiHover.volume = 0.55;
+sfxUiHover.volume = 0.25;
 
 let audioUnlocked = false;
 function unlockAudioOnce(){
@@ -2247,39 +2247,36 @@ function playSfxImmediate(a){
   }catch(e){}
 }
 
-const UI_HOVER_SOUND_SELECTOR = 'button, [role="button"], .smallBtn, .deathBtn, .winControllerTarget, .scoreStoreAction, .statsSelectableRow, .controlsBindButton, input[type="checkbox"], select';
-let lastUiHoverSoundAt = 0;
-let lastControllerHoverSoundTarget = null;
+const UI_ACTIVATE_SOUND_SELECTOR = 'button, [role="button"], .smallBtn, .deathBtn, .winControllerTarget, .scoreStoreAction, .statsSelectableRow, .controlsBindButton, input[type="checkbox"], select';
+let lastUiActivateSoundAt = 0;
 
-function isUiHoverSoundTarget(el){
-  if (!el || !el.matches || !el.matches(UI_HOVER_SOUND_SELECTOR)) return false;
+function isUiActivateSoundTarget(el){
+  if (!el || !el.matches || !el.matches(UI_ACTIVATE_SOUND_SELECTOR)) return false;
   if (el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
   if (el.type && ['hidden', 'range', 'text', 'number', 'color'].includes(String(el.type).toLowerCase())) return false;
   return true;
 }
 
-function playUiHoverSoundFor(el, source='mouse'){
-  if (!isUiHoverSoundTarget(el)) return;
+function playUiActivateSoundFor(el, source='mouse'){
+  if (!isUiActivateSoundTarget(el)) return;
   const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
-  if (source === 'controller'){
-    if (el === lastControllerHoverSoundTarget) return;
-    lastControllerHoverSoundTarget = el;
-  }
-  if (now - lastUiHoverSoundAt < 70) return;
-  lastUiHoverSoundAt = now;
+  if (now - lastUiActivateSoundAt < 70) return;
+  lastUiActivateSoundAt = now;
   playSfx(sfxUiHover);
 }
 
-function bindUiHoverSounds(){
-  document.addEventListener('pointerover', (event) => {
-    const target = event.target && event.target.closest ? event.target.closest(UI_HOVER_SOUND_SELECTOR) : null;
-    if (!target || !isUiHoverSoundTarget(target)) return;
-    if (target.contains(event.relatedTarget)) return;
-    playUiHoverSoundFor(target, 'mouse');
+function bindUiActivationSounds(){
+  document.addEventListener('click', (event) => {
+    // Mouse/touch clicks get their sound here. Controller-triggered .click() calls
+    // are detail=0 and play from activateControllerTarget instead, avoiding doubles.
+    if (event && event.detail === 0) return;
+    const target = event.target && event.target.closest ? event.target.closest(UI_ACTIVATE_SOUND_SELECTOR) : null;
+    if (!target || !isUiActivateSoundTarget(target)) return;
+    playUiActivateSoundFor(target, 'mouse');
   }, true);
 }
 
-bindUiHoverSounds();
+bindUiActivationSounds();
 
 /* =======================
    UI
@@ -2731,12 +2728,10 @@ function focusControllerElement(el){
   if (typeof el.scrollIntoView === 'function') {
     try{ el.scrollIntoView({ block:'nearest', inline:'nearest' }); }catch(_){ }
   }
-  playUiHoverSoundFor(el, 'controller');
 }
 
 function clearControllerFocus(){
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
-  lastControllerHoverSoundTarget = null;
 }
 
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); });
@@ -2900,6 +2895,7 @@ function openControllerSelect(selectEl){
 
 function activateControllerTarget(el){
   if (!el) return;
+  playUiActivateSoundFor(el, 'controller');
   if (el.dataset && el.dataset.action && el.dataset.scheme){
     startBindingEdit(el.dataset.scheme, el.dataset.action);
     return;
@@ -3013,7 +3009,6 @@ function syncDeathControllerFocus(){
     button.classList.toggle("controllerFocus", index === deathFocusIndex);
     if (index === deathFocusIndex){
       try{ button.focus({ preventScroll:true }); }catch(e){ try{ button.focus(); }catch(_){} }
-      playUiHoverSoundFor(button, 'controller');
     }
   });
 }
@@ -3030,6 +3025,7 @@ function activateDeathControllerFocus(){
   if (!buttons.length) return false;
   const button = buttons[Math.max(0, Math.min(deathFocusIndex, buttons.length - 1))];
   if (!button) return false;
+  playUiActivateSoundFor(button, 'controller');
   try{ button.click(); return true; }catch(e){ return false; }
 }
 
