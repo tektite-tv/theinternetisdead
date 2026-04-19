@@ -648,7 +648,7 @@ function hidePauseControlsMenu(){
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
-    showPauseControlsMenu();
+    showOptions(true);
   });
 }
 

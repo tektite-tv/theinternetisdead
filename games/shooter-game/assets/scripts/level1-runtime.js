@@ -649,7 +649,7 @@ function hidePauseControlsMenu(){
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
-    showPauseControlsMenu();
+    showOptions(true);
   });
 }
 
@@ -3351,6 +3351,7 @@ let startMenuPanelRect = null;
 let bindingEditState = null;
 let controllerRebindReady = false;
 let pauseControlsOpen = false;
+let optionsOpenedFromPause = false;
 let controlsPreviewOpen = false;
 let controlsPreviewControllerCaptured = false;
 let controlsPreviewReleaseArmed = false;
@@ -5168,12 +5169,15 @@ function applyBackgroundColorFromControls(value){
   return true;
 }
 
-function showOptions(){
+function showOptions(fromPause = false){
   hideControlsPreviewMenu({ restoreControlsMenu: false });
+  optionsOpenedFromPause = !!fromPause;
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
-  setPaused(false);
-  gameState = STATE.OPTIONS;
+  if (!fromPause){
+    setPaused(false);
+    gameState = STATE.OPTIONS;
+  }
   markOptionsClean(false);
     // v1.96: populate start options UI with saved settings
   livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
@@ -5209,6 +5213,7 @@ function showOptions(){
   pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
+  if (fromPause && pauseOverlay) pauseOverlay.style.display = "none";
   optionsMenu.style.display = "block";
   if (cheatsMenu) cheatsMenu.style.display = "none";
   uiRoot.style.display = "flex";
@@ -5481,7 +5486,7 @@ if (btnStatsLockedToggle){
 }
 
 btnStart.addEventListener("click", startGame);
-btnOptions.addEventListener("click", showOptions);
+btnOptions.addEventListener("click", () => showOptions(false));
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", armCheatsUnlockCountdown);
 if (btnCheats) btnCheats.addEventListener("keydown", handleCheatsButtonTypedKey);
@@ -5530,7 +5535,21 @@ function applyCheatsChanges(showAppliedState=false){
 }
 
 if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
-btnBack.addEventListener("click", showMenu);
+btnBack.addEventListener("click", () => {
+  if (optionsOpenedFromPause && isPaused){
+    optionsMenu.style.display = "none";
+    if (cheatsMenu) cheatsMenu.style.display = "none";
+    uiRoot.style.display = "none";
+    if (pauseOverlay) pauseOverlay.style.display = "flex";
+    optionsOpenedFromPause = false;
+    pauseFocusIndex = 2;
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
+    else clearControllerFocus();
+    return;
+  }
+  optionsOpenedFromPause = false;
+  showMenu();
+});
 function applyStartSettingsFromControls(){
   const livesOpt = parseResourceOption(livesSlider, 0);
   const heartsOpt = parseResourceOption(heartsSlider, 1);
@@ -6262,7 +6281,7 @@ function pollGamepad(dt){
         else if (menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
       }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
-      if (pressY) showOptions();
+      if (pressY) showOptions(false);
     } else if (gameState === STATE.OPTIONS){
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown){
