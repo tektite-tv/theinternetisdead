@@ -2130,15 +2130,81 @@ function isDragonEnemy(e){
 // =======================
 const ENEMY_HIT_FLASH_SECS = 0.24;   // how long the red flash lasts after damage
 const ENEMY_HIT_FLASH_ALPHA = 0.58;  // red overlay strength; still masked to opaque sprite pixels
-const ENEMY_DEATH_FADE_SECS = 0.35;  // how long the death fade lasts
-const ENEMY_DEATH_FLASH_SECS = 0.28; // keep fresh kills visibly red into the fadeout
-const ENEMY_DEATH_GROW_SCALE = 0.14; // visual-only corpse swell while fading; hitboxes stay unchanged
+const ENEMY_DEATH_FADE_SECS = 0.52;  // how long the death fade lasts; long enough for the explosion distortion to read
+const ENEMY_DEATH_FLASH_SECS = 0.34; // keep fresh kills visibly red into the fadeout
+const ENEMY_DEATH_GROW_SCALE = 1.35; // visual-only corpse explosion swell; hitboxes stay unchanged
+const ENEMY_DEATH_BULGE_GRID = 9;    // grid distortion resolution for the fisheye death bulge
+const ENEMY_DEATH_BULGE_STRENGTH = 0.62; // outward center bulge strength during death fade
 
 
 const enemyHitFlashTintCanvas = document.createElement("canvas");
 const enemyHitFlashTintCtx = enemyHitFlashTintCanvas.getContext("2d", { willReadFrequently: false });
 
-function drawEnemyPixelMaskedHitFlash(ctx, img, x, y, w, h, flashProgress, alpha = 1){
+function drawEnemyBulgedImage(ctx, img, x, y, w, h, deathProgress, alpha = 1){
+  if (!ctx || !img) return false;
+  const p = Math.max(0, Math.min(1, deathProgress || 0));
+  if (p <= 0){
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.drawImage(img, x, y, w, h);
+    ctx.restore();
+    return true;
+  }
+
+  const sourceW = Math.max(1, img.naturalWidth || img.videoWidth || img.width || Math.ceil(w));
+  const sourceH = Math.max(1, img.naturalHeight || img.videoHeight || img.height || Math.ceil(h));
+  const cols = ENEMY_DEATH_BULGE_GRID;
+  const rows = ENEMY_DEATH_BULGE_GRID;
+  const srcCellW = sourceW / cols;
+  const srcCellH = sourceH / rows;
+  const dstCellW = w / cols;
+  const dstCellH = h / rows;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const amount = ENEMY_DEATH_BULGE_STRENGTH * p;
+
+  try {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.globalCompositeOperation = "source-over";
+    ctx.imageSmoothingEnabled = true;
+
+    for (let row = 0; row < rows; row++){
+      for (let col = 0; col < cols; col++){
+        const nx = ((col + 0.5) / cols - 0.5) * 2;
+        const ny = ((row + 0.5) / rows - 0.5) * 2;
+        const r = Math.min(1, Math.hypot(nx, ny));
+        const centerPush = Math.pow(1 - r, 1.45) * amount;
+        const edgePush = Math.pow(r, 1.8) * amount * 0.16;
+        const push = centerPush + edgePush;
+        const cellScale = 1 + centerPush * 1.9 + amount * 0.08;
+
+        const baseX = x + col * dstCellW;
+        const baseY = y + row * dstCellH;
+        const cellCx = baseX + dstCellW / 2;
+        const cellCy = baseY + dstCellH / 2;
+        const outX = cx + (cellCx - cx) * (1 + push);
+        const outY = cy + (cellCy - cy) * (1 + push);
+        const dw = dstCellW * cellScale + 1.25;
+        const dh = dstCellH * cellScale + 1.25;
+
+        ctx.drawImage(
+          img,
+          col * srcCellW, row * srcCellH, srcCellW + 0.5, srcCellH + 0.5,
+          outX - dw / 2, outY - dh / 2, dw, dh
+        );
+      }
+    }
+
+    ctx.restore();
+    return true;
+  } catch (err){
+    try { ctx.restore(); } catch (_) {}
+    return false;
+  }
+}
+
+function drawEnemyPixelMaskedHitFlash(ctx, img, x, y, w, h, flashProgress, alpha = 1, deathProgress = 0){
   if (!ctx || !img || !enemyHitFlashTintCtx) return;
   const tw = Math.max(1, Math.ceil(w));
   const th = Math.max(1, Math.ceil(h));
@@ -2158,6 +2224,11 @@ function drawEnemyPixelMaskedHitFlash(ctx, img, x, y, w, h, flashProgress, alpha
     enemyHitFlashTintCtx.fillStyle = `rgba(255,0,0,${ENEMY_HIT_FLASH_ALPHA * p})`;
     enemyHitFlashTintCtx.fillRect(0, 0, tw, th);
     enemyHitFlashTintCtx.restore();
+
+    if (deathProgress > 0){
+      drawEnemyBulgedImage(ctx, enemyHitFlashTintCanvas, x, y, w, h, deathProgress, alpha);
+      return;
+    }
 
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
@@ -6427,6 +6498,11 @@ function syncAnimatedGifSprite(owner, img, x, y, w, h, opts = {}){
   return true;
 }
 
+function hideAnimatedGifSprite(owner){
+  const sprite = animatedGifSpriteMap.get(owner);
+  if (sprite) sprite.style.display = "none";
+}
+
 function endAnimatedGifSpriteFrame(){
   for (const sprite of animatedGifSprites){
     if (!animatedGifSpritesActiveThisFrame.has(sprite)) sprite.style.display = "none";
@@ -8741,28 +8817,41 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
     }
     // v1.96: enemy flash red on hit + fade out on death
     const alpha = (e.dying ? Math.max(0, Math.min(1, e.fade)) : 1);
-    // Visual-only death swell. Keep e.x/e.y/e.w/e.h untouched so bullet and contact hitboxes stay rectangular and unchanged.
-    const deathGrow = e.dying ? (1 + (1 - alpha) * ENEMY_DEATH_GROW_SCALE) : 1;
+    const deathProgress = e.dying ? (1 - alpha) : 0;
+    // Visual-only death explosion. Keep e.x/e.y/e.w/e.h untouched so bullet and contact hitboxes stay rectangular and unchanged.
+    const deathGrow = e.dying ? (1 + deathProgress * ENEMY_DEATH_GROW_SCALE) : 1;
     const drawW = e.w * deathGrow;
     const drawH = e.h * deathGrow;
     const ex = e.x - drawW/2, ey = e.y - drawH/2;
     const enemySource = isGameSpeedFrozen() ? (getStaticFrameForImage(e.img) || e.img) : e.img;
     ctx.save();
     ctx.globalAlpha = alpha;
-    const drewDomEnemy = syncAnimatedGifSprite(
-      e,
-      e.img,
-      ex,
-      ey,
-      drawW,
-      drawH,
-      { className:"enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
-    );
-    if (!drewDomEnemy){
-      ctx.drawImage(enemySource, ex, ey, drawW, drawH);
+    if (e.dying){
+      // Animated GIF/WEBP enemies normally render as DOM <img> elements above the canvas.
+      // Force dying enemies back through canvas so expansion + fisheye bulge actually affect them.
+      hideAnimatedGifSprite(e);
+      const drewBulgedEnemy = drawEnemyBulgedImage(ctx, enemySource, ex, ey, drawW, drawH, deathProgress, alpha);
+      if (!drewBulgedEnemy) ctx.drawImage(enemySource, ex, ey, drawW, drawH);
       if (e.hitFlash > 0){
         const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
-        drawEnemyPixelMaskedHitFlash(ctx, enemySource, ex, ey, drawW, drawH, p, alpha);
+        drawEnemyPixelMaskedHitFlash(ctx, enemySource, ex, ey, drawW, drawH, p, alpha, deathProgress);
+      }
+    } else {
+      const drewDomEnemy = syncAnimatedGifSprite(
+        e,
+        e.img,
+        ex,
+        ey,
+        drawW,
+        drawH,
+        { className:"enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
+      );
+      if (!drewDomEnemy){
+        ctx.drawImage(enemySource, ex, ey, drawW, drawH);
+        if (e.hitFlash > 0){
+          const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
+          drawEnemyPixelMaskedHitFlash(ctx, enemySource, ex, ey, drawW, drawH, p, alpha);
+        }
       }
     }
 
