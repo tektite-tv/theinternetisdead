@@ -2135,6 +2135,8 @@ const ENEMY_DEATH_FLASH_SECS = 0.34; // keep fresh kills visibly red into the fa
 const ENEMY_DEATH_GROW_SCALE = 1.35; // visual-only corpse explosion swell; hitboxes stay unchanged
 const ENEMY_DEATH_BULGE_GRID = 9;    // grid distortion resolution for the fisheye death bulge
 const ENEMY_DEATH_BULGE_STRENGTH = 0.415; // outward center bulge strength during death fade (33% smaller)
+const UFO_SIZE_SCALE = 1.33;          // UFO is 33% larger than the old tiny saucer
+const UFO_DEATH_RED_ALPHA = 0.72;     // red death overlay strength while UFO fades
 
 
 const enemyHitFlashTintCanvas = document.createElement("canvas");
@@ -2370,7 +2372,7 @@ function trySpawnUFO(force=false){
     y: rand(40, 110),
     vx: rand(-420, 420) / 60, // px/frame-ish
     vy: rand(260, 520) / 60,
-    r: 10,
+    r: 10 * UFO_SIZE_SCALE,
     hits: 0,
     stage: 0, // 0 none, 1 red, 2 green, 3 blue
     _killAwarded: false,
@@ -2429,27 +2431,55 @@ function drawUFO(){
   const strobe = Math.floor(time * 22) % 2 === 0;
   const baseFill = strobe ? "#fff" : "#000";
   const col = ufoColorForStage(ufo.stage);
+  const fadeProgress = (ufo.fade > 0) ? Math.max(0, Math.min(1, ufo.fade / 0.55)) : 0;
+  const alpha = (ufo.fade > 0) ? Math.max(0, 1 - fadeProgress) : 1;
 
-  const alpha = (ufo.fade > 0) ? Math.max(0, 1 - (ufo.fade / 0.55)) : 1;
+  // Base UFO is now 33% bigger. During death fade, it visually blooms outward
+  // like enemy death sprites while keeping the stored ufo.r collision radius stable.
+  const baseScale = UFO_SIZE_SCALE;
+  const deathScale = 1 + fadeProgress * ENEMY_DEATH_GROW_SCALE;
+  const bulge = fadeProgress * ENEMY_DEATH_BULGE_STRENGTH;
+  const coreRx = 14 * baseScale * deathScale * (1 + bulge * 0.62);
+  const coreRy = 7 * baseScale * deathScale * (1 + bulge * 1.35);
+  const ringRx = 16 * baseScale * deathScale * (1 + bulge * 0.42);
+  const ringRy = 9 * baseScale * deathScale * (1 + bulge * 1.08);
 
   ctx.save();
   ctx.globalAlpha = alpha;
-
   ctx.translate(ufo.x, ufo.y);
 
   // core strobe oval
   ctx.fillStyle = baseFill;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, coreRx, coreRy, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // colored "shield" ring for hit streak feedback
   if (col){
     ctx.strokeStyle = col;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3 * baseScale * Math.max(1, deathScale * 0.72);
     ctx.beginPath();
-    ctx.ellipse(0, 0, 16, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, ringRx, ringRy, 0, 0, Math.PI * 2);
     ctx.stroke();
+  }
+
+  // UFO death fade now gets the same red/bulging visual language as enemies.
+  // This is vector-masked to the saucer ellipses, so it does not create a lazy red rectangle.
+  if (fadeProgress > 0){
+    const redAlpha = Math.max(0, Math.min(1, UFO_DEATH_RED_ALPHA * (1 - fadeProgress * 0.18)));
+    ctx.save();
+    ctx.globalAlpha = alpha * redAlpha;
+    ctx.fillStyle = "#ff0000";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, coreRx * (1 + bulge * 0.28), coreRy * (1 + bulge * 0.62), 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#ff0000";
+    ctx.lineWidth = Math.max(2, 4 * baseScale * deathScale);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, ringRx * (1 + bulge * 0.18), ringRy * (1 + bulge * 0.42), 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   ctx.restore();
