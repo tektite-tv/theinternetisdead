@@ -71,6 +71,9 @@
 
 ====================================================================== */
 
+// NOTE: If this runtime file changes, also update the visible "Last updated:"
+// timestamp in games/shooter-game/assets/levels/shooter-game-level1.html and
+// games/shooter-game/assets/levels/shooter-game-level2.html to the current time.
 
 /* =======================
    Paths (EDIT IF NEEDED)
@@ -1802,6 +1805,31 @@ function breakBonusArmor(){
   bonusArmorBrokenT = 1.8;
 }
 
+const UFO_KILL_SCORE_POINTS = 100;
+
+function awardUfoKillScore(){
+  if (scoreTrackingDisabled) return 0;
+  score += UFO_KILL_SCORE_POINTS;
+  if (Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD) scoreStoreUnlockedThisRun = true;
+  incrementLifetimeStat("lifetimeScoreEarned", UFO_KILL_SCORE_POINTS);
+  return UFO_KILL_SCORE_POINTS;
+}
+
+function killUFO(source){
+  if (!ufo || ufo.fade > 0 || ufo._killAwarded) return false;
+  ufo._killAwarded = true;
+  ufo.stage = 3;
+  awardUfoKillScore();
+  incrementLifetimeStat("lifetimeEnemiesKilled", 1);
+  incrementLifetimeStat("lifetimeUfosKilled", 1);
+  if (source === "bomb"){
+    bombKills += 1;
+    incrementLifetimeStat("lifetimeBombKills", 1);
+  }
+  ufo.fade = 0.001; // start fade-out and keep the existing bomb pickup reward
+  return true;
+}
+
 /* =======================
    UFO + Bomb Powerup (v1.96)
    - 25% chance to spawn at wave start
@@ -1824,6 +1852,7 @@ function trySpawnUFO(force=false){
     r: 10,
     hits: 0,
     stage: 0, // 0 none, 1 red, 2 green, 3 blue
+    _killAwarded: false,
     fade: 0,
     strobeT: 0
   };
@@ -1948,6 +1977,17 @@ function explodeBomb(){
 
 function bombHitsEnemy(){
   if (!bomb || bomb.exploding) return false;
+  if (ufo && ufo.fade === 0){
+    const dxU = bomb.x - ufo.x;
+    const dyU = bomb.y - ufo.y;
+    const rrU = bomb.r + ufo.r;
+    if (dxU*dxU + dyU*dyU <= rrU*rrU){
+      killUFO("bomb");
+      explodeBomb();
+      playSfx(sfxHit);
+      return true;
+    }
+  }
   for (let i = enemies.length - 1; i >= 0; i--){
     const e = enemies[i];
     if (e.dying) continue;
@@ -2010,6 +2050,14 @@ function updateBomb(dt){
       const radius = enemySize * 1.7;
 
       const BOMB_DAMAGE = 2;
+
+      if (ufo && ufo.fade === 0){
+        const dxU = ufo.x - bomb.x;
+        const dyU = ufo.y - bomb.y;
+        if (dxU*dxU + dyU*dyU <= radius*radius && killUFO("bomb")){
+          playSfx(sfxHit);
+        }
+      }
 
       for (let i = enemies.length - 1; i >= 0; i--){
         const e = enemies[i];
@@ -6608,11 +6656,12 @@ if (!e.swoop){
       const rrU = (b.r + ufo.r);
       if (dxU*dxU + dyU*dyU <= rrU*rrU){
         bullets.splice(bi, 1);
+        hitsConnected += 1;
+        damageDealt += 1;
         ufo.hits += 1;
         ufo.stage = Math.min(3, ufo.hits); // 1 red, 2 green, 3 blue
         if (ufo.hits >= 3){
-          if (ufo.fade === 0) incrementLifetimeStat("lifetimeUfosKilled", 1);
-          ufo.fade = 0.001; // start fade-out
+          killUFO("bullet");
         }
         playSfx(sfxHit);
         continue; // bullet consumed
