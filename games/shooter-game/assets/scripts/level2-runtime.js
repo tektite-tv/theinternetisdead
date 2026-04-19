@@ -3344,13 +3344,51 @@ const player = {
 let playerFacing = -1; // -1 = facing left/default, 1 = facing right
 let playerTurnT = 1;   // 0..1 progress through the current turn
 const PLAYER_TURN_DUR = 0.16;
+const SPIRAL_PLAYER_SPIN_TURNS = 2.25;
 
 // v2.06: full-direction ghost trail. Up/down trail now works, and diagonal movement bends/warps.
 const playerGhosts = [];
 let playerGhostSpawnT = 0;
+let spiralPlayerReactionT = 0;
+let spiralPlayerReactionDuration = 0;
 const PLAYER_GHOST_MAX = 2;
 const PLAYER_GHOST_SPAWN_EVERY = 0.072;
 const PLAYER_GHOST_TTL = 0.18;
+
+function getEnemyContactAssetFilename(enemy){
+  const img = enemy && enemy.img;
+  const src = img ? (img.currentSrc || img.src || "") : "";
+  const cleanSrc = String(src).split(/[?#]/)[0];
+  return cleanSrc.slice(cleanSrc.lastIndexOf("/") + 1).toLowerCase();
+}
+
+function isSpiralContactEnemy(enemy){
+  const filename = getEnemyContactAssetFilename(enemy);
+  return filename === "spiral.webp" || filename === "spiral.gif";
+}
+
+function triggerSpiralPlayerReaction(durationSecs){
+  const duration = Math.max(0.12, durationSecs || player.invuln || 1);
+  spiralPlayerReactionT = duration;
+  spiralPlayerReactionDuration = duration;
+}
+
+function applySpiralPlayerReactionIfNeeded(sourceEnemy){
+  // Spiral enemies scramble the banana only when their body-contact hit lands.
+  if (isSpiralContactEnemy(sourceEnemy)) triggerSpiralPlayerReaction(player.invuln);
+}
+
+function applySpiralPlayerDrawFx(){
+  if (spiralPlayerReactionT <= 0 || spiralPlayerReactionDuration <= 0) return;
+
+  const progress = Math.max(0, Math.min(1, spiralPlayerReactionT / spiralPlayerReactionDuration));
+  const spin = (1 - progress) * Math.PI * 2 * SPIRAL_PLAYER_SPIN_TURNS;
+  const wobble = Math.sin(time * 36) * 0.08 * progress;
+  const hue = Math.round((time * 720) % 360);
+
+  ctx.rotate(spin + wobble);
+  ctx.filter = `hue-rotate(${hue}deg) saturate(${(1 + progress * 2.4).toFixed(2)}) contrast(${(1 + progress * 0.35).toFixed(2)})`;
+}
 
 function spawnPlayerGhost(moveVX, moveVY){
   const mag = Math.hypot(moveVX || 0, moveVY || 0);
@@ -4660,13 +4698,14 @@ function spawnPlayerDeath(isGameOver){
   }
 }
 
-function damagePlayer(){
+function damagePlayer(sourceEnemy = null){
   if (player.invuln > 0 || isDead) return;
 
   // v1.96: Infinite mode means consequences are cancelled.
   if (infiniteModeActive || heartsInfiniteActive){
     playSfx(sfxHit);
     player.invuln = 0.15;
+    applySpiralPlayerReactionIfNeeded(sourceEnemy);
     return;
   }
 
@@ -4675,6 +4714,7 @@ function damagePlayer(){
     if (!shieldsInfiniteActive) shieldPips = Math.max(0, shieldPips - 1);
     playSfx(sfxHit);
     player.invuln = 0.35;
+    applySpiralPlayerReactionIfNeeded(sourceEnemy);
     return;
   }
 
@@ -4683,6 +4723,7 @@ function damagePlayer(){
     breakBonusArmor();
     playSfx(sfxHit);
     player.invuln = 0.35;
+    applySpiralPlayerReactionIfNeeded(sourceEnemy);
     return;
   }
 
@@ -4690,8 +4731,11 @@ function damagePlayer(){
   const nextHealth = health - HIT_DAMAGE;
   health = (nextHealth <= 0.000001) ? 0 : Math.max(0, nextHealth);
   player.invuln = 1.00;
+  applySpiralPlayerReactionIfNeeded(sourceEnemy);
 
   if (health <= 0){
+    spiralPlayerReactionT = 0;
+    spiralPlayerReactionDuration = 0;
     // Lose a life and explode into pixel dust.
     if (!livesInfiniteActive) lives = Math.max(0, lives - 1);
     const deathIsGameOver = !livesInfiniteActive && lives <= 0;
@@ -4902,6 +4946,7 @@ function update(dt){
   }
 
   if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
+  if (spiralPlayerReactionT > 0) spiralPlayerReactionT = Math.max(0, spiralPlayerReactionT - dt);
   if (fireCooldown > 0) fireCooldown = Math.max(0, fireCooldown - dt);
 
   if (waveBanner.t > 0) waveBanner.t = Math.max(0, waveBanner.t - dt);
@@ -5409,7 +5454,7 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         prx + player.w > rx &&
         pry < ry + e.h &&
         pry + player.h > ry;
-      if (overlap){ damagePlayer(); break; }
+      if (overlap){ damagePlayer(e); break; }
     }
   }
 
@@ -5565,6 +5610,8 @@ function draw(){
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(player.x + xOff, player.y + yOff);
+
+    applySpiralPlayerDrawFx();
 
     // v2.04: fake 2.5D turn by squeezing the sprite through a narrow midpoint.
     const turnEase = Math.sin(Math.min(1, Math.max(0, playerTurnT)) * Math.PI);
