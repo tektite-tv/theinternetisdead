@@ -2975,6 +2975,8 @@ const cheatermodeCountdownDisplay = document.getElementById("cheatermodeCountdow
 const cheatermodeUnlockedControl = document.getElementById("cheatermodeUnlockedControl");
 const cheatermodeUnlockedCheckbox = document.getElementById("cheatermodeUnlockedCheckbox");
 const nicknameInput = document.getElementById("nicknameInput");
+const nicknameInputGhost = document.getElementById("nicknameInputGhost");
+const btnNicknameAction = document.getElementById("btnNicknameAction");
 const backgroundColorHex = document.getElementById("backgroundColorHex");
 const backgroundColorPicker = document.getElementById("backgroundColorPicker");
 const muteCheckbox = document.getElementById("muteCheckbox");
@@ -4086,7 +4088,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [nicknameInput, btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, getCheatsUnlockOptionTarget(), btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [nicknameInput, (btnNicknameAction && !btnNicknameAction.disabled ? btnNicknameAction : null), btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, getCheatsUnlockOptionTarget(), btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){
@@ -5468,13 +5470,18 @@ function getStaticFrameForImage(img){
 
 const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
 const CHAT_NICKNAME_EXPLICIT_STORAGE_KEY = "tektiteChatNicknameExplicit";
+const CHAT_NICKNAME_MAX_LENGTH = 8;
+
+function limitChatNicknameLength(value){
+  return Array.from(String(value || "")).slice(0, CHAT_NICKNAME_MAX_LENGTH).join("");
+}
 
 function getSavedChatNicknameValue(){
   try{
     const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
     const normalized = savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
     const isExplicit = window.localStorage.getItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY) === "true";
-    return normalized === "User" && !isExplicit ? "" : normalized;
+    return normalized === "User" && !isExplicit ? "" : limitChatNicknameLength(normalized);
   }catch(error){
     return "";
   }
@@ -5485,7 +5492,7 @@ function loadSavedChatNickname(){
 }
 
 function saveChatNickname(value){
-  const normalized = String(value || "").trim();
+  const normalized = limitChatNicknameLength(String(value || "").trim());
   try{
     if (normalized){
       window.localStorage.setItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY, "true");
@@ -5501,6 +5508,48 @@ function saveChatNickname(value){
 function syncNicknameControl(){
   if (!nicknameInput) return;
   nicknameInput.value = getSavedChatNicknameValue();
+  syncNicknameInputPreview();
+  syncNicknameActionButton();
+}
+
+function getNicknameDraftValue(){
+  return nicknameInput ? String(nicknameInput.value || "").trim() : "";
+}
+
+function syncNicknameInputPreview(){
+  if (!nicknameInputGhost || !nicknameInput) return;
+  const draft = String(nicknameInput.value || "");
+  const chars = Array.from(draft);
+  const allowed = chars.slice(0, CHAT_NICKNAME_MAX_LENGTH).join("");
+  const overflow = chars.slice(CHAT_NICKNAME_MAX_LENGTH).join("");
+  nicknameInputGhost.textContent = "";
+  nicknameInputGhost.appendChild(document.createTextNode(allowed));
+  if (overflow){
+    const overflowSpan = document.createElement("span");
+    overflowSpan.className = "nicknameInputOverflow";
+    overflowSpan.textContent = overflow;
+    nicknameInputGhost.appendChild(overflowSpan);
+  }
+  const scrollLeft = nicknameInput.scrollLeft || 0;
+  nicknameInputGhost.style.transform = scrollLeft ? `translateX(${-scrollLeft}px)` : "";
+}
+
+function syncNicknameActionButton(){
+  if (!btnNicknameAction) return;
+  const savedNickname = getSavedChatNicknameValue();
+  const draftNickname = getNicknameDraftValue();
+  const canApplyDraft = !!draftNickname && draftNickname !== savedNickname;
+  if (canApplyDraft){
+    btnNicknameAction.textContent = "✅";
+    btnNicknameAction.setAttribute("aria-label", "Set nickname");
+    btnNicknameAction.title = "Set nickname";
+    btnNicknameAction.disabled = false;
+  } else {
+    btnNicknameAction.textContent = "❌";
+    btnNicknameAction.setAttribute("aria-label", "Clear nickname");
+    btnNicknameAction.title = "Clear nickname";
+    btnNicknameAction.disabled = !savedNickname;
+  }
 }
 
 function escapePauseTitleText(value){
@@ -5534,27 +5583,43 @@ function setStartMenuButtonLabel(button, label){
   if (textSpan) textSpan.textContent = label;
 }
 
-function fitStatsStartButtonNicknameLabel(){
-  if (!btnStats) return;
-  if (!btnStats.classList.contains("statsNicknameLabel")){
-    btnStats.style.removeProperty("--stats-button-focus-font-size");
-    return;
-  }
+function renderStatsStartButtonLabel(savedNickname){
   const textSpan = getStartMenuButtonTextSpan(btnStats);
   if (!textSpan) return;
-  const buttonRect = btnStats.getBoundingClientRect ? btnStats.getBoundingClientRect() : null;
-  const buttonWidth = Math.max(0, (buttonRect && buttonRect.width) || btnStats.clientWidth || 0);
-  if (!buttonWidth) return;
-  const style = window.getComputedStyle ? window.getComputedStyle(btnStats) : null;
+  if (!savedNickname){
+    btnStats.style.removeProperty("--stats-button-focus-font-size");
+    textSpan.textContent = "Lifetime Stats";
+    return;
+  }
+  const chars = Array.from(savedNickname);
+  const visibleChars = chars.slice(0, CHAT_NICKNAME_MAX_LENGTH);
+  textSpan.textContent = "";
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "statsNicknamePreview";
+  nameSpan.textContent = visibleChars.join("");
+  textSpan.appendChild(nameSpan);
+  textSpan.appendChild(document.createTextNode("'s Stats"));
+  fitStatsStartButtonNicknameLabel();
+}
+
+function fitStatsStartButtonNicknameLabel(){
+  if (!btnStats) return;
+  btnStats.style.removeProperty("--stats-button-focus-font-size");
+  if (!btnStats.classList.contains("controllerFocus")) return;
+  const textSpan = getStartMenuButtonTextSpan(btnStats);
+  if (!textSpan) return;
+  const buttonWidth = Math.max(0, btnStats.clientWidth || 0);
+  const availableWidth = Math.max(46, buttonWidth - 48);
+  const style = window.getComputedStyle ? window.getComputedStyle(textSpan) : null;
   const baseSize = Math.max(1, parseFloat(style && style.fontSize) || 13.3333);
   const canvas = fitStatsStartButtonNicknameLabel._canvas || (fitStatsStartButtonNicknameLabel._canvas = document.createElement("canvas"));
   const ctx = canvas && canvas.getContext ? canvas.getContext("2d") : null;
   if (!ctx) return;
   ctx.font = (style && style.font) || `${style && style.fontWeight ? style.fontWeight : "400"} ${baseSize}px ${style && style.fontFamily ? style.fontFamily : "monospace"}`;
   const textWidth = Math.max(1, ctx.measureText(textSpan.textContent || "").width);
-  const availableWidth = Math.max(46, buttonWidth - 34);
-  const nextSize = Math.max(7, Math.min(baseSize, Math.floor((baseSize * availableWidth / textWidth) * 10) / 10));
-  btnStats.style.setProperty("--stats-button-focus-font-size", `${nextSize}px`);
+  if (textWidth <= availableWidth) return;
+  const nextSize = Math.max(8, Math.floor((baseSize * availableWidth / textWidth) * 10) / 10);
+  btnStats.style.setProperty("--stats-button-focus-font-size", `${Math.min(baseSize, nextSize)}px`);
 }
 
 function syncNicknameStatsLabels(){
@@ -5562,9 +5627,7 @@ function syncNicknameStatsLabels(){
   syncPauseTitleNickname();
   if (btnStats){
     btnStats.classList.toggle("statsNicknameLabel", !!savedNickname);
-    setStartMenuButtonLabel(btnStats, savedNickname ? `${savedNickname}'s Stats` : "Lifetime Stats");
-    fitStatsStartButtonNicknameLabel();
-    try{ requestAnimationFrame(fitStatsStartButtonNicknameLabel); }catch(_){}
+    renderStatsStartButtonLabel(savedNickname);
   }
   if (statsPanelTitle){
     if (savedNickname){
@@ -5580,7 +5643,9 @@ try{ window.addEventListener("resize", fitStatsStartButtonNicknameLabel); }catch
 function applyNicknameFromControls(value, announce=false){
   const normalized = saveChatNickname(value);
   if (nicknameInput) nicknameInput.value = normalized;
+  syncNicknameInputPreview();
   syncNicknameStatsLabels();
+  syncNicknameActionButton();
   try{
     if (window.parent && window.parent !== window){
       window.parent.postMessage({
@@ -5590,6 +5655,19 @@ function applyNicknameFromControls(value, announce=false){
       }, "*");
     }
   }catch(error){}
+  return true;
+}
+
+function activateNicknameAction(){
+  if (!nicknameInput) return false;
+  const savedNickname = getSavedChatNicknameValue();
+  const draftNickname = getNicknameDraftValue();
+  if (draftNickname && draftNickname !== savedNickname){
+    applyNicknameFromControls(draftNickname, false);
+  } else if (savedNickname){
+    applyNicknameFromControls("", false);
+  }
+  syncNicknameActionButton();
   return true;
 }
 
@@ -5885,6 +5963,11 @@ if (btnMysteryLink){
 }
 
 if (nicknameInput){
+  nicknameInput.addEventListener("input", () => {
+    syncNicknameInputPreview();
+    syncNicknameActionButton();
+  });
+  nicknameInput.addEventListener("scroll", syncNicknameInputPreview);
   nicknameInput.addEventListener("change", () => {
     applyNicknameFromControls(nicknameInput.value, false);
   });
@@ -5893,6 +5976,17 @@ if (nicknameInput){
       event.preventDefault();
       applyNicknameFromControls(nicknameInput.value, false);
       try{ nicknameInput.blur(); }catch(e){}
+    }
+  });
+}
+if (btnNicknameAction){
+  btnNicknameAction.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+  });
+  btnNicknameAction.addEventListener("click", () => {
+    activateNicknameAction();
+    if (nicknameInput && typeof nicknameInput.focus === "function"){
+      try{ nicknameInput.focus({ preventScroll:true }); }catch(e){ try{ nicknameInput.focus(); }catch(_){} }
     }
   });
 }
