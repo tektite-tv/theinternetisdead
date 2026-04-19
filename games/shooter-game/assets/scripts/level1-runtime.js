@@ -847,16 +847,39 @@ function setIndividualInfiniteResource(resourceName){
   if (gameState !== STATE.PLAYING) syncScoreTrackingState();
   return message;
 }
+function readStartHudPreviewOption(inputEl, savedValue, savedInfinite, minValue){
+  const shouldReadLiveInput = !!(
+    inputEl &&
+    (gameState === STATE.OPTIONS || gameState === STATE.CHEATS) &&
+    inputEl.offsetParent !== null
+  );
+  if (!shouldReadLiveInput){
+    return {
+      infinite: !!(savedInfinite || INFINITE_MODE),
+      value: savedInfinite || INFINITE_MODE ? 100 : Math.max(minValue, parseInt(savedValue, 10) || minValue)
+    };
+  }
+
+  const raw = String(inputEl.value || "").trim().toLowerCase();
+  const infinite = raw === "∞" || raw === "inf" || raw === "infinite" || raw === "max" || raw === "100";
+  if (infinite || INFINITE_MODE) return { infinite:true, value:100 };
+  const parsed = parseInt(raw, 10);
+  return { infinite:false, value:Math.max(minValue, Number.isFinite(parsed) ? parsed : minValue) };
+}
 function renderMenuHudPreview(){
   const heartsHud = getHeartsHudEl();
-  const previewLivesInfinite = !!(START_LIVES_INFINITE || INFINITE_MODE);
-  const previewHeartsInfinite = !!(START_HEARTS_INFINITE || INFINITE_MODE);
-  const previewShieldsInfinite = !!(START_SHIELDS_INFINITE || INFINITE_MODE);
-  const previewBombsInfinite = !!(START_BOMBS_INFINITE || INFINITE_MODE);
-  const previewLives = previewLivesInfinite ? 100 : Math.max(0, parseInt(START_LIVES, 10) || 0);
-  const previewHearts = previewHeartsInfinite ? 100 : Math.max(1, parseInt(START_HEARTS, 10) || 1);
-  const previewShields = previewShieldsInfinite ? 100 : Math.max(0, parseInt(START_SHIELDS, 10) || 0);
-  const previewBombs = previewBombsInfinite ? 100 : Math.max(0, parseInt(START_BOMBS, 10) || 0);
+  const livesPreview = readStartHudPreviewOption(livesSlider, START_LIVES, START_LIVES_INFINITE, 0);
+  const heartsPreview = readStartHudPreviewOption(heartsSlider, START_HEARTS, START_HEARTS_INFINITE, 1);
+  const shieldsPreview = readStartHudPreviewOption(shieldsSlider, START_SHIELDS, START_SHIELDS_INFINITE, 0);
+  const bombsPreview = readStartHudPreviewOption(bombsSlider, START_BOMBS, START_BOMBS_INFINITE, 0);
+  const previewLivesInfinite = !!livesPreview.infinite;
+  const previewHeartsInfinite = !!heartsPreview.infinite;
+  const previewShieldsInfinite = !!shieldsPreview.infinite;
+  const previewBombsInfinite = !!bombsPreview.infinite;
+  const previewLives = previewLivesInfinite ? 100 : Math.max(0, parseInt(livesPreview.value, 10) || 0);
+  const previewHearts = previewHeartsInfinite ? 100 : Math.max(1, parseInt(heartsPreview.value, 10) || 1);
+  const previewShields = previewShieldsInfinite ? 100 : Math.max(0, parseInt(shieldsPreview.value, 10) || 0);
+  const previewBombs = previewBombsInfinite ? 100 : Math.max(0, parseInt(bombsPreview.value, 10) || 0);
   const maxVisibleHudIcons = 5;
 
   if (livesSlot) livesSlot.style.display = (previewLivesInfinite || previewLives > 0) ? "flex" : "none";
@@ -3026,6 +3049,7 @@ function syncStartOptionsLabels(){
     if (speedVal && speedSlider) speedVal.textContent = String(getSpeedValueFromSlider());
     syncRangeProgress(speedSlider);
     if (startWaveLabel && startWaveSelect) startWaveLabel.textContent = getStartWaveText(startWaveSelect.value);
+    if (typeof renderMenuHudPreview === "function" && gameState !== STATE.PLAYING) renderMenuHudPreview();
   }
 
   [livesSlider, heartsSlider, shieldsSlider, bombsSlider].forEach(inputEl => {
