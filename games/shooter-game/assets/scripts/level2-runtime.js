@@ -3789,7 +3789,8 @@ function pollGamepad(dt){
   }
 
   const pressPause = gpEdge(controllerBindings.pause, getGpActionPressed(gp, 'pause'));
-  const pressCommands = gpEdge(controllerBindings.commands, getGpActionPressed(gp, 'commands'));
+  const commandsHeld = getGpActionPressed(gp, 'commands');
+  const pressCommands = gpEdge(controllerBindings.commands, commandsHeld);
   const pressMenuBack = gpEdge(controllerBindings.menuBack, getGpActionPressed(gp, 'menuBack'));
   const pressMenuSelect = gpEdge(controllerBindings.menuSelect, getGpActionPressed(gp, 'menuSelect'));
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
@@ -3800,7 +3801,7 @@ function pollGamepad(dt){
   const viewSuppressedByY = yComboModifierHeld;
   // Y is reserved as a combo modifier. Y alone does nothing.
   // Y + View saves a screenshot once per hold. Future Y + D-pad combos can hook into yComboModifierHeld here.
-  const yViewScreenshotComboHeld = yComboModifierHeld && back;
+  const yViewScreenshotComboHeld = yComboModifierHeld && commandsHeld;
   const pressScreenshotCombo = yViewScreenshotComboHeld && !gpYViewScreenshotComboHeld;
   gpYViewScreenshotComboHeld = yViewScreenshotComboHeld;
 

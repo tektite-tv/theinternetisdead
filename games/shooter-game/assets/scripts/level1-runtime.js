@@ -3924,7 +3924,7 @@ function markControlsClean(applied=false){
 }
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnMysteryLink, btnStats, btnImages].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnImages, btnStats].filter(Boolean);
 }
 
 function isTitleHoverRevealFocused(){
@@ -4405,30 +4405,27 @@ function moveMenuControllerFocusDirectional(direction){
   const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
   const optionsIndex = items.indexOf(btnOptions);
-  const mysteryIndex = items.indexOf(btnMysteryLink);
-  const statsIndex = items.indexOf(btnStats);
   const imagesIndex = items.indexOf(btnImages);
+  const statsIndex = items.indexOf(btnStats);
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
     if (menuFocusIndex === optionsIndex && startIndex !== -1) nextIndex = startIndex;
-    else if (menuFocusIndex === statsIndex && mysteryIndex !== -1) nextIndex = mysteryIndex;
+    else if (menuFocusIndex === statsIndex && imagesIndex !== -1) nextIndex = imagesIndex;
   } else if (direction === "right"){
     if (menuFocusIndex === startIndex && optionsIndex !== -1) nextIndex = optionsIndex;
-    else if (menuFocusIndex === mysteryIndex && statsIndex !== -1) nextIndex = statsIndex;
+    else if (menuFocusIndex === imagesIndex && statsIndex !== -1) nextIndex = statsIndex;
   } else if (direction === "down"){
     if (menuFocusIndex === titleIndex && revealIndex !== -1) nextIndex = revealIndex;
     else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
-    else if (menuFocusIndex === startIndex && mysteryIndex !== -1) nextIndex = mysteryIndex;
+    else if (menuFocusIndex === startIndex && imagesIndex !== -1) nextIndex = imagesIndex;
     else if (menuFocusIndex === optionsIndex && statsIndex !== -1) nextIndex = statsIndex;
-    else if ((menuFocusIndex === mysteryIndex || menuFocusIndex === statsIndex) && imagesIndex !== -1) nextIndex = imagesIndex;
-    else if (menuFocusIndex === imagesIndex && titleIndex !== -1) nextIndex = titleIndex;
+    else if ((menuFocusIndex === imagesIndex || menuFocusIndex === statsIndex) && titleIndex !== -1) nextIndex = titleIndex;
   } else if (direction === "up"){
-    if (menuFocusIndex === mysteryIndex && startIndex !== -1) nextIndex = startIndex;
+    if (menuFocusIndex === imagesIndex && startIndex !== -1) nextIndex = startIndex;
     else if (menuFocusIndex === statsIndex && optionsIndex !== -1) nextIndex = optionsIndex;
     else if ((menuFocusIndex === startIndex || menuFocusIndex === optionsIndex) && revealIndex !== -1) nextIndex = revealIndex;
     else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
-    else if (menuFocusIndex === imagesIndex && statsIndex !== -1) nextIndex = statsIndex;
     else if (menuFocusIndex === titleIndex && imagesIndex !== -1) nextIndex = imagesIndex;
   }
 
@@ -6406,7 +6403,8 @@ function pollGamepad(dt){
   }
 
   const pressPause = gpEdge(controllerBindings.pause, getGpActionPressed(gp, 'pause'));
-  const pressCommands = gpEdge(controllerBindings.commands, getGpActionPressed(gp, 'commands'));
+  const commandsHeld = getGpActionPressed(gp, 'commands');
+  const pressCommands = gpEdge(controllerBindings.commands, commandsHeld);
   const pressMenuBack = gpEdge(controllerBindings.menuBack, getGpActionPressed(gp, 'menuBack'));
   const pressMenuSelect = gpEdge(controllerBindings.menuSelect, getGpActionPressed(gp, 'menuSelect'));
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
@@ -6417,7 +6415,7 @@ function pollGamepad(dt){
   const viewSuppressedByY = yComboModifierHeld;
   // Y is reserved as a combo modifier. Y alone does nothing.
   // Y + View saves a screenshot once per hold. Future Y + D-pad combos can hook into yComboModifierHeld here.
-  const yViewScreenshotComboHeld = yComboModifierHeld && back;
+  const yViewScreenshotComboHeld = yComboModifierHeld && commandsHeld;
   const pressScreenshotCombo = yViewScreenshotComboHeld && !gpYViewScreenshotComboHeld;
   gpYViewScreenshotComboHeld = yViewScreenshotComboHeld;
   const cheatermodeControllerHoldIntent = !cheatsUnlockedByPassphrase && x && back && isCheatermodeControllerHoldEligible();

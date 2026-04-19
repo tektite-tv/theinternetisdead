@@ -111,7 +111,7 @@
      Absolutely positioned so the four Start menu buttons keep their exact footprint. */
   #startMenu #btnStart,
   #startMenu #btnOptions,
-  #startMenu #btnMysteryLink,
+  #startMenu #btnImages,
   #startMenu #btnStats{
     position:relative;
     overflow:hidden;
@@ -131,7 +131,7 @@
   }
   body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnOptions.controllerFocus .startMenuButtonText,
-  body.controller-active #startMenu #btnMysteryLink.controllerFocus .startMenuButtonText,
+  body.controller-active #startMenu #btnImages.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnStats.controllerFocus .startMenuButtonText{
     position:absolute;
     left:2px;
@@ -160,7 +160,7 @@
   }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
-  body.controller-active #startMenu #btnMysteryLink.controllerFocus::after,
+  body.controller-active #startMenu #btnImages.controllerFocus::after,
   body.controller-active #startMenu #btnStats.controllerFocus::after{
     content:"";
     position:absolute;
@@ -1395,7 +1395,7 @@ body.invert-colors {
     opacity:var(--video-fx-overlay-opacity, 0.18);
   }
 
-  #btnMysteryLink.mysteryBtn{
+  #btnImages.mysteryBtn{
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -1412,8 +1412,8 @@ body.invert-colors {
     cursor:pointer;
     text-decoration:none;
   }
-  #btnMysteryLink.mysteryBtn:hover,
-  body.controller-active #btnMysteryLink.mysteryBtn.controllerFocus{
+  #btnImages.mysteryBtn:hover,
+  body.controller-active #btnImages.mysteryBtn.controllerFocus{
     background:rgba(75,0,118,0.55);
     border-color:rgba(0,255,0,0.9);
     box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
@@ -1529,6 +1529,7 @@ body.invert-colors {
   }
 
 
+  #btnImages,
   #btnStats{
     display:inline-flex;
     align-items:center;
@@ -1537,17 +1538,6 @@ body.invert-colors {
     box-sizing:border-box;
   }
 
-  #startMenu .btnRowImages{
-    width:100%;
-    display:flex;
-    justify-content:center;
-    margin-top:8px;
-  }
-  #btnImages{
-    width:100%;
-    min-height:42px;
-    font-size:18px;
-  }
   #imagesPanel{
     position:fixed;
     inset:0;
@@ -2082,11 +2072,8 @@ body.invert-colors {
       <button id="btnOptions"><span class="startMenuButtonText">Options</span></button>
     </div>
     <div class="btnRow btnRowBottom">
-      <a id="btnMysteryLink" class="smallBtn mysteryBtn" href="https://honestlythomas.com" target="_top" aria-label="Open Honestly Thomas"><span class="startMenuButtonText">Who Made This?</span></a>
+      <button id="btnImages" class="smallBtn mysteryBtn" type="button"><span class="startMenuButtonText">Images</span></button>
       <button id="btnStats" class="smallBtn" type="button"><span class="startMenuButtonText">Stats</span></button>
-    </div>
-    <div class="btnRow btnRowImages">
-      <button id="btnImages" class="smallBtn" type="button">Images</button>
     </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>
@@ -2356,7 +2343,7 @@ body.invert-colors {
 
 <script>
 (function(){
-  const START_MENU_BUTTON_IDS = ["btnStart", "btnOptions", "btnMysteryLink", "btnStats"];
+  const START_MENU_BUTTON_IDS = ["btnStart", "btnOptions", "btnImages", "btnStats"];
 
   function wrapStartMenuButtonText(button){
     let textSpan = button.querySelector(":scope > .startMenuButtonText");
