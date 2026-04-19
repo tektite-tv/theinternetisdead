@@ -2823,9 +2823,15 @@ function updateCheatsUnlockModeHint(){
   }
   if (btnCheats && !cheatsUnlockedByPassphrase){
     btnCheats.title = hint;
-    if (controllerActive && gameState === STATE.OPTIONS && !cheatsUnlockTimer && !cheatsUnlockInputReady && getOptionsControllerTargets()[optionsFocusIndex] === btnCheats){
+    const cheatsTargetFocused = controllerActive
+      && !cheatsUnlockTimer
+      && !cheatsUnlockInputReady
+      && (gameState === STATE.OPTIONS || isPauseOptionsOpen())
+      && getOptionsControllerTargets()[optionsFocusIndex] === btnCheats;
+    if (cheatsTargetFocused){
       renderCheatermodeControllerComboLabel(btnCheats, { remaining: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed: false, viewPressed: false, unlocked: false });
     } else {
+      if (btnCheats.dataset.cheatermodeComboVisual) clearCheatermodeControllerComboLabel(btnCheats, "Cheats");
       btnCheats.setAttribute("aria-label", hint);
     }
   } else if (btnCheats){
@@ -3866,8 +3872,12 @@ function syncOptionsControllerFocus(){
   if (!items.length) return;
   optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
   focusControllerElement(items[optionsFocusIndex]);
+  // Keep the Cheats unlock hint synced with controller focus, including the
+  // normal Start-menu -> Options path. Otherwise the X + View text only shows
+  // after a click/other update cycle, because apparently one hallway was enough
+  // for the old state machine.
+  updateCheatsUnlockModeHint();
 }
-
 function syncCheatsControllerFocus(forceTopVisible=false){
   const items = getCheatsControllerTargets();
   if (!items.length) return;
