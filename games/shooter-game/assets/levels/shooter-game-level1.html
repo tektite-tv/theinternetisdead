@@ -103,8 +103,19 @@
   .smallBtn{ min-width:120px; padding:8px 12px; border-radius:10px; }
   .cheatsUnlockInput{ box-sizing:border-box; color:#fff; background:rgba(75,0,118,0.55); border:2px solid #00ff66; font-family:inherit; }
   .cheatsUnlockInput:focus{ outline:2px solid #ff00ff; outline-offset:2px; }
-  .cheatermodeOptionRow .cheatsUnlockInput{ width:min(230px, 48%); min-width:170px; min-height:38px; padding:8px 10px; font-size:14px; text-align:center; border-radius:10px; }
-  .cheatermodeOptionRow.cheatermodeUnlocked .cheatsUnlockInput{ color:#00ff66; border-color:rgba(0,255,102,0.65); }
+  .cheatermodeOptionRow{ position:relative; }
+  .cheatermodeOptionRow.cheatermodeUnlocked{ padding-right:174px !important; }
+  .cheatermodeOptionRow .cheatHeader{ align-items:center; min-height:42px; }
+  .cheatermodeOptionRow .cheatHeader > div:first-child{ display:flex; flex-direction:column; justify-content:center; }
+  .cheatsButtonRow{ position:relative; min-height:46px; }
+  .cheatsButtonRow .cheatsUnlockInput{ position:absolute; inset:0; width:100%; height:100%; min-height:46px; padding:8px 12px; font-size:16px; text-align:center; border-radius:10px; z-index:2; }
+  .cheatsButtonRow .cheatermodeCountdownDisplay{ display:none; position:absolute; inset:0; width:100%; height:100%; min-height:46px; padding:8px 12px; box-sizing:border-box; align-items:center; justify-content:center; color:#fff; background:rgba(75,0,118,0.55); border:2px solid #00ff66; border-radius:10px; font-family:inherit; font-size:16px; font-weight:900; text-align:center; text-shadow:0 0 8px #fff; z-index:3; }
+  .cheatsButtonRow.cheatermodeCounting .cheatsUnlockInput{ display:none !important; }
+  .cheatsButtonRow.cheatermodeCounting .cheatermodeCountdownDisplay{ display:flex; }
+  .cheatsButtonRow.cheatermodeUnlocked .cheatsUnlockInput,
+  .cheatsButtonRow.cheatermodeUnlocked .cheatermodeCountdownDisplay{ display:none !important; }
+  #optionsMenu .commandOptionRow .cheatermodeUnlockedControl{ display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); }
+  #optionsMenu .commandOptionRow.cheatermodeUnlocked .cheatermodeUnlockedControl{ display:inline-flex; align-items:center; }
   .cheatermodeComboButton{ font-weight:900; text-shadow:0 0 8px currentColor; }
   .cheatermodeComboButton.comboNone{ color:#ff3b3b; }
   .cheatermodeComboButton.comboPartial{ color:#ffd84d; }
@@ -1901,13 +1912,15 @@ body.invert-colors {
             <div class="cheatTitle">Cheatermode</div>
             <div class="cheatCommand">/cheatermode</div>
           </div>
-          <input id="btnCheatsUnlockInput" class="cheatsUnlockInput" type="text" value="type cheatermode" spellcheck="false" autocomplete="off" aria-label="Type cheatermode to unlock cheat commands" />
+          <label id="cheatermodeUnlockedControl" class="cheatermodeUnlockedControl" hidden><input id="cheatermodeUnlockedCheckbox" type="checkbox" checked /><span id="cheatermodeUnlockedStatus" style="margin-left:0;">Enabled</span></label>
         </div>
-        <div class="hint">Type cheatermode here to unlock the Cheats list.</div>
+        <div class="hint">Type cheatermode on the Cheats button to unlock the Cheats list.</div>
       </div>
 
-<div class="optRow fullRow buttonOnlyRow">
+<div id="cheatsButtonRow" class="optRow fullRow buttonOnlyRow cheatsButtonRow">
         <button id="btnCheats" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Cheats</button>
+        <input id="btnCheatsUnlockInput" class="cheatsUnlockInput" type="text" value="Type cheatermode" spellcheck="false" autocomplete="off" aria-label="Type cheatermode to unlock cheat commands" style="display:none;" />
+        <div id="cheatermodeCountdownDisplay" class="cheatermodeCountdownDisplay" role="status" aria-live="polite" hidden></div>
       </div>
         </div>
       </div>

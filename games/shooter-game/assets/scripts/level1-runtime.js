@@ -2632,7 +2632,11 @@ const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
 const btnCheatsUnlockInput = document.getElementById("btnCheatsUnlockInput");
+const cheatsButtonRow = document.getElementById("cheatsButtonRow");
 const cheatermodeOptionRow = document.getElementById("cheatermodeOptionRow");
+const cheatermodeCountdownDisplay = document.getElementById("cheatermodeCountdownDisplay");
+const cheatermodeUnlockedControl = document.getElementById("cheatermodeUnlockedControl");
+const cheatermodeUnlockedCheckbox = document.getElementById("cheatermodeUnlockedCheckbox");
 const nicknameInput = document.getElementById("nicknameInput");
 const backgroundColorHex = document.getElementById("backgroundColorHex");
 const backgroundColorPicker = document.getElementById("backgroundColorPicker");
@@ -2703,9 +2707,10 @@ function syncFullscreenOptionState(nextState = null){
   if (fullscreenStatus) fullscreenStatus.textContent = fullscreenOptionEnabled ? "Enabled" : "Disabled";
 }
 
-const CHEATERMODE_KEYBOARD_PROMPT = "type cheatermode";
+const CHEATERMODE_KEYBOARD_PROMPT = "Type cheatermode";
 const CHEATERMODE_CONTROLLER_PROMPT = "Hold X + View 5s";
 const CHEATERMODE_CONTROLLER_HOLD_MS = 5000;
+const CHEATERMODE_TYPED_COUNTDOWN_MS = 5000;
 
 function getCheatermodePromptText(){
   return activeInputMode === INPUT_MODE_CONTROLLER ? CHEATERMODE_CONTROLLER_PROMPT : CHEATERMODE_KEYBOARD_PROMPT;
@@ -2754,7 +2759,7 @@ function clearCheatermodeControllerComboLabel(target, fallback = "Cheats"){
 
 function isCheatermodePromptText(value){
   const text = String(value || "").trim();
-  return text === CHEATERMODE_KEYBOARD_PROMPT || text === CHEATERMODE_CONTROLLER_PROMPT || /^Hold X \+ View(?: \d+s| \(\d+\))?$/.test(text) || text === "Cheatermode unlocked";
+  return text === CHEATERMODE_KEYBOARD_PROMPT || text === CHEATERMODE_CONTROLLER_PROMPT || /^Hold X \+ View(?: \d+s| \(\d+\))?$/.test(text) || /^\(\d+ seconds?\)$/.test(text) || text === "Cheatermode unlocked";
 }
 
 function updateCheatsUnlockModeHint(){
@@ -2764,6 +2769,20 @@ function updateCheatsUnlockModeHint(){
     : "Keyboard/mouse active: type cheatermode to unlock cheat commands.";
   if (cheatermodeOptionRow){
     cheatermodeOptionRow.classList.toggle("cheatermodeUnlocked", !!cheatsUnlockedByPassphrase);
+  }
+  if (cheatsButtonRow){
+    cheatsButtonRow.classList.toggle("cheatermodeUnlocked", !!cheatsUnlockedByPassphrase);
+    cheatsButtonRow.classList.toggle("cheatermodeCounting", !!cheatsUnlockTimer);
+    cheatsButtonRow.classList.toggle("cheatsUnlockReady", !!cheatsUnlockInputReady);
+  }
+  if (cheatermodeCountdownDisplay){
+    cheatermodeCountdownDisplay.hidden = !cheatsUnlockTimer;
+  }
+  if (cheatermodeUnlockedControl){
+    cheatermodeUnlockedControl.hidden = !cheatsUnlockedByPassphrase;
+  }
+  if (cheatermodeUnlockedCheckbox){
+    cheatermodeUnlockedCheckbox.checked = !!cheatsUnlockedByPassphrase;
   }
   if (btnCheats && !cheatsUnlockedByPassphrase){
     btnCheats.title = hint;
@@ -2782,9 +2801,15 @@ function updateCheatsUnlockModeHint(){
       btnCheatsUnlockInput.setAttribute("aria-label", "Cheatermode unlocked");
       btnCheatsUnlockInput.value = "Cheatermode unlocked";
       btnCheatsUnlockInput.readOnly = true;
+      btnCheatsUnlockInput.style.display = "none";
       return;
     }
-    btnCheatsUnlockInput.placeholder = controllerActive ? "Hold X + View" : "type cheatermode";
+    if (cheatsUnlockTimer){
+      btnCheatsUnlockInput.readOnly = true;
+      btnCheatsUnlockInput.setAttribute("aria-label", "Cheatermode activation countdown");
+      return;
+    }
+    btnCheatsUnlockInput.placeholder = controllerActive ? "Hold X + View" : CHEATERMODE_KEYBOARD_PROMPT;
     btnCheatsUnlockInput.setAttribute("aria-label", hint);
     btnCheatsUnlockInput.readOnly = controllerActive;
     if (controllerActive || isCheatermodePromptText(btnCheatsUnlockInput.value) || String(btnCheatsUnlockInput.value || "").trim() === ""){
@@ -2843,6 +2868,17 @@ function clearCheatsUnlockCountdown(){
     clearInterval(cheatsUnlockTimer);
     cheatsUnlockTimer = null;
   }
+  if (cheatsUnlockFinishTimer){
+    clearTimeout(cheatsUnlockFinishTimer);
+    cheatsUnlockFinishTimer = null;
+  }
+  if (cheatsButtonRow) cheatsButtonRow.classList.remove("cheatermodeCounting");
+  if (cheatermodeCountdownDisplay) cheatermodeCountdownDisplay.hidden = true;
+}
+
+function formatTypedCheatermodeCountdown(remaining){
+  const seconds = Math.max(0, Math.ceil(Number(remaining) || 0));
+  return "(" + seconds + " " + (seconds === 1 ? "second" : "seconds") + ")";
 }
 
 function resetCheatsUnlockGate(){
@@ -2857,21 +2893,22 @@ function resetCheatsUnlockGate(){
     clearCheatermodeControllerComboLabel(btnCheats, unlocked ? "Cheats (Unlocked)" : "Cheats");
   }
   if (btnCheatsUnlockInput){
-    btnCheatsUnlockInput.style.display = "";
+    btnCheatsUnlockInput.style.display = "none";
     setCheatsUnlockInputPrompt();
   }
   updateCheatsUnlockModeHint();
 }
 
-function armCheatsUnlockCountdown(){
+function armCheatsUnlockCountdown(event = null){
+  if (event && event.detail > 0) setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
   if (cheatsUnlockedByPassphrase){
     if (btnCheats) clearCheatermodeControllerComboLabel(btnCheats, "Cheats (Unlocked)");
     showCheats();
     return;
   }
-  if (!btnCheats || cheatsUnlockTimer || cheatsUnlockInputReady) return;
+  if (!btnCheats || cheatsUnlockTimer) return;
   if (activeInputMode === INPUT_MODE_CONTROLLER){
-    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheatsUnlockInput || btnCheats));
+    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
     renderCheatermodeControllerComboLabel(btnCheats, { remaining: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed: false, viewPressed: false, unlocked: false });
     syncOptionsControllerFocus();
     return;
@@ -2883,11 +2920,12 @@ function showCheatsUnlockInput(){
   cheatsUnlockInputReady = true;
   cheatermodeControllerHoldMs = 0;
   if (btnCheatsUnlockInput){
-    btnCheatsUnlockInput.style.display = "";
+    btnCheatsUnlockInput.style.display = "block";
     setCheatsUnlockInputPrompt();
     if (activeInputMode !== INPUT_MODE_CONTROLLER){
       activateCheatsUnlockInput();
-      try{ btnCheatsUnlockInput.focus(); }catch(e){}
+      try{ btnCheatsUnlockInput.focus(); btnCheatsUnlockInput.select(); }catch(e){}
+      try{ btnCheatsUnlockInput.scrollIntoView({ block: "nearest", inline: "nearest" }); }catch(e){}
     }
   }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
@@ -2934,7 +2972,7 @@ function unlockCheatermode(source = "typed"){
   cheatermodeControllerHoldMs = 0;
   cheatsUnlockInputReady = false;
   if (btnCheatsUnlockInput){
-    btnCheatsUnlockInput.style.display = "";
+    btnCheatsUnlockInput.style.display = "none";
     setCheatsUnlockInputPrompt();
   }
   if (btnCheats){
@@ -2955,15 +2993,74 @@ function unlockCheatermode(source = "typed"){
   }
 }
 
+function startTypedCheatermodeCountdown(){
+  if (!btnCheatsUnlockInput || cheatsUnlockedByPassphrase || cheatsUnlockTimer) return;
+  cheatsUnlockInputReady = true;
+  cheatsUnlockRemaining = Math.ceil(CHEATERMODE_TYPED_COUNTDOWN_MS / 1000);
+  btnCheatsUnlockInput.readOnly = true;
+  btnCheatsUnlockInput.style.display = "none";
+  if (cheatermodeCountdownDisplay){
+    cheatermodeCountdownDisplay.hidden = false;
+    cheatermodeCountdownDisplay.textContent = formatTypedCheatermodeCountdown(cheatsUnlockRemaining);
+  }
+  btnCheatsUnlockInput.setAttribute("aria-label", "Cheatermode activation countdown");
+  cheatsUnlockTimer = setInterval(() => {
+    cheatsUnlockRemaining = Math.max(0, cheatsUnlockRemaining - 1);
+    if (cheatsUnlockRemaining <= 0){
+      clearCheatsUnlockCountdown();
+      unlockCheatermode("typed-countdown");
+    } else if (cheatermodeCountdownDisplay) {
+      cheatermodeCountdownDisplay.textContent = formatTypedCheatermodeCountdown(cheatsUnlockRemaining);
+    }
+  }, 1000);
+  updateCheatsUnlockModeHint();
+}
+
+function resetCheatsButtonTypedBuffer(){
+  cheatsButtonTypedBuffer = "";
+  if (cheatsButtonTypedBufferTimer){
+    clearTimeout(cheatsButtonTypedBufferTimer);
+    cheatsButtonTypedBufferTimer = null;
+  }
+}
+
+function handleCheatsButtonTypedKey(event){
+  if (!event || !btnCheats) return;
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (cheatsUnlockedByPassphrase || cheatsUnlockTimer || cheatsUnlockFinishTimer) return;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) return;
+  if (event.key === "Backspace"){
+    event.preventDefault();
+    cheatsButtonTypedBuffer = cheatsButtonTypedBuffer.slice(0, -1);
+    return;
+  }
+  if (event.key === "Escape"){
+    resetCheatsButtonTypedBuffer();
+    return;
+  }
+  if (!event.key || event.key.length !== 1) return;
+  const next = (cheatsButtonTypedBuffer + event.key.toLowerCase()).slice(-"cheatermode".length);
+  cheatsButtonTypedBuffer = next;
+  if (cheatsButtonTypedBufferTimer) clearTimeout(cheatsButtonTypedBufferTimer);
+  cheatsButtonTypedBufferTimer = setTimeout(resetCheatsButtonTypedBuffer, 1600);
+  if ("cheatermode".startsWith(next)) event.preventDefault();
+  if (next === "cheatermode"){
+    event.preventDefault();
+    resetCheatsButtonTypedBuffer();
+    startTypedCheatermodeCountdown();
+  }
+}
+
 function submitCheatsUnlockInput(){
   if (!btnCheatsUnlockInput) return;
+  if (cheatsUnlockTimer || cheatsUnlockFinishTimer || cheatsUnlockedByPassphrase) return;
   const typed = String(btnCheatsUnlockInput.value || "").trim().toLowerCase();
   if (typed !== "cheatermode") return;
-  unlockCheatermode("typed");
+  startTypedCheatermodeCountdown();
 }
 
 function getCheatsUnlockOptionTarget(){
-  if (!cheatsUnlockedByPassphrase && btnCheatsUnlockInput) return btnCheatsUnlockInput;
+  if (cheatsUnlockedByPassphrase && cheatermodeUnlockedCheckbox) return cheatermodeUnlockedCheckbox;
   return btnCheats;
 }
 
@@ -3458,11 +3555,14 @@ let cheatsFocusIndex = 0;
 let cheatsHavePendingChanges = false;
 let cheatsJustApplied = false;
 let cheatsUnlockTimer = null;
+let cheatsUnlockFinishTimer = null;
 let cheatsUnlockRemaining = 0;
 let cheatsUnlockInputReady = false;
 let cheatsUnlockedByPassphrase = false;
 let cheatermodeControllerHoldMs = 0;
 let cheatermodeLastControllerComboKey = "";
+let cheatsButtonTypedBuffer = "";
+let cheatsButtonTypedBufferTimer = null;
 
 function notifyCheatsUnlockedState(){
   try{
@@ -5305,6 +5405,7 @@ btnStart.addEventListener("click", startGame);
 btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", armCheatsUnlockCountdown);
+if (btnCheats) btnCheats.addEventListener("keydown", handleCheatsButtonTypedKey);
 if (btnCheatsUnlockInput){
   btnCheatsUnlockInput.addEventListener("click", activateCheatsUnlockInput);
   btnCheatsUnlockInput.addEventListener("focus", focusCheatsUnlockInput);
@@ -5315,6 +5416,11 @@ if (btnCheatsUnlockInput){
       event.preventDefault();
       submitCheatsUnlockInput();
     }
+  });
+}
+if (cheatermodeUnlockedCheckbox){
+  cheatermodeUnlockedCheckbox.addEventListener("change", () => {
+    if (!cheatermodeUnlockedCheckbox.checked) refreshEntireShooterPage();
   });
 }
 if (muteCheckbox){
