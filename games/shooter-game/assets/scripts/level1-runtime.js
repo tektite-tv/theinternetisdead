@@ -7636,7 +7636,22 @@ function updateHearts(){
   }
 }
 
+let lastGameLoopHeartbeatPost = 0;
+function postGameLoopHeartbeat(t){
+  if (window.parent === window) return;
+  if ((t || 0) - lastGameLoopHeartbeatPost < 500) return;
+  lastGameLoopHeartbeatPost = t || 0;
+  try{
+    window.parent.postMessage({
+      type: "tektite:game-loop-heartbeat",
+      level: window.location.pathname,
+      timestamp: Date.now()
+    }, "*");
+  }catch(error){}
+}
+
 function loop(t){
+  postGameLoopHeartbeat(t);
   // v1.96: Game speed knob. We cap raw dt to prevent big frame hitch jumps,
   // then multiply by GAME_SPEED_MULT (5 = 1.0x, 1 = 0.2x, 10 = 2.0x).
   const rawDt = Math.min(0.033, (t - lastT) / 1000);

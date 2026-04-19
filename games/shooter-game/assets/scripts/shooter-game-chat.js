@@ -6,6 +6,18 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     function buildLevel2Src() {
       return `${LEVEL2_SRC}&reload=${Date.now()}`;
     }
+
+    function resetGameLoopWatch() {
+      try {
+        if (typeof window.__tektiteResetGameLoopWatch === 'function') {
+          window.__tektiteResetGameLoopWatch();
+        }
+      } catch (error) {}
+    }
+
+    if (tektiteFrame) {
+      tektiteFrame.addEventListener('load', resetGameLoopWatch);
+    }
     const shooterPageCommands = [
       { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'] },
       { name: '/cheatermode', desc: 'Unlock cheat commands by typing the passphrase', usage: '/cheatermode', suggestions: ['cheatermode'], unlockOnly: true },
@@ -608,7 +620,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       if (!tektiteFrame || hasSwitchedToLevel2) return;
       hasSwitchedToLevel2 = true;
       const keepFullscreen = !!document.fullscreenElement;
-      tektiteFrame.src = buildLevel2Src();
+      resetGameLoopWatch();
+        tektiteFrame.src = buildLevel2Src();
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
           setIframeFullscreen(true);
@@ -620,7 +633,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       if (!tektiteFrame) return;
       hasSwitchedToLevel2 = false;
       const keepFullscreen = !!document.fullscreenElement;
-      tektiteFrame.src = `${LEVEL1_SRC}?reload=${Date.now()}`;
+      resetGameLoopWatch();
+        tektiteFrame.src = `${LEVEL1_SRC}?reload=${Date.now()}`;
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
           setIframeFullscreen(true);
