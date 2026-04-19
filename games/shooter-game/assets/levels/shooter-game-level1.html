@@ -53,17 +53,23 @@
     min-height:46px;
     margin:4px auto 10px;
     padding:10px 10px;
-    white-space:nowrap;
+    white-space:normal;
     border-radius:12px;
-    border:1px solid rgba(0,255,0,0.45);
+    border:2px solid rgba(0,255,102,0.65);
     background:rgba(0,0,0,0.55);
+    box-shadow:0 0 28px rgba(0,255,102,0.20);
     box-sizing:border-box;
     cursor:default;
     color:#0f0;
   }
   #startMenuTitle .titleText{
     display:block;
-    white-space:nowrap;
+    max-width:100%;
+    line-height:1.15;
+    overflow-wrap:break-word;
+    text-align:center;
+    white-space:normal;
+    animation:titleTextHueShift 1.4s linear infinite;
   }
   #startMenuTitle:hover,
   body.controller-active #startMenuTitle.controllerFocus{
@@ -87,6 +93,7 @@
   body.controller-active .titleSub.controllerFocus .titleSubDefault{ opacity:0; }
   .titleSub:hover .titleSubHover,
   body.controller-active .titleSub.controllerFocus .titleSubHover{ opacity:1; }
+  .titleSubDefault,
   .titleSub:hover .titleSubHover,
   body.controller-active .titleSub.controllerFocus .titleSubHover{
     animation:titleTextHueShift 1.4s linear infinite;
@@ -97,6 +104,24 @@
     box-shadow: none !important;
     border-radius: 0;
     padding: 0;
+  }
+  @media (max-width: 460px){
+    #startMenuTitle{
+      width:100%;
+      min-height:0;
+      padding:8px 6px;
+      font-size:14px;
+      white-space:nowrap;
+    }
+    #startMenuTitle .titleText{
+      overflow-wrap:normal;
+      white-space:nowrap;
+    }
+  }
+  @media (max-width: 340px){
+    #startMenuTitle{
+      font-size:12px;
+    }
   }
   .subimg{
     width:120px; height:120px; display:block; margin:0 auto 10px;
@@ -1263,7 +1288,16 @@ body.invert-colors {
     position:relative;
     background:rgba(0,0,0,0.5);
     border-radius:6px;
-    padding:1px 22px 1px 6px;
+    padding:1px 22px 1px 22px;
+  }
+  #titleHoverReveal .titleSubDefault::before{
+    content:"♻️";
+    position:absolute;
+    left:4px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:12px;
+    line-height:1;
   }
   #titleHoverReveal .titleSubDefault::after{
     content:"♻️";
@@ -1282,7 +1316,18 @@ body.invert-colors {
     text-decoration:none;
     background:rgba(0,0,0,0.5);
     border-radius:6px;
-    padding:1px 22px 1px 6px;
+    padding:1px 22px 1px 22px;
+  }
+  #titleHoverReveal:hover .titleSubHover::before,
+  #titleHoverReveal:focus .titleSubHover::before,
+  body.controller-active #titleHoverReveal.controllerFocus .titleSubHover::before{
+    content:"♻️";
+    position:absolute;
+    left:4px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:12px;
+    line-height:1;
   }
   #titleHoverReveal:hover .titleSubHover::after,
   #titleHoverReveal:focus .titleSubHover::after,
