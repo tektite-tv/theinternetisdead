@@ -93,6 +93,7 @@ const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code
 const AUDIO_HIT = "/games/shooter-game/assets/audio/hitmarker.mp3";
 const AUDIO_OOF = "/games/shooter-game/assets/audio/oof.mp3";
 const AUDIO_UI_HOVER = "/games/shooter-game/assets/audio/bone-crack.mp3";
+const AUDIO_UI_SELECT = "/games/shooter-game/assets/audio/arcade-clink.mp3";
 
 
 /* =======================
@@ -122,6 +123,7 @@ function applyMuteState(){
   sfxHit.muted = m;
   sfxOof.muted = m;
   sfxUiHover.muted = m;
+  sfxUiSelect.muted = m;
 }
 
 function setMuteOptionEnabled(shouldEnable){
@@ -2195,12 +2197,15 @@ function getPlayerAlignedY(gapPx = 6){
 const sfxHit = new Audio(AUDIO_HIT);
 const sfxOof = new Audio(AUDIO_OOF);
 const sfxUiHover = new Audio(AUDIO_UI_HOVER);
+const sfxUiSelect = new Audio(AUDIO_UI_SELECT);
 sfxHit.preload = "auto";
 sfxOof.preload = "auto";
 sfxUiHover.preload = "auto";
+sfxUiSelect.preload = "auto";
 sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
 sfxUiHover.volume = 0.25;
+sfxUiSelect.volume = 0.10;
 
 let audioUnlocked = false;
 function unlockAudioOnce(){
@@ -2217,6 +2222,9 @@ function unlockAudioOnce(){
 
     sfxUiHover.muted = true;
     sfxUiHover.play().then(() => { sfxUiHover.pause(); sfxUiHover.currentTime = 0; sfxUiHover.muted = false; }).catch(()=>{ sfxUiHover.muted = false; });
+
+    sfxUiSelect.muted = true;
+    sfxUiSelect.play().then(() => { sfxUiSelect.pause(); sfxUiSelect.currentTime = 0; sfxUiSelect.muted = false; }).catch(()=>{ sfxUiSelect.muted = false; });
   }catch(e){}
 
   // Prime music/death audio once the browser allows it.
@@ -2248,7 +2256,10 @@ function playSfxImmediate(a){
 }
 
 const UI_ACTIVATE_SOUND_SELECTOR = 'button, [role="button"], .smallBtn, .deathBtn, .winControllerTarget, .scoreStoreAction, .statsSelectableRow, .controlsBindButton, input[type="checkbox"], select';
+const UI_SELECT_SOUND_SELECTOR = UI_ACTIVATE_SOUND_SELECTOR;
 let lastUiActivateSoundAt = 0;
+let lastUiSelectSoundAt = 0;
+let lastControllerSelectSoundTarget = null;
 
 function isUiActivateSoundTarget(el){
   if (!el || !el.matches || !el.matches(UI_ACTIVATE_SOUND_SELECTOR)) return false;
@@ -2265,6 +2276,28 @@ function playUiActivateSoundFor(el, source='mouse'){
   playSfx(sfxUiHover);
 }
 
+function isUiSelectSoundTarget(el){
+  if (!el || !el.matches || !el.matches(UI_SELECT_SOUND_SELECTOR)) return false;
+  return isUiActivateSoundTarget(el);
+}
+
+function playUiSelectSoundFor(el, source='mouse'){
+  if (!isUiSelectSoundTarget(el)) return;
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  if (now - lastUiSelectSoundAt < 45) return;
+  lastUiSelectSoundAt = now;
+  playSfx(sfxUiSelect);
+}
+
+function bindUiSelectionSounds(){
+  document.addEventListener('mouseover', (event) => {
+    const target = event.target && event.target.closest ? event.target.closest(UI_SELECT_SOUND_SELECTOR) : null;
+    if (!target || !isUiSelectSoundTarget(target)) return;
+    if (event.relatedTarget && target.contains(event.relatedTarget)) return;
+    playUiSelectSoundFor(target, 'mouse');
+  }, true);
+}
+
 function bindUiActivationSounds(){
   document.addEventListener('click', (event) => {
     // Mouse/touch clicks get their sound here. Controller-triggered .click() calls
@@ -2276,6 +2309,7 @@ function bindUiActivationSounds(){
   }, true);
 }
 
+bindUiSelectionSounds();
 bindUiActivationSounds();
 
 /* =======================
@@ -2727,6 +2761,10 @@ function focusControllerElement(el){
   if (typeof el.focus === 'function') { try{ el.focus({ preventScroll:true }); }catch(_){ try{ el.focus(); }catch(__){} } }
   if (typeof el.scrollIntoView === 'function') {
     try{ el.scrollIntoView({ block:'nearest', inline:'nearest' }); }catch(_){ }
+  }
+  if (el !== lastControllerSelectSoundTarget) {
+    lastControllerSelectSoundTarget = el;
+    playUiSelectSoundFor(el, 'controller');
   }
 }
 
