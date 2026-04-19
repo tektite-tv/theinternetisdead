@@ -7558,6 +7558,124 @@ function circleRect(cx, cy, cr, rx, ry, rw, rh){
   return (dx*dx + dy*dy) <= cr*cr;
 }
 
+// v2.09: Pixel-perfect enemy body contact.
+// Rectangle overlap was making transparent sprite corners count as hits, because apparently empty air now has teeth.
+const PIXEL_CONTACT_ALPHA_THRESHOLD = 8;
+const spriteAlphaMaskCache = new WeakMap();
+
+function getSpriteAlphaMask(source){
+  if (!source) return null;
+
+  const w = source.naturalWidth || source.videoWidth || source.width || 0;
+  const h = source.naturalHeight || source.videoHeight || source.height || 0;
+  if (!w || !h) return null;
+
+  const cached = spriteAlphaMaskCache.get(source);
+  if (cached && cached.w === w && cached.h === h) return cached;
+
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const cctx = c.getContext("2d", { willReadFrequently:true });
+  if (!cctx) return null;
+
+  try{
+    cctx.clearRect(0, 0, w, h);
+    cctx.drawImage(source, 0, 0, w, h);
+    const data = cctx.getImageData(0, 0, w, h).data;
+    const mask = { w, h, alpha:data };
+    spriteAlphaMaskCache.set(source, mask);
+    return mask;
+  }catch(err){
+    return null;
+  }
+}
+
+function getPlayerContactSource(){
+  return (typeof getStaticPlayerFrame === "function" ? getStaticPlayerFrame() : null) || playerImg;
+}
+
+function getPlayerContactRect(){
+  let widthScale = 1;
+  if (typeof playerTurnT === "number"){
+    const turnEase = Math.sin(Math.min(1, Math.max(0, playerTurnT)) * Math.PI);
+    widthScale = Math.max(0.12, 1 - turnEase * 0.82);
+  }
+  const w = player.w * widthScale;
+  return {
+    x: player.x - w / 2,
+    y: player.y - player.h / 2,
+    w,
+    h: player.h,
+    flipX: typeof playerFacing === "number" && playerFacing >= 0
+  };
+}
+
+function getEnemyContactRect(enemy){
+  return {
+    x: enemy.x - enemy.w / 2,
+    y: enemy.y - enemy.h / 2,
+    w: enemy.w,
+    h: enemy.h,
+    flipX:false
+  };
+}
+
+function rectsOverlap(a, b){
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function sampleMaskAlpha(mask, rect, x, y){
+  if (!mask || !rect.w || !rect.h) return 255;
+
+  let u = (x + 0.5 - rect.x) / rect.w;
+  const v = (y + 0.5 - rect.y) / rect.h;
+  if (rect.flipX) u = 1 - u;
+
+  if (u < 0 || u > 1 || v < 0 || v > 1) return 0;
+
+  const sx = Math.max(0, Math.min(mask.w - 1, Math.floor(u * mask.w)));
+  const sy = Math.max(0, Math.min(mask.h - 1, Math.floor(v * mask.h)));
+  return mask.alpha[(sy * mask.w + sx) * 4 + 3] || 0;
+}
+
+function spritesHaveOpaquePixelOverlap(sourceA, rectA, sourceB, rectB){
+  if (!rectsOverlap(rectA, rectB)) return false;
+
+  const maskA = getSpriteAlphaMask(sourceA);
+  const maskB = getSpriteAlphaMask(sourceB);
+
+  // Asset not readable yet? Keep the old rectangle behavior as a safe fallback.
+  if (!maskA || !maskB) return true;
+
+  const left = Math.max(Math.floor(rectA.x), Math.floor(rectB.x));
+  const right = Math.min(Math.ceil(rectA.x + rectA.w), Math.ceil(rectB.x + rectB.w));
+  const top = Math.max(Math.floor(rectA.y), Math.floor(rectB.y));
+  const bottom = Math.min(Math.ceil(rectA.y + rectA.h), Math.ceil(rectB.y + rectB.h));
+
+  for (let y = top; y < bottom; y++){
+    for (let x = left; x < right; x++){
+      if (
+        sampleMaskAlpha(maskA, rectA, x, y) > PIXEL_CONTACT_ALPHA_THRESHOLD &&
+        sampleMaskAlpha(maskB, rectB, x, y) > PIXEL_CONTACT_ALPHA_THRESHOLD
+      ){
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function enemyTouchesPlayerPixels(enemy){
+  if (!enemy || !enemy.img) return false;
+  return spritesHaveOpaquePixelOverlap(
+    getPlayerContactSource(),
+    getPlayerContactRect(),
+    enemy.img,
+    getEnemyContactRect(enemy)
+  );
+}
+
 function spawnPlayerDeath(isGameOver){
   // v1.96+: violent pixel-dust death
   playerGhosts.length = 0;
@@ -8347,13 +8465,7 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
 
   if (!playerSpectatorMode){
     for (const e of enemies){
-      const rx = e.x - e.w/2, ry = e.y - e.h/2;
-      const overlap =
-        prx < rx + e.w &&
-        prx + player.w > rx &&
-        pry < ry + e.h &&
-        pry + player.h > ry;
-      if (!overlap) continue;
+    if (!enemyTouchesPlayerPixels(e)) continue;
       tryTriggerSpiralPlayerContactFx(e, Math.max(player.invuln || 0, 0.65));
       if (player.invuln <= 0){ damagePlayer(e); }
       break;
