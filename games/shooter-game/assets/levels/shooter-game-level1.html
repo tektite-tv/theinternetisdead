@@ -131,10 +131,7 @@
   body.controller-active #startMenu #btnMysteryLink.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnStats.controllerFocus .startMenuButtonText{
     max-width:calc(100% - 42px);
-  }
-  body.controller-active #startMenu #btnMysteryLink.controllerFocus .startMenuButtonText,
-  body.controller-active #startMenu #btnStats.controllerFocus .startMenuButtonText{
-    font-size:14px;
+    transform:translateX(-18px);
   }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
@@ -2185,12 +2182,6 @@ body.invert-colors {
 <script>
 (function(){
   const START_MENU_BUTTON_IDS = ["btnStart", "btnOptions", "btnMysteryLink", "btnStats"];
-  const SELECTED_ICON_SPACE = 42;
-  const TEXT_SIDE_PADDING = 22;
-
-  function getStartMenuButtons(){
-    return START_MENU_BUTTON_IDS.map((id) => document.getElementById(id)).filter(Boolean);
-  }
 
   function wrapStartMenuButtonText(button){
     let textSpan = button.querySelector(":scope > .startMenuButtonText");
@@ -2208,41 +2199,19 @@ body.invert-colors {
     return textSpan;
   }
 
-  function scaleStartMenuButtonText(button){
-    const textSpan = wrapStartMenuButtonText(button);
-    if (!textSpan) return;
-
-    textSpan.style.maxWidth = "";
-    textSpan.style.transform = "";
-
-    const isControllerSelected = document.body.classList.contains("controller-active") && button.classList.contains("controllerFocus");
-    if (!isControllerSelected) return;
-
-    const availableWidth = Math.max(34, button.clientWidth - SELECTED_ICON_SPACE - TEXT_SIDE_PADDING);
-    textSpan.style.maxWidth = `${availableWidth}px`;
-
-    const naturalWidth = Math.max(1, textSpan.scrollWidth);
-    const scale = Math.min(1, availableWidth / naturalWidth);
-    textSpan.style.transform = `scale(${Math.max(0.64, scale).toFixed(3)})`;
+  function refreshStartMenuButtonTextWraps(){
+    START_MENU_BUTTON_IDS
+      .map((id) => document.getElementById(id))
+      .filter(Boolean)
+      .forEach(wrapStartMenuButtonText);
   }
 
-  function refreshStartMenuButtonTextScale(){
-    getStartMenuButtons().forEach(scaleStartMenuButtonText);
-  }
+  document.addEventListener("DOMContentLoaded", refreshStartMenuButtonTextWraps);
 
-  function scheduleRefresh(){
-    window.requestAnimationFrame(refreshStartMenuButtonTextScale);
-  }
-
-  document.addEventListener("DOMContentLoaded", scheduleRefresh);
-  window.addEventListener("resize", scheduleRefresh);
-
-  const observer = new MutationObserver(scheduleRefresh);
+  const observer = new MutationObserver(refreshStartMenuButtonTextWraps);
   observer.observe(document.documentElement, {
-    attributes:true,
     childList:true,
-    subtree:true,
-    attributeFilter:["class"]
+    subtree:true
   });
 })();
 </script>
