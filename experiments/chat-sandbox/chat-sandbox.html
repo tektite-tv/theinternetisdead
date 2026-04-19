@@ -280,6 +280,41 @@
       letter-spacing: 0.02em;
     }
 
+    .helpTextPicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      padding: 3px 6px;
+      border-radius: 8px;
+      outline: 1px solid rgba(0,255,102,0.45);
+      background: rgba(0,0,0,0.55);
+      box-shadow: 0 0 0 2px rgba(0,255,102,0.10);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .helpTextPickerInput {
+      width: 16ch;
+      max-width: 42vw;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #00ff66;
+      font-family: inherit;
+      font-size: 12px;
+    }
+
+    .helpTextPickerInput::placeholder {
+      color: rgba(186,255,201,0.68);
+    }
+
+    .helpTextPickerHint {
+      opacity: 0.72;
+      font-size: 11px;
+      letter-spacing: 0.02em;
+    }
+
 
     .overclockRefreshLink {
       color: #00ffff;
@@ -4077,6 +4112,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return normalized === '/shoot';
     }
 
+    function isShooterCheatermodeCommand(command = {}) {
+      if (!command || pageCommandMeta.sourceKey !== 'shooter-game') return false;
+      return String(command.name || '').trim().toLowerCase() === '/cheatermode';
+    }
+
     function getShooterChoicePickerOptions(command = {}) {
       const suggestions = command && Array.isArray(command.suggestions) && command.suggestions.length
         ? command.suggestions
@@ -4231,6 +4271,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
       item.removeAttribute('data-color-picker-command');
       item.removeAttribute('data-choice-picker-active');
       item.removeAttribute('data-choice-picker-command');
+      item.removeAttribute('data-text-picker-active');
+      item.removeAttribute('data-text-picker-command');
       if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
       activeCommandPicker = null;
       notifyParentChatSandboxState();
@@ -4302,6 +4344,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const options = Array.isArray(activeCommandPicker.options) ? activeCommandPicker.options : [];
         const selected = options[activeCommandPicker.index] || options[0] || '';
         rawCommand = `${activeCommandPicker.command} ${selected}`.trim();
+      } else if (activeCommandPicker.kind === 'text') {
+        const typed = activeCommandPicker.input ? String(activeCommandPicker.input.value || '').trim() : '';
+        rawCommand = `${activeCommandPicker.command} ${typed}`.trim();
       }
       const itemToRefocus = activeCommandPicker.item || null;
       closeActiveCommandPicker();
@@ -4312,6 +4357,63 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (itemToRefocus && typeof itemToRefocus.focus === 'function') {
         try { itemToRefocus.focus(); } catch (error) {}
       }
+      return true;
+    }
+
+    function openCommandTextPicker(item, command = {}) {
+      if (!item || !command) return false;
+      const normalized = String(command.name || '').trim().toLowerCase();
+      closeActiveCommandPicker();
+
+      const picker = document.createElement('span');
+      picker.className = 'helpTextPicker';
+      picker.setAttribute('aria-hidden', 'false');
+
+      const input = document.createElement('input');
+      input.className = 'helpTextPickerInput';
+      input.type = 'text';
+      input.value = '';
+      input.placeholder = 'type cheatermode';
+      input.autocomplete = 'off';
+      input.spellcheck = false;
+      input.setAttribute('aria-label', 'Type cheatermode to unlock cheat commands');
+
+      const hintNode = document.createElement('span');
+      hintNode.className = 'helpTextPickerHint';
+      hintNode.textContent = 'Enter';
+
+      input.addEventListener('keydown', (event) => {
+        event.stopPropagation();
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submitActiveCommandPicker();
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeActiveCommandPicker();
+        }
+      });
+      input.addEventListener('click', (event) => {
+        event.stopPropagation();
+      });
+
+      picker.appendChild(input);
+      picker.appendChild(hintNode);
+      item.appendChild(picker);
+      item.classList.add('commandNumberPickerOpen');
+      item.dataset.textPickerActive = 'true';
+      item.dataset.textPickerCommand = normalized;
+
+      activeCommandPicker = {
+        kind: 'text',
+        item,
+        picker,
+        command: normalized,
+        input
+      };
+      notifyParentChatSandboxState();
+
+      try { input.focus(); } catch (error) {}
       return true;
     }
 
@@ -4579,6 +4681,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
               submitActiveCommandPicker();
             } else {
               openCommandChoicePicker(item, command);
+            }
+            return;
+          }
+          if (isShooterCheatermodeCommand(command)) {
+            if (activeCommandPicker && activeCommandPicker.item === item && activeCommandPicker.kind === 'text') {
+              submitActiveCommandPicker();
+            } else {
+              openCommandTextPicker(item, command);
             }
             return;
           }

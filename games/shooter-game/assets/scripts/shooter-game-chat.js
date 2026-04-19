@@ -8,6 +8,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     }
     const shooterPageCommands = [
       { name: '/background_color', desc: 'Set starfield background color', usage: '/background_color [name|hex]', suggestions: ['black', 'purple', 'lime', '#110019'] },
+      { name: '/cheatermode', desc: 'Unlock cheat commands by typing the passphrase', usage: '/cheatermode', suggestions: ['cheatermode'], unlockOnly: true },
       { name: '/bombs', desc: 'Set bombs to 0-99, or 100/INFINITE', usage: '/bombs [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'], cheatOnly: true },
       { name: '/fullscreen', desc: 'Toggle fullscreen', usage: '/fullscreen' },
       { name: '/game_speed', desc: 'Set game speed -5..20. 0 starts frozen staring-contest mode, 1 is normal', usage: '/game_speed [-5..20]', suggestions: ['-5', '0', '1', '5', '10', '20'], cheatOnly: true },
@@ -544,7 +545,10 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     }
 
     function getVisibleShooterPageCommands() {
-      return shooterPageCommands.filter((command) => shooterCheatsUnlocked || command.cheatOnly !== true);
+      return shooterPageCommands.filter((command) => {
+        if (shooterCheatsUnlocked) return command.unlockOnly !== true;
+        return command.cheatOnly !== true;
+      });
     }
 
     function registerPageCommands() {

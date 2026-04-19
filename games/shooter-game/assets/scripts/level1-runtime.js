@@ -919,6 +919,31 @@ function execPauseCommand(cmd){
     return { ok:true, suppressChatResult:true };
   }
 
+  if (raw.startsWith("/cheatermode")){
+    const arg = raw.slice("/cheatermode".length).trim().toLowerCase();
+    if (arg !== "cheatermode"){
+      return { ok:false, message:"Usage: /cheatermode [type cheatermode]" };
+    }
+    cheatsUnlockedByPassphrase = true;
+    notifyCheatsUnlockedState();
+    if (pauseCmdSuggest && pauseCmdSuggest.style.display !== "none") showHelp();
+    lockScoreTrackingState();
+    clearCheatsUnlockCountdown();
+    cheatsUnlockInputReady = false;
+    if (btnCheatsUnlockInput){
+      btnCheatsUnlockInput.style.display = "none";
+      btnCheatsUnlockInput.readOnly = true;
+      btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+    }
+    if (btnCheats){
+      btnCheats.style.display = "block";
+      btnCheats.disabled = false;
+      btnCheats.textContent = "Cheats (Unlocked)";
+    }
+    syncCheatsMenuState();
+    return { ok:true, message:"Cheat commands unlocked" };
+  }
+
   if (raw === "/mute"){
     setMuteOptionEnabled(!audioMuted);
     return { ok:true, message:`Mute ${audioMuted ? "enabled" : "disabled"}` };

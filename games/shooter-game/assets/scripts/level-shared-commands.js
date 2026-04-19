@@ -13,6 +13,7 @@ const SHOOT_MODES = ["normal", "big_bullets", "glitch"];
 // v1.96: Pause command registry for /help output (kept alphabetizable)
 const PAUSE_COMMANDS = {
   "/background_color": "Set starfield background color (name or hex)",
+  "/cheatermode": "Unlock cheat commands by typing the passphrase",
   "/bombs": "Set bombs to 0-99, or 100/INFINITE (e.g. /bombs 5 or /bombs 100)",
   "/color_invert": "Toggle inverted colors",
   "/fullscreen": "Toggle fullscreen mode",
@@ -51,7 +52,7 @@ function isPauseCommandVisibleInHelp(command){
 }
 
 function shouldHidePauseMenuCommandList(){
-  return areCheatCommandsUnlocked();
+  return false;
 }
 
 // Controller-editable /help command arguments.
