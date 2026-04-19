@@ -2876,18 +2876,36 @@ function clearCheatsUnlockCountdown(){
   if (cheatermodeCountdownDisplay) cheatermodeCountdownDisplay.hidden = true;
 }
 
-function formatTypedCheatermodeCountdown(remaining){
+function formatTypedCheatermodeCountdownText(remaining){
   const seconds = Math.max(0, Math.ceil(Number(remaining) || 0));
   return "(" + seconds + " " + (seconds === 1 ? "second" : "seconds") + ")";
 }
 
 function renderTypedCheatermodeCountdown(){
   if (!cheatermodeCountdownDisplay) return;
-  cheatermodeCountdownDisplay.innerHTML = '<button type="button" class="cheatermodeCountdownCancel" aria-label="Cancel cheatermode countdown" title="Cancel countdown">❌</button><span>' + escapeCheatermodeHtml(formatTypedCheatermodeCountdown(cheatsUnlockRemaining)) + '</span>';
+  cheatermodeCountdownDisplay.innerHTML = '<span class="cheatermodeCountdownText">' + escapeCheatermodeHtml(formatTypedCheatermodeCountdownText(cheatsUnlockRemaining)) + '</span><button type="button" class="cheatermodeCountdownCancel" aria-label="Cancel cheatermode countdown" title="Cancel countdown">❌</button>';
 }
 
-function cancelTypedCheatermodeCountdown(){
+function scrollOptionsToCheatsButton(){
+  if (!optionsScroll || !btnCheats) return;
+  const applyScroll = () => {
+    try{ optionsScroll.scrollTop = optionsScroll.scrollHeight; }catch(_){ }
+    try{ btnCheats.scrollIntoView({ block: "nearest", inline: "nearest" }); }catch(_){ }
+  };
+  try{ applyScroll(); }catch(_){}
+  try{ requestAnimationFrame(applyScroll); }catch(_){ setTimeout(applyScroll, 0); }
+}
+
+function cancelTypedCheatermodeCountdown(event = null){
+  if (event){
+    event.preventDefault();
+    event.stopPropagation();
+  }
   resetCheatsUnlockGate();
+  if (gameState === STATE.OPTIONS){
+    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  }
 }
 
 function resetCheatsUnlockGate(){
@@ -2991,9 +3009,14 @@ function unlockCheatermode(source = "typed"){
   }
   syncCheatsMenuState();
   updateCheatsUnlockModeHint();
-  const shouldOpenCheatsMenu = source === "controller-hold" && gameState === STATE.OPTIONS;
-  if (shouldOpenCheatsMenu){
-    showCheats();
+  if (source === "typed-countdown" && gameState === STATE.OPTIONS){
+    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
+    scrollOptionsToCheatsButton();
+  }
+  if (source === "controller-hold" && gameState === STATE.OPTIONS){
+    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
+    scrollOptionsToCheatsButton();
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
     return;
   }
   if (activeInputMode === INPUT_MODE_CONTROLLER) {
@@ -5415,6 +5438,13 @@ btnOptions.addEventListener("click", showOptions);
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", armCheatsUnlockCountdown);
 if (btnCheats) btnCheats.addEventListener("keydown", handleCheatsButtonTypedKey);
+if (cheatermodeCountdownDisplay){
+  cheatermodeCountdownDisplay.addEventListener("click", (event) => {
+    const cancelButton = event.target && event.target.closest ? event.target.closest(".cheatermodeCountdownCancel") : null;
+    if (!cancelButton) return;
+    cancelTypedCheatermodeCountdown(event);
+  });
+}
 if (btnCheatsUnlockInput){
   btnCheatsUnlockInput.addEventListener("click", activateCheatsUnlockInput);
   btnCheatsUnlockInput.addEventListener("focus", focusCheatsUnlockInput);
@@ -5425,15 +5455,6 @@ if (btnCheatsUnlockInput){
       event.preventDefault();
       submitCheatsUnlockInput();
     }
-  });
-}
-if (cheatermodeCountdownDisplay){
-  cheatermodeCountdownDisplay.addEventListener("click", (event) => {
-    const cancelButton = event.target && event.target.closest ? event.target.closest(".cheatermodeCountdownCancel") : null;
-    if (!cancelButton) return;
-    event.preventDefault();
-    event.stopPropagation();
-    cancelTypedCheatermodeCountdown();
   });
 }
 if (cheatermodeUnlockedCheckbox){
