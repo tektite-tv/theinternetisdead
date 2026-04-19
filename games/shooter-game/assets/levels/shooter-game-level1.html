@@ -103,6 +103,8 @@
   .smallBtn{ min-width:120px; padding:8px 12px; border-radius:10px; }
   .cheatsUnlockInput{ box-sizing:border-box; color:#fff; background:rgba(75,0,118,0.55); border:2px solid #00ff66; font-family:inherit; }
   .cheatsUnlockInput:focus{ outline:2px solid #ff00ff; outline-offset:2px; }
+  .cheatermodeOptionRow .cheatsUnlockInput{ width:min(230px, 48%); min-width:170px; min-height:38px; padding:8px 10px; font-size:14px; text-align:center; border-radius:10px; }
+  .cheatermodeOptionRow.cheatermodeUnlocked .cheatsUnlockInput{ color:#00ff66; border-color:rgba(0,255,102,0.65); }
   .cheatermodeComboButton{ font-weight:900; text-shadow:0 0 8px currentColor; }
   .cheatermodeComboButton.comboNone{ color:#ff3b3b; }
   .cheatermodeComboButton.comboPartial{ color:#ffd84d; }
@@ -1716,8 +1718,8 @@ body.invert-colors {
   <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
-      <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-    <div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 19, 2026 1:29 AM)</a></div>
+      <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
+    <div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" data-file-last-updated href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: loading)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
@@ -1835,9 +1837,19 @@ body.invert-colors {
         <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
       </div>
 
+      <div id="cheatermodeOptionRow" class="optRow cheatRow commandOptionRow cheatermodeOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Cheatermode</div>
+            <div class="cheatCommand">/cheatermode</div>
+          </div>
+          <input id="btnCheatsUnlockInput" class="cheatsUnlockInput" type="text" value="type cheatermode" spellcheck="false" autocomplete="off" aria-label="Type cheatermode to unlock cheat commands" />
+        </div>
+        <div class="hint">Type cheatermode here to unlock the Cheats list.</div>
+      </div>
+
 <div class="optRow fullRow buttonOnlyRow">
         <button id="btnCheats" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Cheats</button>
-        <input id="btnCheatsUnlockInput" class="smallBtn cheatsUnlockInput" type="text" value="Type cheatermode here to cheat." spellcheck="false" autocomplete="off" readonly aria-label="Type cheatermode here to cheat" style="display:none; width:100%; min-height:46px; font-size:16px; text-align:center;" />
       </div>
         </div>
       </div>
@@ -1973,6 +1985,7 @@ body.invert-colors {
 <script src="/games/shooter-game/assets/scripts/level-stage.js"></script>
 <script src="/games/shooter-game/assets/scripts/level-ufo.js"></script>
 <script src="/games/shooter-game/assets/scripts/level-controls-formatters.js"></script>
+<script src="/games/shooter-game/assets/scripts/level-file-timestamp.js"></script>
 <script src="/games/shooter-game/assets/scripts/level1-runtime.js"></script>
 <script src="/games/shooter-game/assets/scripts/time-easter-egg.js"></script>
 <script src="/games/shooter-game/assets/scripts/level1-win-fallbacks.js"></script>
