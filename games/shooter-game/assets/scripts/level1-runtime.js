@@ -3092,7 +3092,10 @@ function submitCheatsUnlockInput(){
 }
 
 function getCheatsUnlockOptionTarget(){
-  if (cheatsUnlockedByPassphrase && cheatermodeUnlockedCheckbox) return cheatermodeUnlockedCheckbox;
+  // Keep controller selection anchored to the visible Cheats button even after unlocking.
+  // The unlocked checkbox remains mouse-clickable, but it should not steal controller focus
+  // and kick the selector back to the top of the Options list. Because apparently focus
+  // management wanted to become performance art.
   return btnCheats;
 }
 
@@ -6138,7 +6141,8 @@ function pollGamepad(dt){
     if (pressFullscreen){
       toggleFullscreen();
     }
-    if (pressCommands && !cheatermodeControllerHoldIntent && !cheatermodeUnlockedByHold){
+    const optionsCheatsButtonFocused = gameState === STATE.OPTIONS && getOptionsControllerTargets()[optionsFocusIndex] === btnCheats;
+    if (pressCommands && !optionsCheatsButtonFocused && !cheatermodeControllerHoldIntent && !cheatermodeUnlockedByHold){
       requestOpenChat(false, "/help");
       clearControllerFocus();
     }
