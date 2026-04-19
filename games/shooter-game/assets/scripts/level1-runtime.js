@@ -190,11 +190,25 @@ const BIG_BULLET_BRANCH_ANGLE = 0.24;
 const BIG_BULLET_BRANCH_RADIUS_MULTIPLIER = 0.72;
 const BIG_BULLET_BRANCH_SPEED_MULTIPLIER = 0.94;
 const BIG_BULLET_LIGHTNING_TRAIL_LEN = 26;
+const GLITCH_BULLET_FIRE_COOLDOWN_MULTIPLIER = 0.62;
+const GLITCH_BULLET_SPREAD_ANGLE = 0.10;
+const GLITCH_BULLET_RADIUS_MULTIPLIER = 1.32;
+const GLITCH_BULLET_SPEED_MULTIPLIER = 1.22;
+const GLITCH_BACKGROUND_DECAY = 3.6;
+
+function isBigBulletShotActive(){
+  return shootCheatMode !== "glitch" && (shootCheatMode === "big_bullets" || (typeof bigBulletBuffEndTime === "number" && bigBulletBuffEndTime > time));
+}
+
+function isGlitchShotActive(){
+  return shootCheatMode === "glitch";
+}
 
 function getPlayerFireCooldown(){
   // v1.96: player shoots faster every wave (lower cooldown)
   const baseCooldown = Math.max(0.14, BASE_PLAYER_FIRE_COOLDOWN * Math.pow(0.94, (wave-1)));
-  return (typeof bigBulletBuffEndTime === "number" && bigBulletBuffEndTime > time)
+  if (isGlitchShotActive()) return Math.max(0.08, baseCooldown * GLITCH_BULLET_FIRE_COOLDOWN_MULTIPLIER);
+  return isBigBulletShotActive()
     ? Math.max(0.09, baseCooldown * BIG_BULLET_FIRE_COOLDOWN_MULTIPLIER)
     : baseCooldown;
 }
@@ -378,6 +392,7 @@ const pauseCommand = document.getElementById("pauseCommand");
 const pauseCmdSuggest = document.getElementById("pauseCmdSuggest");
 let parentChatVisible = false;
 let parentChatValuePickerActive = false;
+let parentChatValuePickerCommand = "";
 const pauseCloseBtn = document.getElementById("pauseCloseBtn");
 if (pauseCloseBtn){
   pauseCloseBtn.addEventListener("click", () => {
@@ -461,6 +476,7 @@ function renderScoreStoreHeartsPreviewMarkup(){
 function getScoreStoreItemDescription(item){
   if (!item) return "";
   if (item.id !== "big_bullets") return item.description || "";
+  if (shootCheatMode === "big_bullets") return `${item.description} Cheat /shoot big_bullets active.`;
   const remainingSeconds = Math.max(0, bigBulletBuffEndTime - time);
   if (!remainingSeconds) return item.description || "";
   return `${item.description} ${Math.ceil(remainingSeconds)}s remaining.`;
@@ -1010,6 +1026,31 @@ function execPauseCommand(cmd){
     return { ok:false, message:"Usage: /bombs [0-99|100|MAX]" };
   }
 
+  if (raw.startsWith("/shoot")){
+    const arg = raw.slice("/shoot".length).trim().toLowerCase();
+    if (arg === "normal"){
+      shootCheatMode = "normal";
+      bigBulletBuffEndTime = 0;
+      glitchBackgroundPulse = 0;
+      lockScoreTrackingState();
+      return { ok:true, message:"Shoot mode set to normal bullets" };
+    }
+    if (arg === "big_bullets" || arg === "big-bullets"){
+      shootCheatMode = "big_bullets";
+      glitchBackgroundPulse = 0;
+      lockScoreTrackingState();
+      return { ok:true, message:"Shoot mode set to big bullets" };
+    }
+    if (arg === "glitch"){
+      shootCheatMode = "glitch";
+      bigBulletBuffEndTime = 0;
+      glitchBackgroundPulse = Math.max(glitchBackgroundPulse, 0.85);
+      lockScoreTrackingState();
+      return { ok:true, message:"Shoot mode set to EMT glitch cannon" };
+    }
+    return { ok:false, message:"Usage: /shoot [normal|big_bullets|glitch]" };
+  }
+
   // /color_invert -> toggle invert colors mode (same as Options menu)
   if (raw === "/color_invert"){
     INVERT_COLORS = !INVERT_COLORS;
@@ -1047,6 +1088,7 @@ window.addEventListener("message", (event) => {
   if (data.type === "tektite:chat-visibility"){
     parentChatVisible = !!data.visible;
     parentChatValuePickerActive = !!data.valuePickerActive;
+    parentChatValuePickerCommand = parentChatValuePickerActive ? String(data.valuePickerCommand || "").trim().toLowerCase() : "";
     if (parentChatVisible) clearControllerFocus();
     else syncControllerFocusForCurrentState();
     return;
@@ -1178,6 +1220,8 @@ const GP_MENU_REPEAT_DELAY = 0.24;
 const GP_MENU_REPEAT_RATE = 0.12;
 const GP_CHAT_VALUE_REPEAT_DELAY = 0.06;
 const GP_CHAT_VALUE_REPEAT_RATE = 0.045;
+const GP_CHAT_SHOOT_REPEAT_DELAY = 0.22;
+const GP_CHAT_SHOOT_REPEAT_RATE = 0.18;
 const GP_OPTION_REPEAT_DELAY = 0.06;
 const GP_OPTION_REPEAT_RATE = 0.06;
 // HP model (more sane than "3 hits" when bullets are flying)
@@ -1236,6 +1280,8 @@ let hitsConnected = 0;
 let damageDealt = 0;
 let runTimer = 0; // seconds since Start Game
 let bigBulletBuffEndTime = 0;
+let shootCheatMode = "normal";
+let glitchBackgroundPulse = 0;
 // IMPORTANT: Do not rename this localStorage key or change the stored stat property names casually.
 // Players' lifetime stats depend on this exact schema surviving future updates.
 // If the schema ever changes, migrate old values forward instead of resetting them.
@@ -2187,6 +2233,30 @@ function updateStarfield(dt, keys, playerSpeed){
   }
 }
 
+function drawGlitchBackgroundOverlay(){
+  if (!(glitchBackgroundPulse > 0)) return;
+  const pulse = Math.min(1, glitchBackgroundPulse);
+  const jitter = Math.floor(time * 36);
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = 0.14 * pulse;
+  ctx.fillStyle = "#00f5ff";
+  ctx.fillRect((jitter % 3) - 2, 0, canvas.width, canvas.height);
+  for (let i = 0; i < 6; i++){
+    const y = (canvas.height * (((i * 0.19) + (time * (0.27 + i * 0.013))) % 1)) | 0;
+    const h = 2 + ((jitter + i) % 5);
+    ctx.globalAlpha = (0.18 + (i % 2) * 0.10) * pulse;
+    ctx.fillStyle = i % 2 ? "#ff2bd6" : "#00fff0";
+    ctx.fillRect(0, y, canvas.width, h);
+  }
+  ctx.globalAlpha = 0.08 * pulse;
+  ctx.fillStyle = "#ffffff";
+  for (let x = (jitter % 53) - 53; x < canvas.width; x += 53){
+    ctx.fillRect(x, 0, 1, canvas.height);
+  }
+  ctx.restore();
+}
+
 function drawStarfield(){
   // v1.96: Stage 2+ visual shift (wave >= 11)
   const isStage2Plus = (gameState === STATE.PLAYING && wave >= 11);
@@ -2194,6 +2264,7 @@ function drawStarfield(){
   // Background
   ctx.fillStyle = (starfieldBgOverride ? starfieldBgOverride : (isStage2Plus ? "#300" : "#000"));
   ctx.fillRect(0,0,canvas.width,canvas.height);
+  drawGlitchBackgroundOverlay();
 
   if (!starfieldReady) return;
 
@@ -5256,8 +5327,12 @@ function pollGamepad(dt){
   const navDown = consumeMenuAxis('down', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt);
   const navLeft = consumeMenuAxis('left', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt);
   const navRight = consumeMenuAxis('right', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt);
-  const chatRepeatDelay = parentChatValuePickerActive ? GP_CHAT_VALUE_REPEAT_DELAY : GP_MENU_REPEAT_DELAY;
-  const chatRepeatRate = parentChatValuePickerActive ? GP_CHAT_VALUE_REPEAT_RATE : GP_MENU_REPEAT_RATE;
+  const chatRepeatDelay = parentChatValuePickerActive
+    ? (parentChatValuePickerCommand === "/shoot" ? GP_CHAT_SHOOT_REPEAT_DELAY : GP_CHAT_VALUE_REPEAT_DELAY)
+    : GP_MENU_REPEAT_DELAY;
+  const chatRepeatRate = parentChatValuePickerActive
+    ? (parentChatValuePickerCommand === "/shoot" ? GP_CHAT_SHOOT_REPEAT_RATE : GP_CHAT_VALUE_REPEAT_RATE)
+    : GP_MENU_REPEAT_RATE;
   const chatNavUp = consumeMenuAxis('chatUp', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
   const chatNavDown = consumeMenuAxis('chatDown', dDown || ly > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
   const chatNavLeft = consumeMenuAxis('chatLeft', dLeft || lx < -GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
@@ -5809,12 +5884,13 @@ const enemyBullets = [];
 const MAX_PLAYER_BULLETS = 90;
 const MAX_ENEMY_BULLETS  = 140;
 
-function pushPlayerBullet(x, y, vx, vy, r, lightningBranchIndex = null){
+function pushPlayerBullet(x, y, vx, vy, r, lightningBranchIndex = null, extra = null){
   if (bullets.length >= MAX_PLAYER_BULLETS){
     bullets.splice(0, bullets.length - MAX_PLAYER_BULLETS + 1);
   }
   const bullet = { x, y, vx, vy, r };
   if (lightningBranchIndex !== null) bullet.lightningBranchIndex = lightningBranchIndex;
+  if (extra) Object.assign(bullet, extra);
   bullets.push(bullet);
 }
 
@@ -5830,6 +5906,22 @@ function spawnLightningBranchBullets(x, y, dx, dy, baseRadius){
       Math.sin(branchAngle) * PLAYER_BULLET_SPEED * BIG_BULLET_BRANCH_SPEED_MULTIPLIER,
       baseRadius * BIG_BULLET_BRANCH_RADIUS_MULTIPLIER,
       branchDir
+    );
+  }
+}
+
+function spawnGlitchCannonBullets(x, y, dx, dy, baseRadius){
+  const aimAngle = Math.atan2(dy, dx);
+  for (const spread of [-GLITCH_BULLET_SPREAD_ANGLE, 0, GLITCH_BULLET_SPREAD_ANGLE]){
+    const a = aimAngle + spread;
+    pushPlayerBullet(
+      x,
+      y,
+      Math.cos(a) * PLAYER_BULLET_SPEED * GLITCH_BULLET_SPEED_MULTIPLIER,
+      Math.sin(a) * PLAYER_BULLET_SPEED * GLITCH_BULLET_SPEED_MULTIPLIER,
+      baseRadius,
+      null,
+      { glitchEnergy: true, glitchPhase: Math.random() * Math.PI * 2 }
     );
   }
 }
@@ -5861,11 +5953,15 @@ function shoot(){
 
 
   }
-  const hasBigBulletCharge = bigBulletBuffEndTime > time;
+  const hasGlitchCharge = isGlitchShotActive();
+  const hasBigBulletCharge = !hasGlitchCharge && isBigBulletShotActive();
   const bulletX = player.x + dx * spawnDist;
   const bulletY = player.y + dy * spawnDist;
-  const bulletRadius = PLAYER_BULLET_RADIUS * (hasBigBulletCharge ? BIG_BULLET_RADIUS_MULTIPLIER : 1);
-  if (hasBigBulletCharge){
+  const bulletRadius = PLAYER_BULLET_RADIUS * (hasBigBulletCharge ? BIG_BULLET_RADIUS_MULTIPLIER : (hasGlitchCharge ? GLITCH_BULLET_RADIUS_MULTIPLIER : 1));
+  if (hasGlitchCharge){
+    spawnGlitchCannonBullets(bulletX, bulletY, dx, dy, bulletRadius);
+    glitchBackgroundPulse = Math.min(1, glitchBackgroundPulse + 0.55);
+  } else if (hasBigBulletCharge){
     spawnLightningBranchBullets(bulletX, bulletY, dx, dy, bulletRadius);
   } else {
     pushPlayerBullet(bulletX, bulletY, dx * PLAYER_BULLET_SPEED, dy * PLAYER_BULLET_SPEED, bulletRadius);
@@ -6225,6 +6321,7 @@ function update(dt){
 
   // starfield updates always
   updateStarfield(dt, keys, player.speed);
+  if (glitchBackgroundPulse > 0) glitchBackgroundPulse = Math.max(0, glitchBackgroundPulse - dt * GLITCH_BACKGROUND_DECAY);
 
   // PAUSE_GUARD_v1_51: freeze gameplay updates while paused
   if (gameState === STATE.PLAYING && isPaused) return;
@@ -7039,6 +7136,36 @@ if (isDragonEnemy(e)){
 
   // bullets (player)
   for (const b of bullets){
+    if (b.glitchEnergy){
+      const speed = Math.hypot(b.vx, b.vy) || 1;
+      const dirX = b.vx / speed;
+      const dirY = b.vy / speed;
+      const perpX = -dirY;
+      const perpY = dirX;
+      const phase = (b.glitchPhase || 0) + time * 42;
+      const tailLen = 30 + b.r * 2.4;
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.lineCap = "square";
+      ctx.strokeStyle = "rgba(0,255,240,0.42)";
+      ctx.lineWidth = Math.max(3, b.r * 0.95);
+      ctx.beginPath();
+      ctx.moveTo(b.x - dirX * tailLen + perpX * Math.sin(phase) * b.r, b.y - dirY * tailLen + perpY * Math.sin(phase) * b.r);
+      ctx.lineTo(b.x + dirX * b.r, b.y + dirY * b.r);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,35,216,0.72)";
+      ctx.lineWidth = Math.max(1.4, b.r * 0.34);
+      ctx.beginPath();
+      ctx.moveTo(b.x - dirX * (tailLen * 0.72) - perpX * b.r * 0.8, b.y - dirY * (tailLen * 0.72) - perpY * b.r * 0.8);
+      ctx.lineTo(b.x + dirX * b.r * 0.7 + perpX * Math.cos(phase) * b.r * 0.5, b.y + dirY * b.r * 0.7 + perpY * Math.cos(phase) * b.r * 0.5);
+      ctx.stroke();
+      ctx.fillStyle = "#faffff";
+      ctx.fillRect(b.x - b.r * 0.55, b.y - b.r * 0.55, b.r * 1.1, b.r * 1.1);
+      ctx.fillStyle = "rgba(0,255,240,0.65)";
+      ctx.fillRect(b.x - dirX * b.r - perpX * b.r, b.y - dirY * b.r - perpY * b.r, b.r * 1.8, b.r * 0.55);
+      ctx.restore();
+      continue;
+    }
     if (typeof b.lightningBranchIndex === "number"){
       const speed = Math.hypot(b.vx, b.vy) || 1;
       const dirX = b.vx / speed;

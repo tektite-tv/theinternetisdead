@@ -19,6 +19,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/mute', desc: 'Toggle all shooter audio on or off', usage: '/mute' },
       { name: '/nickname', desc: 'Set the displayed username used by system messages', usage: '/nickname ', suggestions: ['Tektite', 'Guest', 'User'] },
       { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'], cheatOnly: true },
+      { name: '/shoot', desc: 'Set player bullet mode', usage: '/shoot [normal|big_bullets|glitch]', suggestions: ['normal', 'big_bullets', 'glitch'], cheatOnly: true },
       { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
     ];
     let hasSwitchedToLevel2 = false;
@@ -26,6 +27,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     let chatSandboxVisible = false;
     let chatSandboxReady = false;
     let chatValuePickerActive = false;
+    let chatValuePickerCommand = '';
     let pendingChatOpenOptions = null;
     let chatControllerTargetIndex = -1;
 
@@ -45,7 +47,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           tektiteFrame.contentWindow.postMessage({
             type: 'tektite:chat-visibility',
             visible: !!chatSandboxVisible,
-            valuePickerActive: !!chatValuePickerActive
+            valuePickerActive: !!chatValuePickerActive,
+            valuePickerCommand: chatValuePickerCommand
           }, '*');
         }
       } catch (error) {}
@@ -379,7 +382,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     function hasActiveChatValuePicker() {
       const chatDoc = getChatDocument();
       if (!chatDoc) return false;
-      return !!chatDoc.querySelector('.helpItem[data-number-picker-active="true"], .helpItem[data-color-picker-active="true"]');
+      return !!chatDoc.querySelector('.helpItem[data-number-picker-active="true"], .helpItem[data-color-picker-active="true"], .helpItem[data-choice-picker-active="true"]');
     }
 
     function activateFocusedChatTarget() {
@@ -389,6 +392,14 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       const chatDoc = getChatDocument();
       const active = target || (chatDoc && chatDoc.activeElement ? chatDoc.activeElement : null);
       if (active && chatDoc && active !== chatDoc.body) {
+        const command = active.dataset && typeof active.dataset.command === 'string' ? active.dataset.command.trim() : '';
+        if (command && getChatWindow()) {
+          postToChatSandbox({
+            type: 'chatSandboxActivateHelpCommand',
+            command
+          });
+          return true;
+        }
         try {
           const view = (active.ownerDocument && active.ownerDocument.defaultView) || window;
           active.dispatchEvent(new view.MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
@@ -659,9 +670,9 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         if (data.type === 'chatSandboxState') {
           chatSandboxReady = true;
           chatValuePickerActive = !!data.valuePickerActive;
+          chatValuePickerCommand = chatValuePickerActive ? String(data.valuePickerCommand || '').trim().toLowerCase() : '';
           flushPendingChatOpen();
           setChatFrameVisible(!!data.visible);
-          registerPageCommands();
           return;
         }
         if (data.type === 'pageChatExecute') {

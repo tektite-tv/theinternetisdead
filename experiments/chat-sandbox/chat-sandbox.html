@@ -247,6 +247,39 @@
       letter-spacing: 0.02em;
     }
 
+    .helpChoicePicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      outline: 1px solid rgba(0,255,102,0.4);
+      background: rgba(0,0,0,0.55);
+      box-shadow: 0 0 0 2px rgba(0,255,102,0.12);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .helpChoicePickerLabel {
+      opacity: 0.78;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+
+    .helpChoicePickerValue {
+      min-width: 9ch;
+      font-weight: 700;
+      color: #baffc9;
+      text-transform: lowercase;
+    }
+
+    .helpChoicePickerHint {
+      opacity: 0.72;
+      font-size: 11px;
+      letter-spacing: 0.02em;
+    }
+
 
     .overclockRefreshLink {
       color: #00ffff;
@@ -1935,7 +1968,9 @@ const focusSink = document.getElementById('focusSink');
         window.parent.postMessage({
           type: 'chatSandboxState',
           visible: chatBarWrap.classList.contains('visible'),
-          valuePickerActive: !!activeCommandPicker
+          valuePickerActive: !!activeCommandPicker,
+          valuePickerKind: activeCommandPicker ? String(activeCommandPicker.kind || '') : '',
+          valuePickerCommand: activeCommandPicker ? String(activeCommandPicker.command || '') : ''
         }, '*');
       }
     }
@@ -3989,7 +4024,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
         value: entry.usage || entry.name,
         execute: entry.execute !== false,
         desc: entry.desc || 'page command',
-        hidden: entry.hidden === true
+        hidden: entry.hidden === true,
+        suggestions: Array.isArray(entry.suggestions) ? entry.suggestions.slice() : []
       }));
       const helpCommand = builtInCommands.find((entry) => entry.name === '/help');
       const mergedCommands = showPageOnlyHelp ? [helpCommand, ...pageCommands].filter(Boolean) : [...builtInCommands, ...pageCommands];
@@ -4024,6 +4060,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (!command || pageCommandMeta.sourceKey !== 'shooter-game') return false;
       const normalized = String(command.name || '').trim().toLowerCase();
       return normalized === '/bombs' ||
+        normalized === '/game_speed' ||
         normalized === '/hearts' ||
         normalized === '/lives' ||
         normalized === '/shields';
@@ -4034,9 +4071,25 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return String(command.name || '').trim().toLowerCase() === '/background_color';
     }
 
+    function isShooterChoicePickerCommand(command = {}) {
+      if (!command) return false;
+      const normalized = String(command.name || '').trim().toLowerCase();
+      return normalized === '/shoot';
+    }
+
+    function getShooterChoicePickerOptions(command = {}) {
+      const suggestions = command && Array.isArray(command.suggestions) && command.suggestions.length
+        ? command.suggestions
+        : ['normal', 'big_bullets', 'glitch'];
+      return suggestions
+        .map((value) => String(value || '').trim())
+        .filter(Boolean);
+    }
+
     function getShooterNumberPickerDefaultValue(commandName = '') {
       const normalized = String(commandName || '').trim().toLowerCase();
       if (normalized === '/hearts') return 4;
+      if (normalized === '/game_speed') return 1;
       if (normalized === '/bombs') return 3;
       if (normalized === '/lives') return 1;
       if (normalized === '/shields') return 0;
@@ -4047,6 +4100,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const normalized = String(commandName || '').trim().toLowerCase();
       if (normalized === '/hearts') {
         return { min: 1, max: 100, step: 1, infiniteValue: 100 };
+      }
+      if (normalized === '/game_speed') {
+        return { min: -5, max: 20, step: 1, infiniteValue: null };
       }
       if (normalized === '/bombs' || normalized === '/lives' || normalized === '/shields') {
         return { min: 0, max: 100, step: 1, infiniteValue: 100 };
@@ -4173,6 +4229,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
       item.removeAttribute('data-number-picker-command');
       item.removeAttribute('data-color-picker-active');
       item.removeAttribute('data-color-picker-command');
+      item.removeAttribute('data-choice-picker-active');
+      item.removeAttribute('data-choice-picker-command');
       if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
       activeCommandPicker = null;
       notifyParentChatSandboxState();
@@ -4213,6 +4271,16 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
         return true;
       }
+      if (activeCommandPicker.kind === 'choice') {
+        if (!activeCommandPicker.valueNode) return false;
+        const options = Array.isArray(activeCommandPicker.options) ? activeCommandPicker.options : [];
+        if (!options.length) return false;
+        if (delta) {
+          activeCommandPicker.index = (Number(activeCommandPicker.index || 0) + Number(delta) + options.length) % options.length;
+        }
+        activeCommandPicker.valueNode.textContent = options[activeCommandPicker.index] || options[0];
+        return true;
+      }
       return false;
     }
 
@@ -4230,6 +4298,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
           ? activeCommandPicker.valueNode.dataset.hexValue
           : hslToHex(activeCommandPicker.hue, activeCommandPicker.saturation, activeCommandPicker.lightness);
         rawCommand = `${activeCommandPicker.command} ${currentHex || '#4b0076'}`;
+      } else if (activeCommandPicker.kind === 'choice') {
+        const options = Array.isArray(activeCommandPicker.options) ? activeCommandPicker.options : [];
+        const selected = options[activeCommandPicker.index] || options[0] || '';
+        rawCommand = `${activeCommandPicker.command} ${selected}`.trim();
       }
       const itemToRefocus = activeCommandPicker.item || null;
       closeActiveCommandPicker();
@@ -4239,6 +4311,54 @@ function createHomepageCustomizeMessageNode(result = {}) {
       submitMessage();
       if (itemToRefocus && typeof itemToRefocus.focus === 'function') {
         try { itemToRefocus.focus(); } catch (error) {}
+      }
+      return true;
+    }
+
+    function openCommandChoicePicker(item, command = {}) {
+      if (!item || !command) return false;
+      const normalized = String(command.name || '').trim().toLowerCase();
+      const options = getShooterChoicePickerOptions(command);
+      if (!options.length) return false;
+      closeActiveCommandPicker();
+
+      const picker = document.createElement('span');
+      picker.className = 'helpChoicePicker';
+      picker.setAttribute('aria-hidden', 'true');
+
+      const label = document.createElement('span');
+      label.className = 'helpChoicePickerLabel';
+      label.textContent = 'mode';
+
+      const valueNode = document.createElement('span');
+      valueNode.className = 'helpChoicePickerValue';
+
+      const hintNode = document.createElement('span');
+      hintNode.className = 'helpChoicePickerHint';
+      hintNode.textContent = '< >';
+
+      picker.appendChild(label);
+      picker.appendChild(valueNode);
+      picker.appendChild(hintNode);
+      item.appendChild(picker);
+      item.classList.add('commandNumberPickerOpen');
+      item.dataset.choicePickerActive = 'true';
+      item.dataset.choicePickerCommand = normalized;
+
+      activeCommandPicker = {
+        kind: 'choice',
+        item,
+        picker,
+        command: normalized,
+        options,
+        index: 0,
+        valueNode
+      };
+      updateActiveCommandPicker(0);
+      notifyParentChatSandboxState();
+
+      if (typeof item.focus === 'function') {
+        try { item.focus(); } catch (error) {}
       }
       return true;
     }
@@ -4345,13 +4465,13 @@ function createHomepageCustomizeMessageNode(result = {}) {
         event.preventDefault();
         event.stopPropagation();
         if (activeCommandPicker.kind === 'color') activeCommandPicker.pendingAxis = 'y';
-        return updateActiveCommandPicker(1);
+        return updateActiveCommandPicker(activeCommandPicker.kind === 'choice' ? -1 : 1);
       }
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         event.stopPropagation();
         if (activeCommandPicker.kind === 'color') activeCommandPicker.pendingAxis = 'y';
-        return updateActiveCommandPicker(-1);
+        return updateActiveCommandPicker(activeCommandPicker.kind === 'choice' ? 1 : -1);
       }
       if (event.key === 'ArrowRight') {
         event.preventDefault();
@@ -4423,6 +4543,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const item = document.createElement('a');
         item.className = 'helpItem';
         item.href = '#';
+        item.dataset.command = command.name;
 
         const nameSpan = document.createElement('span');
         nameSpan.className = 'helpCommandName';
@@ -4453,6 +4574,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
             }
             return;
           }
+          if (isShooterChoicePickerCommand(command)) {
+            if (activeCommandPicker && activeCommandPicker.item === item && activeCommandPicker.kind === 'choice') {
+              submitActiveCommandPicker();
+            } else {
+              openCommandChoicePicker(item, command);
+            }
+            return;
+          }
 
           closeActiveCommandPicker();
           showChatBar();
@@ -4471,6 +4600,21 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       wrapper.appendChild(helpList);
       return wrapper;
+    }
+
+    function activateHelpCommandItem(item) {
+      if (!item || !item.classList || !item.classList.contains('helpItem')) return false;
+      try {
+        item.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+        return true;
+      } catch (error) {
+        try {
+          item.click();
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
     }
 
     function createHelpMessageNode() {
@@ -5052,17 +5196,27 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const info = getCommandArgumentSuggestionInfo();
       if (!info) return false;
 
-      const normalizedPrefix = info.argumentText.trim().toLowerCase();
+      const cycleKeyPrefix = `${info.commandToken} `;
+      let normalizedPrefix = info.argumentText.trim().toLowerCase();
+      if (commandCyclePrefix && commandCyclePrefix.startsWith(cycleKeyPrefix) && commandCycleIndex !== -1) {
+        const previousPrefix = commandCyclePrefix.slice(cycleKeyPrefix.length).toLowerCase();
+        const previousMatches = info.suggestions
+          .filter((entry) => entry.toLowerCase().startsWith(previousPrefix));
+        const previousSelection = previousMatches[commandCycleIndex];
+        if (previousSelection && previousSelection.toLowerCase() === normalizedPrefix) {
+          normalizedPrefix = previousPrefix;
+        }
+      }
       const matches = info.suggestions
-        .filter((entry) => entry.toLowerCase().startsWith(normalizedPrefix))
-        .sort((a, b) => a.localeCompare(b));
+        .filter((entry) => entry.toLowerCase().startsWith(normalizedPrefix));
 
       if (!matches.length) {
         return false;
       }
 
-      if (!commandCyclePrefix || commandCyclePrefix !== `${info.commandToken} ${info.argumentText}`) {
-        commandCyclePrefix = `${info.commandToken} ${info.argumentText}`;
+      const effectiveCyclePrefix = `${info.commandToken} ${normalizedPrefix}`;
+      if (!commandCyclePrefix || commandCyclePrefix !== effectiveCyclePrefix) {
+        commandCyclePrefix = effectiveCyclePrefix;
         commandCycleIndex = -1;
       }
 
@@ -5090,8 +5244,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
       const normalizedPrefix = info.argumentText.trim().toLowerCase();
       const matches = info.suggestions
-        .filter((entry) => entry.toLowerCase().startsWith(normalizedPrefix))
-        .sort((a, b) => a.localeCompare(b));
+        .filter((entry) => entry.toLowerCase().startsWith(normalizedPrefix));
       return matches.length ? matches[0] : null;
     }
 
@@ -6353,6 +6506,23 @@ function createHomepageCustomizeMessageNode(result = {}) {
             }, '*');
           }
         });
+        return;
+      }
+
+      if (event.data.type === 'chatSandboxActivateHelpCommand') {
+        const command = typeof event.data.command === 'string' ? event.data.command.trim().toLowerCase() : '';
+        const item = command
+          ? Array.from(document.querySelectorAll('.helpItem[data-command]')).find((node) => String(node.dataset.command || '').trim().toLowerCase() === command)
+          : null;
+        if (item && activateHelpCommandItem(item)) {
+          return;
+        }
+        const activeItem = document.activeElement && document.activeElement.closest
+          ? document.activeElement.closest('.helpItem')
+          : null;
+        if (activeItem && activateHelpCommandItem(activeItem)) {
+          return;
+        }
         return;
       }
 

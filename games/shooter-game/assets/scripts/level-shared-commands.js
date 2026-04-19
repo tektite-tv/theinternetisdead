@@ -8,6 +8,7 @@ const BG_COLORS = [
   "#000000","#0b1020","#111827","#1f2937","#0f172a","#020617",
   "#300000","#001a33","#002b36","#003300","#1a0033","#2a0030"
 ];
+const SHOOT_MODES = ["normal", "big_bullets", "glitch"];
 
 // v1.96: Pause command registry for /help output (kept alphabetizable)
 const PAUSE_COMMANDS = {
@@ -23,6 +24,7 @@ const PAUSE_COMMANDS = {
   "/log": "Show the visible Last updated timestamp for this level",
   "/mute": "Toggle all game audio on/off",
   "/shields": "Set shields to 0-99, or 100/INFINITE (e.g. /shields 2 or /shields 100)",
+  "/shoot": "Set player bullet mode: /shoot normal, /shoot big_bullets, or /shoot glitch",
   "/video_fx": "Toggle chromatic aberration + hue shifting on/off"
 };
 
@@ -32,7 +34,8 @@ const PAUSE_CHEAT_COMMANDS = new Set([
   "/hearts",
   "/infinite",
   "/lives",
-  "/shields"
+  "/shields",
+  "/shoot"
 ]);
 
 function areCheatCommandsUnlocked(){
@@ -45,6 +48,10 @@ function areCheatCommandsUnlocked(){
 
 function isPauseCommandVisibleInHelp(command){
   return areCheatCommandsUnlocked() || !PAUSE_CHEAT_COMMANDS.has(String(command || "").toLowerCase());
+}
+
+function shouldHidePauseMenuCommandList(){
+  return areCheatCommandsUnlocked();
 }
 
 // Controller-editable /help command arguments.
@@ -120,6 +127,10 @@ function getLastUpdatedLogMessage(){
 // v1.96: Help UI (lists commands in the pause suggestion panel)
 function showHelp(){
   if (!pauseCmdSuggest) return;
+  if (shouldHidePauseMenuCommandList()){
+    closeBgSuggest();
+    return;
+  }
 
   const cmds = Object.keys(PAUSE_COMMANDS).filter(isPauseCommandVisibleInHelp).sort((a,b)=>a.localeCompare(b));
   pauseCmdSuggest.style.display = "block";
@@ -152,6 +163,7 @@ function getPauseCommandList(){
 }
 
 function pauseCommandPrefix(value){
+  if (shouldHidePauseMenuCommandList()) return false;
   const raw = String(value || "");
   const trimmed = raw.trim();
   if (!trimmed || !trimmed.startsWith("/")) return false;
@@ -163,7 +175,12 @@ function bgPrefix(value){
   const raw = String(value || "");
   const trimmed = raw.trim();
   if (pauseCommandPrefix(trimmed)) return true;
-  return trimmed.startsWith(BG_CMD + " ");
+  return trimmed.startsWith(BG_CMD + " ") || shootModePrefix(raw);
+}
+
+function shootModePrefix(value){
+  const raw = String(value || "").toLowerCase();
+  return isPauseCommandVisibleInHelp("/shoot") && /^\/shoot\s+/.test(raw);
 }
 
 function getCommandSuggestions(value){
@@ -181,6 +198,16 @@ function openBgSuggestFromValue(value){
   if (pauseCommandPrefix(trimmed)){
     pauseCommandSuggestMode = "command";
     bgSuggestList = getCommandSuggestions(trimmed);
+    bgSuggestIndex = 0;
+    renderBgSuggest();
+    return;
+  }
+
+  if (shootModePrefix(raw)){
+    pauseCommandSuggestMode = "shoot";
+    const q = raw.toLowerCase().replace(/^\/shoot\s+/, "").trim();
+    bgSuggestList = SHOOT_MODES.filter(mode => !q || mode.includes(q));
+    if (!bgSuggestList.length) bgSuggestList = SHOOT_MODES.slice();
     bgSuggestIndex = 0;
     renderBgSuggest();
     return;
@@ -236,6 +263,20 @@ function renderBgSuggest(){
     return;
   }
 
+  if (pauseCommandSuggestMode === "shoot"){
+    pauseCmdSuggest.innerHTML = bgSuggestList.map((mode, i) => {
+      const active = i === bgSuggestIndex;
+      const desc = mode === "normal"
+        ? "Return to regular bullets"
+        : (mode === "big_bullets" ? "Use Big Bullets lightning mode" : "Use EMT glitch cannon");
+      return `<div data-i="${i}" style="padding:6px 8px;border-radius:8px;margin-bottom:4px;background:${active ? "rgba(0,255,102,0.22)" : "rgba(0,255,102,0.08)"};outline:1px solid ${active ? "rgba(0,255,102,0.75)" : "rgba(0,255,102,0.18)"};cursor:pointer;">
+        <strong>${mode}</strong>
+        <div style="font-size:12px;opacity:0.85;">${desc}</div>
+      </div>`;
+    }).join("");
+    return;
+  }
+
   pauseCmdSuggest.innerHTML = bgSuggestList.map((color, i) => {
     const active = i === bgSuggestIndex;
     const swatch = /^#/.test(color) ? color : color;
@@ -258,6 +299,10 @@ function applyBgChoiceToInput(){
   if (pauseCommandSuggestMode === "command"){
     const cfg = PAUSE_COMMAND_CONTROLS && PAUSE_COMMAND_CONTROLS[choice];
     pauseCommand.value = cfg ? buildPauseCommand(choice, cfg.defaultValue) : (choice + " ");
+    return;
+  }
+  if (pauseCommandSuggestMode === "shoot"){
+    pauseCommand.value = "/shoot " + choice;
     return;
   }
   pauseCommand.value = BG_CMD + " " + choice;
