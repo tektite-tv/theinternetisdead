@@ -5465,7 +5465,7 @@ function updateCheatermodeControllerHold(dt, holdingCombo, xPressed, viewPressed
     return false;
   }
   cheatermodeLastControllerComboKey = comboKey;
-  cheatermodeControllerHoldMs = Math.min(CHEATERMODE_CONTROLLER_HOLD_MS, cheatermodeControllerHoldMs + Math.max(0, Number(dt) || 0));
+  cheatermodeControllerHoldMs = Math.min(CHEATERMODE_CONTROLLER_HOLD_MS, cheatermodeControllerHoldMs + Math.max(0, Number(dt) || 0) * 1000);
   const remaining = Math.max(1, Math.ceil((CHEATERMODE_CONTROLLER_HOLD_MS - cheatermodeControllerHoldMs) / 1000));
   const holdText = formatCheatermodeControllerHoldText(remaining);
   if (btnCheatsUnlockInput && btnCheatsUnlockInput.style.display !== "none"){
