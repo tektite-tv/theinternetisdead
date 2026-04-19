@@ -4170,8 +4170,8 @@ function createHomepageCustomizeMessageNode(result = {}) {
     function formatCheatermodeRemaining(remaining = 5, active = false) {
       const numericRemaining = Number.isFinite(Number(remaining)) ? Number(remaining) : 5;
       if (!active) return '5s';
-      const clamped = Math.max(0, Math.min(5, numericRemaining));
-      return `${clamped.toFixed(1)}s`;
+      const clamped = Math.max(1, Math.min(5, Math.ceil(numericRemaining)));
+      return `${clamped}s`;
     }
 
     function ensureCheatermodeComboNodes() {
@@ -4294,7 +4294,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       const bothPressed = !!xPressed && !!viewPressed;
       const comboClass = getCheatermodeComboClass(!!xPressed, !!viewPressed);
-      const countdownText = unlocked ? '0.0s' : formatCheatermodeRemaining(remaining, bothPressed);
+      const countdownText = unlocked ? '1s' : formatCheatermodeRemaining(remaining, bothPressed);
       const plainText = unlocked ? 'Cheatermode unlocked' : `Hold X + View ${countdownText}`;
 
       if (activeCommandPicker.input && activeCommandPicker.input.getAttribute('aria-label') !== plainText) {

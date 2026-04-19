@@ -2605,8 +2605,44 @@ function getCheatermodePromptText(){
 }
 
 function formatCheatermodeControllerHoldText(remaining){
-  const seconds = Math.max(0, Math.ceil(Number(remaining) || 0));
-  return seconds > 0 ? "Hold X + View " + seconds + "s" : "Cheatermode unlocked";
+  const seconds = Math.max(1, Math.ceil(Number(remaining) || 0));
+  return "Hold X + View " + seconds + "s";
+}
+
+function getCheatermodeComboClass(xPressed = false, viewPressed = false){
+  if (xPressed && viewPressed) return "comboBoth";
+  if (xPressed || viewPressed) return "comboPartial";
+  return "comboNone";
+}
+
+function escapeCheatermodeHtml(value){
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;");
+}
+
+function renderCheatermodeControllerComboLabel(target, { remaining = 5, xPressed = false, viewPressed = false, unlocked = false } = {}){
+  if (!target) return false;
+  const seconds = Math.max(1, Math.ceil(Number(remaining) || 5));
+  const comboClass = getCheatermodeComboClass(!!xPressed, !!viewPressed);
+  const plainText = unlocked ? "Cheats (Unlocked)" : "Hold X + View " + seconds + "s";
+  const nextHtml = unlocked
+    ? "Cheats (Unlocked)"
+    : 'Hold <span class="cheatermodeComboButton ' + comboClass + '">X</span> + <span class="cheatermodeComboButton ' + comboClass + '">View</span> <span class="cheatermodeCountdown">' + escapeCheatermodeHtml(seconds) + 's</span>';
+  if (target.dataset.cheatermodeComboVisual !== nextHtml){
+    target.innerHTML = nextHtml;
+    target.dataset.cheatermodeComboVisual = nextHtml;
+  }
+  target.setAttribute("aria-label", plainText);
+  return true;
+}
+
+function clearCheatermodeControllerComboLabel(target, fallback = "Cheats"){
+  if (!target) return;
+  delete target.dataset.cheatermodeComboVisual;
+  target.textContent = fallback;
 }
 
 function isCheatermodePromptText(value){
@@ -2621,7 +2657,11 @@ function updateCheatsUnlockModeHint(){
     : "Keyboard/mouse active: type cheatermode to unlock cheat commands.";
   if (btnCheats && !cheatsUnlockedByPassphrase){
     btnCheats.title = hint;
-    btnCheats.setAttribute("aria-label", hint);
+    if (controllerActive && gameState === STATE.OPTIONS && !cheatsUnlockTimer && !cheatsUnlockInputReady && getOptionsControllerTargets()[optionsFocusIndex] === btnCheats){
+      renderCheatermodeControllerComboLabel(btnCheats, { remaining: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed: false, viewPressed: false, unlocked: false });
+    } else {
+      btnCheats.setAttribute("aria-label", hint);
+    }
   } else if (btnCheats){
     btnCheats.title = "Cheats unlocked";
     btnCheats.setAttribute("aria-label", "Cheats unlocked");
@@ -2691,7 +2731,7 @@ function resetCheatsUnlockGate(){
   if (btnCheats){
     btnCheats.style.display = "block";
     btnCheats.disabled = false;
-    btnCheats.textContent = unlocked ? "Cheats (Unlocked)" : "Cheats";
+    clearCheatermodeControllerComboLabel(btnCheats, unlocked ? "Cheats (Unlocked)" : "Cheats");
   }
   if (btnCheatsUnlockInput){
     btnCheatsUnlockInput.style.display = "none";
@@ -2702,19 +2742,25 @@ function resetCheatsUnlockGate(){
 
 function armCheatsUnlockCountdown(){
   if (cheatsUnlockedByPassphrase){
-    if (btnCheats) btnCheats.textContent = "Cheats (Unlocked)";
+    if (btnCheats) clearCheatermodeControllerComboLabel(btnCheats, "Cheats (Unlocked)");
     showCheats();
     return;
   }
   if (!btnCheats || cheatsUnlockTimer || cheatsUnlockInputReady) return;
+  if (activeInputMode === INPUT_MODE_CONTROLLER){
+    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
+    renderCheatermodeControllerComboLabel(btnCheats, { remaining: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed: false, viewPressed: false, unlocked: false });
+    syncOptionsControllerFocus();
+    return;
+  }
   cheatsUnlockRemaining = 3;
-  btnCheats.textContent = "Really, cheat? (3)";
+  clearCheatermodeControllerComboLabel(btnCheats, "Really, cheat? (3)");
   cheatsUnlockTimer = setInterval(() => {
     cheatsUnlockRemaining = Math.max(0, cheatsUnlockRemaining - 1);
     if (btnCheats){
-      btnCheats.textContent = cheatsUnlockRemaining > 0
+      clearCheatermodeControllerComboLabel(btnCheats, cheatsUnlockRemaining > 0
         ? "Really, cheat? (" + cheatsUnlockRemaining + ")"
-        : "Really, cheat?";
+        : "Really, cheat?");
     }
     if (cheatsUnlockRemaining <= 0){
       clearCheatsUnlockCountdown();
@@ -2778,10 +2824,15 @@ function unlockCheatermode(source = "typed"){
   if (btnCheats){
     btnCheats.style.display = "block";
     btnCheats.disabled = false;
-    btnCheats.textContent = "Cheats (Unlocked)";
+    clearCheatermodeControllerComboLabel(btnCheats, "Cheats (Unlocked)");
   }
   syncCheatsMenuState();
   updateCheatsUnlockModeHint();
+  const shouldOpenCheatsMenu = source === "controller-hold" && gameState === STATE.OPTIONS;
+  if (shouldOpenCheatsMenu){
+    showCheats();
+    return;
+  }
   if (activeInputMode === INPUT_MODE_CONTROLLER) {
     optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
     syncOptionsControllerFocus();
@@ -5405,19 +5456,24 @@ function updateCheatermodeControllerHold(dt, holdingCombo, xPressed, viewPressed
       setCheatsUnlockInputPrompt();
     }
     if (btnCheats && !cheatsUnlockedByPassphrase && !cheatsUnlockTimer && btnCheats.style.display !== "none"){
-      btnCheats.textContent = "Cheats";
+      if (eligibleForHold && activeInputMode === INPUT_MODE_CONTROLLER && gameState === STATE.OPTIONS){
+        renderCheatermodeControllerComboLabel(btnCheats, { remaining: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed, viewPressed, unlocked: false });
+      } else {
+        clearCheatermodeControllerComboLabel(btnCheats, "Cheats");
+      }
     }
     return false;
   }
   cheatermodeLastControllerComboKey = comboKey;
   cheatermodeControllerHoldMs = Math.min(CHEATERMODE_CONTROLLER_HOLD_MS, cheatermodeControllerHoldMs + Math.max(0, Number(dt) || 0));
-  const remaining = Math.max(0, Math.ceil((CHEATERMODE_CONTROLLER_HOLD_MS - cheatermodeControllerHoldMs) / 1000));
+  const remaining = Math.max(1, Math.ceil((CHEATERMODE_CONTROLLER_HOLD_MS - cheatermodeControllerHoldMs) / 1000));
   const holdText = formatCheatermodeControllerHoldText(remaining);
   if (btnCheatsUnlockInput && btnCheatsUnlockInput.style.display !== "none"){
     btnCheatsUnlockInput.readOnly = true;
     btnCheatsUnlockInput.value = holdText;
-  } else if (btnCheats && gameState === STATE.OPTIONS){
-    btnCheats.textContent = remaining > 0 ? holdText : "Cheats (Unlocked)";
+  }
+  if (btnCheats && gameState === STATE.OPTIONS){
+    renderCheatermodeControllerComboLabel(btnCheats, { remaining, xPressed, viewPressed, unlocked: false });
   }
   notifyCheatermodeControllerHoldState(true, remaining, xPressed, viewPressed);
   if (cheatermodeControllerHoldMs >= CHEATERMODE_CONTROLLER_HOLD_MS){
