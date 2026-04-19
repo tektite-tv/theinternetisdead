@@ -118,7 +118,7 @@
 </head>
 <body>
   <div id="main-content">
-    <div id="gameLoopFailBackground" aria-hidden="true">404</div>
+    <div id="gameLoopFailBackground" aria-hidden="true" hidden>404</div>
     <iframe
       id="tektite-frame"
       src="/games/shooter-game/assets/levels/shooter-game-level1.html"
@@ -144,9 +144,17 @@
       let lastHeartbeat = 0;
       let forcedFailureVisible = false;
 
+      function getFailureBackground(){
+        return document.getElementById('gameLoopFailBackground');
+      }
+
       function showGameLoopFailure(options = {}){
         if (options && options.forced) {
           forcedFailureVisible = true;
+        }
+        const failureBackground = getFailureBackground();
+        if (failureBackground) {
+          failureBackground.hidden = false;
         }
         document.body.classList.add(FAIL_CLASS);
       }
@@ -157,6 +165,10 @@
         }
         if (!forcedFailureVisible) {
           document.body.classList.remove(FAIL_CLASS);
+          const failureBackground = getFailureBackground();
+          if (failureBackground) {
+            failureBackground.hidden = true;
+          }
         }
       }
 
@@ -165,6 +177,8 @@
         lastHeartbeat = 0;
         clearGameLoopFailure(options);
       }
+
+      clearGameLoopFailure({ clearForced: true });
 
       window.__tektiteResetGameLoopWatch = resetGameLoopWatch;
       window.__tektiteShowGameLoopFailure = function(){
