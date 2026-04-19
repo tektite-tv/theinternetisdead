@@ -3593,7 +3593,7 @@ let fireCooldown = 0;
      * HUD toggle: BACK/VIEW (press)
      * Fullscreen: Right Stick Click (press)
      * Menus:
-        - Main Menu: A = Start, Y = Options
+        - Main Menu: A = Select
         - Options: A = Apply, B = Back
         - Death Screen: A = Restart
 ======================= */
@@ -3730,9 +3730,13 @@ function pollGamepad(dt){
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
   const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
   const pressMuteHud = false;
-  const pressY = gpEdge(3, y);
+  const rawYEdge = gpEdge(3, y);
+  const rawViewEdge = gpEdge(8, back);
+  const pressY = rawYEdge;
   const viewSuppressedByY = y;
-  const pressScreenshotCombo = y && back && (pressY || pressCommands);
+  // Screenshot combo is hard-wired to Y + View, not the rebindable Commands action.
+  // This lets Y suppress View/chat while still firing once when either side of the combo is pressed last.
+  const pressScreenshotCombo = y && back && (rawYEdge || rawViewEdge);
 
   if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressScreenshotCombo || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
