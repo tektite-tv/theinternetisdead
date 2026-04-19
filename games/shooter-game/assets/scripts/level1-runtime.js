@@ -949,8 +949,8 @@ function execPauseCommand(cmd){
   }
 
   if (raw.startsWith("/cheatermode")){
-    const arg = raw.slice("/cheatermode".length).trim().toLowerCase();
-    if (arg !== "cheatermode"){
+    const arg = normalizeCheatermodeUnlockText(raw.slice("/cheatermode".length));
+    if (!isCheatermodeCountdownPhrase(arg) && !isCheatermodeInstantPhrase(arg)){
       return { ok:false, message:"Usage: /cheatermode [type cheatermode]" };
     }
     unlockCheatermode("chat");
@@ -2711,6 +2711,27 @@ const CHEATERMODE_KEYBOARD_PROMPT = "Type cheatermode";
 const CHEATERMODE_CONTROLLER_PROMPT = "Hold X + View 5s";
 const CHEATERMODE_CONTROLLER_HOLD_MS = 5000;
 const CHEATERMODE_TYPED_COUNTDOWN_MS = 5000;
+const CHEATERMODE_COUNTDOWN_PHRASE = "cheatermode";
+const CHEATERMODE_INSTANT_PHRASES = ["jinclops", "tektite"];
+const CHEATERMODE_TYPED_UNLOCK_PHRASES = [CHEATERMODE_COUNTDOWN_PHRASE, ...CHEATERMODE_INSTANT_PHRASES];
+const CHEATERMODE_TYPED_BUFFER_MAX = CHEATERMODE_TYPED_UNLOCK_PHRASES.reduce((max, phrase) => Math.max(max, phrase.length), 0);
+
+function normalizeCheatermodeUnlockText(value){
+  return String(value || "").trim().toLowerCase();
+}
+
+function isCheatermodeCountdownPhrase(value){
+  return normalizeCheatermodeUnlockText(value) === CHEATERMODE_COUNTDOWN_PHRASE;
+}
+
+function isCheatermodeInstantPhrase(value){
+  return CHEATERMODE_INSTANT_PHRASES.includes(normalizeCheatermodeUnlockText(value));
+}
+
+function isCheatermodeTypedPrefix(value){
+  const text = normalizeCheatermodeUnlockText(value);
+  return !!text && CHEATERMODE_TYPED_UNLOCK_PHRASES.some((phrase) => phrase.startsWith(text));
+}
 
 function getCheatermodePromptText(){
   return activeInputMode === INPUT_MODE_CONTROLLER ? CHEATERMODE_CONTROLLER_PROMPT : CHEATERMODE_KEYBOARD_PROMPT;
@@ -3009,9 +3030,10 @@ function unlockCheatermode(source = "typed"){
   }
   syncCheatsMenuState();
   updateCheatsUnlockModeHint();
-  if (source === "typed-countdown" && gameState === STATE.OPTIONS){
+  if ((source === "typed-countdown" || source === "typed-instant") && gameState === STATE.OPTIONS){
     optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
     scrollOptionsToCheatsButton();
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   }
   if (source === "controller-hold" && gameState === STATE.OPTIONS){
     optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
@@ -3071,12 +3093,18 @@ function handleCheatsButtonTypedKey(event){
     return;
   }
   if (!event.key || event.key.length !== 1) return;
-  const next = (cheatsButtonTypedBuffer + event.key.toLowerCase()).slice(-"cheatermode".length);
+  const next = (cheatsButtonTypedBuffer + event.key.toLowerCase()).slice(-CHEATERMODE_TYPED_BUFFER_MAX);
   cheatsButtonTypedBuffer = next;
   if (cheatsButtonTypedBufferTimer) clearTimeout(cheatsButtonTypedBufferTimer);
   cheatsButtonTypedBufferTimer = setTimeout(resetCheatsButtonTypedBuffer, 1600);
-  if ("cheatermode".startsWith(next)) event.preventDefault();
-  if (next === "cheatermode"){
+  if (isCheatermodeTypedPrefix(next)) event.preventDefault();
+  if (isCheatermodeInstantPhrase(next)){
+    event.preventDefault();
+    resetCheatsButtonTypedBuffer();
+    unlockCheatermode("typed-instant");
+    return;
+  }
+  if (isCheatermodeCountdownPhrase(next)){
     event.preventDefault();
     resetCheatsButtonTypedBuffer();
     startTypedCheatermodeCountdown();
@@ -3086,8 +3114,12 @@ function handleCheatsButtonTypedKey(event){
 function submitCheatsUnlockInput(){
   if (!btnCheatsUnlockInput) return;
   if (cheatsUnlockTimer || cheatsUnlockFinishTimer || cheatsUnlockedByPassphrase) return;
-  const typed = String(btnCheatsUnlockInput.value || "").trim().toLowerCase();
-  if (typed !== "cheatermode") return;
+  const typed = normalizeCheatermodeUnlockText(btnCheatsUnlockInput.value);
+  if (isCheatermodeInstantPhrase(typed)){
+    unlockCheatermode("typed-instant");
+    return;
+  }
+  if (!isCheatermodeCountdownPhrase(typed)) return;
   startTypedCheatermodeCountdown();
 }
 
