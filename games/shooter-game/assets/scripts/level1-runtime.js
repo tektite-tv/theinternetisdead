@@ -948,6 +948,15 @@ function execPauseCommand(cmd){
     return { ok:true, suppressChatResult:true };
   }
 
+  // Hidden instant cheatermode aliases. Not listed in /help, because secrets need doors.
+  const lowerRaw = raw.toLowerCase();
+  if (lowerRaw === "/jinclops" || lowerRaw === "/tektite"){
+    const secretNickname = lowerRaw === "/jinclops" ? "Jinclops" : "Tektite";
+    applyNicknameFromControls(secretNickname, true);
+    unlockCheatermode("chat-instant");
+    return { ok:true, message:`Nickname set to ${secretNickname}. Cheat commands unlocked` };
+  }
+
   if (raw.startsWith("/cheatermode")){
     const arg = normalizeCheatermodeUnlockText(raw.slice("/cheatermode".length));
     if (!isCheatermodeCountdownPhrase(arg) && !isCheatermodeInstantPhrase(arg)){
