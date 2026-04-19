@@ -117,21 +117,28 @@
     overflow:hidden;
   }
   #startMenu .startMenuButtonText{
-    display:inline-block;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     max-width:100%;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:clip;
     transform-origin:center center;
-    transition:transform 90ms ease, max-width 90ms ease;
-    will-change:transform;
+    transition:left 90ms ease, right 90ms ease, width 90ms ease;
+    will-change:left, right, width;
   }
   body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnOptions.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnMysteryLink.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnStats.controllerFocus .startMenuButtonText{
-    max-width:calc(100% - 42px);
-    transform:translateX(-18px);
+    position:absolute;
+    left:8px;
+    right:34px;
+    top:50%;
+    width:auto;
+    max-width:none;
+    transform:translateY(-50%);
   }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
@@ -139,7 +146,7 @@
   body.controller-active #startMenu #btnStats.controllerFocus::after{
     content:"";
     position:absolute;
-    right:10px;
+    right:8px;
     top:50%;
     width:22px;
     height:22px;
