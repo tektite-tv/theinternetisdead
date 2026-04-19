@@ -614,6 +614,7 @@ function requestOpenChatFromPause(){
 }
 function showPauseControlsMenu(){
   if (!controlsMenu || !isPaused) return;
+  hideControlsPreviewMenu({ restoreControlsMenu: false });
   pauseControlsOpen = true;
   resetDraftBindingsFromActive();
   pauseOverlay.classList.add("pauseControlsVisible");
@@ -633,6 +634,7 @@ function showPauseControlsMenu(){
 }
 function hidePauseControlsMenu(){
   if (!pauseControlsOpen) return;
+  hideControlsPreviewMenu({ restoreControlsMenu: false });
   pauseControlsOpen = false;
   controlsMenu.classList.remove("pauseControlsMode");
   controlsMenu.style.display = "none";
@@ -2334,6 +2336,7 @@ function resize(){
   fitOptionsMenuToViewport();
   fitCheatsMenuToViewport();
   fitControlsMenuToViewport();
+  fitControlsPreviewMenuToViewport();
   fitStatsPanelToStartMenu();
 }
 window.addEventListener("resize", resize);
@@ -2432,6 +2435,10 @@ function sizeMenuLikeStartMenu(menuEl, innerEl=null, scrollEl=null){
 
 function fitControlsMenuToViewport(){
   sizeMenuLikeStartMenu(controlsMenu, controlsMenuInner, controlsListScroll);
+}
+
+function fitControlsPreviewMenuToViewport(){
+  sizeMenuLikeStartMenu(controlsPreviewMenu, null, null);
 }
 
 /* =======================
@@ -2618,6 +2625,9 @@ const controlsApplyBinds = document.getElementById("controlsApplyBinds");
 const controlsBack = document.getElementById("controlsBack");
 const controlsMenuInner = document.getElementById("controlsMenuInner");
 const controlsListScroll = document.getElementById("controlsListScroll");
+const controlsPreviewMenu = document.getElementById("controlsPreviewMenu");
+const controlsPreviewFrame = document.getElementById("controlsPreviewFrame");
+const controlsPreviewBack = document.getElementById("controlsPreviewBack");
 const btnBack = document.getElementById("btnBack");
 const btnApply = document.getElementById("btnApply");
 const btnCheats = document.getElementById("btnCheats");
@@ -3165,6 +3175,11 @@ let startMenuPanelRect = null;
 let bindingEditState = null;
 let controllerRebindReady = false;
 let pauseControlsOpen = false;
+let controlsPreviewOpen = false;
+let controlsPreviewControllerCaptured = false;
+let controlsPreviewReleaseArmed = false;
+let controlsPreviewStickHoldMs = 0;
+let controlsPreviewFocusIndex = 1;
 let keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
 let controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
 let draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
@@ -3272,6 +3287,33 @@ function renderControlsBindingList(){
   const defs = getCurrentBindingDefs();
   const moveDefs = defs.filter(def => isMoveBindAction(def.key));
   const otherDefs = defs.filter(def => !isMoveBindAction(def.key));
+
+  if (controlsBindMode === INPUT_MODE_CONTROLLER){
+    const row = document.createElement('div');
+    row.className = 'controlsBindRow controlsMoveRow controlsPreviewRow';
+    const meta = document.createElement('div');
+    meta.className = 'controlsBindMeta';
+    const title = document.createElement('div');
+    title.className = 'controlsBindTitle';
+    title.textContent = 'Test Controller';
+    const hint = document.createElement('div');
+    hint.className = 'controlsBindHint';
+    hint.textContent = 'Live input preview';
+    meta.appendChild(title);
+    meta.appendChild(hint);
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'controlsPreviewButtonGroup';
+    const button = document.createElement('button');
+    button.id = 'controlsControllerPreviewButton';
+    button.type = 'button';
+    button.className = 'controlsBindButton controlsPreviewButton smallBtn';
+    button.textContent = 'Open';
+    button.addEventListener('click', showControlsPreviewMenu);
+    buttonGroup.appendChild(button);
+    row.appendChild(meta);
+    row.appendChild(buttonGroup);
+    controlsBindList.appendChild(row);
+  }
 
   if (moveDefs.length){
     const row = document.createElement('div');
@@ -3493,6 +3535,8 @@ function clearControllerFocus(){
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); markControlsDirty(); });
 if (controlsApplyBinds) controlsApplyBinds.addEventListener('click', () => { if (!controlsHavePendingChanges) return; applyDraftBindings(); cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); markControlsClean(true); });
 if (controlsBack) controlsBack.addEventListener('click', hideControlsMenu);
+if (controlsPreviewBack) controlsPreviewBack.addEventListener('click', () => hideControlsPreviewMenu());
+if (controlsPreviewFrame) controlsPreviewFrame.addEventListener('load', () => setControlsPreviewFrameOwnership(controlsPreviewControllerCaptured));
 
 function updateControlsApplyButtonState(){
   if (!controlsApplyBinds) return;
@@ -3539,10 +3583,11 @@ function getCheatsControllerTargets(){
 }
 
 function getControlsControllerTargets(){
+  const previewButton = document.getElementById('controlsControllerPreviewButton');
   const moveButtons = getControlsMoveButtons();
   const moveTarget = moveButtons[controlsMoveFocusIndex] || moveButtons[0];
-  const otherBindButtons = Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton:not(.controlsMoveButton)'));
-  return [moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, (controlsApplyBinds && controlsApplyBinds.style.display !== 'none' ? controlsApplyBinds : null)].filter(Boolean);
+  const otherBindButtons = Array.from(document.querySelectorAll('#controlsMenu .controlsBindButton:not(.controlsMoveButton):not(.controlsPreviewButton)')).filter(button => !button.disabled);
+  return [previewButton, moveTarget, ...otherBindButtons, controlsBack, controlsResetBinds, (controlsApplyBinds && controlsApplyBinds.style.display !== 'none' ? controlsApplyBinds : null)].filter(Boolean);
 }
 
 function getPauseHelpControllerTargets(){
@@ -3735,9 +3780,174 @@ function syncControlsControllerFocus(){
   focusControllerElement(items[controlsFocusIndex]);
 }
 
+function isControlsPreviewMenuOpen(){
+  return !!(controlsPreviewOpen && controlsPreviewMenu && controlsPreviewMenu.style.display !== 'none');
+}
+
+function getControlsPreviewControllerTargets(){
+  return [controlsPreviewFrame, controlsPreviewBack].filter(Boolean);
+}
+
+function syncControlsPreviewControllerFocus(){
+  const items = getControlsPreviewControllerTargets();
+  if (!items.length) return;
+  controlsPreviewFocusIndex = Math.max(0, Math.min(controlsPreviewFocusIndex, items.length - 1));
+  focusControllerElement(items[controlsPreviewFocusIndex]);
+}
+
+function reclaimControlsPreviewFocus(){
+  if (!controlsPreviewFrame) return;
+  controlsPreviewFocusIndex = 0;
+  try{ if (controlsPreviewFrame) controlsPreviewFrame.blur(); }catch(_){}
+  try{ if (controlsPreviewFrame && controlsPreviewFrame.contentWindow) controlsPreviewFrame.contentWindow.blur(); }catch(_){}
+  try{ window.focus(); }catch(_){}
+  syncControlsPreviewControllerFocus();
+  try{ requestAnimationFrame(syncControlsPreviewControllerFocus); }catch(_){}
+  try{ setTimeout(syncControlsPreviewControllerFocus, 50); }catch(_){}
+}
+
+function syncControlsPreviewBackLabel(lStick=false, rStick=false){
+  if (!controlsPreviewBack) return;
+  const oneStickHeld = !!(lStick || rStick);
+  const bothSticksHeld = !!(lStick && rStick);
+  let label = 'Back';
+  if (controlsPreviewControllerCaptured){
+    label = 'Click and Hold Both Sticks to Escape';
+    if (bothSticksHeld){
+      const remainingMs = Math.max(0, 3000 - controlsPreviewStickHoldMs);
+      label += ` (${Math.ceil(remainingMs / 1000)}s)`;
+    }
+  }
+  controlsPreviewBack.textContent = label;
+  controlsPreviewBack.classList.toggle('controlsPreviewEscapeIdle', controlsPreviewControllerCaptured && !oneStickHeld);
+  controlsPreviewBack.classList.toggle('controlsPreviewEscapePrimed', controlsPreviewControllerCaptured && oneStickHeld && !bothSticksHeld);
+  controlsPreviewBack.classList.toggle('controlsPreviewEscapeCountdown', controlsPreviewControllerCaptured && bothSticksHeld);
+}
+
+function setControlsPreviewFrameOwnership(ownsController){
+  try{
+    window.localStorage.setItem('tektite-controller-preview-owns', ownsController ? '1' : '0');
+  }catch(_){}
+  try{
+    if (controlsPreviewFrame && controlsPreviewFrame.contentWindow){
+      controlsPreviewFrame.contentWindow.postMessage({
+        type: 'tektite:controller-preview-ownership',
+        ownsController: !!ownsController
+      }, '*');
+    }
+  }catch(_){}
+}
+
+function captureControlsPreviewFrame(){
+  if (!controlsPreviewMenu || !controlsPreviewFrame) return;
+  controlsPreviewControllerCaptured = true;
+  controlsPreviewReleaseArmed = false;
+  controlsPreviewStickHoldMs = 0;
+  controlsPreviewFocusIndex = 0;
+  syncControlsPreviewBackLabel();
+  clearControllerFocus();
+  setControlsPreviewFrameOwnership(true);
+  try{ controlsPreviewFrame.focus(); }catch(_){}
+  try{ if (controlsPreviewFrame.contentWindow) controlsPreviewFrame.contentWindow.focus(); }catch(_){}
+}
+
+function showControlsPreviewMenu(){
+  if (!controlsPreviewMenu || !controlsPreviewFrame) return;
+  controlsPreviewOpen = true;
+  controlsPreviewControllerCaptured = activeInputMode === INPUT_MODE_CONTROLLER;
+  controlsPreviewReleaseArmed = false;
+  controlsPreviewStickHoldMs = 0;
+  controlsPreviewFocusIndex = controlsPreviewControllerCaptured ? 0 : 1;
+  syncControlsPreviewBackLabel();
+  if (controlsMenu) controlsMenu.style.display = 'none';
+  controlsPreviewMenu.style.display = 'flex';
+  fitControlsPreviewMenuToViewport();
+  if (controlsPreviewControllerCaptured){
+    captureControlsPreviewFrame();
+  } else if (activeInputMode === INPUT_MODE_CONTROLLER){
+    syncControlsPreviewControllerFocus();
+  } else {
+    clearControllerFocus();
+  }
+}
+
+function releaseControlsPreviewControllerCapture(){
+  controlsPreviewControllerCaptured = false;
+  controlsPreviewReleaseArmed = false;
+  controlsPreviewStickHoldMs = 0;
+  controlsPreviewFocusIndex = 0;
+  syncControlsPreviewBackLabel();
+  setControlsPreviewFrameOwnership(false);
+  if (activeInputMode === INPUT_MODE_CONTROLLER) reclaimControlsPreviewFocus();
+  else clearControllerFocus();
+}
+
+function hideControlsPreviewMenu(options = null){
+  if (!controlsPreviewMenu) return;
+  const restoreControlsMenu = !(options && options.restoreControlsMenu === false);
+  controlsPreviewOpen = false;
+  controlsPreviewControllerCaptured = false;
+  controlsPreviewReleaseArmed = false;
+  controlsPreviewStickHoldMs = 0;
+  controlsPreviewFocusIndex = 1;
+  syncControlsPreviewBackLabel();
+  setControlsPreviewFrameOwnership(false);
+  controlsPreviewMenu.style.display = 'none';
+  if (restoreControlsMenu && controlsMenu && (gameState === STATE.CONTROLS || pauseControlsOpen)){
+    controlsMenu.style.display = 'block';
+    const previewButton = document.getElementById('controlsControllerPreviewButton');
+    const items = getControlsControllerTargets();
+    const previewIndex = items.indexOf(previewButton);
+    if (previewIndex !== -1) controlsFocusIndex = previewIndex;
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
+    else clearControllerFocus();
+    fitControlsMenuToViewport();
+  } else {
+    clearControllerFocus();
+  }
+}
+
+function updateControlsPreviewControllerTakeover(dt, lStick, rStick, pressMenuSelect, pressMenuBack, pressPause, navUp=false, navDown=false){
+  if (!isControlsPreviewMenuOpen()) return false;
+  if (controlsPreviewControllerCaptured){
+    const bothStickButtonsHeld = !!(lStick && rStick);
+    if (controlsPreviewReleaseArmed){
+      if (!bothStickButtonsHeld) releaseControlsPreviewControllerCapture();
+      else syncControlsPreviewBackLabel(lStick, rStick);
+    } else if (bothStickButtonsHeld){
+      controlsPreviewStickHoldMs += Math.max(0, dt || 0) * 1000;
+      if (controlsPreviewStickHoldMs >= 3000) releaseControlsPreviewControllerCapture();
+      else syncControlsPreviewBackLabel(lStick, rStick);
+    } else {
+      controlsPreviewStickHoldMs = 0;
+      syncControlsPreviewBackLabel(lStick, rStick);
+    }
+    return true;
+  }
+  if (navUp || navDown){
+    controlsPreviewFocusIndex = navUp ? 0 : 1;
+    syncControlsPreviewControllerFocus();
+  }
+  if (pressMenuSelect){
+    const target = getControlsPreviewControllerTargets()[controlsPreviewFocusIndex];
+    if (target === controlsPreviewFrame) captureControlsPreviewFrame();
+    else hideControlsPreviewMenu();
+  } else if (pressMenuBack || pressPause) {
+    hideControlsPreviewMenu();
+  } else {
+    syncControlsPreviewControllerFocus();
+  }
+  return true;
+}
+
 function syncControllerFocusForCurrentState(){
   if (activeInputMode !== INPUT_MODE_CONTROLLER || parentChatVisible){
     clearControllerFocus();
+    return;
+  }
+  if (isControlsPreviewMenuOpen()){
+    if (!controlsPreviewControllerCaptured) syncControlsPreviewControllerFocus();
+    else clearControllerFocus();
     return;
   }
   if (isStatsPanelOpen()){
@@ -4166,6 +4376,7 @@ function showMenu(){
   rememberStartMenuPanelRect();
   optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
+  hideControlsPreviewMenu({ restoreControlsMenu: false });
   if (cheatsMenu) cheatsMenu.style.display = "none";
   resetCheatsUnlockGate();
   pauseControlsOpen = false;
@@ -4185,6 +4396,7 @@ function showMenu(){
 
 function showControlsMenu(){
   if (!controlsMenu) return;
+  hideControlsPreviewMenu({ restoreControlsMenu: false });
   const fromOptions = optionsMenu && optionsMenu.style.display !== "none";
   const fromMenu = startMenu && startMenu.style.display !== "none";
   if (!fromOptions && !fromMenu && !pauseControlsOpen) return;
@@ -4220,6 +4432,7 @@ function showControlsMenu(){
 }
 function hideControlsMenu(){
   if (!controlsMenu) return;
+  hideControlsPreviewMenu({ restoreControlsMenu: false });
   resetDraftBindingsFromActive();
   controlsMenu.style.display = "none";
   controlsMenu.classList.remove("pauseControlsMode");
@@ -4777,6 +4990,7 @@ function applyBackgroundColorFromControls(value){
 }
 
 function showOptions(){
+  hideControlsPreviewMenu({ restoreControlsMenu: false });
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
   setPaused(false);
@@ -4827,6 +5041,7 @@ function showOptions(){
   updateHearts();
 }
 function startGame(){
+  hideControlsPreviewMenu({ restoreControlsMenu: false });
   setPaused(false);
   unlockAudioOnce();
   gameState = STATE.PLAYING;
@@ -5733,6 +5948,11 @@ function pollGamepad(dt){
   const chatNavRight = consumeMenuAxis('chatRight', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
   const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
   const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
+
+  if (updateControlsPreviewControllerTakeover(dt, lStick, rStick, pressMenuSelect, pressMenuBack, pressPause, navUp, navDown)){
+    syncGpPrevButtons(gp);
+    return;
+  }
 
   if (deathOverlay && deathOverlay.style.display === "flex"){
     if (navUp) moveDeathControllerFocus(-1);

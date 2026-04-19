@@ -163,8 +163,19 @@
   const buttonIcons = Array.from(document.querySelectorAll('[data-button]'));
   const axisIcons = Array.from(document.querySelectorAll('[data-axis]'));
   const stickIcons = Array.from(document.querySelectorAll('[data-axis-stick]'));
+  const OWNERSHIP_STORAGE_KEY = 'tektite-controller-preview-owns';
   const extraNodes = new Map();
   let selectedGamepadIndex = null;
+  let controllerOwned = readStoredControllerOwnership();
+
+  function readStoredControllerOwnership(){
+    try{
+      if (window.parent === window) return true;
+      return window.localStorage.getItem(OWNERSHIP_STORAGE_KEY) !== '0';
+    }catch(_){
+      return true;
+    }
+  }
 
   function getGamepads(){
     if (!navigator.getGamepads) return [];
@@ -267,7 +278,19 @@
     extraNodes.forEach((node) => node.classList.remove('active'));
   }
 
+  function setControllerOwned(nextOwned){
+    controllerOwned = !!nextOwned;
+    if (!controllerOwned) clearIcons();
+  }
+
   function tick(){
+    setControllerOwned(readStoredControllerOwnership());
+    if (!controllerOwned){
+      clearIcons();
+      requestAnimationFrame(tick);
+      return;
+    }
+
     const gamepad = pickGamepad();
     if (!gamepad){
       map.classList.add('disconnected');
@@ -293,6 +316,12 @@
 
   window.addEventListener('gamepaddisconnected', (event) => {
     if (selectedGamepadIndex === event.gamepad.index) selectedGamepadIndex = null;
+  });
+
+  window.addEventListener('message', (event) => {
+    const data = event && event.data;
+    if (!data || data.type !== 'tektite:controller-preview-ownership') return;
+    setControllerOwned(data.ownsController);
   });
 
   tick();

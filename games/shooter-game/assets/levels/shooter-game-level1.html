@@ -248,6 +248,59 @@
   #controlsMenu .controlsAimButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
   #controlsMenu .controlsFixedBindButton{ cursor:default; }
   #controlsMenu .controlsFixedBindButton:focus{ outline:none; }
+  #controlsMenu .controlsPreviewButtonGroup{ display:grid; grid-template-columns:repeat(4, 58px); gap:0; justify-content:end; align-items:stretch; min-width:0; width:100%; max-width:100%; }
+  #controlsMenu .controlsPreviewButton{ grid-column:1 / -1; min-width:0; width:100%; padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
+  #controlsPreviewMenu.panel{
+    width:min(520px, 92vw);
+    padding:18px 18px 16px;
+    background:rgba(75,0,118,0.72);
+    border-width:3px;
+    border-radius:14px;
+    box-sizing:border-box;
+    flex-direction:column;
+    gap:8px;
+    overflow:hidden;
+    transform-origin:center center;
+  }
+  #controlsPreviewTitle{
+    flex:0 0 auto;
+    font-size:18px;
+    line-height:1.1;
+    margin:0 0 2px;
+  }
+  #controlsPreviewFrame{
+    flex:1 1 auto;
+    width:100%;
+    min-height:0;
+    border:2px solid rgba(0,255,102,0.56);
+    border-radius:8px;
+    background:#050607;
+    box-sizing:border-box;
+  }
+  body.controller-active #controlsPreviewFrame.controllerFocus{
+    border-color:rgba(0,255,0,0.95);
+    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
+    outline:none;
+  }
+  #controlsPreviewBack{
+    flex:0 0 auto;
+    width:100%;
+    min-height:46px;
+    font-size:16px;
+    line-height:1.15;
+    white-space:normal;
+  }
+  #controlsPreviewBack.controlsPreviewEscapeIdle{
+    color:#ff3434;
+    border-color:rgba(255,52,52,0.8);
+    box-shadow:0 0 0 1px rgba(255,52,52,0.25), 0 0 14px rgba(255,52,52,0.18);
+  }
+  #controlsPreviewBack.controlsPreviewEscapePrimed,
+  #controlsPreviewBack.controlsPreviewEscapeCountdown{
+    color:#ffd84d;
+    border-color:rgba(255,216,77,0.9);
+    box-shadow:0 0 0 1px rgba(255,216,77,0.32), 0 0 16px rgba(255,216,77,0.2);
+  }
 
   @media (max-width: 640px), (max-height: 760px){
     #controlsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; max-height:none; }
@@ -264,6 +317,11 @@
     #controlsMenu .controlsMoveButton .moveBindLabel{ font-size:14px; }
     #controlsMenu .controlsMoveButton .moveBindValue{ font-size:8px; }
     #controlsMenu .controlsAimButton{ min-width:104px; padding:6px 7px; font-size:10px; }
+    #controlsMenu .controlsPreviewButtonGroup{ grid-template-columns:repeat(4, 52px); }
+    #controlsMenu .controlsPreviewButton{ min-width:0; padding:6px 7px; font-size:10px; }
+    #controlsPreviewMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; }
+    #controlsPreviewTitle{ font-size:17px; }
+    #controlsPreviewBack{ min-height:42px; font-size:13px; }
   }
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
   #optionsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
@@ -1974,6 +2032,11 @@ body.invert-colors {
         <button id="controlsApplyBinds" class="smallBtn applyStateBtn" type="button" style="display:none;">Apply? <span class="applyX">(✕)</span></button>
       </div>
     </div>
+  </div>
+  <div id="controlsPreviewMenu" class="panel" style="display:none;" aria-label="Controller input preview">
+    <div id="controlsPreviewTitle" class="title">Test Controller</div>
+    <iframe id="controlsPreviewFrame" src="/games/shooter-game/assets/controller-buttons/controls.html" title="Xbox One controller input preview" allow="gamepad" tabindex="0"></iframe>
+    <button id="controlsPreviewBack" class="smallBtn" type="button">Back</button>
   </div>
 </div>
 <script src="/games/shooter-game/assets/scripts/level-frame-bridge.js"></script>
