@@ -219,6 +219,35 @@
     filter:drop-shadow(0 0 4px rgba(0,255,0,0.75));
     z-index:2;
   }
+
+  /* Controller-active Back button B hints.
+     These mirror the Start menu controller icon placement without changing button footprints. */
+  #btnImagesClose,
+  #btnStatsClose,
+  #btnBack,
+  #controlsBack,
+  #btnCheatsBack{
+    position:relative;
+    overflow:hidden;
+  }
+  body.controller-active #btnImagesClose::after,
+  body.controller-active #btnStatsClose::after,
+  body.controller-active #btnBack::after,
+  body.controller-active #controlsBack::after,
+  body.controller-active #btnCheatsBack::after{
+    content:"";
+    position:absolute;
+    right:4px;
+    top:50%;
+    width:18px;
+    height:18px;
+    transform:translateY(-50%);
+    background:url('/games/shooter-game/assets/controller-buttons/button-b.webp') center / contain no-repeat;
+    image-rendering:auto;
+    pointer-events:none;
+    filter:drop-shadow(0 0 4px rgba(0,255,0,0.75));
+    z-index:2;
+  }
   button{
     font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
     border:1px solid rgba(0,255,0,0.45);
