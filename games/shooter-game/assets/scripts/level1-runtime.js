@@ -2543,6 +2543,8 @@ const btnCheatsApply = document.getElementById("btnCheatsApply");
   const shieldsSlider = document.getElementById("shieldsSlider");
   const bombsSlider = document.getElementById("bombsSlider");
   const speedSlider = document.getElementById("speedSlider");
+  const cheatermodeToggle = document.getElementById("cheatermodeToggle");
+  const cheatermodeToggleStatus = document.getElementById("cheatermodeToggleStatus");
   const infiniteToggle = document.getElementById("infiniteToggle");
   const startWaveSelect = document.getElementById("startWaveSelect");
 const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
@@ -2871,6 +2873,8 @@ function markCheatsClean(applied=false){
 }
 
 function syncCheatsMenuState(){
+  if (cheatermodeToggle) cheatermodeToggle.checked = !!cheatsUnlockedByPassphrase;
+  if (cheatermodeToggleStatus) cheatermodeToggleStatus.textContent = cheatsUnlockedByPassphrase ? "Enabled" : "Disabled";
   if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
   if (muteCheckbox) muteCheckbox.checked = !!audioMuted;
   if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
@@ -2879,6 +2883,27 @@ function syncCheatsMenuState(){
   if (muteStatus) muteStatus.textContent = audioMuted ? "Enabled" : "Disabled";
   if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
   if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
+}
+
+if (cheatermodeToggle){
+  cheatermodeToggle.addEventListener("change", () => {
+    if (!cheatsUnlockedByPassphrase){
+      cheatermodeToggle.checked = false;
+      if (cheatermodeToggleStatus) cheatermodeToggleStatus.textContent = "Disabled";
+      return;
+    }
+    if (!cheatermodeToggle.checked){
+      cheatermodeToggle.disabled = true;
+      if (cheatermodeToggleStatus) cheatermodeToggleStatus.textContent = "Resetting...";
+      try{
+        window.location.reload();
+      }catch(_){
+        try{ window.top.location.reload(); }catch(__){}
+      }
+      return;
+    }
+    syncCheatsMenuState();
+  });
 }
 
 if (infiniteToggle){
@@ -3424,7 +3449,7 @@ function getOptionsControllerTargets(){
 function getCheatsControllerTargets(){
   const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [speedSlider, startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
+  return [cheatermodeToggle, speedSlider, startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
