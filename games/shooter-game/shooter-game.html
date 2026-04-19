@@ -142,18 +142,37 @@
       const FAIL_AFTER_MS = 2200;
       let hasReceivedHeartbeat = false;
       let lastHeartbeat = 0;
+      let forcedFailureVisible = false;
 
-      function clearGameLoopFailure(){
-        document.body.classList.remove(FAIL_CLASS);
+      function showGameLoopFailure(options = {}){
+        if (options && options.forced) {
+          forcedFailureVisible = true;
+        }
+        document.body.classList.add(FAIL_CLASS);
       }
 
-      function resetGameLoopWatch(){
+      function clearGameLoopFailure(options = {}){
+        if (options && options.clearForced) {
+          forcedFailureVisible = false;
+        }
+        if (!forcedFailureVisible) {
+          document.body.classList.remove(FAIL_CLASS);
+        }
+      }
+
+      function resetGameLoopWatch(options = {}){
         hasReceivedHeartbeat = false;
         lastHeartbeat = 0;
-        clearGameLoopFailure();
+        clearGameLoopFailure(options);
       }
 
       window.__tektiteResetGameLoopWatch = resetGameLoopWatch;
+      window.__tektiteShowGameLoopFailure = function(){
+        showGameLoopFailure({ forced: true });
+      };
+      window.__tektiteClearForcedGameLoopFailure = function(){
+        resetGameLoopWatch({ clearForced: true });
+      };
 
       window.addEventListener('message', (event) => {
         const data = event && event.data ? event.data : null;
@@ -164,13 +183,14 @@
       });
 
       setInterval(() => {
+        if (forcedFailureVisible) return;
         if (!hasReceivedHeartbeat || !lastHeartbeat) return;
         if (Date.now() - lastHeartbeat > FAIL_AFTER_MS){
-          document.body.classList.add(FAIL_CLASS);
+          showGameLoopFailure();
         }
       }, 500);
 
-      window.addEventListener('load', resetGameLoopWatch, { once: true });
+      window.addEventListener('load', () => resetGameLoopWatch({ clearForced: true }), { once: true });
     })();
   </script>
   <script src="/games/shooter-game/assets/scripts/shooter-game-chat.js"></script>

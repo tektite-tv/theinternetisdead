@@ -7,12 +7,32 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       return `${LEVEL2_SRC}&reload=${Date.now()}`;
     }
 
-    function resetGameLoopWatch() {
+    function resetGameLoopWatch(options = {}) {
       try {
         if (typeof window.__tektiteResetGameLoopWatch === 'function') {
-          window.__tektiteResetGameLoopWatch();
+          window.__tektiteResetGameLoopWatch(options);
         }
       } catch (error) {}
+    }
+
+    function forceGameLoopFailureBackground() {
+      try {
+        if (typeof window.__tektiteShowGameLoopFailure === 'function') {
+          window.__tektiteShowGameLoopFailure();
+          return;
+        }
+      } catch (error) {}
+      document.body.classList.add('game-loop-failed');
+    }
+
+    function clearForcedGameLoopFailureBackground() {
+      try {
+        if (typeof window.__tektiteClearForcedGameLoopFailure === 'function') {
+          window.__tektiteClearForcedGameLoopFailure();
+          return;
+        }
+      } catch (error) {}
+      resetGameLoopWatch({ clearForced: true });
     }
 
     if (tektiteFrame) {
@@ -616,11 +636,45 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       }
     }
 
+    function stopShooterLevelFramesFor404() {
+      hasSwitchedToLevel2 = false;
+      forceGameLoopFailureBackground();
+      const levelFrames = Array.from(document.querySelectorAll('iframe')).filter((frame) => {
+        const src = String(frame.getAttribute('src') || '');
+        return frame.id === 'tektite-frame' || src.includes('shooter-game-level1.html') || src.includes('shooter-game-level2.html');
+      });
+      levelFrames.forEach((frame) => {
+        frame.dataset.tektiteStoppedByCommand = 'true';
+        frame.style.opacity = '0';
+        frame.style.visibility = 'hidden';
+        frame.style.pointerEvents = 'none';
+        frame.removeAttribute('srcdoc');
+        frame.setAttribute('src', 'about:blank');
+      });
+    }
+
+    function startShooterLevel1FromCommand() {
+      hasSwitchedToLevel2 = false;
+      clearForcedGameLoopFailureBackground();
+      if (!tektiteFrame) return;
+      tektiteFrame.dataset.tektiteStoppedByCommand = 'false';
+      tektiteFrame.style.opacity = '';
+      tektiteFrame.style.visibility = '';
+      tektiteFrame.style.pointerEvents = '';
+      resetGameLoopWatch({ clearForced: true });
+      tektiteFrame.src = `${LEVEL1_SRC}?reload=${Date.now()}`;
+      registerPageCommands();
+      try { tektiteFrame.focus(); } catch (error) {}
+    }
+
     function switchToLevel2() {
       if (!tektiteFrame || hasSwitchedToLevel2) return;
       hasSwitchedToLevel2 = true;
       const keepFullscreen = !!document.fullscreenElement;
-      resetGameLoopWatch();
+      resetGameLoopWatch({ clearForced: true });
+        tektiteFrame.style.opacity = '';
+        tektiteFrame.style.visibility = '';
+        tektiteFrame.style.pointerEvents = '';
         tektiteFrame.src = buildLevel2Src();
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
@@ -633,7 +687,10 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       if (!tektiteFrame) return;
       hasSwitchedToLevel2 = false;
       const keepFullscreen = !!document.fullscreenElement;
-      resetGameLoopWatch();
+      resetGameLoopWatch({ clearForced: true });
+        tektiteFrame.style.opacity = '';
+        tektiteFrame.style.visibility = '';
+        tektiteFrame.style.pointerEvents = '';
         tektiteFrame.src = `${LEVEL1_SRC}?reload=${Date.now()}`;
       if (keepFullscreen) {
         tektiteFrame.addEventListener('load', () => {
@@ -718,6 +775,26 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         if (data.type === 'pageChatExecute') {
           const rawCommand = String(data.raw || data.command || '').trim();
           const commandName = String(data.command || '').trim().toLowerCase();
+          if (commandName === '/stop') {
+            stopShooterLevelFramesFor404();
+            postToChatSandbox({
+              type: 'pageChatResult',
+              command: '/stop',
+              message: '/stop executed. Level iframe closed; 404 test background exposed.',
+              announce: true
+            });
+            return;
+          }
+          if (commandName === '/start') {
+            startShooterLevel1FromCommand();
+            postToChatSandbox({
+              type: 'pageChatResult',
+              command: '/start',
+              message: '/start executed. Level 1 loading normally.',
+              announce: true
+            });
+            return;
+          }
           if (commandName === '/nickname') {
             const nextNickname = rawCommand.slice('/nickname'.length).trim();
             postToChatSandbox({
