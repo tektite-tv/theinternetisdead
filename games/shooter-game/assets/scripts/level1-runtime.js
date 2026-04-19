@@ -3784,6 +3784,16 @@ function getPauseControllerTargets(){
   return [btnPauseResume, (canOpenStore() ? btnPauseOpenStore : null), btnPauseOpenChat, btnPauseQuit].filter(Boolean);
 }
 
+function isPauseOptionsOpen(){
+  return !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+}
+
+function getPauseOptionsReturnFocusIndex(){
+  const items = getPauseControllerTargets();
+  const index = items.indexOf(btnPauseOpenChat);
+  return index >= 0 ? index : 0;
+}
+
 function getScoreStoreControllerTargets(){
   return [...Array.from(document.querySelectorAll('#scoreStoreItems .scoreStoreAction')), btnScoreStoreClose].filter(Boolean);
 }
@@ -4135,6 +4145,10 @@ function syncControllerFocusForCurrentState(){
   }
   if (isStatsPanelOpen()){
     syncStatsControllerFocus();
+    return;
+  }
+  if (isPauseOptionsOpen()){
+    syncOptionsControllerFocus();
     return;
   }
   if (isScoreStoreOpen && isPaused){
@@ -5568,7 +5582,7 @@ btnBack.addEventListener("click", () => {
     uiRoot.style.display = "none";
     if (pauseOverlay) pauseOverlay.style.display = "flex";
     optionsOpenedFromPause = false;
-    pauseFocusIndex = 2;
+    pauseFocusIndex = getPauseOptionsReturnFocusIndex();
     if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
     else clearControllerFocus();
     return;
@@ -6255,6 +6269,25 @@ function pollGamepad(dt){
           postChatControllerAction('close');
         }
       }
+    } else if (isPauseOptionsOpen()){
+      if (navUp) moveOptionsControllerFocus(-1);
+      if (navDown){
+        if (!wrapOptionsBottomButtonsToTop()) moveOptionsControllerFocus(1);
+      }
+      if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
+        if (navLeft) moveStartingStatFocus(-1);
+        if (navRight) moveStartingStatFocus(1);
+        if (rNavUp) adjustControllerOption(1);
+        if (rNavDown) adjustControllerOption(-1);
+      } else {
+        if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
+        if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
+        if (rNavUp) adjustControllerOption(1);
+        if (rNavDown) adjustControllerOption(-1);
+      }
+      if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
+      if (pressMenuBack) activateControllerTarget(btnBack);
+      if (pressPause) activateControllerTarget(btnBack);
     } else if (isPaused){
       if (isScoreStoreOpen){
         if (navUp || navLeft) moveScoreStoreControllerFocus(-1);

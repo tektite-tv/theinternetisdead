@@ -3230,6 +3230,12 @@ function isPauseSelectLevelOpen(){
   return !!(typeof optionsOpenedFromPause !== "undefined" && optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
 }
 
+function getPauseOptionsReturnFocusIndex(){
+  const items = getPauseControllerTargets();
+  const index = items.indexOf(btnPauseOpenChat || btnPauseOptions);
+  return index >= 0 ? index : 0;
+}
+
 function isPauseScoreStoreOpen(){
   return !!(isScoreStoreOpen && isPaused);
 }
@@ -3367,7 +3373,7 @@ btnBack.addEventListener("click", () => {
     if (pauseOverlay) pauseOverlay.style.display = "flex";
     optionsOpenedFromPause = false;
     gameState = STATE.PLAYING;
-    pauseFocusIndex = 2;
+    pauseFocusIndex = getPauseOptionsReturnFocusIndex();
     if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
     else clearControllerFocus();
     return;
