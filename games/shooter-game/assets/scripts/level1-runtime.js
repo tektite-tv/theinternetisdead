@@ -6419,6 +6419,8 @@ const playerGhosts = [];
 let playerGhostSpawnT = 0;
 let spiralPlayerReactionT = 0;
 let spiralPlayerReactionDuration = 0;
+let spiralPlayerContactCooldown = 0;
+const SPIRAL_PLAYER_CONTACT_RETRIGGER_SECS = 0.24;
 const PLAYER_GHOST_MAX = 2;
 const PLAYER_GHOST_SPAWN_EVERY = 0.072;
 const PLAYER_GHOST_TTL = 0.18;
@@ -6444,6 +6446,14 @@ function triggerSpiralPlayerReaction(durationSecs){
 function applySpiralPlayerReactionIfNeeded(sourceEnemy){
   // Spiral enemies scramble the banana only when their body-contact hit lands.
   if (isSpiralContactEnemy(sourceEnemy)) triggerSpiralPlayerReaction(player.invuln);
+}
+
+function tryTriggerSpiralPlayerContactFx(sourceEnemy, durationSecs){
+  // Keep spiral.webp / spiral.gif spooky even when another system absorbs the hit.
+  // Otherwise shield/invulnerability turns the special contact into a normal bump, because apparently fun needed a permission slip.
+  if (!isSpiralContactEnemy(sourceEnemy) || spiralPlayerContactCooldown > 0) return;
+  triggerSpiralPlayerReaction(durationSecs || player.invuln || 0.65);
+  spiralPlayerContactCooldown = SPIRAL_PLAYER_CONTACT_RETRIGGER_SECS;
 }
 
 function applySpiralPlayerDrawFx(){
@@ -7616,6 +7626,7 @@ function damagePlayer(sourceEnemy = null){
   if (health <= 0){
     spiralPlayerReactionT = 0;
     spiralPlayerReactionDuration = 0;
+    spiralPlayerContactCooldown = 0;
     // Lose a life and explode into pixel dust.
     if (!livesInfiniteActive) lives = Math.max(0, lives - 1);
     const deathIsGameOver = !livesInfiniteActive && lives <= 0;
@@ -7872,6 +7883,7 @@ function update(dt){
 
   if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
   if (spiralPlayerReactionT > 0) spiralPlayerReactionT = Math.max(0, spiralPlayerReactionT - dt);
+  if (spiralPlayerContactCooldown > 0) spiralPlayerContactCooldown = Math.max(0, spiralPlayerContactCooldown - dt);
   if (fireCooldown > 0) fireCooldown = Math.max(0, fireCooldown - dt);
 
   if (waveBanner.t > 0) waveBanner.t = Math.max(0, waveBanner.t - dt);
@@ -8325,6 +8337,7 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         e.col += nx * 0.35;
         e.row += ny * 0.25;
 
+        tryTriggerSpiralPlayerContactFx(e, Math.max(player.invuln || 0, 0.65));
         shieldApplyDamage(SHIELD_BULLET_DMG);
         // If shield died from this hit, stop bouncing for this frame.
         if (!shieldActive) break;
@@ -8332,7 +8345,7 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
     }
   }
 
-  if (!playerSpectatorMode && player.invuln <= 0){
+  if (!playerSpectatorMode){
     for (const e of enemies){
       const rx = e.x - e.w/2, ry = e.y - e.h/2;
       const overlap =
@@ -8340,7 +8353,10 @@ if (circleRect(b.x, b.y, b.r, rx, ry, e.w, e.h)){
         prx + player.w > rx &&
         pry < ry + e.h &&
         pry + player.h > ry;
-      if (overlap){ damagePlayer(e); break; }
+      if (!overlap) continue;
+      tryTriggerSpiralPlayerContactFx(e, Math.max(player.invuln || 0, 0.65));
+      if (player.invuln <= 0){ damagePlayer(e); }
+      break;
     }
   }
 
