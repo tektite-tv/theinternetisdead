@@ -387,6 +387,7 @@ let hudVisible = false;
 // =======================
 const pauseOverlay = document.getElementById("pauseOverlay");
 const pauseTitle = document.getElementById("pauseTitle");
+const pauseHint = document.getElementById("pauseHint");
 const scoreStorePanel = document.getElementById("scoreStorePanel");
 const scoreStoreItemsEl = document.getElementById("scoreStoreItems");
 const scoreStoreCurrentScoreEl = document.getElementById("scoreStoreCurrentScore");
@@ -3806,7 +3807,7 @@ const CONTROLLER_BIND_ACTIONS = [
   { key: "bomb", label: "Bomb", hint: "Gameplay action" },
   { key: "pause", label: "Pause / Resume", hint: "Gameplay and pause menu" },
   { key: "commands", label: "Open Commands", hint: "Open slash chat" },
-  { key: "menuSelect", label: "Menu Select", hint: "Menus and command list" },
+  { key: "menuSelect", label: "Menu Select", hint: "Menus" },
   { key: "menuBack", label: "Menu Back / Close Chat", hint: "Menus and pause chat" },
   { key: "fullscreen", label: "Fullscreen", hint: "Whole shooter shell" }
 ];
@@ -3874,6 +3875,9 @@ function updateControlsDisplay(){
     btnControls.textContent = `Controls ${inputLabel}`;
     btnControls.title = inputTitle;
     btnControls.setAttribute('aria-label', `Controls. ${inputTitle}`);
+  }
+  if (pauseHint){
+    pauseHint.textContent = usingController ? "Press Start to Resume" : "Press ESC to Resume";
   }
   if (controlsMenuTitle){
     controlsMenuTitle.textContent = controlsBindMode === INPUT_MODE_CONTROLLER
@@ -4237,7 +4241,7 @@ function getOptionsControllerTargets(){
   // Treat the four starting-stat number boxes as one vertical controller row.
   // Up/down enters/leaves the row; left/right chooses Hearts/Shields/Lives/Bombs.
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [nicknameInput, (btnNicknameAction && !btnNicknameAction.disabled ? btnNicknameAction : null), btnControls, backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, getCheatsUnlockOptionTarget(), btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
+  return [btnControls, nicknameInput, (btnNicknameAction && !btnNicknameAction.disabled ? btnNicknameAction : null), backgroundColorHex, backgroundColorPicker, muteCheckbox, fullscreenCheckbox, invertColorsCheckbox, videoFxCheckbox, getCheatsUnlockOptionTarget(), btnBack, (btnApply && btnApply.style.display !== 'none' ? btnApply : null)].filter(Boolean);
 }
 
 function getCheatsControllerTargets(){

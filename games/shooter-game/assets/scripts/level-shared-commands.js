@@ -52,7 +52,7 @@ function isPauseCommandVisibleInHelp(command){
 }
 
 function shouldHidePauseMenuCommandList(){
-  return false;
+  return true;
 }
 
 // Controller-editable /help command arguments.
@@ -129,6 +129,8 @@ function getLastUpdatedLogMessage(){
 function showHelp(){
   if (!pauseCmdSuggest) return;
   if (shouldHidePauseMenuCommandList()){
+    pauseCmdSuggest.style.display = "none";
+    pauseCmdSuggest.innerHTML = "";
     closeBgSuggest();
     return;
   }
@@ -240,6 +242,12 @@ function closeBgSuggest(){
 
 function renderBgSuggest(){
   if (!pauseCmdSuggest) return;
+  if (shouldHidePauseMenuCommandList()){
+    pauseCmdSuggest.style.display = "none";
+    pauseCmdSuggest.innerHTML = "";
+    bgSuggestOpen = false;
+    return;
+  }
   if (!bgSuggestList || !bgSuggestList.length){
     closeBgSuggest();
     return;

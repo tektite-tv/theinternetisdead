@@ -776,7 +776,9 @@
     width:100%;
     max-width:420px;
     box-sizing:border-box;
-    display:none;
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
     margin:0 auto 10px;
     text-align:left;
     font-family:"Courier New", monospace;
@@ -2246,8 +2248,8 @@ body.invert-colors {
 <div id="pauseOverlay">
   <div id="pausePanel">
     <div id="pauseTitle">Hello User!<br>GAME PAUSED</div>
-    <div id="pauseHint">Press ESC to resume</div>
-    <div id="pauseCmdSuggest" aria-live="polite"></div>
+    <div id="pauseHint">Press ESC to Resume</div>
+    <div id="pauseCmdSuggest" aria-live="polite" aria-hidden="true" hidden></div>
     <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
     <button id="btnPauseOpenStore" class="pauseMenuBtn" type="button" style="font-size:18px; display:none;">Open Store</button>
     <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Options</button>
@@ -2328,6 +2330,9 @@ body.invert-colors {
       <div class="title">Options</div>
       <div id="optionsScroll" class="menuMiddleScroll">
         <div class="optionsGrid">
+      <div class="optRow fullRow buttonOnlyRow">
+        <button id="btnControls" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Controls</button>
+      </div>
       <div class="optRow cheatRow commandOptionRow nicknameRow">
         <div class="cheatHeader">
           <div>
@@ -2343,9 +2348,6 @@ body.invert-colors {
           </div>
         </div>
         <div class="hint">Set the name shown before your chat messages.</div>
-      </div>
-      <div class="optRow fullRow buttonOnlyRow">
-        <button id="btnControls" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Controls</button>
       </div>
       <div class="optRow cheatRow commandOptionRow backgroundColorRow">
         <div class="cheatHeader">

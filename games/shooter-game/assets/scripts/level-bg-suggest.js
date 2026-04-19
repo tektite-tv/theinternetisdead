@@ -35,6 +35,12 @@ function buildShootModeList(value){
 
 function renderBgSuggest(){
   if (!pauseCmdSuggest) return;
+  if (typeof shouldHidePauseMenuCommandList === "function" && shouldHidePauseMenuCommandList()){
+    pauseCmdSuggest.style.display = "none";
+    pauseCmdSuggest.innerHTML = "";
+    bgSuggestOpen = false;
+    return;
+  }
   if (!bgSuggestOpen){
     pauseCmdSuggest.style.display = "none";
     pauseCmdSuggest.innerHTML = "";
