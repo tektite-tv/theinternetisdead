@@ -1526,7 +1526,7 @@ const ENEMY_DEATH_FADE_SECS = 0.52;  // how long the death fade lasts; long enou
 const ENEMY_DEATH_FLASH_SECS = 0.34; // keep fresh kills visibly red into the fadeout
 const ENEMY_DEATH_GROW_SCALE = 1.35; // visual-only corpse explosion swell; hitboxes stay unchanged
 const ENEMY_DEATH_BULGE_GRID = 9;    // grid distortion resolution for the fisheye death bulge
-const ENEMY_DEATH_BULGE_STRENGTH = 0.62; // outward center bulge strength during death fade
+const ENEMY_DEATH_BULGE_STRENGTH = 0.415; // outward center bulge strength during death fade (33% smaller)
 
 
 const enemyHitFlashTintCanvas = document.createElement("canvas");
