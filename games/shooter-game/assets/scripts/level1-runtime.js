@@ -85,6 +85,7 @@ const BOSS_IMG_URL = ENEMY_WEBP_BASE + "180px-NO_U_cycle.webp";
 const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code
 const AUDIO_HIT = "/games/shooter-game/assets/audio/hitmarker.mp3";
 const AUDIO_OOF = "/games/shooter-game/assets/audio/oof.mp3";
+const AUDIO_UI_HOVER = "/games/shooter-game/assets/audio/bone-crack.mp3";
 
 
 /* =======================
@@ -113,6 +114,7 @@ function applyMuteState(){
   sfxDeath.muted = m;
   sfxHit.muted = m;
   sfxOof.muted = m;
+  sfxUiHover.muted = m;
 }
 
 function setMuteOptionEnabled(shouldEnable){
@@ -2426,10 +2428,13 @@ function getPlayerAlignedY(gapPx = 6){
 ======================= */
 const sfxHit = new Audio(AUDIO_HIT);
 const sfxOof = new Audio(AUDIO_OOF);
+const sfxUiHover = new Audio(AUDIO_UI_HOVER);
 sfxHit.preload = "auto";
 sfxOof.preload = "auto";
+sfxUiHover.preload = "auto";
 sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
+sfxUiHover.volume = 0.55;
 
 let audioUnlocked = false;
 let pendingWaveStartMusic = false;
@@ -2444,6 +2449,9 @@ function unlockAudioOnce(){
 
     sfxOof.muted = true;
     sfxOof.play().then(() => { sfxOof.pause(); sfxOof.currentTime = 0; sfxOof.muted = false; }).catch(()=>{ sfxOof.muted = false; });
+
+    sfxUiHover.muted = true;
+    sfxUiHover.play().then(() => { sfxUiHover.pause(); sfxUiHover.currentTime = 0; sfxUiHover.muted = false; }).catch(()=>{ sfxUiHover.muted = false; });
   }catch(e){}
 
   // Prime music/death audio once the browser allows it.
@@ -2477,6 +2485,40 @@ function playSfxImmediate(a){
     a.play().catch(()=>{});
   }catch(e){}
 }
+
+const UI_HOVER_SOUND_SELECTOR = 'button, [role="button"], .smallBtn, .deathBtn, .winControllerTarget, .scoreStoreAction, .statsSelectableRow, .controlsBindButton, input[type="checkbox"], select';
+let lastUiHoverSoundAt = 0;
+let lastControllerHoverSoundTarget = null;
+
+function isUiHoverSoundTarget(el){
+  if (!el || !el.matches || !el.matches(UI_HOVER_SOUND_SELECTOR)) return false;
+  if (el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+  if (el.type && ['hidden', 'range', 'text', 'number', 'color'].includes(String(el.type).toLowerCase())) return false;
+  return true;
+}
+
+function playUiHoverSoundFor(el, source='mouse'){
+  if (!isUiHoverSoundTarget(el)) return;
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  if (source === 'controller'){
+    if (el === lastControllerHoverSoundTarget) return;
+    lastControllerHoverSoundTarget = el;
+  }
+  if (now - lastUiHoverSoundAt < 70) return;
+  lastUiHoverSoundAt = now;
+  playSfx(sfxUiHover);
+}
+
+function bindUiHoverSounds(){
+  document.addEventListener('pointerover', (event) => {
+    const target = event.target && event.target.closest ? event.target.closest(UI_HOVER_SOUND_SELECTOR) : null;
+    if (!target || !isUiHoverSoundTarget(target)) return;
+    if (target.contains(event.relatedTarget)) return;
+    playUiHoverSoundFor(target, 'mouse');
+  }, true);
+}
+
+bindUiHoverSounds();
 
 /* =======================
    UI
@@ -3373,10 +3415,12 @@ function focusControllerElement(el){
   if (typeof el.scrollIntoView === 'function') {
     try{ el.scrollIntoView({ block:'nearest', inline:'nearest' }); }catch(_){ }
   }
+  playUiHoverSoundFor(el, 'controller');
 }
 
 function clearControllerFocus(){
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
+  lastControllerHoverSoundTarget = null;
 }
 
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); markControlsDirty(); });
@@ -4203,6 +4247,7 @@ function syncDeathControllerFocus(){
     button.classList.toggle("controllerFocus", index === deathFocusIndex);
     if (index === deathFocusIndex){
       try{ button.focus({ preventScroll:true }); }catch(e){ try{ button.focus(); }catch(_){} }
+      playUiHoverSoundFor(button, 'controller');
     }
   });
 }
