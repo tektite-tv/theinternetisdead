@@ -379,6 +379,7 @@ let hudVisible = false;
 // - Freezes gameplay updates and input-driven actions.
 // =======================
 const pauseOverlay = document.getElementById("pauseOverlay");
+const pauseTitle = document.getElementById("pauseTitle");
 const scoreStorePanel = document.getElementById("scoreStorePanel");
 const scoreStoreItemsEl = document.getElementById("scoreStoreItems");
 const scoreStoreCurrentScoreEl = document.getElementById("scoreStoreCurrentScore");
@@ -389,6 +390,30 @@ const btnPauseOpenStore = document.getElementById("btnPauseOpenStore");
 const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
 const pauseCommand = null;
 const pauseCmdSuggest = null;
+const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
+function getSavedChatNicknameValue(){
+  try{
+    const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
+    return savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
+  }catch(error){
+    return "";
+  }
+}
+function escapePauseTitleText(value){
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+function syncPauseTitleNickname(){
+  if (!pauseTitle) return;
+  const nickname = getSavedChatNicknameValue() || "User";
+  pauseTitle.innerHTML = `Hello ${escapePauseTitleText(nickname)}!<br>GAME PAUSED`;
+}
+syncPauseTitleNickname();
+
 let parentChatVisible = false;
 let parentChatValuePickerActive = false;
 let parentChatValuePickerCommand = "";
@@ -623,6 +648,7 @@ function showPauseControlsMenu(){
   lockControlsInputMode(activeInputMode);
   startMenu.style.display = "none";
   optionsMenu.style.display = "none";
+  uiRoot.classList.remove("optionsBackdrop");
   controlsMenu.style.display = "block";
   controlsMenu.classList.add("pauseControlsMode");
   uiRoot.style.display = "flex";
@@ -729,6 +755,7 @@ function setPaused(p){
   }
   if (pauseOverlay) pauseOverlay.style.display = isPaused ? "flex" : "none";
   if (isPaused){
+    syncPauseTitleNickname();
     pauseFocusIndex = 0;
     if (!parentChatVisible && !pauseControlsOpen && !isScoreStoreOpen) syncPauseControllerFocus();
   } else if (gameState !== STATE.MENU && gameState !== STATE.OPTIONS){
@@ -3015,6 +3042,7 @@ function showMenu(){
   pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
+  uiRoot.classList.remove("optionsBackdrop");
   uiRoot.style.display = "flex";
   menuFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
@@ -3224,6 +3252,7 @@ function showOptions(fromPause = false){
   uiRoot.classList.remove("pauseControlsOpen");
   if (pauseOverlay) pauseOverlay.style.display = "none";
   optionsMenu.style.display = "block";
+  uiRoot.classList.add("optionsBackdrop");
   uiRoot.style.display = "flex";
   fitOptionsMenuToViewport();
   optionsFocusIndex = 0;
@@ -3239,6 +3268,7 @@ function startGame(){
   ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
   scoreTrackingLocked = hasScoreDisqualifyingSettings();
+  uiRoot.classList.remove("optionsBackdrop");
   uiRoot.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   pauseControlsOpen = false;
@@ -3332,6 +3362,7 @@ if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 btnBack.addEventListener("click", () => {
   if (optionsOpenedFromPause && isPaused){
     optionsMenu.style.display = "none";
+    uiRoot.classList.remove("optionsBackdrop");
     uiRoot.style.display = "none";
     if (pauseOverlay) pauseOverlay.style.display = "flex";
     optionsOpenedFromPause = false;

@@ -18,6 +18,20 @@
   #uiRoot.pauseControlsOpen{ z-index:10001; }
   #controlsMenu.pauseControlsMode{ display:block; position:relative; z-index:10002; background: rgba(75,0,118,0.88); }
   #pauseOverlay.pauseControlsVisible #pausePanel{ display:none; }
+
+  /* Dim gameplay behind the Options menu the same way the Pause overlay does. */
+  #uiRoot.optionsBackdrop::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.55);
+    pointer-events:none;
+    z-index:0;
+  }
+  #uiRoot.optionsBackdrop > *{
+    position:relative;
+    z-index:1;
+  }
   .panel{
     pointer-events:auto;
     width:min(520px, 92vw);
@@ -426,7 +440,7 @@
     width:min(520px, 92vw);
     border:3px solid rgba(0,255,0,0.65);
     border-radius:16px;
-    background: rgba(0,0,0,0.72);
+    background: rgba(75,0,118,0.88);
     padding: 18px 18px 16px;
     text-align:center;
     box-shadow: 0 0 36px rgba(0,255,0,0.14);
@@ -442,7 +456,8 @@
   #pauseTitle{
     font-family:"Courier New", monospace;
     font-weight:900;
-    font-size:56px;
+    font-size:34px;
+    line-height:1.08;
     letter-spacing:2px;
     color:#00ff66;
     text-shadow: 0 0 10px rgba(0,255,0,0.25);
@@ -984,7 +999,7 @@ body.invert-colors {
 
 <div id="pauseOverlay">
   <div id="pausePanel">
-    <div id="pauseTitle">PAUSED</div>
+    <div id="pauseTitle">Hello User!<br>GAME PAUSED</div>
     <div id="pauseHint">Press ESC to resume</div>
     <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
     <button id="btnPauseOpenStore" class="pauseMenuBtn" type="button" style="font-size:18px; display:none;">Open Store</button>
