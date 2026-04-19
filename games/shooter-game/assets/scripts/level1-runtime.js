@@ -924,23 +924,7 @@ function execPauseCommand(cmd){
     if (arg !== "cheatermode"){
       return { ok:false, message:"Usage: /cheatermode [type cheatermode]" };
     }
-    cheatsUnlockedByPassphrase = true;
-    notifyCheatsUnlockedState();
-    if (pauseCmdSuggest && pauseCmdSuggest.style.display !== "none") showHelp();
-    lockScoreTrackingState();
-    clearCheatsUnlockCountdown();
-    cheatsUnlockInputReady = false;
-    if (btnCheatsUnlockInput){
-      btnCheatsUnlockInput.style.display = "none";
-      btnCheatsUnlockInput.readOnly = true;
-      btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
-    }
-    if (btnCheats){
-      btnCheats.style.display = "block";
-      btnCheats.disabled = false;
-      btnCheats.textContent = "Cheats (Unlocked)";
-    }
-    syncCheatsMenuState();
+    unlockCheatermode("chat");
     return { ok:true, message:"Cheat commands unlocked" };
   }
 
@@ -2612,6 +2596,56 @@ function syncFullscreenOptionState(nextState = null){
   if (fullscreenStatus) fullscreenStatus.textContent = fullscreenOptionEnabled ? "Enabled" : "Disabled";
 }
 
+const CHEATERMODE_KEYBOARD_PROMPT = "Type cheatermode here to cheat.";
+const CHEATERMODE_CONTROLLER_PROMPT = "Hold X + View for 5 sec to cheat.";
+const CHEATERMODE_CONTROLLER_HOLD_MS = 5000;
+
+function getCheatermodePromptText(){
+  return activeInputMode === INPUT_MODE_CONTROLLER ? CHEATERMODE_CONTROLLER_PROMPT : CHEATERMODE_KEYBOARD_PROMPT;
+}
+
+function isCheatermodePromptText(value){
+  const text = String(value || "").trim();
+  return text === CHEATERMODE_KEYBOARD_PROMPT || text === CHEATERMODE_CONTROLLER_PROMPT || /^Hold X \+ View \(\d+\)$/.test(text) || text === "Cheatermode unlocked";
+}
+
+function updateCheatsUnlockModeHint(){
+  const controllerActive = activeInputMode === INPUT_MODE_CONTROLLER;
+  const hint = controllerActive
+    ? "Controller active: hold X + View for 5 seconds to unlock cheat commands."
+    : "Keyboard/mouse active: type cheatermode to unlock cheat commands.";
+  if (btnCheats && !cheatsUnlockedByPassphrase){
+    btnCheats.title = hint;
+    btnCheats.setAttribute("aria-label", hint);
+  } else if (btnCheats){
+    btnCheats.title = "Cheats unlocked";
+    btnCheats.setAttribute("aria-label", "Cheats unlocked");
+  }
+  if (btnCheatsUnlockInput){
+    btnCheatsUnlockInput.placeholder = controllerActive ? "Hold X + View" : "type cheatermode";
+    btnCheatsUnlockInput.setAttribute("aria-label", hint);
+    if (btnCheatsUnlockInput.readOnly || isCheatermodePromptText(btnCheatsUnlockInput.value)){
+      btnCheatsUnlockInput.value = getCheatermodePromptText();
+      btnCheatsUnlockInput.readOnly = controllerActive || btnCheatsUnlockInput.readOnly;
+    }
+  }
+}
+
+function setCheatsUnlockInputPrompt(){
+  if (!btnCheatsUnlockInput) return;
+  btnCheatsUnlockInput.value = getCheatermodePromptText();
+  btnCheatsUnlockInput.readOnly = true;
+  updateCheatsUnlockModeHint();
+}
+
+function notifyParentActiveInputMode(){
+  try{
+    if (window.parent && window.parent !== window){
+      window.parent.postMessage({ type: "tektite:input-mode", mode: activeInputMode }, "*");
+    }
+  }catch(_){ }
+}
+
 function setFullscreenOptionEnabled(shouldEnable){
   const nextState = !!shouldEnable;
   if (requestHostFullscreen(nextState ? "enter" : "exit")){
@@ -2645,6 +2679,7 @@ function clearCheatsUnlockCountdown(){
 
 function resetCheatsUnlockGate(){
   clearCheatsUnlockCountdown();
+  cheatermodeControllerHoldMs = 0;
   cheatsUnlockRemaining = 0;
   cheatsUnlockInputReady = false;
   const unlocked = !!cheatsUnlockedByPassphrase;
@@ -2655,9 +2690,9 @@ function resetCheatsUnlockGate(){
   }
   if (btnCheatsUnlockInput){
     btnCheatsUnlockInput.style.display = "none";
-    btnCheatsUnlockInput.readOnly = true;
-    btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+    setCheatsUnlockInputPrompt();
   }
+  updateCheatsUnlockModeHint();
 }
 
 function armCheatsUnlockCountdown(){
@@ -2685,63 +2720,74 @@ function armCheatsUnlockCountdown(){
 
 function showCheatsUnlockInput(){
   cheatsUnlockInputReady = true;
+  cheatermodeControllerHoldMs = 0;
   if (btnCheats){
     btnCheats.style.display = "none";
   }
   if (btnCheatsUnlockInput){
     btnCheatsUnlockInput.style.display = "block";
-    btnCheatsUnlockInput.readOnly = true;
-    btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+    setCheatsUnlockInputPrompt();
   }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
 }
 
 function activateCheatsUnlockInput(){
   if (!btnCheatsUnlockInput) return;
+  if (activeInputMode === INPUT_MODE_CONTROLLER){
+    btnCheatsUnlockInput.readOnly = true;
+    setCheatsUnlockInputPrompt();
+    return;
+  }
   btnCheatsUnlockInput.readOnly = false;
-  if (btnCheatsUnlockInput.value === "Type cheatermode here to cheat."){
+  if (isCheatermodePromptText(btnCheatsUnlockInput.value)){
     btnCheatsUnlockInput.value = "";
   }
 }
 
 function focusCheatsUnlockInput(){
   if (!btnCheatsUnlockInput) return;
-  // Controller focus should highlight the fake input without erasing its visible prompt.
-  // The player still has to click/select it before typing, because apparently even cheating gets UX rules.
-  if (String(btnCheatsUnlockInput.value || "").trim() === ""){
-    btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+  if (String(btnCheatsUnlockInput.value || "").trim() === "" || isCheatermodePromptText(btnCheatsUnlockInput.value)){
+    setCheatsUnlockInputPrompt();
   }
 }
 
 function restoreCheatsUnlockPromptIfEmpty(){
   if (!btnCheatsUnlockInput) return;
   if (String(btnCheatsUnlockInput.value || "").trim() !== "") return;
-  btnCheatsUnlockInput.readOnly = true;
-  btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
+  setCheatsUnlockInputPrompt();
+}
+
+function unlockCheatermode(source = "typed"){
+  if (cheatsUnlockedByPassphrase) return;
+  cheatsUnlockedByPassphrase = true;
+  notifyCheatsUnlockedState();
+  if (pauseCmdSuggest && pauseCmdSuggest.style.display !== "none") showHelp();
+  lockScoreTrackingState();
+  clearCheatsUnlockCountdown();
+  cheatermodeControllerHoldMs = 0;
+  cheatsUnlockInputReady = false;
+  if (btnCheatsUnlockInput){
+    btnCheatsUnlockInput.style.display = "none";
+    setCheatsUnlockInputPrompt();
+  }
+  if (btnCheats){
+    btnCheats.style.display = "block";
+    btnCheats.disabled = false;
+    btnCheats.textContent = "Cheats (Unlocked)";
+  }
+  syncCheatsMenuState();
+  updateCheatsUnlockModeHint();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) {
+    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
+    syncOptionsControllerFocus();
+  }
 }
 
 function submitCheatsUnlockInput(){
   if (!btnCheatsUnlockInput) return;
   const typed = String(btnCheatsUnlockInput.value || "").trim().toLowerCase();
   if (typed !== "cheatermode") return;
-  cheatsUnlockedByPassphrase = true;
-  notifyCheatsUnlockedState();
-  if (pauseCmdSuggest && pauseCmdSuggest.style.display !== "none") showHelp();
-  lockScoreTrackingState();
-  clearCheatsUnlockCountdown();
-  cheatsUnlockInputReady = false;
-  btnCheatsUnlockInput.style.display = "none";
-  btnCheatsUnlockInput.readOnly = true;
-  btnCheatsUnlockInput.value = "Type cheatermode here to cheat.";
-  if (btnCheats){
-    btnCheats.style.display = "block";
-    btnCheats.disabled = false;
-    btnCheats.textContent = "Cheats (Unlocked)";
-  }
-  if (activeInputMode === INPUT_MODE_CONTROLLER) {
-    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
-    syncOptionsControllerFocus();
-  }
+  unlockCheatermode("typed");
 }
 
 function getCheatsUnlockOptionTarget(){
@@ -3022,6 +3068,8 @@ function setActiveInputMode(mode, options = null){
     renderControlsBindingList();
   }
   updateControlsDisplay();
+  updateCheatsUnlockModeHint();
+  notifyParentActiveInputMode();
 }
 function lockControlsInputMode(mode){
   controlsInputLockMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : null;
@@ -3208,6 +3256,7 @@ let cheatsUnlockTimer = null;
 let cheatsUnlockRemaining = 0;
 let cheatsUnlockInputReady = false;
 let cheatsUnlockedByPassphrase = false;
+let cheatermodeControllerHoldMs = 0;
 
 function notifyCheatsUnlockedState(){
   try{
@@ -5308,6 +5357,43 @@ function consumeMenuAxis(direction, active, dt, repeatDelay = GP_MENU_REPEAT_DEL
   return false;
 }
 
+function isCheatermodeControllerHoldEligible(){
+  if (cheatsUnlockedByPassphrase) return false;
+  if (parentChatVisible && parentChatValuePickerActive && parentChatValuePickerCommand === "/cheatermode") return true;
+  if (cheatsUnlockInputReady) return true;
+  if (gameState === STATE.OPTIONS){
+    const optionsTarget = getOptionsControllerTargets()[optionsFocusIndex];
+    if (optionsTarget === btnCheats || optionsTarget === btnCheatsUnlockInput) return true;
+  }
+  return false;
+}
+
+function updateCheatermodeControllerHold(dt, holdingCombo){
+  if (!holdingCombo || !isCheatermodeControllerHoldEligible()){
+    cheatermodeControllerHoldMs = 0;
+    if (btnCheatsUnlockInput && btnCheatsUnlockInput.style.display !== "none" && activeInputMode === INPUT_MODE_CONTROLLER){
+      setCheatsUnlockInputPrompt();
+    }
+    if (btnCheats && !cheatsUnlockedByPassphrase && !cheatsUnlockTimer && btnCheats.style.display !== "none"){
+      btnCheats.textContent = "Cheats";
+    }
+    return false;
+  }
+  cheatermodeControllerHoldMs = Math.min(CHEATERMODE_CONTROLLER_HOLD_MS, cheatermodeControllerHoldMs + Math.max(0, Number(dt) || 0));
+  const remaining = Math.max(0, Math.ceil((CHEATERMODE_CONTROLLER_HOLD_MS - cheatermodeControllerHoldMs) / 1000));
+  if (btnCheatsUnlockInput && btnCheatsUnlockInput.style.display !== "none"){
+    btnCheatsUnlockInput.readOnly = true;
+    btnCheatsUnlockInput.value = remaining > 0 ? "Hold X + View (" + remaining + ")" : "Cheatermode unlocked";
+  } else if (btnCheats && gameState === STATE.OPTIONS){
+    btnCheats.textContent = remaining > 0 ? "Hold X + View (" + remaining + ")" : "Cheats (Unlocked)";
+  }
+  if (cheatermodeControllerHoldMs >= CHEATERMODE_CONTROLLER_HOLD_MS){
+    unlockCheatermode("controller-hold");
+    return true;
+  }
+  return false;
+}
+
 function pollGamepad(dt){
   const gp = getGamepad();
   gpIsConnected = !!gp;
@@ -5322,6 +5408,7 @@ function pollGamepad(dt){
   gpSpeedBoostHeld = false;
 
   if (!gp){
+    cheatermodeControllerHoldMs = 0;
     gpPrev = null;
     gpNavRepeat.up = gpNavRepeat.down = gpNavRepeat.left = gpNavRepeat.right = 0;
     gpNavPrevAxis.horizontal = 0;
@@ -5383,6 +5470,8 @@ function pollGamepad(dt){
   const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
   const pressMuteHud = false;
   const pressY = gpEdge(3, y);
+  const cheatermodeControllerHoldIntent = !cheatsUnlockedByPassphrase && x && back && isCheatermodeControllerHoldEligible();
+  const cheatermodeUnlockedByHold = updateCheatermodeControllerHold(dt, cheatermodeControllerHoldIntent);
 
   if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
@@ -5444,7 +5533,7 @@ function pollGamepad(dt){
     if (pressFullscreen){
       toggleFullscreen();
     }
-    if (pressCommands){
+    if (pressCommands && !cheatermodeControllerHoldIntent && !cheatermodeUnlockedByHold){
       requestOpenChat(false, "/help");
       clearControllerFocus();
     }

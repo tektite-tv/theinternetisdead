@@ -315,6 +315,16 @@
       letter-spacing: 0.02em;
     }
 
+    .helpTextPicker.controllerMode .helpTextPickerInput {
+      width: 24ch;
+      cursor: default;
+    }
+
+    .helpTextPicker.controllerMode .helpTextPickerHint {
+      color: #baffc9;
+      opacity: 0.9;
+    }
+
 
     .overclockRefreshLink {
       color: #00ffff;
@@ -4034,6 +4044,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         title: typeof source.title === 'string' ? source.title : '',
         sourceKey: typeof source.sourceKey === 'string' ? source.sourceKey : ''
       };
+      if (typeof source.inputMode === 'string') setExternalInputMode(source.inputMode);
     }
 
     function getPageCommandDefinition(command) {
@@ -4090,6 +4101,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     let activeCommandPicker = null;
+    let externalInputMode = 'keyboardMouse';
 
     function isShooterNumberPickerCommand(command = {}) {
       if (!command || pageCommandMeta.sourceKey !== 'shooter-game') return false;
@@ -4115,6 +4127,43 @@ function createHomepageCustomizeMessageNode(result = {}) {
     function isShooterCheatermodeCommand(command = {}) {
       if (!command || pageCommandMeta.sourceKey !== 'shooter-game') return false;
       return String(command.name || '').trim().toLowerCase() === '/cheatermode';
+    }
+
+    function isExternalControllerMode() {
+      return externalInputMode === 'controller';
+    }
+
+    function setExternalInputMode(mode) {
+      const nextMode = String(mode || '').trim() === 'controller' ? 'controller' : 'keyboardMouse';
+      if (externalInputMode === nextMode) return;
+      externalInputMode = nextMode;
+      document.body.classList.toggle('controller-active', externalInputMode === 'controller');
+      updateActiveTextPickerInputMode();
+    }
+
+    function updateActiveTextPickerInputMode() {
+      if (!activeCommandPicker || activeCommandPicker.kind !== 'text') return false;
+      const controllerMode = isExternalControllerMode();
+      const picker = activeCommandPicker.picker || null;
+      const input = activeCommandPicker.input || null;
+      const hintNode = activeCommandPicker.hintNode || null;
+      if (picker) picker.classList.toggle('controllerMode', controllerMode);
+      if (input) {
+        input.readOnly = controllerMode;
+        input.placeholder = controllerMode ? 'Hold X + View' : 'type cheatermode';
+        input.value = controllerMode ? 'Hold X + View for 5 sec' : '';
+        input.setAttribute('aria-label', controllerMode
+          ? 'Controller active. Hold X plus View for five seconds to unlock cheat commands'
+          : 'Keyboard or mouse active. Type cheatermode to unlock cheat commands');
+        if (!controllerMode) {
+          try { input.focus(); } catch (error) {}
+        } else {
+          try { activeCommandPicker.item.focus(); } catch (error) {}
+        }
+      }
+      if (hintNode) hintNode.textContent = controllerMode ? 'Hold X + View 5s' : 'Enter';
+      notifyParentChatSandboxState();
+      return true;
     }
 
     function getShooterChoicePickerOptions(command = {}) {
@@ -4345,6 +4394,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const selected = options[activeCommandPicker.index] || options[0] || '';
         rawCommand = `${activeCommandPicker.command} ${selected}`.trim();
       } else if (activeCommandPicker.kind === 'text') {
+        if (isExternalControllerMode()) return false;
         const typed = activeCommandPicker.input ? String(activeCommandPicker.input.value || '').trim() : '';
         rawCommand = `${activeCommandPicker.command} ${typed}`.trim();
       }
@@ -4373,20 +4423,23 @@ function createHomepageCustomizeMessageNode(result = {}) {
       input.className = 'helpTextPickerInput';
       input.type = 'text';
       input.value = '';
-      input.placeholder = 'type cheatermode';
+      input.placeholder = isExternalControllerMode() ? 'Hold X + View' : 'type cheatermode';
       input.autocomplete = 'off';
       input.spellcheck = false;
-      input.setAttribute('aria-label', 'Type cheatermode to unlock cheat commands');
+      input.readOnly = isExternalControllerMode();
+      input.setAttribute('aria-label', isExternalControllerMode()
+        ? 'Controller active. Hold X plus View for five seconds to unlock cheat commands'
+        : 'Keyboard or mouse active. Type cheatermode to unlock cheat commands');
 
       const hintNode = document.createElement('span');
       hintNode.className = 'helpTextPickerHint';
-      hintNode.textContent = 'Enter';
+      hintNode.textContent = isExternalControllerMode() ? 'Hold X + View 5s' : 'Enter';
 
       input.addEventListener('keydown', (event) => {
         event.stopPropagation();
         if (event.key === 'Enter') {
           event.preventDefault();
-          submitActiveCommandPicker();
+          if (!isExternalControllerMode()) submitActiveCommandPicker();
         }
         if (event.key === 'Escape') {
           event.preventDefault();
@@ -4409,11 +4462,17 @@ function createHomepageCustomizeMessageNode(result = {}) {
         item,
         picker,
         command: normalized,
-        input
+        input,
+        hintNode
       };
+      updateActiveTextPickerInputMode();
       notifyParentChatSandboxState();
 
-      try { input.focus(); } catch (error) {}
+      if (!isExternalControllerMode()) {
+        try { input.focus(); } catch (error) {}
+      } else if (typeof item.focus === 'function') {
+        try { item.focus(); } catch (error) {}
+      }
       return true;
     }
 
@@ -4590,6 +4649,10 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
         event.stopPropagation();
+        if (activeCommandPicker.kind === 'text' && isExternalControllerMode()) {
+          updateActiveTextPickerInputMode();
+          return true;
+        }
         return submitActiveCommandPicker();
       }
       if (event.key === 'Escape' || event.key === 'Backspace') {
@@ -4601,7 +4664,12 @@ function createHomepageCustomizeMessageNode(result = {}) {
       return false;
     }
 
+    document.addEventListener('pointerdown', (event) => {
+      if (event.isTrusted !== false) setExternalInputMode('keyboardMouse');
+    }, true);
+
     document.addEventListener('keydown', (event) => {
+      if (event.isTrusted !== false) setExternalInputMode('keyboardMouse');
       handleActiveCommandPickerKeydown(event);
     }, true);
 
@@ -6651,13 +6719,19 @@ function createHomepageCustomizeMessageNode(result = {}) {
         return;
       }
 
+      if (event.data.type === 'chatSandboxInputMode') {
+        setExternalInputMode(event.data.mode || 'keyboardMouse');
+        return;
+      }
+
       if (event.data.type === 'pageChatRegister') {
         setPageCommands({
           commands: Array.isArray(event.data.commands) ? event.data.commands : [],
           pageOnly: !!event.data.pageOnly,
           pageId: event.data.pageId || '',
           title: event.data.title || '',
-          sourceKey: event.data.sourceKey || ''
+          sourceKey: event.data.sourceKey || '',
+          inputMode: event.data.inputMode || ''
         });
         refreshVisibleHelpMessages();
         initialWelcomeMessage = normalizeWelcomeMessage(event.data.welcomeMessage || DEFAULT_WELCOME_MESSAGE);

@@ -31,6 +31,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     let chatValuePickerCommand = '';
     let pendingChatOpenOptions = null;
     let chatControllerTargetIndex = -1;
+    let shooterActiveInputMode = 'keyboardMouse';
 
     function getChatWindow() {
       return chatSandboxFrame && chatSandboxFrame.contentWindow ? chatSandboxFrame.contentWindow : null;
@@ -40,6 +41,13 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       const chatWindow = getChatWindow();
       if (!chatWindow) return;
       chatWindow.postMessage(payload, '*');
+    }
+
+    function postInputModeToChatSandbox() {
+      postToChatSandbox({
+        type: 'chatSandboxInputMode',
+        mode: shooterActiveInputMode
+      });
     }
 
     function notifyChildChatVisibility() {
@@ -383,7 +391,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     function hasActiveChatValuePicker() {
       const chatDoc = getChatDocument();
       if (!chatDoc) return false;
-      return !!chatDoc.querySelector('.helpItem[data-number-picker-active="true"], .helpItem[data-color-picker-active="true"], .helpItem[data-choice-picker-active="true"]');
+      return !!chatDoc.querySelector('.helpItem[data-number-picker-active="true"], .helpItem[data-color-picker-active="true"], .helpItem[data-choice-picker-active="true"], .helpItem[data-text-picker-active="true"]');
     }
 
     function activateFocusedChatTarget() {
@@ -560,6 +568,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         title: 'Tektite Shooter',
         sourceKey: 'shooter-game',
         cheatsUnlocked: shooterCheatsUnlocked,
+        inputMode: shooterActiveInputMode,
         welcomeMessage: "System: Welcome to Tektite's Shooter Game..."
       });
     }
@@ -655,6 +664,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       chatSandboxReady = true;
       flushPendingChatOpen();
       registerPageCommands();
+      postInputModeToChatSandbox();
       bindChatShortcutToFrame(chatSandboxFrame);
     });
 
@@ -701,6 +711,15 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           }
           return;
         }
+      }
+
+      if (data.type === 'tektite:input-mode') {
+        const nextMode = String(data.mode || '').trim() === 'controller' ? 'controller' : 'keyboardMouse';
+        if (shooterActiveInputMode !== nextMode) {
+          shooterActiveInputMode = nextMode;
+          postInputModeToChatSandbox();
+        }
+        return;
       }
 
       if (data.type === 'tektite:cheats-unlocked-state') {
