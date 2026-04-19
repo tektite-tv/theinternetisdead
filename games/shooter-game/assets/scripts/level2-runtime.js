@@ -195,6 +195,8 @@ function playDeathYell(){
 ======================= */
 const BASE_PLAYER_FIRE_COOLDOWN = 0.26; // seconds (wave scaling reduces this)
 const PLAYER_BULLET_SPEED  = 8.0; // pixels per frame-ish (magnitude); direction comes from aim
+const NORMAL_BULLET_FIRE_COOLDOWN_MULTIPLIER = 2.0;
+const NORMAL_BULLET_SPEED_MULTIPLIER = 1.33;
 const BIG_BULLET_FIRE_COOLDOWN_MULTIPLIER = 0.7;
 const BIG_BULLET_BRANCH_ANGLE = 0.24;
 const BIG_BULLET_BRANCH_RADIUS_MULTIPLIER = 0.72;
@@ -220,7 +222,7 @@ function getPlayerFireCooldown(){
   if (isGlitchShotActive()) return Math.max(0.08, baseCooldown * GLITCH_BULLET_FIRE_COOLDOWN_MULTIPLIER);
   return isBigBulletShotActive()
     ? Math.max(0.09, baseCooldown * BIG_BULLET_FIRE_COOLDOWN_MULTIPLIER)
-    : baseCooldown;
+    : baseCooldown * NORMAL_BULLET_FIRE_COOLDOWN_MULTIPLIER;
 }
 
 /* =======================
@@ -5058,7 +5060,8 @@ function shoot(){
   } else if (hasBigBulletCharge){
     spawnLightningBranchBullets(bulletX, bulletY, dx, dy, bulletRadius);
   } else {
-    pushPlayerBullet(bulletX, bulletY, dx * PLAYER_BULLET_SPEED, dy * PLAYER_BULLET_SPEED, bulletRadius);
+    const normalBulletSpeed = PLAYER_BULLET_SPEED * NORMAL_BULLET_SPEED_MULTIPLIER;
+    pushPlayerBullet(bulletX, bulletY, dx * normalBulletSpeed, dy * normalBulletSpeed, bulletRadius);
   }
 
   
