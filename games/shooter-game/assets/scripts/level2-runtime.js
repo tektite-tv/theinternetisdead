@@ -1609,6 +1609,69 @@ function breakBonusArmor(){
 
 const UFO_KILL_SCORE_POINTS = 100;
 const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
+const SAVED_IMAGES_KEY = "tektiteShooterSavedImages";
+const SAVED_IMAGES_MAX = 10;
+
+function readSavedImages(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(SAVED_IMAGES_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter(item => item && item.dataUrl) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function writeSavedImages(images){
+  const safeImages = Array.isArray(images) ? images.filter(item => item && item.dataUrl).slice(0, SAVED_IMAGES_MAX) : [];
+  try{
+    localStorage.setItem(SAVED_IMAGES_KEY, JSON.stringify(safeImages));
+    return true;
+  }catch(e){
+    try{
+      const trimmed = safeImages.slice(0, Math.max(1, Math.floor(safeImages.length / 2)));
+      localStorage.setItem(SAVED_IMAGES_KEY, JSON.stringify(trimmed));
+      return true;
+    }catch(_){
+      return false;
+    }
+  }
+}
+
+function saveCurrentGameImage(levelLabel="Level 2"){
+  if (!canvas || !canvas.width || !canvas.height) return false;
+  try{
+    const captureCanvas = document.createElement("canvas");
+    const targetWidth = 640;
+    const targetHeight = Math.max(1, Math.round(targetWidth * (canvas.height / Math.max(1, canvas.width))));
+    captureCanvas.width = targetWidth;
+    captureCanvas.height = targetHeight;
+    const captureCtx = captureCanvas.getContext("2d");
+    captureCtx.fillStyle = "#000";
+    captureCtx.fillRect(0, 0, targetWidth, targetHeight);
+    captureCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+    const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.82);
+    const images = readSavedImages();
+    images.unshift({
+      id: `shot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      level: levelLabel,
+      dataUrl
+    });
+    const saved = writeSavedImages(images);
+    if (saved && typeof renderSavedImages === "function") renderSavedImages();
+    if (typeof assetStatus !== "undefined" && assetStatus){
+      assetStatus.style.display = "block";
+      assetStatus.textContent = saved ? "Image saved to Images." : "Could not save image. Local storage is full.";
+      window.clearTimeout(saveCurrentGameImage._statusTimer);
+      saveCurrentGameImage._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, 1800);
+    }
+    return saved;
+  }catch(error){
+    console.error("In-game screenshot save failed:", error);
+    return false;
+  }
+}
+
 
 function getDefaultLifetimeStats(){
   return {
@@ -3746,15 +3809,7 @@ function pollGamepad(dt){
   }
 
   if (pressScreenshotCombo){
-    if (typeof requestShooterGameScreenshot === "function") {
-      requestShooterGameScreenshot();
-    } else if (window.parent && window.parent !== window) {
-      try {
-        window.parent.postMessage({ type: "tektite:save-screenshot" }, "*");
-      } catch (error) {
-        console.error("Screenshot request failed:", error);
-      }
-    }
+    saveCurrentGameImage("Level 2");
   }
 
   const navUp = consumeMenuAxis('up', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt);

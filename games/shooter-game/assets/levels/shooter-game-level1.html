@@ -1536,6 +1536,123 @@ body.invert-colors {
     min-width:160px;
     box-sizing:border-box;
   }
+
+  #startMenu .btnRowImages{
+    width:100%;
+    display:flex;
+    justify-content:center;
+    margin-top:8px;
+  }
+  #btnImages{
+    width:100%;
+    min-height:42px;
+    font-size:18px;
+  }
+  #imagesPanel{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:121;
+    background:rgba(0,0,0,0.42);
+    pointer-events:auto;
+  }
+  #imagesPanelInner{
+    width:var(--shooter-menu-footprint-width, min(520px, 92vw));
+    height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
+    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw));
+    max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
+    border:2px solid rgba(0,255,102,0.65);
+    border-radius:var(--shooter-menu-footprint-radius, 16px);
+    background:rgba(75,0,118,0.72);
+    color:#00ff66;
+    font-family:"Courier New", monospace;
+    padding:18px;
+    box-shadow:0 0 28px rgba(0,255,102,0.20);
+    text-align:left;
+    box-sizing:border-box;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+    transform:scale(0.975);
+    transform-origin:center center;
+  }
+  #imagesPanelTitle{
+    text-align:center;
+    font-size:24px;
+    font-weight:900;
+    letter-spacing:2px;
+    margin-bottom:10px;
+  }
+  #imagesList{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    box-sizing:border-box;
+    overflow:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+    padding:0 8px 8px;
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+    align-content:start;
+  }
+  #imagesList::-webkit-scrollbar{ width:6px; height:6px; }
+  #imagesList::-webkit-scrollbar-track{ background:rgba(0,0,0,0.22); border-radius:999px; }
+  #imagesList::-webkit-scrollbar-thumb{ background:#00ff66; border-radius:999px; box-shadow:0 0 8px rgba(0,255,102,0.35); }
+  #imagesList::-webkit-scrollbar-thumb:hover{ background:#7dff7d; }
+  .savedImageCard{
+    border:1px solid rgba(0,255,102,0.35);
+    border-radius:12px;
+    background:rgba(0,0,0,0.38);
+    padding:8px;
+    box-sizing:border-box;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .savedImageCard img{
+    width:100%;
+    aspect-ratio:16 / 9;
+    object-fit:cover;
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.18);
+    background:#000;
+  }
+  .savedImageMeta{
+    font-size:10px;
+    line-height:1.2;
+    color:#ffffff;
+    opacity:0.9;
+    text-align:center;
+  }
+  #imagesEmpty{
+    grid-column:1 / -1;
+    align-self:center;
+    justify-self:center;
+    text-align:center;
+    color:#ffffff;
+    opacity:0.88;
+    font-size:14px;
+    line-height:1.35;
+    padding:24px;
+  }
+  #imagesPanelButtons{
+    flex:0 0 auto;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 8px;
+    margin-top:12px;
+  }
+  body.controller-active #imagesPanel button.controllerFocus,
+  #imagesPanel button:hover{
+    outline:2px solid #00ff66;
+    box-shadow:0 0 16px rgba(0,255,102,0.55);
+  }
+
   #statsPanel{
     position:fixed;
     inset:0;
@@ -1968,6 +2085,9 @@ body.invert-colors {
       <a id="btnMysteryLink" class="smallBtn mysteryBtn" href="https://honestlythomas.com" target="_top" aria-label="Open Honestly Thomas"><span class="startMenuButtonText">Who Made This?</span></a>
       <button id="btnStats" class="smallBtn" type="button"><span class="startMenuButtonText">Stats</span></button>
     </div>
+    <div class="btnRow btnRowImages">
+      <button id="btnImages" class="smallBtn" type="button">Images</button>
+    </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>
 
@@ -1992,6 +2112,20 @@ body.invert-colors {
       <div id="statsPanelButtons" class="btnRow menuBottomRow">
         <button id="btnStatsClose" class="smallBtn" type="button">Back</button>
         <button id="btnStatsReset" class="smallBtn" type="button">Reset Stats</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="imagesPanel" aria-hidden="true">
+    <div id="imagesPanelInner">
+      <div id="imagesPanelTitle">Saved Images</div>
+      <div id="imagesList">
+        <div id="imagesEmpty">No saved images yet.<br>Press Y + View during gameplay to save one here.</div>
+      </div>
+      <div id="imagesPanelButtons" class="btnRow menuBottomRow">
+        <button id="btnImagesClose" class="smallBtn" type="button">Back</button>
+        <button id="btnImagesClear" class="smallBtn" type="button">Clear Images</button>
       </div>
     </div>
   </div>

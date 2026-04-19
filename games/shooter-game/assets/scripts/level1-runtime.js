@@ -1341,6 +1341,69 @@ let glitchBackgroundPulse = 0;
 // If the schema ever changes, migrate old values forward instead of resetting them.
 // Yes, even for a joke browser game. People get attached to numbers. Humanity is weird like that.
 const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
+const SAVED_IMAGES_KEY = "tektiteShooterSavedImages";
+const SAVED_IMAGES_MAX = 10;
+
+function readSavedImages(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(SAVED_IMAGES_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.filter(item => item && item.dataUrl) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function writeSavedImages(images){
+  const safeImages = Array.isArray(images) ? images.filter(item => item && item.dataUrl).slice(0, SAVED_IMAGES_MAX) : [];
+  try{
+    localStorage.setItem(SAVED_IMAGES_KEY, JSON.stringify(safeImages));
+    return true;
+  }catch(e){
+    try{
+      const trimmed = safeImages.slice(0, Math.max(1, Math.floor(safeImages.length / 2)));
+      localStorage.setItem(SAVED_IMAGES_KEY, JSON.stringify(trimmed));
+      return true;
+    }catch(_){
+      return false;
+    }
+  }
+}
+
+function saveCurrentGameImage(levelLabel="Level 1"){
+  if (!canvas || !canvas.width || !canvas.height) return false;
+  try{
+    const captureCanvas = document.createElement("canvas");
+    const targetWidth = 640;
+    const targetHeight = Math.max(1, Math.round(targetWidth * (canvas.height / Math.max(1, canvas.width))));
+    captureCanvas.width = targetWidth;
+    captureCanvas.height = targetHeight;
+    const captureCtx = captureCanvas.getContext("2d");
+    captureCtx.fillStyle = "#000";
+    captureCtx.fillRect(0, 0, targetWidth, targetHeight);
+    captureCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+    const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.82);
+    const images = readSavedImages();
+    images.unshift({
+      id: `shot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      level: levelLabel,
+      dataUrl
+    });
+    const saved = writeSavedImages(images);
+    if (saved && typeof renderSavedImages === "function") renderSavedImages();
+    if (typeof assetStatus !== "undefined" && assetStatus){
+      assetStatus.style.display = "block";
+      assetStatus.textContent = saved ? "Image saved to Images." : "Could not save image. Local storage is full.";
+      window.clearTimeout(saveCurrentGameImage._statusTimer);
+      saveCurrentGameImage._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, 1800);
+    }
+    return saved;
+  }catch(error){
+    console.error("In-game screenshot save failed:", error);
+    return false;
+  }
+}
+
 let currentRunStatsCommitted = false;
 
 function getDefaultLifetimeStats(){
@@ -1516,6 +1579,111 @@ function resetLifetimeStats(){
 function isStatsPanelOpen(){
   return !!(statsPanel && statsPanel.style.display !== "none" && statsPanel.getAttribute("aria-hidden") !== "true");
 }
+
+function formatSavedImageTime(iso){
+  try{
+    return new Date(iso).toLocaleString(undefined, { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
+  }catch(e){
+    return "Saved image";
+  }
+}
+
+function renderSavedImages(){
+  if (!imagesList) return;
+  const images = readSavedImages();
+  imagesList.innerHTML = "";
+  if (!images.length){
+    const empty = document.createElement("div");
+    empty.id = "imagesEmpty";
+    empty.innerHTML = "No saved images yet.<br>Press Y + View during gameplay to save one here.";
+    imagesList.appendChild(empty);
+    return;
+  }
+  images.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className = "savedImageCard";
+    const img = document.createElement("img");
+    img.src = item.dataUrl;
+    img.alt = `${item.level || "Shooter Game"} saved image ${index + 1}`;
+    const meta = document.createElement("div");
+    meta.className = "savedImageMeta";
+    meta.textContent = `${item.level || "Shooter Game"} • ${formatSavedImageTime(item.createdAt)}`;
+    card.appendChild(img);
+    card.appendChild(meta);
+    imagesList.appendChild(card);
+  });
+}
+
+function fitImagesPanelToStartMenu(){
+  if (!imagesPanelInner) return;
+  const sourceRect = getFallbackMenuRect();
+  if (!sourceRect || !sourceRect.width || !sourceRect.height) return;
+  imagesPanelInner.style.width = `${Math.round(sourceRect.width)}px`;
+  imagesPanelInner.style.height = `${Math.round(sourceRect.height)}px`;
+  imagesPanelInner.style.maxWidth = `${Math.round(sourceRect.width)}px`;
+  imagesPanelInner.style.maxHeight = `${Math.round(sourceRect.height)}px`;
+}
+
+function getImagesControllerTargets(){
+  return [btnImagesClose, btnImagesClear].filter(Boolean);
+}
+
+function syncImagesControllerFocus(){
+  clearControllerFocus();
+  const items = getImagesControllerTargets();
+  if (!items.length) return;
+  imagesFocusIndex = Math.max(0, Math.min(imagesFocusIndex, items.length - 1));
+  focusControllerElement(items[imagesFocusIndex]);
+}
+
+function moveImagesControllerFocus(delta){
+  const items = getImagesControllerTargets();
+  if (!items.length) return;
+  imagesFocusIndex = (imagesFocusIndex + delta + items.length) % items.length;
+  syncImagesControllerFocus();
+}
+
+function openImagesPanel(){
+  renderSavedImages();
+  imagesFocusIndex = 0;
+  setStartMenuInteractive(false);
+  if (imagesPanel){
+    imagesPanel.style.display = "flex";
+    imagesPanel.setAttribute("aria-hidden", "false");
+    imagesPanel.setAttribute("aria-modal", "true");
+    fitImagesPanelToStartMenu();
+  }
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncImagesControllerFocus();
+  else if (btnImagesClose && typeof btnImagesClose.focus === "function"){
+    try{ btnImagesClose.focus({ preventScroll:true }); }catch(_){ try{ btnImagesClose.focus(); }catch(__){} }
+  }
+}
+
+function closeImagesPanel(){
+  if (imagesPanel){
+    imagesPanel.style.display = "none";
+    imagesPanel.setAttribute("aria-hidden", "true");
+    imagesPanel.removeAttribute("aria-modal");
+  }
+  setStartMenuInteractive(true);
+  const menuTargets = getMenuControllerTargets();
+  const imagesIndex = menuTargets.indexOf(btnImages);
+  if (imagesIndex !== -1) menuFocusIndex = imagesIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else if (btnImages && typeof btnImages.focus === "function"){
+    try{ btnImages.focus({ preventScroll:true }); }catch(_){ try{ btnImages.focus(); }catch(__){} }
+  }
+}
+
+function clearSavedImages(){
+  writeSavedImages([]);
+  renderSavedImages();
+}
+
+function isImagesPanelOpen(){
+  return !!(imagesPanel && imagesPanel.style.display !== "none" && imagesPanel.getAttribute("aria-hidden") !== "true");
+}
+
 
 function setStartMenuInteractive(isInteractive){
   if (!startMenu) return;
@@ -2354,6 +2522,7 @@ function resize(){
   fitControlsMenuToViewport();
   fitControlsPreviewMenuToViewport();
   fitStatsPanelToStartMenu();
+  fitImagesPanelToStartMenu();
 }
 window.addEventListener("resize", resize);
 
@@ -2626,6 +2795,12 @@ const statsLockedDetails = document.getElementById("statsLockedDetails");
 const btnStatsLockedToggle = document.getElementById("btnStatsLockedToggle");
 const btnStatsClose = document.getElementById("btnStatsClose");
 const btnStatsReset = document.getElementById("btnStatsReset");
+const btnImages = document.getElementById("btnImages");
+const imagesPanel = document.getElementById("imagesPanel");
+const imagesPanelInner = document.getElementById("imagesPanelInner");
+const imagesList = document.getElementById("imagesList");
+const btnImagesClose = document.getElementById("btnImagesClose");
+const btnImagesClear = document.getElementById("btnImagesClear");
 const statLifetimeScore = document.getElementById("statLifetimeScore");
 const statLifetimeEnemies = document.getElementById("statLifetimeEnemies");
 const statLifetimeUfos = document.getElementById("statLifetimeUfos");
@@ -3682,6 +3857,7 @@ function notifyCheatermodeControllerHoldState(active, remaining, xPressed, viewP
 }
 let startingStatFocusIndex = 0;
 let statsFocusIndex = 0;
+let imagesFocusIndex = 0;
 let pauseFocusIndex = 0;
 let winFocusIndex = 0;
 let gpNavRepeat = { up:0, down:0, left:0, right:0 };
@@ -3748,7 +3924,7 @@ function markControlsClean(applied=false){
 }
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnMysteryLink, btnStats].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnMysteryLink, btnStats, btnImages].filter(Boolean);
 }
 
 function isTitleHoverRevealFocused(){
@@ -4171,6 +4347,10 @@ function syncControllerFocusForCurrentState(){
     syncStatsControllerFocus();
     return;
   }
+  if (isImagesPanelOpen()){
+    syncImagesControllerFocus();
+    return;
+  }
   if (isPauseOptionsOpen()){
     syncOptionsControllerFocus();
     return;
@@ -4227,6 +4407,7 @@ function moveMenuControllerFocusDirectional(direction){
   const optionsIndex = items.indexOf(btnOptions);
   const mysteryIndex = items.indexOf(btnMysteryLink);
   const statsIndex = items.indexOf(btnStats);
+  const imagesIndex = items.indexOf(btnImages);
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
@@ -4240,13 +4421,15 @@ function moveMenuControllerFocusDirectional(direction){
     else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
     else if (menuFocusIndex === startIndex && mysteryIndex !== -1) nextIndex = mysteryIndex;
     else if (menuFocusIndex === optionsIndex && statsIndex !== -1) nextIndex = statsIndex;
-    else if ((menuFocusIndex === mysteryIndex || menuFocusIndex === statsIndex) && titleIndex !== -1) nextIndex = titleIndex;
+    else if ((menuFocusIndex === mysteryIndex || menuFocusIndex === statsIndex) && imagesIndex !== -1) nextIndex = imagesIndex;
+    else if (menuFocusIndex === imagesIndex && titleIndex !== -1) nextIndex = titleIndex;
   } else if (direction === "up"){
     if (menuFocusIndex === mysteryIndex && startIndex !== -1) nextIndex = startIndex;
     else if (menuFocusIndex === statsIndex && optionsIndex !== -1) nextIndex = optionsIndex;
     else if ((menuFocusIndex === startIndex || menuFocusIndex === optionsIndex) && revealIndex !== -1) nextIndex = revealIndex;
     else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
-    else if (menuFocusIndex === titleIndex && mysteryIndex !== -1) nextIndex = mysteryIndex;
+    else if (menuFocusIndex === imagesIndex && statsIndex !== -1) nextIndex = statsIndex;
+    else if (menuFocusIndex === titleIndex && imagesIndex !== -1) nextIndex = imagesIndex;
   }
 
   if (nextIndex === menuFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
@@ -4599,6 +4782,7 @@ function showMenu(){
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   if (cheatsMenu) cheatsMenu.style.display = "none";
+  if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
   resetCheatsUnlockGate();
   pauseControlsOpen = false;
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
@@ -4614,6 +4798,8 @@ function showMenu(){
   syncNicknameStatsLabels();
   renderLifetimeStats();
   fitStatsPanelToStartMenu();
+  fitImagesPanelToStartMenu();
+  renderSavedImages();
 }
 
 function showControlsMenu(){
@@ -5540,6 +5726,9 @@ if (backgroundColorPicker){
 }
 
 if (btnStats) btnStats.addEventListener("click", openStatsPanel);
+if (btnImages) btnImages.addEventListener("click", openImagesPanel);
+if (btnImagesClose) btnImagesClose.addEventListener("click", closeImagesPanel);
+if (btnImagesClear) btnImagesClear.addEventListener("click", clearSavedImages);
 if (btnStatsClose) btnStatsClose.addEventListener("click", closeStatsPanel);
 if (btnStatsReset){
   btnStatsReset.addEventListener("click", () => {
@@ -5549,6 +5738,11 @@ if (btnStatsReset){
 if (statsPanel){
   statsPanel.addEventListener("click", (event) => {
     if (event.target === statsPanel) closeStatsPanel();
+  });
+}
+if (imagesPanel){
+  imagesPanel.addEventListener("click", (event) => {
+    if (event.target === imagesPanel) closeImagesPanel();
   });
 }
 if (btnStatsLockedToggle){
@@ -6234,15 +6428,7 @@ function pollGamepad(dt){
   }
 
   if (pressScreenshotCombo){
-    if (typeof requestShooterGameScreenshot === "function") {
-      requestShooterGameScreenshot();
-    } else if (window.parent && window.parent !== window) {
-      try {
-        window.parent.postMessage({ type: "tektite:save-screenshot" }, "*");
-      } catch (error) {
-        console.error("Screenshot request failed:", error);
-      }
-    }
+    saveCurrentGameImage("Level 1");
   }
 
   const navUp = consumeMenuAxis('up', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt);
@@ -6285,6 +6471,17 @@ function pollGamepad(dt){
     if (rNavDown) scrollStatsPanelBy(72);
     if (pressMenuSelect) activateControllerTarget(getStatsControllerTargets()[statsFocusIndex]);
     if (pressMenuBack || pressPause) closeStatsPanel();
+    syncGpPrevButtons(gp);
+    return;
+  }
+
+  if (isImagesPanelOpen()){
+    if (navLeft || navUp) moveImagesControllerFocus(-1);
+    if (navRight || navDown) moveImagesControllerFocus(1);
+    if (rNavUp && imagesList) imagesList.scrollBy({ top:-72, behavior:"smooth" });
+    if (rNavDown && imagesList) imagesList.scrollBy({ top:72, behavior:"smooth" });
+    if (pressMenuSelect) activateControllerTarget(getImagesControllerTargets()[imagesFocusIndex]);
+    if (pressMenuBack || pressPause) closeImagesPanel();
     syncGpPrevButtons(gp);
     return;
   }
@@ -7176,6 +7373,16 @@ window.addEventListener("keydown", (e) => {
     else if (e.code === "ArrowRight") moveStatsControllerFocusDirectional("right");
     else if (e.code === "Enter" || e.code === "Space") activateControllerTarget(getStatsControllerTargets()[statsFocusIndex]);
     else if (e.code === "Escape") closeStatsPanel();
+    e.preventDefault();
+    return;
+  }
+
+  if (isImagesPanelOpen() && (e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "Enter" || e.code === "Space" || e.code === "Escape" || e.code === "Tab")){
+    setActiveInputMode(INPUT_MODE_KEYBOARD);
+    if (e.code === "ArrowUp" || e.code === "ArrowLeft" || (e.code === "Tab" && e.shiftKey)) moveImagesControllerFocus(-1);
+    else if (e.code === "ArrowDown" || e.code === "ArrowRight" || e.code === "Tab") moveImagesControllerFocus(1);
+    else if (e.code === "Enter" || e.code === "Space") activateControllerTarget(getImagesControllerTargets()[imagesFocusIndex]);
+    else if (e.code === "Escape") closeImagesPanel();
     e.preventDefault();
     return;
   }
