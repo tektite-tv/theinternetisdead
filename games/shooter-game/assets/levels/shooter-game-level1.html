@@ -121,8 +121,9 @@
     align-items:center;
     justify-content:center;
     max-width:100%;
+    min-width:0;
     white-space:nowrap;
-    overflow:hidden;
+    overflow:visible;
     text-overflow:clip;
     transform-origin:center center;
     transition:left 90ms ease, right 90ms ease, width 90ms ease;
@@ -133,12 +134,17 @@
   body.controller-active #startMenu #btnMysteryLink.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnStats.controllerFocus .startMenuButtonText{
     position:absolute;
-    left:8px;
-    right:34px;
+    left:2px;
+    right:24px;
     top:50%;
     width:auto;
     max-width:none;
+    min-width:0;
+    box-sizing:border-box;
+    padding:0 2px 0 0;
+    overflow:visible;
     transform:translateY(-50%);
+    z-index:1;
   }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
@@ -146,15 +152,16 @@
   body.controller-active #startMenu #btnStats.controllerFocus::after{
     content:"";
     position:absolute;
-    right:8px;
+    right:4px;
     top:50%;
-    width:22px;
-    height:22px;
+    width:18px;
+    height:18px;
     transform:translateY(-50%);
     background:url('/games/shooter-game/assets/controller-buttons/button-a.webp') center / contain no-repeat;
     image-rendering:auto;
     pointer-events:none;
     filter:drop-shadow(0 0 4px rgba(0,255,0,0.75));
+    z-index:2;
   }
   button{
     font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
