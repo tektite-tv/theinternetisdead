@@ -83,15 +83,15 @@ const ENEMY_WEBP_INDEX_URL = "/games/shooter-game/assets/enemy-webps.json";
 const PLAYER_IMG_URL = "/games/shooter-game/assets/bananarama.gif";
 const BOSS_IMG_URL = ENEMY_WEBP_BASE + "180px-NO_U_cycle.webp";
 const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code
-const AUDIO_HIT = "/media/audio/hitmarker.mp3";
-const AUDIO_OOF = "/media/audio/oof.mp3";
+const AUDIO_HIT = "/games/shooter-game/assets/audio/hitmarker.mp3";
+const AUDIO_OOF = "/games/shooter-game/assets/audio/oof.mp3";
 
 
 /* =======================
    Audio
 ======================= */
-const AUDIO_BG_MUSIC = "/media/audio/spaceinvaders.mp3";
-const AUDIO_DEATH_YELL = "/media/audio/link-yell.mp3";
+const AUDIO_BG_MUSIC = "/games/shooter-game/assets/audio/spaceinvaders.mp3";
+const AUDIO_DEATH_YELL = "/games/shooter-game/assets/audio/link-yell.mp3";
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
@@ -7636,22 +7636,7 @@ function updateHearts(){
   }
 }
 
-let lastGameLoopHeartbeatPost = 0;
-function postGameLoopHeartbeat(t){
-  if (window.parent === window) return;
-  if ((t || 0) - lastGameLoopHeartbeatPost < 500) return;
-  lastGameLoopHeartbeatPost = t || 0;
-  try{
-    window.parent.postMessage({
-      type: "tektite:game-loop-heartbeat",
-      level: window.location.pathname,
-      timestamp: Date.now()
-    }, "*");
-  }catch(error){}
-}
-
 function loop(t){
-  postGameLoopHeartbeat(t);
   // v1.96: Game speed knob. We cap raw dt to prevent big frame hitch jumps,
   // then multiply by GAME_SPEED_MULT (5 = 1.0x, 1 = 0.2x, 10 = 2.0x).
   const rawDt = Math.min(0.033, (t - lastT) / 1000);
