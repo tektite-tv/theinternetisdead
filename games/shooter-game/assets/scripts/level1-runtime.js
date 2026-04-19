@@ -1705,12 +1705,10 @@ function closeStatsPanel(){
   }
   if (startMenu) startMenu.style.display = "block";
   setStartMenuInteractive(true);
-  const menuTargets = getMenuControllerTargets();
-  const statsIndex = menuTargets.indexOf(btnStats);
-  if (statsIndex !== -1) menuFocusIndex = statsIndex;
+  resetStartMenuControllerFocus();
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-  else if (btnStats && typeof btnStats.focus === "function"){
-    try{ btnStats.focus({ preventScroll:true }); }catch(_){ try{ btnStats.focus(); }catch(__){} }
+  else if (btnStart && typeof btnStart.focus === "function"){
+    try{ btnStart.focus({ preventScroll:true }); }catch(_){ try{ btnStart.focus(); }catch(__){} }
   }
 }
 
@@ -1812,12 +1810,10 @@ function closeImagesPanel(){
   }
   if (startMenu) startMenu.style.display = "block";
   setStartMenuInteractive(true);
-  const menuTargets = getMenuControllerTargets();
-  const imagesIndex = menuTargets.indexOf(btnImages);
-  if (imagesIndex !== -1) menuFocusIndex = imagesIndex;
+  resetStartMenuControllerFocus();
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
-  else if (btnImages && typeof btnImages.focus === "function"){
-    try{ btnImages.focus({ preventScroll:true }); }catch(_){ try{ btnImages.focus(); }catch(__){} }
+  else if (btnStart && typeof btnStart.focus === "function"){
+    try{ btnStart.focus({ preventScroll:true }); }catch(_){ try{ btnStart.focus(); }catch(__){} }
   }
 }
 
@@ -4076,6 +4072,16 @@ function getMenuControllerTargets(){
   return [startMenuTitle, titleHoverReveal, btnStart, btnImages, btnStats, btnOptions].filter(Boolean);
 }
 
+function getStartMenuStartFocusIndex(){
+  const items = getMenuControllerTargets();
+  const startIndex = items.indexOf(btnStart);
+  return startIndex >= 0 ? startIndex : 0;
+}
+
+function resetStartMenuControllerFocus(){
+  menuFocusIndex = getStartMenuStartFocusIndex();
+}
+
 function isTitleHoverRevealFocused(){
   return getMenuControllerTargets()[menuFocusIndex] === titleHoverReveal;
 }
@@ -4934,7 +4940,7 @@ function showMenu(){
   uiRoot.classList.remove("pauseControlsOpen");
   uiRoot.classList.remove("optionsBackdrop");
   uiRoot.style.display = "flex";
-  menuFocusIndex = 0;
+  resetStartMenuControllerFocus();
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
   else clearControllerFocus();
   rememberStartMenuPanelRect();
