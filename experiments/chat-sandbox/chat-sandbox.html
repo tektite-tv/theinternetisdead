@@ -325,6 +325,15 @@
       opacity: 0.9;
     }
 
+    .helpTextPickerComboButton {
+      font-weight: 900;
+      text-shadow: 0 0 4px currentColor;
+    }
+
+    .helpTextPickerComboButton.comboNone { color: #ff3b3b; }
+    .helpTextPickerComboButton.comboPartial { color: #ffd84d; }
+    .helpTextPickerComboButton.comboBoth { color: #00ff66; }
+
 
     .overclockRefreshLink {
       color: #00ffff;
@@ -4141,6 +4150,36 @@ function createHomepageCustomizeMessageNode(result = {}) {
       updateActiveTextPickerInputMode();
     }
 
+    function getCheatermodeComboClass(xPressed = false, viewPressed = false) {
+      if (xPressed && viewPressed) return 'comboBoth';
+      if (xPressed || viewPressed) return 'comboPartial';
+      return 'comboNone';
+    }
+
+    function buildCheatermodeComboMarkup(remaining = 5, xPressed = false, viewPressed = false, unlocked = false) {
+      if (unlocked) return 'Cheatermode unlocked';
+      const comboClass = getCheatermodeComboClass(xPressed, viewPressed);
+      const safeRemaining = Math.max(1, Math.ceil(Number(remaining) || 5));
+      return `Hold <span class="helpTextPickerComboButton ${comboClass}">X</span> + <span class="helpTextPickerComboButton ${comboClass}">View</span> ${safeRemaining}s`;
+    }
+
+    function setCheatermodePickerDisplay({ remaining = 5, xPressed = false, viewPressed = false, unlocked = false } = {}) {
+      if (!activeCommandPicker || activeCommandPicker.kind !== 'text') return false;
+      if (String(activeCommandPicker.command || '').trim().toLowerCase() !== '/cheatermode') return false;
+      const comboMarkup = buildCheatermodeComboMarkup(remaining, xPressed, viewPressed, unlocked);
+      const plainText = unlocked ? 'Cheatermode unlocked' : `Hold X + View ${Math.max(1, Math.ceil(Number(remaining) || 5))}s`;
+      if (activeCommandPicker.input) {
+        activeCommandPicker.input.readOnly = true;
+        activeCommandPicker.input.value = isExternalControllerMode() ? '' : activeCommandPicker.input.value;
+        activeCommandPicker.input.placeholder = isExternalControllerMode() ? 'Controller combo active' : 'type cheatermode';
+        activeCommandPicker.input.setAttribute('aria-label', plainText);
+      }
+      if (activeCommandPicker.hintNode) {
+        activeCommandPicker.hintNode.innerHTML = comboMarkup;
+      }
+      return true;
+    }
+
     function updateActiveTextPickerInputMode() {
       if (!activeCommandPicker || activeCommandPicker.kind !== 'text') return false;
       const controllerMode = isExternalControllerMode();
@@ -4151,7 +4190,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (input) {
         input.readOnly = controllerMode;
         input.placeholder = controllerMode ? 'Hold X + View' : 'type cheatermode';
-        input.value = controllerMode ? 'Hold X + View 5s' : '';
+        input.value = controllerMode ? '' : '';
         input.setAttribute('aria-label', controllerMode
           ? 'Controller active. Hold X plus View for five seconds to unlock cheat commands'
           : 'Keyboard or mouse active. Type cheatermode to unlock cheat commands');
@@ -4161,26 +4200,28 @@ function createHomepageCustomizeMessageNode(result = {}) {
           try { activeCommandPicker.item.focus(); } catch (error) {}
         }
       }
-      if (hintNode) hintNode.textContent = controllerMode ? 'Hold X + View 5s' : 'Enter';
+      if (hintNode) {
+        if (controllerMode) setCheatermodePickerDisplay({ remaining: 5, xPressed: false, viewPressed: false, unlocked: false });
+        else hintNode.textContent = 'Enter';
+      }
       notifyParentChatSandboxState();
       return true;
     }
 
-    function updateCheatermodeHoldCountdown(remaining, active = true, unlocked = false) {
+    function updateCheatermodeHoldCountdown(remaining, active = true, unlocked = false, xPressed = false, viewPressed = false) {
       if (!activeCommandPicker || activeCommandPicker.kind !== 'text') return false;
       if (String(activeCommandPicker.command || '').trim().toLowerCase() !== '/cheatermode') return false;
       if (!isExternalControllerMode()) return false;
-      const safeRemaining = Math.max(0, Math.ceil(Number(remaining) || 0));
-      const text = unlocked || safeRemaining <= 0
-        ? 'Cheatermode unlocked'
-        : `Hold X + View ${safeRemaining}s`;
-      if (activeCommandPicker.input) {
-        activeCommandPicker.input.readOnly = true;
-        activeCommandPicker.input.value = active ? text : 'Hold X + View 5s';
-      }
-      if (activeCommandPicker.hintNode) {
-        activeCommandPicker.hintNode.textContent = active ? text : 'Hold X + View 5s';
-      }
+      const bothPressed = !!xPressed && !!viewPressed;
+      const safeRemaining = active && bothPressed
+        ? Math.max(0, Math.ceil(Number(remaining) || 0))
+        : 5;
+      setCheatermodePickerDisplay({
+        remaining: safeRemaining,
+        xPressed,
+        viewPressed,
+        unlocked: unlocked || safeRemaining <= 0
+      });
       notifyParentChatSandboxState();
       return true;
     }
@@ -4452,7 +4493,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       const hintNode = document.createElement('span');
       hintNode.className = 'helpTextPickerHint';
-      hintNode.textContent = isExternalControllerMode() ? 'Hold X + View 5s' : 'Enter';
+      if (isExternalControllerMode()) {
+        hintNode.innerHTML = buildCheatermodeComboMarkup(5, false, false, false);
+      } else {
+        hintNode.textContent = 'Enter';
+      }
 
       input.addEventListener('keydown', (event) => {
         event.stopPropagation();
@@ -6744,7 +6789,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       if (event.data.type === 'chatSandboxCheatermodeHoldState') {
-        updateCheatermodeHoldCountdown(event.data.remaining, event.data.active !== false, !!event.data.unlocked);
+        updateCheatermodeHoldCountdown(event.data.remaining, event.data.active !== false, !!event.data.unlocked, !!event.data.xPressed, !!event.data.viewPressed);
         return;
       }
 

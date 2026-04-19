@@ -56,7 +56,9 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         active: !!data.active,
         remaining: Math.max(0, Math.ceil(Number(data.remaining) || 0)),
         totalSeconds: Math.max(1, Math.ceil(Number(data.totalSeconds) || 5)),
-        unlocked: !!data.unlocked
+        unlocked: !!data.unlocked,
+        xPressed: !!data.xPressed,
+        viewPressed: !!data.viewPressed
       });
     }
 

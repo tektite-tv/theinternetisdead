@@ -3262,6 +3262,7 @@ let cheatsUnlockRemaining = 0;
 let cheatsUnlockInputReady = false;
 let cheatsUnlockedByPassphrase = false;
 let cheatermodeControllerHoldMs = 0;
+let cheatermodeLastControllerComboKey = "";
 
 function notifyCheatsUnlockedState(){
   try{
@@ -3274,7 +3275,7 @@ function notifyCheatsUnlockedState(){
   }catch(error){}
 }
 
-function notifyCheatermodeControllerHoldState(active, remaining){
+function notifyCheatermodeControllerHoldState(active, remaining, xPressed, viewPressed){
   try{
     if (window.parent && window.parent !== window){
       window.parent.postMessage({
@@ -3282,7 +3283,9 @@ function notifyCheatermodeControllerHoldState(active, remaining){
         active: !!active,
         remaining: Math.max(0, Math.ceil(Number(remaining) || 0)),
         totalSeconds: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000),
-        unlocked: !!cheatsUnlockedByPassphrase
+        unlocked: !!cheatsUnlockedByPassphrase,
+        xPressed: !!xPressed,
+        viewPressed: !!viewPressed
       }, "*");
     }
   }catch(error){}
@@ -5387,10 +5390,15 @@ function isCheatermodeControllerHoldEligible(){
   return false;
 }
 
-function updateCheatermodeControllerHold(dt, holdingCombo){
-  if (!holdingCombo || !isCheatermodeControllerHoldEligible()){
-    if (cheatermodeControllerHoldMs > 0){
-      notifyCheatermodeControllerHoldState(false, Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000));
+function updateCheatermodeControllerHold(dt, holdingCombo, xPressed, viewPressed){
+  const eligibleForHold = isCheatermodeControllerHoldEligible();
+  const comboKey = String(!!xPressed) + ':' + String(!!viewPressed) + ':' + String(!!holdingCombo) + ':' + String(!!eligibleForHold);
+  if (!holdingCombo || !eligibleForHold){
+    if (eligibleForHold && (cheatermodeControllerHoldMs > 0 || cheatermodeLastControllerComboKey !== comboKey)){
+      notifyCheatermodeControllerHoldState(false, Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed, viewPressed);
+      cheatermodeLastControllerComboKey = comboKey;
+    } else if (!eligibleForHold) {
+      cheatermodeLastControllerComboKey = '';
     }
     cheatermodeControllerHoldMs = 0;
     if (btnCheatsUnlockInput && btnCheatsUnlockInput.style.display !== "none" && activeInputMode === INPUT_MODE_CONTROLLER){
@@ -5401,6 +5409,7 @@ function updateCheatermodeControllerHold(dt, holdingCombo){
     }
     return false;
   }
+  cheatermodeLastControllerComboKey = comboKey;
   cheatermodeControllerHoldMs = Math.min(CHEATERMODE_CONTROLLER_HOLD_MS, cheatermodeControllerHoldMs + Math.max(0, Number(dt) || 0));
   const remaining = Math.max(0, Math.ceil((CHEATERMODE_CONTROLLER_HOLD_MS - cheatermodeControllerHoldMs) / 1000));
   const holdText = formatCheatermodeControllerHoldText(remaining);
@@ -5410,10 +5419,11 @@ function updateCheatermodeControllerHold(dt, holdingCombo){
   } else if (btnCheats && gameState === STATE.OPTIONS){
     btnCheats.textContent = remaining > 0 ? holdText : "Cheats (Unlocked)";
   }
-  notifyCheatermodeControllerHoldState(true, remaining);
+  notifyCheatermodeControllerHoldState(true, remaining, xPressed, viewPressed);
   if (cheatermodeControllerHoldMs >= CHEATERMODE_CONTROLLER_HOLD_MS){
     unlockCheatermode("controller-hold");
-    notifyCheatermodeControllerHoldState(false, 0);
+    cheatermodeLastControllerComboKey = "";
+    notifyCheatermodeControllerHoldState(false, 0, xPressed, viewPressed);
     return true;
   }
   return false;
@@ -5496,7 +5506,7 @@ function pollGamepad(dt){
   const pressMuteHud = false;
   const pressY = gpEdge(3, y);
   const cheatermodeControllerHoldIntent = !cheatsUnlockedByPassphrase && x && back && isCheatermodeControllerHoldEligible();
-  const cheatermodeUnlockedByHold = updateCheatermodeControllerHold(dt, cheatermodeControllerHoldIntent);
+  const cheatermodeUnlockedByHold = updateCheatermodeControllerHold(dt, cheatermodeControllerHoldIntent, x, back);
 
   if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
     unlockAudioOnce();
