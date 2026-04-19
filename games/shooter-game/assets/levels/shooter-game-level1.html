@@ -16,7 +16,7 @@
 
   #uiRoot{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   #uiRoot.pauseControlsOpen{ z-index:10001; }
-  #controlsMenu.pauseControlsMode{ display:block; position:relative; z-index:10002; background: rgba(75,0,118,0.88); }
+  #controlsMenu.pauseControlsMode{ display:block; position:relative; z-index:10002; background: rgba(75,0,118,0.50); }
   #pauseOverlay.pauseControlsVisible #pausePanel{ display:none; }
 
   /* Dim gameplay behind the Options menu the same way the Pause overlay does. */
@@ -37,7 +37,7 @@
     width:min(520px, 92vw);
     border:1px solid rgba(0,255,0,0.35);
     border-radius:14px;
-    background: rgba(0,0,0,0.72);
+    background: rgba(0,0,0,0.50);
     box-shadow: 0 0 28px rgba(0,255,0,0.08);
     padding: 18px 18px 16px;
     text-align:center;
@@ -105,6 +105,8 @@
   .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
   .btnRowTop{ margin-top:12px; }
   .btnRowBottom{ margin-top:10px; }
+  #startMenu .btnRowTop,
+  #startMenu .btnRowBottom{ transform:translateY(-14px); }
   #btnControls{ min-width:160px; }
 
   /* Controller-selected Start menu A-button hint.
@@ -126,7 +128,7 @@
     overflow:visible;
     text-overflow:clip;
     transform-origin:center center;
-    transition:left 90ms ease, right 90ms ease, width 90ms ease;
+    transition:left 90ms ease, right 90ms ease, width 90ms ease, font-size 90ms ease;
     will-change:left, right, width;
   }
   body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
@@ -146,8 +148,9 @@
     transform:translateY(-50%);
     z-index:1;
   }
-  /* Keep the top two start-menu labels centered while the A icon is shown. */
+  /* Keep compact start-menu labels centered while the A icon is shown. */
   body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
+  body.controller-active #startMenu #btnImages.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnOptions.controllerFocus .startMenuButtonText{
     position:relative;
     left:auto;
@@ -157,6 +160,19 @@
     max-width:100%;
     padding:0;
     transform:none;
+  }
+  body.controller-active #startMenu #btnStats.statsNicknameLabel.controllerFocus .startMenuButtonText{
+    position:relative;
+    left:auto;
+    right:auto;
+    top:auto;
+    width:auto;
+    max-width:calc(100% - 30px);
+    padding:0;
+    overflow:hidden;
+    transform:none;
+    font-size:var(--stats-button-focus-font-size, inherit);
+    line-height:1.1;
   }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
@@ -320,7 +336,8 @@
     font-size: 13px;
     line-height: 1.5;
   }
-  #controlsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
+  #startMenu .menuBlurb{ transform:translateY(-8px); }
+  #controlsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; border:2px solid rgba(0,255,102,0.65); background: rgba(75,0,118,0.50); box-shadow:0 0 28px rgba(0,255,102,0.20); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
   #controlsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #controlsMenuInner{ width:100%; transform-origin:top center; }
   #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
@@ -350,7 +367,7 @@
   #controlsPreviewMenu.panel{
     width:min(520px, 92vw);
     padding:18px 18px 16px;
-    background:rgba(75,0,118,0.72);
+    background:rgba(75,0,118,0.50);
     border-width:3px;
     border-radius:14px;
     box-sizing:border-box;
@@ -421,7 +438,7 @@
     #controlsPreviewBack{ min-height:42px; font-size:13px; }
   }
   /* OPTIONS MENU: keep it on-screen, scroll if needed */
-  #optionsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
+  #optionsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; border:2px solid rgba(0,255,102,0.65); background: rgba(75,0,118,0.50); box-shadow:0 0 28px rgba(0,255,102,0.20); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
   #optionsMenu.panel::-webkit-scrollbar{ width:0; height:0; display:none; }
   #optionsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #optionsMenu .optionsGrid{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; align-items:start; }
@@ -435,7 +452,7 @@
   #optionsMenu .startStatField{ display:flex; flex-direction:column; gap:4px; }
   #optionsMenu .startStatField label{ font-size:11px; opacity:0.9; }
   #optionsMenu .startStatField input[type="number"]{ width:100%; }
-  #cheatsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; background: rgba(75,0,118,0.72); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
+  #cheatsMenu.panel{ width:min(520px, 92vw); padding:18px 18px 16px; border:2px solid rgba(0,255,102,0.65); background: rgba(75,0,118,0.50); box-shadow:0 0 28px rgba(0,255,102,0.20); max-height:none; overflow:hidden; scrollbar-width:none; -ms-overflow-style:none; transform-origin:center center; box-sizing:border-box; }
   #cheatsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #cheatsMenu .cheatsGrid{ display:grid; grid-template-columns:1fr; gap:6px; margin-top:10px; }
   #cheatsMenu .cheatRow{ padding:10px 12px; }
@@ -521,7 +538,7 @@
     width:min(520px, 92vw);
     border:3px solid rgba(255,0,0,0.65);
     border-radius:16px;
-    background: rgba(0,0,0,0.72);
+    background: rgba(0,0,0,0.50);
     padding: 18px 18px 16px;
     text-align:center;
     box-shadow: 0 0 36px rgba(255,0,0,0.14);
@@ -575,7 +592,7 @@
     aspect-ratio:1 / 1;
     border:3px solid rgba(0,255,0,0.75);
     border-radius:16px;
-    background: rgba(0,0,0,0.82);
+    background: rgba(0,0,0,0.50);
     padding: 16px 16px 14px;
     text-align:center;
     box-shadow: 0 0 36px rgba(0,255,0,0.18);
@@ -697,7 +714,7 @@
     width:min(520px, 92vw);
     border:3px solid rgba(0,255,0,0.65);
     border-radius:16px;
-    background: rgba(75,0,118,0.72);
+    background: rgba(75,0,118,0.50);
     padding: 18px 18px 16px;
     text-align:center;
     box-shadow: 0 0 36px rgba(0,255,0,0.14);
@@ -800,7 +817,7 @@
     width:min(640px, 94vw);
     border:3px solid rgba(0,255,0,0.65);
     border-radius:16px;
-    background: rgba(75,0,118,0.72);
+    background: rgba(75,0,118,0.50);
     padding:12px 12px 10px;
     text-align:center;
     box-shadow: 0 0 36px rgba(0,255,0,0.14);
@@ -1555,7 +1572,7 @@ body.invert-colors {
     max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
     border:2px solid rgba(0,255,102,0.65);
     border-radius:var(--shooter-menu-footprint-radius, 16px);
-    background:rgba(75,0,118,0.72);
+    background:rgba(75,0,118,0.50);
     color:#00ff66;
     font-family:"Courier New", monospace;
     padding:18px;
@@ -1566,15 +1583,21 @@ body.invert-colors {
     display:flex;
     flex-direction:column;
     min-height:0;
-    transform:scale(0.975);
-    transform-origin:center center;
   }
-  #imagesPanelTitle{
+  #optionsMenu .title,
+  #cheatsMenu .title,
+  #controlsMenu .title,
+  #imagesPanelTitle,
+  #statsPanelInner .statsTitle{
     text-align:center;
     font-size:24px;
     font-weight:900;
     letter-spacing:2px;
-    margin-bottom:10px;
+    margin:0 0 12px;
+    padding:0 8px;
+    box-sizing:border-box;
+    width:100%;
+    flex:0 0 auto;
   }
   #imagesList{
     flex:1 1 auto;
@@ -1657,7 +1680,7 @@ body.invert-colors {
     width:min(520px, 92vw);
     border:2px solid rgba(0,255,102,0.65);
     border-radius:18px;
-    background:rgba(12,0,24,0.92);
+    background:rgba(75,0,118,0.50);
     color:#00ff66;
     font-family:"Courier New", monospace;
     padding:18px;
@@ -1668,13 +1691,6 @@ body.invert-colors {
     display:flex;
     flex-direction:column;
     min-height:0;
-  }
-  #statsPanelInner .statsTitle{
-    text-align:center;
-    font-size:24px;
-    font-weight:900;
-    letter-spacing:2px;
-    margin-bottom:12px;
   }
   #statsPanel .menuMiddleScroll{
     flex:1 1 auto;
@@ -1771,6 +1787,10 @@ body.invert-colors {
     50%{ filter:hue-rotate(180deg); text-shadow:0 0 10px rgba(255,0,255,0.55), 0 0 24px rgba(0,255,255,0.24); }
     100%{ filter:hue-rotate(360deg); text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(255,255,0,0.20); }
   }
+  #optionsMenu .title,
+  #cheatsMenu .title,
+  #controlsMenu .title,
+  #imagesPanelTitle,
   #statsPanelInner .statsTitle{
     animation:statsTitleHueShift 2.4s linear infinite;
   }
@@ -1827,6 +1847,10 @@ body.invert-colors {
     text-align:center !important;
     transform:scale(0.975) !important;
     transform-origin:center center !important;
+  }
+  #startMenu.panel{
+    border:2px solid rgba(0,255,102,0.65) !important;
+    box-shadow:0 0 28px rgba(0,255,102,0.20) !important;
   }
   #startMenu.panel,
   #pausePanel,
@@ -2059,7 +2083,7 @@ body.invert-colors {
 </div>
 
 <div id="uiRoot">
-  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
+  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.50); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
@@ -2069,11 +2093,11 @@ body.invert-colors {
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
     <div class="btnRow btnRowTop">
       <button id="btnStart"><span class="startMenuButtonText">Start Game</span></button>
-      <button id="btnOptions"><span class="startMenuButtonText">Options</span></button>
+      <button id="btnImages" class="smallBtn mysteryBtn" type="button"><span class="startMenuButtonText">Images</span></button>
     </div>
     <div class="btnRow btnRowBottom">
-      <button id="btnImages" class="smallBtn mysteryBtn" type="button"><span class="startMenuButtonText">Images</span></button>
-      <button id="btnStats" class="smallBtn" type="button"><span class="startMenuButtonText">Stats</span></button>
+      <button id="btnStats" class="smallBtn" type="button"><span class="startMenuButtonText">Lifetime Stats</span></button>
+      <button id="btnOptions"><span class="startMenuButtonText">Options</span></button>
     </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>
@@ -2119,7 +2143,7 @@ body.invert-colors {
 
   <div id="optionsMenu" class="panel" style="display:none;">
     <div id="optionsMenuInner">
-      <div class="title">OPTIONS</div>
+      <div class="title">Options</div>
       <div id="optionsScroll" class="menuMiddleScroll">
         <div class="optionsGrid">
       <div class="optRow cheatRow commandOptionRow nicknameRow">
@@ -2223,7 +2247,7 @@ body.invert-colors {
 
   <div id="cheatsMenu" class="panel" style="display:none;">
     <div id="cheatsMenuInner">
-      <div class="title">CHEATS</div>
+      <div class="title">Cheats</div>
 
       <div id="cheatsScroll" class="menuMiddleScroll">
         <div class="cheatsGrid">
@@ -2343,7 +2367,7 @@ body.invert-colors {
 
 <script>
 (function(){
-  const START_MENU_BUTTON_IDS = ["btnStart", "btnOptions", "btnImages", "btnStats"];
+  const START_MENU_BUTTON_IDS = ["btnStart", "btnImages", "btnStats", "btnOptions"];
 
   function wrapStartMenuButtonText(button){
     let textSpan = button.querySelector(":scope > .startMenuButtonText");

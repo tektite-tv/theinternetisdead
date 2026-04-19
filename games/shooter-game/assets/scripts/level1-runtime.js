@@ -1682,7 +1682,9 @@ function openStatsPanel(){
   const statsTargets = getStatsControllerTargets();
   const defaultStatsFocusIndex = statsTargets.indexOf(btnStatsClose);
   statsFocusIndex = defaultStatsFocusIndex >= 0 ? defaultStatsFocusIndex : 0;
+  rememberStartMenuPanelRect();
   setStartMenuInteractive(false);
+  if (startMenu) startMenu.style.display = "none";
   if (statsPanel){
     statsPanel.style.display = "flex";
     statsPanel.setAttribute("aria-hidden", "false");
@@ -1701,6 +1703,7 @@ function closeStatsPanel(){
     statsPanel.setAttribute("aria-hidden", "true");
     statsPanel.removeAttribute("aria-modal");
   }
+  if (startMenu) startMenu.style.display = "block";
   setStartMenuInteractive(true);
   const menuTargets = getMenuControllerTargets();
   const statsIndex = menuTargets.indexOf(btnStats);
@@ -1786,7 +1789,9 @@ function moveImagesControllerFocus(delta){
 function openImagesPanel(){
   renderSavedImages();
   imagesFocusIndex = 0;
+  rememberStartMenuPanelRect();
   setStartMenuInteractive(false);
+  if (startMenu) startMenu.style.display = "none";
   if (imagesPanel){
     imagesPanel.style.display = "flex";
     imagesPanel.setAttribute("aria-hidden", "false");
@@ -1805,6 +1810,7 @@ function closeImagesPanel(){
     imagesPanel.setAttribute("aria-hidden", "true");
     imagesPanel.removeAttribute("aria-modal");
   }
+  if (startMenu) startMenu.style.display = "block";
   setStartMenuInteractive(true);
   const menuTargets = getMenuControllerTargets();
   const imagesIndex = menuTargets.indexOf(btnImages);
@@ -4020,6 +4026,7 @@ function focusControllerElement(el){
   if (!el) return;
   document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
   el.classList.add('controllerFocus');
+  if (el === btnStats) fitStatsStartButtonNicknameLabel();
   const optRow = el.closest('.optRow');
   if (optRow) optRow.classList.add('controllerFocus');
   const bindRow = el.closest('.controlsBindRow');
@@ -4064,7 +4071,7 @@ function markControlsClean(applied=false){
 }
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnOptions, btnImages, btnStats].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnImages, btnStats, btnOptions].filter(Boolean);
 }
 
 function isTitleHoverRevealFocused(){
@@ -4544,29 +4551,27 @@ function moveMenuControllerFocusDirectional(direction){
   const titleIndex = items.indexOf(startMenuTitle);
   const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
-  const optionsIndex = items.indexOf(btnOptions);
   const imagesIndex = items.indexOf(btnImages);
   const statsIndex = items.indexOf(btnStats);
+  const optionsIndex = items.indexOf(btnOptions);
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
-    if (menuFocusIndex === optionsIndex && startIndex !== -1) nextIndex = startIndex;
-    else if (menuFocusIndex === statsIndex && imagesIndex !== -1) nextIndex = imagesIndex;
+    if (menuFocusIndex === imagesIndex && startIndex !== -1) nextIndex = startIndex;
+    else if (menuFocusIndex === optionsIndex && statsIndex !== -1) nextIndex = statsIndex;
   } else if (direction === "right"){
-    if (menuFocusIndex === startIndex && optionsIndex !== -1) nextIndex = optionsIndex;
-    else if (menuFocusIndex === imagesIndex && statsIndex !== -1) nextIndex = statsIndex;
+    if (menuFocusIndex === startIndex && imagesIndex !== -1) nextIndex = imagesIndex;
+    else if (menuFocusIndex === statsIndex && optionsIndex !== -1) nextIndex = optionsIndex;
   } else if (direction === "down"){
     if (menuFocusIndex === titleIndex && revealIndex !== -1) nextIndex = revealIndex;
     else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
-    else if (menuFocusIndex === startIndex && imagesIndex !== -1) nextIndex = imagesIndex;
-    else if (menuFocusIndex === optionsIndex && statsIndex !== -1) nextIndex = statsIndex;
-    else if ((menuFocusIndex === imagesIndex || menuFocusIndex === statsIndex) && titleIndex !== -1) nextIndex = titleIndex;
+    else if (menuFocusIndex === startIndex && statsIndex !== -1) nextIndex = statsIndex;
+    else if (menuFocusIndex === imagesIndex && optionsIndex !== -1) nextIndex = optionsIndex;
   } else if (direction === "up"){
-    if (menuFocusIndex === imagesIndex && startIndex !== -1) nextIndex = startIndex;
-    else if (menuFocusIndex === statsIndex && optionsIndex !== -1) nextIndex = optionsIndex;
-    else if ((menuFocusIndex === startIndex || menuFocusIndex === optionsIndex) && revealIndex !== -1) nextIndex = revealIndex;
+    if ((menuFocusIndex === startIndex || menuFocusIndex === imagesIndex) && revealIndex !== -1) nextIndex = revealIndex;
+    else if (menuFocusIndex === statsIndex && startIndex !== -1) nextIndex = startIndex;
+    else if (menuFocusIndex === optionsIndex && imagesIndex !== -1) nextIndex = imagesIndex;
     else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
-    else if (menuFocusIndex === titleIndex && imagesIndex !== -1) nextIndex = imagesIndex;
   }
 
   if (nextIndex === menuFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
@@ -4919,6 +4924,7 @@ function showMenu(){
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   if (cheatsMenu) cheatsMenu.style.display = "none";
+  if (statsPanel){ statsPanel.style.display = "none"; statsPanel.setAttribute("aria-hidden", "true"); statsPanel.removeAttribute("aria-modal"); }
   if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
   resetCheatsUnlockGate();
   pauseControlsOpen = false;
@@ -5504,10 +5510,54 @@ function syncPauseTitleNickname(){
   pauseTitle.innerHTML = `Hello ${escapePauseTitleText(nickname)}!<br>GAME PAUSED`;
 }
 
+function getStartMenuButtonTextSpan(button){
+  if (!button) return null;
+  let textSpan = button.querySelector(":scope > .startMenuButtonText");
+  if (textSpan) return textSpan;
+  textSpan = document.createElement("span");
+  textSpan.className = "startMenuButtonText";
+  while (button.firstChild) textSpan.appendChild(button.firstChild);
+  button.appendChild(textSpan);
+  return textSpan;
+}
+
+function setStartMenuButtonLabel(button, label){
+  const textSpan = getStartMenuButtonTextSpan(button);
+  if (textSpan) textSpan.textContent = label;
+}
+
+function fitStatsStartButtonNicknameLabel(){
+  if (!btnStats) return;
+  if (!btnStats.classList.contains("statsNicknameLabel")){
+    btnStats.style.removeProperty("--stats-button-focus-font-size");
+    return;
+  }
+  const textSpan = getStartMenuButtonTextSpan(btnStats);
+  if (!textSpan) return;
+  const buttonRect = btnStats.getBoundingClientRect ? btnStats.getBoundingClientRect() : null;
+  const buttonWidth = Math.max(0, (buttonRect && buttonRect.width) || btnStats.clientWidth || 0);
+  if (!buttonWidth) return;
+  const style = window.getComputedStyle ? window.getComputedStyle(btnStats) : null;
+  const baseSize = Math.max(1, parseFloat(style && style.fontSize) || 13.3333);
+  const canvas = fitStatsStartButtonNicknameLabel._canvas || (fitStatsStartButtonNicknameLabel._canvas = document.createElement("canvas"));
+  const ctx = canvas && canvas.getContext ? canvas.getContext("2d") : null;
+  if (!ctx) return;
+  ctx.font = (style && style.font) || `${style && style.fontWeight ? style.fontWeight : "400"} ${baseSize}px ${style && style.fontFamily ? style.fontFamily : "monospace"}`;
+  const textWidth = Math.max(1, ctx.measureText(textSpan.textContent || "").width);
+  const availableWidth = Math.max(46, buttonWidth - 34);
+  const nextSize = Math.max(7, Math.min(baseSize, Math.floor((baseSize * availableWidth / textWidth) * 10) / 10));
+  btnStats.style.setProperty("--stats-button-focus-font-size", `${nextSize}px`);
+}
+
 function syncNicknameStatsLabels(){
   const savedNickname = getSavedChatNicknameValue();
   syncPauseTitleNickname();
-  if (btnStats) btnStats.textContent = savedNickname ? `${savedNickname}'s Stats` : "Stats";
+  if (btnStats){
+    btnStats.classList.toggle("statsNicknameLabel", !!savedNickname);
+    setStartMenuButtonLabel(btnStats, savedNickname ? `${savedNickname}'s Stats` : "Lifetime Stats");
+    fitStatsStartButtonNicknameLabel();
+    try{ requestAnimationFrame(fitStatsStartButtonNicknameLabel); }catch(_){}
+  }
   if (statsPanelTitle){
     if (savedNickname){
       statsPanelTitle.textContent = `${savedNickname}'s Lifetime Stats`;
@@ -5516,6 +5566,8 @@ function syncNicknameStatsLabels(){
     }
   }
 }
+
+try{ window.addEventListener("resize", fitStatsStartButtonNicknameLabel); }catch(_){}
 
 function applyNicknameFromControls(value, announce=false){
   const normalized = saveChatNickname(value);
@@ -6585,6 +6637,8 @@ function pollGamepad(dt){
   const chatNavRight = consumeMenuAxis('chatRight', dRight || lx > GP_MENU_AXIS_THRESHOLD, dt, chatRepeatDelay, chatRepeatRate);
   const rNavUp = consumeMenuAxis('rUp', ry < -GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
   const rNavDown = consumeMenuAxis('rDown', ry > GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
+  const rNavLeft = consumeMenuAxis('rLeft', rx < -GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
+  const rNavRight = consumeMenuAxis('rRight', rx > GP_MENU_AXIS_THRESHOLD, dt, GP_OPTION_REPEAT_DELAY, GP_OPTION_REPEAT_RATE);
 
   if (updateControlsPreviewControllerTakeover(dt, lStick, rStick, pressMenuSelect, pressMenuBack, pressPause, navUp, navDown)){
     syncGpPrevButtons(gp);
@@ -6730,16 +6784,16 @@ function pollGamepad(dt){
         if (pressPause) togglePause();
       }
     } else if (gameState === STATE.MENU){
-      if (navLeft){
+      if (navLeft || rNavLeft){
         moveMenuControllerFocusDirectional("left");
       }
-      if (navRight){
+      if (navRight || rNavRight){
         moveMenuControllerFocusDirectional("right");
       }
-      if (navDown){
+      if (navDown || rNavDown){
         moveMenuControllerFocusDirectional("down");
       }
-      if (navUp){
+      if (navUp || rNavUp){
         moveMenuControllerFocusDirectional("up");
       }
       const menuTarget = getMenuControllerTargets()[menuFocusIndex];
