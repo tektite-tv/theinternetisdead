@@ -7,6 +7,38 @@
 <style>
   html, body { margin:0; padding:0; background:black; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
+  #starfieldFailBackground{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    user-select:none;
+    color:rgba(255,0,0,0.72);
+    font-family:Impact, Haettenschweiler, "Arial Black", sans-serif;
+    font-size:clamp(120px, 38vw, 560px);
+    font-weight:900;
+    letter-spacing:0.06em;
+    line-height:0.85;
+    text-shadow:0 0 18px rgba(255,0,0,0.75), 0 0 42px rgba(128,0,255,0.55), 8px 8px 0 rgba(0,0,0,0.75);
+    opacity:1;
+  }
+  #starfieldFailBackground::after{
+    content:"STARFIELD FAILED TO LOAD";
+    position:absolute;
+    left:50%;
+    top:calc(50% + min(22vw, 210px));
+    transform:translateX(-50%);
+    color:#00ff66;
+    font-family:"Courier New", monospace;
+    font-size:clamp(14px, 2.8vw, 36px);
+    letter-spacing:0.12em;
+    text-shadow:0 0 8px rgba(0,255,102,0.85), 2px 2px 0 #000;
+    white-space:nowrap;
+  }
+  #game{ position:relative; z-index:1; }
   #overlay{
     position:absolute; top:10px; left:10px; font-size:14px; line-height:1.4; pointer-events:none;
     text-shadow:0 0 6px rgba(0,255,0,0.35);
@@ -1618,6 +1650,7 @@ body.invert-colors {
 
 </head>
 <body>
+<div id="starfieldFailBackground" aria-hidden="true">404</div>
 <canvas id="game"></canvas>
 <div id="overlay" hidden aria-hidden="true" style="display:none !important;"></div>
 
@@ -1714,7 +1747,7 @@ body.invert-colors {
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- NOTE TO FUTURE EDITOR: Every time this file is edited, update the visible "Last updated:" hover text below to the newest edit date/time in 12-hour America/Toronto time. -->
-    <div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 19, 2026 12:17 AM)</a></div>
+    <div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: April 19, 2026 12:22 AM)</a></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
