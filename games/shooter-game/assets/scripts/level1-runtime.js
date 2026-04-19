@@ -6559,7 +6559,7 @@ const player = {
 let playerFacing = -1; // -1 = facing left/default, 1 = facing right
 let playerTurnT = 1;   // 0..1 progress through the current turn
 const PLAYER_TURN_DUR = 0.16;
-const SPIRAL_PLAYER_SPIN_TURNS = 2.25;
+const SPIRAL_PLAYER_SPIN_TURNS = 3;
 
 const playerGhosts = [];
 let playerGhostSpawnT = 0;

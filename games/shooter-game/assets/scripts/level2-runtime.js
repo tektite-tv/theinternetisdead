@@ -3828,7 +3828,7 @@ const player = {
 let playerFacing = -1; // -1 = facing left/default, 1 = facing right
 let playerTurnT = 1;   // 0..1 progress through the current turn
 const PLAYER_TURN_DUR = 0.16;
-const SPIRAL_PLAYER_SPIN_TURNS = 2.25;
+const SPIRAL_PLAYER_SPIN_TURNS = 3;
 
 // v2.06: full-direction ghost trail. Up/down trail now works, and diagonal movement bends/warps.
 const playerGhosts = [];
