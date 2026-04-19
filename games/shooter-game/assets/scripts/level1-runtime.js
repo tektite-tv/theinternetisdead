@@ -2543,8 +2543,6 @@ const btnCheatsApply = document.getElementById("btnCheatsApply");
   const shieldsSlider = document.getElementById("shieldsSlider");
   const bombsSlider = document.getElementById("bombsSlider");
   const speedSlider = document.getElementById("speedSlider");
-  const cheatermodeToggle = document.getElementById("cheatermodeToggle");
-  const cheatermodeToggleStatus = document.getElementById("cheatermodeToggleStatus");
   const infiniteToggle = document.getElementById("infiniteToggle");
   const startWaveSelect = document.getElementById("startWaveSelect");
 const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
@@ -2873,8 +2871,6 @@ function markCheatsClean(applied=false){
 }
 
 function syncCheatsMenuState(){
-  if (cheatermodeToggle) cheatermodeToggle.checked = !!cheatsUnlockedByPassphrase;
-  if (cheatermodeToggleStatus) cheatermodeToggleStatus.textContent = cheatsUnlockedByPassphrase ? "Enabled" : "Disabled";
   if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
   if (muteCheckbox) muteCheckbox.checked = !!audioMuted;
   if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
@@ -2883,28 +2879,6 @@ function syncCheatsMenuState(){
   if (muteStatus) muteStatus.textContent = audioMuted ? "Enabled" : "Disabled";
   if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
   if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
-}
-
-if (cheatermodeToggle){
-  cheatermodeToggle.addEventListener("change", () => {
-    if (!cheatsUnlockedByPassphrase){
-      cheatermodeToggle.checked = false;
-      if (cheatermodeToggleStatus) cheatermodeToggleStatus.textContent = "Disabled";
-      return;
-    }
-    if (!cheatermodeToggle.checked){
-      cheatermodeToggle.disabled = true;
-      if (cheatermodeToggleStatus) cheatermodeToggleStatus.textContent = "Resetting...";
-      try{
-        const reloadTarget = (window.top && window.top !== window) ? window.top : window;
-        reloadTarget.location.reload();
-      }catch(_){
-        try{ window.location.reload(); }catch(__){}
-      }
-      return;
-    }
-    syncCheatsMenuState();
-  });
 }
 
 if (infiniteToggle){
@@ -3450,7 +3424,7 @@ function getOptionsControllerTargets(){
 function getCheatsControllerTargets(){
   const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [cheatermodeToggle, speedSlider, startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
+  return [speedSlider, startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack, (btnCheatsApply && btnCheatsApply.style.display !== 'none' ? btnCheatsApply : null)].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
@@ -3505,28 +3479,11 @@ function toggleStatsLockedSummary(){
   return true;
 }
 
-function scrollMenuContainerBy(container, delta){
-  if (!container || !delta) return false;
-  const previous = container.scrollTop;
-  const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-  container.scrollTop = Math.max(0, Math.min(maxScroll, previous + delta));
-  return container.scrollTop !== previous;
-}
-
 function scrollStatsPanelBy(delta){
-  return scrollMenuContainerBy(statsScroll, delta);
-}
-
-function scrollOptionsMenuBy(delta){
-  return scrollMenuContainerBy(optionsScroll, delta);
-}
-
-function scrollCheatsMenuBy(delta){
-  return scrollMenuContainerBy(cheatsScroll, delta);
-}
-
-function scrollControlsMenuBy(delta){
-  return scrollMenuContainerBy(controlsListScroll, delta);
+  if (!statsScroll || !delta) return false;
+  const previous = statsScroll.scrollTop;
+  statsScroll.scrollTop = Math.max(0, previous + delta);
+  return statsScroll.scrollTop !== previous;
 }
 
 function getWinControllerTargets(){
@@ -5686,7 +5643,7 @@ function pollGamepad(dt){
     return;
   }
 
-  // Right stick scrolls active scrollable menus instead of changing focused values.
+  // Options menu: right stick changes number values without dragging focus around like a caffeinated raccoon.
   if (bindingEditState && bindingEditState.scheme === INPUT_MODE_CONTROLLER){
     const anyPressedNow = gp.buttons.some((btn, idx) => idx <= 15 && getGpButtonPressedByIndex(gp, idx));
     if (!controllerRebindReady){
@@ -5782,12 +5739,14 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
+        if (rNavUp) adjustControllerOption(1);
+        if (rNavDown) adjustControllerOption(-1);
       } else {
         if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
         if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
+        if (rNavUp) adjustControllerOption(1);
+        if (rNavDown) adjustControllerOption(-1);
       }
-      if (rNavUp) scrollOptionsMenuBy(-72);
-      if (rNavDown) scrollOptionsMenuBy(72);
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) showMenu();
     } else if (gameState === STATE.CHEATS){
@@ -5796,12 +5755,14 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
+        if (rNavUp) adjustControllerCheat(1);
+        if (rNavDown) adjustControllerCheat(-1);
       } else {
         if (navLeft) adjustControllerCheat(-1);
         if (navRight) adjustControllerCheat(1);
+        if (rNavUp) adjustControllerCheat(1);
+        if (rNavDown) adjustControllerCheat(-1);
       }
-      if (rNavUp) scrollCheatsMenuBy(-72);
-      if (rNavDown) scrollCheatsMenuBy(72);
       if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
       if (pressMenuBack) hideCheats();
     } else if (gameState === STATE.CONTROLS){
@@ -5814,8 +5775,6 @@ function pollGamepad(dt){
         if (navLeft) moveControlsControllerFocus(-1);
         if (navRight) moveControlsControllerFocus(1);
       }
-      if (rNavUp) scrollControlsMenuBy(-72);
-      if (rNavDown) scrollControlsMenuBy(72);
       if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
       if (pressMenuBack){
         if (bindingEditState) cancelBindingEdit();
