@@ -2438,8 +2438,8 @@ sfxUiHover.preload = "auto";
 sfxUiSelect.preload = "auto";
 sfxHit.volume = 0.7;
 sfxOof.volume = 0.8;
-sfxUiHover.volume = 0.25;
-sfxUiSelect.volume = 0.10;
+sfxUiHover.volume = 0.15;
+sfxUiSelect.volume = 0.33;
 
 let audioUnlocked = false;
 let pendingWaveStartMusic = false;
