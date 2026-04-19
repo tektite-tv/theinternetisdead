@@ -5634,6 +5634,24 @@ function getSavedChatNicknameValue(){
   }
 }
 
+
+function isTektiteNicknameCheatermodeUnlock(){
+  return getSavedChatNicknameValue().trim().toLowerCase() === "tektite";
+}
+
+function syncTektiteNicknameCheatermodeUnlock(){
+  if (!isTektiteNicknameCheatermodeUnlock()) return false;
+  if (!cheatsUnlockedByPassphrase){
+    unlockCheatermode("nickname-tektite");
+  } else {
+    notifyCheatsUnlockedState();
+    lockScoreTrackingState();
+    syncCheatsMenuState();
+    updateCheatsUnlockModeHint();
+  }
+  return true;
+}
+
 function loadSavedChatNickname(){
   return getSavedChatNicknameValue() || "User";
 }
@@ -5793,6 +5811,7 @@ function applyNicknameFromControls(value, announce=false){
   syncNicknameInputPreview();
   syncNicknameStatsLabels();
   syncNicknameActionButton();
+  syncTektiteNicknameCheatermodeUnlock();
   try{
     if (window.parent && window.parent !== window){
       window.parent.postMessage({
@@ -5820,6 +5839,7 @@ function activateNicknameAction(){
 
 syncNicknameControl();
 syncNicknameStatsLabels();
+syncTektiteNicknameCheatermodeUnlock();
 
 function normalizeHexColor(value){
   const raw = String(value || "").trim();
@@ -5879,6 +5899,7 @@ function showOptions(fromPause = false){
       if (event.key !== CHAT_NICKNAME_STORAGE_KEY && event.key !== CHAT_NICKNAME_EXPLICIT_STORAGE_KEY) return;
       syncNicknameControl();
       syncNicknameStatsLabels();
+      syncTektiteNicknameCheatermodeUnlock();
     });
   }catch(error){}
 

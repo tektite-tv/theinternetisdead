@@ -399,6 +399,11 @@ function getSavedChatNicknameValue(){
     return "";
   }
 }
+
+function isTektiteNicknameCheatermodeUnlock(){
+  return getSavedChatNicknameValue().trim().toLowerCase() === "tektite";
+}
+
 function escapePauseTitleText(value){
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -1427,7 +1432,7 @@ function hasScoreDisqualifyingSettings(){
 }
 
 function syncScoreTrackingState(){
-  const nextDisabled = !!(scoreTrackingLocked || hasScoreDisqualifyingSettings());
+  const nextDisabled = !!(scoreTrackingLocked || isTektiteNicknameCheatermodeUnlock() || hasScoreDisqualifyingSettings());
   scoreTrackingDisabled = nextDisabled;
   if (nextDisabled && isScoreStoreOpen && typeof closeScoreStoreMenu === "function"){
     closeScoreStoreMenu();
@@ -3617,7 +3622,7 @@ function startGame(){
   // Start looping music exactly when the game starts.
   ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
-  scoreTrackingLocked = hasScoreDisqualifyingSettings();
+  scoreTrackingLocked = !!(isTektiteNicknameCheatermodeUnlock() || hasScoreDisqualifyingSettings());
   uiRoot.classList.remove("optionsBackdrop");
   uiRoot.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
