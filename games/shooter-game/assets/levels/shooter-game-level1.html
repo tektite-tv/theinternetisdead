@@ -106,24 +106,30 @@
   .btnRowTop{ margin-top:12px; }
   .btnRowBottom{ margin-top:10px; }
   #btnControls{ min-width:160px; }
-  /* Show the controller A button only on the selected Start-menu action. */
-  #startMenu .btnRow button,
-  #startMenu .btnRow .smallBtn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
+
+  /* Controller-selected Start menu A-button hint.
+     Absolutely positioned so the four Start menu buttons keep their exact footprint. */
+  #startMenu #btnStart,
+  #startMenu #btnOptions,
+  #startMenu #btnMysteryLink,
+  #startMenu #btnStats{
+    position:relative;
   }
-  body.controller-active #startMenu .btnRow button.controllerFocus::after,
-  body.controller-active #startMenu .btnRow .smallBtn.controllerFocus::after{
+  body.controller-active #startMenu #btnStart.controllerFocus::after,
+  body.controller-active #startMenu #btnOptions.controllerFocus::after,
+  body.controller-active #startMenu #btnMysteryLink.controllerFocus::after,
+  body.controller-active #startMenu #btnStats.controllerFocus::after{
     content:"";
-    display:inline-block;
+    position:absolute;
+    right:10px;
+    top:50%;
     width:22px;
     height:22px;
-    flex:0 0 22px;
-    background:url("/games/shooter-game/assets/controller-buttons/button-a.webp") center / contain no-repeat;
+    transform:translateY(-50%);
+    background:url('/games/shooter-game/assets/controller-buttons/button-a.webp') center / contain no-repeat;
     image-rendering:auto;
-    filter:drop-shadow(0 0 5px rgba(0,255,102,0.55));
+    pointer-events:none;
+    filter:drop-shadow(0 0 4px rgba(0,255,0,0.75));
   }
   button{
     font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
