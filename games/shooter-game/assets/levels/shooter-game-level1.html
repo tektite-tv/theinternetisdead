@@ -146,6 +146,18 @@
     transform:translateY(-50%);
     z-index:1;
   }
+  /* Keep the top two start-menu labels centered while the A icon is shown. */
+  body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
+  body.controller-active #startMenu #btnOptions.controllerFocus .startMenuButtonText{
+    position:relative;
+    left:auto;
+    right:auto;
+    top:auto;
+    width:auto;
+    max-width:100%;
+    padding:0;
+    transform:none;
+  }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
   body.controller-active #startMenu #btnMysteryLink.controllerFocus::after,
