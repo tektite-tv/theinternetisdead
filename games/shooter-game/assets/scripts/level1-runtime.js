@@ -6398,7 +6398,6 @@ function pollGamepad(dt){
         else if (menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
       }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
-      if (pressY && !pressScreenshotCombo) showOptions(false);
     } else if (gameState === STATE.OPTIONS){
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown){

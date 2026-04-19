@@ -3857,7 +3857,6 @@ function pollGamepad(dt){
       }
       if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
-      if (pressY && !pressScreenshotCombo) showOptions();
     } else if (gameState === STATE.OPTIONS){
       // Level 2 Select Level can be opened while paused. Keep controller focus on
       // the visible Select Level buttons, not the hidden pause menu buttons.
