@@ -2826,8 +2826,8 @@ function updateCheatsUnlockModeHint(){
     const cheatsTargetFocused = controllerActive
       && !cheatsUnlockTimer
       && !cheatsUnlockInputReady
-      && (gameState === STATE.OPTIONS || isPauseOptionsOpen())
-      && getOptionsControllerTargets()[optionsFocusIndex] === btnCheats;
+      && isCheatermodeOptionsContextOpen()
+      && isOptionsCheatsButtonFocused();
     if (cheatsTargetFocused){
       renderCheatermodeControllerComboLabel(btnCheats, { remaining: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed: false, viewPressed: false, unlocked: false });
     } else {
@@ -3793,6 +3793,15 @@ function getPauseControllerTargets(){
 
 function isPauseOptionsOpen(){
   return !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+}
+
+function isCheatermodeOptionsContextOpen(){
+  return gameState === STATE.OPTIONS || isPauseOptionsOpen();
+}
+
+function isOptionsCheatsButtonFocused(){
+  const items = getOptionsControllerTargets();
+  return !!(btnCheats && items[optionsFocusIndex] === btnCheats);
 }
 
 function isPauseCheatsOpen(){
@@ -6081,7 +6090,7 @@ function isCheatermodeControllerHoldEligible(){
   if (cheatsUnlockedByPassphrase) return false;
   if (parentChatVisible && parentChatValuePickerActive && parentChatValuePickerCommand === "/cheatermode") return true;
   if (cheatsUnlockInputReady) return true;
-  if (gameState === STATE.OPTIONS){
+  if (isCheatermodeOptionsContextOpen()){
     const optionsTarget = getOptionsControllerTargets()[optionsFocusIndex];
     if (optionsTarget === btnCheats || optionsTarget === btnCheatsUnlockInput) return true;
   }
@@ -6103,9 +6112,9 @@ function updateCheatermodeControllerHold(dt, holdingCombo, xPressed, viewPressed
       setCheatsUnlockInputPrompt();
     }
     if (btnCheats && !cheatsUnlockedByPassphrase && !cheatsUnlockTimer && btnCheats.style.display !== "none"){
-      if (eligibleForHold && activeInputMode === INPUT_MODE_CONTROLLER && gameState === STATE.OPTIONS){
+      if (eligibleForHold && activeInputMode === INPUT_MODE_CONTROLLER && isCheatermodeOptionsContextOpen() && isOptionsCheatsButtonFocused()){
         renderCheatermodeControllerComboLabel(btnCheats, { remaining: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed, viewPressed, unlocked: false });
-      } else {
+      } else if (!isCheatermodeOptionsContextOpen() || !isOptionsCheatsButtonFocused()) {
         clearCheatermodeControllerComboLabel(btnCheats, "Cheats");
       }
     }
@@ -6119,7 +6128,7 @@ function updateCheatermodeControllerHold(dt, holdingCombo, xPressed, viewPressed
     btnCheatsUnlockInput.readOnly = true;
     btnCheatsUnlockInput.value = holdText;
   }
-  if (btnCheats && gameState === STATE.OPTIONS){
+  if (btnCheats && isCheatermodeOptionsContextOpen() && isOptionsCheatsButtonFocused()){
     renderCheatermodeControllerComboLabel(btnCheats, { remaining, xPressed, viewPressed, unlocked: false });
   }
   notifyCheatermodeControllerHoldState(true, remaining, xPressed, viewPressed);
@@ -6276,7 +6285,7 @@ function pollGamepad(dt){
     if (pressFullscreen){
       toggleFullscreen();
     }
-    const optionsCheatsButtonFocused = (gameState === STATE.OPTIONS || isPauseOptionsOpen()) && getOptionsControllerTargets()[optionsFocusIndex] === btnCheats;
+    const optionsCheatsButtonFocused = isCheatermodeOptionsContextOpen() && isOptionsCheatsButtonFocused();
     if (pressCommands && !optionsCheatsButtonFocused && !cheatermodeControllerHoldIntent && !cheatermodeUnlockedByHold){
       requestOpenChat(false, "/help");
       clearControllerFocus();
