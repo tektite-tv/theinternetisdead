@@ -1523,6 +1523,42 @@ function isDragonEnemy(e){
 const ENEMY_HIT_FLASH_SECS = 0.12;   // how long the red flash lasts
 const ENEMY_DEATH_FADE_SECS = 0.35;  // how long the death fade lasts
 
+
+const enemyHitFlashTintCanvas = document.createElement("canvas");
+const enemyHitFlashTintCtx = enemyHitFlashTintCanvas.getContext("2d", { willReadFrequently: false });
+
+function drawEnemyPixelMaskedHitFlash(ctx, img, x, y, w, h, flashProgress, alpha = 1){
+  if (!ctx || !img || !enemyHitFlashTintCtx) return;
+  const tw = Math.max(1, Math.ceil(w));
+  const th = Math.max(1, Math.ceil(h));
+  const p = Math.max(0, Math.min(1, flashProgress || 0));
+  if (p <= 0) return;
+
+  try {
+    if (enemyHitFlashTintCanvas.width !== tw) enemyHitFlashTintCanvas.width = tw;
+    if (enemyHitFlashTintCanvas.height !== th) enemyHitFlashTintCanvas.height = th;
+
+    enemyHitFlashTintCtx.save();
+    enemyHitFlashTintCtx.clearRect(0, 0, tw, th);
+    enemyHitFlashTintCtx.globalCompositeOperation = "source-over";
+    enemyHitFlashTintCtx.globalAlpha = 1;
+    enemyHitFlashTintCtx.drawImage(img, 0, 0, tw, th);
+    enemyHitFlashTintCtx.globalCompositeOperation = "source-in";
+    enemyHitFlashTintCtx.fillStyle = `rgba(255,0,0,${0.32 * p})`;
+    enemyHitFlashTintCtx.fillRect(0, 0, tw, th);
+    enemyHitFlashTintCtx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.globalCompositeOperation = "source-over";
+    ctx.drawImage(enemyHitFlashTintCanvas, x, y, w, h);
+    ctx.restore();
+  } catch (err){
+    // If a browser refuses to mask a frame for any reason, fail closed.
+    // Do not fall back to a rectangle flash, because that reintroduces the transparent-box bug.
+  }
+}
+
 function enemyMarkHit(e){
   if (!e) return;
   e.hitFlash = ENEMY_HIT_FLASH_SECS;
@@ -6192,6 +6228,10 @@ if (gameState === STATE.PLAYING){
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.drawImage(e.img, ex, ey, e.w, e.h);
+    if (e.hitFlash > 0){
+      const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
+      drawEnemyPixelMaskedHitFlash(ctx, e.img, ex, ey, e.w, e.h, p, alpha);
+    }
 
 // Dragon marker: upside-down red equilateral triangle (because dragons deserve drama)
 if (isDragonEnemy(e)){
@@ -6203,12 +6243,6 @@ if (isDragonEnemy(e)){
   ctx.restore();
 }
 
-    if (e.hitFlash > 0){
-      const p = Math.max(0, Math.min(1, e.hitFlash / ENEMY_HIT_FLASH_SECS));
-      ctx.globalCompositeOperation = "source-atop";
-      ctx.fillStyle = `rgba(255,0,0,${0.28 * p})`;
-      ctx.fillRect(ex, ey, e.w, e.h);
-    }
     ctx.restore();
   }
 
