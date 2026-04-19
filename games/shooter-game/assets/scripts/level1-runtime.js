@@ -3514,11 +3514,45 @@ function syncOptionsControllerFocus(){
   focusControllerElement(items[optionsFocusIndex]);
 }
 
-function syncCheatsControllerFocus(){
+function syncCheatsControllerFocus(forceTopVisible=false){
   const items = getCheatsControllerTargets();
   if (!items.length) return;
   cheatsFocusIndex = Math.max(0, Math.min(cheatsFocusIndex, items.length - 1));
-  focusControllerElement(items[cheatsFocusIndex]);
+  const target = items[cheatsFocusIndex];
+  focusControllerElement(target);
+  keepCheatsControllerTargetFullyVisible(target, { forceTop: !!forceTopVisible || cheatsFocusIndex === 0 });
+}
+
+function getCheatsScrollTargetElement(el){
+  if (!el) return null;
+  return el.closest('.optRow, .cheatRow, .fullRow, .buttonOnlyRow') || el;
+}
+
+function keepCheatsControllerTargetFullyVisible(el, options={}){
+  if (!cheatsScroll || !el) return;
+  const target = getCheatsScrollTargetElement(el);
+  if (!target) return;
+
+  const adjust = () => {
+    if (!cheatsScroll || !target.isConnected) return;
+    const containerRect = cheatsScroll.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const margin = 10;
+
+    if (options.forceTop){
+      cheatsScroll.scrollTop = Math.max(0, cheatsScroll.scrollTop + targetRect.top - containerRect.top - margin);
+      return;
+    }
+
+    if (targetRect.top < containerRect.top + margin){
+      cheatsScroll.scrollTop = Math.max(0, cheatsScroll.scrollTop - ((containerRect.top + margin) - targetRect.top));
+    } else if (targetRect.bottom > containerRect.bottom - margin){
+      cheatsScroll.scrollTop += targetRect.bottom - (containerRect.bottom - margin);
+    }
+  };
+
+  try{ adjust(); }catch(_){}
+  try{ requestAnimationFrame(adjust); }catch(_){ setTimeout(adjust, 0); }
 }
 
 function syncPauseControllerFocus(){
@@ -3697,8 +3731,10 @@ function moveOptionsControllerFocus(delta){
 function moveCheatsControllerFocus(delta){
   const items = getCheatsControllerTargets();
   if (!items.length) return;
+  const previousIndex = cheatsFocusIndex;
   cheatsFocusIndex = (cheatsFocusIndex + delta + items.length) % items.length;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncCheatsControllerFocus();
+  const wrappedToTop = delta > 0 && cheatsFocusIndex < previousIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncCheatsControllerFocus(wrappedToTop);
   else clearControllerFocus();
 }
 
