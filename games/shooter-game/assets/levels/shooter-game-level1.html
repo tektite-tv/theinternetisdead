@@ -769,6 +769,21 @@
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
   }
   body.controller-active #pausePanel .pauseMenuBtn.controllerFocus *{ box-shadow:none !important; }
+
+  /* Controller-selected Pause menu A-button hint.
+     Inline after the label so it appears to the right of the button text only while controller-selected. */
+  body.controller-active #pausePanel .pauseMenuBtn.controllerFocus::after{
+    content:"";
+    display:inline-block;
+    width:18px;
+    height:18px;
+    margin-left:8px;
+    vertical-align:-3px;
+    background:url('/games/shooter-game/assets/controller-buttons/button-a.webp') center / contain no-repeat;
+    image-rendering:auto;
+    pointer-events:none;
+    filter:drop-shadow(0 0 4px rgba(0,255,0,0.75));
+  }
   #pausePanel .pauseMenuBtn:hover{
     background: rgba(75,0,118,0.55);
     border-color: rgba(0,255,0,0.9);
