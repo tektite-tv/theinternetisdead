@@ -1369,19 +1369,149 @@ function writeSavedImages(images){
   }
 }
 
+
+function captureViewportSize(){
+  const viewportWidth = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || canvas.width || 640));
+  const viewportHeight = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || canvas.height || 360));
+  const maxWidth = 960;
+  const scale = Math.min(1, maxWidth / viewportWidth);
+  return {
+    viewportWidth,
+    viewportHeight,
+    targetWidth: Math.max(1, Math.round(viewportWidth * scale)),
+    targetHeight: Math.max(1, Math.round(viewportHeight * scale)),
+    scaleX: scale,
+    scaleY: scale
+  };
+}
+
+function isCaptureElementVisible(el){
+  if (!el) return false;
+  const style = window.getComputedStyle(el);
+  if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity || 1) <= 0.01) return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0 && rect.left < window.innerWidth && rect.top < window.innerHeight;
+}
+
+function drawRoundedCaptureRect(ctx, x, y, w, h, r){
+  const radius = Math.max(0, Math.min(r || 0, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+function drawCaptureDomImages(ctx, scaleX, scaleY){
+  const imgs = Array.from(document.querySelectorAll("#animatedGifSpriteLayer img, .animated-gif-sprite"));
+  for (const img of imgs){
+    if (!isCaptureElementVisible(img) || !img.complete || !img.naturalWidth) continue;
+    const rect = img.getBoundingClientRect();
+    ctx.save();
+    try{
+      const style = window.getComputedStyle(img);
+      ctx.globalAlpha = Math.max(0, Math.min(1, Number(style.opacity || 1)));
+      ctx.drawImage(img, rect.left * scaleX, rect.top * scaleY, rect.width * scaleX, rect.height * scaleY);
+    }catch(_){
+      // Cross-origin or not-yet-decoded images can refuse canvas drawing. Same-origin game assets should work.
+    }finally{
+      ctx.restore();
+    }
+  }
+}
+
+function getCaptureTextLines(el){
+  const text = (el && (el.innerText || el.textContent) || "").replace(/\u00a0/g, " ").trim();
+  return text ? text.split(/\n+/).map(line => line.trim()).filter(Boolean) : [];
+}
+
+function drawCaptureHudElement(ctx, el, scaleX, scaleY, opts = {}){
+  if (!isCaptureElementVisible(el)) return;
+  const rect = el.getBoundingClientRect();
+  const style = window.getComputedStyle(el);
+  const x = rect.left * scaleX;
+  const y = rect.top * scaleY;
+  const w = rect.width * scaleX;
+  const h = rect.height * scaleY;
+  const borderRadius = parseFloat(style.borderRadius || "10") * Math.min(scaleX, scaleY);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, Number(style.opacity || 1)));
+  drawRoundedCaptureRect(ctx, x, y, w, h, borderRadius || 8);
+  ctx.fillStyle = opts.background || style.backgroundColor || "rgba(0,0,0,0.55)";
+  ctx.fill();
+  const borderWidth = Math.max(1, (parseFloat(style.borderTopWidth || "2") || 2) * Math.min(scaleX, scaleY));
+  ctx.lineWidth = borderWidth;
+  ctx.strokeStyle = opts.border || style.borderTopColor || "rgba(255,255,255,0.82)";
+  ctx.stroke();
+
+  const lines = getCaptureTextLines(el);
+  if (lines.length){
+    const baseFontSize = Math.max(8, (parseFloat(style.fontSize || "16") || 16) * Math.min(scaleX, scaleY));
+    const lineHeight = baseFontSize * 1.15;
+    const totalHeight = lines.length * lineHeight;
+    let ty = y + h / 2 - totalHeight / 2 + baseFontSize * 0.82;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = opts.color || style.color || "#fff";
+    ctx.font = `${style.fontWeight || "700"} ${baseFontSize}px ${style.fontFamily || "monospace"}`;
+    ctx.shadowColor = "rgba(0,0,0,0.75)";
+    ctx.shadowBlur = Math.max(2, 5 * Math.min(scaleX, scaleY));
+    for (const line of lines){
+      ctx.fillText(line, x + w / 2, ty, Math.max(1, w - 10 * scaleX));
+      ty += lineHeight;
+    }
+  }
+  ctx.restore();
+}
+
+function drawCaptureHud(ctx, scaleX, scaleY){
+  const hudIds = [
+    "stageHud",
+    "scoreStoreHud",
+    "timerHud",
+    "heartsHud",
+    "livesSlot",
+    "powerupSlot"
+  ];
+  for (const id of hudIds){
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const opts = {};
+    if (id === "stageHud"){
+      opts.background = "rgba(0,0,0,0.38)";
+      opts.border = "rgba(0,255,102,0.45)";
+    }
+    drawCaptureHudElement(ctx, el, scaleX, scaleY, opts);
+  }
+}
+
 function saveCurrentGameImage(levelLabel="Level 1"){
   if (!canvas || !canvas.width || !canvas.height) return false;
   try{
+    const capture = captureViewportSize();
     const captureCanvas = document.createElement("canvas");
-    const targetWidth = 640;
-    const targetHeight = Math.max(1, Math.round(targetWidth * (canvas.height / Math.max(1, canvas.width))));
-    captureCanvas.width = targetWidth;
-    captureCanvas.height = targetHeight;
+    captureCanvas.width = capture.targetWidth;
+    captureCanvas.height = capture.targetHeight;
     const captureCtx = captureCanvas.getContext("2d");
     captureCtx.fillStyle = "#000";
-    captureCtx.fillRect(0, 0, targetWidth, targetHeight);
-    captureCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
-    const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.82);
+    captureCtx.fillRect(0, 0, capture.targetWidth, capture.targetHeight);
+
+    // Draw the complete visible game canvas to the full viewport, not just the old canvas-aspect thumbnail.
+    captureCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, capture.targetWidth, capture.targetHeight);
+
+    // Enemy GIF/WebP sprites are DOM <img> elements layered over the canvas, so draw them manually too.
+    drawCaptureDomImages(captureCtx, capture.scaleX, capture.scaleY);
+
+    // HUD is also DOM, not canvas. Rebuild the visible HUD boxes onto the saved image.
+    drawCaptureHud(captureCtx, capture.scaleX, capture.scaleY);
+
+    const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.78);
     const images = readSavedImages();
     images.unshift({
       id: `shot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
