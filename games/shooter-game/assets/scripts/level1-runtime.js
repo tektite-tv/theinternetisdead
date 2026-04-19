@@ -954,7 +954,11 @@ function execPauseCommand(cmd){
     const secretNickname = lowerRaw === "/jinclops" ? "Jinclops" : "Tektite";
     applyNicknameFromControls(secretNickname, true);
     unlockCheatermode("chat-instant");
-    return { ok:true, message:`Nickname set to ${secretNickname}. Cheat commands unlocked` };
+    applyGlobalInfiniteMode(true);
+    shootCheatMode = "big_bullets";
+    glitchBackgroundPulse = 0;
+    lockScoreTrackingState();
+    return { ok:true, message:`Nickname set to ${secretNickname}. Cheat commands unlocked, Infinite Mode enabled, and /shoot big_bullets applied` };
   }
 
   if (raw.startsWith("/cheatermode")){
