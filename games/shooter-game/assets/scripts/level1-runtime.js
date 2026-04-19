@@ -1445,12 +1445,12 @@ const PLAYER_BULLET_RADIUS = 5;
 const BIG_BULLET_RADIUS_MULTIPLIER = 2;
 const BIG_BULLET_DURATION_SECS = 30;
 const SCORE_STORE_ITEMS = [
+  { id: "big_bullets", label: "Big Bullets", cost: -500, description: "Spend score to fire 2x bigger lightning-branch bullets for 30 seconds." },
   { id: "hearts", label: "Extra Heart", cost: -250, description: "Spend score to add 1 heart to your total hearts." },
   { id: "lives", label: "Extra Life", cost: -250, description: "Spend score to add 1 extra life." },
   { id: "full_health_restore", label: "Full Health Restore", cost: -150, description: "Spend score to refill your current hearts to full." },
   { id: "shields", label: "Shield", cost: -125, description: "Spend score to add 1 shield pip." },
-  { id: "bombs", label: "Bomb", cost: -100, description: "Spend score to add 1 bomb." },
-  { id: "big_bullets", label: "Big Bullets", cost: -500, description: "Spend score to fire 2x bigger lightning-branch bullets for 30 seconds." }
+  { id: "bombs", label: "Bomb", cost: -100, description: "Spend score to add 1 bomb." }
 ];
 let totalEnemiesSpawned = 0;
 let bombKills = 0;
