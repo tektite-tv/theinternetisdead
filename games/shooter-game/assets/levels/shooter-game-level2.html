@@ -804,6 +804,67 @@ body.invert-colors {
   .resourceStepperButtons{ display:none !important; }
   .startStatField.statInfinite::after{ display:none; }
   .startStatField.statInfinite .resourceNumberWrap::after{ content:"MAX"; position:absolute; left:12px; right:12px; top:50%; transform:translateY(-50%); height:22px; line-height:22px; text-align:center; color:#00ff66; font-family:monospace; font-size:18px; pointer-events:none; }
+
+  /* Unified overlay menu footprint: Start, Pause, Death, and Win now share the same shell size. */
+  :root{
+    --shooter-menu-footprint-width:min(520px, 92vw);
+    --shooter-menu-footprint-height:min(430px, calc(100vh - 32px));
+    --shooter-menu-footprint-padding:18px 18px 16px;
+    --shooter-menu-footprint-radius:16px;
+  }
+  #startMenu.panel,
+  #pausePanel,
+  #deathPanel,
+  #winPanel{
+    width:var(--shooter-menu-footprint-width) !important;
+    max-width:var(--shooter-menu-footprint-width) !important;
+    height:var(--shooter-menu-footprint-height) !important;
+    max-height:var(--shooter-menu-footprint-height) !important;
+    min-height:0 !important;
+    box-sizing:border-box !important;
+    padding:var(--shooter-menu-footprint-padding) !important;
+    border-radius:var(--shooter-menu-footprint-radius) !important;
+    text-align:center !important;
+    transform:scale(0.975) !important;
+    transform-origin:center center !important;
+  }
+  #startMenu.panel,
+  #pausePanel,
+  #deathPanel{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  #winPanel{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    aspect-ratio:auto !important;
+    overflow:auto;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+  }
+  #winPanel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #startMenu.panel .btnRow,
+  #pausePanel .pauseMenuBtn,
+  #deathPanel .deathBtn,
+  #winPanel #btnContinue{
+    flex:0 0 auto;
+  }
+  #winStatsList{
+    flex:0 1 auto;
+    min-height:0;
+    overflow:visible;
+  }
+  @media (max-height: 620px), (max-width: 460px){
+    :root{ --shooter-menu-footprint-height:min(400px, calc(100vh - 24px)); }
+    #pauseTitle,
+    #deathTitle{ font-size:44px; }
+  }
+  /* End unified overlay menu footprint. */
 </style>
 
 
