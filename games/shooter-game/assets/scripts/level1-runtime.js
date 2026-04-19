@@ -3046,12 +3046,12 @@ function unlockCheatermode(source = "typed"){
   }
   syncCheatsMenuState();
   updateCheatsUnlockModeHint();
-  if ((source === "typed-countdown" || source === "typed-instant") && gameState === STATE.OPTIONS){
+  if ((source === "typed-countdown" || source === "typed-instant") && (gameState === STATE.OPTIONS || isPauseOptionsOpen())){
     optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
     scrollOptionsToCheatsButton();
     if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   }
-  if (source === "controller-hold" && gameState === STATE.OPTIONS){
+  if (source === "controller-hold" && (gameState === STATE.OPTIONS || isPauseOptionsOpen())){
     optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
     scrollOptionsToCheatsButton();
     if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
@@ -3355,6 +3355,7 @@ let bindingEditState = null;
 let controllerRebindReady = false;
 let pauseControlsOpen = false;
 let optionsOpenedFromPause = false;
+let cheatsOpenedFromPause = false;
 let controlsPreviewOpen = false;
 let controlsPreviewControllerCaptured = false;
 let controlsPreviewReleaseArmed = false;
@@ -3786,6 +3787,10 @@ function getPauseControllerTargets(){
 
 function isPauseOptionsOpen(){
   return !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+}
+
+function isPauseCheatsOpen(){
+  return !!(cheatsOpenedFromPause && isPaused && cheatsMenu && cheatsMenu.style.display === "block");
 }
 
 function getPauseOptionsReturnFocusIndex(){
@@ -4812,9 +4817,15 @@ function restartRun(){
   startGame();
 }
 function showCheats(){
+  const openingFromPauseOptions = !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+  cheatsOpenedFromPause = openingFromPauseOptions;
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
-  setPaused(false);
+  if (openingFromPauseOptions){
+    if (pauseOverlay) pauseOverlay.style.display = "none";
+  } else {
+    setPaused(false);
+  }
   gameState = STATE.CHEATS;
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
@@ -4843,7 +4854,9 @@ function showCheats(){
 }
 
 function hideCheats(){
-  gameState = STATE.OPTIONS;
+  const returningToPauseOptions = !!(cheatsOpenedFromPause && isPaused);
+  gameState = returningToPauseOptions ? STATE.PLAYING : STATE.OPTIONS;
+  cheatsOpenedFromPause = false;
   if (cheatsMenu) cheatsMenu.style.display = "none";
   optionsMenu.style.display = "block";
   uiRoot.classList.add("optionsBackdrop");
@@ -5209,6 +5222,7 @@ function applyBackgroundColorFromControls(value){
 function showOptions(fromPause = false){
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   optionsOpenedFromPause = !!fromPause;
+  cheatsOpenedFromPause = false;
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
   if (!fromPause){
@@ -5582,6 +5596,8 @@ btnBack.addEventListener("click", () => {
     uiRoot.style.display = "none";
     if (pauseOverlay) pauseOverlay.style.display = "flex";
     optionsOpenedFromPause = false;
+    cheatsOpenedFromPause = false;
+    gameState = STATE.PLAYING;
     pauseFocusIndex = getPauseOptionsReturnFocusIndex();
     if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
     else clearControllerFocus();
@@ -6250,7 +6266,7 @@ function pollGamepad(dt){
     if (pressFullscreen){
       toggleFullscreen();
     }
-    const optionsCheatsButtonFocused = gameState === STATE.OPTIONS && getOptionsControllerTargets()[optionsFocusIndex] === btnCheats;
+    const optionsCheatsButtonFocused = (gameState === STATE.OPTIONS || isPauseOptionsOpen()) && getOptionsControllerTargets()[optionsFocusIndex] === btnCheats;
     if (pressCommands && !optionsCheatsButtonFocused && !cheatermodeControllerHoldIntent && !cheatermodeUnlockedByHold){
       requestOpenChat(false, "/help");
       clearControllerFocus();
@@ -6269,6 +6285,23 @@ function pollGamepad(dt){
           postChatControllerAction('close');
         }
       }
+    } else if (isPauseCheatsOpen()){
+      if (navUp) moveCheatsControllerFocus(-1);
+      if (navDown) moveCheatsControllerFocus(1);
+      if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
+        if (navLeft) moveStartingStatFocus(-1);
+        if (navRight) moveStartingStatFocus(1);
+        if (rNavUp) adjustControllerCheat(1);
+        if (rNavDown) adjustControllerCheat(-1);
+      } else {
+        if (navLeft) adjustControllerCheat(-1);
+        if (navRight) adjustControllerCheat(1);
+        if (rNavUp) adjustControllerCheat(1);
+        if (rNavDown) adjustControllerCheat(-1);
+      }
+      if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
+      if (pressMenuBack) hideCheats();
+      if (pressPause) hideCheats();
     } else if (isPauseOptionsOpen()){
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown){
