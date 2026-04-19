@@ -4151,7 +4151,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (input) {
         input.readOnly = controllerMode;
         input.placeholder = controllerMode ? 'Hold X + View' : 'type cheatermode';
-        input.value = controllerMode ? 'Hold X + View for 5 sec' : '';
+        input.value = controllerMode ? 'Hold X + View 5s' : '';
         input.setAttribute('aria-label', controllerMode
           ? 'Controller active. Hold X plus View for five seconds to unlock cheat commands'
           : 'Keyboard or mouse active. Type cheatermode to unlock cheat commands');
@@ -4162,6 +4162,25 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
       }
       if (hintNode) hintNode.textContent = controllerMode ? 'Hold X + View 5s' : 'Enter';
+      notifyParentChatSandboxState();
+      return true;
+    }
+
+    function updateCheatermodeHoldCountdown(remaining, active = true, unlocked = false) {
+      if (!activeCommandPicker || activeCommandPicker.kind !== 'text') return false;
+      if (String(activeCommandPicker.command || '').trim().toLowerCase() !== '/cheatermode') return false;
+      if (!isExternalControllerMode()) return false;
+      const safeRemaining = Math.max(0, Math.ceil(Number(remaining) || 0));
+      const text = unlocked || safeRemaining <= 0
+        ? 'Cheatermode unlocked'
+        : `Hold X + View ${safeRemaining}s`;
+      if (activeCommandPicker.input) {
+        activeCommandPicker.input.readOnly = true;
+        activeCommandPicker.input.value = active ? text : 'Hold X + View 5s';
+      }
+      if (activeCommandPicker.hintNode) {
+        activeCommandPicker.hintNode.textContent = active ? text : 'Hold X + View 5s';
+      }
       notifyParentChatSandboxState();
       return true;
     }
@@ -6721,6 +6740,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       if (event.data.type === 'chatSandboxInputMode') {
         setExternalInputMode(event.data.mode || 'keyboardMouse');
+        return;
+      }
+
+      if (event.data.type === 'chatSandboxCheatermodeHoldState') {
+        updateCheatermodeHoldCountdown(event.data.remaining, event.data.active !== false, !!event.data.unlocked);
         return;
       }
 

@@ -2604,9 +2604,14 @@ function getCheatermodePromptText(){
   return activeInputMode === INPUT_MODE_CONTROLLER ? CHEATERMODE_CONTROLLER_PROMPT : CHEATERMODE_KEYBOARD_PROMPT;
 }
 
+function formatCheatermodeControllerHoldText(remaining){
+  const seconds = Math.max(0, Math.ceil(Number(remaining) || 0));
+  return seconds > 0 ? "Hold X + View " + seconds + "s" : "Cheatermode unlocked";
+}
+
 function isCheatermodePromptText(value){
   const text = String(value || "").trim();
-  return text === CHEATERMODE_KEYBOARD_PROMPT || text === CHEATERMODE_CONTROLLER_PROMPT || /^Hold X \+ View \(\d+\)$/.test(text) || text === "Cheatermode unlocked";
+  return text === CHEATERMODE_KEYBOARD_PROMPT || text === CHEATERMODE_CONTROLLER_PROMPT || /^Hold X \+ View(?: \d+s| \(\d+\))?$/.test(text) || text === "Cheatermode unlocked";
 }
 
 function updateCheatsUnlockModeHint(){
@@ -3263,6 +3268,20 @@ function notifyCheatsUnlockedState(){
     if (window.parent && window.parent !== window){
       window.parent.postMessage({
         type: "tektite:cheats-unlocked-state",
+        unlocked: !!cheatsUnlockedByPassphrase
+      }, "*");
+    }
+  }catch(error){}
+}
+
+function notifyCheatermodeControllerHoldState(active, remaining){
+  try{
+    if (window.parent && window.parent !== window){
+      window.parent.postMessage({
+        type: "tektite:cheatermode-hold-state",
+        active: !!active,
+        remaining: Math.max(0, Math.ceil(Number(remaining) || 0)),
+        totalSeconds: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000),
         unlocked: !!cheatsUnlockedByPassphrase
       }, "*");
     }
@@ -5370,6 +5389,9 @@ function isCheatermodeControllerHoldEligible(){
 
 function updateCheatermodeControllerHold(dt, holdingCombo){
   if (!holdingCombo || !isCheatermodeControllerHoldEligible()){
+    if (cheatermodeControllerHoldMs > 0){
+      notifyCheatermodeControllerHoldState(false, Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000));
+    }
     cheatermodeControllerHoldMs = 0;
     if (btnCheatsUnlockInput && btnCheatsUnlockInput.style.display !== "none" && activeInputMode === INPUT_MODE_CONTROLLER){
       setCheatsUnlockInputPrompt();
@@ -5381,14 +5403,17 @@ function updateCheatermodeControllerHold(dt, holdingCombo){
   }
   cheatermodeControllerHoldMs = Math.min(CHEATERMODE_CONTROLLER_HOLD_MS, cheatermodeControllerHoldMs + Math.max(0, Number(dt) || 0));
   const remaining = Math.max(0, Math.ceil((CHEATERMODE_CONTROLLER_HOLD_MS - cheatermodeControllerHoldMs) / 1000));
+  const holdText = formatCheatermodeControllerHoldText(remaining);
   if (btnCheatsUnlockInput && btnCheatsUnlockInput.style.display !== "none"){
     btnCheatsUnlockInput.readOnly = true;
-    btnCheatsUnlockInput.value = remaining > 0 ? "Hold X + View (" + remaining + ")" : "Cheatermode unlocked";
+    btnCheatsUnlockInput.value = holdText;
   } else if (btnCheats && gameState === STATE.OPTIONS){
-    btnCheats.textContent = remaining > 0 ? "Hold X + View (" + remaining + ")" : "Cheats (Unlocked)";
+    btnCheats.textContent = remaining > 0 ? holdText : "Cheats (Unlocked)";
   }
+  notifyCheatermodeControllerHoldState(true, remaining);
   if (cheatermodeControllerHoldMs >= CHEATERMODE_CONTROLLER_HOLD_MS){
     unlockCheatermode("controller-hold");
+    notifyCheatermodeControllerHoldState(false, 0);
     return true;
   }
   return false;
@@ -5547,7 +5572,7 @@ function pollGamepad(dt){
         if (rNavUp) postChatControllerAction('scrollUp');
         if (rNavDown) postChatControllerAction('scrollDown');
         if (pressMenuSelect) postChatControllerAction('execute');
-        if (pressMenuBack){
+        if (pressMenuBack && !cheatermodeControllerHoldIntent){
           postChatControllerAction('close');
         }
       }

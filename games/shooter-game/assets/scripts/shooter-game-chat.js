@@ -50,6 +50,16 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       });
     }
 
+    function postCheatermodeHoldStateToChatSandbox(data = {}) {
+      postToChatSandbox({
+        type: 'chatSandboxCheatermodeHoldState',
+        active: !!data.active,
+        remaining: Math.max(0, Math.ceil(Number(data.remaining) || 0)),
+        totalSeconds: Math.max(1, Math.ceil(Number(data.totalSeconds) || 5)),
+        unlocked: !!data.unlocked
+      });
+    }
+
     function notifyChildChatVisibility() {
       try {
         if (tektiteFrame && tektiteFrame.contentWindow) {
@@ -725,6 +735,11 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       if (data.type === 'tektite:cheats-unlocked-state') {
         shooterCheatsUnlocked = !!data.unlocked;
         registerPageCommands();
+        return;
+      }
+
+      if (data.type === 'tektite:cheatermode-hold-state') {
+        postCheatermodeHoldStateToChatSandbox(data);
         return;
       }
 
