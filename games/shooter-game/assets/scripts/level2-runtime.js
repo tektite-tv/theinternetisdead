@@ -1641,8 +1641,7 @@ function writeSavedImages(images){
 function captureViewportSize(){
   const viewportWidth = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || canvas.width || 640));
   const viewportHeight = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || canvas.height || 360));
-  const maxWidth = 960;
-  const scale = Math.min(1, maxWidth / viewportWidth);
+  const scale = 1;
   return {
     viewportWidth,
     viewportHeight,
@@ -1759,27 +1758,38 @@ function drawCaptureHud(ctx, scaleX, scaleY){
   }
 }
 
-function saveCurrentGameImage(levelLabel="Level 2"){
+async function saveCurrentGameImage(levelLabel="Level 2"){
   if (!canvas || !canvas.width || !canvas.height) return false;
   try{
-    const capture = captureViewportSize();
-    const captureCanvas = document.createElement("canvas");
-    captureCanvas.width = capture.targetWidth;
-    captureCanvas.height = capture.targetHeight;
-    const captureCtx = captureCanvas.getContext("2d");
-    captureCtx.fillStyle = "#000";
-    captureCtx.fillRect(0, 0, capture.targetWidth, capture.targetHeight);
+    let dataUrl = "";
+    if (typeof window.tektiteCreateLevelScreenshotDataUrl === "function"){
+      try{
+        dataUrl = await window.tektiteCreateLevelScreenshotDataUrl({
+          canvas,
+          type: "image/jpeg",
+          quality: 0.86
+        });
+      }catch(snapshotError){
+        console.warn("Browser-matched screenshot capture failed; falling back to canvas compositor.", snapshotError);
+      }
+    }
 
-    // Draw the complete visible game canvas to the full viewport, not just the old canvas-aspect thumbnail.
-    captureCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, capture.targetWidth, capture.targetHeight);
+    if (!dataUrl){
+      const capture = captureViewportSize();
+      const captureCanvas = document.createElement("canvas");
+      captureCanvas.width = capture.targetWidth;
+      captureCanvas.height = capture.targetHeight;
+      const captureCtx = captureCanvas.getContext("2d");
+      captureCtx.fillStyle = "#000";
+      captureCtx.fillRect(0, 0, capture.targetWidth, capture.targetHeight);
 
-    // Enemy GIF/WebP sprites are DOM <img> elements layered over the canvas, so draw them manually too.
-    drawCaptureDomImages(captureCtx, capture.scaleX, capture.scaleY);
+      captureCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, capture.targetWidth, capture.targetHeight);
+      drawCaptureDomImages(captureCtx, capture.scaleX, capture.scaleY);
+      drawCaptureHud(captureCtx, capture.scaleX, capture.scaleY);
 
-    // HUD is also DOM, not canvas. Rebuild the visible HUD boxes onto the saved image.
-    drawCaptureHud(captureCtx, capture.scaleX, capture.scaleY);
+      dataUrl = captureCanvas.toDataURL("image/jpeg", 0.86);
+    }
 
-    const dataUrl = captureCanvas.toDataURL("image/jpeg", 0.78);
     const images = readSavedImages();
     images.unshift({
       id: `shot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
