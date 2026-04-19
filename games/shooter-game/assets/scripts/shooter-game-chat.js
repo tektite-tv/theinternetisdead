@@ -876,11 +876,11 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         return;
       }
       if (data.type === 'tektite:set-nickname') {
-        const nextNickname = String(data.nickname || '').trim() || 'User';
+        const nextNickname = String(data.nickname || '').trim();
         postToChatSandbox({
           type: 'pageChatResult',
           command: '/nickname',
-          message: `/nickname executed by ${nextNickname}`,
+          message: nextNickname ? `/nickname executed by ${nextNickname}` : 'Nickname cleared.',
           nickname: nextNickname,
           announce: data.announce === true
         });

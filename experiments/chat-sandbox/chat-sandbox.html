@@ -1635,6 +1635,7 @@ const focusSink = document.getElementById('focusSink');
     const scriptLoadInput = document.getElementById('scriptLoadInput');
 
     const CHAT_NICKNAME_STORAGE_KEY = 'tektiteChatNickname';
+    const CHAT_NICKNAME_EXPLICIT_STORAGE_KEY = 'tektiteChatNicknameExplicit';
 
     function loadSavedNickname() {
       try {
@@ -1648,8 +1649,10 @@ const focusSink = document.getElementById('focusSink');
     function saveNickname(value) {
       try {
         if (value && value.trim()) {
+          window.localStorage.setItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY, 'true');
           window.localStorage.setItem(CHAT_NICKNAME_STORAGE_KEY, value.trim());
         } else {
+          window.localStorage.removeItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY);
           window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
         }
       } catch (error) {

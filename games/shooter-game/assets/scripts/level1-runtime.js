@@ -5467,11 +5467,14 @@ function getStaticFrameForImage(img){
 }
 
 const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
+const CHAT_NICKNAME_EXPLICIT_STORAGE_KEY = "tektiteChatNicknameExplicit";
 
 function getSavedChatNicknameValue(){
   try{
     const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
-    return savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
+    const normalized = savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
+    const isExplicit = window.localStorage.getItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY) === "true";
+    return normalized === "User" && !isExplicit ? "" : normalized;
   }catch(error){
     return "";
   }
@@ -5484,10 +5487,15 @@ function loadSavedChatNickname(){
 function saveChatNickname(value){
   const normalized = String(value || "").trim();
   try{
-    if (normalized) window.localStorage.setItem(CHAT_NICKNAME_STORAGE_KEY, normalized);
-    else window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
+    if (normalized){
+      window.localStorage.setItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY, "true");
+      window.localStorage.setItem(CHAT_NICKNAME_STORAGE_KEY, normalized);
+    } else {
+      window.localStorage.removeItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY);
+      window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
+    }
   }catch(error){}
-  return normalized || "User";
+  return normalized;
 }
 
 function syncNicknameControl(){
@@ -5643,7 +5651,7 @@ function showOptions(fromPause = false){
   syncNicknameStatsLabels();
   try{
     window.addEventListener("storage", (event) => {
-      if (event.key !== CHAT_NICKNAME_STORAGE_KEY) return;
+      if (event.key !== CHAT_NICKNAME_STORAGE_KEY && event.key !== CHAT_NICKNAME_EXPLICIT_STORAGE_KEY) return;
       syncNicknameControl();
       syncNicknameStatsLabels();
     });
