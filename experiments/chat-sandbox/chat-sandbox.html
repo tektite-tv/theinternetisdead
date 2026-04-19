@@ -4111,6 +4111,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     let activeCommandPicker = null;
     let externalInputMode = 'keyboardMouse';
+    let cheatermodeControllerHoldStartedAt = 0;
+    let cheatermodeControllerHoldWasBothPressed = false;
+    let cheatermodeControllerHoldTickTimer = null;
 
     function isShooterNumberPickerCommand(command = {}) {
       if (!command || pageCommandMeta.sourceKey !== 'shooter-game') return false;
@@ -4147,6 +4150,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (externalInputMode === nextMode) return;
       externalInputMode = nextMode;
       document.body.classList.toggle('controller-active', externalInputMode === 'controller');
+      if (externalInputMode !== 'controller') stopCheatermodeControllerHoldTicker();
       updateActiveTextPickerInputMode();
     }
 
@@ -4161,6 +4165,86 @@ function createHomepageCustomizeMessageNode(result = {}) {
       const comboClass = getCheatermodeComboClass(xPressed, viewPressed);
       const safeRemaining = Math.max(1, Math.ceil(Number(remaining) || 5));
       return `Hold <span class="helpTextPickerComboButton ${comboClass}">X</span> + <span class="helpTextPickerComboButton ${comboClass}">View</span> ${safeRemaining}s`;
+    }
+
+    function resetCheatermodeControllerHoldTimer() {
+      cheatermodeControllerHoldStartedAt = 0;
+      cheatermodeControllerHoldWasBothPressed = false;
+    }
+
+    function getCheatermodeControllerButtons() {
+      try {
+        const pads = typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function'
+          ? Array.from(navigator.getGamepads() || [])
+          : [];
+        const gp = pads.find((pad) => pad && pad.connected && pad.buttons && pad.buttons.length);
+        if (!gp) return { xPressed: false, viewPressed: false };
+        return {
+          xPressed: !!(gp.buttons[2] && gp.buttons[2].pressed),
+          viewPressed: !!(gp.buttons[8] && gp.buttons[8].pressed)
+        };
+      } catch (error) {
+        return { xPressed: false, viewPressed: false };
+      }
+    }
+
+    function submitCheatermodeControllerUnlock() {
+      if (!activeCommandPicker || activeCommandPicker.kind !== 'text') return false;
+      if (String(activeCommandPicker.command || '').trim().toLowerCase() !== '/cheatermode') return false;
+      const itemToRefocus = activeCommandPicker.item || null;
+      closeActiveCommandPicker();
+      showChatBar();
+      chatBar.value = '/cheatermode cheatermode';
+      moveCursorToEnd();
+      submitMessage();
+      if (itemToRefocus && typeof itemToRefocus.focus === 'function') {
+        try { itemToRefocus.focus(); } catch (error) {}
+      }
+      return true;
+    }
+
+    function tickCheatermodeControllerHold() {
+      if (!activeCommandPicker || activeCommandPicker.kind !== 'text') return false;
+      if (String(activeCommandPicker.command || '').trim().toLowerCase() !== '/cheatermode') return false;
+      if (!isExternalControllerMode()) {
+        resetCheatermodeControllerHoldTimer();
+        return false;
+      }
+      const buttons = getCheatermodeControllerButtons();
+      const bothPressed = !!buttons.xPressed && !!buttons.viewPressed;
+      if (!bothPressed) {
+        resetCheatermodeControllerHoldTimer();
+        setCheatermodePickerDisplay({ remaining: 5, xPressed: buttons.xPressed, viewPressed: buttons.viewPressed, unlocked: false });
+        return false;
+      }
+      const now = (typeof performance !== 'undefined' && typeof performance.now === 'function') ? performance.now() : Date.now();
+      if (!cheatermodeControllerHoldStartedAt || !cheatermodeControllerHoldWasBothPressed) {
+        cheatermodeControllerHoldStartedAt = now;
+      }
+      cheatermodeControllerHoldWasBothPressed = true;
+      const elapsed = Math.max(0, now - cheatermodeControllerHoldStartedAt);
+      const remaining = Math.max(0, Math.ceil((5000 - elapsed) / 1000));
+      setCheatermodePickerDisplay({ remaining, xPressed: true, viewPressed: true, unlocked: remaining <= 0 });
+      if (remaining <= 0 || elapsed >= 5000) {
+        submitCheatermodeControllerUnlock();
+        return true;
+      }
+      return false;
+    }
+
+    function ensureCheatermodeControllerHoldTicker() {
+      if (cheatermodeControllerHoldTickTimer) return;
+      cheatermodeControllerHoldTickTimer = window.setInterval(() => {
+        tickCheatermodeControllerHold();
+      }, 100);
+    }
+
+    function stopCheatermodeControllerHoldTicker() {
+      if (cheatermodeControllerHoldTickTimer) {
+        window.clearInterval(cheatermodeControllerHoldTickTimer);
+        cheatermodeControllerHoldTickTimer = null;
+      }
+      resetCheatermodeControllerHoldTimer();
     }
 
     function setCheatermodePickerDisplay({ remaining = 5, xPressed = false, viewPressed = false, unlocked = false } = {}) {
@@ -4201,8 +4285,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
         }
       }
       if (hintNode) {
-        if (controllerMode) setCheatermodePickerDisplay({ remaining: 5, xPressed: false, viewPressed: false, unlocked: false });
-        else hintNode.textContent = 'Enter';
+        if (controllerMode) {
+          resetCheatermodeControllerHoldTimer();
+          setCheatermodePickerDisplay({ remaining: 5, xPressed: false, viewPressed: false, unlocked: false });
+          ensureCheatermodeControllerHoldTicker();
+        } else {
+          stopCheatermodeControllerHoldTicker();
+          hintNode.textContent = 'Enter';
+        }
       }
       notifyParentChatSandboxState();
       return true;
@@ -4368,6 +4458,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
     function closeActiveCommandPicker() {
       if (!activeCommandPicker || !activeCommandPicker.item) {
+        stopCheatermodeControllerHoldTicker();
         activeCommandPicker = null;
         notifyParentChatSandboxState();
         return;
@@ -4383,6 +4474,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       item.removeAttribute('data-text-picker-active');
       item.removeAttribute('data-text-picker-command');
       if (picker && picker.parentNode) picker.parentNode.removeChild(picker);
+      stopCheatermodeControllerHoldTicker();
       activeCommandPicker = null;
       notifyParentChatSandboxState();
     }
@@ -4454,9 +4546,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const selected = options[activeCommandPicker.index] || options[0] || '';
         rawCommand = `${activeCommandPicker.command} ${selected}`.trim();
       } else if (activeCommandPicker.kind === 'text') {
-        if (isExternalControllerMode()) return false;
-        const typed = activeCommandPicker.input ? String(activeCommandPicker.input.value || '').trim() : '';
-        rawCommand = `${activeCommandPicker.command} ${typed}`.trim();
+        if (isExternalControllerMode()) {
+          const normalized = String(activeCommandPicker.command || '').trim().toLowerCase();
+          if (normalized === '/cheatermode') rawCommand = '/cheatermode cheatermode';
+          else return false;
+        } else {
+          const typed = activeCommandPicker.input ? String(activeCommandPicker.input.value || '').trim() : '';
+          rawCommand = `${activeCommandPicker.command} ${typed}`.trim();
+        }
       }
       const itemToRefocus = activeCommandPicker.item || null;
       closeActiveCommandPicker();
@@ -4530,6 +4627,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
         hintNode
       };
       updateActiveTextPickerInputMode();
+      if (normalized === '/cheatermode' && isExternalControllerMode()) {
+        resetCheatermodeControllerHoldTimer();
+        ensureCheatermodeControllerHoldTicker();
+        tickCheatermodeControllerHold();
+      }
       notifyParentChatSandboxState();
 
       if (!isExternalControllerMode()) {
