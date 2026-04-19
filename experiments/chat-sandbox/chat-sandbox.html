@@ -4030,7 +4030,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function getCommandCatalog() {
-      const pageCommands = pageCommandRegistry.map((entry) => entry.name);
+      // Hidden page commands remain executable through the command handler, but they
+      // are intentionally excluded from inline autocomplete and Tab suggestions.
+      const pageCommands = pageCommandRegistry
+        .filter((entry) => entry.hidden !== true)
+        .map((entry) => entry.name);
       if (document.body.classList.contains('embedded') && pageCommandMeta.pageOnly) {
         return Array.from(new Set(['/help', ...pageCommands])).sort((a, b) => a.localeCompare(b));
       }

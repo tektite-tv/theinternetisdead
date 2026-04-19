@@ -51,8 +51,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/color_invert', desc: 'Toggle invert colors', usage: '/color_invert' },
       { name: '/lives', desc: 'Set lives to 0-99, or 100/INFINITE', usage: '/lives [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'], cheatOnly: true },
       { name: '/log', desc: 'Show the visible Last updated timestamp for the current level', usage: '/log' },
-      { name: '/stop', desc: 'Testing: close the level iframe and expose the host 404 fallback', usage: '/stop', hiddenUntilCheats: true },
-      { name: '/start', desc: 'Testing: reload Level 1 normally after /stop', usage: '/start', hiddenUntilCheats: true },
+      { name: '/stop', desc: 'Testing: close the level iframe and expose the host 404 fallback', usage: '/stop', cheatOnly: true, hidden: true },
+      { name: '/start', desc: 'Testing: reload Level 1 normally after /stop', usage: '/start', cheatOnly: true, hidden: true },
       { name: '/mute', desc: 'Toggle all shooter audio on or off', usage: '/mute' },
       { name: '/nickname', desc: 'Set the displayed username used by system messages', usage: '/nickname ', suggestions: ['Tektite', 'Guest', 'User'] },
       { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'], cheatOnly: true },
@@ -606,12 +606,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           if (shooterCheatsUnlocked) return command.unlockOnly !== true;
           return command.cheatOnly !== true;
         })
-        .map((command) => {
-          if (command.hiddenUntilCheats === true) {
-            return { ...command, hidden: !shooterCheatsUnlocked };
-          }
-          return command;
-        });
+        .map((command) => ({ ...command }));
     }
 
     function registerPageCommands() {
@@ -787,6 +782,15 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           const rawCommand = String(data.raw || data.command || '').trim();
           const commandName = String(data.command || '').trim().toLowerCase();
           if (commandName === '/stop') {
+            if (!shooterCheatsUnlocked) {
+              postToChatSandbox({
+                type: 'pageChatResult',
+                command: '/stop',
+                message: '/stop requires cheatermode to be active.',
+                announce: true
+              });
+              return;
+            }
             stopShooterLevelFramesFor404();
             postToChatSandbox({
               type: 'pageChatResult',
@@ -797,6 +801,15 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
             return;
           }
           if (commandName === '/start') {
+            if (!shooterCheatsUnlocked) {
+              postToChatSandbox({
+                type: 'pageChatResult',
+                command: '/start',
+                message: '/start requires cheatermode to be active.',
+                announce: true
+              });
+              return;
+            }
             startShooterLevel1FromCommand();
             postToChatSandbox({
               type: 'pageChatResult',
