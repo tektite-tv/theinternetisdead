@@ -4293,6 +4293,11 @@ function getMenuHubInnerForTab(tab){
 }
 
 function syncMenuHubTabButtons(){
+  if (menuHubPanel){
+    menuHubPanel.classList.toggle("menuHubTabImages", menuHubActiveTab === "images");
+    menuHubPanel.classList.toggle("menuHubTabStats", menuHubActiveTab === "stats");
+    menuHubPanel.classList.toggle("menuHubTabOptions", menuHubActiveTab === "options");
+  }
   [btnMenuHubImages, btnMenuHubStats, btnMenuHubOptions].filter(Boolean).forEach(button => {
     const active = getMenuHubTabForButton(button) === menuHubActiveTab;
     button.classList.toggle("menuHubActiveTab", active);
@@ -5370,6 +5375,7 @@ function closeMenuHub(){
   if (menuHubPanel){
     menuHubPanel.style.display = "none";
     menuHubPanel.setAttribute("aria-hidden", "true");
+    menuHubPanel.classList.remove("menuHubTabImages", "menuHubTabStats", "menuHubTabOptions");
   }
   gameState = STATE.MENU;
   uiRoot.classList.remove("optionsBackdrop");

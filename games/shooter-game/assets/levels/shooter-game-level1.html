@@ -2261,172 +2261,189 @@ body.invert-colors {
   /* End unified overlay menu footprint. */
 
 
-  /* v2.03: compact one-line command listings inside Options > Controls and Menu > Options. */
-  #optionsMenu .commandOptionRow{
-    padding:6px 8px !important;
+  /* v2.04: restore normal Options command-list layout inside the tabbed Menu hub.
+     The previous compact override made the rows pretend to be a spreadsheet. Never again. */
+  #menuHubPanel.menuHubTabOptions #menuHubPanelInner{
+    width:min(1280px, calc(100vw - 72px)) !important;
+    max-width:min(1280px, calc(100vw - 72px)) !important;
+    height:min(900px, calc(100vh - 80px)) !important;
+    max-height:min(900px, calc(100vh - 80px)) !important;
+    padding:18px !important;
   }
-  #optionsMenu .commandOptionRow .cheatHeader{
+  #menuHubPanel.menuHubTabOptions #menuHubContent{
+    min-height:0 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent > #optionsMenuInner{
     display:flex !important;
-    align-items:center !important;
-    justify-content:space-between !important;
-    gap:8px !important;
-    min-height:28px !important;
-  }
-  #optionsMenu .commandOptionRow .cheatHeader > div:first-child{
-    display:flex !important;
-    flex-direction:row !important;
-    align-items:baseline !important;
-    justify-content:flex-start !important;
-    gap:10px !important;
-    min-width:0 !important;
-    flex:1 1 auto !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-  }
-  #optionsMenu .commandOptionRow .cheatTitle{
-    flex:0 0 auto !important;
-    font-size:13px !important;
-    line-height:1 !important;
-    white-space:nowrap !important;
-  }
-  #optionsMenu .commandOptionRow .cheatCommand{
-    flex:1 1 auto !important;
-    min-width:0 !important;
-    font-size:10px !important;
-    line-height:1 !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
-    opacity:0.82 !important;
-  }
-  #optionsMenu .commandOptionRow .hint{
-    margin-top:4px !important;
-    font-size:9px !important;
-    line-height:1.15 !important;
-  }
-  #optionsMenu .nicknameRow .nicknameControls,
-  #optionsMenu .backgroundColorRow .backgroundColorControls,
-  #optionsMenu .commandOptionRow label{
-    flex:0 0 auto !important;
-    max-width:46% !important;
-  }
-  #optionsMenu .nicknameRow .nicknameInputWrap{
-    width:150px !important;
-    max-width:32vw !important;
-  }
-  #optionsMenu .backgroundColorRow .backgroundColorHex{
-    width:86px !important;
-  }
-
-  #controlsMenu .title{
-    font-size:15px !important;
-    margin:0 0 4px !important;
-  }
-  #controlsMenu .controlsBindList{
-    gap:4px !important;
-    margin-top:0 !important;
-  }
-  #controlsMenu .controlsBindRow{
-    display:flex !important;
-    flex-direction:row !important;
-    align-items:center !important;
-    justify-content:space-between !important;
-    gap:8px !important;
-    padding:4px 6px !important;
-    min-height:34px !important;
+    flex-direction:column !important;
+    width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    min-height:0 !important;
+    padding:0 !important;
     box-sizing:border-box !important;
   }
-  #controlsMenu .controlsBindMeta{
-    display:flex !important;
-    flex-direction:row !important;
-    align-items:baseline !important;
-    gap:8px !important;
+  #menuHubPanel.menuHubTabOptions #optionsScroll{
     flex:1 1 auto !important;
-    min-width:0 !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-align:left !important;
+    min-height:0 !important;
+    width:100% !important;
+    overflow:auto !important;
+    padding:0 18px 12px !important;
+    box-sizing:border-box !important;
   }
-  #controlsMenu .controlsBindTitle{
-    flex:0 0 auto !important;
-    font-size:11px !important;
-    line-height:1 !important;
-    white-space:nowrap !important;
-  }
-  #controlsMenu .controlsBindHint{
-    flex:1 1 auto !important;
-    min-width:0 !important;
-    font-size:8px !important;
-    line-height:1 !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
-    opacity:0.72 !important;
-  }
-  #controlsMenu .controlsBindButton{
-    flex:0 0 150px !important;
-    width:150px !important;
-    min-width:0 !important;
-    padding:5px 6px !important;
-    font-size:10px !important;
-    line-height:1.05 !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
-  }
-  #controlsMenu .controlsMoveButtonGroup,
-  #controlsMenu .controlsPreviewButtonGroup{
-    flex:0 0 270px !important;
-    width:270px !important;
-    max-width:270px !important;
-    display:flex !important;
-    flex-direction:row !important;
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optionsGrid{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:16px !important;
+    width:100% !important;
     align-items:stretch !important;
-    justify-content:flex-end !important;
-    gap:4px !important;
+    box-sizing:border-box !important;
   }
-  #controlsMenu .controlsMoveButton,
-  #controlsMenu .controlsPreviewButton{
-    flex:1 1 0 !important;
-    width:auto !important;
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow{
+    display:block !important;
+    width:100% !important;
+    padding:18px 20px !important;
+    text-align:left !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatHeader{
+    display:grid !important;
+    grid-template-columns:minmax(0, 1fr) auto !important;
+    align-items:center !important;
+    gap:18px !important;
+    min-height:0 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatHeader > div:first-child{
+    display:block !important;
+    min-width:0 !important;
+    text-align:left !important;
+    white-space:normal !important;
+    overflow:visible !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatTitle{
+    display:block !important;
+    font-size:28px !important;
+    line-height:1.12 !important;
+    margin:0 0 8px !important;
+    white-space:normal !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatCommand{
+    display:block !important;
+    font-size:23px !important;
+    line-height:1.12 !important;
+    margin:0 !important;
+    opacity:1 !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .hint{
+    margin-top:10px !important;
+    font-size:22px !important;
+    line-height:1.2 !important;
+    text-align:left !important;
+    padding-left:0 !important;
+    white-space:normal !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:16px !important;
+    max-width:none !important;
+    white-space:nowrap !important;
+    font-size:28px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    width:32px !important;
+    height:32px !important;
+    transform:none !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow{
+    display:block !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .cheatHeader{
+    display:grid !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameControls,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorControls{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:14px !important;
     min-width:0 !important;
     max-width:none !important;
-    padding:5px 3px !important;
-    font-size:9px !important;
-    line-height:1 !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-overflow:clip !important;
-    justify-content:center !important;
-    gap:4px !important;
   }
-  #controlsMenu .controlsMoveButton .moveBindLabel{
-    font-size:12px !important;
-    line-height:1 !important;
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap{
+    width:330px !important;
+    max-width:34vw !important;
+    font-size:24px !important;
   }
-  #controlsMenu .controlsMoveButton .moveBindValue{
-    font-size:7px !important;
-    line-height:1 !important;
-    white-space:nowrap !important;
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap .nicknameInput,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputPreview{
+    font-size:24px !important;
+    padding:13px 18px !important;
   }
-  #controlsMenu .controlsAimButtonGroup{
-    flex:0 0 150px !important;
-    width:150px !important;
-    max-width:150px !important;
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameActionBtn{
+    font-size:34px !important;
   }
-  #controlsMenu .controlsAimButton{
-    width:150px !important;
-    padding:5px 6px !important;
-    font-size:10px !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-overflow:ellipsis !important;
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+    width:230px !important;
+    font-size:24px !important;
+    padding:13px 18px !important;
   }
-  #controlsMenu .controlsGrid,
-  #controlsMenu #controlsListScroll,
-  #controlsMenu .controlsListPanel{
-    padding-left:4px !important;
-    padding-right:4px !important;
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorPicker{
+    width:84px !important;
+    height:76px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .buttonOnlyRow .smallBtn{
+    min-height:112px !important;
+    font-size:28px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .menuBottomRow{
+    flex:0 0 auto !important;
+    padding:0 18px !important;
+    margin-top:14px !important;
+  }
+
+  @media (max-width: 900px){
+    #menuHubPanel.menuHubTabOptions #menuHubPanelInner{
+      width:calc(100vw - 32px) !important;
+      max-width:calc(100vw - 32px) !important;
+      height:calc(100vh - 48px) !important;
+      max-height:calc(100vh - 48px) !important;
+      padding:14px !important;
+    }
+    #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow{
+      padding:12px 14px !important;
+    }
+    #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatTitle{
+      font-size:18px !important;
+    }
+    #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatCommand,
+    #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .hint{
+      font-size:14px !important;
+    }
+    #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+      font-size:18px !important;
+    }
+    #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap,
+    #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+      width:180px !important;
+      max-width:36vw !important;
+      font-size:14px !important;
+    }
+    #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap .nicknameInput,
+    #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputPreview,
+    #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+      font-size:14px !important;
+      padding:8px 10px !important;
+    }
+    #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorPicker{
+      width:48px !important;
+      height:42px !important;
+    }
   }
 
 </style>
