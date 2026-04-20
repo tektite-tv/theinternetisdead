@@ -61,6 +61,37 @@
   .btnRowTop{ margin-top:12px; }
   .btnRowBottom{ margin-top:10px; }
   #btnControls{ min-width:160px; }
+
+
+  /* Controller-selected Back button B-button hint.
+     Matches the Start menu controller icon placement, but only while controller focus is active. */
+  #btnImagesClose,
+  #btnStatsClose,
+  #btnBack,
+  #controlsBack,
+  #btnCheatsBack{
+    position:relative;
+    overflow:hidden;
+  }
+  body.controller-active #btnImagesClose.controllerFocus::after,
+  body.controller-active #btnStatsClose.controllerFocus::after,
+  body.controller-active #btnBack.controllerFocus::after,
+  body.controller-active #controlsBack.controllerFocus::after,
+  body.controller-active #btnCheatsBack.controllerFocus::after{
+    content:"";
+    position:absolute;
+    right:4px;
+    top:50%;
+    width:18px;
+    height:18px;
+    transform:translateY(-50%);
+    background:url('/games/shooter-game/assets/controller-buttons/button-b.webp') center / contain no-repeat;
+    image-rendering:auto;
+    pointer-events:none;
+    filter:drop-shadow(0 0 4px rgba(0,255,0,0.75));
+    z-index:2;
+  }
+
   button{
     font-family:monospace; color:#0f0; background:rgba(0,0,0,0.55);
     border:1px solid rgba(0,255,0,0.45);
