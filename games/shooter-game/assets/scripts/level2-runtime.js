@@ -3240,6 +3240,50 @@ function syncControlsControllerFocus(){
   focusControllerElement(items[controlsFocusIndex]);
 }
 
+function blurCapturedControllerInputIfNeeded(backButton){
+  const activeEl = document.activeElement;
+  if (!activeEl || activeEl === document.body || activeEl === backButton) return false;
+  const tag = (activeEl.tagName || "").toUpperCase();
+  const isCapturedInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || activeEl.isContentEditable;
+  if (!isCapturedInput) return false;
+  try{ activeEl.blur(); }catch(_){}
+  return true;
+}
+
+function routeControllerBackToButton(backButton, items, currentIndex, setIndex, syncFocus){
+  if (!backButton) return false;
+  items = Array.isArray(items) ? items.filter(Boolean) : [];
+  const currentTarget = items[currentIndex] || document.querySelector('.controllerFocus');
+  const backIsFocused = currentTarget === backButton || backButton.classList.contains('controllerFocus') || document.activeElement === backButton;
+  if (backIsFocused){
+    activateControllerTarget(backButton);
+    return true;
+  }
+
+  blurCapturedControllerInputIfNeeded(backButton);
+
+  const backIndex = items.indexOf(backButton);
+  if (backIndex !== -1 && typeof setIndex === "function"){
+    setIndex(backIndex);
+    if (typeof syncFocus === "function") syncFocus();
+  } else {
+    focusControllerElement(backButton);
+  }
+  return true;
+}
+
+function handleOptionsControllerBackButton(){
+  return routeControllerBackToButton(btnBack, getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus);
+}
+
+function handleControlsControllerBackButton(){
+  return routeControllerBackToButton(controlsBack, getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus);
+}
+
+function handleScoreStoreControllerBackButton(){
+  return routeControllerBackToButton(btnScoreStoreClose, getScoreStoreControllerTargets(), scoreStoreFocusIndex, (index) => { scoreStoreFocusIndex = index; }, syncScoreStoreControllerFocus);
+}
+
 function moveMenuControllerFocus(delta){
   const items = getMenuControllerTargets();
   if (!items.length) return;
@@ -4176,7 +4220,7 @@ function pollGamepad(dt){
       if (navUp || navLeft) moveScoreStoreControllerFocus(-1);
       if (navDown || navRight) moveScoreStoreControllerFocus(1);
       if (pressMenuSelect) activateControllerTarget(getScoreStoreControllerTargets()[scoreStoreFocusIndex]);
-      if (pressMenuBack) closeScoreStoreMenu();
+      if (pressMenuBack) handleScoreStoreControllerBackButton();
       if (pressPause) togglePause();
     } else if (isPauseSelectLevelOpen()){
       if (navUp) moveOptionsControllerFocus(-1);
@@ -4184,7 +4228,7 @@ function pollGamepad(dt){
       if (navLeft) moveOptionsControllerFocus(-1);
       if (navRight) moveOptionsControllerFocus(1);
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
-      if (pressMenuBack) activateControllerTarget(btnBack);
+      if (pressMenuBack) handleOptionsControllerBackButton();
       if (pressPause) activateControllerTarget(btnBack);
     } else if (isPaused && gameState !== STATE.OPTIONS){
       if (pauseControlsOpen){
@@ -4193,7 +4237,7 @@ function pollGamepad(dt){
         if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
         if (pressMenuBack){
           if (bindingEditState) cancelBindingEdit();
-          else hidePauseControlsMenu();
+          else handleControlsControllerBackButton();
         }
         if (pressPause) togglePause();
       } else {
@@ -4238,7 +4282,7 @@ function pollGamepad(dt){
       if (navLeft) moveOptionsControllerFocus(-1);
       if (navRight) moveOptionsControllerFocus(1);
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
-      if (pressMenuBack) activateControllerTarget(btnBack);
+      if (pressMenuBack) handleOptionsControllerBackButton();
     } else if (gameState === STATE.CONTROLS){
       if (navUp) moveControlsControllerFocus(-1);
       if (navDown) moveControlsControllerFocus(1);
@@ -4252,7 +4296,7 @@ function pollGamepad(dt){
       if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
       if (pressMenuBack){
         if (bindingEditState) cancelBindingEdit();
-        else hideControlsMenu();
+        else handleControlsControllerBackButton();
       }
     } else if (deathOverlay && deathOverlay.style.display === "flex"){
       if (pressMenuSelect) restartRun();

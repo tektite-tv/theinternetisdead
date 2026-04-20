@@ -62,22 +62,15 @@
   .btnRowBottom{ margin-top:10px; }
   #btnControls{ min-width:160px; }
 
-
   /* Controller-selected Back button B-button hint.
-     Matches the Start menu controller icon placement, but only while controller focus is active. */
-  #btnImagesClose,
-  #btnStatsClose,
+     B first moves selection here; pressing B again activates Back. Tiny sanity tax paid. */
   #btnBack,
-  #controlsBack,
-  #btnCheatsBack{
+  #controlsBack{
     position:relative;
     overflow:hidden;
   }
-  body.controller-active #btnImagesClose.controllerFocus::after,
-  body.controller-active #btnStatsClose.controllerFocus::after,
   body.controller-active #btnBack.controllerFocus::after,
-  body.controller-active #controlsBack.controllerFocus::after,
-  body.controller-active #btnCheatsBack.controllerFocus::after{
+  body.controller-active #controlsBack.controllerFocus::after{
     content:"";
     position:absolute;
     right:4px;
