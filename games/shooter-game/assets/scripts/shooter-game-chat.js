@@ -444,6 +444,27 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       return !!chatDoc.querySelector('.helpItem[data-number-picker-active="true"], .helpItem[data-color-picker-active="true"], .helpItem[data-choice-picker-active="true"], .helpItem[data-text-picker-active="true"]');
     }
 
+
+    function closeActiveChatValuePickerFromParent() {
+      const chatDoc = getChatDocument();
+      const activePickerItem = chatDoc
+        ? chatDoc.querySelector('.helpItem[data-number-picker-active="true"], .helpItem[data-color-picker-active="true"], .helpItem[data-choice-picker-active="true"], .helpItem[data-text-picker-active="true"]')
+        : null;
+      postToChatSandbox({ type: 'chatSandboxCloseActiveCommandPicker' });
+      if (activePickerItem) {
+        const targets = getChatInteractiveTargets();
+        const pickerIndex = targets.findIndex((node) => node === activePickerItem);
+        if (pickerIndex >= 0) {
+          chatControllerTargetIndex = pickerIndex;
+          updateChatControllerSelectionVisuals(activePickerItem);
+        }
+      }
+      chatValuePickerActive = false;
+      chatValuePickerCommand = '';
+      notifyChildChatVisibility();
+      return true;
+    }
+
     function activateFocusedChatTarget() {
       const targets = getChatInteractiveTargets();
       const activeIndex = syncChatControllerTargetIndex(targets);
@@ -930,7 +951,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         } else if (action === 'seedSlash') {
           withChatInputReady(primeChatSlashSuggestion);
         } else if (action === 'close') {
-          closeChatFromParent();
+          if (valuePickerActive) closeActiveChatValuePickerFromParent();
+          else closeChatFromParent();
         } else if (action === 'scrollUp') {
           scrollChatBy(-72);
         } else if (action === 'scrollDown') {
