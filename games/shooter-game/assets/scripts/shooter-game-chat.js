@@ -43,6 +43,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/cheatermode', desc: 'Unlock cheat commands by typing the passphrase', usage: '/cheatermode', suggestions: ['cheatermode'], unlockOnly: true },
       { name: '/jinclops', desc: 'Hidden: set nickname to Jinclops and unlock cheat commands', usage: '/jinclops', hidden: true },
       { name: '/tektite', desc: 'Hidden: set nickname to Tektite and unlock cheat commands', usage: '/tektite', hidden: true },
+      { name: '/debug', desc: 'Hidden: toggle shooter-game debug styling without using chat-sandbox built-ins', usage: '/debug', hidden: true, replaceBuiltIn: true },
       { name: '/bombs', desc: 'Set bombs to 0-99, or 100/INFINITE', usage: '/bombs [0-99|100|INFINITE]', suggestions: ['0', '3', '5', '99', '100', 'INFINITE'], cheatOnly: true },
       { name: '/fullscreen', desc: 'Toggle fullscreen', usage: '/fullscreen' },
       { name: '/game_speed', desc: 'Set game speed -5..20. 0 starts frozen staring-contest mode, 1 is normal', usage: '/game_speed [-5..20]', suggestions: ['-5', '0', '1', '5', '10', '20'], cheatOnly: true },
@@ -61,6 +62,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     ];
     let hasSwitchedToLevel2 = false;
     let shooterCheatsUnlocked = false;
+    let shooterDebugMode = false;
     let chatSandboxVisible = false;
     let chatSandboxReady = false;
     let chatValuePickerActive = false;
@@ -135,6 +137,43 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       } catch (error) {
         return null;
       }
+    }
+
+    function applyDebugClassToDocument(doc, enabled) {
+      try {
+        if (!doc || !doc.body) return;
+        doc.body.classList.toggle('debug', !!enabled);
+        doc.documentElement.classList.toggle('debug', !!enabled);
+      } catch (error) {}
+    }
+
+    function notifyLevelDebugMode(enabled) {
+      try {
+        if (tektiteFrame && tektiteFrame.contentWindow) {
+          tektiteFrame.contentWindow.postMessage({
+            type: 'tektite:debug-mode',
+            enabled: !!enabled
+          }, '*');
+        }
+      } catch (error) {}
+    }
+
+    function applyShooterDebugMode(enabled) {
+      shooterDebugMode = !!enabled;
+      window.__shooterDebugMode = shooterDebugMode;
+      document.body.classList.toggle('debug', shooterDebugMode);
+      document.documentElement.classList.toggle('debug', shooterDebugMode);
+      applyDebugClassToDocument(getChatDocument(), shooterDebugMode);
+      try {
+        const levelDoc = tektiteFrame && tektiteFrame.contentWindow && tektiteFrame.contentWindow.document;
+        applyDebugClassToDocument(levelDoc, shooterDebugMode);
+      } catch (error) {}
+      notifyLevelDebugMode(shooterDebugMode);
+    }
+
+    function toggleShooterDebugMode() {
+      applyShooterDebugMode(!shooterDebugMode);
+      return shooterDebugMode;
     }
 
     function getChatInput() {
@@ -777,12 +816,14 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       flushPendingChatOpen();
       registerPageCommands();
       postInputModeToChatSandbox();
+      applyShooterDebugMode(shooterDebugMode);
       bindChatShortcutToFrame(chatSandboxFrame);
     });
 
     tektiteFrame.addEventListener('load', () => {
       bindChatShortcutToFrame(tektiteFrame);
       registerPageCommands();
+      applyShooterDebugMode(shooterDebugMode);
       notifyChildFullscreenState();
     });
 
@@ -804,6 +845,16 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         if (data.type === 'pageChatExecute') {
           const rawCommand = String(data.raw || data.command || '').trim();
           const commandName = String(data.command || '').trim().toLowerCase();
+          if (commandName === '/debug') {
+            const enabled = toggleShooterDebugMode();
+            postToChatSandbox({
+              type: 'pageChatResult',
+              command: '/debug',
+              message: `/debug ${enabled ? 'enabled' : 'disabled'}.`,
+              announce: true
+            });
+            return;
+          }
           if (commandName === '/stop') {
             if (!shooterCheatsUnlocked) {
               postToChatSandbox({
