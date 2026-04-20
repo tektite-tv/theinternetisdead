@@ -2446,6 +2446,86 @@ body.invert-colors {
     }
   }
 
+
+  /* v2.05: keep the tabbed Menu hub the same footprint as the Start menu.
+     The Options tab may scroll inside it, but the whole hub should not balloon into a desktop window. */
+  #menuHubPanel.menuHubTabOptions #menuHubPanelInner,
+  #menuHubPanel.menuHubTabImages #menuHubPanelInner,
+  #menuHubPanel.menuHubTabStats #menuHubPanelInner{
+    width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    padding:18px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll{
+    padding:0 8px 8px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optionsGrid{
+    gap:8px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow{
+    padding:8px 10px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatHeader{
+    gap:8px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatTitle{
+    font-size:13px !important;
+    line-height:1.12 !important;
+    margin:0 0 2px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatCommand{
+    font-size:12px !important;
+    line-height:1.12 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .hint{
+    margin-top:3px !important;
+    font-size:10px !important;
+    line-height:1.15 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    gap:8px !important;
+    font-size:13px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    width:18px !important;
+    height:18px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameControls,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorControls{
+    gap:8px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap{
+    width:170px !important;
+    max-width:34vw !important;
+    font-size:12px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap .nicknameInput,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputPreview,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+    font-size:12px !important;
+    padding:7px 9px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameActionBtn{
+    font-size:20px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+    width:120px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorPicker{
+    width:46px !important;
+    height:40px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .buttonOnlyRow .smallBtn{
+    min-height:44px !important;
+    font-size:13px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .menuBottomRow{
+    padding:0 8px !important;
+    margin-top:8px !important;
+  }
+
 </style>
 
 <style>
