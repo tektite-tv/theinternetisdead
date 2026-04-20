@@ -2839,6 +2839,43 @@ body.invert-colors {
     box-sizing:border-box !important;
   }
 
+
+  /* v2.08: Status text sits before each toggle box in the LB/RB Options tab.
+     The longest normal word, Disabled, reserves the text column and pushes every
+     checkbox to the same right-side position instead of letting Enabled drift. */
+  #optionsMenu .commandOptionRow label,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    width:100px !important;
+    min-width:100px !important;
+    display:grid !important;
+    grid-template-columns:72px 18px !important;
+    align-items:center !important;
+    justify-content:end !important;
+    justify-items:start !important;
+    column-gap:8px !important;
+    text-align:left !important;
+    white-space:nowrap !important;
+  }
+  #optionsMenu .commandOptionRow label > span,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label > span{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    display:inline-block !important;
+    width:72px !important;
+    min-width:72px !important;
+    max-width:72px !important;
+    text-align:right !important;
+    overflow:visible !important;
+  }
+  #optionsMenu .commandOptionRow input[type="checkbox"],
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    justify-self:start !important;
+    flex:0 0 auto !important;
+    margin:0 !important;
+  }
+
 </style>
 
 <style>
@@ -2937,6 +2974,43 @@ body.invert-colors {
   margin-left:0;
   vertical-align:middle;
 }
+
+  /* v2.08: Status text sits before each toggle box in the LB/RB Options tab.
+     The longest normal word, Disabled, reserves the text column and pushes every
+     checkbox to the same right-side position instead of letting Enabled drift. */
+  #optionsMenu .commandOptionRow label,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    width:100px !important;
+    min-width:100px !important;
+    display:grid !important;
+    grid-template-columns:72px 18px !important;
+    align-items:center !important;
+    justify-content:end !important;
+    justify-items:start !important;
+    column-gap:8px !important;
+    text-align:left !important;
+    white-space:nowrap !important;
+  }
+  #optionsMenu .commandOptionRow label > span,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label > span{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    display:inline-block !important;
+    width:72px !important;
+    min-width:72px !important;
+    max-width:72px !important;
+    text-align:right !important;
+    overflow:visible !important;
+  }
+  #optionsMenu .commandOptionRow input[type="checkbox"],
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    justify-self:start !important;
+    flex:0 0 auto !important;
+    margin:0 !important;
+  }
+
 </style>
 
 </head>
