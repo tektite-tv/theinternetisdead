@@ -2766,6 +2766,79 @@ body.invert-colors {
     margin-top:14px !important;
   }
 
+
+  /* v2.07: keep Options command controls stable inside the LB/RB tab hub.
+     Text inputs use the normal Options-menu footprint, and checkbox toggles keep
+     their actual boxes aligned whether the status says Enabled or Disabled. */
+  #optionsMenu .commandOptionRow label,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    width:88px !important;
+    min-width:88px !important;
+    display:grid !important;
+    grid-template-columns:18px 64px !important;
+    align-items:center !important;
+    justify-content:end !important;
+    justify-items:start !important;
+    column-gap:6px !important;
+    text-align:left !important;
+    white-space:nowrap !important;
+  }
+  #optionsMenu .commandOptionRow label > span,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label > span{
+    display:inline-block !important;
+    width:64px !important;
+    min-width:64px !important;
+    text-align:left !important;
+  }
+  #optionsMenu .commandOptionRow input[type="checkbox"],
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    justify-self:start !important;
+    flex:0 0 auto !important;
+    margin:0 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameControls,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorControls{
+    width:170px !important;
+    min-width:170px !important;
+    max-width:170px !important;
+    flex:0 0 170px !important;
+    justify-content:flex-end !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap{
+    width:132px !important;
+    height:34px !important;
+    min-height:34px !important;
+    flex:0 0 132px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap .nicknameInput,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputPreview{
+    height:32px !important;
+    min-height:32px !important;
+    font-size:12px !important;
+    line-height:18px !important;
+    padding:7px 8px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+    width:92px !important;
+    height:34px !important;
+    min-height:34px !important;
+    flex:0 0 92px !important;
+    font-size:12px !important;
+    line-height:18px !important;
+    padding:7px 8px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorPicker{
+    width:38px !important;
+    height:34px !important;
+    min-height:34px !important;
+    flex:0 0 38px !important;
+    box-sizing:border-box !important;
+  }
+
 </style>
 
 <style>
