@@ -31,7 +31,7 @@
       position:fixed;
       inset:0;
       display:flex;
-      align-items:flex-end;
+      align-items:center;
       justify-content:center;
       padding:16px;
       opacity:0;
@@ -46,17 +46,28 @@
       transition:opacity 120ms ease;
     }
     #chatPanel{
-      width:min(880px, calc(100vw - 24px));
-      max-height:min(78vh, 760px);
+      /* Match the fixed Start menu footprint used by the level overlays.
+         The slash menu is now a true shooter-game menu, not a bottom chat slab. */
+      --shooter-menu-footprint-width:min(520px, 92vw);
+      --shooter-menu-footprint-height:min(430px, calc(100vh - 32px));
+      --shooter-menu-footprint-padding:18px 18px 16px;
+      --shooter-menu-footprint-radius:16px;
+      width:var(--shooter-menu-footprint-width);
+      max-width:var(--shooter-menu-footprint-width);
+      height:var(--shooter-menu-footprint-height);
+      max-height:var(--shooter-menu-footprint-height);
       display:flex;
       flex-direction:column;
       gap:10px;
-      padding:12px;
-      border:2px solid var(--lime);
-      border-radius:14px;
+      padding:var(--shooter-menu-footprint-padding);
+      border:3px solid var(--lime);
+      border-radius:var(--shooter-menu-footprint-radius);
       background:linear-gradient(180deg, rgba(75,0,118,0.88), rgba(0,0,0,0.91));
       box-shadow:0 0 0 2px rgba(75,0,118,0.82), 0 0 28px rgba(0,255,102,0.32);
       text-shadow:1px 1px 0 #000;
+      transform:scale(0.975);
+      transform-origin:center center;
+      overflow:hidden;
     }
     #chatHeader{
       display:flex;
@@ -98,10 +109,11 @@
       box-shadow:0 0 14px rgba(0,255,102,0.48);
     }
     #messagesWrap{
+      flex:1 1 auto;
+      min-height:0;
       overflow-y:auto;
       overscroll-behavior:contain;
-      max-height:calc(min(78vh, 760px) - 120px);
-      min-height:160px;
+      max-height:none;
       padding:10px;
       border:1px solid rgba(0,255,102,0.45);
       border-radius:12px;
@@ -175,10 +187,14 @@
     }
     #helpPanel{
       display:none;
+      flex:0 1 128px;
+      min-height:0;
+      overflow-y:auto;
       border:1px solid rgba(0,255,102,0.45);
       border-radius:12px;
       padding:10px;
       background:rgba(0,0,0,0.54);
+      scrollbar-color:var(--lime) #000;
     }
     #helpPanel.visible{display:block;}
     #helpHeader{
@@ -229,8 +245,11 @@
     .suggestionBtn:hover,.suggestionBtn:focus{background:var(--purple);outline:1px solid var(--lime);}
     @media (max-width:700px){
       #chatRoot{padding:8px;}
-      #chatPanel{width:calc(100vw - 16px);max-height:86vh;padding:10px;}
-      #messagesWrap{max-height:calc(86vh - 132px);}
+      #chatPanel{
+        --shooter-menu-footprint-width:min(520px, calc(100vw - 16px));
+        --shooter-menu-footprint-height:min(400px, calc(100vh - 24px));
+        padding:14px;
+      }
       #chatSubmit{min-width:58px;padding-inline:10px;}
       #helpList{grid-template-columns:1fr;}
     }
