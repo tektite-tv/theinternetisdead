@@ -152,13 +152,45 @@
     }
 
     .helpItem {
+      position: relative;
       display: block;
       width: fit-content;
+      max-width: 100%;
+      box-sizing: border-box;
       color: var(--message-text-color);
       text-decoration: none;
       cursor: pointer;
       margin: 4px 0;
+      padding-right: 0;
       line-height: 1.35;
+    }
+
+    .helpItem.controllerFocus,
+    .helpItem[data-tektite-controller-selected="true"] {
+      padding-right: 30px;
+    }
+
+    .helpItem.controllerFocus::after,
+    .helpItem[data-tektite-controller-selected="true"]::after {
+      content: "";
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translateY(-50%);
+      background: url('/games/shooter-game/assets/controller-buttons/button-a.webp') center / contain no-repeat;
+      filter: drop-shadow(0 0 4px rgba(0,255,0,0.75));
+      pointer-events: none;
+    }
+
+    .helpItem.commandNumberPickerOpen.controllerFocus,
+    .helpItem.commandNumberPickerOpen[data-tektite-controller-selected="true"],
+    .helpItem[data-number-picker-active="true"][data-tektite-controller-selected="true"],
+    .helpItem[data-color-picker-active="true"][data-tektite-controller-selected="true"],
+    .helpItem[data-choice-picker-active="true"][data-tektite-controller-selected="true"],
+    .helpItem[data-text-picker-active="true"][data-tektite-controller-selected="true"] {
+      padding-right: 34px;
     }
 
     .helpCommandName {
@@ -189,6 +221,7 @@
       align-items: center;
       gap: 6px;
       margin-left: 10px;
+      margin-right: 4px;
       padding: 2px 8px;
       border-radius: 999px;
       outline: 1px solid rgba(0,255,102,0.4);
@@ -216,6 +249,7 @@
       align-items: center;
       gap: 8px;
       margin-left: 10px;
+      margin-right: 4px;
       padding: 3px 8px;
       border-radius: 999px;
       outline: 1px solid rgba(0,255,102,0.4);
@@ -252,6 +286,7 @@
       align-items: center;
       gap: 8px;
       margin-left: 10px;
+      margin-right: 4px;
       padding: 3px 8px;
       border-radius: 999px;
       outline: 1px solid rgba(0,255,102,0.4);
@@ -285,6 +320,7 @@
       align-items: center;
       gap: 6px;
       margin-left: 8px;
+      margin-right: 4px;
       padding: 3px 6px;
       border-radius: 8px;
       outline: 1px solid rgba(0,255,102,0.45);

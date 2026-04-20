@@ -312,6 +312,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         const isSelected = node === selectedNode;
         if (isSelected) {
           node.dataset.tektiteControllerSelected = 'true';
+          try { node.classList.add('controllerFocus'); } catch (error) {}
           node.style.backgroundColor = 'rgba(75,0,118,0.82)';
           node.style.outline = '2px solid rgba(0,255,102,0.98)';
           node.style.boxShadow = '0 0 0 1px rgba(0,255,102,0.35), 0 0 14px rgba(0,255,102,0.28)';
@@ -321,6 +322,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           node.style.transform = 'translateX(0)';
         } else {
           node.dataset.tektiteControllerSelected = 'false';
+          try { node.classList.remove('controllerFocus'); } catch (error) {}
           node.style.backgroundColor = node.dataset.tektiteControllerBaseBg || '';
           node.style.outline = node.dataset.tektiteControllerBaseOutline || '';
           node.style.boxShadow = node.dataset.tektiteControllerBaseBoxShadow || '';
