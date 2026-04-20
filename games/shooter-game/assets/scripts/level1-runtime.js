@@ -4507,6 +4507,33 @@ function routeControllerBackToButton(backButton, items, currentIndex, setIndex, 
   return true;
 }
 
+function isControllerListJumpBlockedByCapturedInput(){
+  const activeEl = document.activeElement;
+  if (!activeEl || activeEl === document.body) return false;
+  const tag = (activeEl.tagName || "").toUpperCase();
+  if (tag === "TEXTAREA" || tag === "SELECT" || activeEl.isContentEditable) return true;
+  if (tag !== "INPUT") return false;
+  const type = String(activeEl.getAttribute("type") || activeEl.type || "text").toLowerCase();
+  // Buttons, checkboxes, ranges, and radios are normal controller targets;
+  // text-ish inputs and pickers can capture intent, so bumpers leave them alone.
+  return !["button", "checkbox", "radio", "range", "submit", "reset"].includes(type);
+}
+
+function jumpControllerFocusToListEdge(items, currentIndex, setIndex, syncFocus, direction){
+  if (isControllerListJumpBlockedByCapturedInput()) return false;
+  items = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!items.length || typeof setIndex !== "function") return false;
+  const lastIndex = items.length - 1;
+  let nextIndex = direction < 0 ? 0 : lastIndex;
+  const safeCurrentIndex = Math.max(0, Math.min(lastIndex, Number(currentIndex) || 0));
+  if (safeCurrentIndex === nextIndex){
+    nextIndex = direction < 0 ? lastIndex : 0;
+  }
+  setIndex(nextIndex);
+  if (typeof syncFocus === "function") syncFocus();
+  return true;
+}
+
 function handleStatsControllerBackButton(){
   return routeControllerBackToButton(btnStatsClose, getStatsControllerTargets(), statsFocusIndex, (index) => { statsFocusIndex = index; }, syncStatsControllerFocus);
 }
@@ -6948,6 +6975,8 @@ function pollGamepad(dt){
   const pressMenuSelect = gpEdge(controllerBindings.menuSelect, getGpActionPressed(gp, 'menuSelect'));
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
   const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
+  const pressListTop = gpEdge(4, lb);
+  const pressListBottom = gpEdge(5, rb);
   const pressMuteHud = false;
   const yComboModifierHeld = y;
   const pressY = false;
@@ -6960,7 +6989,7 @@ function pollGamepad(dt){
   const cheatermodeControllerHoldIntent = !cheatsUnlockedByPassphrase && x && back && isCheatermodeControllerHoldEligible();
   const cheatermodeUnlockedByHold = updateCheatermodeControllerHold(dt, cheatermodeControllerHoldIntent, x, back);
 
-  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressScreenshotCombo || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
+  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressScreenshotCombo || pressPause || pressFullscreen || pressBomb || pressListTop || pressListBottom) && !audioUnlocked){
     unlockAudioOnce();
   }
 
@@ -7002,6 +7031,8 @@ function pollGamepad(dt){
   }
 
   if (isStatsPanelOpen()){
+    if (pressListTop) jumpControllerFocusToListEdge(getStatsControllerTargets(), statsFocusIndex, (index) => { statsFocusIndex = index; }, syncStatsControllerFocus, -1);
+    if (pressListBottom) jumpControllerFocusToListEdge(getStatsControllerTargets(), statsFocusIndex, (index) => { statsFocusIndex = index; }, syncStatsControllerFocus, 1);
     if (navUp) moveStatsControllerFocusDirectional("up");
     if (navDown) moveStatsControllerFocusDirectional("down");
     if (navLeft) moveStatsControllerFocusDirectional("left");
@@ -7016,6 +7047,8 @@ function pollGamepad(dt){
   }
 
   if (isImagesPanelOpen()){
+    if (pressListTop) jumpControllerFocusToListEdge(getImagesControllerTargets(), imagesFocusIndex, (index) => { imagesFocusIndex = index; }, syncImagesControllerFocus, -1);
+    if (pressListBottom) jumpControllerFocusToListEdge(getImagesControllerTargets(), imagesFocusIndex, (index) => { imagesFocusIndex = index; }, syncImagesControllerFocus, 1);
     if (navLeft || navUp) moveImagesControllerFocus(-1);
     if (navRight || navDown) moveImagesControllerFocus(1);
     if (rNavUp && imagesList) imagesList.scrollBy({ top:-72, behavior:"smooth" });
@@ -7064,6 +7097,8 @@ function pollGamepad(dt){
         }
       }
     } else if (isPauseCheatsOpen()){
+      if (pressListTop) jumpControllerFocusToListEdge(getCheatsControllerTargets(), cheatsFocusIndex, (index) => { cheatsFocusIndex = index; }, syncCheatsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getCheatsControllerTargets(), cheatsFocusIndex, (index) => { cheatsFocusIndex = index; }, syncCheatsControllerFocus, 1);
       if (navUp) moveCheatsControllerFocus(-1);
       if (navDown) moveCheatsControllerFocus(1);
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
@@ -7081,6 +7116,8 @@ function pollGamepad(dt){
       if (pressMenuBack) handleCheatsControllerBackButton();
       if (pressPause) hideCheats();
     } else if (isPauseOptionsOpen()){
+      if (pressListTop) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, 1);
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown){
         if (!wrapOptionsBottomButtonsToTop()) moveOptionsControllerFocus(1);
@@ -7101,12 +7138,16 @@ function pollGamepad(dt){
       if (pressPause) activateControllerTarget(btnBack);
     } else if (isPaused){
       if (isScoreStoreOpen){
+        if (pressListTop) jumpControllerFocusToListEdge(getScoreStoreControllerTargets(), scoreStoreFocusIndex, (index) => { scoreStoreFocusIndex = index; }, syncScoreStoreControllerFocus, -1);
+        if (pressListBottom) jumpControllerFocusToListEdge(getScoreStoreControllerTargets(), scoreStoreFocusIndex, (index) => { scoreStoreFocusIndex = index; }, syncScoreStoreControllerFocus, 1);
         if (navUp || navLeft) moveScoreStoreControllerFocus(-1);
         if (navDown || navRight) moveScoreStoreControllerFocus(1);
         if (pressMenuSelect) activateControllerTarget(getScoreStoreControllerTargets()[scoreStoreFocusIndex]);
         if (pressMenuBack) handleScoreStoreControllerBackButton();
         if (pressPause) togglePause();
       } else if (pauseControlsOpen){
+        if (pressListTop) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, -1);
+        if (pressListBottom) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, 1);
         if (navUp || navLeft) moveControlsControllerFocus(-1);
         if (navDown || navRight) moveControlsControllerFocus(1);
         if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
@@ -7116,6 +7157,8 @@ function pollGamepad(dt){
         }
         if (pressPause) togglePause();
       } else {
+        if (pressListTop) jumpControllerFocusToListEdge(getPauseControllerTargets(), pauseFocusIndex, (index) => { pauseFocusIndex = index; }, syncPauseControllerFocus, -1);
+        if (pressListBottom) jumpControllerFocusToListEdge(getPauseControllerTargets(), pauseFocusIndex, (index) => { pauseFocusIndex = index; }, syncPauseControllerFocus, 1);
         const pauseTargets = getPauseControllerTargets();
         const pauseTarget = pauseTargets[pauseFocusIndex];
         const helpRowFocused = !!(pauseTarget && pauseTarget.dataset && pauseTarget.dataset.cmd);
@@ -7152,6 +7195,8 @@ function pollGamepad(dt){
       }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
     } else if (gameState === STATE.OPTIONS){
+      if (pressListTop) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, 1);
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown){
         if (!wrapOptionsBottomButtonsToTop()) moveOptionsControllerFocus(1);
@@ -7170,6 +7215,8 @@ function pollGamepad(dt){
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) handleOptionsControllerBackButton();
     } else if (gameState === STATE.CHEATS){
+      if (pressListTop) jumpControllerFocusToListEdge(getCheatsControllerTargets(), cheatsFocusIndex, (index) => { cheatsFocusIndex = index; }, syncCheatsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getCheatsControllerTargets(), cheatsFocusIndex, (index) => { cheatsFocusIndex = index; }, syncCheatsControllerFocus, 1);
       if (navUp) moveCheatsControllerFocus(-1);
       if (navDown) moveCheatsControllerFocus(1);
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
@@ -7186,6 +7233,8 @@ function pollGamepad(dt){
       if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
       if (pressMenuBack) handleCheatsControllerBackButton();
     } else if (gameState === STATE.CONTROLS){
+      if (pressListTop) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, 1);
       if (navUp) moveControlsControllerFocus(-1);
       if (navDown) moveControlsControllerFocus(1);
       if (isControlsMoveFocused()){
@@ -7202,6 +7251,8 @@ function pollGamepad(dt){
       }
     } else if (gameState === STATE.WIN){
       if (activeInputMode === INPUT_MODE_CONTROLLER) syncWinControllerFocus();
+      if (pressListTop) jumpControllerFocusToListEdge(getWinControllerTargets(), winFocusIndex, (index) => { winFocusIndex = index; }, syncWinControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getWinControllerTargets(), winFocusIndex, (index) => { winFocusIndex = index; }, syncWinControllerFocus, 1);
       if (navUp || navLeft) moveWinControllerFocus(-1);
       if (navDown || navRight) moveWinControllerFocus(1);
       if (rNavUp) scrollWinPanelBy(-72);

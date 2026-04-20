@@ -3272,6 +3272,33 @@ function routeControllerBackToButton(backButton, items, currentIndex, setIndex, 
   return true;
 }
 
+function isControllerListJumpBlockedByCapturedInput(){
+  const activeEl = document.activeElement;
+  if (!activeEl || activeEl === document.body) return false;
+  const tag = (activeEl.tagName || "").toUpperCase();
+  if (tag === "TEXTAREA" || tag === "SELECT" || activeEl.isContentEditable) return true;
+  if (tag !== "INPUT") return false;
+  const type = String(activeEl.getAttribute("type") || activeEl.type || "text").toLowerCase();
+  // Buttons, checkboxes, ranges, and radios are normal controller targets;
+  // text-ish inputs and pickers can capture intent, so bumpers leave them alone.
+  return !["button", "checkbox", "radio", "range", "submit", "reset"].includes(type);
+}
+
+function jumpControllerFocusToListEdge(items, currentIndex, setIndex, syncFocus, direction){
+  if (isControllerListJumpBlockedByCapturedInput()) return false;
+  items = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!items.length || typeof setIndex !== "function") return false;
+  const lastIndex = items.length - 1;
+  let nextIndex = direction < 0 ? 0 : lastIndex;
+  const safeCurrentIndex = Math.max(0, Math.min(lastIndex, Number(currentIndex) || 0));
+  if (safeCurrentIndex === nextIndex){
+    nextIndex = direction < 0 ? lastIndex : 0;
+  }
+  setIndex(nextIndex);
+  if (typeof syncFocus === "function") syncFocus();
+  return true;
+}
+
 function handleOptionsControllerBackButton(){
   return routeControllerBackToButton(btnBack, getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus);
 }
@@ -4141,6 +4168,8 @@ function pollGamepad(dt){
   const pressMenuSelect = gpEdge(controllerBindings.menuSelect, getGpActionPressed(gp, 'menuSelect'));
   const pressFullscreen = gpEdge(controllerBindings.fullscreen, getGpActionPressed(gp, 'fullscreen'));
   const pressBomb = gpEdge(controllerBindings.bomb, getGpActionPressed(gp, 'bomb'));
+  const pressListTop = gpEdge(4, lb);
+  const pressListBottom = gpEdge(5, rb);
   const pressMuteHud = false;
   const yComboModifierHeld = y;
   const pressY = false;
@@ -4151,7 +4180,7 @@ function pollGamepad(dt){
   const pressScreenshotCombo = yViewScreenshotComboHeld && !gpYViewScreenshotComboHeld;
   gpYViewScreenshotComboHeld = yViewScreenshotComboHeld;
 
-  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressScreenshotCombo || pressPause || pressFullscreen || pressBomb) && !audioUnlocked){
+  if ((gpHasAnyInput || pressMenuSelect || pressMenuBack || pressCommands || pressY || pressScreenshotCombo || pressPause || pressFullscreen || pressBomb || pressListTop || pressListBottom) && !audioUnlocked){
     unlockAudioOnce();
   }
 
@@ -4217,12 +4246,16 @@ function pollGamepad(dt){
         togglePause();
       }
     } else if (isPauseScoreStoreOpen()){
+      if (pressListTop) jumpControllerFocusToListEdge(getScoreStoreControllerTargets(), scoreStoreFocusIndex, (index) => { scoreStoreFocusIndex = index; }, syncScoreStoreControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getScoreStoreControllerTargets(), scoreStoreFocusIndex, (index) => { scoreStoreFocusIndex = index; }, syncScoreStoreControllerFocus, 1);
       if (navUp || navLeft) moveScoreStoreControllerFocus(-1);
       if (navDown || navRight) moveScoreStoreControllerFocus(1);
       if (pressMenuSelect) activateControllerTarget(getScoreStoreControllerTargets()[scoreStoreFocusIndex]);
       if (pressMenuBack) handleScoreStoreControllerBackButton();
       if (pressPause) togglePause();
     } else if (isPauseSelectLevelOpen()){
+      if (pressListTop) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, 1);
       if (navUp) moveOptionsControllerFocus(-1);
       if (navDown) moveOptionsControllerFocus(1);
       if (navLeft) moveOptionsControllerFocus(-1);
@@ -4232,6 +4265,8 @@ function pollGamepad(dt){
       if (pressPause) activateControllerTarget(btnBack);
     } else if (isPaused && gameState !== STATE.OPTIONS){
       if (pauseControlsOpen){
+        if (pressListTop) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, -1);
+        if (pressListBottom) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, 1);
         if (navUp || navLeft) moveControlsControllerFocus(-1);
         if (navDown || navRight) moveControlsControllerFocus(1);
         if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
@@ -4241,6 +4276,8 @@ function pollGamepad(dt){
         }
         if (pressPause) togglePause();
       } else {
+        if (pressListTop) jumpControllerFocusToListEdge(getPauseControllerTargets(), pauseFocusIndex, (index) => { pauseFocusIndex = index; }, syncPauseControllerFocus, -1);
+        if (pressListBottom) jumpControllerFocusToListEdge(getPauseControllerTargets(), pauseFocusIndex, (index) => { pauseFocusIndex = index; }, syncPauseControllerFocus, 1);
         if (navUp || navLeft) movePauseControllerFocus(-1);
         if (navDown || navRight) movePauseControllerFocus(1);
         if (pressMenuSelect) activateControllerTarget(getPauseControllerTargets()[pauseFocusIndex]);
@@ -4275,6 +4312,8 @@ function pollGamepad(dt){
       if (pressMenuSelect) activateControllerTarget(getMenuControllerTargets()[menuFocusIndex]);
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
     } else if (gameState === STATE.OPTIONS){
+      if (pressListTop) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, 1);
       // Level 2 Select Level can be opened while paused. Keep controller focus on
       // the visible Select Level buttons, not the hidden pause menu buttons.
       if (navUp) moveOptionsControllerFocus(-1);
@@ -4284,6 +4323,8 @@ function pollGamepad(dt){
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) handleOptionsControllerBackButton();
     } else if (gameState === STATE.CONTROLS){
+      if (pressListTop) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, 1);
       if (navUp) moveControlsControllerFocus(-1);
       if (navDown) moveControlsControllerFocus(1);
       if (isControlsMoveFocused()){
