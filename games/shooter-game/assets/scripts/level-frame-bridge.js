@@ -11,7 +11,7 @@ function requestHostFullscreen(action="toggle"){
 function postChatControllerAction(action){
   try{
     if (window.parent && window.parent !== window){
-      window.parent.postMessage({ type: "tektite:shooter-chat-control", action }, "*");
+      window.parent.postMessage({ type: "tektite:chat-control", action }, "*");
     }
   }catch(e){}
 }
@@ -36,7 +36,7 @@ function requestShooterGameScreenshot(){
 function requestOpenChat(focusSlash, runCommand){
   try{
     if (window.parent && window.parent !== window){
-      window.parent.postMessage({ type: "tektite:open-shooter-chat", seedSlash: !!focusSlash, autoSuggestSlash: !!focusSlash, runCommand: runCommand ? String(runCommand) : "" }, "*");
+      window.parent.postMessage({ type: "openChatFromChild", seedSlash: !!focusSlash, autoSuggestSlash: !!focusSlash, runCommand: runCommand ? String(runCommand) : "" }, "*");
       return;
     }
   }catch(e){}
