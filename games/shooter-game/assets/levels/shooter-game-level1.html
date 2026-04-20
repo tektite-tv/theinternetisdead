@@ -1843,17 +1843,74 @@ body.invert-colors {
     font-size:15px;
     line-height:1.1;
   }
-  #menuHubBlurb{
+  #menuHubContent{
     flex:1 1 auto;
     min-height:0;
+    width:100%;
+    overflow:hidden;
+    box-sizing:border-box;
     display:flex;
-    align-items:center;
-    justify-content:center;
+    flex-direction:column;
+  }
+  #menuHubContent > #imagesPanelInner,
+  #menuHubContent > #statsPanelInner,
+  #menuHubContent > #optionsMenuInner{
+    width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    padding:0 !important;
+    flex:1 1 auto;
+    min-height:0;
+  }
+  #menuHubContent > #optionsMenuInner{
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+  }
+  #menuHubContent .menuMiddleScroll{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    box-sizing:border-box;
+    overflow:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+    padding:0 8px 8px;
+  }
+  #menuHubContent .optionsGrid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:6px;
+    align-items:start;
+    width:100%;
+    box-sizing:border-box;
+  }
+  #menuHubContent .optRow.fullRow,
+  #menuHubContent .optRow.checkboxGroup{
+    grid-column:1 / -1;
+  }
+  #menuHubContent .optRow{
+    padding:6px 8px;
+  }
+  #menuHubContent .optLabel{
+    margin-bottom:3px;
+    font-size:12px;
+  }
+  #menuHubContent .hint{
+    margin-top:3px;
+    line-height:1.15;
+    font-size:10px;
+  }
+  #menuHubTopButtons .smallBtn.menuHubActiveTab{
+    border-color:#00ff66;
     color:#ffffff;
-    opacity:0.88;
-    font-size:14px;
-    line-height:1.35;
-    padding:8px 12px;
+    background:rgba(0,255,102,0.18);
+    box-shadow:0 0 16px rgba(0,255,102,0.42);
   }
   #menuHubButtons{
     flex:0 0 auto;
@@ -2418,11 +2475,11 @@ body.invert-colors {
   <div id="menuHubPanel" aria-hidden="true">
     <div id="menuHubPanelInner">
       <div id="menuHubTopButtons">
-        <button id="btnMenuHubImages" class="smallBtn" type="button">Images Menu</button>
-        <button id="btnMenuHubStats" class="smallBtn" type="button">Stats Menu</button>
-        <button id="btnMenuHubOptions" class="smallBtn" type="button">Options Menu</button>
+        <button id="btnMenuHubImages" class="smallBtn" type="button" data-menu-hub-tab="images" aria-pressed="true">Images Menu</button>
+        <button id="btnMenuHubStats" class="smallBtn" type="button" data-menu-hub-tab="stats" aria-pressed="false">Stats Menu</button>
+        <button id="btnMenuHubOptions" class="smallBtn" type="button" data-menu-hub-tab="options" aria-pressed="false">Options Menu</button>
       </div>
-      <div id="menuHubBlurb">Choose a submenu. Somehow the menu needed a lobby. Civilization continues to thrive.</div>
+      <div id="menuHubContent" aria-live="polite"></div>
       <div id="menuHubButtons" class="btnRow menuBottomRow">
         <button id="btnMenuHubClose" class="smallBtn" type="button">Back</button>
       </div>

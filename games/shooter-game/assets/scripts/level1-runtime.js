@@ -1676,6 +1676,7 @@ function renderLifetimeStats(){
 }
 
 function openStatsPanel(){
+  restoreMenuHubActiveInner();
   overlayPanelReturnTarget = (gameState === STATE.HUB) ? STATE.HUB : STATE.MENU;
   syncNicknameStatsLabels();
   renderLifetimeStats();
@@ -1793,6 +1794,7 @@ function moveImagesControllerFocus(delta){
 }
 
 function openImagesPanel(){
+  restoreMenuHubActiveInner();
   overlayPanelReturnTarget = (gameState === STATE.HUB) ? STATE.HUB : STATE.MENU;
   renderSavedImages();
   imagesFocusIndex = 0;
@@ -3097,6 +3099,7 @@ const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const menuHubPanel = document.getElementById("menuHubPanel");
 const menuHubPanelInner = document.getElementById("menuHubPanelInner");
+const menuHubContent = document.getElementById("menuHubContent");
 const btnMenuHubImages = document.getElementById("btnMenuHubImages");
 const btnMenuHubStats = document.getElementById("btnMenuHubStats");
 const btnMenuHubOptions = document.getElementById("btnMenuHubOptions");
@@ -4135,6 +4138,10 @@ updateControlsDisplay();
 renderControlsBindingList();
 let menuFocusIndex = 0;
 let menuHubFocusIndex = 0;
+let menuHubActiveTab = "images";
+let menuHubActiveInner = null;
+const MENU_HUB_TABS = ["images", "stats", "options"];
+const menuHubOriginalParents = new Map();
 let optionsFocusIndex = 0;
 let optionsHavePendingChanges = false;
 let optionsJustApplied = false;
@@ -4251,11 +4258,98 @@ function getMenuControllerTargets(){
 }
 
 function getMenuHubControllerTargets(){
-  return [btnMenuHubImages, btnMenuHubStats, btnMenuHubOptions, btnMenuHubClose].filter(Boolean);
+  return [btnMenuHubImages, btnMenuHubStats, btnMenuHubOptions].filter(Boolean);
+}
+
+function rememberMenuHubOriginalParent(el){
+  if (el && el.parentNode && !menuHubOriginalParents.has(el)) menuHubOriginalParents.set(el, el.parentNode);
+}
+
+function restoreMenuHubActiveInner(){
+  if (!menuHubActiveInner) return;
+  const originalParent = menuHubOriginalParents.get(menuHubActiveInner);
+  if (originalParent && menuHubActiveInner.parentNode !== originalParent) originalParent.appendChild(menuHubActiveInner);
+  menuHubActiveInner = null;
+}
+
+function getMenuHubTabButton(tab){
+  if (tab === "stats") return btnMenuHubStats;
+  if (tab === "options") return btnMenuHubOptions;
+  return btnMenuHubImages;
+}
+
+function getMenuHubTabForButton(button){
+  if (button === btnMenuHubStats) return "stats";
+  if (button === btnMenuHubOptions) return "options";
+  return "images";
+}
+
+function getMenuHubInnerForTab(tab){
+  if (tab === "stats") return statsPanelInner;
+  if (tab === "options") return document.getElementById("optionsMenuInner");
+  return imagesPanelInner;
+}
+
+function syncMenuHubTabButtons(){
+  [btnMenuHubImages, btnMenuHubStats, btnMenuHubOptions].filter(Boolean).forEach(button => {
+    const active = getMenuHubTabForButton(button) === menuHubActiveTab;
+    button.classList.toggle("menuHubActiveTab", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+function selectMenuHubTab(tab, focusTab=false){
+  if (!MENU_HUB_TABS.includes(tab)) tab = "images";
+  const targetInner = getMenuHubInnerForTab(tab);
+  if (!menuHubContent || !targetInner) return;
+
+  menuHubActiveTab = tab;
+  syncMenuHubTabButtons();
+
+  if (statsPanel){ statsPanel.style.display = "none"; statsPanel.setAttribute("aria-hidden", "true"); statsPanel.removeAttribute("aria-modal"); }
+  if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
+  if (optionsMenu) optionsMenu.style.display = "none";
+
+  rememberMenuHubOriginalParent(targetInner);
+
+  if (menuHubActiveInner !== targetInner){
+    if (menuHubActiveInner){
+      const previousParent = menuHubOriginalParents.get(menuHubActiveInner);
+      if (previousParent && menuHubActiveInner.parentNode !== previousParent) previousParent.appendChild(menuHubActiveInner);
+    }
+    menuHubContent.appendChild(targetInner);
+    menuHubActiveInner = targetInner;
+  }
+
+  if (tab === "images") renderSavedImages();
+  if (tab === "stats"){ syncNicknameStatsLabels(); renderLifetimeStats(); }
+  if (tab === "options"){
+    markOptionsClean(false);
+    if (livesSlider) livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
+    if (heartsSlider) heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
+    if (shieldsSlider) shieldsSlider.value = START_SHIELDS_INFINITE ? 100 : START_SHIELDS;
+    if (bombsSlider) bombsSlider.value = START_BOMBS_INFINITE ? 100 : START_BOMBS;
+    if (typeof setSpeedSliderPositionFromSpeed === "function") setSpeedSliderPositionFromSpeed(START_GAME_SPEED);
+    if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
+    if (typeof syncStartOptionsLabels === "function") syncStartOptionsLabels();
+    [livesSlider, heartsSlider, shieldsSlider, bombsSlider].filter(Boolean).forEach(input => normalizeStartStatInput(input));
+    if (typeof syncCheatsMenuState === "function") syncCheatsMenuState();
+    if (typeof syncNicknameControl === "function") syncNicknameControl();
+    if (typeof syncNicknameStatsLabels === "function") syncNicknameStatsLabels();
+    if (typeof updateOptionsApplyButtonState === "function") updateOptionsApplyButtonState();
+    fitMenuHubToStartMenu();
+  }
+
+  const button = getMenuHubTabButton(tab);
+  const items = getMenuHubControllerTargets();
+  const index = items.indexOf(button);
+  if (index >= 0) menuHubFocusIndex = index;
+  if (focusTab && activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
 }
 
 function resetMenuHubControllerFocus(){
   menuHubFocusIndex = 0;
+  menuHubActiveTab = "images";
 }
 
 function syncMenuHubControllerFocus(){
@@ -4269,36 +4363,16 @@ function moveMenuHubControllerFocus(delta){
   const items = getMenuHubControllerTargets();
   if (!items.length) return;
   menuHubFocusIndex = (menuHubFocusIndex + delta + items.length) % items.length;
+  const tab = getMenuHubTabForButton(items[menuHubFocusIndex]);
+  selectMenuHubTab(tab, false);
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
   else clearControllerFocus();
 }
 
 function moveMenuHubControllerFocusDirectional(direction){
-  const items = getMenuHubControllerTargets();
-  if (!items.length) return false;
-  const imagesIndex = items.indexOf(btnMenuHubImages);
-  const statsIndex = items.indexOf(btnMenuHubStats);
-  const optionsIndex = items.indexOf(btnMenuHubOptions);
-  const closeIndex = items.indexOf(btnMenuHubClose);
-  let nextIndex = menuHubFocusIndex;
-
-  if (direction === "left"){
-    if (menuHubFocusIndex === statsIndex && imagesIndex !== -1) nextIndex = imagesIndex;
-    else if (menuHubFocusIndex === optionsIndex && statsIndex !== -1) nextIndex = statsIndex;
-  } else if (direction === "right"){
-    if (menuHubFocusIndex === imagesIndex && statsIndex !== -1) nextIndex = statsIndex;
-    else if (menuHubFocusIndex === statsIndex && optionsIndex !== -1) nextIndex = optionsIndex;
-  } else if (direction === "down"){
-    if ((menuHubFocusIndex === imagesIndex || menuHubFocusIndex === statsIndex || menuHubFocusIndex === optionsIndex) && closeIndex !== -1) nextIndex = closeIndex;
-  } else if (direction === "up"){
-    if (menuHubFocusIndex === closeIndex) nextIndex = imagesIndex !== -1 ? imagesIndex : 0;
-  }
-
-  if (nextIndex === menuHubFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
-  menuHubFocusIndex = nextIndex;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
-  else clearControllerFocus();
-  return true;
+  if (direction === "left") { moveMenuHubControllerFocus(-1); return true; }
+  if (direction === "right") { moveMenuHubControllerFocus(1); return true; }
+  return false;
 }
 
 function getStartMenuStartFocusIndex(){
@@ -5282,6 +5356,7 @@ function openMenuHub(){
   uiRoot.style.display = "flex";
   fitMenuHubToStartMenu();
   resetMenuHubControllerFocus();
+  selectMenuHubTab("images", false);
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
   else clearControllerFocus();
   renderMenuHudPreview();
@@ -5289,6 +5364,7 @@ function openMenuHub(){
 }
 
 function closeMenuHub(){
+  restoreMenuHubActiveInner();
   if (menuHubPanel){
     menuHubPanel.style.display = "none";
     menuHubPanel.setAttribute("aria-hidden", "true");
@@ -5321,14 +5397,19 @@ function openOptionsFromHub(){
 function showControlsMenu(){
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
-  const fromOptions = optionsMenu && optionsMenu.style.display !== "none";
+  const fromHubOptions = gameState === STATE.HUB && menuHubActiveTab === "options";
+  const fromOptions = (optionsMenu && optionsMenu.style.display !== "none") || fromHubOptions;
   const fromMenu = startMenu && startMenu.style.display !== "none";
   if (!fromOptions && !fromMenu && !pauseControlsOpen) return;
 
-  if (fromMenu) rememberStartMenuPanelRect();
+  if (fromMenu || fromHubOptions) rememberStartMenuPanelRect();
   else getFallbackMenuRect();
 
-  controlsReturnState = fromOptions ? STATE.OPTIONS : STATE.MENU;
+  controlsReturnState = fromHubOptions ? STATE.HUB : (fromOptions ? STATE.OPTIONS : STATE.MENU);
+  if (fromHubOptions){
+    restoreMenuHubActiveInner();
+    if (menuHubPanel) menuHubPanel.style.display = "none";
+  }
 
   setPaused(false);
   pauseControlsOpen = false;
@@ -5369,6 +5450,11 @@ function hideControlsMenu(){
   }
   if (controlsReturnState === STATE.OPTIONS){
     showOptions();
+    return;
+  }
+  if (controlsReturnState === STATE.HUB){
+    openMenuHub();
+    selectMenuHubTab("options", activeInputMode === INPUT_MODE_CONTROLLER);
     return;
   }
   showMenu();
@@ -6092,6 +6178,7 @@ function applyBackgroundColorFromControls(value){
 }
 
 function showOptions(fromPause = false){
+  restoreMenuHubActiveInner();
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   optionsOpenedFromPause = !!fromPause;
   cheatsOpenedFromPause = false;
@@ -6150,6 +6237,7 @@ function showOptions(fromPause = false){
   updateHearts();
 }
 function startGame(){
+  restoreMenuHubActiveInner();
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   setPaused(false);
   unlockAudioOnce();
@@ -6412,9 +6500,9 @@ if (backgroundColorPicker){
 if (btnStats) btnStats.addEventListener("click", openStatsPanel);
 if (btnImages) btnImages.addEventListener("click", openImagesPanel);
 if (btnMenu) btnMenu.addEventListener("click", openMenuHub);
-if (btnMenuHubImages) btnMenuHubImages.addEventListener("click", openImagesPanelFromHub);
-if (btnMenuHubStats) btnMenuHubStats.addEventListener("click", openStatsPanelFromHub);
-if (btnMenuHubOptions) btnMenuHubOptions.addEventListener("click", openOptionsFromHub);
+if (btnMenuHubImages) btnMenuHubImages.addEventListener("click", () => selectMenuHubTab("images", true));
+if (btnMenuHubStats) btnMenuHubStats.addEventListener("click", () => selectMenuHubTab("stats", true));
+if (btnMenuHubOptions) btnMenuHubOptions.addEventListener("click", () => selectMenuHubTab("options", true));
 if (btnMenuHubClose) btnMenuHubClose.addEventListener("click", closeMenuHub);
 if (btnImagesClose) btnImagesClose.addEventListener("click", closeImagesPanel);
 if (btnImagesClear) btnImagesClear.addEventListener("click", clearSavedImages);
@@ -7341,11 +7429,11 @@ function pollGamepad(dt){
       }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
     } else if (gameState === STATE.HUB){
+      if (pressListTop) moveMenuHubControllerFocus(-1);
+      if (pressListBottom) moveMenuHubControllerFocus(1);
       if (navLeft || rNavLeft) moveMenuHubControllerFocusDirectional("left");
       if (navRight || rNavRight) moveMenuHubControllerFocusDirectional("right");
-      if (navDown || rNavDown) moveMenuHubControllerFocusDirectional("down");
-      if (navUp || rNavUp) moveMenuHubControllerFocusDirectional("up");
-      if (pressMenuSelect) activateControllerTarget(getMenuHubControllerTargets()[menuHubFocusIndex]);
+      if (pressMenuSelect) selectMenuHubTab(getMenuHubTabForButton(getMenuHubControllerTargets()[menuHubFocusIndex]), true);
       if (pressMenuBack) closeMenuHub();
     } else if (gameState === STATE.OPTIONS){
       if (pressListTop) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, -1);
