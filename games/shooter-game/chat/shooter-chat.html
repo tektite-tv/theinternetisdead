@@ -205,28 +205,40 @@
       text-transform:uppercase;
     }
     #helpList{
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
-      gap:8px;
+      list-style:none;
+      margin:0;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .helpListItem{
+      margin:0;
+      padding:0;
     }
     .helpItem{
       appearance:none;
+      width:100%;
+      display:grid;
+      grid-template-columns:minmax(128px, 0.8fr) minmax(0, 1.4fr) minmax(150px, 1fr);
+      align-items:center;
+      gap:10px;
       text-align:left;
       border:1px solid rgba(0,255,102,0.5);
-      border-radius:10px;
-      background:rgba(75,0,118,0.58);
+      border-radius:8px;
+      background:rgba(75,0,118,0.46);
       color:#fff;
-      padding:8px;
-      min-height:54px;
+      padding:6px 8px;
+      min-height:34px;
     }
     .helpItem:hover,.helpItem:focus,.helpItem.controllerFocus{
       outline:2px solid var(--lime) !important;
       background:rgba(75,0,118,0.88);
       box-shadow:0 0 12px rgba(0,255,102,0.35);
     }
-    .helpName{display:block;color:var(--lime);font-weight:900;margin-bottom:3px;}
-    .helpDesc{display:block;font-size:12px;opacity:0.94;line-height:1.3;}
-    .helpUsage{display:block;font-size:11px;color:#d9ffd9;opacity:0.72;margin-top:4px;}
+    .helpName{display:block;color:var(--lime);font-weight:900;}
+    .helpDesc{display:block;font-size:12px;opacity:0.94;line-height:1.25;}
+    .helpUsage{display:block;font-size:11px;color:#d9ffd9;opacity:0.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     #suggestions{
       display:none;
       flex-wrap:wrap;
@@ -251,7 +263,8 @@
         padding:14px;
       }
       #chatSubmit{min-width:58px;padding-inline:10px;}
-      #helpList{grid-template-columns:1fr;}
+      .helpItem{grid-template-columns:1fr;gap:2px;}
+      .helpUsage{white-space:normal;}
     }
   </style>
 </head>
@@ -268,7 +281,7 @@
       <div id="cheatermodeHoldStatus" role="status"></div>
       <section id="helpPanel" aria-label="Command help">
         <p id="helpHeader">Commands</p>
-        <div id="helpList"></div>
+        <ul id="helpList"></ul>
       </section>
       <div id="suggestions" aria-label="Command suggestions"></div>
       <form id="chatForm" autocomplete="off">

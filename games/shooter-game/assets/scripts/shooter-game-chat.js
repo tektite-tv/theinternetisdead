@@ -160,6 +160,9 @@
     const list = allCommands();
     helpList.innerHTML = '';
     list.forEach((cmd) => {
+      const item = document.createElement('li');
+      item.className = 'helpListItem';
+
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'helpItem chat-command-link';
@@ -170,7 +173,9 @@
       }
       btn.innerHTML = `<span class="helpName">${escapeHtml(cmd.name)}</span><span class="helpDesc">${escapeHtml(cmd.desc || '')}</span><span class="helpUsage">${escapeHtml(cmd.usage || cmd.name)}</span>`;
       btn.addEventListener('click', () => activateHelpCommand(cmd.name));
-      helpList.appendChild(btn);
+
+      item.appendChild(btn);
+      helpList.appendChild(item);
     });
     helpPanel.classList.add('visible');
   }
@@ -274,16 +279,17 @@
     if (command.toLowerCase() === 'cheatermode') command = '/cheatermode cheatermode';
     if (command.toLowerCase() === '/cheatermode') command = '/cheatermode cheatermode';
     const name = normalizeCommandName(command);
-    if (options.echo !== false) appendLine(command, 'user');
     clearSuggestions();
     activePickerCommand = '';
     sendState();
 
     if (name === '/help') {
       renderHelp();
-      appendLine('System: Command list opened.', 'result');
       return;
     }
+
+    if (options.echo !== false) appendLine(command, 'user');
+
     if (name === '/clear') {
       if (messages) messages.innerHTML = '';
       welcomePrinted = false;
