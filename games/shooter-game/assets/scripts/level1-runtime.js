@@ -1703,6 +1703,7 @@ function openStatsPanel(){
 }
 
 function closeStatsPanel(){
+  if (closeMenuHubHostedPanelToStart(statsPanelInner)) return;
   if (statsPanel){
     statsPanel.style.display = "none";
     statsPanel.setAttribute("aria-hidden", "true");
@@ -1814,6 +1815,7 @@ function openImagesPanel(){
 }
 
 function closeImagesPanel(){
+  if (closeMenuHubHostedPanelToStart(imagesPanelInner)) return;
   if (imagesPanel){
     imagesPanel.style.display = "none";
     imagesPanel.setAttribute("aria-hidden", "true");
@@ -5379,6 +5381,16 @@ function closeMenuHub(){
   renderMenuHudPreview();
 }
 
+function isMenuHubHostingElement(el){
+  return !!(menuHubPanel && el && menuHubPanel.contains(el));
+}
+
+function closeMenuHubHostedPanelToStart(el){
+  if (!isMenuHubHostingElement(el)) return false;
+  closeMenuHub();
+  return true;
+}
+
 function openImagesPanelFromHub(){
   if (menuHubPanel){ menuHubPanel.style.display = "none"; menuHubPanel.setAttribute("aria-hidden", "true"); }
   openImagesPanel();
@@ -6584,6 +6596,7 @@ function applyCheatsChanges(showAppliedState=false){
 
 if (btnCheatsBack) btnCheatsBack.addEventListener("click", hideCheats);
 btnBack.addEventListener("click", () => {
+  if (closeMenuHubHostedPanelToStart(document.getElementById("optionsMenuInner"))) return;
   if (optionsOpenedFromPause && isPaused){
     optionsMenu.style.display = "none";
     if (cheatsMenu) cheatsMenu.style.display = "none";
