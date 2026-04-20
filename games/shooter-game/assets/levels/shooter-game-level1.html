@@ -1802,24 +1802,39 @@ body.invert-colors {
     justify-content:flex-start;
     min-height:0;
   }
-  #menuHubTitle{
-    text-align:center;
-    font-size:24px;
-    font-weight:900;
-    letter-spacing:2px;
-    margin:0 0 12px;
-    padding:0 8px;
-    box-sizing:border-box;
-    width:100%;
-    flex:0 0 auto;
-  }
   #menuHubTopButtons{
+    position:relative;
     display:grid;
     grid-template-columns:repeat(3, minmax(0, 1fr));
     gap:10px;
     width:100%;
     margin:0 0 14px;
+    padding:0 56px;
     flex:0 0 auto;
+    box-sizing:border-box;
+  }
+  #menuHubTopButtons::before,
+  #menuHubTopButtons::after{
+    content:"";
+    position:absolute;
+    top:50%;
+    width:42px;
+    height:42px;
+    transform:translateY(-50%);
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:contain;
+    image-rendering:auto;
+    filter:drop-shadow(0 0 8px rgba(0,255,102,0.55));
+    pointer-events:none;
+  }
+  #menuHubTopButtons::before{
+    left:4px;
+    background-image:url("/games/shooter-game/assets/controller-buttons/left-bumper.webp");
+  }
+  #menuHubTopButtons::after{
+    right:4px;
+    background-image:url("/games/shooter-game/assets/controller-buttons/right-bumper.webp");
   }
   #menuHubTopButtons .smallBtn{
     width:100%;
@@ -1851,7 +1866,9 @@ body.invert-colors {
     box-shadow:0 0 16px rgba(0,255,102,0.55);
   }
   @media (max-width: 460px){
-    #menuHubTopButtons{ grid-template-columns:1fr; gap:8px; }
+    #menuHubTopButtons{ grid-template-columns:1fr; gap:8px; padding:0 42px; }
+    #menuHubTopButtons::before,
+    #menuHubTopButtons::after{ width:32px; height:32px; top:22px; transform:none; }
     #menuHubTopButtons .smallBtn{ min-height:42px; font-size:14px; }
   }
 
@@ -1887,7 +1904,6 @@ body.invert-colors {
   #optionsMenu .title,
   #cheatsMenu .title,
   #controlsMenu .title,
-  #menuHubTitle,
   #imagesPanelTitle,
   #statsPanelInner .statsTitle{
     text-align:center;
@@ -2091,7 +2107,6 @@ body.invert-colors {
   #optionsMenu .title,
   #cheatsMenu .title,
   #controlsMenu .title,
-  #menuHubTitle,
   #imagesPanelTitle,
   #statsPanelInner .statsTitle{
     animation:statsTitleHueShift 2.4s linear infinite;
@@ -2402,7 +2417,6 @@ body.invert-colors {
 
   <div id="menuHubPanel" aria-hidden="true">
     <div id="menuHubPanelInner">
-      <div id="menuHubTitle">Menu</div>
       <div id="menuHubTopButtons">
         <button id="btnMenuHubImages" class="smallBtn" type="button">Images Menu</button>
         <button id="btnMenuHubStats" class="smallBtn" type="button">Stats Menu</button>
