@@ -2526,6 +2526,246 @@ body.invert-colors {
     margin-top:8px !important;
   }
 
+  /* v2.06: make the Options tab under the LB/RB hub row use the normal Options menu layout.
+     The hub buttons are the title now, so hide any inner Options title if one sneaks back in. */
+  #menuHubPanel.menuHubTabOptions #menuHubContent > #optionsMenuInner > .title{
+    display:none !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent > #optionsMenuInner{
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    min-height:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    width:100% !important;
+    overflow:auto !important;
+    padding:0 8px 8px !important;
+    box-sizing:border-box !important;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll::-webkit-scrollbar{ width:6px; height:6px; }
+  #menuHubPanel.menuHubTabOptions #optionsScroll::-webkit-scrollbar-track{ background:rgba(0,0,0,0.22); border-radius:999px; }
+  #menuHubPanel.menuHubTabOptions #optionsScroll::-webkit-scrollbar-thumb{ background:#00ff66; border-radius:999px; box-shadow:0 0 8px rgba(0,255,102,0.35); }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optionsGrid{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:6px !important;
+    align-items:start !important;
+    width:100% !important;
+    margin-top:0 !important;
+    text-align:center !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optRow.fullRow,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optRow.checkboxGroup{
+    grid-column:1 / -1 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optRow{
+    border:1px solid rgba(0,255,0,0.2) !important;
+    border-radius:12px !important;
+    padding:6px 8px !important;
+    background:rgba(0,0,0,0.35) !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optRow.buttonOnlyRow{
+    border:none !important;
+    background:transparent !important;
+    padding:0 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow{
+    text-align:left !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatHeader{
+    display:grid !important;
+    grid-template-columns:minmax(0, 1fr) auto !important;
+    align-items:center !important;
+    gap:8px !important;
+    min-height:0 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatHeader > div:first-child{
+    display:block !important;
+    min-width:0 !important;
+    text-align:left !important;
+    white-space:normal !important;
+    overflow:visible !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatTitle{
+    display:block !important;
+    font-size:12px !important;
+    line-height:1.15 !important;
+    text-align:left !important;
+    margin:0 !important;
+    white-space:normal !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatCommand{
+    display:block !important;
+    font-size:10px !important;
+    line-height:1.1 !important;
+    opacity:0.7 !important;
+    text-align:left !important;
+    margin:2px 0 0 !important;
+    padding-left:0 !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .hint{
+    margin-top:4px !important;
+    line-height:1.15 !important;
+    font-size:10px !important;
+    text-align:left !important;
+    padding-left:0 !important;
+    white-space:normal !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:6px !important;
+    white-space:nowrap !important;
+    text-align:right !important;
+    font-size:inherit !important;
+    max-width:none !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    width:auto !important;
+    height:auto !important;
+    transform:scale(1) !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow{
+    display:grid !important;
+    grid-template-columns:minmax(0, 1fr) auto !important;
+    align-items:center !important;
+    column-gap:8px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .cheatHeader{
+    display:contents !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .cheatHeader > div:first-child{
+    grid-column:1 !important;
+    grid-row:1 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .nicknameControls{
+    grid-column:2 !important;
+    grid-row:1 / span 2 !important;
+    align-self:center !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .hint{
+    grid-column:1 !important;
+    grid-row:2 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameControls,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorControls{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:6px !important;
+    min-width:170px !important;
+    max-width:none !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap{
+    position:relative !important;
+    display:inline-flex !important;
+    width:132px !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+    font-family:monospace !important;
+    font-size:12px !important;
+    color:#00ff66 !important;
+    background:rgba(0,0,0,0.55) !important;
+    border:1px solid rgba(0,255,0,0.45) !important;
+    border-radius:9px !important;
+    overflow:hidden !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap .nicknameInput{
+    position:relative !important;
+    z-index:2 !important;
+    width:100% !important;
+    color:transparent !important;
+    -webkit-text-fill-color:transparent !important;
+    caret-color:#00ff66 !important;
+    background:transparent !important;
+    border:0 !important;
+    border-radius:0 !important;
+    font-size:12px !important;
+    padding:7px 8px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputPreview{
+    position:absolute !important;
+    inset:0 !important;
+    z-index:1 !important;
+    box-sizing:border-box !important;
+    padding:7px 8px !important;
+    line-height:normal !important;
+    white-space:pre !important;
+    overflow:hidden !important;
+    pointer-events:none !important;
+    font-size:12px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameActionBtn{
+    width:auto !important;
+    min-width:0 !important;
+    height:auto !important;
+    min-height:0 !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    box-sizing:border-box !important;
+    font-size:16px !important;
+    line-height:1 !important;
+    color:#0f0 !important;
+    background:rgba(0,0,0,0.55) !important;
+    border:0 !important;
+    border-radius:0 !important;
+    padding:0 !important;
+    cursor:pointer !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+    width:92px !important;
+    box-sizing:border-box !important;
+    font-family:monospace !important;
+    font-size:12px !important;
+    color:#00ff66 !important;
+    background:rgba(0,0,0,0.55) !important;
+    border:1px solid rgba(0,255,0,0.45) !important;
+    border-radius:9px !important;
+    padding:7px 8px !important;
+    outline:none !important;
+    text-transform:uppercase !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorPicker{
+    width:38px !important;
+    height:34px !important;
+    box-sizing:border-box !important;
+    border:1px solid rgba(0,255,0,0.45) !important;
+    border-radius:9px !important;
+    background:rgba(0,0,0,0.55) !important;
+    padding:2px !important;
+    cursor:pointer !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .buttonOnlyRow .smallBtn{
+    width:100% !important;
+    min-height:46px !important;
+    font-size:16px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .menuBottomRow{
+    flex:0 0 auto !important;
+    width:100% !important;
+    box-sizing:border-box !important;
+    padding:0 8px !important;
+    margin-top:14px !important;
+  }
+
 </style>
 
 <style>
