@@ -1242,7 +1242,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         if (shouldIgnoreChatShortcutFromEvent(event)) return;
         event.preventDefault();
         event.stopPropagation();
-        openChatFromParent({ focus: true, runCommand: '/help' });
+        openChatFromParent({ focus: true });
         return;
       }
 
