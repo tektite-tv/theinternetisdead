@@ -404,27 +404,27 @@
   #controlsMenu .title{ font-size:18px; margin:1px 0 5px; }
   #controlsMenu .controlsGrid{ display:grid; gap:6px; text-align:center; width:100%; min-width:0; }
   #controlsMenu .optRow{ padding:6px 0; background:transparent; border:none; border-radius:0; box-shadow:none; }
-  #controlsMenu .controlsBindList{ display:grid; grid-template-columns:minmax(0, 1fr); gap:6px; margin-top:4px; width:100%; min-width:0; }
-  #controlsMenu .controlsBindRow{ display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px; align-items:center; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:6px 8px; background: rgba(0,0,0,0.35); }
+  #controlsMenu .controlsBindList{ display:flex; flex-direction:column; gap:6px; margin-top:4px; width:100%; min-width:0; }
+  #controlsMenu .controlsBindRow{ display:flex; flex-direction:column; gap:6px; align-items:stretch; border:1px solid rgba(0,255,0,0.2); border-radius:12px; padding:6px 8px; background: rgba(0,0,0,0.35); }
   #controlsMenu .controlsBindRow:hover,
   #controlsMenu .controlsBindRow:focus-within{ border-color: rgba(0,255,0,0.9); box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22); background: rgba(75,0,118,0.52); }
   #controlsMenu .controlsBindMeta{ display:flex; flex-direction:column; gap:1px; min-width:0; align-items:flex-start; text-align:left; }
   #controlsMenu .controlsBindTitle{ font-size:12px; }
   #controlsMenu .controlsBindHint{ opacity:0.7; font-size:9px; line-height:1.15; }
-  #controlsMenu .controlsBindButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; }
+  #controlsMenu .controlsBindButton{ width:100%; min-width:0; padding:6px 8px; text-align:center; font-size:11px; box-sizing:border-box; }
   #controlsMenu .controlsBindButton.listening{ border-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 2px rgba(255,255,255,0.16); }
-  #controlsMenu .controlsMoveRow{ grid-template-columns:minmax(120px, 0.92fr) minmax(0, 1.08fr); }
-  #controlsMenu .controlsMoveButtonGroup{ display:grid; grid-template-columns:repeat(4, 58px); gap:0; align-items:stretch; justify-content:end; min-width:0; width:100%; max-width:100%; }
-  #controlsMenu .controlsMoveButton{ min-width:58px; width:58px; max-width:58px; min-height:0; padding:6px 0; font-size:10px; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:clip; display:flex; align-items:center; justify-content:center; gap:2px; text-align:center; box-sizing:border-box; }
+  #controlsMenu .controlsMoveRow{ display:flex; flex-direction:column; }
+  #controlsMenu .controlsMoveButtonGroup{ display:flex; flex-direction:column; gap:6px; align-items:stretch; justify-content:flex-start; min-width:0; width:100%; max-width:100%; }
+  #controlsMenu .controlsMoveButton{ width:100%; max-width:none; min-width:0; min-height:0; padding:6px 8px; font-size:10px; line-height:1.05; white-space:nowrap; overflow:hidden; text-overflow:clip; display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:center; box-sizing:border-box; }
   #controlsMenu .controlsMoveButton .moveBindLabel{ display:inline-block; font-size:15px; line-height:1.0; }
   #controlsMenu .controlsMoveButton .moveBindValue{ display:inline-block; font-size:8px; line-height:1.0; opacity:0.95; white-space:nowrap; overflow:hidden; text-overflow:clip; }
-  #controlsMenu .controlsAimRow{ grid-template-columns:minmax(120px, 0.92fr) auto; }
-  #controlsMenu .controlsAimButtonGroup{ display:flex; justify-content:end; align-items:stretch; min-width:0; width:100%; max-width:100%; }
-  #controlsMenu .controlsAimButton{ min-width:116px; padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
+  #controlsMenu .controlsAimRow{ display:flex; flex-direction:column; }
+  #controlsMenu .controlsAimButtonGroup{ display:flex; justify-content:stretch; align-items:stretch; min-width:0; width:100%; max-width:100%; }
+  #controlsMenu .controlsAimButton{ width:100%; min-width:0; padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
   #controlsMenu .controlsFixedBindButton{ cursor:default; }
   #controlsMenu .controlsFixedBindButton:focus{ outline:none; }
-  #controlsMenu .controlsPreviewButtonGroup{ display:grid; grid-template-columns:repeat(4, 58px); gap:0; justify-content:end; align-items:stretch; min-width:0; width:100%; max-width:100%; }
-  #controlsMenu .controlsPreviewButton{ grid-column:1 / -1; min-width:0; width:100%; padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
+  #controlsMenu .controlsPreviewButtonGroup{ display:flex; flex-direction:column; gap:6px; justify-content:flex-start; align-items:stretch; min-width:0; width:100%; max-width:100%; }
+  #controlsMenu .controlsPreviewButton{ min-width:0; width:100%; padding:6px 8px; text-align:center; font-size:11px; display:flex; align-items:center; justify-content:center; }
   #controlsPreviewMenu.panel{
     width:min(520px, 92vw);
     padding:18px 18px 16px;
