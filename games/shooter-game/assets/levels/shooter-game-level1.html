@@ -137,6 +137,7 @@
   /* Controller-selected Start menu A-button hint.
      Absolutely positioned so the four Start menu buttons keep their exact footprint. */
   #startMenu #btnStart,
+  #startMenu #btnMenu,
   #startMenu #btnOptions,
   #startMenu #btnImages,
   #startMenu #btnStats{
@@ -157,6 +158,7 @@
     will-change:left, right, width;
   }
   body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
+  body.controller-active #startMenu #btnMenu.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnOptions.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnImages.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnStats.controllerFocus .startMenuButtonText{
@@ -178,6 +180,7 @@
   }
   /* Keep compact start-menu labels centered while the A icon is shown. */
   body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
+  body.controller-active #startMenu #btnMenu.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnImages.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnOptions.controllerFocus .startMenuButtonText{
     position:relative;
@@ -203,6 +206,7 @@
     line-height:1.1;
   }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
+  body.controller-active #startMenu #btnMenu.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
   body.controller-active #startMenu #btnImages.controllerFocus::after,
   body.controller-active #startMenu #btnStats.controllerFocus::after{
@@ -1768,6 +1772,89 @@ body.invert-colors {
     max-width:160px;
   }
 
+  #menuHubPanel{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:119;
+    background:rgba(0,0,0,0.42);
+    pointer-events:auto;
+  }
+  #menuHubPanelInner{
+    width:var(--shooter-menu-footprint-width, min(520px, 92vw));
+    height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
+    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw));
+    max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
+    border:2px solid rgba(0,255,102,0.65);
+    border-radius:var(--shooter-menu-footprint-radius, 16px);
+    background:rgba(75,0,118,0.50);
+    color:#00ff66;
+    font-family:"Courier New", monospace;
+    padding:18px;
+    box-shadow:0 0 28px rgba(0,255,102,0.20);
+    text-align:center;
+    box-sizing:border-box;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+    min-height:0;
+  }
+  #menuHubTitle{
+    text-align:center;
+    font-size:24px;
+    font-weight:900;
+    letter-spacing:2px;
+    margin:0 0 12px;
+    padding:0 8px;
+    box-sizing:border-box;
+    width:100%;
+    flex:0 0 auto;
+  }
+  #menuHubTopButtons{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:10px;
+    width:100%;
+    margin:0 0 14px;
+    flex:0 0 auto;
+  }
+  #menuHubTopButtons .smallBtn{
+    width:100%;
+    min-width:0;
+    min-height:52px;
+    font-size:15px;
+    line-height:1.1;
+  }
+  #menuHubBlurb{
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#ffffff;
+    opacity:0.88;
+    font-size:14px;
+    line-height:1.35;
+    padding:8px 12px;
+  }
+  #menuHubButtons{
+    flex:0 0 auto;
+    width:100%;
+    margin-top:12px;
+  }
+  body.controller-active #menuHubPanel button.controllerFocus,
+  #menuHubPanel button:hover{
+    outline:2px solid #00ff66;
+    box-shadow:0 0 16px rgba(0,255,102,0.55);
+  }
+  @media (max-width: 460px){
+    #menuHubTopButtons{ grid-template-columns:1fr; gap:8px; }
+    #menuHubTopButtons .smallBtn{ min-height:42px; font-size:14px; }
+  }
+
   #imagesPanel{
     position:fixed;
     inset:0;
@@ -1800,6 +1887,7 @@ body.invert-colors {
   #optionsMenu .title,
   #cheatsMenu .title,
   #controlsMenu .title,
+  #menuHubTitle,
   #imagesPanelTitle,
   #statsPanelInner .statsTitle{
     text-align:center;
@@ -2003,6 +2091,7 @@ body.invert-colors {
   #optionsMenu .title,
   #cheatsMenu .title,
   #controlsMenu .title,
+  #menuHubTitle,
   #imagesPanelTitle,
   #statsPanelInner .statsTitle{
     animation:statsTitleHueShift 2.4s linear infinite;
@@ -2306,13 +2395,24 @@ body.invert-colors {
     <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
     <div class="btnRow btnRowTop">
       <button id="btnStart"><span class="startMenuButtonText">Start Game</span></button>
-      <button id="btnImages" class="smallBtn mysteryBtn" type="button"><span class="startMenuButtonText">Images</span></button>
-    </div>
-    <div class="btnRow btnRowBottom">
-      <button id="btnStats" class="smallBtn" type="button"><span class="startMenuButtonText">Lifetime Stats</span></button>
-      <button id="btnOptions"><span class="startMenuButtonText">Options</span></button>
+      <button id="btnMenu" class="smallBtn" type="button"><span class="startMenuButtonText">Menu</span></button>
     </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
+  </div>
+
+  <div id="menuHubPanel" aria-hidden="true">
+    <div id="menuHubPanelInner">
+      <div id="menuHubTitle">Menu</div>
+      <div id="menuHubTopButtons">
+        <button id="btnMenuHubImages" class="smallBtn" type="button">Images Menu</button>
+        <button id="btnMenuHubStats" class="smallBtn" type="button">Stats Menu</button>
+        <button id="btnMenuHubOptions" class="smallBtn" type="button">Options Menu</button>
+      </div>
+      <div id="menuHubBlurb">Choose a submenu. Somehow the menu needed a lobby. Civilization continues to thrive.</div>
+      <div id="menuHubButtons" class="btnRow menuBottomRow">
+        <button id="btnMenuHubClose" class="smallBtn" type="button">Back</button>
+      </div>
+    </div>
   </div>
 
   <div id="statsPanel" aria-hidden="true">

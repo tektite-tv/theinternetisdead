@@ -1676,6 +1676,7 @@ function renderLifetimeStats(){
 }
 
 function openStatsPanel(){
+  overlayPanelReturnTarget = (gameState === STATE.HUB) ? STATE.HUB : STATE.MENU;
   syncNicknameStatsLabels();
   renderLifetimeStats();
   if (btnStatsLockedToggle){
@@ -1707,6 +1708,10 @@ function closeStatsPanel(){
     statsPanel.removeAttribute("aria-modal");
   }
   if (startMenu) startMenu.style.display = "block";
+  if (overlayPanelReturnTarget === STATE.HUB && menuHubPanel){
+    openMenuHub();
+    return;
+  }
   setStartMenuInteractive(true);
   resetStartMenuControllerFocus();
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
@@ -1788,6 +1793,7 @@ function moveImagesControllerFocus(delta){
 }
 
 function openImagesPanel(){
+  overlayPanelReturnTarget = (gameState === STATE.HUB) ? STATE.HUB : STATE.MENU;
   renderSavedImages();
   imagesFocusIndex = 0;
   rememberStartMenuPanelRect();
@@ -1812,6 +1818,10 @@ function closeImagesPanel(){
     imagesPanel.removeAttribute("aria-modal");
   }
   if (startMenu) startMenu.style.display = "block";
+  if (overlayPanelReturnTarget === STATE.HUB && menuHubPanel){
+    openMenuHub();
+    return;
+  }
   setStartMenuInteractive(true);
   resetStartMenuControllerFocus();
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
@@ -1935,7 +1945,7 @@ function showWaveBanner(n){
   waveBanner.t = 1.35;
 }
 
-const STATE = { MENU:"menu", OPTIONS:"options", CHEATS:"cheats", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
+const STATE = { MENU:"menu", HUB:"hub", OPTIONS:"options", CHEATS:"cheats", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
 let gameWon = false;
 
@@ -2803,14 +2813,26 @@ function resize(){
 
   resetStarfield();
   resizeFX();
+  fitMenuHubToStartMenu();
   fitOptionsMenuToViewport();
   fitCheatsMenuToViewport();
   fitControlsMenuToViewport();
   fitControlsPreviewMenuToViewport();
+  fitMenuHubToStartMenu();
   fitStatsPanelToStartMenu();
   fitImagesPanelToStartMenu();
 }
 window.addEventListener("resize", resize);
+
+function fitMenuHubToStartMenu(){
+  if (!menuHubPanelInner) return;
+  const sourceRect = getFallbackMenuRect();
+  if (!sourceRect || !sourceRect.width || !sourceRect.height) return;
+  menuHubPanelInner.style.width = `${Math.round(sourceRect.width)}px`;
+  menuHubPanelInner.style.height = `${Math.round(sourceRect.height)}px`;
+  menuHubPanelInner.style.maxWidth = `${Math.round(sourceRect.width)}px`;
+  menuHubPanelInner.style.maxHeight = `${Math.round(sourceRect.height)}px`;
+}
 
 function fitOptionsMenuToViewport(){
   sizeMenuLikeStartMenu(optionsMenu, optionsMenuInner, optionsScroll);
@@ -3067,11 +3089,18 @@ const assetStatus = document.getElementById("assetStatus");
 function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 
 const btnStart = document.getElementById("btnStart");
+const btnMenu = document.getElementById("btnMenu");
 const btnOptions = document.getElementById("btnOptions");
 const startMenuTitle = document.getElementById("startMenuTitle");
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
+const menuHubPanel = document.getElementById("menuHubPanel");
+const menuHubPanelInner = document.getElementById("menuHubPanelInner");
+const btnMenuHubImages = document.getElementById("btnMenuHubImages");
+const btnMenuHubStats = document.getElementById("btnMenuHubStats");
+const btnMenuHubOptions = document.getElementById("btnMenuHubOptions");
+const btnMenuHubClose = document.getElementById("btnMenuHubClose");
 const btnStats = document.getElementById("btnStats");
 const statsPanel = document.getElementById("statsPanel");
 const statsPanelTitle = document.getElementById("statsPanelTitle");
@@ -3817,6 +3846,7 @@ let controlsBindMode = INPUT_MODE_KEYBOARD;
 let controlsFocusIndex = 0;
 let controlsMoveFocusIndex = 0;
 let controlsReturnState = STATE.MENU;
+let overlayPanelReturnTarget = STATE.MENU;
 let controlsHavePendingChanges = false;
 let controlsJustApplied = false;
 let startMenuPanelRect = null;
@@ -4104,6 +4134,7 @@ resetDraftBindingsFromActive();
 updateControlsDisplay();
 renderControlsBindingList();
 let menuFocusIndex = 0;
+let menuHubFocusIndex = 0;
 let optionsFocusIndex = 0;
 let optionsHavePendingChanges = false;
 let optionsJustApplied = false;
@@ -4216,7 +4247,58 @@ function markControlsClean(applied=false){
 }
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnImages, btnStats, btnOptions].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnMenu].filter(Boolean);
+}
+
+function getMenuHubControllerTargets(){
+  return [btnMenuHubImages, btnMenuHubStats, btnMenuHubOptions, btnMenuHubClose].filter(Boolean);
+}
+
+function resetMenuHubControllerFocus(){
+  menuHubFocusIndex = 0;
+}
+
+function syncMenuHubControllerFocus(){
+  const items = getMenuHubControllerTargets();
+  if (!items.length){ clearControllerFocus(); return; }
+  menuHubFocusIndex = Math.max(0, Math.min(menuHubFocusIndex, items.length - 1));
+  focusControllerElement(items[menuHubFocusIndex]);
+}
+
+function moveMenuHubControllerFocus(delta){
+  const items = getMenuHubControllerTargets();
+  if (!items.length) return;
+  menuHubFocusIndex = (menuHubFocusIndex + delta + items.length) % items.length;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
+  else clearControllerFocus();
+}
+
+function moveMenuHubControllerFocusDirectional(direction){
+  const items = getMenuHubControllerTargets();
+  if (!items.length) return false;
+  const imagesIndex = items.indexOf(btnMenuHubImages);
+  const statsIndex = items.indexOf(btnMenuHubStats);
+  const optionsIndex = items.indexOf(btnMenuHubOptions);
+  const closeIndex = items.indexOf(btnMenuHubClose);
+  let nextIndex = menuHubFocusIndex;
+
+  if (direction === "left"){
+    if (menuHubFocusIndex === statsIndex && imagesIndex !== -1) nextIndex = imagesIndex;
+    else if (menuHubFocusIndex === optionsIndex && statsIndex !== -1) nextIndex = statsIndex;
+  } else if (direction === "right"){
+    if (menuHubFocusIndex === imagesIndex && statsIndex !== -1) nextIndex = statsIndex;
+    else if (menuHubFocusIndex === statsIndex && optionsIndex !== -1) nextIndex = optionsIndex;
+  } else if (direction === "down"){
+    if ((menuHubFocusIndex === imagesIndex || menuHubFocusIndex === statsIndex || menuHubFocusIndex === optionsIndex) && closeIndex !== -1) nextIndex = closeIndex;
+  } else if (direction === "up"){
+    if (menuHubFocusIndex === closeIndex) nextIndex = imagesIndex !== -1 ? imagesIndex : 0;
+  }
+
+  if (nextIndex === menuHubFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
+  menuHubFocusIndex = nextIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
+  else clearControllerFocus();
+  return true;
 }
 
 function getStartMenuStartFocusIndex(){
@@ -4756,6 +4838,10 @@ function syncControllerFocusForCurrentState(){
     syncMenuControllerFocus();
     return;
   }
+  if (gameState === STATE.HUB){
+    syncMenuHubControllerFocus();
+    return;
+  }
   if (gameState === STATE.OPTIONS){
     syncOptionsControllerFocus();
     return;
@@ -4789,26 +4875,18 @@ function moveMenuControllerFocusDirectional(direction){
   const titleIndex = items.indexOf(startMenuTitle);
   const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
-  const imagesIndex = items.indexOf(btnImages);
-  const statsIndex = items.indexOf(btnStats);
-  const optionsIndex = items.indexOf(btnOptions);
+  const menuIndex = items.indexOf(btnMenu);
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
-    if (menuFocusIndex === imagesIndex && startIndex !== -1) nextIndex = startIndex;
-    else if (menuFocusIndex === optionsIndex && statsIndex !== -1) nextIndex = statsIndex;
+    if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
   } else if (direction === "right"){
-    if (menuFocusIndex === startIndex && imagesIndex !== -1) nextIndex = imagesIndex;
-    else if (menuFocusIndex === statsIndex && optionsIndex !== -1) nextIndex = optionsIndex;
+    if (menuFocusIndex === startIndex && menuIndex !== -1) nextIndex = menuIndex;
   } else if (direction === "down"){
     if (menuFocusIndex === titleIndex && revealIndex !== -1) nextIndex = revealIndex;
     else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
-    else if (menuFocusIndex === startIndex && statsIndex !== -1) nextIndex = statsIndex;
-    else if (menuFocusIndex === imagesIndex && optionsIndex !== -1) nextIndex = optionsIndex;
   } else if (direction === "up"){
-    if ((menuFocusIndex === startIndex || menuFocusIndex === imagesIndex) && revealIndex !== -1) nextIndex = revealIndex;
-    else if (menuFocusIndex === statsIndex && startIndex !== -1) nextIndex = startIndex;
-    else if (menuFocusIndex === optionsIndex && imagesIndex !== -1) nextIndex = imagesIndex;
+    if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && revealIndex !== -1) nextIndex = revealIndex;
     else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
   }
 
@@ -5157,6 +5235,7 @@ function showMenu(){
 
   startMenu.style.display = "block";
   setStartMenuInteractive(true);
+  if (menuHubPanel){ menuHubPanel.style.display = "none"; menuHubPanel.setAttribute("aria-hidden", "true"); }
   rememberStartMenuPanelRect();
   optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
@@ -5181,6 +5260,62 @@ function showMenu(){
   fitStatsPanelToStartMenu();
   fitImagesPanelToStartMenu();
   renderSavedImages();
+}
+
+function openMenuHub(){
+  if (!menuHubPanel) return;
+  setPaused(false);
+  gameState = STATE.HUB;
+  mouseShieldHolding = false;
+  stopShield(false);
+  if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
+  else getFallbackMenuRect();
+  startMenu.style.display = "none";
+  if (optionsMenu) optionsMenu.style.display = "none";
+  if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
+  if (cheatsMenu) cheatsMenu.style.display = "none";
+  if (statsPanel){ statsPanel.style.display = "none"; statsPanel.setAttribute("aria-hidden", "true"); statsPanel.removeAttribute("aria-modal"); }
+  if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
+  menuHubPanel.style.display = "flex";
+  menuHubPanel.setAttribute("aria-hidden", "false");
+  uiRoot.classList.add("optionsBackdrop");
+  uiRoot.style.display = "flex";
+  fitMenuHubToStartMenu();
+  resetMenuHubControllerFocus();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
+  else clearControllerFocus();
+  renderMenuHudPreview();
+  updateHearts();
+}
+
+function closeMenuHub(){
+  if (menuHubPanel){
+    menuHubPanel.style.display = "none";
+    menuHubPanel.setAttribute("aria-hidden", "true");
+  }
+  gameState = STATE.MENU;
+  uiRoot.classList.remove("optionsBackdrop");
+  startMenu.style.display = "block";
+  setStartMenuInteractive(true);
+  resetStartMenuControllerFocus();
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  else clearControllerFocus();
+  renderMenuHudPreview();
+}
+
+function openImagesPanelFromHub(){
+  if (menuHubPanel){ menuHubPanel.style.display = "none"; menuHubPanel.setAttribute("aria-hidden", "true"); }
+  openImagesPanel();
+}
+
+function openStatsPanelFromHub(){
+  if (menuHubPanel){ menuHubPanel.style.display = "none"; menuHubPanel.setAttribute("aria-hidden", "true"); }
+  openStatsPanel();
+}
+
+function openOptionsFromHub(){
+  if (menuHubPanel){ menuHubPanel.style.display = "none"; menuHubPanel.setAttribute("aria-hidden", "true"); }
+  showOptions(false);
 }
 
 function showControlsMenu(){
@@ -5427,6 +5562,7 @@ function showCheats(){
   syncCheatsMenuState();
   markCheatsClean(false);
   startMenu.style.display = "none";
+  if (menuHubPanel){ menuHubPanel.style.display = "none"; menuHubPanel.setAttribute("aria-hidden", "true"); }
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   optionsMenu.style.display = "none";
   if (cheatsMenu) cheatsMenu.style.display = "block";
@@ -6275,12 +6411,22 @@ if (backgroundColorPicker){
 
 if (btnStats) btnStats.addEventListener("click", openStatsPanel);
 if (btnImages) btnImages.addEventListener("click", openImagesPanel);
+if (btnMenu) btnMenu.addEventListener("click", openMenuHub);
+if (btnMenuHubImages) btnMenuHubImages.addEventListener("click", openImagesPanelFromHub);
+if (btnMenuHubStats) btnMenuHubStats.addEventListener("click", openStatsPanelFromHub);
+if (btnMenuHubOptions) btnMenuHubOptions.addEventListener("click", openOptionsFromHub);
+if (btnMenuHubClose) btnMenuHubClose.addEventListener("click", closeMenuHub);
 if (btnImagesClose) btnImagesClose.addEventListener("click", closeImagesPanel);
 if (btnImagesClear) btnImagesClear.addEventListener("click", clearSavedImages);
 if (btnStatsClose) btnStatsClose.addEventListener("click", closeStatsPanel);
 if (btnStatsReset){
   btnStatsReset.addEventListener("click", () => {
     resetLifetimeStats();
+  });
+}
+if (menuHubPanel){
+  menuHubPanel.addEventListener("click", (event) => {
+    if (event.target === menuHubPanel) closeMenuHub();
   });
 }
 if (statsPanel){
@@ -6299,8 +6445,8 @@ if (btnStatsLockedToggle){
   });
 }
 
-btnStart.addEventListener("click", startGame);
-btnOptions.addEventListener("click", () => showOptions(false));
+if (btnStart) btnStart.addEventListener("click", startGame);
+if (btnOptions) btnOptions.addEventListener("click", () => showOptions(false));
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
 if (btnCheats) btnCheats.addEventListener("click", armCheatsUnlockCountdown);
 if (btnCheats) btnCheats.addEventListener("keydown", handleCheatsButtonTypedKey);
@@ -7194,6 +7340,13 @@ function pollGamepad(dt){
         else if (menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
       }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
+    } else if (gameState === STATE.HUB){
+      if (navLeft || rNavLeft) moveMenuHubControllerFocusDirectional("left");
+      if (navRight || rNavRight) moveMenuHubControllerFocusDirectional("right");
+      if (navDown || rNavDown) moveMenuHubControllerFocusDirectional("down");
+      if (navUp || rNavUp) moveMenuHubControllerFocusDirectional("up");
+      if (pressMenuSelect) activateControllerTarget(getMenuHubControllerTargets()[menuHubFocusIndex]);
+      if (pressMenuBack) closeMenuHub();
     } else if (gameState === STATE.OPTIONS){
       if (pressListTop) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, -1);
       if (pressListBottom) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, 1);
@@ -9158,7 +9311,7 @@ if (isDragonEnemy(e)){
   if (gameState === STATE.PLAYING){
     livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
     _syncBombHud();
-  } else if (gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
+  } else if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
     renderMenuHudPreview();
   }
   if (gameState === STATE.PLAYING){
@@ -9168,7 +9321,7 @@ if (isDragonEnemy(e)){
     const stageHudEl = document.getElementById("stageHud");
     stageHudEl.textContent = lab.text;
     stageHudEl.style.color = lab.color;
-  } else if (gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
+  } else if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
     const stageHudEl = document.getElementById("stageHud");
     stageHudEl.textContent = "Start Menu";
       stageHudEl.style.color = "#ffffff";
@@ -9198,7 +9351,7 @@ if (isDragonEnemy(e)){
 let lastT = performance.now();
 
 function updateHearts(){
-  if (gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
+  if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
     renderMenuHudPreview();
     return;
   }
@@ -9247,7 +9400,7 @@ function updateHearts(){
   const el = document.getElementById("heartsHud");
   if (el){
     el.innerHTML = out.trim();
-    el.style.display = (gameState === STATE.PLAYING || gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS) ? "block" : "none";
+    el.style.display = (gameState === STATE.PLAYING || gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS) ? "block" : "none";
   }
 }
 
