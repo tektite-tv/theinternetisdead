@@ -185,26 +185,19 @@
       color:#fff;
       outline:none;
     }
-    #helpPanel{
-      display:none;
-      flex:0 1 128px;
-      min-height:0;
-      overflow-y:auto;
-      border:1px solid rgba(0,255,102,0.45);
-      border-radius:12px;
-      padding:10px;
-      background:rgba(0,0,0,0.54);
-      scrollbar-color:var(--lime) #000;
+    .chatHelpBlock{
+      display:block;
+      padding:8px 10px;
     }
-    #helpPanel.visible{display:block;}
-    #helpHeader{
+    .chatHelpIntro{
+      display:block;
+      margin-bottom:6px;
       color:var(--lime);
-      font-size:13px;
       font-weight:900;
-      margin:0 0 8px;
       text-transform:uppercase;
+      font-size:13px;
     }
-    #helpList{
+    .chatHelpList{
       list-style:none;
       margin:0;
       padding:0;
@@ -220,25 +213,24 @@
       appearance:none;
       width:100%;
       display:grid;
-      grid-template-columns:minmax(128px, 0.8fr) minmax(0, 1.4fr) minmax(150px, 1fr);
-      align-items:center;
-      gap:10px;
+      grid-template-columns:minmax(110px, 0.75fr) minmax(0, 1.6fr);
+      align-items:start;
+      gap:8px;
       text-align:left;
-      border:1px solid rgba(0,255,102,0.5);
+      border:1px solid rgba(0,255,102,0.42);
       border-radius:8px;
-      background:rgba(75,0,118,0.46);
+      background:rgba(75,0,118,0.32);
       color:#fff;
-      padding:6px 8px;
-      min-height:34px;
+      padding:5px 7px;
+      min-height:30px;
     }
     .helpItem:hover,.helpItem:focus,.helpItem.controllerFocus{
       outline:2px solid var(--lime) !important;
-      background:rgba(75,0,118,0.88);
+      background:rgba(75,0,118,0.82);
       box-shadow:0 0 12px rgba(0,255,102,0.35);
     }
     .helpName{display:block;color:var(--lime);font-weight:900;}
     .helpDesc{display:block;font-size:12px;opacity:0.94;line-height:1.25;}
-    .helpUsage{display:block;font-size:11px;color:#d9ffd9;opacity:0.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     #suggestions{
       display:none;
       flex-wrap:wrap;
@@ -264,7 +256,6 @@
       }
       #chatSubmit{min-width:58px;padding-inline:10px;}
       .helpItem{grid-template-columns:1fr;gap:2px;}
-      .helpUsage{white-space:normal;}
     }
   </style>
 </head>
@@ -279,10 +270,6 @@
         <div id="messages"></div>
       </div>
       <div id="cheatermodeHoldStatus" role="status"></div>
-      <section id="helpPanel" aria-label="Command help">
-        <p id="helpHeader">Commands</p>
-        <ul id="helpList"></ul>
-      </section>
       <div id="suggestions" aria-label="Command suggestions"></div>
       <form id="chatForm" autocomplete="off">
         <input id="chatBar" data-chat-prompt type="text" spellcheck="false" autocomplete="off" placeholder="Press / for commands" />

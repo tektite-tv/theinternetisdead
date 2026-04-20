@@ -9,8 +9,6 @@
   const form = document.getElementById('chatForm');
   const input = document.getElementById('chatBar');
   const closeBtn = document.getElementById('chatCloseBtn');
-  const helpPanel = document.getElementById('helpPanel');
-  const helpList = document.getElementById('helpList');
   const suggestions = document.getElementById('suggestions');
   const modeBadge = document.getElementById('chatModeBadge');
   const cheaterHold = document.getElementById('cheatermodeHoldStatus');
@@ -155,10 +153,25 @@
     return `${name} `;
   }
 
+  function removeHelpBlock(){
+    if (!messages) return;
+    const existing = messages.querySelector('[data-shooter-help-block="true"]');
+    if (existing) existing.remove();
+  }
+
   function renderHelp(){
-    if (!helpList || !helpPanel) return;
+    if (!messages) return;
+    ensureWelcome();
     const list = allCommands();
-    helpList.innerHTML = '';
+    removeHelpBlock();
+
+    const block = document.createElement('div');
+    block.className = 'chatLine system chatHelpBlock';
+    block.dataset.shooterHelpBlock = 'true';
+    block.innerHTML = `<span class="prefix">System:</span> <span class="chatHelpIntro">Commands</span>`;
+
+    const ul = document.createElement('ul');
+    ul.className = 'chatHelpList';
     list.forEach((cmd) => {
       const item = document.createElement('li');
       item.className = 'helpListItem';
@@ -167,21 +180,32 @@
       btn.type = 'button';
       btn.className = 'helpItem chat-command-link';
       btn.dataset.command = cmd.name;
+      btn.title = cmd.usage || cmd.name;
       if (activePickerCommand === cmd.name) {
         const pickerType = pickerTypeForCommand(cmd);
         if (pickerType) btn.dataset[`${pickerType}PickerActive`] = 'true';
       }
-      btn.innerHTML = `<span class="helpName">${escapeHtml(cmd.name)}</span><span class="helpDesc">${escapeHtml(cmd.desc || '')}</span><span class="helpUsage">${escapeHtml(cmd.usage || cmd.name)}</span>`;
+      btn.innerHTML = `<span class="helpName">${escapeHtml(cmd.name)}</span><span class="helpDesc">${escapeHtml(cmd.desc || cmd.usage || '')}</span>`;
       btn.addEventListener('click', () => activateHelpCommand(cmd.name));
 
       item.appendChild(btn);
-      helpList.appendChild(item);
+      ul.appendChild(item);
     });
-    helpPanel.classList.add('visible');
+    block.appendChild(ul);
+
+    const welcomeLine = messages.querySelector('.chatLine.system:not(.chatHelpBlock)');
+    if (welcomeLine && welcomeLine.nextSibling) {
+      messages.insertBefore(block, welcomeLine.nextSibling);
+    } else if (welcomeLine) {
+      messages.appendChild(block);
+    } else {
+      messages.prepend(block);
+    }
+    scrollToBottom();
   }
 
   function hideHelp(){
-    if (helpPanel) helpPanel.classList.remove('visible');
+    removeHelpBlock();
     activePickerCommand = '';
     sendState();
   }
