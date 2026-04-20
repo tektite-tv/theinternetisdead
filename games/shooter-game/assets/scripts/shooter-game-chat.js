@@ -1,467 +1,5 @@
-(function(){
-  'use strict';
-
-  if (document.getElementById('chatRoot')) {
-
-  const root = document.getElementById('chatRoot');
-  const messagesWrap = document.getElementById('messagesWrap');
-  const messages = document.getElementById('messages');
-  const form = document.getElementById('chatForm');
-  const input = document.getElementById('chatBar');
-  const closeBtn = document.getElementById('chatCloseBtn');
-  const helpPanel = document.getElementById('helpPanel');
-  const helpList = document.getElementById('helpList');
-  const suggestions = document.getElementById('suggestions');
-  const modeBadge = document.getElementById('chatModeBadge');
-  const cheaterHold = document.getElementById('cheatermodeHoldStatus');
-
-  const NICKNAME_KEY = 'tektiteChatNickname';
-  const NICKNAME_EXPLICIT_KEY = 'tektiteChatNicknameExplicit';
-
-  const localCommands = [
-    { name:'/help', usage:'/help', desc:'Show shooter chat commands', local:true },
-    { name:'/clear', usage:'/clear', desc:'Clear this visible chat log', local:true }
-  ];
-
-  let registeredCommands = [];
-  let cheatsUnlocked = false;
-  let inputMode = 'keyboardMouse';
-  let isOpen = false;
-  let activePickerCommand = '';
-  let currentSuggestionIndex = -1;
-  let welcomePrinted = false;
-  let welcomeMessage = "System: Welcome to Tektite's Shooter Game...";
-
-  function getParent(){
-    return window.parent && window.parent !== window ? window.parent : null;
-  }
-
-  function post(message){
-    const parent = getParent();
-    if (!parent) return;
-    parent.postMessage(message, '*');
-  }
-
-  function sendState(){
-    post({
-      type:'shooterChatState',
-      visible:isOpen,
-      valuePickerActive:!!activePickerCommand,
-      valuePickerCommand:activePickerCommand || '',
-      cheatsUnlocked:!!cheatsUnlocked,
-      inputMode
-    });
-  }
-
-  function escapeHtml(value){
-    return String(value == null ? '' : value)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;')
-      .replace(/'/g,'&#39;');
-  }
-
-  function getNickname(){
-    try { return String(localStorage.getItem(NICKNAME_KEY) || '').trim(); }
-    catch(error){ return ''; }
-  }
-
-  function setNickname(value){
-    const next = String(value || '').trim();
-    try {
-      if (next) {
-        localStorage.setItem(NICKNAME_KEY, next);
-        localStorage.setItem(NICKNAME_EXPLICIT_KEY, 'true');
-      } else {
-        localStorage.removeItem(NICKNAME_KEY);
-        localStorage.removeItem(NICKNAME_EXPLICIT_KEY);
-      }
-    } catch(error) {}
-  }
-
-  function linePrefix(kind){
-    if (kind === 'user') return getNickname() || 'You';
-    if (kind === 'error') return 'Error';
-    if (kind === 'result') return 'System';
-    return 'System';
-  }
-
-  function appendLine(text, kind = 'system'){
-    if (!messages) return null;
-    const line = document.createElement('p');
-    line.className = `chatLine ${kind}`;
-    const raw = String(text || '');
-    const prefixMatch = raw.match(/^([^:]{1,32}):\s*(.*)$/s);
-    let prefix = linePrefix(kind);
-    let body = raw;
-    if (prefixMatch && /^(system|error|you|player|tektite|jinclops)$/i.test(prefixMatch[1])) {
-      prefix = prefixMatch[1];
-      body = prefixMatch[2];
-    }
-    line.innerHTML = `<span class="prefix">${escapeHtml(prefix)}:</span> ${escapeHtml(body)}`;
-    messages.appendChild(line);
-    scrollToBottom();
-    return line;
-  }
-
-  function scrollToBottom(){
-    if (!messagesWrap) return;
-    window.requestAnimationFrame(() => {
-      messagesWrap.scrollTop = messagesWrap.scrollHeight;
-    });
-  }
-
-  function ensureWelcome(){
-    if (welcomePrinted) return;
-    welcomePrinted = true;
-    appendLine(welcomeMessage || "System: Welcome to Tektite's Shooter Game...", 'system');
-  }
-
-  function normalizeCommandName(command){
-    return String(command || '').trim().split(/\s+/)[0].toLowerCase();
-  }
-
-  function allCommands(){
-    const map = new Map();
-    localCommands.concat(registeredCommands).forEach((cmd) => {
-      if (!cmd || !cmd.name) return;
-      const key = normalizeCommandName(cmd.name);
-      if (!key || cmd.hidden) return;
-      map.set(key, { ...cmd, name:key });
-    });
-    return Array.from(map.values()).sort((a,b) => a.name.localeCompare(b.name));
-  }
-
-  function commandByName(name){
-    const key = normalizeCommandName(name);
-    return allCommands().find((cmd) => normalizeCommandName(cmd.name) === key) || null;
-  }
-
-  function commandNeedsArgument(cmd){
-    if (!cmd) return false;
-    const name = normalizeCommandName(cmd.name);
-    if (['/fullscreen','/mute','/video_fx','/color_invert','/log','/stop','/start','/clear','/help'].includes(name)) return false;
-    if (name === '/cheatermode') return true;
-    const usage = String(cmd.usage || '');
-    return /\[|<|\s$/.test(usage) || (Array.isArray(cmd.suggestions) && cmd.suggestions.length > 0);
-  }
-
-  function usageSeedFor(cmd){
-    if (!cmd) return '';
-    const name = normalizeCommandName(cmd.name);
-    if (name === '/cheatermode') return '/cheatermode cheatermode';
-    if (String(cmd.usage || '').endsWith(' ')) return String(cmd.usage || cmd.name);
-    return `${name} `;
-  }
-
-  function renderHelp(){
-    if (!helpList || !helpPanel) return;
-    const list = allCommands();
-    helpList.innerHTML = '';
-    list.forEach((cmd) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'helpItem chat-command-link';
-      btn.dataset.command = cmd.name;
-      if (activePickerCommand === cmd.name) {
-        const pickerType = pickerTypeForCommand(cmd);
-        if (pickerType) btn.dataset[`${pickerType}PickerActive`] = 'true';
-      }
-      btn.innerHTML = `<span class="helpName">${escapeHtml(cmd.name)}</span><span class="helpDesc">${escapeHtml(cmd.desc || '')}</span><span class="helpUsage">${escapeHtml(cmd.usage || cmd.name)}</span>`;
-      btn.addEventListener('click', () => activateHelpCommand(cmd.name));
-      helpList.appendChild(btn);
-    });
-    helpPanel.classList.add('visible');
-  }
-
-  function hideHelp(){
-    if (helpPanel) helpPanel.classList.remove('visible');
-    activePickerCommand = '';
-    sendState();
-  }
-
-  function pickerTypeForCommand(cmd){
-    const name = normalizeCommandName(cmd && cmd.name);
-    if (['/hearts','/lives','/bombs','/shields','/game_speed'].includes(name)) return 'number';
-    if (name === '/background_color') return 'color';
-    if (['/shoot','/infinite'].includes(name)) return 'choice';
-    if (['/nickname','/cheatermode'].includes(name)) return 'text';
-    return '';
-  }
-
-  function renderSuggestionsForCommand(cmd){
-    if (!suggestions) return;
-    suggestions.innerHTML = '';
-    const name = normalizeCommandName(cmd && cmd.name);
-    const values = Array.isArray(cmd && cmd.suggestions) ? cmd.suggestions : [];
-    const fallback = {
-      '/hearts':['1','3','4','8','99','100','INFINITE'],
-      '/lives':['0','1','3','5','99','100','INFINITE'],
-      '/bombs':['0','3','5','99','100','INFINITE'],
-      '/shields':['0','1','3','99','100','INFINITE'],
-      '/game_speed':['-5','0','1','5','10','20'],
-      '/background_color':['#000000','#110019','#4b0076','#00ff66'],
-      '/shoot':['normal','big_bullets','glitch'],
-      '/infinite':['hearts','shields','lives','bombs'],
-      '/cheatermode':['cheatermode']
-    }[name] || [];
-    const merged = Array.from(new Set(values.concat(fallback))).filter(Boolean);
-    if (!merged.length) {
-      suggestions.classList.remove('visible');
-      return;
-    }
-    merged.forEach((value) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'suggestionBtn';
-      btn.textContent = value;
-      btn.addEventListener('click', () => {
-        input.value = `${name} ${value}`;
-        input.focus();
-      });
-      suggestions.appendChild(btn);
-    });
-    suggestions.classList.add('visible');
-  }
-
-  function clearSuggestions(){
-    if (!suggestions) return;
-    suggestions.innerHTML = '';
-    suggestions.classList.remove('visible');
-    currentSuggestionIndex = -1;
-  }
-
-  function activateHelpCommand(command){
-    const cmd = commandByName(command);
-    if (!cmd) return;
-    const name = normalizeCommandName(cmd.name);
-    if (commandNeedsArgument(cmd)) {
-      activePickerCommand = name;
-      input.value = usageSeedFor(cmd);
-      input.focus();
-      renderSuggestionsForCommand(cmd);
-      renderHelp();
-      sendState();
-      return;
-    }
-    activePickerCommand = '';
-    clearSuggestions();
-    sendState();
-    executeCommand(name, { echo:true });
-  }
-
-  function openChat(options = {}){
-    isOpen = true;
-    document.body.classList.add('chatOpen');
-    ensureWelcome();
-    if (options.seedSlash && input && !input.value) input.value = '/';
-    if (options.focus !== false && input) window.setTimeout(() => input.focus(), 20);
-    sendState();
-  }
-
-  function closeChat(){
-    isOpen = false;
-    activePickerCommand = '';
-    clearSuggestions();
-    document.body.classList.remove('chatOpen');
-    sendState();
-  }
-
-  function executeCommand(raw, options = {}){
-    let command = String(raw || '').trim();
-    if (!command) return;
-    if (command.toLowerCase() === 'cheatermode') command = '/cheatermode cheatermode';
-    if (command.toLowerCase() === '/cheatermode') command = '/cheatermode cheatermode';
-    const name = normalizeCommandName(command);
-    if (options.echo !== false) appendLine(command, 'user');
-    clearSuggestions();
-    activePickerCommand = '';
-    sendState();
-
-    if (name === '/help') {
-      renderHelp();
-      appendLine('System: Command list opened.', 'result');
-      return;
-    }
-    if (name === '/clear') {
-      if (messages) messages.innerHTML = '';
-      welcomePrinted = false;
-      ensureWelcome();
-      return;
-    }
-
-    post({
-      type:'pageChatExecute',
-      command:name,
-      raw:command
-    });
-  }
-
-  function updateSuggestionsFromInput(){
-    const raw = input ? input.value.trim() : '';
-    const name = normalizeCommandName(raw);
-    const cmd = commandByName(name);
-    if (!raw.startsWith('/') || !cmd || !commandNeedsArgument(cmd)) {
-      clearSuggestions();
-      return;
-    }
-    activePickerCommand = name;
-    renderSuggestionsForCommand(cmd);
-    renderHelp();
-    sendState();
-  }
-
-  function cycleRootCommand(direction){
-    const raw = input ? input.value : '';
-    if (!raw.startsWith('/')) return false;
-    const list = allCommands().map((cmd) => cmd.name);
-    if (!list.length) return false;
-    const typed = normalizeCommandName(raw);
-    const matching = list.filter((name) => name.startsWith(typed || '/'));
-    const pool = matching.length ? matching : list;
-    currentSuggestionIndex = (currentSuggestionIndex + direction + pool.length) % pool.length;
-    input.value = commandNeedsArgument(commandByName(pool[currentSuggestionIndex])) ? `${pool[currentSuggestionIndex]} ` : pool[currentSuggestionIndex];
-    return true;
-  }
-
-  function handleResult(data){
-    if (Object.prototype.hasOwnProperty.call(data, 'nickname')) {
-      setNickname(data.nickname || '');
-    }
-    const msg = String(data.message || '').trim();
-    if (msg) appendLine(msg, data.ok === false ? 'error' : 'result');
-  }
-
-  function registerCommands(data){
-    registeredCommands = Array.isArray(data.commands) ? data.commands.map((cmd) => ({ ...cmd })) : [];
-    cheatsUnlocked = !!data.cheatsUnlocked;
-    inputMode = String(data.inputMode || inputMode || 'keyboardMouse');
-    if (typeof data.welcomeMessage === 'string' && data.welcomeMessage.trim()) {
-      welcomeMessage = data.welcomeMessage.trim();
-    }
-    updateModeBadge();
-    renderHelp();
-    post({ type:'shooterChatDvdState', sourceKey:data.sourceKey || 'shooter-game' });
-    sendState();
-  }
-
-  function updateModeBadge(){
-    if (!modeBadge) return;
-    modeBadge.textContent = inputMode === 'controller'
-      ? (cheatsUnlocked ? 'controller · cheats unlocked' : 'controller')
-      : (cheatsUnlocked ? 'keyboard/mouse · cheats unlocked' : 'keyboard/mouse');
-  }
-
-  function updateCheaterHold(data){
-    if (!cheaterHold) return;
-    const active = !!data.active && !data.unlocked;
-    cheaterHold.classList.toggle('active', active || !!data.unlocked);
-    if (data.unlocked) {
-      cheaterHold.textContent = 'Cheatermode unlocked';
-      return;
-    }
-    if (!active) {
-      cheaterHold.textContent = '';
-      return;
-    }
-    const remaining = Math.max(0, Math.ceil(Number(data.remaining) || 0));
-    const x = data.xPressed ? 'X' : 'x';
-    const view = data.viewPressed ? 'View' : 'view';
-    cheaterHold.textContent = `Hold ${x} + ${view}: ${remaining}s`;
-  }
-
-  form && form.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const value = input ? input.value : '';
-    if (input) input.value = '';
-    executeCommand(value, { echo:true });
-  });
-
-  closeBtn && closeBtn.addEventListener('click', closeChat);
-
-  input && input.addEventListener('input', updateSuggestionsFromInput);
-
-  input && input.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      closeChat();
-      return;
-    }
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      cycleRootCommand(event.shiftKey ? -1 : 1);
-      updateSuggestionsFromInput();
-      return;
-    }
-    if (event.key === 'ArrowDown' && input.value.trim() === '/') {
-      event.preventDefault();
-      cycleRootCommand(1);
-      return;
-    }
-  });
-
-  window.addEventListener('message', (event) => {
-    const data = event.data;
-    if (!data || typeof data !== 'object') return;
-    switch (data.type) {
-      case 'pageChatRegister':
-        registerCommands(data);
-        break;
-      case 'shooterChatOpen':
-        openChat(data);
-        break;
-      case 'shooterChatClose':
-        closeChat();
-        break;
-      case 'shooterChatExecuteCommand':
-        openChat({ focus:data.focus !== false });
-        executeCommand(data.command || '', { echo:true });
-        break;
-      case 'shooterChatActivateHelpCommand':
-        activateHelpCommand(data.command || '');
-        break;
-      case 'shooterChatCloseActiveCommandPicker':
-        activePickerCommand = '';
-        clearSuggestions();
-        renderHelp();
-        sendState();
-        break;
-      case 'shooterChatInputMode':
-        inputMode = String(data.mode || '').trim() === 'controller' ? 'controller' : 'keyboardMouse';
-        updateModeBadge();
-        sendState();
-        break;
-      case 'shooterChatCheatermodeHoldState':
-        updateCheaterHold(data);
-        break;
-      case 'pageChatResult':
-        handleResult(data);
-        break;
-      default:
-        break;
-    }
-  });
-
-  document.addEventListener('pointerdown', (event) => {
-    if (!isOpen || !root) return;
-    if (event.target === root) closeChat();
-  });
-
-  window.addEventListener('load', () => {
-    ensureWelcome();
-    updateModeBadge();
-    sendState();
-  });
-
-  // Tell the parent shell this iframe speaks the same message protocol as the old sandbox,
-  // but the implementation is now local to /games/shooter-game. Tiny mercy, apparently.
-  sendState();
-    return;
-  }
-
-const tektiteFrame = document.getElementById('tektite-frame');
-    const shooterChatFrame = document.getElementById('shooter-chat-frame');
+    const tektiteFrame = document.getElementById('tektite-frame');
+    const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
 const LEVEL1_SRC = '/games/shooter-game/assets/levels/shooter-game-level1.html';
 const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?autostart=1&startWave=1';
 
@@ -523,8 +61,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     ];
     let hasSwitchedToLevel2 = false;
     let shooterCheatsUnlocked = false;
-    let shooterChatVisible = false;
-    let shooterChatReady = false;
+    let chatSandboxVisible = false;
+    let chatSandboxReady = false;
     let chatValuePickerActive = false;
     let chatValuePickerCommand = '';
     let pendingChatOpenOptions = null;
@@ -532,25 +70,25 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     let shooterActiveInputMode = 'keyboardMouse';
 
     function getChatWindow() {
-      return shooterChatFrame && shooterChatFrame.contentWindow ? shooterChatFrame.contentWindow : null;
+      return chatSandboxFrame && chatSandboxFrame.contentWindow ? chatSandboxFrame.contentWindow : null;
     }
 
-    function postToShooterChat(payload) {
+    function postToChatSandbox(payload) {
       const chatWindow = getChatWindow();
       if (!chatWindow) return;
       chatWindow.postMessage(payload, '*');
     }
 
-    function postInputModeToShooterChat() {
-      postToShooterChat({
-        type: 'shooterChatInputMode',
+    function postInputModeToChatSandbox() {
+      postToChatSandbox({
+        type: 'chatSandboxInputMode',
         mode: shooterActiveInputMode
       });
     }
 
-    function postCheatermodeHoldStateToShooterChat(data = {}) {
-      postToShooterChat({
-        type: 'shooterChatCheatermodeHoldState',
+    function postCheatermodeHoldStateToChatSandbox(data = {}) {
+      postToChatSandbox({
+        type: 'chatSandboxCheatermodeHoldState',
         active: !!data.active,
         remaining: Math.max(0, Math.ceil(Number(data.remaining) || 0)),
         totalSeconds: Math.max(1, Math.ceil(Number(data.totalSeconds) || 5)),
@@ -564,8 +102,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       try {
         if (tektiteFrame && tektiteFrame.contentWindow) {
           tektiteFrame.contentWindow.postMessage({
-            type: 'tektite:shooter-chat-visibility',
-            visible: !!shooterChatVisible,
+            type: 'tektite:chat-visibility',
+            visible: !!chatSandboxVisible,
             valuePickerActive: !!chatValuePickerActive,
             valuePickerCommand: chatValuePickerCommand
           }, '*');
@@ -585,8 +123,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     }
 
     function setChatFrameVisible(visible) {
-      shooterChatVisible = !!visible;
-      shooterChatFrame.classList.toggle('visible', shooterChatVisible);
+      chatSandboxVisible = !!visible;
+      chatSandboxFrame.classList.toggle('visible', chatSandboxVisible);
       notifyChildChatVisibility();
     }
 
@@ -912,7 +450,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       const activePickerItem = chatDoc
         ? chatDoc.querySelector('.helpItem[data-number-picker-active="true"], .helpItem[data-color-picker-active="true"], .helpItem[data-choice-picker-active="true"], .helpItem[data-text-picker-active="true"]')
         : null;
-      postToShooterChat({ type: 'shooterChatCloseActiveCommandPicker' });
+      postToChatSandbox({ type: 'chatSandboxCloseActiveCommandPicker' });
       if (activePickerItem) {
         const targets = getChatInteractiveTargets();
         const pickerIndex = targets.findIndex((node) => node === activePickerItem);
@@ -934,14 +472,10 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       const chatDoc = getChatDocument();
       const active = target || (chatDoc && chatDoc.activeElement ? chatDoc.activeElement : null);
       if (active && chatDoc && active !== chatDoc.body) {
-        const activeTag = active.tagName ? active.tagName.toUpperCase() : '';
-        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || active.isContentEditable) {
-          return dispatchChatKey('Enter', 'Enter', { target: 'active' });
-        }
         const command = active.dataset && typeof active.dataset.command === 'string' ? active.dataset.command.trim() : '';
         if (command && getChatWindow()) {
-          postToShooterChat({
-            type: 'shooterChatActivateHelpCommand',
+          postToChatSandbox({
+            type: 'chatSandboxActivateHelpCommand',
             command
           });
           return true;
@@ -1017,10 +551,10 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
 
     function runChatCommand(command) {
       const normalizedCommand = String(command || '').trim();
-      if (!normalizedCommand || !shooterChatReady || !getChatWindow()) return false;
+      if (!normalizedCommand || !chatSandboxReady || !getChatWindow()) return false;
       chatControllerTargetIndex = -1;
-      postToShooterChat({
-        type: 'shooterChatExecuteCommand',
+      postToChatSandbox({
+        type: 'chatSandboxExecuteCommand',
         command: normalizedCommand,
         openChat: true,
         focus: true
@@ -1047,11 +581,11 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     }
 
     function flushPendingChatOpen() {
-      if (!pendingChatOpenOptions || !shooterChatReady) return;
+      if (!pendingChatOpenOptions || !chatSandboxReady) return;
       const options = pendingChatOpenOptions;
       pendingChatOpenOptions = null;
-      postToShooterChat({
-        type: 'shooterChatOpen',
+      postToChatSandbox({
+        type: 'chatSandboxOpen',
         focus: options.focus !== false,
         seedSlash: !!options.seedSlash
       });
@@ -1067,7 +601,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       try {
         if (tektiteFrame && tektiteFrame.contentWindow) {
           tektiteFrame.contentWindow.postMessage({
-            type: 'tektite:pause-for-shooter-chat'
+            type: 'tektite:pause-for-chat'
           }, '*');
         }
       } catch (error) {}
@@ -1084,7 +618,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     function closeChatFromParent() {
       chatControllerTargetIndex = -1;
       updateChatControllerSelectionVisuals(null);
-      postToShooterChat({ type: 'shooterChatClose' });
+      postToChatSandbox({ type: 'chatSandboxClose' });
       setChatFrameVisible(false);
       try { tektiteFrame.contentWindow.focus(); } catch (error) {}
     }
@@ -1099,7 +633,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     }
 
     function registerPageCommands() {
-      postToShooterChat({
+      postToChatSandbox({
         type: 'pageChatRegister',
         commands: getVisibleShooterPageCommands(),
         pageOnly: true,
@@ -1216,7 +750,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         return;
       }
 
-      if (event.key === 'Escape' && shooterChatVisible) {
+      if (event.key === 'Escape' && chatSandboxVisible) {
         event.preventDefault();
         event.stopPropagation();
         closeChatFromParent();
@@ -1238,12 +772,12 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
 
     window.addEventListener('keydown', handleChatShortcutKeydown, true);
 
-    shooterChatFrame.addEventListener('load', () => {
-      shooterChatReady = true;
+    chatSandboxFrame.addEventListener('load', () => {
+      chatSandboxReady = true;
       flushPendingChatOpen();
       registerPageCommands();
-      postInputModeToShooterChat();
-      bindChatShortcutToFrame(shooterChatFrame);
+      postInputModeToChatSandbox();
+      bindChatShortcutToFrame(chatSandboxFrame);
     });
 
     tektiteFrame.addEventListener('load', () => {
@@ -1259,8 +793,8 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       if (!data || typeof data !== 'object') return;
 
       if (event.source === getChatWindow()) {
-        if (data.type === 'shooterChatState') {
-          shooterChatReady = true;
+        if (data.type === 'chatSandboxState') {
+          chatSandboxReady = true;
           chatValuePickerActive = !!data.valuePickerActive;
           chatValuePickerCommand = chatValuePickerActive ? String(data.valuePickerCommand || '').trim().toLowerCase() : '';
           flushPendingChatOpen();
@@ -1272,7 +806,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           const commandName = String(data.command || '').trim().toLowerCase();
           if (commandName === '/stop') {
             if (!shooterCheatsUnlocked) {
-              postToShooterChat({
+              postToChatSandbox({
                 type: 'pageChatResult',
                 command: '/stop',
                 message: '/stop requires cheatermode to be active.',
@@ -1281,7 +815,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
               return;
             }
             stopShooterLevelFramesFor404();
-            postToShooterChat({
+            postToChatSandbox({
               type: 'pageChatResult',
               command: '/stop',
               message: '/stop executed. Level iframe closed; 404 test background exposed.',
@@ -1291,7 +825,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           }
           if (commandName === '/start') {
             if (!shooterCheatsUnlocked) {
-              postToShooterChat({
+              postToChatSandbox({
                 type: 'pageChatResult',
                 command: '/start',
                 message: '/start requires cheatermode to be active.',
@@ -1300,7 +834,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
               return;
             }
             startShooterLevel1FromCommand();
-            postToShooterChat({
+            postToChatSandbox({
               type: 'pageChatResult',
               command: '/start',
               message: '/start executed. Level 1 loading normally.',
@@ -1310,7 +844,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           }
           if (commandName === '/nickname') {
             const nextNickname = rawCommand.slice('/nickname'.length).trim();
-            postToShooterChat({
+            postToChatSandbox({
               type: 'pageChatResult',
               command: '/nickname',
               message: nextNickname ? `/nickname executed by ${nextNickname}` : 'Usage: /nickname [name]',
@@ -1333,7 +867,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         const nextMode = String(data.mode || '').trim() === 'controller' ? 'controller' : 'keyboardMouse';
         if (shooterActiveInputMode !== nextMode) {
           shooterActiveInputMode = nextMode;
-          postInputModeToShooterChat();
+          postInputModeToChatSandbox();
         }
         return;
       }
@@ -1345,7 +879,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       }
 
       if (data.type === 'tektite:cheatermode-hold-state') {
-        postCheatermodeHoldStateToShooterChat(data);
+        postCheatermodeHoldStateToChatSandbox(data);
         return;
       }
 
@@ -1366,7 +900,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       }
       if (data.type === 'tektite:set-nickname') {
         const nextNickname = String(data.nickname || '').trim();
-        postToShooterChat({
+        postToChatSandbox({
           type: 'pageChatResult',
           command: '/nickname',
           message: nextNickname ? `/nickname executed by ${nextNickname}` : 'Nickname cleared.',
@@ -1376,7 +910,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         return;
       }
       if (data.type === 'tektite:command-result') {
-        postToShooterChat({
+        postToChatSandbox({
           type: 'pageChatResult',
           command: data.command || '',
           message: data.message || `${data.command || 'Command'} executed`,
@@ -1384,7 +918,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         });
         return;
       }
-      if (data.type === 'tektite:open-shooter-chat') {
+      if (data.type === 'openChatFromChild') {
         openChatFromParent({
           focus: true,
           seedSlash: !!data.seedSlash,
@@ -1393,11 +927,11 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         });
         return;
       }
-      if (data.type === 'tektite:close-shooter-chat') {
+      if (data.type === 'closeChatFromChild') {
         closeChatFromParent();
         return;
       }
-      if (data.type === 'tektite:shooter-chat-control') {
+      if (data.type === 'tektite:chat-control') {
         const action = String(data.action || '').trim();
         const valuePickerActive = hasActiveChatValuePicker();
         if (action === 'cycleUp') {
@@ -1429,4 +963,4 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         return;
       }
     });
-})();
+  

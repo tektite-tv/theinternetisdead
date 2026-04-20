@@ -1142,7 +1142,7 @@ window.addEventListener("message", (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
 
-  if (data.type === "tektite:shooter-chat-visibility"){
+  if (data.type === "tektite:chat-visibility"){
     parentChatVisible = !!data.visible;
     parentChatValuePickerActive = !!data.valuePickerActive;
     parentChatValuePickerCommand = parentChatValuePickerActive ? String(data.valuePickerCommand || "").trim().toLowerCase() : "";
@@ -1151,7 +1151,7 @@ window.addEventListener("message", (event) => {
     return;
   }
 
-  if (data.type === "tektite:pause-for-shooter-chat"){
+  if (data.type === "tektite:pause-for-chat"){
     if (gameState === STATE.PLAYING && !isPaused && !isDead && !(deathOverlay && deathOverlay.style.display === "flex")){
       setPaused(true);
     }
