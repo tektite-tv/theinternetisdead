@@ -4142,6 +4142,7 @@ let menuFocusIndex = 0;
 let menuHubFocusIndex = 0;
 let menuHubActiveTab = "images";
 let menuHubActiveInner = null;
+let menuHubOptionsContentFocused = false;
 const MENU_HUB_TABS = ["images", "stats", "options"];
 const menuHubOriginalParents = new Map();
 let optionsFocusIndex = 0;
@@ -4355,11 +4356,13 @@ function selectMenuHubTab(tab, focusTab=false){
 }
 
 function resetMenuHubControllerFocus(){
+  menuHubOptionsContentFocused = false;
   menuHubFocusIndex = 0;
   menuHubActiveTab = "images";
 }
 
 function syncMenuHubControllerFocus(){
+  menuHubOptionsContentFocused = false;
   const items = getMenuHubControllerTargets();
   if (!items.length){ clearControllerFocus(); return; }
   menuHubFocusIndex = Math.max(0, Math.min(menuHubFocusIndex, items.length - 1));
@@ -4367,6 +4370,7 @@ function syncMenuHubControllerFocus(){
 }
 
 function moveMenuHubControllerFocus(delta){
+  menuHubOptionsContentFocused = false;
   const items = getMenuHubControllerTargets();
   if (!items.length) return;
   menuHubFocusIndex = (menuHubFocusIndex + delta + items.length) % items.length;
@@ -4376,9 +4380,32 @@ function moveMenuHubControllerFocus(delta){
   else clearControllerFocus();
 }
 
+function focusMenuHubOptionsContentFromTab(){
+  if (menuHubActiveTab !== "options") return false;
+  const items = getOptionsControllerTargets();
+  if (!items.length) return false;
+  menuHubOptionsContentFocused = true;
+  optionsFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else clearControllerFocus();
+  return true;
+}
+
+function returnMenuHubOptionsFocusToTab(){
+  menuHubOptionsContentFocused = false;
+  const items = getMenuHubControllerTargets();
+  const optionsIndex = items.indexOf(btnMenuHubOptions);
+  if (optionsIndex >= 0) menuHubFocusIndex = optionsIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
+  else clearControllerFocus();
+  return true;
+}
+
 function moveMenuHubControllerFocusDirectional(direction){
   if (direction === "left") { moveMenuHubControllerFocus(-1); return true; }
   if (direction === "right") { moveMenuHubControllerFocus(1); return true; }
+  if (direction === "down") return focusMenuHubOptionsContentFromTab();
+  if (direction === "up" && menuHubOptionsContentFocused) return returnMenuHubOptionsFocusToTab();
   return false;
 }
 
@@ -7448,12 +7475,38 @@ function pollGamepad(dt){
       }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
     } else if (gameState === STATE.HUB){
-      if (pressListTop) moveMenuHubControllerFocus(-1);
-      if (pressListBottom) moveMenuHubControllerFocus(1);
-      if (navLeft || rNavLeft) moveMenuHubControllerFocusDirectional("left");
-      if (navRight || rNavRight) moveMenuHubControllerFocusDirectional("right");
-      if (pressMenuSelect) selectMenuHubTab(getMenuHubTabForButton(getMenuHubControllerTargets()[menuHubFocusIndex]), true);
-      if (pressMenuBack) closeMenuHub();
+      if (menuHubActiveTab === "options" && menuHubOptionsContentFocused){
+        if (pressListTop) returnMenuHubOptionsFocusToTab();
+        if (pressListBottom) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, 1);
+        if (navUp){
+          if (optionsFocusIndex <= 0) returnMenuHubOptionsFocusToTab();
+          else moveOptionsControllerFocus(-1);
+        }
+        if (navDown){
+          if (!wrapOptionsBottomButtonsToTop()) moveOptionsControllerFocus(1);
+        }
+        if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
+          if (navLeft) moveStartingStatFocus(-1);
+          if (navRight) moveStartingStatFocus(1);
+          if (rNavUp) adjustControllerOption(1);
+          if (rNavDown) adjustControllerOption(-1);
+        } else {
+          if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
+          if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
+          if (rNavUp) adjustControllerOption(1);
+          if (rNavDown) adjustControllerOption(-1);
+        }
+        if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
+        if (pressMenuBack) returnMenuHubOptionsFocusToTab();
+      } else {
+        if (pressListTop) moveMenuHubControllerFocus(-1);
+        if (pressListBottom) moveMenuHubControllerFocus(1);
+        if (navLeft || rNavLeft) moveMenuHubControllerFocusDirectional("left");
+        if (navRight || rNavRight) moveMenuHubControllerFocusDirectional("right");
+        if (navDown || rNavDown) moveMenuHubControllerFocusDirectional("down");
+        if (pressMenuSelect) selectMenuHubTab(getMenuHubTabForButton(getMenuHubControllerTargets()[menuHubFocusIndex]), true);
+        if (pressMenuBack) closeMenuHub();
+      }
     } else if (gameState === STATE.OPTIONS){
       if (pressListTop) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, -1);
       if (pressListBottom) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, 1);
