@@ -1373,7 +1373,22 @@
   background:#050008;
   color:#00ff66;
 }
+#musicDropdownCaret{
+  display:inline-block;
+  color:#00ff66;
+  font:bold 15px monospace;
+  line-height:1;
+  margin-left:-8px;
+  text-shadow:0 0 6px rgba(0,255,0,0.35);
+  pointer-events:none;
+  user-select:none;
+  transform:translateY(-1px);
+}
 #musicFileDropdown.isMuted{
+  color:#ff5050;
+  text-shadow:0 0 6px rgba(255,0,0,0.45);
+}
+#musicFileDropdown.isMuted + #musicDropdownCaret{
   color:#ff5050;
   text-shadow:0 0 6px rgba(255,0,0,0.45);
 }
@@ -5667,7 +5682,7 @@ body.menu-hub-open #menuHubPanel{
     <option value="wii-shop-music.mp3">wii-shop-music.mp3</option>
     <option value="spaceinvaders.mp3">spaceinvaders.mp3</option>
     <option value="do-that-there.mp3">do-that-there.mp3</option>
-  </select>
+  </select><span id="musicDropdownCaret" aria-hidden="true">∨</span>
 </div>
 <button id="scoreStoreHud" type="button" disabled aria-label="Score HUD">
   <div id="accuracyScore">Score: 0pts</div>
