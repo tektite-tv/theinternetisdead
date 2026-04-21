@@ -2614,28 +2614,20 @@ body.invert-colors {
     }
   }
 
-
-
-  /* v2.18: lock the LB/RB hub header to one exact footprint across Images, Stats, and Options.
-     Moving tabs should swap content only, not resize the top button row like a nervous accordion. */
+  /* v2.19: keep the good Options content fit from v2.17/v2.16 intact.
+     Only Images and Stats inherit the Options hub header footprint; Options itself is not overridden here. */
   #menuHubPanel.menuHubTabImages #menuHubTopButtons,
-  #menuHubPanel.menuHubTabStats #menuHubTopButtons,
-  #menuHubPanel.menuHubTabOptions #menuHubTopButtons{
-    height:52px !important;
+  #menuHubPanel.menuHubTabStats #menuHubTopButtons{
     min-height:52px !important;
-    max-height:52px !important;
     margin:0 0 14px !important;
     padding:0 56px !important;
-    flex:0 0 52px !important;
+    flex:0 0 auto !important;
     align-items:stretch !important;
     box-sizing:border-box !important;
   }
   #menuHubPanel.menuHubTabImages #menuHubTopButtons .smallBtn,
-  #menuHubPanel.menuHubTabStats #menuHubTopButtons .smallBtn,
-  #menuHubPanel.menuHubTabOptions #menuHubTopButtons .smallBtn{
-    height:52px !important;
+  #menuHubPanel.menuHubTabStats #menuHubTopButtons .smallBtn{
     min-height:52px !important;
-    max-height:52px !important;
     padding:0 10px !important;
     display:flex !important;
     align-items:center !important;
@@ -2647,40 +2639,25 @@ body.invert-colors {
   #menuHubPanel.menuHubTabImages #menuHubTopButtons::before,
   #menuHubPanel.menuHubTabImages #menuHubTopButtons::after,
   #menuHubPanel.menuHubTabStats #menuHubTopButtons::before,
-  #menuHubPanel.menuHubTabStats #menuHubTopButtons::after,
-  #menuHubPanel.menuHubTabOptions #menuHubTopButtons::before,
-  #menuHubPanel.menuHubTabOptions #menuHubTopButtons::after{
+  #menuHubPanel.menuHubTabStats #menuHubTopButtons::after{
     top:50% !important;
     width:42px !important;
     height:42px !important;
     transform:translateY(-50%) !important;
   }
-  #menuHubPanel.menuHubTabImages #menuHubContent,
-  #menuHubPanel.menuHubTabStats #menuHubContent,
-  #menuHubPanel.menuHubTabOptions #menuHubContent{
-    flex:1 1 auto !important;
-    min-height:0 !important;
-    width:100% !important;
-  }
   @media (max-width: 460px){
     #menuHubPanel.menuHubTabImages #menuHubTopButtons,
-    #menuHubPanel.menuHubTabStats #menuHubTopButtons,
-    #menuHubPanel.menuHubTabOptions #menuHubTopButtons{
-      height:42px !important;
+    #menuHubPanel.menuHubTabStats #menuHubTopButtons{
       min-height:42px !important;
-      max-height:42px !important;
-      flex-basis:42px !important;
       padding:0 42px !important;
     }
     #menuHubPanel.menuHubTabImages #menuHubTopButtons .smallBtn,
-    #menuHubPanel.menuHubTabStats #menuHubTopButtons .smallBtn,
-    #menuHubPanel.menuHubTabOptions #menuHubTopButtons .smallBtn{
-      height:42px !important;
+    #menuHubPanel.menuHubTabStats #menuHubTopButtons .smallBtn{
       min-height:42px !important;
-      max-height:42px !important;
       font-size:14px !important;
     }
   }
+
 </style>
 
 <style>
