@@ -3020,20 +3020,18 @@ window.addEventListener("resize", resize);
 
 function fitMenuHubToStartMenu(){
   if (!menuHubPanelInner) return;
-  // Match the Hub to the Start Menu's actual visible box, not the nominal CSS
-  // variable. The Start Menu can be scaled/styled by late CSS rules, so using
-  // its measured rect is the only sane source of truth. Set the Hub transform
-  // to none after copying the visible rect so we do not scale the copied size
-  // again and accidentally make the hub taller. Tiny CSS clown math, defused.
+  // v2.XX: The Hub uses the Start Menu measured footprint, then scales its
+  // own inner panel down inside that footprint so it cannot look wider or taller.
+  const hubScale = 0.94;
   const rect = getFallbackMenuRect();
   if (rect && rect.width && rect.height){
     const width = Math.round(rect.width);
     const height = Math.round(rect.height);
-    menuHubPanelInner.style.width = `${width}px`;
-    menuHubPanelInner.style.height = `${height}px`;
-    menuHubPanelInner.style.maxWidth = `${width}px`;
-    menuHubPanelInner.style.maxHeight = `${height}px`;
-    menuHubPanelInner.style.transform = "none";
+    menuHubPanelInner.style.width = `px`;
+    menuHubPanelInner.style.height = `px`;
+    menuHubPanelInner.style.maxWidth = `px`;
+    menuHubPanelInner.style.maxHeight = `px`;
+    menuHubPanelInner.style.transform = `scale()`;
     menuHubPanelInner.style.transformOrigin = "center center";
     return;
   }
@@ -3041,7 +3039,8 @@ function fitMenuHubToStartMenu(){
   menuHubPanelInner.style.height = "var(--shooter-menu-footprint-height)";
   menuHubPanelInner.style.maxWidth = "var(--shooter-menu-footprint-width)";
   menuHubPanelInner.style.maxHeight = "var(--shooter-menu-footprint-height)";
-  menuHubPanelInner.style.transform = "none";
+  menuHubPanelInner.style.transform = `scale()`;
+  menuHubPanelInner.style.transformOrigin = "center center";
 }
 
 function fitOptionsMenuToViewport(){
