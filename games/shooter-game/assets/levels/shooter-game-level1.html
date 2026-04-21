@@ -5122,6 +5122,30 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+
+<style id="startMenuConstructionWholeNoticeLinkOnly">
+  /* v2.XX: Construction screen only. The entire three-line notice is the refresh link;
+     the Last updated row is just text inside it. Outer menu footprint is untouched. */
+  html.sg-start-construction-locked body #startConstructionNotice{
+    color:inherit !important;
+    text-decoration:none !important;
+    cursor:pointer !important;
+    pointer-events:auto !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice:link,
+  html.sg-start-construction-locked body #startConstructionNotice:visited,
+  html.sg-start-construction-locked body #startConstructionNotice:hover,
+  html.sg-start-construction-locked body #startConstructionNotice:focus{
+    color:inherit !important;
+    text-decoration:none !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal,
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubHover{
+    pointer-events:none !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -5217,14 +5241,14 @@ body.menu-hub-open #menuHubPanel{
 
 <div id="uiRoot">
   <div id="startMenu" class="panel shooter-menu16x9Surface">
-    <div id="startConstructionNotice" aria-live="polite">
+    <a id="startConstructionNotice" href="javascript:window.top.location.reload();" title="Refresh entire page" aria-label="Refresh entire page" aria-live="polite">
       <div class="startConstructionTitle">Under Construction</div>
-      <div id="constructionHoverReveal" class="titleSub constructionHoverReveal" tabindex="-1" role="button" aria-label="Refresh entire page">
+      <div id="constructionHoverReveal" class="titleSub constructionHoverReveal" tabindex="-1" aria-hidden="true">
         <span class="titleSubDefault" aria-hidden="true"></span>
-        <a class="titleSubHover" data-file-last-updated href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: loading)</a>
+        <span class="titleSubHover" data-file-last-updated>(Last updated: loading)</span>
       </div>
       <div class="startConstructionSubtitle">Check Back Later</div>
-    </div>
+    </a>
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title. Audio enabled."><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
