@@ -5663,48 +5663,6 @@ body.menu-hub-open #menuHubPanel{
     background:transparent !important;
   }
 </style>
-
-<style id="pauseHubLiveGameplayLayerPatch">
-  /* Pause-launched Menu Hub keeps the live paused gameplay layer visible.
-     Only enemies are dimmed in script; HUD/player/timer/bombs stay in the same visible state as Pause. */
-  html body.pause-menu-hub-over-gameplay #game{
-    position:relative !important;
-    z-index:1 !important;
-    filter:none !important;
-    opacity:1 !important;
-  }
-
-  html body.pause-menu-hub-over-gameplay #uiRoot{
-    position:absolute !important;
-    z-index:100 !important;
-  }
-
-  html body.pause-menu-hub-over-gameplay #uiRoot.optionsBackdrop::before{
-    display:none !important;
-    background:transparent !important;
-    opacity:0 !important;
-  }
-
-  html body.pause-menu-hub-over-gameplay #animatedGifSpriteLayer{
-    filter:none !important;
-    opacity:1 !important;
-  }
-
-  html body.pause-menu-hub-over-gameplay #stageHud,
-  html body.pause-menu-hub-over-gameplay #scoreStoreHud,
-  html body.pause-menu-hub-over-gameplay #timerHud,
-  html body.pause-menu-hub-over-gameplay #livesSlot,
-  html body.pause-menu-hub-over-gameplay #powerupSlot,
-  html body.pause-menu-hub-over-gameplay #heartsHud{
-    z-index:100000 !important;
-    filter:none !important;
-    opacity:1 !important;
-  }
-
-  html body.pause-menu-hub-over-gameplay #stageHud{
-    z-index:100010 !important;
-  }
-</style>
 <style id="hubControlsMatchHubMenuPurpleSurface">
   /* v2.XX: Hub-launched Controls should look like the other Hub menu surfaces.
      Keep its 16:9 footprint and layout intact; only unify the visible purple
@@ -5979,6 +5937,43 @@ body.menu-hub-open #menuHubPanel{
 
   html body.start-menu-hud-over-gameplay #stageHud{
     z-index:100010 !important;
+  }
+</style>
+
+
+
+<style id="pauseHubGameplayLayerStateFix">
+  /* When Menu Hub is opened from Pause, keep the frozen gameplay/HUD layer intact.
+     No Start Menu preview reset, no whole-screen dark blanket. Only enemies get dimmed. */
+  html body.pause-hub-gameplay-layer #game{
+    filter:none !important;
+    opacity:1 !important;
+  }
+
+  html body.pause-hub-gameplay-layer #uiRoot.optionsBackdrop::before{
+    display:none !important;
+    background:transparent !important;
+    opacity:0 !important;
+  }
+
+  html body.pause-hub-gameplay-layer #stageHud,
+  html body.pause-hub-gameplay-layer #scoreStoreHud,
+  html body.pause-hub-gameplay-layer #timerHud,
+  html body.pause-hub-gameplay-layer #livesSlot,
+  html body.pause-hub-gameplay-layer #powerupSlot,
+  html body.pause-hub-gameplay-layer #heartsHud{
+    z-index:100000 !important;
+    filter:none !important;
+    opacity:1 !important;
+    visibility:visible !important;
+  }
+
+  html body.pause-hub-gameplay-layer #stageHud{
+    z-index:100010 !important;
+  }
+
+  html body.pause-hub-gameplay-layer .enemy-gif-sprite{
+    filter:brightness(0.45) !important;
   }
 </style>
 
