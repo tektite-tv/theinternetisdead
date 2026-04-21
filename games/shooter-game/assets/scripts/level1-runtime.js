@@ -4557,12 +4557,47 @@ function syncOptionsControllerFocus(){
   const items = getOptionsControllerTargets();
   if (!items.length) return;
   optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
-  focusControllerElement(items[optionsFocusIndex]);
+  const target = items[optionsFocusIndex];
+  focusControllerElement(target);
+  keepOptionsControllerTargetFullyVisible(target, { forceTop: optionsFocusIndex === 0 });
   // Keep the Cheats unlock hint synced with controller focus, including the
   // normal Start-menu -> Options path. Otherwise the X + View text only shows
   // after a click/other update cycle, because apparently one hallway was enough
   // for the old state machine.
   updateCheatsUnlockModeHint();
+}
+
+function getOptionsScrollTargetElement(el){
+  if (!el) return null;
+  return el.closest('.optRow, .cheatRow, .fullRow, .buttonOnlyRow') || el;
+}
+
+function keepOptionsControllerTargetFullyVisible(el, options={}){
+  if (!optionsScroll || !el) return;
+  const target = getOptionsScrollTargetElement(el);
+  if (!target) return;
+
+  const adjust = () => {
+    if (!optionsScroll || !target.isConnected) return;
+    const containerRect = optionsScroll.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const marginTop = 12;
+    const marginBottom = 16;
+
+    if (options.forceTop){
+      optionsScroll.scrollTop = Math.max(0, optionsScroll.scrollTop + targetRect.top - containerRect.top - marginTop);
+      return;
+    }
+
+    if (targetRect.top < containerRect.top + marginTop){
+      optionsScroll.scrollTop = Math.max(0, optionsScroll.scrollTop - ((containerRect.top + marginTop) - targetRect.top));
+    } else if (targetRect.bottom > containerRect.bottom - marginBottom){
+      optionsScroll.scrollTop += targetRect.bottom - (containerRect.bottom - marginBottom);
+    }
+  };
+
+  try{ adjust(); }catch(_){ }
+  try{ requestAnimationFrame(adjust); }catch(_){ setTimeout(adjust, 0); }
 }
 function syncCheatsControllerFocus(forceTopVisible=false){
   const items = getCheatsControllerTargets();

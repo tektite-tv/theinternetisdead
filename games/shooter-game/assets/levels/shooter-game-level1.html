@@ -2876,6 +2876,42 @@ body.invert-colors {
     margin:0 !important;
   }
 
+
+  /* v2.12: Options tab content must fit inside the Start-menu-sized hub.
+     Give the first Controls row and last Cheats row breathing room inside the
+     scrollbox instead of letting focus shadows get shaved off at the edges. */
+  #menuHubPanel.menuHubTabOptions #menuHubTopButtons{
+    gap:8px !important;
+    margin:0 0 8px !important;
+    padding:0 48px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubTopButtons::before,
+  #menuHubPanel.menuHubTabOptions #menuHubTopButtons::after{
+    width:36px !important;
+    height:36px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubTopButtons .smallBtn{
+    min-height:44px !important;
+    font-size:14px !important;
+    line-height:1.05 !important;
+    padding:6px 8px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll{
+    padding:6px 8px 16px !important;
+    scroll-padding-top:8px !important;
+    scroll-padding-bottom:18px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optionsGrid{
+    padding:2px 0 10px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .buttonOnlyRow .smallBtn{
+    min-height:42px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #cheatsButtonRow{
+    margin-bottom:2px !important;
+  }
+
 </style>
 
 <style>
