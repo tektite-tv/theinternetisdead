@@ -4721,3 +4721,69 @@ body.menu-hub-open #menuHubPanel{
     line-height:1.1 !important;
   }
 </style>
+
+<style id="startMenuEnterNicknameFillRowFinal">
+  /* v2.XX: Final Start Menu nickname-row fix.
+     Keep the proven Start/Hub outer footprint and proportional layout untouched.
+     Only make the Enter Nickname control fill the existing nickname row instead
+     of collapsing into a tiny left-side square. */
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow{
+    display:grid !important;
+    grid-template-columns:minmax(0, 1fr) !important;
+    grid-template-rows:minmax(0, 1fr) !important;
+    align-items:stretch !important;
+    justify-items:stretch !important;
+    align-content:stretch !important;
+    justify-content:stretch !important;
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    padding:0 !important;
+    margin:0 !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname,
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput,
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startWelcomeNickname{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    align-self:stretch !important;
+    justify-self:stretch !important;
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:0 14px !important;
+    font-size:clamp(13px, 1.25vw, 17px) !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:clip !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname .startMenuButtonText{
+    display:block !important;
+    width:100% !important;
+    min-width:0 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+  }
+</style>
+
