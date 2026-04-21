@@ -1872,13 +1872,16 @@ function renderLifetimeStats(){
   const lockedList = document.getElementById("statsLockedList");
   const nicknamePrompt = document.getElementById("btnStatsEnterNickname");
   const nicknameStatsInput = document.getElementById("statsNicknameInput");
-  const needsNicknameForStats = !hasLifetimeStatsProfile();
+  const statsProfileName = getLifetimeStatsProfileName();
+  const needsNicknameForStats = !statsProfileName;
   const statsInputActive = isStatsNicknameInputActive();
   if (nicknamePrompt){
-    nicknamePrompt.textContent = "Enter Nickname to Track Stats";
-    nicknamePrompt.hidden = !needsNicknameForStats || statsInputActive;
-    nicknamePrompt.setAttribute("aria-hidden", (!needsNicknameForStats || statsInputActive) ? "true" : "false");
-    nicknamePrompt.tabIndex = (needsNicknameForStats && !statsInputActive) ? 0 : -1;
+    const showNicknamePrompt = !statsInputActive;
+    nicknamePrompt.textContent = needsNicknameForStats ? "Enter Nickname to Track Stats" : `${statsProfileName}'s Stats`;
+    nicknamePrompt.classList.toggle("statsNicknameProfileLabel", !needsNicknameForStats);
+    nicknamePrompt.hidden = !showNicknamePrompt;
+    nicknamePrompt.setAttribute("aria-hidden", showNicknamePrompt ? "false" : "true");
+    nicknamePrompt.tabIndex = showNicknamePrompt ? 0 : -1;
   }
   if (nicknameStatsInput && (!needsNicknameForStats || !statsInputActive)){
     nicknameStatsInput.hidden = true;
@@ -5045,8 +5048,10 @@ function resetStatsNicknameEntry(){
     statsNicknameInput.classList.remove("nicknameEntryActive");
     statsNicknameInput.classList.remove("nicknameHasDraft");
   }
-  if (btnStatsEnterNickname && !hasLifetimeStatsProfile()){
-    btnStatsEnterNickname.textContent = "Enter Nickname to Track Stats";
+  if (btnStatsEnterNickname){
+    const statsProfileName = getLifetimeStatsProfileName();
+    btnStatsEnterNickname.textContent = statsProfileName ? `${statsProfileName}'s Stats` : "Enter Nickname to Track Stats";
+    btnStatsEnterNickname.classList.toggle("statsNicknameProfileLabel", !!statsProfileName);
     btnStatsEnterNickname.hidden = false;
     btnStatsEnterNickname.setAttribute("aria-hidden", "false");
     btnStatsEnterNickname.tabIndex = 0;
@@ -5055,7 +5060,7 @@ function resetStatsNicknameEntry(){
 }
 
 function showStatsNicknameInput(){
-  if (!statsNicknameInput || !btnStatsEnterNickname) return false;
+  if (!statsNicknameInput || !btnStatsEnterNickname || hasLifetimeStatsProfile()) return false;
   btnStatsEnterNickname.hidden = true;
   btnStatsEnterNickname.setAttribute("aria-hidden", "true");
   btnStatsEnterNickname.tabIndex = -1;
@@ -7553,6 +7558,7 @@ if (imagesPanel){
 }
 if (btnStatsEnterNickname){
   btnStatsEnterNickname.addEventListener("click", () => {
+    if (hasLifetimeStatsProfile()) return;
     openNicknamePromptFromStats();
   });
 }
