@@ -2930,6 +2930,25 @@ body.invert-colors {
     margin-bottom:2px !important;
   }
 
+  /* v2.16: Keep the Options Back button fully inside the Start-menu-sized hub.
+     The bottom row was sitting flush against an overflow-hidden panel, so the
+     bottom edge/focus glow got clipped. Naturally the last 4 pixels declared
+     independence. */
+  #menuHubPanel.menuHubTabOptions #menuHubContent > #optionsMenuInner{
+    padding:0 0 10px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .menuBottomRow{
+    margin-top:6px !important;
+    padding:0 8px 10px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .menuBottomRow #btnBack{
+    min-height:38px !important;
+    line-height:1.05 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll{
+    padding-bottom:10px !important;
+  }
+
   /* v2.14: Treat the Cheats button like the normal Options menu does:
      one controller focus target, one visible outline, no parent-row glow stacked
      under the button glow. */
