@@ -5691,6 +5691,145 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+
+<style id="pauseMenuStartHubFootprintAndGameplayOnlyDimmingFinalPatch">
+  html body #pauseOverlay{
+    z-index:120 !important;
+    background:rgba(0,0,0,0.55) !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+
+  html body #pauseOverlay #pausePanel.shooter-menu16x9Surface,
+  html body #pauseOverlay #pausePanel{
+    width:var(--shooter-start-hub-frame-width) !important;
+    min-width:var(--shooter-start-hub-frame-width) !important;
+    max-width:var(--shooter-start-hub-frame-width) !important;
+    height:var(--shooter-start-hub-frame-height) !important;
+    min-height:var(--shooter-start-hub-frame-height) !important;
+    max-height:var(--shooter-start-hub-frame-height) !important;
+    aspect-ratio:16 / 9 !important;
+    box-sizing:border-box !important;
+    padding:10px !important;
+    border:var(--shooter-start-hub-frame-border) !important;
+    border-width:2px !important;
+    border-radius:var(--shooter-start-hub-frame-radius) !important;
+    background:var(--shooter-start-hub-frame-bg) !important;
+    box-shadow:var(--shooter-start-hub-frame-shadow) !important;
+    transform:none !important;
+    transform-origin:center center !important;
+    margin:0 !important;
+    overflow:hidden !important;
+    display:grid !important;
+    grid-template-rows:1.15fr 0.42fr 0fr 0.62fr 0.62fr 0.62fr 0.62fr !important;
+    gap:8px !important;
+    align-items:stretch !important;
+    justify-items:center !important;
+    justify-content:stretch !important;
+    align-content:stretch !important;
+    text-align:center !important;
+    pointer-events:auto !important;
+  }
+
+  html body #pauseOverlay #pausePanel > *{
+    width:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  html body #pauseOverlay #pausePanel #pauseTitle,
+  html body #pauseOverlay #pausePanel #pauseHint{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    overflow:hidden !important;
+  }
+
+  html body #pauseOverlay #pausePanel #pauseTitle{
+    font-size:clamp(22px, 3.15vw, 34px) !important;
+    line-height:1.08 !important;
+    letter-spacing:1px !important;
+    padding:0 8px !important;
+  }
+
+  html body #pauseOverlay #pausePanel #pauseHint{
+    font-size:clamp(12px, 1.15vw, 14px) !important;
+    line-height:1.05 !important;
+    padding:0 8px !important;
+  }
+
+  html body #pauseOverlay #pausePanel #pauseCmdSuggest{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    height:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    overflow:hidden !important;
+  }
+
+  html body #pauseOverlay #pausePanel .pauseMenuBtn{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 14px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    font-size:clamp(13px, 1.25vw, 18px) !important;
+    line-height:1 !important;
+    border:2px solid rgba(0,255,102,0.65) !important;
+    border-radius:10px !important;
+    background:rgba(0,0,0,0.55) !important;
+    color:#0f0 !important;
+    box-shadow:0 0 18px rgba(0,255,102,0.18) !important;
+    text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(0,255,102,0.25) !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+
+  html body.start-menu-hud-over-gameplay #game{
+    position:relative !important;
+    z-index:1 !important;
+    filter:brightness(0.45) !important;
+  }
+
+  html body.start-menu-hud-over-gameplay #uiRoot{
+    position:absolute !important;
+    z-index:100 !important;
+  }
+
+  html body.start-menu-hud-over-gameplay #uiRoot.optionsBackdrop::before{
+    display:none !important;
+    background:transparent !important;
+    opacity:0 !important;
+  }
+
+  html body.start-menu-hud-over-gameplay #stageHud,
+  html body.start-menu-hud-over-gameplay #scoreStoreHud,
+  html body.start-menu-hud-over-gameplay #timerHud,
+  html body.start-menu-hud-over-gameplay #livesSlot,
+  html body.start-menu-hud-over-gameplay #powerupSlot,
+  html body.start-menu-hud-over-gameplay #heartsHud{
+    z-index:100000 !important;
+    filter:none !important;
+    opacity:1 !important;
+  }
+
+  html body.start-menu-hud-over-gameplay #stageHud{
+    z-index:100010 !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -5774,7 +5913,7 @@ body.menu-hub-open #menuHubPanel{
 </div>
 
 <div id="pauseOverlay">
-  <div id="pausePanel">
+  <div id="pausePanel" class="shooter-menu16x9Surface">
     <div id="pauseTitle">Hello User!<br>GAME PAUSED</div>
     <div id="pauseHint">Press ESC to Resume</div>
     <div id="pauseCmdSuggest" aria-live="polite" aria-hidden="true" hidden></div>
