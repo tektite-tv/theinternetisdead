@@ -2912,6 +2912,20 @@ body.invert-colors {
     margin-bottom:2px !important;
   }
 
+  /* v2.13: In the hosted Options tab, the Cheats row and the Cheats button
+     occupy the same visual rectangle. Let only the button draw controller focus
+     so it does not look like two outlines fighting for custody. */
+  body.controller-active #menuHubPanel.menuHubTabOptions #cheatsButtonRow.controllerFocus{
+    border-color:transparent !important;
+    box-shadow:none !important;
+    background:transparent !important;
+  }
+  body.controller-active #menuHubPanel.menuHubTabOptions #cheatsButtonRow .smallBtn.controllerFocus{
+    outline:none !important;
+    border-color:rgba(0,255,0,0.95) !important;
+    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.24) !important;
+  }
+
 </style>
 
 <style>

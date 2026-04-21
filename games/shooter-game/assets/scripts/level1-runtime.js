@@ -4473,7 +4473,9 @@ function isPauseOptionsOpen(){
 }
 
 function isCheatermodeOptionsContextOpen(){
-  return gameState === STATE.OPTIONS || isPauseOptionsOpen();
+  return gameState === STATE.OPTIONS
+    || isPauseOptionsOpen()
+    || (gameState === STATE.HUB && menuHubActiveTab === "options" && menuHubOptionsContentFocused);
 }
 
 function isOptionsCheatsButtonFocused(){
