@@ -2335,7 +2335,7 @@ body.invert-colors {
   :root{
     --shooter-menu-footprint-width:min(520px, 92vw);
     --shooter-menu-footprint-height:min(430px, calc(100vh - 32px));
-    --shooter-menu-footprint-padding:18px 18px 16px;
+    --shooter-menu-footprint-padding:18px 18px 18px;
     --shooter-menu-footprint-radius:16px;
   }
   #startMenu.panel,
@@ -2357,6 +2357,40 @@ body.invert-colors {
   #startMenu.panel{
     border:2px solid rgba(0,255,102,0.65) !important;
     box-shadow:0 0 28px rgba(0,255,102,0.20) !important;
+  }
+  /* v2.XX: Normalize the Start Menu vertical rhythm.
+     Every visible Start Menu block now uses the same outside gap, and the
+     panel padding is equal on the top and bottom. CSS has been told to stop
+     improvising jazz with margins. */
+  #startMenu.panel{
+    --start-menu-gap:10px;
+    padding:18px 18px !important;
+    gap:var(--start-menu-gap) !important;
+  }
+  #startMenu.panel > *{
+    flex:0 0 auto;
+  }
+  #startMenu #startMenuTitle,
+  #startMenu .titleSubWrap,
+  #startMenu .subimg,
+  #startMenu .menuBlurb,
+  #startMenu .btnRowTop{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+  }
+  #startMenu #startMenuTitle,
+  #startMenu .titleSubWrap,
+  #startMenu .subimg,
+  #startMenu .menuBlurb{
+    margin-left:auto !important;
+    margin-right:auto !important;
+  }
+  #startMenu .btnRowTop{
+    column-gap:10px !important;
+    row-gap:var(--start-menu-gap) !important;
+  }
+  #startMenu #startWelcomeNickname{
+    margin:0 !important;
   }
   #startMenu.panel,
   #pausePanel,
