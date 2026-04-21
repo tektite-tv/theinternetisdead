@@ -4510,7 +4510,11 @@ function getStartNicknameMenuTarget(){
 }
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnMenu, getStartNicknameMenuTarget()].filter(Boolean);
+  // v2.XX: Start-menu controller focus is intentionally limited to the two
+  // actual launch controls. Title, subtitle/reveal text, welcome/nickname text,
+  // and inline nickname entry remain mouse/keyboard reachable only, so the
+  // controller selector cannot get stranded on decorative rows.
+  return [btnStart, btnMenu].filter(Boolean);
 }
 
 function getMenuHubControllerTargets(){
@@ -5365,26 +5369,19 @@ function moveMenuControllerFocus(delta){
 function moveMenuControllerFocusDirectional(direction){
   const items = getMenuControllerTargets();
   if (!items.length) return false;
-  const titleIndex = items.indexOf(startMenuTitle);
-  const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
   const menuIndex = items.indexOf(btnMenu);
-  const nicknameTarget = getStartNicknameMenuTarget();
-  const nicknameIndex = items.indexOf(nicknameTarget);
   let nextIndex = menuFocusIndex;
 
-  if (direction === "left"){
-    if (menuFocusIndex === nicknameIndex && menuIndex !== -1) nextIndex = menuIndex;
-    else if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
-  } else if (direction === "right"){
-    if (menuFocusIndex === startIndex && menuIndex !== -1) nextIndex = menuIndex;
-    else if (menuFocusIndex === menuIndex && nicknameIndex !== -1) nextIndex = nicknameIndex;
-  } else if (direction === "down"){
-    if (menuFocusIndex === titleIndex && revealIndex !== -1) nextIndex = revealIndex;
-    else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
-  } else if (direction === "up"){
-    if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex || menuFocusIndex === nicknameIndex) && revealIndex !== -1) nextIndex = revealIndex;
-    else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
+  // Only Start Game and Menu are controller-selectable on the Start Menu.
+  // Left/right move between those two buttons; up/down are ignored so focus
+  // cannot climb into the title, blurb, welcome text, or nickname row.
+  if (direction === "left" && menuFocusIndex === menuIndex && startIndex !== -1){
+    nextIndex = startIndex;
+  } else if (direction === "right" && menuFocusIndex === startIndex && menuIndex !== -1){
+    nextIndex = menuIndex;
+  } else {
+    return false;
   }
 
   if (nextIndex === menuFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
@@ -8005,8 +8002,7 @@ function pollGamepad(dt){
       }
       const menuTarget = getMenuControllerTargets()[menuFocusIndex];
       if (pressMenuSelect && menuTarget){
-        if (menuTarget === titleHoverReveal) refreshEntireShooterPage();
-        else if (menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
+        activateControllerTarget(menuTarget);
       }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
     } else if (gameState === STATE.HUB){
