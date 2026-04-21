@@ -4,34 +4,65 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tektite's Bananaman Shooter Game</title>
+
+<!-- v2.XX: First-paint nickname state guard.
+     This runs before the main CSS so the Start Menu nickname row does not
+     blink empty during refresh while the full runtime wakes up. Because yes,
+     the browser needed adult supervision before breakfast. -->
 <script>
-  /* Prime Start Menu nickname state before first paint so refresh does not flash an empty nickname row. */
-  (function primeStartMenuNicknameState(){
-    var root = document.documentElement;
-    function limitNickname(value){ return Array.from(String(value || "")).slice(0, 8).join(""); }
-    function cssString(value){ return JSON.stringify(String(value || "")); }
-    try{
-      var saved = window.localStorage.getItem("tektiteChatNickname");
-      var explicit = window.localStorage.getItem("tektiteChatNicknameExplicit") === "true";
-      var nickname = saved && saved.trim ? saved.trim() : "";
-      if (nickname === "User" && !explicit) nickname = "";
-      nickname = limitNickname(nickname);
-      if (nickname){
-        root.classList.add("start-menu-nickname-present");
-        root.classList.remove("start-menu-nickname-missing");
-        root.style.setProperty("--start-menu-welcome-text", cssString("Welcome back, " + nickname));
-      } else {
-        root.classList.add("start-menu-nickname-missing");
-        root.classList.remove("start-menu-nickname-present");
-        root.style.setProperty("--start-menu-welcome-text", cssString(""));
-      }
-    }catch(error){
-      root.classList.add("start-menu-nickname-missing");
-      root.classList.remove("start-menu-nickname-present");
-      root.style.setProperty("--start-menu-welcome-text", cssString(""));
-    }
-  })();
+(function(){
+  var root = document.documentElement;
+  root.classList.add('sg-start-nickname-prepaint');
+  var nickname = '';
+  try{
+    var raw = window.localStorage.getItem('tektiteChatNickname');
+    var explicit = window.localStorage.getItem('tektiteChatNicknameExplicit') === 'true';
+    var normalized = raw && raw.trim ? raw.trim() : '';
+    if (normalized === 'User' && !explicit) normalized = '';
+    nickname = Array.from(String(normalized || '')).slice(0, 8).join('');
+  }catch(error){
+    nickname = '';
+  }
+  if (nickname){
+    root.classList.add('sg-start-nickname-has-name');
+    root.style.setProperty('--sg-start-nickname-welcome', JSON.stringify('Welcome back, ' + nickname));
+  } else {
+    root.classList.add('sg-start-nickname-needs-name');
+  }
+})();
 </script>
+<style>
+  html.sg-start-nickname-prepaint #startMenu #startNicknameRow{
+    min-height:42px !important;
+    height:42px !important;
+  }
+  html.sg-start-nickname-prepaint.sg-start-nickname-needs-name #startMenu #btnEnterNickname{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    visibility:visible !important;
+    opacity:1 !important;
+  }
+  html.sg-start-nickname-prepaint.sg-start-nickname-needs-name #startMenu #startNicknameInput,
+  html.sg-start-nickname-prepaint.sg-start-nickname-needs-name #startMenu #startWelcomeNickname{
+    display:none !important;
+  }
+  html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #btnEnterNickname,
+  html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startNicknameInput{
+    display:none !important;
+  }
+  html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelcomeNickname{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    min-height:42px !important;
+    visibility:visible !important;
+    opacity:1 !important;
+  }
+  html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelcomeNickname::before{
+    content:var(--sg-start-nickname-welcome, '');
+  }
+</style>
 <style>
   html, body { margin:0; padding:0; background:transparent; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -1954,26 +1985,23 @@ body.invert-colors {
   }
   #menuHubPanelInner{
     width:var(--shooter-menu-footprint-width, min(520px, 92vw));
-    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw));
     height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
+    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw));
     max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
-    min-height:0;
-    box-sizing:border-box;
-    padding:var(--shooter-menu-footprint-padding, 18px 18px 18px);
     border:2px solid rgba(0,255,102,0.65);
     border-radius:var(--shooter-menu-footprint-radius, 16px);
     background:rgba(75,0,118,0.50);
     color:#00ff66;
     font-family:"Courier New", monospace;
+    padding:18px;
     box-shadow:0 0 28px rgba(0,255,102,0.20);
     text-align:center;
+    box-sizing:border-box;
     overflow:hidden;
     display:flex;
     flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    transform:none !important;
-    transform-origin:center center;
+    justify-content:flex-start;
+    min-height:0;
   }
   #menuHubTopButtons{
     position:relative;
@@ -2394,11 +2422,10 @@ body.invert-colors {
     padding:var(--shooter-menu-footprint-padding) !important;
     border-radius:var(--shooter-menu-footprint-radius) !important;
     text-align:center !important;
-    transform:none !important;
+    transform:scale(0.975) !important;
     transform-origin:center center !important;
   }
-  #startMenu.panel,
-  #menuHubPanelInner{
+  #startMenu.panel{
     border:2px solid rgba(0,255,102,0.65) !important;
     box-shadow:0 0 28px rgba(0,255,102,0.20) !important;
   }
@@ -2437,7 +2464,6 @@ body.invert-colors {
     margin:0 !important;
   }
   #startMenu.panel,
-  #menuHubPanelInner,
   #pausePanel,
   #deathPanel{
     display:flex;
@@ -2473,20 +2499,6 @@ body.invert-colors {
     #pauseTitle,
     #deathTitle{ font-size:44px; }
   }
-  /* v2.XX: Hub Menu is the same native box as Start Menu.
-     Do not scale, measure, or transform it. Same variables, same border-box. */
-  #menuHubPanelInner{
-    width:var(--shooter-menu-footprint-width) !important;
-    max-width:var(--shooter-menu-footprint-width) !important;
-    height:var(--shooter-menu-footprint-height) !important;
-    max-height:var(--shooter-menu-footprint-height) !important;
-    padding:var(--shooter-menu-footprint-padding) !important;
-    border-radius:var(--shooter-menu-footprint-radius) !important;
-    box-sizing:border-box !important;
-    transform:none !important;
-    margin:0 !important;
-  }
-
   /* End unified overlay menu footprint. */
 
 
@@ -3364,11 +3376,6 @@ body.invert-colors {
     max-width:160px !important;
     box-sizing:border-box !important;
   }
-  /* v2.XX: Menu button keeps the exact native Start Game button size even though it still carries .smallBtn for scripting/selection hooks. */
-  #startMenu #btnMenu{
-    padding:10px 14px !important;
-    border-radius:12px !important;
-  }
   #startMenu #startNicknameRow{
     display:flex !important;
     align-items:center !important;
@@ -3710,7 +3717,7 @@ body.invert-colors {
 </div>
 
 <div id="uiRoot">
-  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.50); border-width: 3px;">
+  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.50); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title. Audio enabled."><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
@@ -4081,15 +4088,9 @@ line-height:1;
    pretending a fixed-height shell can magically create equal row spacing. */
 #startMenu.panel{
   --start-menu-compact-gap:8px !important;
-  width:var(--shooter-menu-footprint-width) !important;
-  min-width:var(--shooter-menu-footprint-width) !important;
-  max-width:var(--shooter-menu-footprint-width) !important;
-  height:var(--shooter-menu-footprint-height) !important;
-  min-height:var(--shooter-menu-footprint-height) !important;
-  max-height:var(--shooter-menu-footprint-height) !important;
-  box-sizing:border-box !important;
-  transform:none !important;
-  transform-origin:center center !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-height:calc(100vh - 32px) !important;
   padding:18px !important;
   display:flex !important;
   flex-direction:column !important;
@@ -4155,8 +4156,8 @@ line-height:1;
 
 
 <style>
-/* v2.XX: Menu hub replaces the Start Menu in the same native footprint.
-   No JS measuring, no shrink scaling, no rectangle theology. */
+/* v2.XX: Menu hub should replace the Start Menu, not sit beside it.
+   Also force the hub shell to use the same visible footprint as the Start Menu. */
 body.menu-hub-open #startMenu{
   display:none !important;
   pointer-events:none !important;
@@ -4166,70 +4167,21 @@ body.menu-hub-open #menuHubPanel{
   align-items:center !important;
   justify-content:center !important;
 }
-#startMenu.panel,
 #menuHubPanel #menuHubPanelInner{
-  width:var(--shooter-menu-footprint-width) !important;
-  max-width:var(--shooter-menu-footprint-width) !important;
-  height:var(--shooter-menu-footprint-height) !important;
-  max-height:var(--shooter-menu-footprint-height) !important;
+  /* JS copies the Start Menu's measured visible rect into this panel. Do not
+     scale it again here, or the hub becomes a slightly different height and
+     everyone gets to lose another afternoon to rectangle theology. */
   box-sizing:border-box !important;
+  border-width:2px !important;
   transform:none !important;
   transform-origin:center center !important;
 }
 </style>
 
-
-<style>
-/* v2.XX: Final Start Menu native footprint lock.
-   This exists last so refresh, nickname state, and script display flips cannot resize it. */
-#startMenu.panel{
-  width:var(--shooter-menu-footprint-width) !important;
-  min-width:var(--shooter-menu-footprint-width) !important;
-  max-width:var(--shooter-menu-footprint-width) !important;
-  height:var(--shooter-menu-footprint-height) !important;
-  min-height:var(--shooter-menu-footprint-height) !important;
-  max-height:var(--shooter-menu-footprint-height) !important;
-  box-sizing:border-box !important;
-  transform:none !important;
-  transform-origin:center center !important;
-  transition:none !important;
-}
-#startMenu #startNicknameRow{
-  height:42px !important;
-  min-height:42px !important;
-  max-height:42px !important;
-  flex:0 0 42px !important;
-  overflow:hidden !important;
-}
-#startMenu #btnEnterNickname,
-#startMenu #startNicknameInput,
-#startMenu #startWelcomeNickname{
-  min-height:34px !important;
-  max-height:42px !important;
-}
-
-/* v2.XX: Before runtime hydration, reserve and populate the nickname row from localStorage-derived html classes.
-   This prevents the Enter Nickname button / Welcome text from vanishing during page refresh. */
-html:not(.start-menu-nickname-hydrated).start-menu-nickname-missing #startMenu #btnEnterNickname{
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-}
-html:not(.start-menu-nickname-hydrated).start-menu-nickname-missing #startMenu #startWelcomeNickname,
-html:not(.start-menu-nickname-hydrated).start-menu-nickname-missing #startMenu #startNicknameInput{
-  display:none !important;
-}
-html:not(.start-menu-nickname-hydrated).start-menu-nickname-present #startMenu #btnEnterNickname,
-html:not(.start-menu-nickname-hydrated).start-menu-nickname-present #startMenu #startNicknameInput{
-  display:none !important;
-}
-html:not(.start-menu-nickname-hydrated).start-menu-nickname-present #startMenu #startWelcomeNickname{
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-}
-html:not(.start-menu-nickname-hydrated).start-menu-nickname-present #startMenu #startWelcomeNickname:empty::before{
-  content:var(--start-menu-welcome-text, "");
-}
-
+<style id="hubMenuScaleInsideStartMenuFix">
+  /* v2.XX: Hub Menu must sit inside the Start Menu footprint, not match it and then visually overflow. */
+  #menuHubPanel #menuHubPanelInner{
+    transform:scale(0.94) !important;
+    transform-origin:center center !important;
+  }
 </style>

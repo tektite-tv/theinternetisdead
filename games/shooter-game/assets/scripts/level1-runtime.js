@@ -1867,7 +1867,7 @@ function closeStatsPanel(){
     statsPanel.setAttribute("aria-hidden", "true");
     statsPanel.removeAttribute("aria-modal");
   }
-  if (startMenu) startMenu.style.display = "flex";
+  if (startMenu) startMenu.style.display = "block";
   if (overlayPanelReturnTarget === STATE.HUB && menuHubPanel){
     openMenuHub();
     return;
@@ -2011,7 +2011,7 @@ function closeImagesPanel(){
     imagesPanel.setAttribute("aria-hidden", "true");
     imagesPanel.removeAttribute("aria-modal");
   }
-  if (startMenu) startMenu.style.display = "flex";
+  if (startMenu) startMenu.style.display = "block";
   if (overlayPanelReturnTarget === STATE.HUB && menuHubPanel){
     openMenuHub();
     return;
@@ -3020,14 +3020,27 @@ window.addEventListener("resize", resize);
 
 function fitMenuHubToStartMenu(){
   if (!menuHubPanelInner) return;
-  // v2.XX: Hub sizing is native CSS now. No measured rects. No scaling.
-  // The Hub and Start Menu share the same fixed footprint selectors in the level HTML.
-  menuHubPanelInner.style.removeProperty("width");
-  menuHubPanelInner.style.removeProperty("height");
-  menuHubPanelInner.style.removeProperty("max-width");
-  menuHubPanelInner.style.removeProperty("max-height");
-  menuHubPanelInner.style.removeProperty("transform");
-  menuHubPanelInner.style.removeProperty("transform-origin");
+  // v2.XX: The Hub uses the Start Menu measured footprint, then scales its
+  // own inner panel down inside that footprint so it cannot look wider or taller.
+  const hubScale = 0.94;
+  const rect = getFallbackMenuRect();
+  if (rect && rect.width && rect.height){
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
+    menuHubPanelInner.style.width = `px`;
+    menuHubPanelInner.style.height = `px`;
+    menuHubPanelInner.style.maxWidth = `px`;
+    menuHubPanelInner.style.maxHeight = `px`;
+    menuHubPanelInner.style.transform = `scale()`;
+    menuHubPanelInner.style.transformOrigin = "center center";
+    return;
+  }
+  menuHubPanelInner.style.width = "var(--shooter-menu-footprint-width)";
+  menuHubPanelInner.style.height = "var(--shooter-menu-footprint-height)";
+  menuHubPanelInner.style.maxWidth = "var(--shooter-menu-footprint-width)";
+  menuHubPanelInner.style.maxHeight = "var(--shooter-menu-footprint-height)";
+  menuHubPanelInner.style.transform = `scale()`;
+  menuHubPanelInner.style.transformOrigin = "center center";
 }
 
 function fitOptionsMenuToViewport(){
@@ -3067,7 +3080,7 @@ function getFallbackMenuRect(){
       const previousPointerEvents = startMenu.style.pointerEvents;
       startMenu.style.visibility = "hidden";
       startMenu.style.pointerEvents = "none";
-      startMenu.style.display = "flex";
+      startMenu.style.display = "block";
   rememberStartMenuPanelRect();
       const rect = startMenu.getBoundingClientRect();
       startMenu.style.display = previousDisplay;
@@ -5728,7 +5741,7 @@ function showMenu(){
 
   document.body.classList.remove("menu-hub-open");
   if (startMenu){
-    startMenu.style.setProperty("display", "flex");
+    startMenu.style.setProperty("display", "block");
     startMenu.setAttribute("aria-hidden", "false");
     setStartMenuInteractive(true);
   }
@@ -5768,7 +5781,10 @@ function openMenuHub(){
   mouseShieldHolding = false;
   stopShield(false);
   // v2.XX: make the hub replace the Start Menu instead of sitting beside it.
-  // Hub size is CSS-native and matches the Start Menu footprint by default.
+  // Capture the Start Menu footprint first, then hide the Start Menu with
+  // priority because later CSS overrides were winning the dumb little war.
+  if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
+  else getFallbackMenuRect();
   document.body.classList.add("menu-hub-open");
   if (startMenu){
     startMenu.style.setProperty("display", "none", "important");
@@ -5785,6 +5801,7 @@ function openMenuHub(){
   uiRoot.classList.add("optionsBackdrop");
   uiRoot.style.display = "flex";
   fitMenuHubToStartMenu();
+  requestAnimationFrame(fitMenuHubToStartMenu);
   resetMenuHubControllerFocus();
   selectMenuHubTab("images", false);
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
@@ -5804,7 +5821,7 @@ function closeMenuHub(){
   uiRoot.classList.remove("optionsBackdrop");
   document.body.classList.remove("menu-hub-open");
   if (startMenu){
-    startMenu.style.setProperty("display", "flex");
+    startMenu.style.setProperty("display", "block");
     startMenu.setAttribute("aria-hidden", "false");
     setStartMenuInteractive(true);
   }
@@ -6551,23 +6568,15 @@ function fitStatsStartButtonNicknameLabel(){
 }
 
 function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()){
+  const root = document.documentElement;
+  if (root && root.classList){
+    root.classList.remove("sg-start-nickname-prepaint", "sg-start-nickname-needs-name", "sg-start-nickname-has-name");
+    if (root.style && root.style.removeProperty) root.style.removeProperty("--sg-start-nickname-welcome");
+  }
   if (!btnEnterNickname && !startWelcomeNickname) return;
   const nicknameText = String(savedNickname || "").trim();
   const needsNickname = !nicknameText;
   const inputActive = isStartNicknameInputActive();
-
-  const root = document.documentElement;
-  if (root){
-    root.classList.add("start-menu-nickname-hydrated");
-    root.classList.toggle("start-menu-nickname-present", !needsNickname);
-    root.classList.toggle("start-menu-nickname-missing", needsNickname);
-    try{
-      root.style.setProperty("--start-menu-welcome-text", JSON.stringify(needsNickname ? "" : `Welcome back, ${nicknameText}`));
-    }catch(error){
-      const safeWelcome = needsNickname ? "" : `Welcome back, ${nicknameText}`.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-      root.style.setProperty("--start-menu-welcome-text", safeWelcome ? `"${safeWelcome}"` : '""');
-    }
-  }
 
   if (btnEnterNickname){
     btnEnterNickname.classList.toggle("needsNickname", needsNickname && !inputActive);
