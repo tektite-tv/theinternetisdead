@@ -5562,6 +5562,50 @@ body.menu-hub-open #menuHubPanel{
     }
   </style>
 
+
+
+
+<style id="startMenuEnterNicknameControllerFocusMatchStartFinal">
+  /* v2.XX: Match Enter Nickname controller focus to Start Game exactly. */
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow.controllerFocus,
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow.controller-selected{
+    border-color:transparent !important;
+    box-shadow:none !important;
+    outline:none !important;
+    background:transparent !important;
+  }
+
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput:not(.nicknameEntryActive),
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startWelcomeNickname:not(.hasNickname){
+    border:0 !important;
+    box-shadow:none !important;
+    outline:none !important;
+    background:transparent !important;
+  }
+
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controllerFocus,
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controller-selected{
+    background:rgba(75,0,118,0.55) !important;
+    border:2px solid rgba(0,255,0,0.9) !important;
+    border-radius:12px !important;
+    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+    outline:none !important;
+  }
+
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controllerFocus .startMenuButtonText,
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controller-selected .startMenuButtonText{
+    position:relative !important;
+    left:auto !important;
+    right:auto !important;
+    top:auto !important;
+    width:auto !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    padding:0 !important;
+    transform:none !important;
+    text-align:center !important;
+  }
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
