@@ -3358,6 +3358,75 @@ body.invert-colors {
     border-color: rgba(0,255,0,0.9) !important;
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
   }
+
+  /* v2.XX: Start Menu equal row spacing hard override.
+     No space-evenly, no row-specific margin games. The top title padding stays
+     as-is, and every visible Start Menu row uses the same vertical gap. */
+  #startMenu.panel{
+    --start-menu-even-gap:14px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    gap:var(--start-menu-even-gap) !important;
+    padding:18px !important;
+  }
+  #startMenu.panel > *{
+    flex:0 0 auto !important;
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+    transform:none !important;
+  }
+  #startMenu #startMenuTitle,
+  #startMenu .titleSubWrap,
+  #startMenu .subimg,
+  #startMenu .menuBlurb,
+  #startMenu .btnRowTop,
+  #startMenu #startNicknameRow{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+  }
+  #startMenu .titleSubWrap{
+    min-height:18px !important;
+    line-height:1 !important;
+  }
+  #startMenu .titleSub{
+    margin:0 !important;
+  }
+  #startMenu .subimg{
+    display:block !important;
+    width:120px !important;
+    height:120px !important;
+  }
+  #startMenu .menuBlurb{
+    display:block !important;
+    transform:none !important;
+  }
+  #startMenu .btnRowTop{
+    display:grid !important;
+    grid-template-columns:repeat(2, 160px) !important;
+    justify-content:center !important;
+    align-items:center !important;
+    gap:10px !important;
+    width:100% !important;
+  }
+  #startMenu #startNicknameRow{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    min-height:42px !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+  }
+  #startMenu #startWelcomeNickname{
+    margin:0 !important;
+    padding:0 8px !important;
+    min-height:42px !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+
 </style>
 
 <style>
