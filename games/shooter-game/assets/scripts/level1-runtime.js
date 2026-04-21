@@ -152,7 +152,7 @@ function getActiveMusicAudioElement(){
   return isPreGameplayMenuAudioState() ? menuMusicBg : musicBg;
 }
 function getActiveMusicFilename(){
-  if (audioMuted) return "Muted";
+  if (effectiveAudioMuted()) return "Muted";
   return musicFilenameFromPath(getActiveMusicAudioElement().src || getActiveMusicAudioElement().currentSrc || (isPreGameplayMenuAudioState() ? AUDIO_MENU_MUSIC : AUDIO_BG_MUSIC));
 }
 function setHudMusicSelection(filename){
@@ -3406,6 +3406,7 @@ const musicFileDropdown = document.getElementById("musicFileDropdown");
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const constructionHoverReveal = document.getElementById("constructionHoverReveal");
 function updateMusicHud(labelText){
+  audioMuted = effectiveAudioMuted();
   const icon = audioMuted ? "🔇" : "🔊";
   if (stageHudLabel && typeof labelText === "string") stageHudLabel.textContent = labelText;
   if (stageHudSpeaker){
@@ -7338,7 +7339,7 @@ if (backgroundColorPicker){
   });
 }
 
-syncStartMenuMuteIcon();
+applyMuteState();
 if (stageHud){
   stageHud.addEventListener("click", (event) => {
     if (!isPreGameplayMenuAudioState()) return;

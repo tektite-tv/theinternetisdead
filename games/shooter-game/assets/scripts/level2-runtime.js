@@ -149,7 +149,7 @@ function setAudioElementTrack(audioEl, filename, restart=true){
   return true;
 }
 function getActiveMusicFilename(){
-  if (audioMuted) return "Muted";
+  if (effectiveAudioMuted()) return "Muted";
   return musicFilenameFromPath(musicBg.src || musicBg.currentSrc || AUDIO_BG_MUSIC);
 }
 function setHudMusicSelection(filename){
@@ -166,6 +166,7 @@ function setHudMusicSelection(filename){
   updateMusicHud();
 }
 function updateMusicHud(labelText){
+  audioMuted = effectiveAudioMuted();
   const stageHudEl = document.getElementById("stageHud");
   const labelEl = document.getElementById("stageHudLabel");
   const speakerEl = document.getElementById("stageHudSpeaker");
@@ -199,6 +200,7 @@ function applyMuteState(){
   sfxOof.muted = m;
   sfxUiHover.muted = m;
   sfxUiSelect.muted = m;
+  updateMusicHud();
 }
 
 function setMuteOptionEnabled(shouldEnable){
@@ -482,6 +484,7 @@ const stageHudSpeaker = document.getElementById("stageHudSpeaker");
 const musicFileDropdown = document.getElementById("musicFileDropdown");
 if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", () => { unlockAudioOnce(); setMuteOptionEnabled(!audioMuted); });
 if (musicFileDropdown) musicFileDropdown.addEventListener("change", () => setHudMusicSelection(musicFileDropdown.value));
+applyMuteState();
 
 function isTektiteNicknameCheatermodeUnlock(){
   return getSavedChatNicknameValue().trim().toLowerCase() === "tektite";
