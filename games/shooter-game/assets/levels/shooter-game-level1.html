@@ -3297,6 +3297,50 @@ body.invert-colors {
     padding:0 8px !important;
   }
 
+
+  /* v2.XX: Keep Start Menu nickname/no-nickname states on the same layout.
+     Start Game and Menu are the only buttons in the main row, so the Menu
+     button no longer shrinks just because a nickname exists. The nickname
+     area stays as its own row: either Enter Nickname/input, or Welcome back. */
+  #startMenu .btnRowTop{
+    display:grid !important;
+    grid-template-columns:repeat(2, 160px) !important;
+    justify-content:center !important;
+    align-items:center !important;
+    gap:var(--start-menu-gap, 10px) !important;
+    width:100% !important;
+  }
+  #startMenu #btnStart,
+  #startMenu #btnMenu{
+    width:160px !important;
+    min-width:160px !important;
+    max-width:160px !important;
+    box-sizing:border-box !important;
+  }
+  #startMenu #startNicknameRow{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    min-height:42px !important;
+    margin:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+  }
+  #startMenu #btnEnterNickname,
+  #startMenu #startNicknameInput{
+    width:220px !important;
+    min-width:220px !important;
+    max-width:220px !important;
+    box-sizing:border-box !important;
+  }
+  #startMenu #startWelcomeNickname{
+    width:100% !important;
+    margin:0 !important;
+    padding:0 8px !important;
+    box-sizing:border-box !important;
+  }
+
   /* v2.XX: Controller-selected Start Menu items now reuse the exact glow state
      used by mouse hover. The earlier rules existed above the global focus-killer,
      so the browser gleefully erased the glow like a tiny bureaucrat. */
@@ -3556,10 +3600,12 @@ body.invert-colors {
     <div class="btnRow btnRowTop">
       <button id="btnStart"><span class="startMenuButtonText">Start Game</span></button>
       <button id="btnMenu" class="smallBtn" type="button"><span class="startMenuButtonText">Menu</span></button>
+    </div>
+    <div id="startNicknameRow" class="startMenuNicknameRow">
       <button id="btnEnterNickname" class="smallBtn" type="button"><span class="startMenuButtonText">Enter Nickname</span></button>
       <input id="startNicknameInput" class="smallBtn" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname" />
+      <div id="startWelcomeNickname" class="startMenuWelcomeNickname" aria-live="polite"></div>
     </div>
-    <div id="startWelcomeNickname" class="startMenuWelcomeNickname" aria-live="polite"></div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>
 
