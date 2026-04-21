@@ -3020,32 +3020,16 @@ window.addEventListener("resize", resize);
 
 function fitMenuHubToStartMenu(){
   if (!menuHubPanelInner) return;
-
-  // The Hub must occupy the exact same visual footprint as the Start Menu.
-  // Measure the Start Menu's rendered rectangle, including its transform, then
-  // apply that rectangle as the Hub's border-box. No extra hub-only scaling.
-  const rect = getFallbackMenuRect();
-  if (!rect || !rect.width || !rect.height) return;
-
-  const width = Math.round(rect.width);
-  const height = Math.round(rect.height);
-  const radius = startMenu ? getComputedStyle(startMenu).borderRadius : "14px";
-
-  menuHubPanelInner.style.boxSizing = "border-box";
-  menuHubPanelInner.style.width = `${width}px`;
-  menuHubPanelInner.style.height = `${height}px`;
-  menuHubPanelInner.style.minWidth = `${width}px`;
-  menuHubPanelInner.style.minHeight = `${height}px`;
-  menuHubPanelInner.style.maxWidth = `${width}px`;
-  menuHubPanelInner.style.maxHeight = `${height}px`;
-  menuHubPanelInner.style.borderRadius = radius || "14px";
-  menuHubPanelInner.style.transform = "none";
-  menuHubPanelInner.style.transformOrigin = "center center";
-
-  document.documentElement.style.setProperty("--shooter-menu-footprint-width", `${width}px`);
-  document.documentElement.style.setProperty("--shooter-menu-footprint-height", `${height}px`);
-  document.documentElement.style.setProperty("--shooter-menu-footprint-radius", radius || "14px");
+  // v2.XX: Hub sizing is native CSS now. No measured rects. No scaling.
+  // The Hub and Start Menu share the same fixed footprint selectors in the level HTML.
+  menuHubPanelInner.style.removeProperty("width");
+  menuHubPanelInner.style.removeProperty("height");
+  menuHubPanelInner.style.removeProperty("max-width");
+  menuHubPanelInner.style.removeProperty("max-height");
+  menuHubPanelInner.style.removeProperty("transform");
+  menuHubPanelInner.style.removeProperty("transform-origin");
 }
+
 function fitOptionsMenuToViewport(){
   sizeMenuLikeStartMenu(optionsMenu, optionsMenuInner, optionsScroll);
 }
@@ -5784,10 +5768,7 @@ function openMenuHub(){
   mouseShieldHolding = false;
   stopShield(false);
   // v2.XX: make the hub replace the Start Menu instead of sitting beside it.
-  // Capture the Start Menu footprint first, then hide the Start Menu with
-  // priority because later CSS overrides were winning the dumb little war.
-  if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
-  else getFallbackMenuRect();
+  // Hub size is CSS-native and matches the Start Menu footprint by default.
   document.body.classList.add("menu-hub-open");
   if (startMenu){
     startMenu.style.setProperty("display", "none", "important");
@@ -5804,7 +5785,6 @@ function openMenuHub(){
   uiRoot.classList.add("optionsBackdrop");
   uiRoot.style.display = "flex";
   fitMenuHubToStartMenu();
-  requestAnimationFrame(fitMenuHubToStartMenu);
   resetMenuHubControllerFocus();
   selectMenuHubTab("images", false);
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
