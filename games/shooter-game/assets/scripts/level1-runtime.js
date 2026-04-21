@@ -1752,6 +1752,10 @@ function getLifetimeStatsProfileId(){
   return nickname ? `name:${nickname.toLowerCase()}` : "";
 }
 
+function hasLifetimeStatsProfile(){
+  return !!getLifetimeStatsProfileId();
+}
+
 function readLifetimeStatsProfiles(){
   try{
     const parsed = JSON.parse(localStorage.getItem(LIFETIME_STATS_PROFILES_KEY) || "{}");
@@ -1784,17 +1788,14 @@ function writeDefaultLifetimeStats(stats){
 
 function readLifetimeStats(){
   const profileId = getLifetimeStatsProfileId();
-  if (!profileId) return readDefaultLifetimeStats();
+  if (!profileId) return getDefaultLifetimeStats();
   const profiles = readLifetimeStatsProfiles();
   return normalizeLifetimeStatsRecord(profiles[profileId] || {});
 }
 
 function writeLifetimeStats(stats){
   const profileId = getLifetimeStatsProfileId();
-  if (!profileId){
-    writeDefaultLifetimeStats(stats);
-    return;
-  }
+  if (!profileId) return;
   const profiles = readLifetimeStatsProfiles();
   profiles[profileId] = normalizeLifetimeStatsRecord(stats || {});
   writeLifetimeStatsProfiles(profiles);
@@ -1802,6 +1803,7 @@ function writeLifetimeStats(stats){
 
 function incrementLifetimeStat(key, amount=1){
   if (!LIFETIME_STATS_STAT_KEYS.includes(key)) return;
+  if (!hasLifetimeStatsProfile()) return;
   const stats = readLifetimeStats();
   stats[key] = Math.max(0, Number(stats[key] || 0) + Math.max(0, Number(amount) || 0));
   if (!stats.statStartedAt || typeof stats.statStartedAt !== "object") stats.statStartedAt = getDefaultLifetimeStatStartedAt();
@@ -1853,7 +1855,7 @@ function formatLifetimeNumber(value){
 
 function renderLifetimeStats(){
   const stats = readLifetimeStats();
-  writeLifetimeStats(stats);
+  if (hasLifetimeStatsProfile()) writeLifetimeStats(stats);
   const statBindings = [
     ["lifetimeScoreEarned", statLifetimeScore],
     ["lifetimeEnemiesKilled", statLifetimeEnemies],
@@ -1955,7 +1957,7 @@ function closeStatsPanel(){
 }
 
 function resetLifetimeStats(){
-  writeLifetimeStats(getDefaultLifetimeStats());
+  if (hasLifetimeStatsProfile()) writeLifetimeStats(getDefaultLifetimeStats());
   renderLifetimeStats();
 }
 
@@ -2124,6 +2126,7 @@ function setStartMenuInteractive(isInteractive){
 function commitRunLifetimeStats({won=false, died=false} = {}){
   if (currentRunStatsCommitted) return;
   currentRunStatsCommitted = true;
+  if (!hasLifetimeStatsProfile()) return;
   const stats = readLifetimeStats();
   if (won) stats.lifetimeGamesWon += 1;
   if (died) stats.lifetimeTotalDeaths += 1;
