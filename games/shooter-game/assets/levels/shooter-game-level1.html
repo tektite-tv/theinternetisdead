@@ -4777,6 +4777,17 @@ body.menu-hub-open #menuHubPanel{
 
 
 <!-- v2.XX: Hue-shift only the typed nickname text after the player enters text. -->
+
+<style id="startMenuNicknameRuntimeSingleLayerFinal">
+  /* v2.XX: Runtime owns the nickname row after hydration.
+     The first-paint ::before welcome is only for refresh prepaint; once runtime
+     has hydrated, it must not duplicate the real textContent welcome. */
+  html:not(.sg-start-nickname-prepaint) body #startMenu.panel.shooter-menu16x9Surface #startWelcomeNickname::before{
+    content:none !important;
+    display:none !important;
+  }
+</style>
+
 <style id="startMenuNicknameTypedHueShiftOnly">
   #startMenu #startNicknameInput{
     animation:none !important;

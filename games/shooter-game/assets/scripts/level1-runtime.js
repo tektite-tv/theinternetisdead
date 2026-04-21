@@ -6567,6 +6567,20 @@ function fitStatsStartButtonNicknameLabel(){
   btnStats.style.setProperty("--stats-button-focus-font-size", `${Math.min(baseSize, nextSize)}px`);
 }
 
+
+function clearStartNicknamePrepaintState(){
+  // v2.XX: The prepaint classes are only allowed to control the nickname row
+  // before the runtime hydrates. Leaving them on after saving a nickname lets
+  // old !important first-paint rules resurrect the Enter Nickname button and
+  // duplicate the Welcome back message via ::before. Bureaucratic CSS necromancy.
+  const root = document.documentElement;
+  if (!root || !root.classList) return;
+  root.classList.remove("sg-start-nickname-prepaint");
+  root.classList.remove("sg-start-nickname-needs-name");
+  root.classList.remove("sg-start-nickname-has-name");
+  try{ root.style.removeProperty("--sg-start-nickname-welcome"); }catch(_){ }
+}
+
 function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()){
   if (!btnEnterNickname && !startWelcomeNickname) return;
   const nicknameText = String(savedNickname || "").trim();
@@ -6574,23 +6588,28 @@ function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()
   const inputActive = isStartNicknameInputActive();
 
   if (btnEnterNickname){
-    btnEnterNickname.classList.toggle("needsNickname", needsNickname && !inputActive);
-    btnEnterNickname.style.display = (needsNickname && !inputActive) ? "" : "none";
-    btnEnterNickname.setAttribute("aria-hidden", (needsNickname && !inputActive) ? "false" : "true");
-    btnEnterNickname.tabIndex = (needsNickname && !inputActive) ? 0 : -1;
+    const showEnterButton = needsNickname && !inputActive;
+    btnEnterNickname.classList.toggle("needsNickname", showEnterButton);
+    btnEnterNickname.style.display = showEnterButton ? "" : "none";
+    btnEnterNickname.setAttribute("aria-hidden", showEnterButton ? "false" : "true");
+    btnEnterNickname.tabIndex = showEnterButton ? 0 : -1;
   }
 
   if (startWelcomeNickname){
-    startWelcomeNickname.classList.toggle("hasNickname", !needsNickname);
-    startWelcomeNickname.style.display = needsNickname ? "none" : "inline-flex";
-    startWelcomeNickname.textContent = needsNickname ? "" : `Welcome back, ${nicknameText}`;
-    startWelcomeNickname.setAttribute("aria-hidden", needsNickname ? "true" : "false");
+    const showWelcome = !needsNickname && !inputActive;
+    startWelcomeNickname.classList.toggle("hasNickname", showWelcome);
+    startWelcomeNickname.style.display = showWelcome ? "inline-flex" : "none";
+    startWelcomeNickname.textContent = showWelcome ? `Welcome back, ${nicknameText}` : "";
+    startWelcomeNickname.setAttribute("aria-hidden", showWelcome ? "false" : "true");
   }
 
   if (startNicknameInput && (!needsNickname || !inputActive)){
     startNicknameInput.classList.remove("nicknameEntryActive");
     startNicknameInput.style.display = "none";
   }
+
+  clearStartNicknamePrepaintState();
+
   if (!needsNickname){
     const items = getMenuControllerTargets();
     if (menuFocusIndex >= items.length) menuFocusIndex = Math.max(0, items.length - 1);
@@ -6616,6 +6635,7 @@ function resetStartNicknameEntry(){
 
 function showStartNicknameInput(){
   if (!startNicknameInput || !btnEnterNickname) return false;
+  clearStartNicknamePrepaintState();
   btnEnterNickname.classList.remove("needsNickname");
   btnEnterNickname.style.display = "none";
   btnEnterNickname.setAttribute("aria-hidden", "true");
@@ -6645,6 +6665,7 @@ function commitStartNicknameInput(){
   }
   applyNicknameFromControls(draft, false);
   resetStartNicknameEntry();
+  syncStartMenuNicknameButton(getSavedChatNicknameValue());
   const items = getMenuControllerTargets();
   const startIndex = items.indexOf(btnStart);
   menuFocusIndex = startIndex >= 0 ? startIndex : 0;
