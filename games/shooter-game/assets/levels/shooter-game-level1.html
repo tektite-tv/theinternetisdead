@@ -2153,6 +2153,12 @@ body.invert-colors {
     text-align:right;
     font-weight:900;
   }
+  .statsValue::before{
+    content:attr(data-stat-since);
+    color:#7dff7d;
+    font-weight:900;
+    white-space:nowrap;
+  }
   #statsPanelButtons{
     flex:0 0 auto;
     width:100%;
@@ -3385,7 +3391,7 @@ body.invert-colors {
     <div id="statsPanelInner">
       <div id="statsScroll" class="menuMiddleScroll">
         <div id="statsList">
-          <div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score Earned</span><span id="statLifetimeScore" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score</span><span id="statLifetimeScore" class="statsValue">0</span></div>
           <div class="statsRow" data-stat-row="lifetimeEnemiesKilled"><span>Lifetime Enemies Killed</span><span id="statLifetimeEnemies" class="statsValue">0</span></div>
           <div class="statsRow" data-stat-row="lifetimeUfosKilled"><span>Lifetime UFOs Killed</span><span id="statLifetimeUfos" class="statsValue">0</span></div>
           <div class="statsRow" data-stat-row="lifetimeGamesWon"><span>Lifetime Games Won</span><span id="statLifetimeWins" class="statsValue">0</span></div>

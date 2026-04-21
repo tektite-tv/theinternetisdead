@@ -1395,6 +1395,16 @@ let glitchBackgroundPulse = 0;
 // If the schema ever changes, migrate old values forward instead of resetting them.
 // Yes, even for a joke browser game. People get attached to numbers. Humanity is weird like that.
 const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
+const LIFETIME_STATS_PROFILES_KEY = "tektiteShooterLevel1LifetimeStatsByNickname";
+const LIFETIME_STATS_STAT_KEYS = [
+  "lifetimeScoreEarned",
+  "lifetimeEnemiesKilled",
+  "lifetimeUfosKilled",
+  "lifetimeGamesWon",
+  "lifetimeTotalDeaths",
+  "lifetimeBulletsFired",
+  "lifetimeBombKills"
+];
 const SAVED_IMAGES_KEY = "tektiteShooterSavedImages";
 const SAVED_IMAGES_MAX = 10;
 
@@ -1600,36 +1610,128 @@ async function saveCurrentGameImage(levelLabel="Level 1"){
 
 let currentRunStatsCommitted = false;
 
-function getDefaultLifetimeStats(){
-  return {
-    lifetimeScoreEarned: 0,
-    lifetimeEnemiesKilled: 0,
-    lifetimeUfosKilled: 0,
-    lifetimeGamesWon: 0,
-    lifetimeTotalDeaths: 0,
-    lifetimeBulletsFired: 0,
-    lifetimeBombKills: 0
-  };
+function getLifetimeStatDateStamp(){
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-function readLifetimeStats(){
+function formatLifetimeSinceDate(stamp){
+  const raw = String(stamp || "").trim();
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())){
+    const yyyy = parsed.getFullYear();
+    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+    const dd = String(parsed.getDate()).padStart(2, "0");
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  return formatLifetimeSinceDate(getLifetimeStatDateStamp());
+}
+
+function getDefaultLifetimeStatStartedAt(){
+  const today = getLifetimeStatDateStamp();
+  return LIFETIME_STATS_STAT_KEYS.reduce((dates, key) => {
+    dates[key] = today;
+    return dates;
+  }, {});
+}
+
+function getDefaultLifetimeStats(){
+  return Object.assign(LIFETIME_STATS_STAT_KEYS.reduce((stats, key) => {
+    stats[key] = 0;
+    return stats;
+  }, {}), {
+    statStartedAt: getDefaultLifetimeStatStartedAt()
+  });
+}
+
+function normalizeLifetimeStatsRecord(rawStats){
+  const defaults = getDefaultLifetimeStats();
+  const raw = rawStats && typeof rawStats === "object" ? rawStats : {};
+  const normalized = Object.assign({}, defaults, raw);
+  normalized.statStartedAt = Object.assign({}, defaults.statStartedAt, raw.statStartedAt || {});
+  for (const key of LIFETIME_STATS_STAT_KEYS){
+    normalized[key] = Math.max(0, Number(normalized[key] || 0));
+    if (!normalized.statStartedAt[key]) normalized.statStartedAt[key] = getLifetimeStatDateStamp();
+  }
+  return normalized;
+}
+
+function getLifetimeStatsProfileName(){
+  try{
+    const savedNickname = window.localStorage.getItem("tektiteChatNickname");
+    const isExplicit = window.localStorage.getItem("tektiteChatNicknameExplicit") === "true";
+    const normalized = savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
+    if (normalized === "User" && !isExplicit) return "";
+    return Array.from(normalized).slice(0, 8).join("");
+  }catch(error){
+    return "";
+  }
+}
+
+function getLifetimeStatsProfileId(){
+  const nickname = getLifetimeStatsProfileName();
+  return nickname ? `name:${nickname.toLowerCase()}` : "";
+}
+
+function readLifetimeStatsProfiles(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(LIFETIME_STATS_PROFILES_KEY) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  }catch(e){
+    return {};
+  }
+}
+
+function writeLifetimeStatsProfiles(profiles){
+  try{
+    localStorage.setItem(LIFETIME_STATS_PROFILES_KEY, JSON.stringify(profiles && typeof profiles === "object" ? profiles : {}));
+  }catch(e){}
+}
+
+function readDefaultLifetimeStats(){
   try{
     const parsed = JSON.parse(localStorage.getItem(LIFETIME_STATS_KEY) || "null");
-    return Object.assign(getDefaultLifetimeStats(), parsed || {});
+    return normalizeLifetimeStatsRecord(parsed || {});
   }catch(e){
     return getDefaultLifetimeStats();
   }
 }
 
-function writeLifetimeStats(stats){
+function writeDefaultLifetimeStats(stats){
   try{
-    localStorage.setItem(LIFETIME_STATS_KEY, JSON.stringify(Object.assign(getDefaultLifetimeStats(), stats || {})));
+    localStorage.setItem(LIFETIME_STATS_KEY, JSON.stringify(normalizeLifetimeStatsRecord(stats || {})));
   }catch(e){}
 }
 
+function readLifetimeStats(){
+  const profileId = getLifetimeStatsProfileId();
+  if (!profileId) return readDefaultLifetimeStats();
+  const profiles = readLifetimeStatsProfiles();
+  return normalizeLifetimeStatsRecord(profiles[profileId] || {});
+}
+
+function writeLifetimeStats(stats){
+  const profileId = getLifetimeStatsProfileId();
+  if (!profileId){
+    writeDefaultLifetimeStats(stats);
+    return;
+  }
+  const profiles = readLifetimeStatsProfiles();
+  profiles[profileId] = normalizeLifetimeStatsRecord(stats || {});
+  writeLifetimeStatsProfiles(profiles);
+}
+
 function incrementLifetimeStat(key, amount=1){
+  if (!LIFETIME_STATS_STAT_KEYS.includes(key)) return;
   const stats = readLifetimeStats();
   stats[key] = Math.max(0, Number(stats[key] || 0) + Math.max(0, Number(amount) || 0));
+  if (!stats.statStartedAt || typeof stats.statStartedAt !== "object") stats.statStartedAt = getDefaultLifetimeStatStartedAt();
+  if (!stats.statStartedAt[key]) stats.statStartedAt[key] = getLifetimeStatDateStamp();
   writeLifetimeStats(stats);
   renderLifetimeStats();
 }
@@ -1677,6 +1779,7 @@ function formatLifetimeNumber(value){
 
 function renderLifetimeStats(){
   const stats = readLifetimeStats();
+  writeLifetimeStats(stats);
   const statBindings = [
     ["lifetimeScoreEarned", statLifetimeScore],
     ["lifetimeEnemiesKilled", statLifetimeEnemies],
@@ -1696,7 +1799,11 @@ function renderLifetimeStats(){
   for (const [key, el] of statBindings){
     const value = Math.max(0, Number(stats[key] || 0));
     const row = document.querySelector(`[data-stat-row="${key}"]`);
-    if (el) el.textContent = formatLifetimeNumber(value);
+    const since = formatLifetimeSinceDate(stats.statStartedAt && stats.statStartedAt[key]);
+    if (el){
+      el.dataset.statSince = `Since ${since} - `;
+      el.textContent = formatLifetimeNumber(value);
+    }
     if (!row) continue;
 
     if (value > 0){
@@ -6436,6 +6543,7 @@ function applyNicknameFromControls(value, announce=false){
   if (nicknameInput) nicknameInput.value = normalized;
   syncNicknameInputPreview();
   syncNicknameStatsLabels();
+  if (typeof renderLifetimeStats === "function") renderLifetimeStats();
   syncNicknameActionButton();
   syncTektiteNicknameCheatermodeUnlock();
   try{
