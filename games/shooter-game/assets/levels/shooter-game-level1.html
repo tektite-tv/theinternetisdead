@@ -163,6 +163,29 @@
   #startMenu #startNicknameInput.nicknameEntryActive{
     display:inline-flex;
   }
+  #startMenu #startWelcomeNickname{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    width:160px;
+    min-width:160px;
+    min-height:42px;
+    box-sizing:border-box;
+    padding:6px 8px;
+    color:#0f0;
+    font-family:inherit;
+    font-size:18px;
+    font-weight:900;
+    line-height:1.08;
+    letter-spacing:0.7px;
+    text-align:center;
+    text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(0,255,102,0.25);
+    animation:titleTextHueShift 1.4s linear infinite;
+    overflow-wrap:anywhere;
+  }
+  #startMenu #startWelcomeNickname.hasNickname{
+    display:inline-flex;
+  }
   body.controller-active #startMenu #startNicknameInput.controllerFocus{
     border-color:#00ffff;
     box-shadow:0 0 0 2px rgba(0,255,255,0.25), 0 0 16px rgba(0,255,255,0.35);
@@ -3411,6 +3434,7 @@ body.invert-colors {
       <button id="btnMenu" class="smallBtn" type="button"><span class="startMenuButtonText">Menu</span></button>
       <button id="btnEnterNickname" class="smallBtn" type="button"><span class="startMenuButtonText">Enter Nickname</span></button>
       <input id="startNicknameInput" class="smallBtn" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname" />
+      <div id="startWelcomeNickname" class="startMenuWelcomeNickname" aria-live="polite"></div>
     </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>

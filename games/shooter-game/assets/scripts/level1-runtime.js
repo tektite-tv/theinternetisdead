@@ -3295,6 +3295,7 @@ const btnStart = document.getElementById("btnStart");
 const btnMenu = document.getElementById("btnMenu");
 const btnEnterNickname = document.getElementById("btnEnterNickname");
 const startNicknameInput = document.getElementById("startNicknameInput");
+const startWelcomeNickname = document.getElementById("startWelcomeNickname");
 const btnOptions = document.getElementById("btnOptions");
 const startMenuTitle = document.getElementById("startMenuTitle");
 const stageHud = document.getElementById("stageHud");
@@ -6536,13 +6537,25 @@ function fitStatsStartButtonNicknameLabel(){
 }
 
 function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()){
-  if (!btnEnterNickname) return;
-  const needsNickname = !savedNickname;
+  if (!btnEnterNickname && !startWelcomeNickname) return;
+  const nicknameText = String(savedNickname || "").trim();
+  const needsNickname = !nicknameText;
   const inputActive = isStartNicknameInputActive();
-  btnEnterNickname.classList.toggle("needsNickname", needsNickname && !inputActive);
-  btnEnterNickname.style.display = (needsNickname && !inputActive) ? "" : "none";
-  btnEnterNickname.setAttribute("aria-hidden", (needsNickname && !inputActive) ? "false" : "true");
-  btnEnterNickname.tabIndex = (needsNickname && !inputActive) ? 0 : -1;
+
+  if (btnEnterNickname){
+    btnEnterNickname.classList.toggle("needsNickname", needsNickname && !inputActive);
+    btnEnterNickname.style.display = (needsNickname && !inputActive) ? "" : "none";
+    btnEnterNickname.setAttribute("aria-hidden", (needsNickname && !inputActive) ? "false" : "true");
+    btnEnterNickname.tabIndex = (needsNickname && !inputActive) ? 0 : -1;
+  }
+
+  if (startWelcomeNickname){
+    startWelcomeNickname.classList.toggle("hasNickname", !needsNickname);
+    startWelcomeNickname.style.display = needsNickname ? "none" : "inline-flex";
+    startWelcomeNickname.textContent = needsNickname ? "" : `Welcome back, ${nicknameText}`;
+    startWelcomeNickname.setAttribute("aria-hidden", needsNickname ? "true" : "false");
+  }
+
   if (startNicknameInput && (!needsNickname || !inputActive)){
     startNicknameInput.classList.remove("nicknameEntryActive");
     startNicknameInput.style.display = "none";
