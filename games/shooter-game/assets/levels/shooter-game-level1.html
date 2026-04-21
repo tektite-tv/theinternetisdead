@@ -4787,3 +4787,77 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+<style id="startMenuNicknameExclusiveVisibleLayerFix">
+  /* v2.XX: Final Start Menu nickname state-layer fix.
+     The nickname row is one grid cell. Only ONE child is allowed to render and
+     receive pointer events at a time: the button, the input, or the welcome text.
+     This keeps the fixed/proportional layout intact while stopping the input
+     from sitting invisibly on top of the Enter Nickname button. */
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname:not(.needsNickname),
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput:not(.nicknameEntryActive),
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startWelcomeNickname:not(.hasNickname){
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    align-items:center !important;
+    justify-content:center !important;
+    grid-column:1 !important;
+    grid-row:1 !important;
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    padding:0 14px !important;
+    box-sizing:border-box !important;
+    cursor:pointer !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput.nicknameEntryActive{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    grid-column:1 !important;
+    grid-row:1 !important;
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    padding:0 14px !important;
+    box-sizing:border-box !important;
+    text-align:center !important;
+    cursor:text !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startWelcomeNickname.hasNickname{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:none !important;
+    align-items:center !important;
+    justify-content:center !important;
+    grid-column:1 !important;
+    grid-row:1 !important;
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    padding:0 8px !important;
+    box-sizing:border-box !important;
+  }
+</style>
