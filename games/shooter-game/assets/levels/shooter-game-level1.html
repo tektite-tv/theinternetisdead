@@ -5012,6 +5012,61 @@ body.menu-hub-open #menuHubPanel{
 </style>
 
 
+
+
+<style id="statsNicknameInputMatchesStartMenuFinal">
+  /* v2.XX: Stats inline nickname entry uses the same active input styling as
+     the Start Menu nickname input, including the typed-text hue shift. */
+  #statsNicknameInput{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:42px !important;
+    min-height:42px !important;
+    max-height:42px !important;
+    box-sizing:border-box !important;
+    margin:0 !important;
+    padding:0 14px !important;
+    display:block !important;
+    text-align:center !important;
+    font-family:"Courier New", monospace !important;
+    font-size:var(--menu-button-font-size, 14px) !important;
+    font-weight:900 !important;
+    line-height:1.1 !important;
+    color:#00ffff !important;
+    background:rgba(0,0,0,0.65) !important;
+    border:2px solid rgba(0,255,0,0.78) !important;
+    border-radius:10px !important;
+    outline:none !important;
+    box-shadow:0 0 18px rgba(0,255,102,0.18) !important;
+    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25) !important;
+    animation:none !important;
+    caret-color:#00ffff !important;
+    cursor:text !important;
+  }
+
+  #statsNicknameInput[hidden]{
+    display:none !important;
+  }
+
+  #statsNicknameInput::placeholder{
+    color:rgba(0,255,255,0.72) !important;
+    text-shadow:0 0 8px rgba(0,255,255,0.42), 0 0 14px rgba(0,255,255,0.18) !important;
+    animation:none !important;
+  }
+
+  #statsNicknameInput.nicknameEntryActive.nicknameHasDraft{
+    animation:startNicknameTypedTextHueShift 1.25s linear infinite !important;
+    caret-color:#00ffff !important;
+  }
+
+  body.controller-active #statsNicknameInput.controllerFocus,
+  body.controller-active #statsNicknameInput.nicknameEntryActive.controllerFocus{
+    border-color:#00ffff !important;
+    outline:none !important;
+    box-shadow:0 0 0 2px rgba(0,255,255,0.25), 0 0 16px rgba(0,255,255,0.35) !important;
+  }
+</style>
 <style id="startMenuConstructionGateFinalWinner">
   /* v2.XX: Final construction gate winner. Do not change the Start/Hub
      footprint here; this only controls what is visible inside Start Menu. */

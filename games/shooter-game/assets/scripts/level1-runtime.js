@@ -5030,12 +5030,20 @@ function toggleStatsLockedSummary(){
   return true;
 }
 
+function syncStatsNicknameInputDraftState(){
+  if (!statsNicknameInput) return;
+  const hasDraft = !!String(statsNicknameInput.value || "").trim();
+  statsNicknameInput.classList.toggle("nicknameHasDraft", hasDraft);
+}
+
 function resetStatsNicknameEntry(){
   if (statsNicknameInput){
     statsNicknameInput.hidden = true;
     statsNicknameInput.setAttribute("aria-hidden", "true");
     statsNicknameInput.tabIndex = -1;
     statsNicknameInput.value = "";
+    statsNicknameInput.classList.remove("nicknameEntryActive");
+    statsNicknameInput.classList.remove("nicknameHasDraft");
   }
   if (btnStatsEnterNickname && !hasLifetimeStatsProfile()){
     btnStatsEnterNickname.textContent = "Enter Nickname to Track Stats";
@@ -5055,6 +5063,8 @@ function showStatsNicknameInput(){
   statsNicknameInput.setAttribute("aria-hidden", "false");
   statsNicknameInput.tabIndex = 0;
   statsNicknameInput.value = "";
+  statsNicknameInput.classList.add("nicknameEntryActive");
+  statsNicknameInput.classList.remove("nicknameHasDraft");
   statsNicknameInput.readOnly = false;
   statsNicknameInput.disabled = false;
   statsNicknameInput.placeholder = "Enter Nickname";
@@ -5079,6 +5089,8 @@ function commitStatsNicknameInput(){
   statsNicknameInput.setAttribute("aria-hidden", "true");
   statsNicknameInput.tabIndex = -1;
   statsNicknameInput.value = "";
+  statsNicknameInput.classList.remove("nicknameEntryActive");
+  statsNicknameInput.classList.remove("nicknameHasDraft");
   renderLifetimeStats();
   const items = getStatsControllerTargets();
   const closeIndex = items.indexOf(btnStatsClose);
@@ -7547,6 +7559,9 @@ if (statsNicknameInput){
   statsNicknameInput.addEventListener("click", (event) => {
     event.stopPropagation();
     setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+  });
+  statsNicknameInput.addEventListener("input", () => {
+    syncStatsNicknameInputDraftState();
   });
   statsNicknameInput.addEventListener("keydown", (event) => {
     event.stopPropagation();
