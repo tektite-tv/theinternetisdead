@@ -5406,13 +5406,15 @@ body.menu-hub-open #menuHubPanel{
      menu gets this frame; native pause Controls keeps its own layout. */
   html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
   #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode{
-    --hub-controls-16x9-width:min(520px, 92vw, calc((100vh - 32px) * 16 / 9));
-    width:var(--hub-controls-16x9-width) !important;
-    min-width:var(--hub-controls-16x9-width) !important;
-    max-width:var(--hub-controls-16x9-width) !important;
-    height:calc(var(--hub-controls-16x9-width) * 9 / 16) !important;
-    min-height:calc(var(--hub-controls-16x9-width) * 9 / 16) !important;
-    max-height:calc(var(--hub-controls-16x9-width) * 9 / 16) !important;
+    /* Match the Start/Hub source-of-truth frame exactly. Do not use the
+       old 520px Controls cap here or the Hub-launched Controls panel renders
+       as a smaller 16:9 panel than every other Hub/Start menu. */
+    width:var(--shooter-start-hub-frame-width) !important;
+    min-width:var(--shooter-start-hub-frame-width) !important;
+    max-width:var(--shooter-start-hub-frame-width) !important;
+    height:var(--shooter-start-hub-frame-height) !important;
+    min-height:var(--shooter-start-hub-frame-height) !important;
+    max-height:var(--shooter-start-hub-frame-height) !important;
     aspect-ratio:16 / 9 !important;
     box-sizing:border-box !important;
     overflow:hidden !important;
