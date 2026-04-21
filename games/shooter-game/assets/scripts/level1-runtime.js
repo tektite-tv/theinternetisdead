@@ -3020,12 +3020,14 @@ window.addEventListener("resize", resize);
 
 function fitMenuHubToStartMenu(){
   if (!menuHubPanelInner) return;
-  const sourceRect = getFallbackMenuRect();
-  if (!sourceRect || !sourceRect.width || !sourceRect.height) return;
-  menuHubPanelInner.style.width = `${Math.round(sourceRect.width)}px`;
-  menuHubPanelInner.style.height = `${Math.round(sourceRect.height)}px`;
-  menuHubPanelInner.style.maxWidth = `${Math.round(sourceRect.width)}px`;
-  menuHubPanelInner.style.maxHeight = `${Math.round(sourceRect.height)}px`;
+  // Keep the Hub on the same unscaled CSS footprint as the Start Menu.
+  // Do NOT copy getBoundingClientRect() here: the Start Menu is transform-scaled,
+  // and copying that already-scaled rect makes the Hub fight its own scale.
+  // Browsers, naturally, chose violence.
+  menuHubPanelInner.style.width = "var(--shooter-menu-footprint-width)";
+  menuHubPanelInner.style.height = "var(--shooter-menu-footprint-height)";
+  menuHubPanelInner.style.maxWidth = "var(--shooter-menu-footprint-width)";
+  menuHubPanelInner.style.maxHeight = "var(--shooter-menu-footprint-height)";
 }
 
 function fitOptionsMenuToViewport(){

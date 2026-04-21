@@ -4109,8 +4109,17 @@ body.menu-hub-open #menuHubPanel{
   justify-content:center !important;
 }
 #menuHubPanel #menuHubPanelInner{
+  /* Match the Start Menu actual visible footprint. The Start Menu shell is
+     scaled to 0.975, so the Hub shell must use the same unscaled CSS box and
+     the same visual scale. Otherwise it looks slightly larger even when the
+     width/height variables match. CSS, naturally, found a way to make equality fake. */
+  width:var(--shooter-menu-footprint-width) !important;
+  max-width:var(--shooter-menu-footprint-width) !important;
+  height:var(--shooter-menu-footprint-height) !important;
+  max-height:var(--shooter-menu-footprint-height) !important;
   box-sizing:border-box !important;
   border-width:2px !important;
-  transform:none !important;
+  transform:scale(0.975) !important;
+  transform-origin:center center !important;
 }
 </style>
