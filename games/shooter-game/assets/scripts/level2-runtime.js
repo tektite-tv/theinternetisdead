@@ -100,7 +100,14 @@ const AUDIO_UI_SELECT = "/games/shooter-game/assets/audio/arcade-clink.mp3";
    Audio
 ======================= */
 const AUDIO_BG_MUSIC = "/games/shooter-game/assets/audio/do-that-there.mp3";
+const AUDIO_LEVEL1_MUSIC = "/games/shooter-game/assets/audio/spaceinvaders.mp3";
+const AUDIO_MENU_MUSIC = "/games/shooter-game/assets/audio/wii-shop-music.mp3";
 const AUDIO_DEATH_YELL = "/games/shooter-game/assets/audio/link-yell.mp3";
+const MUSIC_TRACKS = {
+  "wii-shop-music.mp3": AUDIO_MENU_MUSIC,
+  "spaceinvaders.mp3": AUDIO_LEVEL1_MUSIC,
+  "do-that-there.mp3": AUDIO_BG_MUSIC
+};
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
@@ -113,25 +120,79 @@ const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
 sfxDeath.volume = 0.10;
 
-// Global mute toggle (M key).
-// v2.XX: Nickname `_mute` hard-mutes all level audio even when the normal mute option is off.
+// Global mute toggle (M key)
 let audioMuted = false;
-const GAME_AUDIO_MUTE_NICKNAME = "_mute";
+let manualAudioMuted = false;
 
-function isMuteNicknameEnabled(){
+function isMuteNicknameActive(){
+  try{ return String(getSavedChatNicknameValue ? getSavedChatNicknameValue() : "").trim().toLowerCase() === "_mute"; }catch(_){ return false; }
+}
+function effectiveAudioMuted(){
+  return !!manualAudioMuted || isMuteNicknameActive();
+}
+function musicFilenameFromPath(path){
+  const raw = String(path || "").split("?")[0].split("#")[0];
+  return raw.substring(raw.lastIndexOf("/") + 1) || "do-that-there.mp3";
+}
+function setAudioElementTrack(audioEl, filename, restart=true){
+  const src = MUSIC_TRACKS[filename];
+  if (!audioEl || !src) return false;
+  const wasPlaying = !audioEl.paused;
+  try{ audioEl.pause(); }catch(_){ }
   try{
-    return getSavedChatNicknameValue().trim().toLowerCase() === GAME_AUDIO_MUTE_NICKNAME;
-  }catch(error){
-    return false;
+    if (!String(audioEl.src || "").endsWith(src)) audioEl.src = src;
+    if (restart) audioEl.currentTime = 0;
+    audioEl.loop = true;
+    audioEl.load();
+  }catch(_){ }
+  if (wasPlaying && !audioMuted) tryPlayWithRetry(audioEl, 30, 80);
+  return true;
+}
+function getActiveMusicFilename(){
+  if (audioMuted) return "Muted";
+  return musicFilenameFromPath(musicBg.src || musicBg.currentSrc || AUDIO_BG_MUSIC);
+}
+function setHudMusicSelection(filename){
+  if (filename === "Muted"){
+    setMuteOptionEnabled(true);
+    return;
+  }
+  if (!MUSIC_TRACKS[filename]) return;
+  manualAudioMuted = false;
+  audioMuted = effectiveAudioMuted();
+  setAudioElementTrack(musicBg, filename, true);
+  applyMuteState();
+  if (!audioMuted && gameState === STATE.PLAYING) ensureMusicPlaying(true);
+  updateMusicHud();
+}
+function updateMusicHud(labelText){
+  const stageHudEl = document.getElementById("stageHud");
+  const labelEl = document.getElementById("stageHudLabel");
+  const speakerEl = document.getElementById("stageHudSpeaker");
+  const dropdownEl = document.getElementById("musicFileDropdown");
+  const icon = audioMuted ? "🔇" : "🔊";
+  if (labelEl && typeof labelText === "string") labelEl.textContent = labelText;
+  if (speakerEl){
+    speakerEl.textContent = icon;
+    speakerEl.setAttribute("aria-label", audioMuted ? "Unmute audio" : "Mute audio");
+    speakerEl.title = audioMuted ? "Unmute all game audio" : "Mute all game audio";
+  }
+  if (dropdownEl){
+    const filename = getActiveMusicFilename();
+    dropdownEl.value = filename;
+    if (dropdownEl.value !== filename) dropdownEl.value = "Muted";
+    dropdownEl.classList.toggle("isMuted", !!audioMuted);
+    dropdownEl.title = audioMuted ? "Muted" : filename;
+  }
+  if (stageHudEl){
+    stageHudEl.dataset.audioIcon = icon;
+    stageHudEl.setAttribute("aria-label", `${labelEl ? labelEl.textContent : "HUD"}. Audio ${audioMuted ? "muted" : "enabled"}.`);
   }
 }
 
-function isGameAudioMuted(){
-  return !!audioMuted || isMuteNicknameEnabled();
-}
-
 function applyMuteState(){
-  const m = isGameAudioMuted();
+  audioMuted = effectiveAudioMuted();
+  const m = !!audioMuted;
   musicBg.muted = m;
   sfxDeath.muted = m;
   sfxHit.muted = m;
@@ -141,16 +202,17 @@ function applyMuteState(){
 }
 
 function setMuteOptionEnabled(shouldEnable){
-  audioMuted = !!shouldEnable;
+  manualAudioMuted = !!shouldEnable;
+  audioMuted = effectiveAudioMuted();
   applyMuteState();
   // Only resume music when gameplay is actually running.
-  if (!isGameAudioMuted() && gameState === STATE.PLAYING) ensureMusicPlaying();
+  if (!audioMuted && gameState === STATE.PLAYING) ensureMusicPlaying();
 }
 
 function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
-  if (!audioEl || isGameAudioMuted()) return;
+  if (!audioEl || audioMuted) return;
   try{
-    audioEl.muted = isGameAudioMuted();
+    audioEl.muted = !!audioMuted;
   }catch(e){}
   try{
     const p = audioEl.play();
@@ -179,7 +241,7 @@ function ensureMusicPlaying(restart=false){
     }
     musicBg.loop = true;
   }catch(e){}
-  if (isGameAudioMuted()) return;
+  if (audioMuted) return;
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
@@ -195,10 +257,10 @@ function stopMusic(){
 }
 
 function playDeathYell(){
-  if (isGameAudioMuted()) return;
+  if (audioMuted) return;
   try{
     sfxDeath.currentTime = 0;
-    sfxDeath.muted = isGameAudioMuted();
+    sfxDeath.muted = !!audioMuted;
   }catch(e){}
   // Try immediately, then retry briefly to avoid "plays only after next keypress" behavior.
   sfxDeath.play().catch(()=>{ tryPlayWithRetry(sfxDeath, 30, 60); });
@@ -416,6 +478,10 @@ function getSavedChatNicknameValue(){
     return "";
   }
 }
+const stageHudSpeaker = document.getElementById("stageHudSpeaker");
+const musicFileDropdown = document.getElementById("musicFileDropdown");
+if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", () => { unlockAudioOnce(); setMuteOptionEnabled(!audioMuted); });
+if (musicFileDropdown) musicFileDropdown.addEventListener("change", () => setHudMusicSelection(musicFileDropdown.value));
 
 function isTektiteNicknameCheatermodeUnlock(){
   return getSavedChatNicknameValue().trim().toLowerCase() === "tektite";
@@ -801,7 +867,7 @@ function setPaused(p){
       if (!musicBg.paused) musicBg.pause();
     } else {
       // only resume if we're in gameplay and not muted
-      if (gameState === STATE.PLAYING && !isGameAudioMuted()) musicBg.play().catch(()=>{});
+      if (gameState === STATE.PLAYING && !audioMuted) musicBg.play().catch(()=>{});
     }
   }catch(e){}
 
@@ -2654,19 +2720,19 @@ function unlockAudioOnce(){
   if (gameState === STATE.PLAYING) ensureMusicPlaying();
 }
 function playSfx(a){
-  if (isGameAudioMuted()) return;
+  if (audioMuted) return;
   try{
     const c = a.cloneNode();
     c.volume = a.volume;
-    c.muted = isGameAudioMuted();
+    c.muted = !!audioMuted;
     c.play().catch(()=>{});
   }catch(e){}
 }
 function playSfxImmediate(a){
-  if (isGameAudioMuted() || !a) return;
+  if (audioMuted || !a) return;
   try{
     a.currentTime = 0;
-    a.muted = isGameAudioMuted();
+    a.muted = !!audioMuted;
     a.play().catch(()=>{});
   }catch(e){}
 }
@@ -6621,14 +6687,14 @@ if (isDragonEnemy(e)){
     const clampedWave = Math.min(wave, info.end);
     const lab = getWaveLabel(wave);
     const stageHudEl = document.getElementById("stageHud");
-    stageHudEl.textContent = lab.text;
+    updateMusicHud(lab.text);
     stageHudEl.style.color = lab.color;
   } else if (gameState === STATE.MENU || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
     const stageHudEl = document.getElementById("stageHud");
-    stageHudEl.textContent = "Start Menu";
-      stageHudEl.style.color = "#ffffff";
+    updateMusicHud("Start Menu");
+    stageHudEl.style.color = "#ffffff";
   } else {
-    document.getElementById("stageHud").textContent = "";
+    updateMusicHud("");
   }
 
   // Post FX pass (subtle)

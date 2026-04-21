@@ -94,7 +94,13 @@ const AUDIO_UI_SELECT = "/games/shooter-game/assets/audio/arcade-clink.mp3";
 ======================= */
 const AUDIO_BG_MUSIC = "/games/shooter-game/assets/audio/spaceinvaders.mp3";
 const AUDIO_MENU_MUSIC = "/games/shooter-game/assets/audio/wii-shop-music.mp3";
+const AUDIO_EXTRA_MUSIC = "/games/shooter-game/assets/audio/do-that-there.mp3";
 const AUDIO_DEATH_YELL = "/games/shooter-game/assets/audio/link-yell.mp3";
+const MUSIC_TRACKS = {
+  "wii-shop-music.mp3": AUDIO_MENU_MUSIC,
+  "spaceinvaders.mp3": AUDIO_BG_MUSIC,
+  "do-that-there.mp3": AUDIO_EXTRA_MUSIC
+};
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
@@ -114,32 +120,62 @@ const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
 sfxDeath.volume = 0.10;
 
-// Global mute toggle (M key).
-// v2.XX: Nickname `_mute` is a hard audio kill switch. The normal mute option
-// still keeps its own state, but effective playback stays silent while that
-// nickname is saved. Yes, the username field is now a control panel.
+// Global mute toggle (M key)
 let audioMuted = false;
-const GAME_AUDIO_MUTE_NICKNAME = "_mute";
+let manualAudioMuted = false;
 
-function isMuteNicknameEnabled(){
+function isMuteNicknameActive(){
+  try{ return String(getSavedChatNicknameValue ? getSavedChatNicknameValue() : "").trim().toLowerCase() === "_mute"; }catch(_){ return false; }
+}
+function effectiveAudioMuted(){
+  return !!manualAudioMuted || isMuteNicknameActive();
+}
+function musicFilenameFromPath(path){
+  const raw = String(path || "").split("?")[0].split("#")[0];
+  return raw.substring(raw.lastIndexOf("/") + 1) || "spaceinvaders.mp3";
+}
+function setAudioElementTrack(audioEl, filename, restart=true){
+  const src = MUSIC_TRACKS[filename];
+  if (!audioEl || !src) return false;
+  const wasPlaying = !audioEl.paused;
+  try{ audioEl.pause(); }catch(_){ }
   try{
-    return getSavedChatNicknameValue().trim().toLowerCase() === GAME_AUDIO_MUTE_NICKNAME;
-  }catch(error){
-    return false;
+    if (!String(audioEl.src || "").endsWith(src)) audioEl.src = src;
+    if (restart) audioEl.currentTime = 0;
+    audioEl.loop = true;
+    audioEl.load();
+  }catch(_){ }
+  if (wasPlaying && !audioMuted) tryPlayWithRetry(audioEl, 30, 80);
+  return true;
+}
+function getActiveMusicAudioElement(){
+  return isPreGameplayMenuAudioState() ? menuMusicBg : musicBg;
+}
+function getActiveMusicFilename(){
+  if (audioMuted) return "Muted";
+  return musicFilenameFromPath(getActiveMusicAudioElement().src || getActiveMusicAudioElement().currentSrc || (isPreGameplayMenuAudioState() ? AUDIO_MENU_MUSIC : AUDIO_BG_MUSIC));
+}
+function setHudMusicSelection(filename){
+  if (filename === "Muted"){
+    setMuteOptionEnabled(true);
+    return;
   }
-}
-
-function isGameAudioMuted(){
-  return !!audioMuted || isMuteNicknameEnabled();
-}
-
-function getGameAudioMuteStatusText(){
-  if (isMuteNicknameEnabled()) return "Enabled (_mute)";
-  return audioMuted ? "Enabled" : "Disabled";
+  if (!MUSIC_TRACKS[filename]) return;
+  manualAudioMuted = false;
+  audioMuted = effectiveAudioMuted();
+  const activeAudio = getActiveMusicAudioElement();
+  setAudioElementTrack(activeAudio, filename, true);
+  applyMuteState();
+  if (!audioMuted){
+    if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
+    else if (gameState === STATE.PLAYING) ensureMusicPlaying(true);
+  }
+  updateMusicHud();
 }
 
 function applyMuteState(){
-  const m = isGameAudioMuted();
+  audioMuted = effectiveAudioMuted();
+  const m = !!audioMuted;
   musicBg.muted = m;
   menuMusicBg.muted = m;
   sfxDeath.muted = m;
@@ -154,9 +190,10 @@ function applyMuteState(){
 }
 
 function setMuteOptionEnabled(shouldEnable){
-  audioMuted = !!shouldEnable;
+  manualAudioMuted = !!shouldEnable;
+  audioMuted = effectiveAudioMuted();
   applyMuteState();
-  if (!isGameAudioMuted()){
+  if (!audioMuted){
     if (gameState === STATE.PLAYING) ensureMusicPlaying();
     else if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
   }
@@ -164,9 +201,9 @@ function setMuteOptionEnabled(shouldEnable){
 }
 
 function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
-  if (!audioEl || isGameAudioMuted()) return;
+  if (!audioEl || audioMuted) return;
   try{
-    audioEl.muted = isGameAudioMuted();
+    audioEl.muted = !!audioMuted;
   }catch(e){}
   try{
     const p = audioEl.play();
@@ -204,7 +241,7 @@ function ensureMenuMusicPlaying(restart=false){
     if (restart) menuMusicBg.currentTime = 0;
     menuMusicBg.loop = true;
   }catch(e){}
-  if (isGameAudioMuted() || !isPreGameplayMenuAudioState()) return;
+  if (audioMuted || !isPreGameplayMenuAudioState()) return;
   try{
     if (!musicBg.paused) musicBg.pause();
   }catch(e){}
@@ -231,7 +268,7 @@ function ensureMusicPlaying(restart=false){
     }
     musicBg.loop = true;
   }catch(e){}
-  if (isGameAudioMuted()) return;
+  if (audioMuted) return;
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
@@ -247,10 +284,10 @@ function stopMusic(){
 }
 
 function playDeathYell(){
-  if (isGameAudioMuted()) return;
+  if (audioMuted) return;
   try{
     sfxDeath.currentTime = 0;
-    sfxDeath.muted = isGameAudioMuted();
+    sfxDeath.muted = !!audioMuted;
   }catch(e){}
   // Try immediately, then retry briefly to avoid "plays only after next keypress" behavior.
   sfxDeath.play().catch(()=>{ tryPlayWithRetry(sfxDeath, 30, 60); });
@@ -831,7 +868,7 @@ function setPaused(p){
       if (!musicBg.paused) musicBg.pause();
     } else {
       // only resume if we're in gameplay and not muted
-      if (gameState === STATE.PLAYING && !isGameAudioMuted()) musicBg.play().catch(()=>{});
+      if (gameState === STATE.PLAYING && !audioMuted) musicBg.play().catch(()=>{});
     }
   }catch(e){}
 
@@ -3258,28 +3295,28 @@ function unlockAudioOnce(){
   }catch(e){}
 
   applyMuteState();
-  if (!isGameAudioMuted() && isPreGameplayMenuAudioState()){
+  if (!audioMuted && isPreGameplayMenuAudioState()){
     ensureMenuMusicPlaying();
-    setTimeout(() => { if (!isGameAudioMuted() && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(); }, 120);
+    setTimeout(() => { if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(); }, 120);
   }
 }
 
 function playSfx(a){
-  if (isGameAudioMuted()) return;
+  if (audioMuted) return;
   try{
     const c = a.cloneNode();
     activeSfxClones.add(c);
     c.addEventListener("ended", () => activeSfxClones.delete(c), { once:true });
     c.volume = a.volume;
-    c.muted = isGameAudioMuted();
+    c.muted = !!audioMuted;
     c.play().catch(()=>{ activeSfxClones.delete(c); });
   }catch(e){}
 }
 function playSfxImmediate(a){
-  if (isGameAudioMuted() || !a) return;
+  if (audioMuted || !a) return;
   try{
     a.currentTime = 0;
-    a.muted = isGameAudioMuted();
+    a.muted = !!audioMuted;
     a.play().catch(()=>{});
   }catch(e){}
 }
@@ -3363,30 +3400,52 @@ const startWelcomeNickname = document.getElementById("startWelcomeNickname");
 const btnOptions = document.getElementById("btnOptions");
 const startMenuTitle = document.getElementById("startMenuTitle");
 const stageHud = document.getElementById("stageHud");
+const stageHudLabel = document.getElementById("stageHudLabel");
+const stageHudSpeaker = document.getElementById("stageHudSpeaker");
+const musicFileDropdown = document.getElementById("musicFileDropdown");
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const constructionHoverReveal = document.getElementById("constructionHoverReveal");
-function syncStartMenuMuteIcon(){
-  const icon = isGameAudioMuted() ? "🔇" : "🔊";
-  if (startMenuTitle){
-    startMenuTitle.dataset.audioIcon = icon;
-    startMenuTitle.setAttribute("aria-label", isGameAudioMuted() ? "Game title. Audio muted." : "Game title. Audio enabled.");
-    startMenuTitle.title = isMuteNicknameEnabled() ? "Audio muted by nickname _mute" : (audioMuted ? "Audio muted" : "Audio enabled");
+function updateMusicHud(labelText){
+  const icon = audioMuted ? "🔇" : "🔊";
+  if (stageHudLabel && typeof labelText === "string") stageHudLabel.textContent = labelText;
+  if (stageHudSpeaker){
+    stageHudSpeaker.textContent = icon;
+    stageHudSpeaker.setAttribute("aria-label", audioMuted ? "Unmute audio" : "Mute audio");
+    stageHudSpeaker.title = audioMuted ? "Unmute all game audio" : "Mute all game audio";
+  }
+  if (musicFileDropdown){
+    const filename = getActiveMusicFilename();
+    musicFileDropdown.value = filename;
+    if (musicFileDropdown.value !== filename) musicFileDropdown.value = "Muted";
+    musicFileDropdown.classList.toggle("isMuted", !!audioMuted);
+    musicFileDropdown.title = audioMuted ? "Muted" : filename;
   }
   if (stageHud){
     stageHud.dataset.audioIcon = icon;
-    stageHud.setAttribute("aria-label", isGameAudioMuted() ? "Start Menu. Audio muted. Activate speaker to unmute audio." : "Start Menu. Audio enabled. Activate speaker to mute audio.");
-    stageHud.title = isMuteNicknameEnabled() ? "Audio muted by nickname _mute" : (audioMuted ? "Unmute all game audio" : "Mute all game audio");
+    stageHud.setAttribute("aria-label", `${stageHudLabel ? stageHudLabel.textContent : "HUD"}. Audio ${audioMuted ? "muted" : "enabled"}.`);
+    stageHud.title = audioMuted ? "Unmute all game audio" : "Mute all game audio";
   }
+}
+function syncStartMenuMuteIcon(){
+  const icon = audioMuted ? "🔇" : "🔊";
+  if (startMenuTitle){
+    startMenuTitle.dataset.audioIcon = icon;
+    startMenuTitle.setAttribute("aria-label", audioMuted ? "Game title. Audio muted." : "Game title. Audio enabled.");
+    startMenuTitle.title = audioMuted ? "Audio muted" : "Audio enabled";
+  }
+  updateMusicHud();
 }
 function toggleStartMenuTitleMute(){
   unlockAudioOnce();
   setMuteOptionEnabled(!audioMuted);
-  if (!isGameAudioMuted() && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
+  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
 }
 function primeMenuMusicOnFirstGesture(){
   unlockAudioOnce();
-  if (!isGameAudioMuted() && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
+  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
 }
+if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", toggleStartMenuTitleMute);
+if (musicFileDropdown) musicFileDropdown.addEventListener("change", () => setHudMusicSelection(musicFileDropdown.value));
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const menuHubPanel = document.getElementById("menuHubPanel");
@@ -3962,11 +4021,11 @@ function markCheatsClean(applied=false){
 
 function syncCheatsMenuState(){
   if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
-  if (muteCheckbox) muteCheckbox.checked = isGameAudioMuted();
+  if (muteCheckbox) muteCheckbox.checked = !!audioMuted;
   if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
   if (videoFxCheckbox) videoFxCheckbox.checked = !!VIDEO_FX_ENABLED;
   if (infiniteToggleStatus) infiniteToggleStatus.textContent = INFINITE_MODE ? "Enabled" : "Disabled";
-  if (muteStatus) muteStatus.textContent = getGameAudioMuteStatusText();
+  if (muteStatus) muteStatus.textContent = audioMuted ? "Enabled" : "Disabled";
   if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
   if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
 }
@@ -4565,9 +4624,6 @@ function getStartNicknameMenuTarget(){
 
 function getMenuControllerTargets(){
   if (isStartMenuConstructionLocked()) return [];
-  // Start Menu controller scope: Start Game, Menu, the update-message reveal,
-  // and Enter Nickname only. The title itself is decorative, because apparently
-  // even focus order needs a bouncer now.
   return [titleHoverReveal, btnStart, btnMenu, getStartNicknameMenuTarget()].filter(Boolean);
 }
 
@@ -5432,6 +5488,7 @@ function moveMenuControllerFocus(delta){
 function moveMenuControllerFocusDirectional(direction){
   const items = getMenuControllerTargets();
   if (!items.length) return false;
+  const titleIndex = items.indexOf(startMenuTitle);
   const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
   const menuIndex = items.indexOf(btnMenu);
@@ -5440,16 +5497,15 @@ function moveMenuControllerFocusDirectional(direction){
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
-    // Only switch Menu -> Start. No rollover, no nickname side quests.
     if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
   } else if (direction === "right"){
-    // Only switch Start -> Menu. No rollover, because this is a menu, not a hamster wheel.
     if (menuFocusIndex === startIndex && menuIndex !== -1) nextIndex = menuIndex;
   } else if (direction === "down"){
     if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && nicknameIndex !== -1) nextIndex = nicknameIndex;
     else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
   } else if (direction === "up"){
     if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && revealIndex !== -1) nextIndex = revealIndex;
+    else if (menuFocusIndex === nicknameIndex && startIndex !== -1) nextIndex = startIndex;
   }
 
   if (nextIndex === menuFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
@@ -5791,7 +5847,7 @@ function showMenu(){
   try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
   deathYellPlayed = false;
   gameState = STATE.MENU;
-  if (audioUnlocked && !isGameAudioMuted()) ensureMenuMusicPlaying();
+  if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
   gameWon = false;
   // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
@@ -5840,7 +5896,7 @@ function openMenuHub(){
   setPaused(false);
   unlockAudioOnce();
   gameState = STATE.HUB;
-  if (!isGameAudioMuted()) ensureMenuMusicPlaying();
+  if (!audioMuted) ensureMenuMusicPlaying();
   mouseShieldHolding = false;
   stopShield(false);
   // v2.XX: make the hub replace the Start Menu instead of sitting beside it.
@@ -5880,7 +5936,7 @@ function closeMenuHub(){
     menuHubPanel.classList.remove("menuHubTabImages", "menuHubTabStats", "menuHubTabOptions");
   }
   gameState = STATE.MENU;
-  if (audioUnlocked && !isGameAudioMuted()) ensureMenuMusicPlaying();
+  if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
   uiRoot.classList.remove("optionsBackdrop");
   document.body.classList.remove("menu-hub-open");
   if (startMenu){
@@ -5992,7 +6048,7 @@ function showControlsMenu(options = null){
   uiRoot.classList.remove("optionsBackdrop");
   gameState = STATE.CONTROLS;
   unlockAudioOnce();
-  if (!isGameAudioMuted()) ensureMenuMusicPlaying();
+  if (!audioMuted) ensureMenuMusicPlaying();
   resetDraftBindingsFromActive();
   markControlsClean(false);
   lockControlsInputMode(activeInputMode);
@@ -6217,7 +6273,7 @@ function showCheats(){
   gameState = STATE.CHEATS;
   if (!openingFromPauseOptions){
     unlockAudioOnce();
-    if (!isGameAudioMuted()) ensureMenuMusicPlaying();
+    if (!audioMuted) ensureMenuMusicPlaying();
   }
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
@@ -6606,12 +6662,6 @@ function saveChatNickname(value){
       window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
     }
   }catch(error){}
-  applyMuteState();
-  if (!isGameAudioMuted()){
-    if (gameState === STATE.PLAYING) ensureMusicPlaying();
-    else if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
-  }
-  syncCheatsMenuState();
   return normalized;
 }
 
@@ -6868,6 +6918,8 @@ function applyNicknameFromControls(value, announce=false){
   if (nicknameInput) nicknameInput.value = normalized;
   syncNicknameInputPreview();
   syncNicknameStatsLabels();
+  audioMuted = effectiveAudioMuted();
+  applyMuteState();
   if (typeof renderLifetimeStats === "function") renderLifetimeStats();
   syncNicknameActionButton();
   syncTektiteNicknameCheatermodeUnlock();
@@ -6936,7 +6988,7 @@ function showOptions(fromPause = false){
     setPaused(false);
     gameState = STATE.OPTIONS;
     unlockAudioOnce();
-    if (!isGameAudioMuted()) ensureMenuMusicPlaying();
+    if (!audioMuted) ensureMenuMusicPlaying();
   }
   markOptionsClean(false);
     // v1.96: populate start options UI with saved settings
@@ -9364,7 +9416,7 @@ function update(dt){
     const waveIsLive = enemies.length > 0 || (wave === 11 && boss.active);
     if (waveIsLive){
       pendingWaveStartMusic = false;
-      if (!isGameAudioMuted()) ensureMusicPlaying(true);
+      if (!audioMuted) ensureMusicPlaying(true);
     }
   }
 
@@ -10311,22 +10363,21 @@ if (isDragonEnemy(e)){
     const lab = getWaveLabel(wave);
     const stageHudEl = stageHud || document.getElementById("stageHud");
     if (stageHudEl){
-      stageHudEl.textContent = lab.text;
+      updateMusicHud(lab.text);
       stageHudEl.style.color = lab.color;
-      stageHudEl.classList.remove("stageMenuAudioToggle");
+      stageHudEl.classList.add("stageMenuAudioToggle");
     }
   } else if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
     const stageHudEl = stageHud || document.getElementById("stageHud");
     if (stageHudEl){
-      stageHudEl.textContent = "Start Menu";
       stageHudEl.style.color = "#ffffff";
       stageHudEl.classList.add("stageMenuAudioToggle");
-      syncStartMenuMuteIcon();
+      updateMusicHud("Start Menu");
     }
   } else {
     const stageHudEl = stageHud || document.getElementById("stageHud");
     if (stageHudEl){
-      stageHudEl.textContent = "";
+      updateMusicHud("");
       stageHudEl.classList.remove("stageMenuAudioToggle");
     }
   }
