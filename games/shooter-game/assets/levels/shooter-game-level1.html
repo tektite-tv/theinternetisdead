@@ -4094,3 +4094,23 @@ line-height:1;
   margin:0 !important;
 }
 </style>
+
+
+<style>
+/* v2.XX: Menu hub should replace the Start Menu, not sit beside it.
+   Also force the hub shell to use the same visible footprint as the Start Menu. */
+body.menu-hub-open #startMenu{
+  display:none !important;
+  pointer-events:none !important;
+}
+body.menu-hub-open #menuHubPanel{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+#menuHubPanel #menuHubPanelInner{
+  box-sizing:border-box !important;
+  border-width:2px !important;
+  transform:none !important;
+}
+</style>

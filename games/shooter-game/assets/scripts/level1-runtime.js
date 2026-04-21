@@ -4151,17 +4151,9 @@ function setActiveInputMode(mode, options = null){
   const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
   const force = !!(options && options.force);
   if (!force && nextMode === INPUT_MODE_KEYBOARD && controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) return;
-
-  // v2.XX: Keyboard / mouse mode must not leave controller highlight CSS stuck on menu items.
-  if (nextMode === INPUT_MODE_KEYBOARD){
-    document.body.classList.remove('controller-active');
-    clearControllerFocus();
-  }
-
   if (activeInputMode === nextMode) return;
   activeInputMode = nextMode;
   document.body.classList.toggle('controller-active', activeInputMode === INPUT_MODE_CONTROLLER);
-  if (activeInputMode !== INPUT_MODE_CONTROLLER) clearControllerFocus();
   if (controlsMenu && controlsMenu.style.display !== 'none') {
     controlsBindMode = activeInputMode;
     bindingEditState = null;
@@ -4469,10 +4461,7 @@ function focusControllerElement(el){
 }
 
 function clearControllerFocus(){
-  document.querySelectorAll('.controllerFocus, .controller-selected').forEach(node => {
-    node.classList.remove('controllerFocus');
-    node.classList.remove('controller-selected');
-  });
+  document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
 }
 
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); markControlsDirty(); });
@@ -4510,11 +4499,7 @@ function getStartNicknameMenuTarget(){
 }
 
 function getMenuControllerTargets(){
-  // v2.XX: Start-menu controller focus is intentionally limited to the two
-  // actual launch controls. Title, subtitle/reveal text, welcome/nickname text,
-  // and inline nickname entry remain mouse/keyboard reachable only, so the
-  // controller selector cannot get stranded on decorative rows.
-  return [btnStart, btnMenu].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnMenu, getStartNicknameMenuTarget()].filter(Boolean);
 }
 
 function getMenuHubControllerTargets(){
@@ -5369,19 +5354,26 @@ function moveMenuControllerFocus(delta){
 function moveMenuControllerFocusDirectional(direction){
   const items = getMenuControllerTargets();
   if (!items.length) return false;
+  const titleIndex = items.indexOf(startMenuTitle);
+  const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
   const menuIndex = items.indexOf(btnMenu);
+  const nicknameTarget = getStartNicknameMenuTarget();
+  const nicknameIndex = items.indexOf(nicknameTarget);
   let nextIndex = menuFocusIndex;
 
-  // Only Start Game and Menu are controller-selectable on the Start Menu.
-  // Left/right move between those two buttons; up/down are ignored so focus
-  // cannot climb into the title, blurb, welcome text, or nickname row.
-  if (direction === "left" && menuFocusIndex === menuIndex && startIndex !== -1){
-    nextIndex = startIndex;
-  } else if (direction === "right" && menuFocusIndex === startIndex && menuIndex !== -1){
-    nextIndex = menuIndex;
-  } else {
-    return false;
+  if (direction === "left"){
+    if (menuFocusIndex === nicknameIndex && menuIndex !== -1) nextIndex = menuIndex;
+    else if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
+  } else if (direction === "right"){
+    if (menuFocusIndex === startIndex && menuIndex !== -1) nextIndex = menuIndex;
+    else if (menuFocusIndex === menuIndex && nicknameIndex !== -1) nextIndex = nicknameIndex;
+  } else if (direction === "down"){
+    if (menuFocusIndex === titleIndex && revealIndex !== -1) nextIndex = revealIndex;
+    else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
+  } else if (direction === "up"){
+    if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex || menuFocusIndex === nicknameIndex) && revealIndex !== -1) nextIndex = revealIndex;
+    else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
   }
 
   if (nextIndex === menuFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
@@ -5732,8 +5724,12 @@ function showMenu(){
   clearDeathControllerFocus();
   if (winOverlay) winOverlay.style.display = "none";
 
-  startMenu.style.display = "block";
-  setStartMenuInteractive(true);
+  document.body.classList.remove("menu-hub-open");
+  if (startMenu){
+    startMenu.style.setProperty("display", "block");
+    startMenu.setAttribute("aria-hidden", "false");
+    setStartMenuInteractive(true);
+  }
   if (menuHubPanel){ menuHubPanel.style.display = "none"; menuHubPanel.setAttribute("aria-hidden", "true"); }
   rememberStartMenuPanelRect();
   optionsMenu.style.display = "none";
@@ -5769,9 +5765,17 @@ function openMenuHub(){
   if (!audioMuted) ensureMenuMusicPlaying();
   mouseShieldHolding = false;
   stopShield(false);
+  // v2.XX: make the hub replace the Start Menu instead of sitting beside it.
+  // Capture the Start Menu footprint first, then hide the Start Menu with
+  // priority because later CSS overrides were winning the dumb little war.
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
-  startMenu.style.display = "none";
+  document.body.classList.add("menu-hub-open");
+  if (startMenu){
+    startMenu.style.setProperty("display", "none", "important");
+    startMenu.setAttribute("aria-hidden", "true");
+    setStartMenuInteractive(false);
+  }
   if (optionsMenu) optionsMenu.style.display = "none";
   if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
   if (cheatsMenu) cheatsMenu.style.display = "none";
@@ -5782,6 +5786,7 @@ function openMenuHub(){
   uiRoot.classList.add("optionsBackdrop");
   uiRoot.style.display = "flex";
   fitMenuHubToStartMenu();
+  requestAnimationFrame(fitMenuHubToStartMenu);
   resetMenuHubControllerFocus();
   selectMenuHubTab("images", false);
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
@@ -5789,7 +5794,6 @@ function openMenuHub(){
   renderMenuHudPreview();
   updateHearts();
 }
-
 function closeMenuHub(){
   restoreMenuHubActiveInner();
   if (menuHubPanel){
@@ -5800,8 +5804,12 @@ function closeMenuHub(){
   gameState = STATE.MENU;
   if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
   uiRoot.classList.remove("optionsBackdrop");
-  startMenu.style.display = "block";
-  setStartMenuInteractive(true);
+  document.body.classList.remove("menu-hub-open");
+  if (startMenu){
+    startMenu.style.setProperty("display", "block");
+    startMenu.setAttribute("aria-hidden", "false");
+    setStartMenuInteractive(true);
+  }
   resetStartMenuControllerFocus();
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
   else clearControllerFocus();
@@ -8002,7 +8010,8 @@ function pollGamepad(dt){
       }
       const menuTarget = getMenuControllerTargets()[menuFocusIndex];
       if (pressMenuSelect && menuTarget){
-        activateControllerTarget(menuTarget);
+        if (menuTarget === titleHoverReveal) refreshEntireShooterPage();
+        else if (menuTarget !== startMenuTitle) activateControllerTarget(menuTarget);
       }
       if (pressMenuBack && bindingEditState) cancelBindingEdit();
     } else if (gameState === STATE.HUB){
@@ -8951,7 +8960,6 @@ window.addEventListener("keydown", (e) => {
   const typingIntoField = target && ((target.tagName === "INPUT") || (target.tagName === "TEXTAREA") || target.isContentEditable);
 
   if (typingIntoField){
-    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
     if (e.code === "Escape" && target && typeof target.blur === "function") target.blur();
     return;
   }
@@ -9016,7 +9024,6 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; keys[e.code || e.key] = false; });
 window.addEventListener("mousedown", (e) => {
-  setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
   if (controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) {
     unlockControlsInputMode();
     setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
@@ -9027,14 +9034,6 @@ window.addEventListener("mousedown", (e) => {
   setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
   applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, mouseButtonToBinding(e.button));
 }, true);
-
-let lastKeyboardMouseModePointerAt = 0;
-window.addEventListener("mousemove", () => {
-  const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-  if (now - lastKeyboardMouseModePointerAt < 80) return;
-  lastKeyboardMouseModePointerAt = now;
-  setActiveInputMode(INPUT_MODE_KEYBOARD);
-}, { passive:true });
 
 canvas.addEventListener("pointermove", (e) => {
   setActiveInputMode(INPUT_MODE_KEYBOARD);
