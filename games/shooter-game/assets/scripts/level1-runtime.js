@@ -6401,16 +6401,33 @@ const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
 const CHAT_NICKNAME_EXPLICIT_STORAGE_KEY = "tektiteChatNicknameExplicit";
 const CHAT_NICKNAME_MAX_LENGTH = 8;
 const START_MENU_CONSTRUCTION_DEBUG_NICKNAME = "_debug";
+const START_MENU_ACCESS_MODE_DEFAULT = "public";
+
+function getStartMenuAccessMode(){
+  const configuredMode = String(window.SHOOTER_START_MENU_ACCESS_MODE || START_MENU_ACCESS_MODE_DEFAULT).trim().toLowerCase();
+  if (["public", "dev", "open", "construction"].includes(configuredMode)) return configuredMode;
+
+  // Backward compatibility for older patches that only had the boolean gate.
+  // false meant "normal Start Menu for everyone", which is now "open".
+  if (window.SHOOTER_START_MENU_CONSTRUCTION_GATE_ENABLED === false) return "open";
+  return START_MENU_ACCESS_MODE_DEFAULT;
+}
 
 function isStartMenuConstructionGateEnabled(){
-  // Easy toggle: set window.SHOOTER_START_MENU_CONSTRUCTION_GATE_ENABLED = false
-  // in shooter-game-level1.html to restore the normal Start Menu for everyone.
-  return window.SHOOTER_START_MENU_CONSTRUCTION_GATE_ENABLED !== false;
+  return getStartMenuAccessMode() !== "open";
 }
 
 function isStartMenuConstructionLocked(savedNickname = getSavedChatNicknameValue()){
-  if (!isStartMenuConstructionGateEnabled()) return false;
-  return String(savedNickname || "").trim() !== START_MENU_CONSTRUCTION_DEBUG_NICKNAME;
+  const mode = getStartMenuAccessMode();
+  const nickname = String(savedNickname || "").trim();
+  const isDebugNickname = nickname === START_MENU_CONSTRUCTION_DEBUG_NICKNAME;
+
+  if (mode === "dev") return !isDebugNickname;
+  if (mode === "construction") return true;
+  if (mode === "open") return false;
+
+  // public mode: the normal Start Menu is public; _debug previews construction.
+  return isDebugNickname;
 }
 
 function syncStartMenuConstructionGate(savedNickname = getSavedChatNicknameValue()){

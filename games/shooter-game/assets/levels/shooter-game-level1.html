@@ -12,12 +12,29 @@
 <script>
 (function(){
   var root = document.documentElement;
-  /* Start Menu construction gate toggle.
-     Flip this to false when the normal Start Menu should be public again. */
-  var START_MENU_CONSTRUCTION_GATE_ENABLED = true;
+  /* Start Menu access mode switch.
+     public = normal Start Menu for everyone; nickname _debug previews construction.
+     dev = nickname _debug is required for the normal Start Menu; everyone else sees construction.
+     open = normal Start Menu for everyone, including _debug.
+     construction = construction screen for everyone.
+
+     Tell ChatGPT "switch the game to dev mode" and this value should become "dev".
+     Tell ChatGPT "switch the game to public mode" and this value should become "public". */
+  var START_MENU_ACCESS_MODE = 'public';
   var START_MENU_CONSTRUCTION_DEBUG_NICKNAME = '_debug';
-  window.SHOOTER_START_MENU_CONSTRUCTION_GATE_ENABLED = START_MENU_CONSTRUCTION_GATE_ENABLED;
+  window.SHOOTER_START_MENU_ACCESS_MODE = START_MENU_ACCESS_MODE;
   window.SHOOTER_START_MENU_CONSTRUCTION_DEBUG_NICKNAME = START_MENU_CONSTRUCTION_DEBUG_NICKNAME;
+  window.SHOOTER_START_MENU_CONSTRUCTION_GATE_ENABLED = START_MENU_ACCESS_MODE !== 'open';
+
+  function shouldShowConstructionScreenForStartMenu(nickname){
+    var mode = String(START_MENU_ACCESS_MODE || 'public').trim().toLowerCase();
+    var debugNickname = START_MENU_CONSTRUCTION_DEBUG_NICKNAME;
+    var isDebugNickname = String(nickname || '').trim() === debugNickname;
+    if (mode === 'dev') return !isDebugNickname;
+    if (mode === 'construction') return true;
+    if (mode === 'open') return false;
+    return isDebugNickname;
+  }
   root.classList.add('sg-start-nickname-prepaint');
   var nickname = '';
   try{
@@ -29,7 +46,7 @@
   }catch(error){
     nickname = '';
   }
-  if (START_MENU_CONSTRUCTION_GATE_ENABLED && nickname !== START_MENU_CONSTRUCTION_DEBUG_NICKNAME){
+  if (shouldShowConstructionScreenForStartMenu(nickname)){
     root.classList.add('sg-start-construction-locked');
   } else {
     root.classList.add('sg-start-construction-unlocked');
@@ -43,10 +60,9 @@
 })();
 </script>
 <style id="startMenuConstructionGateFirstPaint">
-  /* v2.XX: Start Menu construction gate.
-     Source of truth toggle is START_MENU_CONSTRUCTION_GATE_ENABLED in the
-     first head script above. When enabled, nickname must be exactly _debug
-     or the Start Menu only renders this notice inside the existing frame. */
+  /* v2.XX: Start Menu construction/public mode.
+     Source of truth toggle is START_MENU_ACCESS_MODE in the first head script.
+     public mode: _debug previews construction. dev mode: _debug unlocks the game. */
   html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface{
     position:relative !important;
   }
