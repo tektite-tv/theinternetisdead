@@ -103,38 +103,6 @@
     font-size:clamp(13px, 2vw, 20px) !important;
     text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
   }
-
-  /* Hub Options Controls mode only: keep Move Controls direction buttons on one line.
-     Native/pause Controls menu keeps its existing stacked layout. */
-  body.controls-hub-options-mode #controlsMenu .controlsMoveButtonGroup{
-    display:grid !important;
-    grid-template-columns:repeat(4, minmax(0, 1fr)) !important;
-    grid-auto-flow:column !important;
-    gap:6px !important;
-    align-items:stretch !important;
-    justify-content:stretch !important;
-    width:100% !important;
-    max-width:100% !important;
-  }
-  body.controls-hub-options-mode #controlsMenu .controlsMoveButton{
-    width:100% !important;
-    min-width:0 !important;
-    max-width:none !important;
-    padding:6px 4px !important;
-    justify-content:center !important;
-    gap:4px !important;
-    white-space:nowrap !important;
-  }
-  body.controls-hub-options-mode #controlsMenu .controlsMoveButton .moveBindLabel{
-    font-size:13px !important;
-    flex:0 0 auto !important;
-  }
-  body.controls-hub-options-mode #controlsMenu .controlsMoveButton .moveBindValue{
-    font-size:8px !important;
-    min-width:0 !important;
-    overflow:hidden !important;
-    text-overflow:clip !important;
-  }
 </style>
 <style>
   html.sg-start-nickname-prepaint #startMenu #startNicknameRow{
@@ -5194,76 +5162,19 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
-<style id="controlsMenuMatchesStartHubFootprintFinal">
-  /* v2.XX: Controls menu must use the exact same visible 16:9 frame as the
-     Start Menu and Hub Menu. This only changes the Controls shell footprint;
-     inner content remains scrollable inside the fixed panel. */
-  html body #controlsMenu.panel.shooter-menu16x9Surface{
-    width: var(--shooter-start-hub-frame-width) !important;
-    min-width: var(--shooter-start-hub-frame-width) !important;
-    max-width: var(--shooter-start-hub-frame-width) !important;
-    height: var(--shooter-start-hub-frame-height) !important;
-    min-height: var(--shooter-start-hub-frame-height) !important;
-    max-height: var(--shooter-start-hub-frame-height) !important;
-    aspect-ratio: 16 / 9 !important;
-    box-sizing: border-box !important;
-    padding: var(--shooter-start-hub-frame-padding) !important;
-    border: var(--shooter-start-hub-frame-border) !important;
-    border-width: 2px !important;
-    border-radius: var(--shooter-start-hub-frame-radius) !important;
-    background: var(--shooter-start-hub-frame-bg) !important;
-    box-shadow: var(--shooter-start-hub-frame-shadow) !important;
-    transform: none !important;
-    transform-origin: center center !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-    flex: 0 0 auto !important;
-  }
-
-  html body #controlsMenu.panel.shooter-menu16x9Surface #controlsMenuInner{
-    height: 100% !important;
-    min-height: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    justify-content: flex-start !important;
-    gap: 10px !important;
-    box-sizing: border-box !important;
-    transform: none !important;
-    margin: 0 !important;
-  }
-
-  html body #controlsMenu.panel.shooter-menu16x9Surface #controlsMenuTitle,
-  html body #controlsMenu.panel.shooter-menu16x9Surface .menuBottomRow{
-    flex: 0 0 auto !important;
-  }
-
-  html body #controlsMenu.panel.shooter-menu16x9Surface .controlsGrid{
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow: auto !important;
-    box-sizing: border-box !important;
-  }
-</style>
-
-
-<style id="controlsMenuOwnsScreenHideStartFinal">
-  /* v2.XX: When Controls opens from Hub > Options, it owns the menu layer.
-     Hide Start/Hub/Options explicitly so Controls cannot appear beside them. */
-  html body.controls-menu-open #startMenu,
-  html body.controls-menu-open #menuHubPanel,
-  html body.controls-menu-open #optionsMenu,
-  html body.controls-menu-open #cheatsMenu,
-  html body.controls-menu-open #statsPanel,
-  html body.controls-menu-open #imagesPanel{
+<style id="controlsPreviewOwnsScreenHideKeybindsFinal">
+  /* v2.XX: When Test Controller opens from Hub > Options > Controls,
+     the preview owns the menu layer. Hide the Controls keybinds panel so it
+     cannot remain visible beside the preview. */
+  html body.controls-preview-open #controlsMenu{
     display:none !important;
     visibility:hidden !important;
     opacity:0 !important;
     pointer-events:none !important;
   }
 
-  html body.controls-menu-open #controlsMenu.panel.shooter-menu16x9Surface{
-    display:block !important;
+  html body.controls-preview-open #controlsPreviewMenu.panel{
+    display:flex !important;
     visibility:visible !important;
     opacity:1 !important;
     pointer-events:auto !important;
@@ -5643,7 +5554,7 @@ body.menu-hub-open #menuHubPanel{
     </div>
   </div>
 
-  <div id="controlsMenu" class="panel shooter-menu16x9Surface" style="display:none;">
+  <div id="controlsMenu" class="panel" style="display:none;">
     <div id="controlsMenuInner">
       <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
       <div class="controlsGrid">

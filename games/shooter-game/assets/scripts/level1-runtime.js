@@ -669,19 +669,14 @@ function requestOpenChatFromPause(){
 }
 function showPauseControlsMenu(){
   if (!controlsMenu || !isPaused) return;
-  document.body.classList.remove("controls-hub-options-mode");
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   pauseControlsOpen = true;
   resetDraftBindingsFromActive();
   pauseOverlay.classList.add("pauseControlsVisible");
   uiRoot.classList.add("pauseControlsOpen");
   lockControlsInputMode(activeInputMode);
-  if (startMenu){
-    startMenu.style.setProperty("display", "none", "important");
-    startMenu.setAttribute("aria-hidden", "true");
-    setStartMenuInteractive(false);
-  }
-  if (optionsMenu) optionsMenu.style.setProperty("display", "none", "important");
+  startMenu.style.display = "none";
+  optionsMenu.style.display = "none";
   uiRoot.classList.remove("optionsBackdrop");
   controlsMenu.style.display = "block";
   controlsMenu.classList.add("pauseControlsMode");
@@ -1010,22 +1005,17 @@ function execPauseCommand(cmd){
     return { ok:true, suppressChatResult:true };
   }
 
-  // Hidden nickname shortcut. Not listed in /help.
+  // Hidden instant cheatermode aliases. Not listed in /help, because secrets need doors.
   const lowerRaw = raw.toLowerCase();
-  if (lowerRaw === "/jinclops"){
-    applyNicknameFromControls("Jinclops", true);
-    return { ok:true, message:"Nickname set to Jinclops" };
-  }
-
-  // Hidden instant cheatermode alias. Not listed in /help, because secrets need doors.
-  if (lowerRaw === "/tektite"){
-    applyNicknameFromControls("Tektite", true);
+  if (lowerRaw === "/jinclops" || lowerRaw === "/tektite"){
+    const secretNickname = lowerRaw === "/jinclops" ? "Jinclops" : "Tektite";
+    applyNicknameFromControls(secretNickname, true);
     unlockCheatermode("chat-instant");
     applyGlobalInfiniteMode(true);
     shootCheatMode = "big_bullets";
     glitchBackgroundPulse = 0;
     lockScoreTrackingState();
-    return { ok:true, message:"Nickname set to Tektite. Cheat commands unlocked, Infinite Mode enabled, and /shoot big_bullets applied" };
+    return { ok:true, message:`Nickname set to ${secretNickname}. Cheat commands unlocked, Infinite Mode enabled, and /shoot big_bullets applied` };
   }
 
   if (raw.startsWith("/cheatermode")){
@@ -3476,7 +3466,7 @@ const CHEATERMODE_CONTROLLER_PROMPT = "Hold X + View 5s";
 const CHEATERMODE_CONTROLLER_HOLD_MS = 5000;
 const CHEATERMODE_TYPED_COUNTDOWN_MS = 5000;
 const CHEATERMODE_COUNTDOWN_PHRASE = "cheatermode";
-const CHEATERMODE_INSTANT_PHRASES = ["tektite"];
+const CHEATERMODE_INSTANT_PHRASES = ["jinclops", "tektite"];
 const CHEATERMODE_TYPED_UNLOCK_PHRASES = [CHEATERMODE_COUNTDOWN_PHRASE, ...CHEATERMODE_INSTANT_PHRASES];
 const CHEATERMODE_TYPED_BUFFER_MAX = CHEATERMODE_TYPED_UNLOCK_PHRASES.reduce((max, phrase) => Math.max(max, phrase.length), 0);
 
@@ -5219,14 +5209,19 @@ function captureControlsPreviewFrame(){
 
 function showControlsPreviewMenu(){
   if (!controlsPreviewMenu || !controlsPreviewFrame) return;
+  document.body.classList.add("controls-preview-open");
   controlsPreviewOpen = true;
   controlsPreviewControllerCaptured = activeInputMode === INPUT_MODE_CONTROLLER;
   controlsPreviewReleaseArmed = false;
   controlsPreviewStickHoldMs = 0;
   controlsPreviewFocusIndex = controlsPreviewControllerCaptured ? 0 : 1;
   syncControlsPreviewBackLabel();
-  if (controlsMenu) controlsMenu.style.display = 'none';
-  controlsPreviewMenu.style.display = 'flex';
+  if (controlsMenu){
+    controlsMenu.style.setProperty("display", "none", "important");
+    controlsMenu.setAttribute("aria-hidden", "true");
+  }
+  controlsPreviewMenu.style.setProperty("display", "flex", "important");
+  controlsPreviewMenu.setAttribute("aria-hidden", "false");
   fitControlsPreviewMenuToViewport();
   if (controlsPreviewControllerCaptured){
     captureControlsPreviewFrame();
@@ -5250,6 +5245,7 @@ function releaseControlsPreviewControllerCapture(){
 
 function hideControlsPreviewMenu(options = null){
   if (!controlsPreviewMenu) return;
+  document.body.classList.remove("controls-preview-open");
   const restoreControlsMenu = !(options && options.restoreControlsMenu === false);
   controlsPreviewOpen = false;
   controlsPreviewControllerCaptured = false;
@@ -5258,9 +5254,12 @@ function hideControlsPreviewMenu(options = null){
   controlsPreviewFocusIndex = 1;
   syncControlsPreviewBackLabel();
   setControlsPreviewFrameOwnership(false);
-  controlsPreviewMenu.style.display = 'none';
+  controlsPreviewMenu.style.setProperty("display", "none", "important");
+  controlsPreviewMenu.setAttribute("aria-hidden", "true");
   if (restoreControlsMenu && controlsMenu && (gameState === STATE.CONTROLS || pauseControlsOpen)){
-    controlsMenu.style.display = 'block';
+    controlsMenu.style.removeProperty("display");
+    controlsMenu.style.display = "block";
+    controlsMenu.setAttribute("aria-hidden", "false");
     const previewButton = document.getElementById('controlsControllerPreviewButton');
     const items = getControlsControllerTargets();
     const previewIndex = items.indexOf(previewButton);
@@ -5736,8 +5735,6 @@ function adjustControllerCheat(delta){
   return false;
 }
 function showMenu(){
-  document.body.classList.remove("controls-menu-open");
-  document.body.classList.remove("controls-hub-options-mode");
   setPaused(false);
   playerSpectatorMode = false;
   try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
@@ -5787,8 +5784,6 @@ function showMenu(){
 }
 
 function openMenuHub(){
-  document.body.classList.remove("controls-menu-open");
-  document.body.classList.remove("controls-hub-options-mode");
   if (!menuHubPanel) return;
   setPaused(false);
   unlockAudioOnce();
@@ -5886,24 +5881,8 @@ function showControlsMenu(){
   controlsReturnState = fromHubOptions ? STATE.HUB : (fromOptions ? STATE.OPTIONS : STATE.MENU);
   if (fromHubOptions){
     restoreMenuHubActiveInner();
-    if (menuHubPanel){
-      menuHubPanel.style.setProperty("display", "none", "important");
-      menuHubPanel.setAttribute("aria-hidden", "true");
-    }
+    if (menuHubPanel) menuHubPanel.style.display = "none";
   }
-
-  // v2.XX: Controls opens as its own full Start/Hub-sized menu, not as a
-  // cursed extra panel beside/inside the Hub Options tab.
-  restoreMenuHubActiveInner();
-  if (menuHubPanel){
-    menuHubPanel.style.setProperty("display", "none", "important");
-    menuHubPanel.setAttribute("aria-hidden", "true");
-  }
-  if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
-  if (statsPanel){ statsPanel.style.display = "none"; statsPanel.setAttribute("aria-hidden", "true"); statsPanel.removeAttribute("aria-modal"); }
-  document.body.classList.remove("menu-hub-open");
-  document.body.classList.add("controls-menu-open");
-  document.body.classList.toggle("controls-hub-options-mode", !!fromHubOptions);
 
   setPaused(false);
   pauseControlsOpen = false;
@@ -5917,12 +5896,8 @@ function showControlsMenu(){
   markControlsClean(false);
   lockControlsInputMode(activeInputMode);
   setControlsBindMode(activeInputMode);
-  if (startMenu){
-    startMenu.style.setProperty("display", "none", "important");
-    startMenu.setAttribute("aria-hidden", "true");
-    setStartMenuInteractive(false);
-  }
-  if (optionsMenu) optionsMenu.style.setProperty("display", "none", "important");
+  startMenu.style.display = "none";
+  optionsMenu.style.display = "none";
   if (cheatsMenu) cheatsMenu.style.display = "none";
   controlsMenu.style.display = "block";
   controlsMenu.classList.remove("pauseControlsMode");
@@ -5937,8 +5912,6 @@ function showControlsMenu(){
   updateHearts();
 }
 function hideControlsMenu(){
-  document.body.classList.remove("controls-menu-open");
-  document.body.classList.remove("controls-hub-options-mode");
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   resetDraftBindingsFromActive();
