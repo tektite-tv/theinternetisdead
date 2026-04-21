@@ -276,7 +276,7 @@
     line-height:1.1;
   }
   body.controller-active #startMenu #btnStart::after,
-  body.controller-active #startMenu #btnMenu.controllerFocus::after,
+  body.controller-active #startMenu #btnMenu::after,
   body.controller-active #startMenu #btnEnterNickname.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
   body.controller-active #startMenu #btnImages.controllerFocus::after,
@@ -299,7 +299,11 @@
     filter:drop-shadow(0 0 4px rgba(0,255,0,0.75));
     z-index:2;
   }
-  body.controller-active #startMenu #btnStart.controllerFocus::after{
+  body.controller-active #startMenu #btnMenu::after{
+    background-image:url('/games/shooter-game/assets/controller-buttons/menu.webp');
+  }
+  body.controller-active #startMenu #btnStart.controllerFocus::after,
+  body.controller-active #startMenu #btnMenu.controllerFocus::after{
     background-color:rgba(0,255,102,0.5);
   }
 
