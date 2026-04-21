@@ -5941,42 +5941,26 @@ body.menu-hub-open #menuHubPanel{
 </style>
 
 
-
-<style id="pauseHubGameplayLayerStateFix">
-  /* When Menu Hub is opened from Pause, keep the frozen gameplay/HUD layer intact.
-     No Start Menu preview reset, no whole-screen dark blanket. Only enemies get dimmed. */
-  html body.pause-hub-gameplay-layer #game{
+<style id="pauseHubEnemyOnlyDimmingPatch">
+  /* Pause Menu -> Menu Hub keeps the gameplay/HUD layer bright.
+     Only enemies dim, including animated DOM enemy sprites. */
+  html body.pause-hub-open #game{
     filter:none !important;
     opacity:1 !important;
   }
-
-  html body.pause-hub-gameplay-layer #uiRoot.optionsBackdrop::before{
-    display:none !important;
-    background:transparent !important;
-    opacity:0 !important;
-  }
-
-  html body.pause-hub-gameplay-layer #stageHud,
-  html body.pause-hub-gameplay-layer #scoreStoreHud,
-  html body.pause-hub-gameplay-layer #timerHud,
-  html body.pause-hub-gameplay-layer #livesSlot,
-  html body.pause-hub-gameplay-layer #powerupSlot,
-  html body.pause-hub-gameplay-layer #heartsHud{
-    z-index:100000 !important;
+  html body.pause-hub-open #stageHud,
+  html body.pause-hub-open #scoreStoreHud,
+  html body.pause-hub-open #timerHud,
+  html body.pause-hub-open #livesSlot,
+  html body.pause-hub-open #powerupSlot,
+  html body.pause-hub-open #heartsHud{
     filter:none !important;
     opacity:1 !important;
-    visibility:visible !important;
   }
-
-  html body.pause-hub-gameplay-layer #stageHud{
-    z-index:100010 !important;
-  }
-
-  html body.pause-hub-gameplay-layer .enemy-gif-sprite{
-    filter:brightness(0.45) !important;
+  html body.pause-hub-open .enemy-gif-sprite{
+    filter:brightness(0.38) !important;
   }
 </style>
-
 </head>
 <body>
 <canvas id="game"></canvas>
