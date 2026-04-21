@@ -130,8 +130,8 @@
   }
   .btnRow{ display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap; }
   .btnRowTop{ margin-top:12px; }
-  /* Keep the Start/Menu row evenly spaced: 12px above buttons, 12px from buttons to welcome text, and 12px below welcome text. */
-  #startMenu .btnRowTop{ row-gap:12px; margin-top:12px; transform:none; }
+  /* Keep the Start/Menu row anchored, but pull only the welcome/nickname line upward so its visual gap balances against the panel bottom. */
+  #startMenu .btnRowTop{ row-gap:4px; margin-top:12px; transform:none; }
   .btnRowBottom{ margin-top:10px; }
   #startMenu .btnRowBottom{ transform:none; }
   #btnControls{ min-width:160px; }
@@ -173,7 +173,7 @@
     min-width:0;
     min-height:42px;
     box-sizing:border-box;
-    margin:0 0 12px;
+    margin:0 0 20px;
     padding:6px 8px;
     color:#0f0;
     font-family:inherit;
