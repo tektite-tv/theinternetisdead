@@ -4765,6 +4765,32 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+
+<!-- v2.XX: Hue-shift only the typed nickname text after the player enters text. -->
+<style id="startMenuNicknameTypedHueShiftOnly">
+  #startMenu #startNicknameInput{
+    animation:none !important;
+  }
+  #startMenu #startNicknameInput.nicknameEntryActive.nicknameHasDraft{
+    animation:startNicknameTypedTextHueShift 1.25s linear infinite !important;
+    caret-color:#00ffff;
+  }
+  #startMenu #startNicknameInput::placeholder{
+    color:rgba(0,255,255,0.72);
+    animation:none !important;
+  }
+  @keyframes startNicknameTypedTextHueShift{
+    0%{ color:#00ffff; text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25); }
+    16%{ color:#00ff66; text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 14px rgba(0,255,102,0.25); }
+    33%{ color:#ffff00; text-shadow:0 0 8px rgba(255,255,0,0.50), 0 0 14px rgba(255,255,0,0.22); }
+    50%{ color:#ff66ff; text-shadow:0 0 8px rgba(255,102,255,0.50), 0 0 14px rgba(255,102,255,0.22); }
+    66%{ color:#9966ff; text-shadow:0 0 8px rgba(153,102,255,0.52), 0 0 14px rgba(153,102,255,0.22); }
+    83%{ color:#00aaff; text-shadow:0 0 8px rgba(0,170,255,0.55), 0 0 14px rgba(0,170,255,0.25); }
+    100%{ color:#00ffff; text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25); }
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>

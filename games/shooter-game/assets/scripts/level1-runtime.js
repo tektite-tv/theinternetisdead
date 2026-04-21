@@ -6597,9 +6597,17 @@ function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()
   }
 }
 
+
+function syncStartNicknameInputHueShift(){
+  if (!startNicknameInput) return;
+  const hasDraft = String(startNicknameInput.value || "").length > 0;
+  startNicknameInput.classList.toggle("nicknameHasDraft", hasDraft);
+}
+
 function resetStartNicknameEntry(){
   if (startNicknameInput){
     startNicknameInput.classList.remove("nicknameEntryActive");
+    startNicknameInput.classList.remove("nicknameHasDraft");
     startNicknameInput.style.display = "none";
     startNicknameInput.value = "";
   }
@@ -6615,6 +6623,7 @@ function showStartNicknameInput(){
   startNicknameInput.classList.add("nicknameEntryActive");
   startNicknameInput.style.display = "inline-flex";
   startNicknameInput.value = "";
+  startNicknameInput.classList.remove("nicknameHasDraft");
   startNicknameInput.readOnly = false;
   startNicknameInput.disabled = false;
   startNicknameInput.placeholder = "Enter Nickname";
@@ -7073,6 +7082,9 @@ if (startNicknameInput){
   startNicknameInput.addEventListener("click", (event) => {
     event.stopPropagation();
     setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+  });
+  startNicknameInput.addEventListener("input", () => {
+    syncStartNicknameInputHueShift();
   });
   startNicknameInput.addEventListener("keydown", (event) => {
     event.stopPropagation();
