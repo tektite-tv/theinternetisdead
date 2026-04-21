@@ -4151,9 +4151,17 @@ function setActiveInputMode(mode, options = null){
   const nextMode = mode === INPUT_MODE_CONTROLLER ? INPUT_MODE_CONTROLLER : INPUT_MODE_KEYBOARD;
   const force = !!(options && options.force);
   if (!force && nextMode === INPUT_MODE_KEYBOARD && controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) return;
+
+  // v2.XX: Keyboard / mouse mode must not leave controller highlight CSS stuck on menu items.
+  if (nextMode === INPUT_MODE_KEYBOARD){
+    document.body.classList.remove('controller-active');
+    clearControllerFocus();
+  }
+
   if (activeInputMode === nextMode) return;
   activeInputMode = nextMode;
   document.body.classList.toggle('controller-active', activeInputMode === INPUT_MODE_CONTROLLER);
+  if (activeInputMode !== INPUT_MODE_CONTROLLER) clearControllerFocus();
   if (controlsMenu && controlsMenu.style.display !== 'none') {
     controlsBindMode = activeInputMode;
     bindingEditState = null;
@@ -4461,7 +4469,10 @@ function focusControllerElement(el){
 }
 
 function clearControllerFocus(){
-  document.querySelectorAll('.controllerFocus').forEach(node => node.classList.remove('controllerFocus'));
+  document.querySelectorAll('.controllerFocus, .controller-selected').forEach(node => {
+    node.classList.remove('controllerFocus');
+    node.classList.remove('controller-selected');
+  });
 }
 
 if (controlsResetBinds) controlsResetBinds.addEventListener('click', () => { draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS }; draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS }; cancelBindingEdit(); updateControlsDisplay(); renderControlsBindingList(); markControlsDirty(); });
@@ -8944,6 +8955,7 @@ window.addEventListener("keydown", (e) => {
   const typingIntoField = target && ((target.tagName === "INPUT") || (target.tagName === "TEXTAREA") || target.isContentEditable);
 
   if (typingIntoField){
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
     if (e.code === "Escape" && target && typeof target.blur === "function") target.blur();
     return;
   }
@@ -9008,6 +9020,7 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; keys[e.code || e.key] = false; });
 window.addEventListener("mousedown", (e) => {
+  setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
   if (controlsMenu && controlsMenu.style.display !== 'none' && controlsInputLockMode === INPUT_MODE_CONTROLLER) {
     unlockControlsInputMode();
     setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
@@ -9018,6 +9031,14 @@ window.addEventListener("mousedown", (e) => {
   setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
   applyBindingValue(INPUT_MODE_KEYBOARD, bindingEditState.action, mouseButtonToBinding(e.button));
 }, true);
+
+let lastKeyboardMouseModePointerAt = 0;
+window.addEventListener("mousemove", () => {
+  const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  if (now - lastKeyboardMouseModePointerAt < 80) return;
+  lastKeyboardMouseModePointerAt = now;
+  setActiveInputMode(INPUT_MODE_KEYBOARD);
+}, { passive:true });
 
 canvas.addEventListener("pointermove", (e) => {
   setActiveInputMode(INPUT_MODE_KEYBOARD);

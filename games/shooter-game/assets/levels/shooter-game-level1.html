@@ -1296,8 +1296,16 @@ body.invert-colors {
     border-color: rgba(0,255,0,0.9) !important;
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
   }
-  body:not(.controller-active) .controllerFocus{
+  body:not(.controller-active) .controllerFocus,
+  body:not(.controller-active) .controller-selected{
+    background: inherit !important;
     border-color: inherit !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  body:not(.controller-active) .controllerFocus::after,
+  body:not(.controller-active) .controller-selected::after{
+    background-color: transparent !important;
     box-shadow: none !important;
   }
   canvas, .panel, button, select, label, #main-content, #app-shell, #overlay-container, #shooter-game-frame, #tektite-frame{
