@@ -275,7 +275,7 @@
     font-size:var(--stats-button-focus-font-size, inherit);
     line-height:1.1;
   }
-  body.controller-active #startMenu #btnStart.controllerFocus::after,
+  #startMenu #btnStart::after,
   body.controller-active #startMenu #btnMenu.controllerFocus::after,
   body.controller-active #startMenu #btnEnterNickname.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
@@ -288,11 +288,19 @@
     width:18px;
     height:18px;
     transform:translateY(-50%);
-    background:url('/games/shooter-game/assets/controller-buttons/button-a.webp') center / contain no-repeat;
+    background-color:transparent;
+    background-image:url('/games/shooter-game/assets/controller-buttons/button-a.webp');
+    background-position:center;
+    background-size:contain;
+    background-repeat:no-repeat;
+    border-radius:50%;
     image-rendering:auto;
     pointer-events:none;
     filter:drop-shadow(0 0 4px rgba(0,255,0,0.75));
     z-index:2;
+  }
+  body.controller-active #startMenu #btnStart.controllerFocus::after{
+    background-color:rgba(0,255,102,0.5);
   }
 
   /* Controller-selected Back button B-button hint.
