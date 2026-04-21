@@ -1871,11 +1871,20 @@ function renderLifetimeStats(){
   const lockedToggle = document.getElementById("btnStatsLockedToggle");
   const lockedList = document.getElementById("statsLockedList");
   const nicknamePrompt = document.getElementById("btnStatsEnterNickname");
+  const nicknameStatsInput = document.getElementById("statsNicknameInput");
   const needsNicknameForStats = !hasLifetimeStatsProfile();
+  const statsInputActive = isStatsNicknameInputActive();
   if (nicknamePrompt){
-    nicknamePrompt.hidden = !needsNicknameForStats;
-    nicknamePrompt.setAttribute("aria-hidden", needsNicknameForStats ? "false" : "true");
-    nicknamePrompt.tabIndex = needsNicknameForStats ? 0 : -1;
+    nicknamePrompt.textContent = "Enter Nickname to Track Stats";
+    nicknamePrompt.hidden = !needsNicknameForStats || statsInputActive;
+    nicknamePrompt.setAttribute("aria-hidden", (!needsNicknameForStats || statsInputActive) ? "true" : "false");
+    nicknamePrompt.tabIndex = (needsNicknameForStats && !statsInputActive) ? 0 : -1;
+  }
+  if (nicknameStatsInput && (!needsNicknameForStats || !statsInputActive)){
+    nicknameStatsInput.hidden = true;
+    nicknameStatsInput.setAttribute("aria-hidden", "true");
+    nicknameStatsInput.tabIndex = -1;
+    if (!statsInputActive) nicknameStatsInput.value = "";
   }
   let lockedCount = 0;
 
@@ -3496,6 +3505,7 @@ const statsPanelInner = document.getElementById("statsPanelInner");
 const statsScroll = document.getElementById("statsScroll");
 const statsLockedDetails = document.getElementById("statsLockedDetails");
 const btnStatsEnterNickname = document.getElementById("btnStatsEnterNickname");
+const statsNicknameInput = document.getElementById("statsNicknameInput");
 const btnStatsLockedToggle = document.getElementById("btnStatsLockedToggle");
 const btnStatsClose = document.getElementById("btnStatsClose");
 const btnStatsReset = document.getElementById("btnStatsReset");
@@ -4979,7 +4989,12 @@ function getStatsControllerTargets(){
   return [...statRows, nicknamePrompt, lockedSummary, ...getStatsLockedRowTargets(), btnStatsClose, btnStatsReset].filter(Boolean);
 }
 
+function isStatsNicknameInputActive(){
+  return !!(statsNicknameInput && !statsNicknameInput.hidden);
+}
+
 function getStatsNicknamePromptTarget(){
+  if (statsNicknameInput && !statsNicknameInput.hidden) return statsNicknameInput;
   if (!btnStatsEnterNickname || btnStatsEnterNickname.hidden) return null;
   return btnStatsEnterNickname;
 }
@@ -5015,32 +5030,65 @@ function toggleStatsLockedSummary(){
   return true;
 }
 
+function resetStatsNicknameEntry(){
+  if (statsNicknameInput){
+    statsNicknameInput.hidden = true;
+    statsNicknameInput.setAttribute("aria-hidden", "true");
+    statsNicknameInput.tabIndex = -1;
+    statsNicknameInput.value = "";
+  }
+  if (btnStatsEnterNickname && !hasLifetimeStatsProfile()){
+    btnStatsEnterNickname.textContent = "Enter Nickname to Track Stats";
+    btnStatsEnterNickname.hidden = false;
+    btnStatsEnterNickname.setAttribute("aria-hidden", "false");
+    btnStatsEnterNickname.tabIndex = 0;
+  }
+  renderLifetimeStats();
+}
+
+function showStatsNicknameInput(){
+  if (!statsNicknameInput || !btnStatsEnterNickname) return false;
+  btnStatsEnterNickname.hidden = true;
+  btnStatsEnterNickname.setAttribute("aria-hidden", "true");
+  btnStatsEnterNickname.tabIndex = -1;
+  statsNicknameInput.hidden = false;
+  statsNicknameInput.setAttribute("aria-hidden", "false");
+  statsNicknameInput.tabIndex = 0;
+  statsNicknameInput.value = "";
+  statsNicknameInput.readOnly = false;
+  statsNicknameInput.disabled = false;
+  statsNicknameInput.placeholder = "Enter Nickname";
+  const items = getStatsControllerTargets();
+  const inputIndex = items.indexOf(statsNicknameInput);
+  if (inputIndex >= 0) statsFocusIndex = inputIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
+  try{ statsNicknameInput.focus({ preventScroll:true }); }catch(_){ try{ statsNicknameInput.focus(); }catch(__){} }
+  try{ statsNicknameInput.select(); }catch(_){ }
+  return true;
+}
+
+function commitStatsNicknameInput(){
+  if (!statsNicknameInput) return false;
+  const draft = String(statsNicknameInput.value || "").trim();
+  if (!draft){
+    resetStatsNicknameEntry();
+    return false;
+  }
+  applyNicknameFromControls(draft, false);
+  statsNicknameInput.hidden = true;
+  statsNicknameInput.setAttribute("aria-hidden", "true");
+  statsNicknameInput.tabIndex = -1;
+  statsNicknameInput.value = "";
+  renderLifetimeStats();
+  const items = getStatsControllerTargets();
+  const closeIndex = items.indexOf(btnStatsClose);
+  statsFocusIndex = closeIndex >= 0 ? closeIndex : 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
+  return true;
+}
+
 function openNicknamePromptFromStats(){
-  restoreMenuHubActiveInner();
-  if (statsPanel){
-    statsPanel.style.display = "none";
-    statsPanel.setAttribute("aria-hidden", "true");
-    statsPanel.removeAttribute("aria-modal");
-  }
-  if (menuHubPanel){
-    menuHubPanel.style.display = "none";
-    menuHubPanel.setAttribute("aria-hidden", "true");
-    menuHubPanel.classList.remove("menuHubTabImages", "menuHubTabStats", "menuHubTabOptions");
-  }
-  document.body.classList.remove("menu-hub-open");
-  if (uiRoot){
-    uiRoot.classList.remove("optionsBackdrop");
-    uiRoot.style.display = "flex";
-  }
-  gameState = STATE.MENU;
-  syncStartMenuHudLayerMode();
-  if (startMenu){
-    startMenu.style.setProperty("display", "block");
-    startMenu.setAttribute("aria-hidden", "false");
-    setStartMenuInteractive(true);
-  }
-  syncStartMenuNicknameButton(getSavedChatNicknameValue());
-  return showStartNicknameInput();
+  return showStatsNicknameInput();
 }
 
 function scrollStatsPanelBy(delta){
@@ -5844,7 +5892,7 @@ function activateControllerTarget(el){
     showControlsMenu({ fromHubOptions: isHubOptionsControlsLaunchContext() });
     return;
   }
-  if (el === nicknameInput || el === startNicknameInput){
+  if (el === nicknameInput || el === startNicknameInput || el === statsNicknameInput){
     el.focus();
     focusControllerElement(el);
     return;
@@ -7493,6 +7541,26 @@ if (imagesPanel){
 if (btnStatsEnterNickname){
   btnStatsEnterNickname.addEventListener("click", () => {
     openNicknamePromptFromStats();
+  });
+}
+if (statsNicknameInput){
+  statsNicknameInput.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+  });
+  statsNicknameInput.addEventListener("keydown", (event) => {
+    event.stopPropagation();
+    if (event.key === "Enter"){
+      event.preventDefault();
+      commitStatsNicknameInput();
+    } else if (event.key === "Escape"){
+      event.preventDefault();
+      resetStatsNicknameEntry();
+      if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
+    }
+  });
+  statsNicknameInput.addEventListener("blur", () => {
+    if (!String(statsNicknameInput.value || "").trim()) resetStatsNicknameEntry();
   });
 }
 if (btnStatsLockedToggle){
