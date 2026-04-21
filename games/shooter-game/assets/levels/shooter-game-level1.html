@@ -4363,3 +4363,66 @@ body.menu-hub-open #menuHubPanel{
     overflow: hidden !important;
   }
 </style>
+
+<style id="startHubTrueSameVisibleFootprintFinalOverride">
+  /* v2.XX: FINAL source-of-truth guard for Start + Hub visible frame.
+     This intentionally beats the older first-paint Start Menu lock and the hub-tab
+     overrides by using higher specificity for both surfaces. The visible green
+     outline/background must occupy the exact same centered 16:9 footprint when
+     switching between Start and Hub. */
+  :root{
+    --shooter-start-hub-frame-height: min(405px, 51.75vw, calc(100vh - 96px));
+    --shooter-start-hub-frame-width: calc(var(--shooter-start-hub-frame-height) * 16 / 9);
+    --shooter-start-hub-frame-padding: 18px;
+    --shooter-start-hub-frame-radius: 16px;
+    --shooter-start-hub-frame-border: 2px solid rgba(0,255,102,0.65);
+    --shooter-start-hub-frame-bg: rgba(75,0,118,0.50);
+    --shooter-start-hub-frame-shadow: 0 0 28px rgba(0,255,102,0.20);
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface,
+  html body #menuHubPanel #menuHubPanelInner.shooter-menu16x9Surface,
+  html body #menuHubPanel.menuHubTabOptions #menuHubPanelInner.shooter-menu16x9Surface,
+  html body #menuHubPanel.menuHubTabImages #menuHubPanelInner.shooter-menu16x9Surface,
+  html body #menuHubPanel.menuHubTabStats #menuHubPanelInner.shooter-menu16x9Surface{
+    width: var(--shooter-start-hub-frame-width) !important;
+    min-width: var(--shooter-start-hub-frame-width) !important;
+    max-width: var(--shooter-start-hub-frame-width) !important;
+    height: var(--shooter-start-hub-frame-height) !important;
+    min-height: var(--shooter-start-hub-frame-height) !important;
+    max-height: var(--shooter-start-hub-frame-height) !important;
+    aspect-ratio: 16 / 9 !important;
+    box-sizing: border-box !important;
+    padding: var(--shooter-start-hub-frame-padding) !important;
+    border: var(--shooter-start-hub-frame-border) !important;
+    border-width: 2px !important;
+    border-radius: var(--shooter-start-hub-frame-radius) !important;
+    background: var(--shooter-start-hub-frame-bg) !important;
+    box-shadow: var(--shooter-start-hub-frame-shadow) !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    flex: 0 0 auto !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+
+  html body #menuHubPanel #menuHubPanelInner.shooter-menu16x9Surface,
+  html body #menuHubPanel.menuHubTabOptions #menuHubPanelInner.shooter-menu16x9Surface,
+  html body #menuHubPanel.menuHubTabImages #menuHubPanelInner.shooter-menu16x9Surface,
+  html body #menuHubPanel.menuHubTabStats #menuHubPanelInner.shooter-menu16x9Surface{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+  }
+</style>
+
