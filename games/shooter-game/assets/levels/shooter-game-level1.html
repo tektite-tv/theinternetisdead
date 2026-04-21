@@ -71,6 +71,29 @@
     white-space:normal;
     animation:titleTextHueShift 1.4s linear infinite;
   }
+  #startMenuTitle::after{
+    content: attr(data-audio-icon);
+    display:inline-grid;
+    place-items:center;
+    flex:0 0 auto;
+    width:34px;
+    height:34px;
+    margin-left:10px;
+    border-radius:10px;
+    border:1px solid rgba(0,255,102,0.45);
+    background:rgba(0,0,0,0.38);
+    box-shadow:0 0 12px rgba(0,255,102,0.14);
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+    filter:none;
+  }
+  #startMenuTitle:hover::after,
+  body.controller-active #startMenuTitle.controllerFocus::after{
+    background:rgba(75,0,118,0.75);
+    border-color:rgba(0,255,0,0.95);
+    box-shadow:0 0 0 2px rgba(0,255,0,0.22), 0 0 14px rgba(0,255,0,0.24);
+  }
   #startMenuTitle:hover,
   body.controller-active #startMenuTitle.controllerFocus{
     background: rgba(75,0,118,0.55);
@@ -116,6 +139,12 @@
     #startMenuTitle .titleText{
       overflow-wrap:normal;
       white-space:nowrap;
+    }
+    #startMenuTitle::after{
+      width:28px;
+      height:28px;
+      margin-left:6px;
+      font-size:17px;
     }
   }
   @media (max-width: 340px){
@@ -3330,7 +3359,7 @@ body.invert-colors {
 
 <div id="uiRoot">
   <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.50); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
-    <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
+    <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title. Audio enabled. Activate to mute audio." data-audio-icon="🔊"><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
     <div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" data-file-last-updated href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: loading)</a></div>

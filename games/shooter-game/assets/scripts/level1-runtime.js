@@ -93,6 +93,7 @@ const AUDIO_UI_SELECT = "/games/shooter-game/assets/audio/arcade-clink.mp3";
    Audio
 ======================= */
 const AUDIO_BG_MUSIC = "/games/shooter-game/assets/audio/spaceinvaders.mp3";
+const AUDIO_MENU_MUSIC = "/games/shooter-game/assets/audio/wii-shop-music.mp3";
 const AUDIO_DEATH_YELL = "/games/shooter-game/assets/audio/link-yell.mp3";
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
@@ -100,6 +101,13 @@ const musicBg = new Audio(AUDIO_BG_MUSIC);
 musicBg.loop = true;
 musicBg.preload = "auto";
 musicBg.volume = 0.6;
+
+// Pre-game/menu music. Runs only before gameplay starts, then hands off to level music.
+const menuMusicBg = new Audio(AUDIO_MENU_MUSIC);
+menuMusicBg.loop = true;
+menuMusicBg.preload = "auto";
+menuMusicBg.volume = 0.45;
+const activeSfxClones = new Set();
 
 // Death yell (plays once when GAME OVER screen appears)
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
@@ -112,18 +120,25 @@ let audioMuted = false;
 function applyMuteState(){
   const m = !!audioMuted;
   musicBg.muted = m;
+  menuMusicBg.muted = m;
   sfxDeath.muted = m;
   sfxHit.muted = m;
   sfxOof.muted = m;
   sfxUiHover.muted = m;
   sfxUiSelect.muted = m;
+  activeSfxClones.forEach((clone) => {
+    try{ clone.muted = m; }catch(e){}
+  });
+  syncStartMenuMuteIcon();
 }
 
 function setMuteOptionEnabled(shouldEnable){
   audioMuted = !!shouldEnable;
   applyMuteState();
-  // Only resume music when gameplay is actually running.
-  if (!audioMuted && gameState === STATE.PLAYING) ensureMusicPlaying();
+  if (!audioMuted){
+    if (gameState === STATE.PLAYING) ensureMusicPlaying();
+    else if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
+  }
   syncCheatsMenuState();
 }
 
@@ -150,7 +165,43 @@ function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
   }
 }
 
+function isPreGameplayMenuAudioState(){
+  try{
+    return gameState === STATE.MENU
+      || gameState === STATE.HUB
+      || gameState === STATE.OPTIONS
+      || gameState === STATE.CHEATS
+      || gameState === STATE.CONTROLS;
+  }catch(e){
+    return false;
+  }
+}
+
+function ensureMenuMusicPlaying(restart=false){
+  // Start/resume looping Wii Shop-style menu music while the player is still in pre-game menus.
+  try{
+    if (restart) menuMusicBg.currentTime = 0;
+    menuMusicBg.loop = true;
+  }catch(e){}
+  if (audioMuted || !isPreGameplayMenuAudioState()) return;
+  try{
+    if (!musicBg.paused) musicBg.pause();
+  }catch(e){}
+  try{
+    if (!restart && !menuMusicBg.paused) return;
+    tryPlayWithRetry(menuMusicBg, 30, 80);
+  }catch(e){}
+}
+
+function stopMenuMusic(reset=false){
+  try{
+    menuMusicBg.pause();
+    if (reset) menuMusicBg.currentTime = 0;
+  }catch(e){}
+}
+
 function ensureMusicPlaying(restart=false){
+  stopMenuMusic(true);
   // Start/resume looping background music immediately when gameplay begins.
   // "restart=true" forces it back to the beginning.
   try{
@@ -3027,21 +3078,28 @@ function unlockAudioOnce(){
     musicBg.muted = true;
     musicBg.play().then(()=>{ musicBg.pause(); musicBg.currentTime = 0; musicBg.muted = false; }).catch(()=>{ musicBg.muted = false; });
 
+    // Prime the pre-game menu music once the browser allows it.
+    menuMusicBg.muted = true;
+    menuMusicBg.play().then(()=>{ menuMusicBg.pause(); menuMusicBg.currentTime = 0; menuMusicBg.muted = false; }).catch(()=>{ menuMusicBg.muted = false; });
+
     // Prime the death yell audio once the browser allows it.
     sfxDeath.muted = true;
     sfxDeath.play().then(()=>{ sfxDeath.pause(); sfxDeath.currentTime = 0; sfxDeath.muted = false; }).catch(()=>{ sfxDeath.muted = false; });
   }catch(e){}
 
   applyMuteState();
+  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
 }
 
 function playSfx(a){
   if (audioMuted) return;
   try{
     const c = a.cloneNode();
+    activeSfxClones.add(c);
+    c.addEventListener("ended", () => activeSfxClones.delete(c), { once:true });
     c.volume = a.volume;
     c.muted = !!audioMuted;
-    c.play().catch(()=>{});
+    c.play().catch(()=>{ activeSfxClones.delete(c); });
   }catch(e){}
 }
 function playSfxImmediate(a){
@@ -3129,6 +3187,17 @@ const btnMenu = document.getElementById("btnMenu");
 const btnOptions = document.getElementById("btnOptions");
 const startMenuTitle = document.getElementById("startMenuTitle");
 const titleHoverReveal = document.getElementById("titleHoverReveal");
+function syncStartMenuMuteIcon(){
+  if (!startMenuTitle) return;
+  startMenuTitle.dataset.audioIcon = audioMuted ? "🔇" : "🔊";
+  startMenuTitle.setAttribute("aria-label", audioMuted ? "Game title. Audio muted. Activate to unmute audio." : "Game title. Audio enabled. Activate to mute audio.");
+  startMenuTitle.title = audioMuted ? "Unmute all game audio" : "Mute all game audio";
+}
+function toggleStartMenuTitleMute(){
+  unlockAudioOnce();
+  setMuteOptionEnabled(!audioMuted);
+  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
+}
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const menuHubPanel = document.getElementById("menuHubPanel");
@@ -5408,6 +5477,10 @@ function stepNumberInput(inputEl, delta){
 function activateControllerTarget(el){
   if (!el) return;
   playUiActivateSoundFor(el, 'controller');
+  if (el === startMenuTitle){
+    toggleStartMenuTitleMute();
+    return true;
+  }
   if (el.tagName === "A"){
     el.click();
     return true;
@@ -5504,6 +5577,7 @@ function showMenu(){
   try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
   deathYellPlayed = false;
   gameState = STATE.MENU;
+  if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
   gameWon = false;
   // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
@@ -5545,7 +5619,9 @@ function showMenu(){
 function openMenuHub(){
   if (!menuHubPanel) return;
   setPaused(false);
+  unlockAudioOnce();
   gameState = STATE.HUB;
+  if (!audioMuted) ensureMenuMusicPlaying();
   mouseShieldHolding = false;
   stopShield(false);
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
@@ -5577,6 +5653,7 @@ function closeMenuHub(){
     menuHubPanel.classList.remove("menuHubTabImages", "menuHubTabStats", "menuHubTabOptions");
   }
   gameState = STATE.MENU;
+  if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
   uiRoot.classList.remove("optionsBackdrop");
   startMenu.style.display = "block";
   setStartMenuInteractive(true);
@@ -5634,6 +5711,8 @@ function showControlsMenu(){
   uiRoot.classList.remove("pauseControlsOpen");
   uiRoot.classList.remove("optionsBackdrop");
   gameState = STATE.CONTROLS;
+  unlockAudioOnce();
+  if (!audioMuted) ensureMenuMusicPlaying();
   resetDraftBindingsFromActive();
   markControlsClean(false);
   lockControlsInputMode(activeInputMode);
@@ -5851,6 +5930,10 @@ function showCheats(){
     setPaused(false);
   }
   gameState = STATE.CHEATS;
+  if (!openingFromPauseOptions){
+    unlockAudioOnce();
+    if (!audioMuted) ensureMenuMusicPlaying();
+  }
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
   heartsSlider.value = START_HEARTS_INFINITE ? 100 : START_HEARTS;
@@ -5982,6 +6065,7 @@ function applyGameSpeedValue(value, syncSlider=true){
   if (speed === 0){
     pendingWaveStartMusic = false;
     stopMusic();
+    stopMenuMusic(true);
   }
   if (syncSlider) setSpeedSliderPositionFromSpeed(speed);
   syncStartOptionsLabels();
@@ -6404,6 +6488,8 @@ function showOptions(fromPause = false){
   if (!fromPause){
     setPaused(false);
     gameState = STATE.OPTIONS;
+    unlockAudioOnce();
+    if (!audioMuted) ensureMenuMusicPlaying();
   }
   markOptionsClean(false);
     // v1.96: populate start options UI with saved settings
@@ -6458,6 +6544,7 @@ function startGame(){
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   setPaused(false);
   unlockAudioOnce();
+  stopMenuMusic(true);
   gameState = STATE.PLAYING;
   scoreTrackingLocked = !!(cheatsUnlockedByPassphrase || hasScoreDisqualifyingSettings());
   syncScoreTrackingState();
@@ -6567,6 +6654,7 @@ function startGame(){
     trySpawnUFO(true);
     pendingWaveStartMusic = false;
     stopMusic();
+    stopMenuMusic(true);
     runTimer = 0;
     document.body.classList.remove("speedZeroTimeTravel");
     if (timerHud) timerHud.style.display = "none";
@@ -6711,6 +6799,20 @@ if (backgroundColorPicker){
   });
   backgroundColorPicker.addEventListener("change", () => {
     applyBackgroundColorFromControls(backgroundColorPicker.value);
+  });
+}
+
+if (startMenuTitle){
+  syncStartMenuMuteIcon();
+  startMenuTitle.addEventListener("click", (event) => {
+    // The visible speaker is a ::after pseudo-element; clicks on the right edge hit the title box.
+    const rect = startMenuTitle.getBoundingClientRect();
+    const iconZonePx = 52;
+    if (!rect || event.clientX >= rect.right - iconZonePx){
+      event.preventDefault();
+      event.stopPropagation();
+      toggleStartMenuTitleMute();
+    }
   });
 }
 
