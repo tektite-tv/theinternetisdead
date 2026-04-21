@@ -3288,7 +3288,7 @@ function getControlsControllerTargets(){
 }
 
 function getPauseControllerTargets(){
-  return [btnPauseResume, (canOpenStore() ? btnPauseOpenStore : null), btnPauseOpenChat, btnPauseOptions, btnPauseQuit].filter(Boolean);
+  return [(canOpenStore() ? btnPauseOpenStore : null), btnPauseOpenChat, btnPauseOptions, btnPauseQuit].filter(Boolean);
 }
 
 function getScoreStoreControllerTargets(){

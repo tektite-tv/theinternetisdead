@@ -5912,12 +5912,19 @@ body.menu-hub-open #menuHubPanel{
   </div>
 </div>
 
+<style id="pauseMenuNoDuplicateResumeButtonPatch">
+  /* v2.XX: Keep the pause menu button stack matching Start/Hub.
+     The pause hint already says Press ESC to Resume, so do not draw a
+     separate one-line Resume button between the hint and Open Store. */
+  #btnPauseResume{
+    display:none !important;
+  }
+</style>
 <div id="pauseOverlay">
   <div id="pausePanel" class="shooter-menu16x9Surface">
     <div id="pauseTitle">Hello User!<br>GAME PAUSED</div>
     <div id="pauseHint">Press ESC to Resume</div>
     <div id="pauseCmdSuggest" aria-live="polite" aria-hidden="true" hidden></div>
-    <button id="btnPauseResume" class="pauseMenuBtn" style="font-size:18px;">Resume</button>
     <button id="btnPauseOpenStore" class="pauseMenuBtn" type="button" style="font-size:18px; display:none;">Open Store</button>
     <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Options</button>
     <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
