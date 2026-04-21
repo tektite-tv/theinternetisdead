@@ -4022,3 +4022,75 @@ line-height:1;
 </body>
 
 </html>
+
+<style>
+/* v2.XX: Start Menu compact equal-spacing correction.
+   Keep the good top padding, make the bottom padding match it, and stop
+   pretending a fixed-height shell can magically create equal row spacing. */
+#startMenu.panel{
+  --start-menu-compact-gap:8px !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-height:calc(100vh - 32px) !important;
+  padding:18px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:var(--start-menu-compact-gap) !important;
+  overflow:hidden !important;
+}
+#startMenu.panel > *{
+  flex:0 0 auto !important;
+  margin-top:0 !important;
+  margin-bottom:0 !important;
+  transform:none !important;
+}
+#startMenu #startMenuTitle,
+#startMenu .titleSubWrap,
+#startMenu .subimg,
+#startMenu .menuBlurb,
+#startMenu .btnRowTop,
+#startMenu #startNicknameRow{
+  margin-top:0 !important;
+  margin-bottom:0 !important;
+  transform:none !important;
+}
+#startMenu .titleSubWrap{
+  min-height:auto !important;
+  line-height:1 !important;
+}
+#startMenu .titleSub{
+  margin:0 !important;
+  line-height:1 !important;
+}
+#startMenu .subimg{
+  width:110px !important;
+  height:110px !important;
+}
+#startMenu .menuBlurb{
+  line-height:1.28 !important;
+}
+#startMenu .btnRowTop{
+  display:grid !important;
+  grid-template-columns:repeat(2, 160px) !important;
+  justify-content:center !important;
+  align-items:center !important;
+  gap:10px !important;
+  width:100% !important;
+}
+#startMenu #startNicknameRow{
+  min-height:42px !important;
+  height:42px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:100% !important;
+  padding:0 !important;
+}
+#startMenu #startWelcomeNickname,
+#startMenu #btnEnterNickname,
+#startMenu #startNicknameInput{
+  margin:0 !important;
+}
+</style>
