@@ -4337,6 +4337,49 @@ display:none;
 white-space:nowrap;
 line-height:1;
 ">❤️ ❤️ ❤️ ❤️</div>
+
+<style id="startMenuNicknameButtonReadableSameFootprint">
+  /* v2.XX: Start Menu interior-only nickname fix.
+     Keep the outer frame and proportional layout untouched. Give the Enter
+     Nickname control the full nickname row footprint so it stays readable. */
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow{
+    display:flex !important;
+    align-items:stretch !important;
+    justify-content:center !important;
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #btnEnterNickname,
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameInput{
+    width:100% !important;
+    max-width:none !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    padding:0 14px !important;
+    font-size:clamp(13px, 2.1vw, 18px) !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    box-sizing:border-box !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #btnEnterNickname .startMenuButtonText{
+    display:block !important;
+    width:100% !important;
+    min-width:0 !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+    text-align:center !important;
+  }
+</style>
+
 </body>
 
 </html>
