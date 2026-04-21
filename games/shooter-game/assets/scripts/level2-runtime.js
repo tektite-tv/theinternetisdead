@@ -113,11 +113,25 @@ const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
 sfxDeath.volume = 0.10;
 
-// Global mute toggle (M key)
+// Global mute toggle (M key).
+// v2.XX: Nickname `_mute` hard-mutes all level audio even when the normal mute option is off.
 let audioMuted = false;
+const GAME_AUDIO_MUTE_NICKNAME = "_mute";
+
+function isMuteNicknameEnabled(){
+  try{
+    return getSavedChatNicknameValue().trim().toLowerCase() === GAME_AUDIO_MUTE_NICKNAME;
+  }catch(error){
+    return false;
+  }
+}
+
+function isGameAudioMuted(){
+  return !!audioMuted || isMuteNicknameEnabled();
+}
 
 function applyMuteState(){
-  const m = !!audioMuted;
+  const m = isGameAudioMuted();
   musicBg.muted = m;
   sfxDeath.muted = m;
   sfxHit.muted = m;
@@ -130,13 +144,13 @@ function setMuteOptionEnabled(shouldEnable){
   audioMuted = !!shouldEnable;
   applyMuteState();
   // Only resume music when gameplay is actually running.
-  if (!audioMuted && gameState === STATE.PLAYING) ensureMusicPlaying();
+  if (!isGameAudioMuted() && gameState === STATE.PLAYING) ensureMusicPlaying();
 }
 
 function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
-  if (!audioEl || audioMuted) return;
+  if (!audioEl || isGameAudioMuted()) return;
   try{
-    audioEl.muted = !!audioMuted;
+    audioEl.muted = isGameAudioMuted();
   }catch(e){}
   try{
     const p = audioEl.play();
@@ -165,7 +179,7 @@ function ensureMusicPlaying(restart=false){
     }
     musicBg.loop = true;
   }catch(e){}
-  if (audioMuted) return;
+  if (isGameAudioMuted()) return;
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
@@ -181,10 +195,10 @@ function stopMusic(){
 }
 
 function playDeathYell(){
-  if (audioMuted) return;
+  if (isGameAudioMuted()) return;
   try{
     sfxDeath.currentTime = 0;
-    sfxDeath.muted = !!audioMuted;
+    sfxDeath.muted = isGameAudioMuted();
   }catch(e){}
   // Try immediately, then retry briefly to avoid "plays only after next keypress" behavior.
   sfxDeath.play().catch(()=>{ tryPlayWithRetry(sfxDeath, 30, 60); });
@@ -787,7 +801,7 @@ function setPaused(p){
       if (!musicBg.paused) musicBg.pause();
     } else {
       // only resume if we're in gameplay and not muted
-      if (gameState === STATE.PLAYING && !audioMuted) musicBg.play().catch(()=>{});
+      if (gameState === STATE.PLAYING && !isGameAudioMuted()) musicBg.play().catch(()=>{});
     }
   }catch(e){}
 
@@ -2640,19 +2654,19 @@ function unlockAudioOnce(){
   if (gameState === STATE.PLAYING) ensureMusicPlaying();
 }
 function playSfx(a){
-  if (audioMuted) return;
+  if (isGameAudioMuted()) return;
   try{
     const c = a.cloneNode();
     c.volume = a.volume;
-    c.muted = !!audioMuted;
+    c.muted = isGameAudioMuted();
     c.play().catch(()=>{});
   }catch(e){}
 }
 function playSfxImmediate(a){
-  if (audioMuted || !a) return;
+  if (isGameAudioMuted() || !a) return;
   try{
     a.currentTime = 0;
-    a.muted = !!audioMuted;
+    a.muted = isGameAudioMuted();
     a.play().catch(()=>{});
   }catch(e){}
 }

@@ -114,11 +114,32 @@ const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
 sfxDeath.volume = 0.10;
 
-// Global mute toggle (M key)
+// Global mute toggle (M key).
+// v2.XX: Nickname `_mute` is a hard audio kill switch. The normal mute option
+// still keeps its own state, but effective playback stays silent while that
+// nickname is saved. Yes, the username field is now a control panel.
 let audioMuted = false;
+const GAME_AUDIO_MUTE_NICKNAME = "_mute";
+
+function isMuteNicknameEnabled(){
+  try{
+    return getSavedChatNicknameValue().trim().toLowerCase() === GAME_AUDIO_MUTE_NICKNAME;
+  }catch(error){
+    return false;
+  }
+}
+
+function isGameAudioMuted(){
+  return !!audioMuted || isMuteNicknameEnabled();
+}
+
+function getGameAudioMuteStatusText(){
+  if (isMuteNicknameEnabled()) return "Enabled (_mute)";
+  return audioMuted ? "Enabled" : "Disabled";
+}
 
 function applyMuteState(){
-  const m = !!audioMuted;
+  const m = isGameAudioMuted();
   musicBg.muted = m;
   menuMusicBg.muted = m;
   sfxDeath.muted = m;
@@ -135,7 +156,7 @@ function applyMuteState(){
 function setMuteOptionEnabled(shouldEnable){
   audioMuted = !!shouldEnable;
   applyMuteState();
-  if (!audioMuted){
+  if (!isGameAudioMuted()){
     if (gameState === STATE.PLAYING) ensureMusicPlaying();
     else if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
   }
@@ -143,9 +164,9 @@ function setMuteOptionEnabled(shouldEnable){
 }
 
 function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
-  if (!audioEl || audioMuted) return;
+  if (!audioEl || isGameAudioMuted()) return;
   try{
-    audioEl.muted = !!audioMuted;
+    audioEl.muted = isGameAudioMuted();
   }catch(e){}
   try{
     const p = audioEl.play();
@@ -183,7 +204,7 @@ function ensureMenuMusicPlaying(restart=false){
     if (restart) menuMusicBg.currentTime = 0;
     menuMusicBg.loop = true;
   }catch(e){}
-  if (audioMuted || !isPreGameplayMenuAudioState()) return;
+  if (isGameAudioMuted() || !isPreGameplayMenuAudioState()) return;
   try{
     if (!musicBg.paused) musicBg.pause();
   }catch(e){}
@@ -210,7 +231,7 @@ function ensureMusicPlaying(restart=false){
     }
     musicBg.loop = true;
   }catch(e){}
-  if (audioMuted) return;
+  if (isGameAudioMuted()) return;
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
@@ -226,10 +247,10 @@ function stopMusic(){
 }
 
 function playDeathYell(){
-  if (audioMuted) return;
+  if (isGameAudioMuted()) return;
   try{
     sfxDeath.currentTime = 0;
-    sfxDeath.muted = !!audioMuted;
+    sfxDeath.muted = isGameAudioMuted();
   }catch(e){}
   // Try immediately, then retry briefly to avoid "plays only after next keypress" behavior.
   sfxDeath.play().catch(()=>{ tryPlayWithRetry(sfxDeath, 30, 60); });
@@ -810,7 +831,7 @@ function setPaused(p){
       if (!musicBg.paused) musicBg.pause();
     } else {
       // only resume if we're in gameplay and not muted
-      if (gameState === STATE.PLAYING && !audioMuted) musicBg.play().catch(()=>{});
+      if (gameState === STATE.PLAYING && !isGameAudioMuted()) musicBg.play().catch(()=>{});
     }
   }catch(e){}
 
@@ -3237,28 +3258,28 @@ function unlockAudioOnce(){
   }catch(e){}
 
   applyMuteState();
-  if (!audioMuted && isPreGameplayMenuAudioState()){
+  if (!isGameAudioMuted() && isPreGameplayMenuAudioState()){
     ensureMenuMusicPlaying();
-    setTimeout(() => { if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(); }, 120);
+    setTimeout(() => { if (!isGameAudioMuted() && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(); }, 120);
   }
 }
 
 function playSfx(a){
-  if (audioMuted) return;
+  if (isGameAudioMuted()) return;
   try{
     const c = a.cloneNode();
     activeSfxClones.add(c);
     c.addEventListener("ended", () => activeSfxClones.delete(c), { once:true });
     c.volume = a.volume;
-    c.muted = !!audioMuted;
+    c.muted = isGameAudioMuted();
     c.play().catch(()=>{ activeSfxClones.delete(c); });
   }catch(e){}
 }
 function playSfxImmediate(a){
-  if (audioMuted || !a) return;
+  if (isGameAudioMuted() || !a) return;
   try{
     a.currentTime = 0;
-    a.muted = !!audioMuted;
+    a.muted = isGameAudioMuted();
     a.play().catch(()=>{});
   }catch(e){}
 }
@@ -3345,26 +3366,26 @@ const stageHud = document.getElementById("stageHud");
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const constructionHoverReveal = document.getElementById("constructionHoverReveal");
 function syncStartMenuMuteIcon(){
-  const icon = audioMuted ? "🔇" : "🔊";
+  const icon = isGameAudioMuted() ? "🔇" : "🔊";
   if (startMenuTitle){
     startMenuTitle.dataset.audioIcon = icon;
-    startMenuTitle.setAttribute("aria-label", audioMuted ? "Game title. Audio muted." : "Game title. Audio enabled.");
-    startMenuTitle.title = audioMuted ? "Audio muted" : "Audio enabled";
+    startMenuTitle.setAttribute("aria-label", isGameAudioMuted() ? "Game title. Audio muted." : "Game title. Audio enabled.");
+    startMenuTitle.title = isMuteNicknameEnabled() ? "Audio muted by nickname _mute" : (audioMuted ? "Audio muted" : "Audio enabled");
   }
   if (stageHud){
     stageHud.dataset.audioIcon = icon;
-    stageHud.setAttribute("aria-label", audioMuted ? "Start Menu. Audio muted. Activate speaker to unmute audio." : "Start Menu. Audio enabled. Activate speaker to mute audio.");
-    stageHud.title = audioMuted ? "Unmute all game audio" : "Mute all game audio";
+    stageHud.setAttribute("aria-label", isGameAudioMuted() ? "Start Menu. Audio muted. Activate speaker to unmute audio." : "Start Menu. Audio enabled. Activate speaker to mute audio.");
+    stageHud.title = isMuteNicknameEnabled() ? "Audio muted by nickname _mute" : (audioMuted ? "Unmute all game audio" : "Mute all game audio");
   }
 }
 function toggleStartMenuTitleMute(){
   unlockAudioOnce();
   setMuteOptionEnabled(!audioMuted);
-  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
+  if (!isGameAudioMuted() && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
 }
 function primeMenuMusicOnFirstGesture(){
   unlockAudioOnce();
-  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
+  if (!isGameAudioMuted() && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
 }
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
@@ -3941,11 +3962,11 @@ function markCheatsClean(applied=false){
 
 function syncCheatsMenuState(){
   if (infiniteToggle) infiniteToggle.checked = !!INFINITE_MODE;
-  if (muteCheckbox) muteCheckbox.checked = !!audioMuted;
+  if (muteCheckbox) muteCheckbox.checked = isGameAudioMuted();
   if (invertColorsCheckbox) invertColorsCheckbox.checked = !!INVERT_COLORS;
   if (videoFxCheckbox) videoFxCheckbox.checked = !!VIDEO_FX_ENABLED;
   if (infiniteToggleStatus) infiniteToggleStatus.textContent = INFINITE_MODE ? "Enabled" : "Disabled";
-  if (muteStatus) muteStatus.textContent = audioMuted ? "Enabled" : "Disabled";
+  if (muteStatus) muteStatus.textContent = getGameAudioMuteStatusText();
   if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
   if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
 }
@@ -5770,7 +5791,7 @@ function showMenu(){
   try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
   deathYellPlayed = false;
   gameState = STATE.MENU;
-  if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
+  if (audioUnlocked && !isGameAudioMuted()) ensureMenuMusicPlaying();
   gameWon = false;
   // v1.96: drop shield when entering menus
   mouseShieldHolding = false;
@@ -5819,7 +5840,7 @@ function openMenuHub(){
   setPaused(false);
   unlockAudioOnce();
   gameState = STATE.HUB;
-  if (!audioMuted) ensureMenuMusicPlaying();
+  if (!isGameAudioMuted()) ensureMenuMusicPlaying();
   mouseShieldHolding = false;
   stopShield(false);
   // v2.XX: make the hub replace the Start Menu instead of sitting beside it.
@@ -5859,7 +5880,7 @@ function closeMenuHub(){
     menuHubPanel.classList.remove("menuHubTabImages", "menuHubTabStats", "menuHubTabOptions");
   }
   gameState = STATE.MENU;
-  if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
+  if (audioUnlocked && !isGameAudioMuted()) ensureMenuMusicPlaying();
   uiRoot.classList.remove("optionsBackdrop");
   document.body.classList.remove("menu-hub-open");
   if (startMenu){
@@ -5971,7 +5992,7 @@ function showControlsMenu(options = null){
   uiRoot.classList.remove("optionsBackdrop");
   gameState = STATE.CONTROLS;
   unlockAudioOnce();
-  if (!audioMuted) ensureMenuMusicPlaying();
+  if (!isGameAudioMuted()) ensureMenuMusicPlaying();
   resetDraftBindingsFromActive();
   markControlsClean(false);
   lockControlsInputMode(activeInputMode);
@@ -6196,7 +6217,7 @@ function showCheats(){
   gameState = STATE.CHEATS;
   if (!openingFromPauseOptions){
     unlockAudioOnce();
-    if (!audioMuted) ensureMenuMusicPlaying();
+    if (!isGameAudioMuted()) ensureMenuMusicPlaying();
   }
   if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
   livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
@@ -6585,6 +6606,12 @@ function saveChatNickname(value){
       window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
     }
   }catch(error){}
+  applyMuteState();
+  if (!isGameAudioMuted()){
+    if (gameState === STATE.PLAYING) ensureMusicPlaying();
+    else if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
+  }
+  syncCheatsMenuState();
   return normalized;
 }
 
@@ -6909,7 +6936,7 @@ function showOptions(fromPause = false){
     setPaused(false);
     gameState = STATE.OPTIONS;
     unlockAudioOnce();
-    if (!audioMuted) ensureMenuMusicPlaying();
+    if (!isGameAudioMuted()) ensureMenuMusicPlaying();
   }
   markOptionsClean(false);
     // v1.96: populate start options UI with saved settings
@@ -9337,7 +9364,7 @@ function update(dt){
     const waveIsLive = enemies.length > 0 || (wave === 11 && boss.active);
     if (waveIsLive){
       pendingWaveStartMusic = false;
-      if (!audioMuted) ensureMusicPlaying(true);
+      if (!isGameAudioMuted()) ensureMusicPlaying(true);
     }
   }
 
