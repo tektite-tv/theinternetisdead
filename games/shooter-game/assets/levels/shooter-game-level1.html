@@ -5721,12 +5721,12 @@ body.menu-hub-open #menuHubPanel{
     transform-origin:center center !important;
     margin:0 !important;
     overflow:hidden !important;
-    display:grid !important;
-    grid-template-rows:1.15fr 0.42fr 0fr 0.62fr 0.62fr 0.62fr 0.62fr !important;
+    display:flex !important;
+    flex-direction:column !important;
     gap:8px !important;
     align-items:stretch !important;
     justify-items:center !important;
-    justify-content:stretch !important;
+    justify-content:flex-start !important;
     align-content:stretch !important;
     text-align:center !important;
     pointer-events:auto !important;
@@ -5772,6 +5772,37 @@ body.menu-hub-open #menuHubPanel{
     overflow:hidden !important;
   }
 
+
+
+  /* v2.XX: Pause menu native button stack.
+     Keep Resume, Open Store, Options, and Quit as real stacked buttons.
+     The hidden command suggestion node is removed from normal layout so it cannot draw
+     the stray one-line row between the hint and the buttons. */
+  html body #pauseOverlay #pausePanel #pauseTitle{
+    flex:0 0 96px !important;
+  }
+  html body #pauseOverlay #pausePanel #pauseHint{
+    flex:0 0 28px !important;
+  }
+  html body #pauseOverlay #pausePanel #pauseCmdSuggest[hidden],
+  html body #pauseOverlay #pausePanel #pauseCmdSuggest[aria-hidden="true"]{
+    display:none !important;
+    position:absolute !important;
+    width:0 !important;
+    height:0 !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:0 !important;
+    max-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    overflow:hidden !important;
+  }
+  html body #pauseOverlay #pausePanel .pauseMenuBtn{
+    flex:1 1 0 !important;
+    min-height:42px !important;
+  }
   html body #pauseOverlay #pausePanel .pauseMenuBtn{
     width:100% !important;
     min-width:0 !important;
@@ -5912,19 +5943,58 @@ body.menu-hub-open #menuHubPanel{
   </div>
 </div>
 
-<style id="pauseMenuNoDuplicateResumeButtonPatch">
-  /* v2.XX: Keep the pause menu button stack matching Start/Hub.
-     The pause hint already says Press ESC to Resume, so do not draw a
-     separate one-line Resume button between the hint and Open Store. */
-  #btnPauseResume{
+
+<style id="pauseMenuFourButtonNativeListFix">
+  /* Keep the visible pause controls as normal stacked buttons: Resume, Open Store, Options, Quit.
+     The hidden command suggestion placeholder is not part of the normal pause layout. */
+  html body #pauseOverlay #pausePanel{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    gap:8px !important;
+  }
+  html body #pauseOverlay #pausePanel #pauseTitle{
+    flex:0 0 96px !important;
+  }
+  html body #pauseOverlay #pausePanel #pauseHint{
+    flex:0 0 28px !important;
+  }
+  html body #pauseOverlay #pausePanel #pauseCmdSuggest[hidden],
+  html body #pauseOverlay #pausePanel #pauseCmdSuggest[aria-hidden="true"]{
     display:none !important;
+    position:absolute !important;
+    width:0 !important;
+    height:0 !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:0 !important;
+    max-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    overflow:hidden !important;
+  }
+  html body #pauseOverlay #pausePanel .pauseMenuBtn{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:100% !important;
+    max-width:none !important;
+    height:auto !important;
+    min-height:42px !important;
+    flex:1 1 0 !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
   }
 </style>
+
 <div id="pauseOverlay">
   <div id="pausePanel" class="shooter-menu16x9Surface">
     <div id="pauseTitle">Hello User!<br>GAME PAUSED</div>
     <div id="pauseHint">Press ESC to Resume</div>
     <div id="pauseCmdSuggest" aria-live="polite" aria-hidden="true" hidden></div>
+    <button id="btnPauseResume" class="pauseMenuBtn" type="button" style="font-size:18px;">Resume</button>
     <button id="btnPauseOpenStore" class="pauseMenuBtn" type="button" style="font-size:18px; display:none;">Open Store</button>
     <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Options</button>
     <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>

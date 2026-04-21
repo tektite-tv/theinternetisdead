@@ -4913,7 +4913,7 @@ function getPauseHelpControllerTargets(){
 function getPauseControllerTargets(){
   const helpTargets = getPauseHelpControllerTargets();
   if (helpTargets.length) return helpTargets;
-  return [(canOpenStore() ? btnPauseOpenStore : null), btnPauseOpenChat, btnPauseQuit].filter(Boolean);
+  return [btnPauseResume, (canOpenStore() ? btnPauseOpenStore : null), btnPauseOpenChat, btnPauseQuit].filter(Boolean);
 }
 
 function isPauseOptionsOpen(){
