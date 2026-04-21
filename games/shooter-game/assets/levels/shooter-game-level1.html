@@ -5485,6 +5485,83 @@ body.menu-hub-open #menuHubPanel{
     box-shadow:var(--shooter-start-hub-frame-shadow) !important;
   }
 </style>
+
+
+  <!-- v2.XX: Start/Menu controller glyphs sit beside their labels instead of floating at the far right. -->
+  <style id="startMenuControllerGlyphsInlineBesideText">
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controllerFocus,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu.controllerFocus,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controller-selected,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu.controller-selected{
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      gap:6px !important;
+      overflow:hidden !important;
+    }
+
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart .startMenuButtonText,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu .startMenuButtonText,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controllerFocus .startMenuButtonText,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu.controllerFocus .startMenuButtonText,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controller-selected .startMenuButtonText,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu.controller-selected .startMenuButtonText{
+      position:relative !important;
+      left:auto !important;
+      right:auto !important;
+      top:auto !important;
+      width:auto !important;
+      max-width:calc(100% - 28px) !important;
+      min-width:0 !important;
+      padding:0 !important;
+      transform:none !important;
+      flex:0 1 auto !important;
+      overflow:hidden !important;
+      text-overflow:ellipsis !important;
+      white-space:nowrap !important;
+    }
+
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controllerFocus::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu.controllerFocus::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controller-selected::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu.controller-selected::after{
+      content:"" !important;
+      position:static !important;
+      display:inline-block !important;
+      flex:0 0 18px !important;
+      width:18px !important;
+      height:18px !important;
+      margin:0 !important;
+      transform:none !important;
+      vertical-align:middle !important;
+      background-color:transparent !important;
+      background-position:center !important;
+      background-size:contain !important;
+      background-repeat:no-repeat !important;
+      border-radius:50% !important;
+      image-rendering:auto !important;
+      pointer-events:none !important;
+      filter:drop-shadow(0 0 4px rgba(0,255,0,0.75)) !important;
+      z-index:2 !important;
+    }
+
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controllerFocus::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controller-selected::after{
+      background-image:url('/games/shooter-game/assets/controller-buttons/button-a.webp') !important;
+    }
+
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu.controllerFocus::after,
+    body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu.controller-selected::after{
+      background-image:url('/games/shooter-game/assets/controller-buttons/menu.webp') !important;
+    }
+  </style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
