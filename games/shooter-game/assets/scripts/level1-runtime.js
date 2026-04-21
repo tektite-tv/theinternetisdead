@@ -4214,12 +4214,16 @@ function focusControllerElement(el){
   el.classList.add('controllerFocus');
   if (el === btnStats) fitStatsStartButtonNicknameLabel();
   const optRow = el.closest('.optRow');
-  if (optRow) optRow.classList.add('controllerFocus');
+  const suppressParentFocus = (el === btnCheats && optRow && optRow.id === "cheatsButtonRow");
+  if (optRow && !suppressParentFocus) optRow.classList.add('controllerFocus');
   const bindRow = el.closest('.controlsBindRow');
   if (bindRow) bindRow.classList.add('controllerFocus');
   if (typeof el.focus === 'function') { try{ el.focus({ preventScroll:true }); }catch(_){ try{ el.focus(); }catch(__){} } }
   if (typeof el.scrollIntoView === 'function') {
     try{ el.scrollIntoView({ block:'nearest', inline:'nearest' }); }catch(_){ }
+  }
+  if (el === btnCheats && typeof updateCheatsUnlockModeHint === "function") {
+    updateCheatsUnlockModeHint();
   }
   if (el !== lastControllerSelectSoundTarget) {
     lastControllerSelectSoundTarget = el;
@@ -4561,6 +4565,9 @@ function syncOptionsControllerFocus(){
   optionsFocusIndex = Math.max(0, Math.min(optionsFocusIndex, items.length - 1));
   const target = items[optionsFocusIndex];
   focusControllerElement(target);
+  if (target === btnCheats && activeInputMode === INPUT_MODE_CONTROLLER && !cheatsUnlockedByPassphrase && !cheatsUnlockTimer && !cheatsUnlockInputReady){
+    renderCheatermodeControllerComboLabel(btnCheats, { remaining: Math.ceil(CHEATERMODE_CONTROLLER_HOLD_MS / 1000), xPressed: false, viewPressed: false, unlocked: false });
+  }
   keepOptionsControllerTargetFullyVisible(target, { forceTop: optionsFocusIndex === 0 });
   // Keep the Cheats unlock hint synced with controller focus, including the
   // normal Start-menu -> Options path. Otherwise the X + View text only shows

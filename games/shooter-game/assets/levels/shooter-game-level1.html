@@ -295,7 +295,7 @@
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
     background: rgba(75,0,118,0.52);
   }
-  body.controller-active .optRow .controllerFocus,
+  body.controller-active .optRow:not(.cheatsButtonRow) .controllerFocus,
   body.controller-active .controlsBindRow .controllerFocus{
     border-color: rgba(0,255,0,0.95) !important;
     box-shadow: 0 0 0 2px rgba(0,255,0,0.38), 0 0 12px rgba(0,255,0,0.22);
@@ -2912,18 +2912,19 @@ body.invert-colors {
     margin-bottom:2px !important;
   }
 
-  /* v2.13: In the hosted Options tab, the Cheats row and the Cheats button
-     occupy the same visual rectangle. Let only the button draw controller focus
-     so it does not look like two outlines fighting for custody. */
-  body.controller-active #menuHubPanel.menuHubTabOptions #cheatsButtonRow.controllerFocus{
+  /* v2.14: Treat the Cheats button like the normal Options menu does:
+     one controller focus target, one visible outline, no parent-row glow stacked
+     under the button glow. */
+  body.controller-active #cheatsButtonRow.controllerFocus{
     border-color:transparent !important;
     box-shadow:none !important;
     background:transparent !important;
   }
-  body.controller-active #menuHubPanel.menuHubTabOptions #cheatsButtonRow .smallBtn.controllerFocus{
+  body.controller-active #cheatsButtonRow > #btnCheats.controllerFocus{
     outline:none !important;
     border-color:rgba(0,255,0,0.95) !important;
     box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.24) !important;
+    background:rgba(75,0,118,0.55) !important;
   }
 
 </style>
