@@ -1870,6 +1870,13 @@ function renderLifetimeStats(){
   const lockedDetails = document.getElementById("statsLockedDetails");
   const lockedToggle = document.getElementById("btnStatsLockedToggle");
   const lockedList = document.getElementById("statsLockedList");
+  const nicknamePrompt = document.getElementById("btnStatsEnterNickname");
+  const needsNicknameForStats = !hasLifetimeStatsProfile();
+  if (nicknamePrompt){
+    nicknamePrompt.hidden = !needsNicknameForStats;
+    nicknamePrompt.setAttribute("aria-hidden", needsNicknameForStats ? "false" : "true");
+    nicknamePrompt.tabIndex = needsNicknameForStats ? 0 : -1;
+  }
   let lockedCount = 0;
 
   for (const [key, el] of statBindings){
@@ -3488,6 +3495,7 @@ const statsPanelTitle = document.getElementById("statsPanelTitle");
 const statsPanelInner = document.getElementById("statsPanelInner");
 const statsScroll = document.getElementById("statsScroll");
 const statsLockedDetails = document.getElementById("statsLockedDetails");
+const btnStatsEnterNickname = document.getElementById("btnStatsEnterNickname");
 const btnStatsLockedToggle = document.getElementById("btnStatsLockedToggle");
 const btnStatsClose = document.getElementById("btnStatsClose");
 const btnStatsReset = document.getElementById("btnStatsReset");
@@ -4966,8 +4974,14 @@ function getScoreStoreControllerTargets(){
 
 function getStatsControllerTargets(){
   const statRows = getStatsRowTargets();
+  const nicknamePrompt = getStatsNicknamePromptTarget();
   const lockedSummary = getStatsLockedSummaryTarget();
-  return [...statRows, lockedSummary, ...getStatsLockedRowTargets(), btnStatsClose, btnStatsReset].filter(Boolean);
+  return [...statRows, nicknamePrompt, lockedSummary, ...getStatsLockedRowTargets(), btnStatsClose, btnStatsReset].filter(Boolean);
+}
+
+function getStatsNicknamePromptTarget(){
+  if (!btnStatsEnterNickname || btnStatsEnterNickname.hidden) return null;
+  return btnStatsEnterNickname;
 }
 
 function getStatsRowTargets(){
@@ -4999,6 +5013,34 @@ function toggleStatsLockedSummary(){
   syncStatsLockedSummaryState();
   focusControllerElement(btnStatsLockedToggle);
   return true;
+}
+
+function openNicknamePromptFromStats(){
+  restoreMenuHubActiveInner();
+  if (statsPanel){
+    statsPanel.style.display = "none";
+    statsPanel.setAttribute("aria-hidden", "true");
+    statsPanel.removeAttribute("aria-modal");
+  }
+  if (menuHubPanel){
+    menuHubPanel.style.display = "none";
+    menuHubPanel.setAttribute("aria-hidden", "true");
+    menuHubPanel.classList.remove("menuHubTabImages", "menuHubTabStats", "menuHubTabOptions");
+  }
+  document.body.classList.remove("menu-hub-open");
+  if (uiRoot){
+    uiRoot.classList.remove("optionsBackdrop");
+    uiRoot.style.display = "flex";
+  }
+  gameState = STATE.MENU;
+  syncStartMenuHudLayerMode();
+  if (startMenu){
+    startMenu.style.setProperty("display", "block");
+    startMenu.setAttribute("aria-hidden", "false");
+    setStartMenuInteractive(true);
+  }
+  syncStartMenuNicknameButton(getSavedChatNicknameValue());
+  return showStartNicknameInput();
 }
 
 function scrollStatsPanelBy(delta){
@@ -5591,6 +5633,7 @@ function moveStatsControllerFocusDirectional(direction){
   const items = getStatsControllerTargets();
   if (!items.length) return false;
   const current = items[statsFocusIndex];
+  const nicknamePrompt = getStatsNicknamePromptTarget();
   const lockedSummary = getStatsLockedSummaryTarget();
   const lockedRows = getStatsLockedRowTargets();
   const currentLockedRowIndex = lockedRows.indexOf(current);
@@ -5598,16 +5641,21 @@ function moveStatsControllerFocusDirectional(direction){
   const lastLockedRow = lockedRows.length ? lockedRows[lockedRows.length - 1] : null;
   const backIndex = items.indexOf(btnStatsClose);
   const resetIndex = items.indexOf(btnStatsReset);
+  const nicknamePromptIndex = nicknamePrompt ? items.indexOf(nicknamePrompt) : -1;
   const summaryIndex = lockedSummary ? items.indexOf(lockedSummary) : -1;
   let nextIndex = statsFocusIndex;
 
   if (direction === "up"){
     if ((current === btnStatsClose || current === btnStatsReset) && lastLockedRow) nextIndex = items.indexOf(lastLockedRow);
     else if ((current === btnStatsClose || current === btnStatsReset) && summaryIndex !== -1) nextIndex = summaryIndex;
+    else if ((current === btnStatsClose || current === btnStatsReset) && nicknamePromptIndex !== -1) nextIndex = nicknamePromptIndex;
     else if (currentLockedRowIndex > 0) nextIndex = items.indexOf(lockedRows[currentLockedRowIndex - 1]);
     else if (currentLockedRowIndex === 0 && summaryIndex !== -1) nextIndex = summaryIndex;
+    else if (current === lockedSummary && nicknamePromptIndex !== -1) nextIndex = nicknamePromptIndex;
   } else if (direction === "down"){
-    if (current === lockedSummary && firstLockedRow) nextIndex = items.indexOf(firstLockedRow);
+    if (current === nicknamePrompt && summaryIndex !== -1) nextIndex = summaryIndex;
+    else if (current === nicknamePrompt && backIndex !== -1) nextIndex = backIndex;
+    else if (current === lockedSummary && firstLockedRow) nextIndex = items.indexOf(firstLockedRow);
     else if (current === lockedSummary && backIndex !== -1) nextIndex = backIndex;
     else if (currentLockedRowIndex >= 0 && currentLockedRowIndex < lockedRows.length - 1) nextIndex = items.indexOf(lockedRows[currentLockedRowIndex + 1]);
     else if (currentLockedRowIndex === lockedRows.length - 1 && backIndex !== -1) nextIndex = backIndex;
@@ -7440,6 +7488,11 @@ if (statsPanel){
 if (imagesPanel){
   imagesPanel.addEventListener("click", (event) => {
     if (event.target === imagesPanel) closeImagesPanel();
+  });
+}
+if (btnStatsEnterNickname){
+  btnStatsEnterNickname.addEventListener("click", () => {
+    openNicknamePromptFromStats();
   });
 }
 if (btnStatsLockedToggle){

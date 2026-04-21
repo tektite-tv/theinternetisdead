@@ -2506,10 +2506,18 @@ body.invert-colors {
   #statsLockedDetails[hidden]{
     display:none !important;
   }
-  #statsLockedDetails .statsToggleBtn{
+  #statsLockedDetails .statsToggleBtn,
+  #btnStatsEnterNickname{
     display:block;
     width:100%;
     margin:0;
+  }
+  #btnStatsEnterNickname[hidden]{
+    display:none !important;
+  }
+  body.controller-active #btnStatsEnterNickname.controllerFocus{
+    outline:2px solid #00ff66;
+    box-shadow:0 0 16px rgba(0,255,102,0.55);
   }
   #statsLockedList{
     display:grid;
@@ -6062,6 +6070,7 @@ body.menu-hub-open #menuHubPanel{
           <div class="statsRow" data-stat-row="lifetimeBulletsFired"><span>Lifetime Bullets Fired</span><span id="statLifetimeBullets" class="statsValue">0</span></div>
           <div class="statsRow" data-stat-row="lifetimeBombKills"><span>Lifetime Bomb Kills</span><span id="statLifetimeBombKills" class="statsValue">0</span></div>
         </div>
+        <button id="btnStatsEnterNickname" class="smallBtn statsToggleBtn statsNicknamePromptBtn" type="button" hidden>Enter Nickname</button>
         <div id="statsLockedDetails" hidden>
           <button id="btnStatsLockedToggle" class="smallBtn statsToggleBtn" type="button" aria-expanded="false">Play More To Unlock</button>
           <div id="statsLockedList" hidden></div>
