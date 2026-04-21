@@ -3020,29 +3020,32 @@ window.addEventListener("resize", resize);
 
 function fitMenuHubToStartMenu(){
   if (!menuHubPanelInner) return;
-  // v2.XX: The Hub uses the Start Menu measured footprint, then scales its
-  // own inner panel down inside that footprint so it cannot look wider or taller.
-  const hubScale = 0.94;
-  const rect = getFallbackMenuRect();
-  if (rect && rect.width && rect.height){
-    const width = Math.round(rect.width);
-    const height = Math.round(rect.height);
-    menuHubPanelInner.style.width = `px`;
-    menuHubPanelInner.style.height = `px`;
-    menuHubPanelInner.style.maxWidth = `px`;
-    menuHubPanelInner.style.maxHeight = `px`;
-    menuHubPanelInner.style.transform = `scale()`;
-    menuHubPanelInner.style.transformOrigin = "center center";
-    return;
-  }
-  menuHubPanelInner.style.width = "var(--shooter-menu-footprint-width)";
-  menuHubPanelInner.style.height = "var(--shooter-menu-footprint-height)";
-  menuHubPanelInner.style.maxWidth = "var(--shooter-menu-footprint-width)";
-  menuHubPanelInner.style.maxHeight = "var(--shooter-menu-footprint-height)";
-  menuHubPanelInner.style.transform = `scale()`;
-  menuHubPanelInner.style.transformOrigin = "center center";
-}
 
+  // The Hub must occupy the exact same visual footprint as the Start Menu.
+  // Measure the Start Menu's rendered rectangle, including its transform, then
+  // apply that rectangle as the Hub's border-box. No extra hub-only scaling.
+  const rect = getFallbackMenuRect();
+  if (!rect || !rect.width || !rect.height) return;
+
+  const width = Math.round(rect.width);
+  const height = Math.round(rect.height);
+  const radius = startMenu ? getComputedStyle(startMenu).borderRadius : "14px";
+
+  menuHubPanelInner.style.boxSizing = "border-box";
+  menuHubPanelInner.style.width = `${width}px`;
+  menuHubPanelInner.style.height = `${height}px`;
+  menuHubPanelInner.style.minWidth = `${width}px`;
+  menuHubPanelInner.style.minHeight = `${height}px`;
+  menuHubPanelInner.style.maxWidth = `${width}px`;
+  menuHubPanelInner.style.maxHeight = `${height}px`;
+  menuHubPanelInner.style.borderRadius = radius || "14px";
+  menuHubPanelInner.style.transform = "none";
+  menuHubPanelInner.style.transformOrigin = "center center";
+
+  document.documentElement.style.setProperty("--shooter-menu-footprint-width", `${width}px`);
+  document.documentElement.style.setProperty("--shooter-menu-footprint-height", `${height}px`);
+  document.documentElement.style.setProperty("--shooter-menu-footprint-radius", radius || "14px");
+}
 function fitOptionsMenuToViewport(){
   sizeMenuLikeStartMenu(optionsMenu, optionsMenuInner, optionsScroll);
 }
