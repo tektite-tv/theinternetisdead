@@ -3274,9 +3274,11 @@ function renderCheatermodeControllerComboLabel(target, { remaining = 5, xPressed
   const seconds = Math.max(1, Math.ceil(Number(remaining) || 5));
   const comboClass = getCheatermodeComboClass(!!xPressed, !!viewPressed);
   const plainText = unlocked ? "Cheats (Unlocked)" : "Hold X + View " + seconds + "s";
+  const xIcon = '<span class="cheatermodeComboButton ' + comboClass + '" aria-hidden="true"><img src="/games/shooter-game/assets/controller-buttons/button-x.webp" alt="" /></span>';
+  const viewIcon = '<span class="cheatermodeComboButton ' + comboClass + '" aria-hidden="true"><img src="/games/shooter-game/assets/controller-buttons/view.webp" alt="" /></span>';
   const nextHtml = unlocked
     ? "Cheats (Unlocked)"
-    : 'Hold <span class="cheatermodeComboButton ' + comboClass + '">X</span> + <span class="cheatermodeComboButton ' + comboClass + '">View</span> <span class="cheatermodeCountdown">' + escapeCheatermodeHtml(seconds) + 's</span>';
+    : 'Hold ' + xIcon + ' + ' + viewIcon + ' <span class="cheatermodeCountdown">' + escapeCheatermodeHtml(seconds) + 's</span>';
   if (target.dataset.cheatermodeComboVisual !== nextHtml){
     target.innerHTML = nextHtml;
     target.dataset.cheatermodeComboVisual = nextHtml;
