@@ -1005,17 +1005,22 @@ function execPauseCommand(cmd){
     return { ok:true, suppressChatResult:true };
   }
 
-  // Hidden instant cheatermode aliases. Not listed in /help, because secrets need doors.
+  // Hidden nickname shortcut. Not listed in /help.
   const lowerRaw = raw.toLowerCase();
-  if (lowerRaw === "/jinclops" || lowerRaw === "/tektite"){
-    const secretNickname = lowerRaw === "/jinclops" ? "Jinclops" : "Tektite";
-    applyNicknameFromControls(secretNickname, true);
+  if (lowerRaw === "/jinclops"){
+    applyNicknameFromControls("Jinclops", true);
+    return { ok:true, message:"Nickname set to Jinclops" };
+  }
+
+  // Hidden instant cheatermode alias. Not listed in /help, because secrets need doors.
+  if (lowerRaw === "/tektite"){
+    applyNicknameFromControls("Tektite", true);
     unlockCheatermode("chat-instant");
     applyGlobalInfiniteMode(true);
     shootCheatMode = "big_bullets";
     glitchBackgroundPulse = 0;
     lockScoreTrackingState();
-    return { ok:true, message:`Nickname set to ${secretNickname}. Cheat commands unlocked, Infinite Mode enabled, and /shoot big_bullets applied` };
+    return { ok:true, message:"Nickname set to Tektite. Cheat commands unlocked, Infinite Mode enabled, and /shoot big_bullets applied" };
   }
 
   if (raw.startsWith("/cheatermode")){
@@ -3466,7 +3471,7 @@ const CHEATERMODE_CONTROLLER_PROMPT = "Hold X + View 5s";
 const CHEATERMODE_CONTROLLER_HOLD_MS = 5000;
 const CHEATERMODE_TYPED_COUNTDOWN_MS = 5000;
 const CHEATERMODE_COUNTDOWN_PHRASE = "cheatermode";
-const CHEATERMODE_INSTANT_PHRASES = ["jinclops", "tektite"];
+const CHEATERMODE_INSTANT_PHRASES = ["tektite"];
 const CHEATERMODE_TYPED_UNLOCK_PHRASES = [CHEATERMODE_COUNTDOWN_PHRASE, ...CHEATERMODE_INSTANT_PHRASES];
 const CHEATERMODE_TYPED_BUFFER_MAX = CHEATERMODE_TYPED_UNLOCK_PHRASES.reduce((max, phrase) => Math.max(max, phrase.length), 0);
 
