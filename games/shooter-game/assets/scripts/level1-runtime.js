@@ -4544,7 +4544,10 @@ function getStartNicknameMenuTarget(){
 
 function getMenuControllerTargets(){
   if (isStartMenuConstructionLocked()) return [];
-  return [startMenuTitle, titleHoverReveal, btnStart, btnMenu, getStartNicknameMenuTarget()].filter(Boolean);
+  // v2.XX: Start Menu controller navigation is intentionally narrow:
+  // (New and Improved)/(Last updated), Start Game, Menu, and Enter Nickname.
+  // The title itself is decorative, not a controller stop. Tiny mercy.
+  return [titleHoverReveal, btnStart, btnMenu, getStartNicknameMenuTarget()].filter(Boolean);
 }
 
 function getMenuHubControllerTargets(){
@@ -5408,7 +5411,6 @@ function moveMenuControllerFocus(delta){
 function moveMenuControllerFocusDirectional(direction){
   const items = getMenuControllerTargets();
   if (!items.length) return false;
-  const titleIndex = items.indexOf(startMenuTitle);
   const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
   const menuIndex = items.indexOf(btnMenu);
@@ -5417,17 +5419,17 @@ function moveMenuControllerFocusDirectional(direction){
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
-    if (menuFocusIndex === nicknameIndex && menuIndex !== -1) nextIndex = menuIndex;
-    else if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
+    // Start/Menu row only. No rollover, no drifting into nickname. Civilization limps on.
+    if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
   } else if (direction === "right"){
+    // Start -> Menu only. Menu does not wrap back around or fall into the nickname row.
     if (menuFocusIndex === startIndex && menuIndex !== -1) nextIndex = menuIndex;
-    else if (menuFocusIndex === menuIndex && nicknameIndex !== -1) nextIndex = nicknameIndex;
   } else if (direction === "down"){
-    if (menuFocusIndex === titleIndex && revealIndex !== -1) nextIndex = revealIndex;
-    else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
+    if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
+    else if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && nicknameIndex !== -1) nextIndex = nicknameIndex;
   } else if (direction === "up"){
-    if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex || menuFocusIndex === nicknameIndex) && revealIndex !== -1) nextIndex = revealIndex;
-    else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
+    if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && revealIndex !== -1) nextIndex = revealIndex;
+    else if (menuFocusIndex === nicknameIndex && startIndex !== -1) nextIndex = startIndex;
   }
 
   if (nextIndex === menuFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
