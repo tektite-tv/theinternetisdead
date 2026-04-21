@@ -4382,10 +4382,19 @@ function moveMenuHubControllerFocus(delta){
 
 function focusMenuHubOptionsContentFromTab(){
   if (menuHubActiveTab !== "options") return false;
+  const hubItems = getMenuHubControllerTargets();
+  const currentHubTarget = hubItems[menuHubFocusIndex];
+  if (currentHubTarget !== btnMenuHubOptions) return false;
+
   const items = getOptionsControllerTargets();
   if (!items.length) return false;
+
+  // Enter the hosted Options menu at its first real row: Controls.
+  // Do not let text inputs or checkboxes steal the first Down press from
+  // the top Options tab, because apparently focus order needs a chaperone.
+  const controlsIndex = items.indexOf(btnControls);
   menuHubOptionsContentFocused = true;
-  optionsFocusIndex = 0;
+  optionsFocusIndex = controlsIndex >= 0 ? controlsIndex : 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
   else clearControllerFocus();
   return true;
