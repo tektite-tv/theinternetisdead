@@ -4514,6 +4514,7 @@ function getStartNicknameMenuTarget(){
 }
 
 function getMenuControllerTargets(){
+  if (isStartMenuConstructionLocked()) return [];
   return [startMenuTitle, titleHoverReveal, btnStart, btnMenu, getStartNicknameMenuTarget()].filter(Boolean);
 }
 
@@ -6398,6 +6399,31 @@ function getStaticFrameForImage(img){
 const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
 const CHAT_NICKNAME_EXPLICIT_STORAGE_KEY = "tektiteChatNicknameExplicit";
 const CHAT_NICKNAME_MAX_LENGTH = 8;
+const START_MENU_CONSTRUCTION_DEBUG_NICKNAME = "_debug";
+
+function isStartMenuConstructionGateEnabled(){
+  // Easy toggle: set window.SHOOTER_START_MENU_CONSTRUCTION_GATE_ENABLED = false
+  // in shooter-game-level1.html to restore the normal Start Menu for everyone.
+  return window.SHOOTER_START_MENU_CONSTRUCTION_GATE_ENABLED !== false;
+}
+
+function isStartMenuConstructionLocked(savedNickname = getSavedChatNicknameValue()){
+  if (!isStartMenuConstructionGateEnabled()) return false;
+  return String(savedNickname || "").trim() !== START_MENU_CONSTRUCTION_DEBUG_NICKNAME;
+}
+
+function syncStartMenuConstructionGate(savedNickname = getSavedChatNicknameValue()){
+  const root = document.documentElement;
+  const locked = isStartMenuConstructionLocked(savedNickname);
+  if (root && root.classList){
+    root.classList.toggle("sg-start-construction-locked", locked);
+    root.classList.toggle("sg-start-construction-unlocked", !locked);
+  }
+  if (startMenu){
+    startMenu.setAttribute("aria-label", locked ? "Under Construction. Check Back Later." : "Start Menu");
+  }
+  return locked;
+}
 
 function limitChatNicknameLength(value){
   return Array.from(String(value || "")).slice(0, CHAT_NICKNAME_MAX_LENGTH).join("");
@@ -6582,6 +6608,7 @@ function clearStartNicknamePrepaintState(){
 }
 
 function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()){
+  syncStartMenuConstructionGate(savedNickname);
   if (!btnEnterNickname && !startWelcomeNickname) return;
   const nicknameText = String(savedNickname || "").trim();
   const needsNickname = !nicknameText;
@@ -6679,6 +6706,7 @@ function openNicknameMenuFromStart(){
 
 function syncNicknameStatsLabels(){
   const savedNickname = getSavedChatNicknameValue();
+  syncStartMenuConstructionGate(savedNickname);
   syncStartMenuNicknameButton(savedNickname);
   syncPauseTitleNickname();
   if (btnStats){
@@ -6794,6 +6822,7 @@ function showOptions(fromPause = false){
       if (event.key !== CHAT_NICKNAME_STORAGE_KEY && event.key !== CHAT_NICKNAME_EXPLICIT_STORAGE_KEY) return;
       syncNicknameControl();
       syncNicknameStatsLabels();
+      syncStartMenuConstructionGate();
       syncTektiteNicknameCheatermodeUnlock();
     });
   }catch(error){}

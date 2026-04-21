@@ -12,6 +12,12 @@
 <script>
 (function(){
   var root = document.documentElement;
+  /* Start Menu construction gate toggle.
+     Flip this to false when the normal Start Menu should be public again. */
+  var START_MENU_CONSTRUCTION_GATE_ENABLED = true;
+  var START_MENU_CONSTRUCTION_DEBUG_NICKNAME = '_debug';
+  window.SHOOTER_START_MENU_CONSTRUCTION_GATE_ENABLED = START_MENU_CONSTRUCTION_GATE_ENABLED;
+  window.SHOOTER_START_MENU_CONSTRUCTION_DEBUG_NICKNAME = START_MENU_CONSTRUCTION_DEBUG_NICKNAME;
   root.classList.add('sg-start-nickname-prepaint');
   var nickname = '';
   try{
@@ -23,6 +29,11 @@
   }catch(error){
     nickname = '';
   }
+  if (START_MENU_CONSTRUCTION_GATE_ENABLED && nickname !== START_MENU_CONSTRUCTION_DEBUG_NICKNAME){
+    root.classList.add('sg-start-construction-locked');
+  } else {
+    root.classList.add('sg-start-construction-unlocked');
+  }
   if (nickname){
     root.classList.add('sg-start-nickname-has-name');
     root.style.setProperty('--sg-start-nickname-welcome', JSON.stringify('Welcome back, ' + nickname));
@@ -31,6 +42,52 @@
   }
 })();
 </script>
+<style id="startMenuConstructionGateFirstPaint">
+  /* v2.XX: Start Menu construction gate.
+     Source of truth toggle is START_MENU_CONSTRUCTION_GATE_ENABLED in the
+     first head script above. When enabled, nickname must be exactly _debug
+     or the Start Menu only renders this notice inside the existing frame. */
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface{
+    position:relative !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface > *{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::before,
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::after{
+    position:absolute !important;
+    left:10px !important;
+    right:10px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+    font-family:monospace !important;
+    font-weight:900 !important;
+    line-height:1.05 !important;
+    pointer-events:none !important;
+    z-index:20 !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::before{
+    content:"Under Construction" !important;
+    top:calc(50% - 44px) !important;
+    min-height:48px !important;
+    color:#00ff66 !important;
+    font-size:clamp(24px, 4.2vw, 42px) !important;
+    text-shadow:0 0 10px rgba(0,255,102,0.70), 0 0 22px rgba(128,0,255,0.45) !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::after{
+    content:"Check Back Later" !important;
+    top:calc(50% + 12px) !important;
+    min-height:26px !important;
+    color:#00ffff !important;
+    font-size:clamp(13px, 2vw, 20px) !important;
+    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
+  }
+</style>
 <style>
   html.sg-start-nickname-prepaint #startMenu #startNicknameRow{
     min-height:42px !important;
@@ -4808,6 +4865,52 @@ body.menu-hub-open #menuHubPanel{
     66%{ color:#9966ff; text-shadow:0 0 8px rgba(153,102,255,0.52), 0 0 14px rgba(153,102,255,0.22); }
     83%{ color:#00aaff; text-shadow:0 0 8px rgba(0,170,255,0.55), 0 0 14px rgba(0,170,255,0.25); }
     100%{ color:#00ffff; text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25); }
+  }
+</style>
+
+
+<style id="startMenuConstructionGateFinalWinner">
+  /* v2.XX: Final construction gate winner. Do not change the Start/Hub
+     footprint here; this only controls what is visible inside Start Menu. */
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface{
+    position:relative !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface > *{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::before,
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::after{
+    position:absolute !important;
+    left:10px !important;
+    right:10px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+    font-family:monospace !important;
+    font-weight:900 !important;
+    line-height:1.05 !important;
+    pointer-events:none !important;
+    z-index:999 !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::before{
+    content:"Under Construction" !important;
+    top:calc(50% - 44px) !important;
+    min-height:48px !important;
+    color:#00ff66 !important;
+    font-size:clamp(24px, 4.2vw, 42px) !important;
+    text-shadow:0 0 10px rgba(0,255,102,0.70), 0 0 22px rgba(128,0,255,0.45) !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::after{
+    content:"Check Back Later" !important;
+    top:calc(50% + 12px) !important;
+    min-height:26px !important;
+    color:#00ffff !important;
+    font-size:clamp(13px, 2vw, 20px) !important;
+    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
   }
 </style>
 
