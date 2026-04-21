@@ -225,6 +225,7 @@ function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
 
 function isPreGameplayMenuAudioState(){
   try{
+    if (isPauseMenuHubOverlayActive()) return false;
     return gameState === STATE.MENU
       || gameState === STATE.HUB
       || gameState === STATE.OPTIONS
@@ -2238,9 +2239,23 @@ function showWaveBanner(n){
 const STATE = { MENU:"menu", HUB:"hub", OPTIONS:"options", CHEATS:"cheats", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
 
+function isPauseMenuHubOverlayActive(){
+  try{
+    return !!(menuHubOpenedFromPause && isPaused && gameState === STATE.HUB);
+  }catch(_){
+    return false;
+  }
+}
+
+function isLiveGameplayHudState(){
+  return gameState === STATE.PLAYING || isPauseMenuHubOverlayActive();
+}
+
 function syncStartMenuHudLayerMode(){
   try{
+    const pauseHub = isPauseMenuHubOverlayActive();
     document.body.classList.toggle("start-menu-hud-over-gameplay", gameState === STATE.MENU);
+    document.body.classList.toggle("pause-menu-hub-over-gameplay", pauseHub);
   }catch(_){ }
 }
 
@@ -2320,7 +2335,7 @@ if (scoreStoreHud){
 }
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
-  const isPlaying = gameState === STATE.PLAYING;
+  const isPlaying = isLiveGameplayHudState();
   const scoreVisible = isPlaying && !scoreTrackingDisabled;
   const cheatsVisible = isPlaying && scoreTrackingDisabled;
   const hudVisible = scoreVisible || cheatsVisible;
@@ -2419,8 +2434,8 @@ function refreshWinStats(){
 
 function updateTimerHUD(){
   if (!timerHud) return;
-  // Show timer only while actually playing
-  if (gameState !== STATE.PLAYING){
+  // Show the live run timer during gameplay and while the Pause-launched Hub replaces the Pause panel.
+  if (!isLiveGameplayHudState()){
     timerHud.style.display = "none";
     return;
   }
@@ -6003,6 +6018,7 @@ function showMenu(){
   if (winOverlay) winOverlay.style.display = "none";
 
   document.body.classList.remove("menu-hub-open");
+  document.body.classList.remove("pause-menu-hub-over-gameplay");
   if (startMenu){
     startMenu.style.setProperty("display", "block");
     startMenu.setAttribute("aria-hidden", "false");
@@ -6048,9 +6064,11 @@ function openMenuHub(options = null){
   unlockAudioOnce();
   gameState = STATE.HUB;
   syncStartMenuHudLayerMode();
-  if (!audioMuted) ensureMenuMusicPlaying();
-  mouseShieldHolding = false;
-  stopShield(false);
+  if (!keepGameplayPaused && !audioMuted) ensureMenuMusicPlaying();
+  if (!keepGameplayPaused){
+    mouseShieldHolding = false;
+    stopShield(false);
+  }
   // v2.XX: make the hub replace the Start Menu instead of sitting beside it.
   // Capture the Start Menu footprint first, then hide the Start Menu with
   // priority because later CSS overrides were winning the dumb little war.
@@ -6077,8 +6095,15 @@ function openMenuHub(options = null){
   selectMenuHubTab("images", false);
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuHubControllerFocus();
   else clearControllerFocus();
-  renderMenuHudPreview();
-  updateHearts();
+  if (isPauseMenuHubOverlayActive()) {
+    updateAccuracyScoreHUD();
+    updateTimerHUD();
+    updateHearts();
+    _syncBombHud();
+  } else {
+    renderMenuHudPreview();
+    updateHearts();
+  }
 }
 function closeMenuHub(){
   const returnToPause = !!(menuHubOpenedFromPause && isPaused);
@@ -6091,6 +6116,7 @@ function closeMenuHub(){
   }
   uiRoot.classList.remove("optionsBackdrop");
   document.body.classList.remove("menu-hub-open");
+  document.body.classList.remove("pause-menu-hub-over-gameplay");
 
   if (returnToPause){
     // Hub Back from Pause should restore the Pause menu, not dump the player at Start.
@@ -10384,13 +10410,14 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
   drawBomb();
 
   // enemies
+  const pauseHubEnemyDim = isPauseMenuHubOverlayActive() ? 0.45 : 1;
   for (const e of enemies){
     // v1.96: frog enemies get a pulsing green aura ring
     if (e.isFrog){
       const pulse = 1 + 0.12 * Math.sin(time * 6.0);
       const r = Math.max(e.w, e.h) * 0.70 * pulse;
       ctx.save();
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.85 * pauseHubEnemyDim;
       ctx.fillStyle = "rgba(0,255,0,0.10)";
       ctx.strokeStyle = "rgba(0,255,0,0.45)";
       ctx.lineWidth = 3;
@@ -10410,7 +10437,7 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
     const ex = e.x - drawW/2, ey = e.y - drawH/2;
     const enemySource = isGameSpeedFrozen() ? (getStaticFrameForImage(e.img) || e.img) : e.img;
     ctx.save();
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = alpha * pauseHubEnemyDim;
     if (e.dying){
       // Animated GIF/WEBP enemies normally render as DOM <img> elements above the canvas.
       // Force dying enemies back through canvas so expansion + fisheye bulge actually affect them.
@@ -10429,7 +10456,7 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
         ey,
         drawW,
         drawH,
-        { className:"enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
+        { className:"enemy-gif-sprite", alpha: alpha * pauseHubEnemyDim, hitFlash:e.hitFlash > 0 }
       );
       if (!drewDomEnemy){
         ctx.drawImage(enemySource, ex, ey, drawW, drawH);
@@ -10444,6 +10471,7 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
 if (isDragonEnemy(e)){
   const r = Math.max(e.w, e.h) * 0.78;
   ctx.save();
+  ctx.globalAlpha *= pauseHubEnemyDim;
   ctx.strokeStyle = "rgba(255,0,0,0.85)";
   ctx.lineWidth = 3;
   drawInvertedTriangle(e.x, e.y, r);
@@ -10573,13 +10601,13 @@ if (isDragonEnemy(e)){
   updateTimerHUD();
 
   // v1.96: corner HUD updates
-  if (gameState === STATE.PLAYING){
+  if (isLiveGameplayHudState()){
     livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
     _syncBombHud();
   } else if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
     renderMenuHudPreview();
   }
-  if (gameState === STATE.PLAYING){
+  if (isLiveGameplayHudState()){
     const info = getStageInfo(wave);
     const clampedWave = Math.min(wave, info.end);
     const lab = getWaveLabel(wave);
@@ -10626,7 +10654,7 @@ if (isDragonEnemy(e)){
 let lastT = performance.now();
 
 function updateHearts(){
-  if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
+  if (!isPauseMenuHubOverlayActive() && (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS)){
     renderMenuHudPreview();
     return;
   }
@@ -10675,7 +10703,7 @@ function updateHearts(){
   const el = document.getElementById("heartsHud");
   if (el){
     el.innerHTML = out.trim();
-    el.style.display = (gameState === STATE.PLAYING || gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS) ? "block" : "none";
+    el.style.display = (isLiveGameplayHudState() || gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS) ? "block" : "none";
   }
 }
 
