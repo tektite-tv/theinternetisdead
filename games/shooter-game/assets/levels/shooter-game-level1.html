@@ -3752,6 +3752,20 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
 }
 </style>
 
+<style id="startMenuMatchCurrentHubFootprintFix">
+  /* v2.XX: Match the Start Menu to the Hub Menu's CURRENT visible footprint.
+     The Hub is currently 520px x 430px with a 0.94 visual scale, so the
+     Start Menu gets that same size natively instead of relying on another
+     transform stack. Yes, this is rectangle triage. */
+  #startMenu.panel{
+    width:min(489px, 86.5vw) !important;
+    max-width:min(489px, 86.5vw) !important;
+    height:min(404px, calc(100vh - 56px)) !important;
+    max-height:min(404px, calc(100vh - 56px)) !important;
+    transform:none !important;
+    transform-origin:center center !important;
+  }
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
