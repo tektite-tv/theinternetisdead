@@ -3020,14 +3020,28 @@ window.addEventListener("resize", resize);
 
 function fitMenuHubToStartMenu(){
   if (!menuHubPanelInner) return;
-  // Keep the Hub on the same unscaled CSS footprint as the Start Menu.
-  // Do NOT copy getBoundingClientRect() here: the Start Menu is transform-scaled,
-  // and copying that already-scaled rect makes the Hub fight its own scale.
-  // Browsers, naturally, chose violence.
+  // Match the Hub to the Start Menu's actual visible box, not the nominal CSS
+  // variable. The Start Menu can be scaled/styled by late CSS rules, so using
+  // its measured rect is the only sane source of truth. Set the Hub transform
+  // to none after copying the visible rect so we do not scale the copied size
+  // again and accidentally make the hub taller. Tiny CSS clown math, defused.
+  const rect = getFallbackMenuRect();
+  if (rect && rect.width && rect.height){
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
+    menuHubPanelInner.style.width = `${width}px`;
+    menuHubPanelInner.style.height = `${height}px`;
+    menuHubPanelInner.style.maxWidth = `${width}px`;
+    menuHubPanelInner.style.maxHeight = `${height}px`;
+    menuHubPanelInner.style.transform = "none";
+    menuHubPanelInner.style.transformOrigin = "center center";
+    return;
+  }
   menuHubPanelInner.style.width = "var(--shooter-menu-footprint-width)";
   menuHubPanelInner.style.height = "var(--shooter-menu-footprint-height)";
   menuHubPanelInner.style.maxWidth = "var(--shooter-menu-footprint-width)";
   menuHubPanelInner.style.maxHeight = "var(--shooter-menu-footprint-height)";
+  menuHubPanelInner.style.transform = "none";
 }
 
 function fitOptionsMenuToViewport(){
