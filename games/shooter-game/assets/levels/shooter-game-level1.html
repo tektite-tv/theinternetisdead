@@ -5080,6 +5080,48 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+<style id="startMenuConstructionUnifiedBackgroundOnly">
+  /* v2.XX: Construction screen only. The three-line construction message now
+     shares one background capsule copied from the old Last updated strip.
+     The Start/Hub menu footprint and normal Start Menu title hover are untouched. */
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface > #startConstructionNotice{
+    position:absolute !important;
+    inset:auto !important;
+    left:50% !important;
+    top:50% !important;
+    transform:translate(-50%, -50%) !important;
+    width:calc(100% - 20px) !important;
+    max-width:calc(100% - 20px) !important;
+    min-height:0 !important;
+    display:grid !important;
+    grid-template-rows:auto auto auto !important;
+    align-items:center !important;
+    justify-items:center !important;
+    gap:8px !important;
+    padding:10px 14px !important;
+    background:rgba(0,0,0,0.5) !important;
+    border-radius:6px !important;
+    box-sizing:border-box !important;
+    text-align:center !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .startConstructionTitle{
+    grid-row:1 !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal{
+    grid-row:2 !important;
+    min-height:0 !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .startConstructionSubtitle{
+    grid-row:3 !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubHover{
+    background:transparent !important;
+    border-radius:0 !important;
+    padding:0 28px !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
