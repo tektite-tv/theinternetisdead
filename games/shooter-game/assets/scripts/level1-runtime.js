@@ -675,8 +675,12 @@ function showPauseControlsMenu(){
   pauseOverlay.classList.add("pauseControlsVisible");
   uiRoot.classList.add("pauseControlsOpen");
   lockControlsInputMode(activeInputMode);
-  startMenu.style.display = "none";
-  optionsMenu.style.display = "none";
+  if (startMenu){
+    startMenu.style.setProperty("display", "none", "important");
+    startMenu.setAttribute("aria-hidden", "true");
+    setStartMenuInteractive(false);
+  }
+  if (optionsMenu) optionsMenu.style.setProperty("display", "none", "important");
   uiRoot.classList.remove("optionsBackdrop");
   controlsMenu.style.display = "block";
   controlsMenu.classList.add("pauseControlsMode");
@@ -5731,6 +5735,7 @@ function adjustControllerCheat(delta){
   return false;
 }
 function showMenu(){
+  document.body.classList.remove("controls-menu-open");
   setPaused(false);
   playerSpectatorMode = false;
   try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
@@ -5780,6 +5785,7 @@ function showMenu(){
 }
 
 function openMenuHub(){
+  document.body.classList.remove("controls-menu-open");
   if (!menuHubPanel) return;
   setPaused(false);
   unlockAudioOnce();
@@ -5893,6 +5899,7 @@ function showControlsMenu(){
   if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
   if (statsPanel){ statsPanel.style.display = "none"; statsPanel.setAttribute("aria-hidden", "true"); statsPanel.removeAttribute("aria-modal"); }
   document.body.classList.remove("menu-hub-open");
+  document.body.classList.add("controls-menu-open");
 
   setPaused(false);
   pauseControlsOpen = false;
@@ -5906,8 +5913,12 @@ function showControlsMenu(){
   markControlsClean(false);
   lockControlsInputMode(activeInputMode);
   setControlsBindMode(activeInputMode);
-  startMenu.style.display = "none";
-  optionsMenu.style.display = "none";
+  if (startMenu){
+    startMenu.style.setProperty("display", "none", "important");
+    startMenu.setAttribute("aria-hidden", "true");
+    setStartMenuInteractive(false);
+  }
+  if (optionsMenu) optionsMenu.style.setProperty("display", "none", "important");
   if (cheatsMenu) cheatsMenu.style.display = "none";
   controlsMenu.style.display = "block";
   controlsMenu.classList.remove("pauseControlsMode");
@@ -5922,6 +5933,7 @@ function showControlsMenu(){
   updateHearts();
 }
 function hideControlsMenu(){
+  document.body.classList.remove("controls-menu-open");
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   resetDraftBindingsFromActive();
