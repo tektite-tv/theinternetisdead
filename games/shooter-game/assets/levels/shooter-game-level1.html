@@ -5453,6 +5453,25 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+<style id="hubMenusNoDarkGameplayBackdrop">
+  /* v2.XX: Hub tabs should sit over the gameplay without the extra black dimmer.
+     Controls already behaved this way; apply the same no-backdrop behavior to
+     the Hub-hosted Images, Stats, Options, and the Cheats row inside Options.
+     This does not change the purple menu panel itself or any 16:9 footprint. */
+  html body.menu-hub-open #uiRoot.optionsBackdrop::before{
+    display:none !important;
+    background:transparent !important;
+    opacity:0 !important;
+  }
+  html body.menu-hub-open #menuHubPanel{
+    background:transparent !important;
+  }
+  html body.menu-hub-open #menuHubPanel.menuHubTabImages,
+  html body.menu-hub-open #menuHubPanel.menuHubTabStats,
+  html body.menu-hub-open #menuHubPanel.menuHubTabOptions{
+    background:transparent !important;
+  }
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
