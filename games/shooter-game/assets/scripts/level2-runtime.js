@@ -1463,6 +1463,13 @@ function showWaveBanner(n){
 
 const STATE = { MENU:"menu", OPTIONS:"options", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
+
+function syncStartMenuHudLayerMode(){
+  try{
+    document.body.classList.toggle("start-menu-hud-over-gameplay", gameState === STATE.MENU);
+  }catch(_){ }
+}
+
 let gameWon = false;
 
 // Powerup state (v1.96)
@@ -3534,6 +3541,7 @@ function showMenu(){
   syncInitialActiveInputModeFromMenuContext();
   deathYellPlayed = false;
   gameState = STATE.MENU;
+  syncStartMenuHudLayerMode();
   gameWon = false;
   mouseShieldHolding = false;
   stopShield(false);
@@ -3562,6 +3570,7 @@ function showMenu(){
 function showWinOverlay(){
   gameWon = true;
   gameState = STATE.WIN;
+  syncStartMenuHudLayerMode();
   if (winOverlay) winOverlay.style.display = "flex";
   if (mazeSummaryOverlay) mazeSummaryOverlay.style.display = "none";
   if (pauseOverlay) pauseOverlay.style.display = "none";
@@ -3705,6 +3714,7 @@ function showControlsMenu(){
   if (pauseOverlay) pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
   gameState = STATE.CONTROLS;
+  syncStartMenuHudLayerMode();
   resetDraftBindingsFromActive();
   lockControlsInputMode(activeInputMode);
   setControlsBindMode(activeInputMode);
@@ -3755,6 +3765,7 @@ function showOptions(fromPause = false){
   if (!fromPause) {
     setPaused(false);
     gameState = STATE.OPTIONS;
+    syncStartMenuHudLayerMode();
   }
 
   mouseShieldHolding = false;
@@ -3782,6 +3793,7 @@ function startGame(){
   // Start looping music exactly when the game starts.
   ensureMusicPlaying(true);
   gameState = STATE.PLAYING;
+  syncStartMenuHudLayerMode();
   scoreTrackingLocked = !!(isTektiteNicknameCheatermodeUnlock() || hasScoreDisqualifyingSettings());
   uiRoot.classList.remove("optionsBackdrop");
   uiRoot.style.display = "none";
@@ -6365,6 +6377,7 @@ function drawShieldRing(){
 }
 
 function draw(){
+  syncStartMenuHudLayerMode();
   drawStarfield();
   drawMaze();
 

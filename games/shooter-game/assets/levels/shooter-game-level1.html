@@ -5658,6 +5658,23 @@ body.menu-hub-open #menuHubPanel{
     }
   </style>
 
+
+<style id="startMenuHudAboveGameplayBackdrop">
+  /* v2.XX: On the Start Menu, the dim layer is for the gameplay/canvas layer only.
+     Keep score, title/audio dropdown, timer, lives, hearts, and bombs above it. */
+  body.start-menu-hud-over-gameplay #stageHud,
+  body.start-menu-hud-over-gameplay #scoreStoreHud,
+  body.start-menu-hud-over-gameplay #timerHud,
+  body.start-menu-hud-over-gameplay #livesSlot,
+  body.start-menu-hud-over-gameplay #powerupSlot,
+  body.start-menu-hud-over-gameplay #heartsHud{
+    z-index:10060 !important;
+  }
+  body.start-menu-hud-over-gameplay #stageHud{
+    z-index:10070 !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>

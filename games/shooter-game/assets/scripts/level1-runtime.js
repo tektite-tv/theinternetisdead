@@ -2199,6 +2199,13 @@ function showWaveBanner(n){
 
 const STATE = { MENU:"menu", HUB:"hub", OPTIONS:"options", CHEATS:"cheats", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
+
+function syncStartMenuHudLayerMode(){
+  try{
+    document.body.classList.toggle("start-menu-hud-over-gameplay", gameState === STATE.MENU);
+  }catch(_){ }
+}
+
 let gameWon = false;
 
 // Powerup state (v1.96)
@@ -5848,6 +5855,7 @@ function showMenu(){
   try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
   deathYellPlayed = false;
   gameState = STATE.MENU;
+  syncStartMenuHudLayerMode();
   if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
   gameWon = false;
   // v1.96: drop shield when entering menus
@@ -5897,6 +5905,7 @@ function openMenuHub(){
   setPaused(false);
   unlockAudioOnce();
   gameState = STATE.HUB;
+  syncStartMenuHudLayerMode();
   if (!audioMuted) ensureMenuMusicPlaying();
   mouseShieldHolding = false;
   stopShield(false);
@@ -5937,6 +5946,7 @@ function closeMenuHub(){
     menuHubPanel.classList.remove("menuHubTabImages", "menuHubTabStats", "menuHubTabOptions");
   }
   gameState = STATE.MENU;
+  syncStartMenuHudLayerMode();
   if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
   uiRoot.classList.remove("optionsBackdrop");
   document.body.classList.remove("menu-hub-open");
@@ -6048,6 +6058,7 @@ function showControlsMenu(options = null){
   uiRoot.classList.remove("pauseControlsOpen");
   uiRoot.classList.remove("optionsBackdrop");
   gameState = STATE.CONTROLS;
+  syncStartMenuHudLayerMode();
   unlockAudioOnce();
   if (!audioMuted) ensureMenuMusicPlaying();
   resetDraftBindingsFromActive();
@@ -6102,6 +6113,7 @@ function showWinOverlay(){
   commitRunLifetimeStats({ won:true });
   gameWon = true;
   gameState = STATE.WIN;
+  syncStartMenuHudLayerMode();
   if (winOverlay) winOverlay.style.display = "flex";
   if (pauseOverlay) pauseOverlay.style.display = "none";
   refreshWinStats();
@@ -6272,6 +6284,7 @@ function showCheats(){
     setPaused(false);
   }
   gameState = STATE.CHEATS;
+  syncStartMenuHudLayerMode();
   if (!openingFromPauseOptions){
     unlockAudioOnce();
     if (!audioMuted) ensureMenuMusicPlaying();
@@ -6988,6 +7001,7 @@ function showOptions(fromPause = false){
   if (!fromPause){
     setPaused(false);
     gameState = STATE.OPTIONS;
+    syncStartMenuHudLayerMode();
     unlockAudioOnce();
     if (!audioMuted) ensureMenuMusicPlaying();
   }
@@ -7047,6 +7061,7 @@ function startGame(){
   unlockAudioOnce();
   stopMenuMusic(true);
   gameState = STATE.PLAYING;
+  syncStartMenuHudLayerMode();
   scoreTrackingLocked = !!(cheatsUnlockedByPassphrase || hasScoreDisqualifyingSettings());
   syncScoreTrackingState();
   uiRoot.classList.remove("optionsBackdrop");
@@ -10058,6 +10073,7 @@ function drawShieldRing(){
 }
 
 function draw(){
+  syncStartMenuHudLayerMode();
   drawStarfield();
 
   // v1.96+: draw player death particles
