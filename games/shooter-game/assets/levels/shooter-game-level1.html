@@ -3752,77 +3752,6 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
 }
 </style>
 
-<style id="allMenus16x9FootprintFix">
-  /* v2.XX: Native 16:9 menu frame override.
-     All major shooter menus use the same unscaled outer frame so their outlines
-     line up instead of relying on inherited transforms and CSS goblin math. */
-  :root{
-    --shooter-menu-frame-w: min(720px, calc(100vw - 32px));
-    --shooter-menu-frame-h: min(405px, calc(100vh - 32px));
-    --shooter-menu-frame-radius: 16px;
-    --shooter-menu-frame-border: 2px solid rgba(0,255,102,0.65);
-    --shooter-menu-frame-shadow: 0 0 28px rgba(0,255,102,0.20);
-  }
-
-  #startMenu.panel,
-  #pauseMenu,
-  #deathPanel,
-  #winPanel,
-  #scoreStorePanel,
-  #menuHubPanel #menuHubPanelInner,
-  #optionsPanel,
-  #cheatsPanel,
-  #controlsPanel,
-  #controllerPreviewPanel,
-  #statsPanel,
-  #imagesPanel{
-    width: var(--shooter-menu-frame-w) !important;
-    max-width: var(--shooter-menu-frame-w) !important;
-    min-width: 0 !important;
-    height: var(--shooter-menu-frame-h) !important;
-    max-height: var(--shooter-menu-frame-h) !important;
-    min-height: 0 !important;
-    aspect-ratio: 16 / 9 !important;
-    transform: none !important;
-    transform-origin: center center !important;
-    box-sizing: border-box !important;
-    border: var(--shooter-menu-frame-border) !important;
-    border-radius: var(--shooter-menu-frame-radius) !important;
-    box-shadow: var(--shooter-menu-frame-shadow) !important;
-    overflow: hidden !important;
-  }
-
-  #startMenu.panel{
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:center !important;
-    justify-content:center !important;
-  }
-
-  #menuHubPanel #menuHubPanelInner{
-    display:flex !important;
-    flex-direction:column !important;
-  }
-
-  #menuHubPanel #menuHubContent,
-  #scoreStorePanel .scoreStoreContent,
-  #optionsPanel,
-  #cheatsPanel,
-  #controlsPanel,
-  #controllerPreviewPanel,
-  #statsPanel,
-  #imagesPanel{
-    min-height:0 !important;
-  }
-
-  @media (max-width: 760px), (max-height: 440px){
-    :root{
-      --shooter-menu-frame-w: min(calc(100vw - 18px), calc((100vh - 18px) * 16 / 9));
-      --shooter-menu-frame-h: min(calc(100vh - 18px), calc((100vw - 18px) * 9 / 16));
-    }
-  }
-</style>
-
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -3917,7 +3846,7 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
 </div>
 
 <div id="uiRoot">
-  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.50); border-width: 3px;">
+  <div id="startMenu" class="panel shooter-menu16x9Surface" style="background: rgba(75,0,118,0.50); border-width: 3px;">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title. Audio enabled."><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
@@ -3938,7 +3867,7 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
   </div>
 
   <div id="menuHubPanel" aria-hidden="true">
-    <div id="menuHubPanelInner">
+    <div id="menuHubPanelInner" class="shooter-menu16x9Surface">
       <div id="menuHubTopButtons">
         <button id="btnMenuHubImages" class="smallBtn" type="button" data-menu-hub-tab="images" aria-pressed="true">Images</button>
         <button id="btnMenuHubStats" class="smallBtn" type="button" data-menu-hub-tab="stats" aria-pressed="false">Stats</button>
@@ -4305,130 +4234,74 @@ body.menu-hub-open #menuHubPanel{
 }
 </style>
 
-<style id="hubMenuScaleInsideStartMenuFix">
-  /* v2.XX: Hub Menu must sit inside the Start Menu footprint, not match it and then visually overflow. */
-  #menuHubPanel #menuHubPanelInner{
-    transform:scale(0.94) !important;
-    transform-origin:center center !important;
-  }
-</style>
-<style id="startMenuUseHubOutlineFootprintFix">
-  /* v2.XX: Start Menu outer outline uses the same visible footprint as the Hub Menu.
-     The hub is 520x430 scaled to 0.94, so the Start Menu shell uses the same scale. */
-  #startMenu.panel{
-    transform:scale(0.94) !important;
-    transform-origin:center center !important;
-    border:2px solid rgba(0,255,102,0.65) !important;
-    border-radius:var(--shooter-menu-footprint-radius, 16px) !important;
-    box-shadow:0 0 28px rgba(0,255,102,0.20) !important;
-    box-sizing:border-box !important;
-  }
-</style>
 
-<style id="allMenusHard16x9VisibleFrameFix">
-  /* v2.XX: Hard visible-frame 16:9 menu fix.
-     This block intentionally lives last because earlier menu CSS still contains
-     transforms, max-height rules, and one post-HTML Hub scale override. The visible
-     menu rectangle itself is now a single 16:9 frame, not a polite suggestion. */
+<style id="startHubShared16x9SourceOfTruth">
+  /* v2.XX: SINGLE SOURCE OF TRUTH for the Start Menu and Hub Menu outer background.
+     Both surfaces share this class so the visible green outline/background is the same 16:9 frame.
+     Inner content may scroll; the outer panel is not allowed to grow, shrink, or transform itself. */
   :root{
-    --sg-menu-frame-w:min(720px, calc(100vw - 48px), calc((100vh - 48px) * 16 / 9));
-    --sg-menu-frame-h:calc(var(--sg-menu-frame-w) * 9 / 16);
-    --sg-menu-frame-padding:18px;
-    --sg-menu-frame-radius:16px;
-    --sg-menu-frame-border:2px solid rgba(0,255,102,0.65);
-    --sg-menu-frame-shadow:0 0 28px rgba(0,255,102,0.20);
+    --shooter-start-hub-frame-height: min(405px, 51.75vw, calc(100vh - 96px));
+    --shooter-start-hub-frame-width: calc(var(--shooter-start-hub-frame-height) * 16 / 9);
+    --shooter-start-hub-frame-padding: 18px;
+    --shooter-start-hub-frame-radius: 16px;
+    --shooter-start-hub-frame-border: 2px solid rgba(0,255,102,0.65);
+    --shooter-start-hub-frame-bg: rgba(75,0,118,0.50);
+    --shooter-start-hub-frame-shadow: 0 0 28px rgba(0,255,102,0.20);
   }
 
-  #startMenu.panel,
-  #pausePanel,
-  #deathPanel,
-  #winPanel,
-  #menuHubPanel #menuHubPanelInner,
-  #scoreStorePanel,
-  #optionsMenu,
-  #cheatsMenu,
-  #controlsMenu,
-  #controlsPreviewMenu,
-  #imagesPanel #imagesPanelInner,
-  #statsPanel #statsPanelInner{
-    width:var(--sg-menu-frame-w) !important;
-    min-width:var(--sg-menu-frame-w) !important;
-    max-width:var(--sg-menu-frame-w) !important;
-    height:var(--sg-menu-frame-h) !important;
-    min-height:var(--sg-menu-frame-h) !important;
-    max-height:var(--sg-menu-frame-h) !important;
-    aspect-ratio:16 / 9 !important;
-    box-sizing:border-box !important;
-    transform:none !important;
-    transform-origin:center center !important;
-    border:var(--sg-menu-frame-border) !important;
-    border-radius:var(--sg-menu-frame-radius) !important;
-    box-shadow:var(--sg-menu-frame-shadow) !important;
-    overflow:hidden !important;
+  #startMenu.shooter-menu16x9Surface,
+  #menuHubPanelInner.shooter-menu16x9Surface{
+    width: var(--shooter-start-hub-frame-width) !important;
+    max-width: var(--shooter-start-hub-frame-width) !important;
+    min-width: var(--shooter-start-hub-frame-width) !important;
+    height: var(--shooter-start-hub-frame-height) !important;
+    max-height: var(--shooter-start-hub-frame-height) !important;
+    min-height: var(--shooter-start-hub-frame-height) !important;
+    aspect-ratio: 16 / 9 !important;
+    box-sizing: border-box !important;
+    padding: var(--shooter-start-hub-frame-padding) !important;
+    border: var(--shooter-start-hub-frame-border) !important;
+    border-radius: var(--shooter-start-hub-frame-radius) !important;
+    background: var(--shooter-start-hub-frame-bg) !important;
+    box-shadow: var(--shooter-start-hub-frame-shadow) !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    overflow: hidden !important;
   }
 
-  #startMenu.panel,
-  #pausePanel,
-  #deathPanel,
-  #winPanel{
-    padding:var(--sg-menu-frame-padding) !important;
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:center !important;
-    justify-content:center !important;
+  #startMenu.shooter-menu16x9Surface{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
   }
 
-  body.menu-hub-open #menuHubPanel{
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
+  #menuHubPanelInner.shooter-menu16x9Surface{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
   }
 
-  #menuHubPanel #menuHubPanelInner,
-  #imagesPanel #imagesPanelInner,
-  #statsPanel #statsPanelInner{
-    padding:var(--sg-menu-frame-padding) !important;
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:stretch !important;
-    justify-content:flex-start !important;
+  #startMenu.shooter-menu16x9Surface > *,
+  #menuHubPanelInner.shooter-menu16x9Surface > *{
+    min-height: 0 !important;
+    box-sizing: border-box !important;
   }
 
-  #optionsMenu,
-  #cheatsMenu,
-  #controlsMenu,
-  #controlsPreviewMenu,
-  #scoreStorePanel{
-    padding:var(--sg-menu-frame-padding) !important;
+  #menuHubPanelInner.shooter-menu16x9Surface #menuHubContent{
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
 
-  #menuHubContent,
-  #optionsMenuInner,
-  #cheatsMenuInner,
-  #controlsMenuInner{
-    flex:1 1 auto !important;
-    min-height:0 !important;
-    max-height:100% !important;
-    overflow:hidden !important;
-    box-sizing:border-box !important;
-  }
-
-  #optionsScroll,
-  #cheatsScroll,
-  #controlsListScroll,
-  #statsScroll,
-  #imagesList{
-    flex:1 1 auto !important;
-    min-height:0 !important;
-    max-height:100% !important;
-    overflow:auto !important;
-    box-sizing:border-box !important;
-  }
-
-  @media (max-width:560px), (max-height:460px){
-    :root{
-      --sg-menu-frame-w:min(calc(100vw - 24px), calc((100vh - 24px) * 16 / 9));
-      --sg-menu-frame-padding:12px;
-    }
+  #menuHubPanelInner.shooter-menu16x9Surface #optionsScroll,
+  #menuHubPanelInner.shooter-menu16x9Surface #imagesList,
+  #menuHubPanelInner.shooter-menu16x9Surface #statsList,
+  #menuHubPanelInner.shooter-menu16x9Surface #statsLockedList{
+    max-height: 100% !important;
+    overflow: auto !important;
   }
 </style>
