@@ -775,7 +775,7 @@ function openMenuHubFromPause(){
   if (uiRoot) uiRoot.classList.remove("pauseControlsOpen");
   if (controlsMenu) controlsMenu.classList.remove("pauseControlsMode");
   // Keep isPaused true so the gameplay layer stays frozen while the Hub replaces the Pause menu.
-  openMenuHub({ keepGameplayPaused:true });
+  openMenuHub({ keepGameplayPaused:true, fromPause:true });
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
@@ -4544,6 +4544,8 @@ let menuHubActiveInner = null;
 let menuHubImagesContentFocused = false;
 let menuHubStatsContentFocused = false;
 let menuHubOptionsContentFocused = false;
+// Tracks when the Menu Hub was opened from the Pause menu so Back restores Pause instead of Start.
+let menuHubOpenedFromPause = false;
 const MENU_HUB_TABS = ["images", "stats", "options"];
 const menuHubOriginalParents = new Map();
 let optionsFocusIndex = 0;
@@ -5982,6 +5984,7 @@ function adjustControllerCheat(delta){
   return false;
 }
 function showMenu(){
+  menuHubOpenedFromPause = false;
   setControlsStandaloneMenuOpen(false);
   setPaused(false);
   playerSpectatorMode = false;
@@ -6036,8 +6039,12 @@ function openMenuHub(options = null){
   setControlsStandaloneMenuOpen(false);
   if (!menuHubPanel) return;
   const keepGameplayPaused = !!(options && options.keepGameplayPaused);
+  menuHubOpenedFromPause = !!(options && options.fromPause);
   if (!keepGameplayPaused) setPaused(false);
-  else if (pauseOverlay) pauseOverlay.style.display = "none";
+  else {
+    isPaused = true;
+    if (pauseOverlay) pauseOverlay.style.display = "none";
+  }
   unlockAudioOnce();
   gameState = STATE.HUB;
   syncStartMenuHudLayerMode();
@@ -6074,17 +6081,50 @@ function openMenuHub(options = null){
   updateHearts();
 }
 function closeMenuHub(){
+  const returnToPause = !!(menuHubOpenedFromPause && isPaused);
+  menuHubOpenedFromPause = false;
   restoreMenuHubActiveInner();
   if (menuHubPanel){
     menuHubPanel.style.display = "none";
     menuHubPanel.setAttribute("aria-hidden", "true");
     menuHubPanel.classList.remove("menuHubTabImages", "menuHubTabStats", "menuHubTabOptions");
   }
+  uiRoot.classList.remove("optionsBackdrop");
+  document.body.classList.remove("menu-hub-open");
+
+  if (returnToPause){
+    // Hub Back from Pause should restore the Pause menu, not dump the player at Start.
+    if (startMenu){
+      startMenu.style.setProperty("display", "none", "important");
+      startMenu.setAttribute("aria-hidden", "true");
+      setStartMenuInteractive(false);
+    }
+    if (optionsMenu) optionsMenu.style.display = "none";
+    if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode", "hubOptionsControlsMode"); }
+    if (cheatsMenu) cheatsMenu.style.display = "none";
+    if (statsPanel){ statsPanel.style.display = "none"; statsPanel.setAttribute("aria-hidden", "true"); statsPanel.removeAttribute("aria-modal"); }
+    if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
+    gameState = STATE.PLAYING;
+    syncStartMenuHudLayerMode();
+    if (pauseOverlay){
+      pauseOverlay.classList.remove("pauseControlsVisible", "scoreStoreVisible");
+      pauseOverlay.style.display = "flex";
+    }
+    uiRoot.style.display = "none";
+    pauseControlsOpen = false;
+    optionsOpenedFromPause = false;
+    cheatsOpenedFromPause = false;
+    pauseFocusIndex = getPauseOptionsReturnFocusIndex();
+    syncPauseTitleNickname();
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
+    else clearControllerFocus();
+    renderMenuHudPreview();
+    return;
+  }
+
   gameState = STATE.MENU;
   syncStartMenuHudLayerMode();
   if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
-  uiRoot.classList.remove("optionsBackdrop");
-  document.body.classList.remove("menu-hub-open");
   if (startMenu){
     startMenu.style.setProperty("display", "block");
     startMenu.setAttribute("aria-hidden", "false");
@@ -6095,6 +6135,7 @@ function closeMenuHub(){
   else clearControllerFocus();
   renderMenuHudPreview();
 }
+
 
 function isMenuHubHostingElement(el){
   return !!(menuHubPanel && el && menuHubPanel.contains(el));
