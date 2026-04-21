@@ -892,6 +892,7 @@ function setPaused(p){
   if (isPaused){
     for (const k in keys) keys[k] = false;
   }
+  syncPauseEnemyDimmingClass();
 }
 
 function _applyLives(n, forceInfinite){
@@ -1420,8 +1421,30 @@ const SHIELD_RADIUS_MULT = 0.78;       // relative to player size
 let shieldHoldGrace = 0;
 const SHIELD_HOLD_GRACE_SECS = 0.25;
 
+function isPausedGameplayHubActive(){
+  // v2.XX: Menu Hub opened from Pause is a frozen gameplay snapshot, not a Start Menu preview.
+  return !!(menuHubOpenedFromPause && isPaused && gameState === STATE.HUB);
+}
+
+function isGameplayRenderActive(){
+  return gameState === STATE.PLAYING || isPausedGameplayHubActive();
+}
+
+function isEnemyOnlyPauseDimmingActive(){
+  // Use the pause dimming idea, but scope it to enemies only so HUD/player/menu stay readable.
+  return !!((gameState === STATE.PLAYING && isPaused) || isPausedGameplayHubActive());
+}
+
+function syncPauseEnemyDimmingClass(){
+  try{
+    const active = isEnemyOnlyPauseDimmingActive();
+    document.body.classList.toggle("pause-enemy-dim", active);
+    document.body.classList.toggle("pause-hub-open", isPausedGameplayHubActive());
+  }catch(_){ }
+}
+
 function hasActivePlayer(){
-  return gameState === STATE.PLAYING && !playerSpectatorMode;
+  return isGameplayRenderActive() && !playerSpectatorMode;
 }
 
 function canActivateShield(){
@@ -2320,7 +2343,7 @@ if (scoreStoreHud){
 }
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
-  const isPlaying = gameState === STATE.PLAYING;
+  const isPlaying = isGameplayRenderActive();
   const scoreVisible = isPlaying && !scoreTrackingDisabled;
   const cheatsVisible = isPlaying && scoreTrackingDisabled;
   const hudVisible = scoreVisible || cheatsVisible;
@@ -2419,8 +2442,8 @@ function refreshWinStats(){
 
 function updateTimerHUD(){
   if (!timerHud) return;
-  // Show timer only while actually playing
-  if (gameState !== STATE.PLAYING){
+  // Show timer while playing, including the frozen Pause -> Menu Hub snapshot.
+  if (!isGameplayRenderActive()){
     timerHud.style.display = "none";
     return;
   }
@@ -5985,6 +6008,7 @@ function adjustControllerCheat(delta){
 }
 function showMenu(){
   menuHubOpenedFromPause = false;
+  syncPauseEnemyDimmingClass();
   setControlsStandaloneMenuOpen(false);
   setPaused(false);
   playerSpectatorMode = false;
@@ -5992,6 +6016,7 @@ function showMenu(){
   deathYellPlayed = false;
   gameState = STATE.MENU;
   syncStartMenuHudLayerMode();
+  syncPauseEnemyDimmingClass();
   if (audioUnlocked && !audioMuted) ensureMenuMusicPlaying();
   gameWon = false;
   // v1.96: drop shield when entering menus
@@ -6048,7 +6073,9 @@ function openMenuHub(options = null){
   unlockAudioOnce();
   gameState = STATE.HUB;
   syncStartMenuHudLayerMode();
-  if (!audioMuted) ensureMenuMusicPlaying();
+  syncPauseEnemyDimmingClass();
+  // Do not restart/switch menu music when the Hub is replacing Pause during gameplay.
+  if (!audioMuted && !isPausedGameplayHubActive()) ensureMenuMusicPlaying();
   mouseShieldHolding = false;
   stopShield(false);
   // v2.XX: make the hub replace the Start Menu instead of sitting beside it.
@@ -6106,6 +6133,7 @@ function closeMenuHub(){
     if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
     gameState = STATE.PLAYING;
     syncStartMenuHudLayerMode();
+    syncPauseEnemyDimmingClass();
     if (pauseOverlay){
       pauseOverlay.classList.remove("pauseControlsVisible", "scoreStoreVisible");
       pauseOverlay.style.display = "flex";
@@ -7856,7 +7884,7 @@ function drawStaticPlayerSprite(alpha = 1, xOff = 0, yOff = 0, extraWidthScale =
 }
 
 function redrawPlayerSpriteAfterVideoFx(){
-  if (gameState !== STATE.PLAYING) return;
+  if (!isGameplayRenderActive()) return;
   if (isDead || gameWon) return;
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
   if (flicker) return;
@@ -10279,6 +10307,7 @@ function drawShieldRing(){
 
 function draw(){
   syncStartMenuHudLayerMode();
+  syncPauseEnemyDimmingClass();
   drawStarfield();
 
   // v1.96+: draw player death particles
@@ -10384,13 +10413,14 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
   drawBomb();
 
   // enemies
+  const pauseEnemyDimActive = isEnemyOnlyPauseDimmingActive();
   for (const e of enemies){
     // v1.96: frog enemies get a pulsing green aura ring
     if (e.isFrog){
       const pulse = 1 + 0.12 * Math.sin(time * 6.0);
       const r = Math.max(e.w, e.h) * 0.70 * pulse;
       ctx.save();
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = pauseEnemyDimActive ? 0.32 : 0.85;
       ctx.fillStyle = "rgba(0,255,0,0.10)";
       ctx.strokeStyle = "rgba(0,255,0,0.45)";
       ctx.lineWidth = 3;
@@ -10411,6 +10441,7 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
     const enemySource = isGameSpeedFrozen() ? (getStaticFrameForImage(e.img) || e.img) : e.img;
     ctx.save();
     ctx.globalAlpha = alpha;
+    if (pauseEnemyDimActive) ctx.filter = "brightness(0.45)";
     if (e.dying){
       // Animated GIF/WEBP enemies normally render as DOM <img> elements above the canvas.
       // Force dying enemies back through canvas so expansion + fisheye bulge actually affect them.
@@ -10573,13 +10604,13 @@ if (isDragonEnemy(e)){
   updateTimerHUD();
 
   // v1.96: corner HUD updates
-  if (gameState === STATE.PLAYING){
+  if (isGameplayRenderActive()){
     livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
     _syncBombHud();
   } else if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
     renderMenuHudPreview();
   }
-  if (gameState === STATE.PLAYING){
+  if (isGameplayRenderActive()){
     const info = getStageInfo(wave);
     const clampedWave = Math.min(wave, info.end);
     const lab = getWaveLabel(wave);
@@ -10626,7 +10657,7 @@ if (isDragonEnemy(e)){
 let lastT = performance.now();
 
 function updateHearts(){
-  if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
+  if ((gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS) && !isPausedGameplayHubActive()){
     renderMenuHudPreview();
     return;
   }
