@@ -3752,6 +3752,77 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
 }
 </style>
 
+<style id="allMenus16x9FootprintFix">
+  /* v2.XX: Native 16:9 menu frame override.
+     All major shooter menus use the same unscaled outer frame so their outlines
+     line up instead of relying on inherited transforms and CSS goblin math. */
+  :root{
+    --shooter-menu-frame-w: min(720px, calc(100vw - 32px));
+    --shooter-menu-frame-h: min(405px, calc(100vh - 32px));
+    --shooter-menu-frame-radius: 16px;
+    --shooter-menu-frame-border: 2px solid rgba(0,255,102,0.65);
+    --shooter-menu-frame-shadow: 0 0 28px rgba(0,255,102,0.20);
+  }
+
+  #startMenu.panel,
+  #pauseMenu,
+  #deathPanel,
+  #winPanel,
+  #scoreStorePanel,
+  #menuHubPanel #menuHubPanelInner,
+  #optionsPanel,
+  #cheatsPanel,
+  #controlsPanel,
+  #controllerPreviewPanel,
+  #statsPanel,
+  #imagesPanel{
+    width: var(--shooter-menu-frame-w) !important;
+    max-width: var(--shooter-menu-frame-w) !important;
+    min-width: 0 !important;
+    height: var(--shooter-menu-frame-h) !important;
+    max-height: var(--shooter-menu-frame-h) !important;
+    min-height: 0 !important;
+    aspect-ratio: 16 / 9 !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    box-sizing: border-box !important;
+    border: var(--shooter-menu-frame-border) !important;
+    border-radius: var(--shooter-menu-frame-radius) !important;
+    box-shadow: var(--shooter-menu-frame-shadow) !important;
+    overflow: hidden !important;
+  }
+
+  #startMenu.panel{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+
+  #menuHubPanel #menuHubPanelInner{
+    display:flex !important;
+    flex-direction:column !important;
+  }
+
+  #menuHubPanel #menuHubContent,
+  #scoreStorePanel .scoreStoreContent,
+  #optionsPanel,
+  #cheatsPanel,
+  #controlsPanel,
+  #controllerPreviewPanel,
+  #statsPanel,
+  #imagesPanel{
+    min-height:0 !important;
+  }
+
+  @media (max-width: 760px), (max-height: 440px){
+    :root{
+      --shooter-menu-frame-w: min(calc(100vw - 18px), calc((100vh - 18px) * 16 / 9));
+      --shooter-menu-frame-h: min(calc(100vh - 18px), calc((100vw - 18px) * 9 / 16));
+    }
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
