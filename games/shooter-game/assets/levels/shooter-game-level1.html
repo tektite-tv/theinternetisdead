@@ -4914,6 +4914,118 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+
+<style id="startMenuConstructionLastUpdatedNotice">
+  /* v2.XX: Construction gate visible content.
+     This replaces the pseudo-element construction message with real DOM so the
+     (New and Improved) / Last updated refresh link can be clicked. Outer menu
+     footprint is untouched. */
+  #startConstructionNotice{
+    display:none;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::before,
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface::after{
+    content:none !important;
+    display:none !important;
+  }
+  html.sg-start-construction-locked body #startMenu.panel.shooter-menu16x9Surface > #startConstructionNotice{
+    position:absolute !important;
+    inset:10px !important;
+    display:grid !important;
+    grid-template-rows:1fr auto auto auto 1fr !important;
+    align-items:center !important;
+    justify-items:center !important;
+    gap:8px !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    z-index:1000 !important;
+    text-align:center !important;
+    font-family:monospace !important;
+    box-sizing:border-box !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice > *{
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .startConstructionTitle{
+    grid-row:2 !important;
+    color:#00ff66 !important;
+    font-size:clamp(24px, 4.2vw, 42px) !important;
+    font-weight:900 !important;
+    line-height:1.05 !important;
+    text-shadow:0 0 10px rgba(0,255,102,0.70), 0 0 22px rgba(128,0,255,0.45) !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal{
+    grid-row:3 !important;
+    color:#00ffff !important;
+    font-size:clamp(11px, 1.45vw, 15px) !important;
+    line-height:1.1 !important;
+    min-height:20px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    cursor:pointer !important;
+    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .startConstructionSubtitle{
+    grid-row:4 !important;
+    color:#00ffff !important;
+    font-size:clamp(13px, 2vw, 20px) !important;
+    font-weight:900 !important;
+    line-height:1.05 !important;
+    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubHover{
+    color:inherit;
+    text-decoration:none;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubDefault,
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:hover .titleSubHover,
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:focus .titleSubHover,
+  body.controller-active html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal.controllerFocus .titleSubHover{
+    position:relative;
+    background:rgba(0,0,0,0.5);
+    border-radius:6px;
+    padding:1px 22px 1px 22px;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubDefault::before,
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:hover .titleSubHover::before,
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:focus .titleSubHover::before{
+    content:"♻️";
+    position:absolute;
+    left:4px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:12px;
+    line-height:1;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubDefault::after,
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:hover .titleSubHover::after,
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:focus .titleSubHover::after{
+    content:"♻️";
+    position:absolute;
+    right:4px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:12px;
+    line-height:1;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:hover .titleSubHover,
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:focus .titleSubHover{
+    color:#00ff66;
+    text-decoration:none;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:focus .titleSubDefault{
+    opacity:0;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:focus .titleSubHover{
+    opacity:1;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -5009,6 +5121,14 @@ body.menu-hub-open #menuHubPanel{
 
 <div id="uiRoot">
   <div id="startMenu" class="panel shooter-menu16x9Surface">
+    <div id="startConstructionNotice" aria-live="polite">
+      <div class="startConstructionTitle">Under Construction</div>
+      <div id="constructionHoverReveal" class="titleSub constructionHoverReveal" tabindex="-1" role="button" aria-label="Refresh entire page">
+        <span class="titleSubDefault">(New and Improved)</span>
+        <a class="titleSubHover" data-file-last-updated href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: loading)</a>
+      </div>
+      <div class="startConstructionSubtitle">Check Back Later</div>
+    </div>
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title. Audio enabled."><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->

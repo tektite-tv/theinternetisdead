@@ -3315,6 +3315,7 @@ const btnOptions = document.getElementById("btnOptions");
 const startMenuTitle = document.getElementById("startMenuTitle");
 const stageHud = document.getElementById("stageHud");
 const titleHoverReveal = document.getElementById("titleHoverReveal");
+const constructionHoverReveal = document.getElementById("constructionHoverReveal");
 function syncStartMenuMuteIcon(){
   const icon = audioMuted ? "🔇" : "🔊";
   if (startMenuTitle){
@@ -7036,9 +7037,45 @@ if (typeof startWaveSelect !== "undefined" && startWaveSelect){
 
 
 
+
+function syncFileLastUpdatedLabels(){
+  const labels = Array.from(document.querySelectorAll("[data-file-last-updated]"));
+  if (!labels.length) return;
+  let displayText = "Last updated: unknown";
+  try{
+    const modified = document.lastModified ? new Date(document.lastModified) : null;
+    if (modified && !Number.isNaN(modified.getTime())){
+      displayText = `Last updated: ${modified.toLocaleString(undefined, {
+        year:"numeric",
+        month:"short",
+        day:"numeric",
+        hour:"numeric",
+        minute:"2-digit"
+      })}`;
+    }
+  }catch(error){
+    displayText = "Last updated: unknown";
+  }
+  labels.forEach((label) => {
+    label.textContent = `(${displayText})`;
+  });
+}
+
+syncFileLastUpdatedLabels();
+
 if (titleHoverReveal){
   titleHoverReveal.addEventListener("click", refreshEntireShooterPage);
   titleHoverReveal.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " "){
+      event.preventDefault();
+      refreshEntireShooterPage();
+    }
+  });
+}
+
+if (constructionHoverReveal){
+  constructionHoverReveal.addEventListener("click", refreshEntireShooterPage);
+  constructionHoverReveal.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " "){
       event.preventDefault();
       refreshEntireShooterPage();
