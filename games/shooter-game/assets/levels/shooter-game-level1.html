@@ -4919,7 +4919,7 @@ body.menu-hub-open #menuHubPanel{
 <style id="startMenuConstructionLastUpdatedNotice">
   /* v2.XX: Construction gate visible content.
      This replaces the pseudo-element construction message with real DOM so the
-     (New and Improved) / Last updated refresh link can be clicked. Outer menu
+     construction-only Last updated refresh link can be clicked. Outer menu
      footprint is untouched. */
   #startConstructionNotice{
     display:none;
@@ -5024,6 +5024,60 @@ body.menu-hub-open #menuHubPanel{
   html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal:focus .titleSubHover{
     opacity:1;
   }
+
+  /* v2.XX: Construction screen only. Do not use the normal title hover swap here.
+     Always show the Last updated refresh link centered between the recycle marks. */
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal{
+    width:100% !important;
+    min-height:24px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    pointer-events:auto !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubDefault{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubHover{
+    position:relative !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    margin:0 auto !important;
+    padding:1px 28px !important;
+    background:rgba(0,0,0,0.5) !important;
+    border-radius:6px !important;
+    color:#00ff66 !important;
+    opacity:1 !important;
+    visibility:visible !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+    text-decoration:none !important;
+    pointer-events:auto !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubHover::before{
+    content:"♻️" !important;
+    position:absolute !important;
+    left:6px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    font-size:12px !important;
+    line-height:1 !important;
+  }
+  html.sg-start-construction-locked body #startConstructionNotice .constructionHoverReveal .titleSubHover::after{
+    content:"♻️" !important;
+    position:absolute !important;
+    right:6px !important;
+    top:50% !important;
+    transform:translateY(-50%) !important;
+    font-size:12px !important;
+    line-height:1 !important;
+  }
 </style>
 
 </head>
@@ -5124,7 +5178,7 @@ body.menu-hub-open #menuHubPanel{
     <div id="startConstructionNotice" aria-live="polite">
       <div class="startConstructionTitle">Under Construction</div>
       <div id="constructionHoverReveal" class="titleSub constructionHoverReveal" tabindex="-1" role="button" aria-label="Refresh entire page">
-        <span class="titleSubDefault">(New and Improved)</span>
+        <span class="titleSubDefault" aria-hidden="true"></span>
         <a class="titleSubHover" data-file-last-updated href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: loading)</a>
       </div>
       <div class="startConstructionSubtitle">Check Back Later</div>
