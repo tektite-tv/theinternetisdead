@@ -5472,6 +5472,19 @@ body.menu-hub-open #menuHubPanel{
     background:transparent !important;
   }
 </style>
+<style id="hubControlsMatchHubMenuPurpleSurface">
+  /* v2.XX: Hub-launched Controls should look like the other Hub menu surfaces.
+     Keep its 16:9 footprint and layout intact; only unify the visible purple
+     panel styling with Start/Hub/Options/Stats/Images/Cheats. */
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode{
+    background:var(--shooter-start-hub-frame-bg) !important;
+    border:var(--shooter-start-hub-frame-border) !important;
+    border-width:2px !important;
+    border-radius:var(--shooter-start-hub-frame-radius) !important;
+    box-shadow:var(--shooter-start-hub-frame-shadow) !important;
+  }
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
