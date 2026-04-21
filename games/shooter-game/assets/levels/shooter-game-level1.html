@@ -3250,6 +3250,40 @@ body.invert-colors {
   }
 
 
+
+  /* v2.XX: Start Menu row rhythm fix.
+     The previous pass normalized margins, but the fixed-height panel still
+     left the lower rows visually drifting. Treat every visible Start Menu
+     row as a direct vertical item and distribute the empty space evenly. */
+  #startMenu.panel{
+    --start-menu-row-space:12px;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:space-evenly !important;
+    gap:0 !important;
+    padding:18px 18px !important;
+  }
+  #startMenu.panel > *{
+    flex:0 0 auto !important;
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+  }
+  #startMenu .btnRowTop{
+    display:flex !important;
+    justify-content:center !important;
+    align-items:center !important;
+    column-gap:10px !important;
+    row-gap:var(--start-menu-row-space) !important;
+    margin:0 !important;
+    transform:none !important;
+    width:100% !important;
+  }
+  #startMenu #startWelcomeNickname{
+    margin:0 !important;
+    min-height:0 !important;
+    padding:0 8px !important;
+  }
 </style>
 
 <style>
@@ -3494,8 +3528,8 @@ body.invert-colors {
       <button id="btnMenu" class="smallBtn" type="button"><span class="startMenuButtonText">Menu</span></button>
       <button id="btnEnterNickname" class="smallBtn" type="button"><span class="startMenuButtonText">Enter Nickname</span></button>
       <input id="startNicknameInput" class="smallBtn" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname" />
-      <div id="startWelcomeNickname" class="startMenuWelcomeNickname" aria-live="polite"></div>
     </div>
+    <div id="startWelcomeNickname" class="startMenuWelcomeNickname" aria-live="polite"></div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>
 
