@@ -4561,11 +4561,20 @@ body.menu-hub-open #menuHubPanel{
     border-radius:10px !important;
     background:rgba(0,0,0,0.55) !important;
     box-shadow:0 0 18px rgba(0,255,102,0.18) !important;
-    color:#0f0 !important;
-    text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(0,255,102,0.25) !important;
     font-family:monospace !important;
     font-weight:900 !important;
     outline:none !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname{
+    color:#0f0 !important;
+    text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(0,255,102,0.25) !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput.nicknameEntryActive:not(.nicknameHasDraft){
+    color:#00ffff !important;
+    text-shadow:0 0 8px rgba(0,255,255,0.45), 0 0 14px rgba(0,255,255,0.20) !important;
+    animation:none !important;
   }
 
   html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname:hover,
@@ -4772,7 +4781,7 @@ body.menu-hub-open #menuHubPanel{
   #startMenu #startNicknameInput{
     animation:none !important;
   }
-  #startMenu #startNicknameInput.nicknameEntryActive.nicknameHasDraft{
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput.nicknameEntryActive.nicknameHasDraft{
     animation:startNicknameTypedTextHueShift 1.25s linear infinite !important;
     caret-color:#00ffff;
   }
