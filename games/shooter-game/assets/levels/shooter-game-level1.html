@@ -5564,48 +5564,124 @@ body.menu-hub-open #menuHubPanel{
 
 
 
-
-<style id="startMenuEnterNicknameControllerFocusMatchStartFinal">
-  /* v2.XX: Match Enter Nickname controller focus to Start Game exactly. */
-  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow.controllerFocus,
-  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow.controller-selected{
-    border-color:transparent !important;
-    box-shadow:none !important;
-    outline:none !important;
-    background:transparent !important;
-  }
-
-  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput:not(.nicknameEntryActive),
-  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startWelcomeNickname:not(.hasNickname){
+<style id="startMenuNicknameSameAsTopButtonsFinal">
+  /* v2.XX: Make Enter Nickname use the same button geometry and controller
+     highlight as Start Game/Menu. This intentionally overrides the earlier
+     full-row nickname-button patches. The row is just a holder now, not a
+     secret second outline factory. */
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow{
+    display:flex !important;
+    align-items:stretch !important;
+    justify-content:center !important;
+    justify-items:center !important;
+    align-content:stretch !important;
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    padding:0 !important;
+    margin:0 !important;
+    overflow:visible !important;
     border:0 !important;
+    outline:0 !important;
     box-shadow:none !important;
-    outline:none !important;
     background:transparent !important;
+    box-sizing:border-box !important;
   }
 
-  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controllerFocus,
-  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controller-selected{
-    background:rgba(75,0,118,0.55) !important;
-    border:2px solid rgba(0,255,0,0.9) !important;
-    border-radius:12px !important;
-    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
-    outline:none !important;
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname,
+  html.sg-start-nickname-prepaint.sg-start-nickname-needs-name body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    align-self:stretch !important;
+    justify-self:center !important;
+    flex:0 1 calc((100% - 10px) / 2) !important;
+    width:calc((100% - 10px) / 2) !important;
+    min-width:0 !important;
+    max-width:calc((100% - 10px) / 2) !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    margin:0 !important;
+    padding:0 14px !important;
+    box-sizing:border-box !important;
+    border:2px solid rgba(0,255,102,0.65) !important;
+    border-radius:10px !important;
+    outline:0 !important;
+    background:rgba(0,0,0,0.55) !important;
+    box-shadow:0 0 18px rgba(0,255,102,0.18) !important;
+    color:#0f0 !important;
+    font-family:monospace !important;
+    font-weight:900 !important;
+    font-size:clamp(13px, 1.25vw, 17px) !important;
+    line-height:1 !important;
+    text-align:center !important;
+    text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(0,255,102,0.25) !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:clip !important;
+    cursor:pointer !important;
   }
 
-  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controllerFocus .startMenuButtonText,
-  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controller-selected .startMenuButtonText{
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname .startMenuButtonText{
     position:relative !important;
     left:auto !important;
     right:auto !important;
     top:auto !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
     width:auto !important;
-    max-width:100% !important;
+    max-width:calc(100% - 30px) !important;
     min-width:0 !important;
     padding:0 !important;
     transform:none !important;
     text-align:center !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname:hover,
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controllerFocus,
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controller-selected{
+    background:rgba(75,0,118,0.55) !important;
+    border-color:rgba(0,255,0,0.9) !important;
+    outline:0 !important;
+    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+  }
+
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controllerFocus::after{
+    content:"" !important;
+    position:absolute !important;
+    right:4px !important;
+    top:50% !important;
+    width:18px !important;
+    height:18px !important;
+    transform:translateY(-50%) !important;
+    background-color:rgba(0,255,102,0.5) !important;
+    background-image:url('/games/shooter-game/assets/controller-buttons/button-a.webp') !important;
+    background-position:center !important;
+    background-size:contain !important;
+    background-repeat:no-repeat !important;
+    border-radius:50% !important;
+    image-rendering:auto !important;
+    pointer-events:none !important;
+    filter:drop-shadow(0 0 4px rgba(0,255,0,0.75)) !important;
+    z-index:2 !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput.nicknameEntryActive,
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startWelcomeNickname.hasNickname{
+    flex:1 1 100% !important;
+    width:100% !important;
+    max-width:100% !important;
   }
 </style>
+
 </head>
 <body>
 <canvas id="game"></canvas>

@@ -4544,9 +4544,9 @@ function getStartNicknameMenuTarget(){
 
 function getMenuControllerTargets(){
   if (isStartMenuConstructionLocked()) return [];
-  // v2.XX: Start Menu controller navigation is intentionally narrow:
-  // (New and Improved)/(Last updated), Start Game, Menu, and Enter Nickname.
-  // The title itself is decorative, not a controller stop. Tiny mercy.
+  // Start Menu controller scope: Start Game, Menu, the update-message reveal,
+  // and Enter Nickname only. The title itself is decorative, because apparently
+  // even focus order needs a bouncer now.
   return [titleHoverReveal, btnStart, btnMenu, getStartNicknameMenuTarget()].filter(Boolean);
 }
 
@@ -5419,17 +5419,16 @@ function moveMenuControllerFocusDirectional(direction){
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
-    // Start/Menu row only. No rollover, no drifting into nickname. Civilization limps on.
+    // Only switch Menu -> Start. No rollover, no nickname side quests.
     if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
   } else if (direction === "right"){
-    // Start -> Menu only. Menu does not wrap back around or fall into the nickname row.
+    // Only switch Start -> Menu. No rollover, because this is a menu, not a hamster wheel.
     if (menuFocusIndex === startIndex && menuIndex !== -1) nextIndex = menuIndex;
   } else if (direction === "down"){
-    if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
-    else if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && nicknameIndex !== -1) nextIndex = nicknameIndex;
+    if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && nicknameIndex !== -1) nextIndex = nicknameIndex;
+    else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
   } else if (direction === "up"){
     if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && revealIndex !== -1) nextIndex = revealIndex;
-    else if (menuFocusIndex === nicknameIndex && startIndex !== -1) nextIndex = startIndex;
   }
 
   if (nextIndex === menuFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
