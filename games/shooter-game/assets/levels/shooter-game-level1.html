@@ -3623,6 +3623,135 @@ body.invert-colors {
 
 </style>
 
+
+<style>
+/* v2.XX: Start Menu first-paint layout lock.
+   The refresh state now uses the same native box model as the hydrated state,
+   so the nickname row can swap content without shoving the whole menu down. */
+html #startMenu.panel{
+  width:min(520px, 92vw) !important;
+  max-width:min(520px, 92vw) !important;
+  height:min(430px, calc(100vh - 32px)) !important;
+  max-height:min(430px, calc(100vh - 32px)) !important;
+  min-height:0 !important;
+  box-sizing:border-box !important;
+  padding:18px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  gap:14px !important;
+  overflow:hidden !important;
+  transform:none !important;
+  transform-origin:center center !important;
+}
+html #startMenu.panel > *{
+  flex:0 0 auto !important;
+  margin-top:0 !important;
+  margin-bottom:0 !important;
+  transform:none !important;
+  box-sizing:border-box !important;
+}
+html #startMenu #startMenuTitle,
+html #startMenu .titleSubWrap,
+html #startMenu .subimg,
+html #startMenu .menuBlurb,
+html #startMenu .btnRowTop,
+html #startMenu #startNicknameRow,
+html #startMenu #assetStatus{
+  margin-top:0 !important;
+  margin-bottom:0 !important;
+  transform:none !important;
+}
+html #startMenu .subimg{
+  width:110px !important;
+  height:110px !important;
+  min-width:110px !important;
+  min-height:110px !important;
+  max-width:110px !important;
+  max-height:110px !important;
+}
+html #startMenu .menuBlurb{
+  line-height:1.28 !important;
+}
+html #startMenu .btnRowTop{
+  display:grid !important;
+  grid-template-columns:repeat(2, 160px) !important;
+  justify-content:center !important;
+  align-items:center !important;
+  gap:10px !important;
+  width:100% !important;
+  min-height:42px !important;
+  height:42px !important;
+  padding:0 !important;
+}
+html #startMenu #btnStart,
+html #startMenu #btnMenu{
+  width:160px !important;
+  min-width:160px !important;
+  max-width:160px !important;
+  height:42px !important;
+  min-height:42px !important;
+  max-height:42px !important;
+  box-sizing:border-box !important;
+}
+html #startMenu #startNicknameRow{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:100% !important;
+  min-height:42px !important;
+  height:42px !important;
+  max-height:42px !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+}
+html #startMenu #btnEnterNickname,
+html #startMenu #startNicknameInput,
+html #startMenu #startWelcomeNickname{
+  margin:0 !important;
+  height:42px !important;
+  min-height:42px !important;
+  max-height:42px !important;
+  box-sizing:border-box !important;
+}
+html #startMenu #btnEnterNickname,
+html #startMenu #startNicknameInput{
+  width:220px !important;
+  min-width:220px !important;
+  max-width:220px !important;
+}
+html #startMenu #startWelcomeNickname{
+  width:100% !important;
+  min-width:0 !important;
+  padding:0 8px !important;
+  align-items:center !important;
+  justify-content:center !important;
+  line-height:1.1 !important;
+}
+html.sg-start-nickname-prepaint.sg-start-nickname-needs-name #startMenu #btnEnterNickname{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+html.sg-start-nickname-prepaint.sg-start-nickname-needs-name #startMenu #startNicknameInput,
+html.sg-start-nickname-prepaint.sg-start-nickname-needs-name #startMenu #startWelcomeNickname{
+  display:none !important;
+}
+html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #btnEnterNickname,
+html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startNicknameInput{
+  display:none !important;
+}
+html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelcomeNickname{
+  display:inline-flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -3717,7 +3846,7 @@ body.invert-colors {
 </div>
 
 <div id="uiRoot">
-  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.50); border-width: 3px; transform:scale(0.975); transform-origin:center center;">
+  <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.50); border-width: 3px;">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title. Audio enabled."><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
