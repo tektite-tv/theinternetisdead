@@ -5869,11 +5869,20 @@ function openOptionsFromHub(){
   showOptions(false);
 }
 
+function isHubOptionsControlsLaunchContext(){
+  if (!btnControls) return false;
+  const hubVisible = !!(menuHubPanel && menuHubPanel.style.display !== "none" && menuHubPanel.getAttribute("aria-hidden") !== "true");
+  const buttonInsideHub = !!(menuHubPanel && menuHubPanel.contains(btnControls));
+  const optionsInner = document.getElementById("optionsMenuInner");
+  const optionsInnerInsideHub = !!(menuHubContent && optionsInner && menuHubContent.contains(optionsInner));
+  return !!(hubVisible && (menuHubActiveTab === "options" || buttonInsideHub || optionsInnerInsideHub));
+}
 
 function setControlsStandaloneMenuOpen(isOpen, options = null){
   const fromHubOptions = !!(options && options.fromHubOptions);
   document.body.classList.toggle("controls-menu-open", !!isOpen);
   document.body.classList.toggle("controls-hub-options-mode", !!(isOpen && fromHubOptions));
+  if (controlsMenu) controlsMenu.classList.toggle("hubOptionsControlsMode", !!(isOpen && fromHubOptions));
   if (!isOpen){
     document.body.classList.remove("controls-preview-open");
     return;
@@ -5906,7 +5915,7 @@ function setControlsStandaloneMenuOpen(isOpen, options = null){
 function showControlsMenu(){
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
-  const fromHubOptions = gameState === STATE.HUB && menuHubActiveTab === "options";
+  const fromHubOptions = isHubOptionsControlsLaunchContext();
   const fromOptions = (optionsMenu && optionsMenu.style.display !== "none") || fromHubOptions;
   const fromMenu = startMenu && startMenu.style.display !== "none";
   if (!fromOptions && !fromMenu && !pauseControlsOpen) return;
@@ -5939,6 +5948,7 @@ function showControlsMenu(){
   controlsMenu.style.display = "flex";
   controlsMenu.setAttribute("aria-hidden", "false");
   controlsMenu.classList.remove("pauseControlsMode");
+  controlsMenu.classList.toggle("hubOptionsControlsMode", !!fromHubOptions);
   uiRoot.style.display = "flex";
   updateControlsDisplay();
   renderControlsBindingList();
