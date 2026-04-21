@@ -1013,22 +1013,23 @@
     z-index: 90;
   }
   #pausePanel{
-    width:min(520px, 92vw);
-    border:3px solid rgba(0,255,0,0.65);
-    border-radius:16px;
-    background: rgba(75,0,118,0.50);
-    padding: 18px 18px 16px;
+    /* Keep the Level 1 pause menu locked to the exact same outer footprint as the Start Menu. */
+    width:var(--shooter-menu-footprint-width, min(520px, 92vw));
+    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw));
+    height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
+    max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
+    min-height:0;
+    box-sizing:border-box;
+    border:2px solid rgba(0,255,0,0.65);
+    border-radius:var(--shooter-menu-footprint-radius, 16px);
+    background:rgba(75,0,118,0.50);
+    padding:var(--shooter-menu-footprint-padding, 18px 18px 18px);
     text-align:center;
-    box-shadow: 0 0 36px rgba(0,255,0,0.14);
-  
-  box-sizing: border-box;
-  max-width: min(520px, 92vw);
-  width: min(520px, 92vw);
-
-  position: relative;
-
-  pointer-events: auto;
-}
+    box-shadow:0 0 28px rgba(0,255,102,0.20);
+    position:relative;
+    pointer-events:auto;
+    overflow:hidden;
+  }
   #pauseTitle{
     font-family:"Courier New", monospace;
     font-weight:900;
@@ -2667,6 +2668,21 @@ body.invert-colors {
     :root{ --shooter-menu-footprint-height:min(400px, calc(100vh - 24px)); }
     #pauseTitle,
     #deathTitle{ font-size:44px; }
+  }
+
+  /* v2.XX: Final Level 1 pause footprint lock.
+     The pause shell now shares the Start Menu dimensions directly instead of
+     depending on older pause-specific width/padding fossils earlier in the CSS. */
+  #pausePanel{
+    width:var(--shooter-menu-footprint-width) !important;
+    max-width:var(--shooter-menu-footprint-width) !important;
+    height:var(--shooter-menu-footprint-height) !important;
+    max-height:var(--shooter-menu-footprint-height) !important;
+    padding:var(--shooter-menu-footprint-padding) !important;
+    border-radius:var(--shooter-menu-footprint-radius) !important;
+    box-sizing:border-box !important;
+    transform:scale(0.94) !important;
+    transform-origin:center center !important;
   }
   /* End unified overlay menu footprint. */
 
