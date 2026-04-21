@@ -6556,6 +6556,19 @@ function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()
   const needsNickname = !nicknameText;
   const inputActive = isStartNicknameInputActive();
 
+  const root = document.documentElement;
+  if (root){
+    root.classList.add("start-menu-nickname-hydrated");
+    root.classList.toggle("start-menu-nickname-present", !needsNickname);
+    root.classList.toggle("start-menu-nickname-missing", needsNickname);
+    try{
+      root.style.setProperty("--start-menu-welcome-text", JSON.stringify(needsNickname ? "" : `Welcome back, ${nicknameText}`));
+    }catch(error){
+      const safeWelcome = needsNickname ? "" : `Welcome back, ${nicknameText}`.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+      root.style.setProperty("--start-menu-welcome-text", safeWelcome ? `"${safeWelcome}"` : '""');
+    }
+  }
+
   if (btnEnterNickname){
     btnEnterNickname.classList.toggle("needsNickname", needsNickname && !inputActive);
     btnEnterNickname.style.display = (needsNickname && !inputActive) ? "" : "none";

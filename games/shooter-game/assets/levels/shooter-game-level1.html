@@ -4,6 +4,34 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tektite's Bananaman Shooter Game</title>
+<script>
+  /* Prime Start Menu nickname state before first paint so refresh does not flash an empty nickname row. */
+  (function primeStartMenuNicknameState(){
+    var root = document.documentElement;
+    function limitNickname(value){ return Array.from(String(value || "")).slice(0, 8).join(""); }
+    function cssString(value){ return JSON.stringify(String(value || "")); }
+    try{
+      var saved = window.localStorage.getItem("tektiteChatNickname");
+      var explicit = window.localStorage.getItem("tektiteChatNicknameExplicit") === "true";
+      var nickname = saved && saved.trim ? saved.trim() : "";
+      if (nickname === "User" && !explicit) nickname = "";
+      nickname = limitNickname(nickname);
+      if (nickname){
+        root.classList.add("start-menu-nickname-present");
+        root.classList.remove("start-menu-nickname-missing");
+        root.style.setProperty("--start-menu-welcome-text", cssString("Welcome back, " + nickname));
+      } else {
+        root.classList.add("start-menu-nickname-missing");
+        root.classList.remove("start-menu-nickname-present");
+        root.style.setProperty("--start-menu-welcome-text", cssString(""));
+      }
+    }catch(error){
+      root.classList.add("start-menu-nickname-missing");
+      root.classList.remove("start-menu-nickname-present");
+      root.style.setProperty("--start-menu-welcome-text", cssString(""));
+    }
+  })();
+</script>
 <style>
   html, body { margin:0; padding:0; background:transparent; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; }
@@ -4179,4 +4207,29 @@ body.menu-hub-open #menuHubPanel{
   min-height:34px !important;
   max-height:42px !important;
 }
+
+/* v2.XX: Before runtime hydration, reserve and populate the nickname row from localStorage-derived html classes.
+   This prevents the Enter Nickname button / Welcome text from vanishing during page refresh. */
+html:not(.start-menu-nickname-hydrated).start-menu-nickname-missing #startMenu #btnEnterNickname{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+html:not(.start-menu-nickname-hydrated).start-menu-nickname-missing #startMenu #startWelcomeNickname,
+html:not(.start-menu-nickname-hydrated).start-menu-nickname-missing #startMenu #startNicknameInput{
+  display:none !important;
+}
+html:not(.start-menu-nickname-hydrated).start-menu-nickname-present #startMenu #btnEnterNickname,
+html:not(.start-menu-nickname-hydrated).start-menu-nickname-present #startMenu #startNicknameInput{
+  display:none !important;
+}
+html:not(.start-menu-nickname-hydrated).start-menu-nickname-present #startMenu #startWelcomeNickname{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+html:not(.start-menu-nickname-hydrated).start-menu-nickname-present #startMenu #startWelcomeNickname:empty::before{
+  content:var(--start-menu-welcome-text, "");
+}
+
 </style>
