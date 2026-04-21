@@ -7968,6 +7968,18 @@ function pollGamepad(dt){
         if (pressPause) togglePause();
       }
     } else if (gameState === STATE.MENU){
+      if (pressPause){
+        const menuItems = getMenuControllerTargets();
+        const menuButtonIndex = menuItems.indexOf(btnMenu);
+        const menuTarget = menuItems[menuFocusIndex];
+        if (menuButtonIndex !== -1 && menuTarget !== btnMenu){
+          menuFocusIndex = menuButtonIndex;
+          if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+          else clearControllerFocus();
+        } else if (menuTarget === btnMenu){
+          activateControllerTarget(btnMenu);
+        }
+      }
       if (navLeft || rNavLeft){
         moveMenuControllerFocusDirectional("left");
       }
