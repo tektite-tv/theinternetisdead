@@ -5735,6 +5735,7 @@ function adjustControllerCheat(delta){
   return false;
 }
 function showMenu(){
+  setControlsStandaloneMenuOpen(false);
   setPaused(false);
   playerSpectatorMode = false;
   try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
@@ -5784,6 +5785,7 @@ function showMenu(){
 }
 
 function openMenuHub(){
+  setControlsStandaloneMenuOpen(false);
   if (!menuHubPanel) return;
   setPaused(false);
   unlockAudioOnce();
@@ -5867,6 +5869,40 @@ function openOptionsFromHub(){
   showOptions(false);
 }
 
+
+function setControlsStandaloneMenuOpen(isOpen, options = null){
+  const fromHubOptions = !!(options && options.fromHubOptions);
+  document.body.classList.toggle("controls-menu-open", !!isOpen);
+  document.body.classList.toggle("controls-hub-options-mode", !!(isOpen && fromHubOptions));
+  if (!isOpen){
+    document.body.classList.remove("controls-preview-open");
+    return;
+  }
+  if (startMenu){
+    startMenu.style.setProperty("display", "none", "important");
+    startMenu.setAttribute("aria-hidden", "true");
+    setStartMenuInteractive(false);
+  }
+  if (menuHubPanel){
+    menuHubPanel.style.setProperty("display", "none", "important");
+    menuHubPanel.setAttribute("aria-hidden", "true");
+  }
+  if (optionsMenu){
+    optionsMenu.style.setProperty("display", "none", "important");
+    optionsMenu.setAttribute("aria-hidden", "true");
+  }
+  if (cheatsMenu){ cheatsMenu.style.setProperty("display", "none", "important"); }
+  if (statsPanel){
+    statsPanel.style.setProperty("display", "none", "important");
+    statsPanel.setAttribute("aria-hidden", "true");
+    statsPanel.removeAttribute("aria-modal");
+  }
+  if (imagesPanel){
+    imagesPanel.style.setProperty("display", "none", "important");
+    imagesPanel.setAttribute("aria-hidden", "true");
+  }
+}
+
 function showControlsMenu(){
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
@@ -5879,9 +5915,9 @@ function showControlsMenu(){
   else getFallbackMenuRect();
 
   controlsReturnState = fromHubOptions ? STATE.HUB : (fromOptions ? STATE.OPTIONS : STATE.MENU);
+  setControlsStandaloneMenuOpen(true, { fromHubOptions });
   if (fromHubOptions){
     restoreMenuHubActiveInner();
-    if (menuHubPanel) menuHubPanel.style.display = "none";
   }
 
   setPaused(false);
@@ -5896,10 +5932,12 @@ function showControlsMenu(){
   markControlsClean(false);
   lockControlsInputMode(activeInputMode);
   setControlsBindMode(activeInputMode);
-  startMenu.style.display = "none";
-  optionsMenu.style.display = "none";
-  if (cheatsMenu) cheatsMenu.style.display = "none";
-  controlsMenu.style.display = "block";
+  if (startMenu) startMenu.style.setProperty("display", "none", "important");
+  if (optionsMenu) optionsMenu.style.setProperty("display", "none", "important");
+  if (cheatsMenu) cheatsMenu.style.setProperty("display", "none", "important");
+  controlsMenu.style.removeProperty("display");
+  controlsMenu.style.display = "flex";
+  controlsMenu.setAttribute("aria-hidden", "false");
   controlsMenu.classList.remove("pauseControlsMode");
   uiRoot.style.display = "flex";
   updateControlsDisplay();
@@ -5914,6 +5952,7 @@ function showControlsMenu(){
 function hideControlsMenu(){
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
+  setControlsStandaloneMenuOpen(false);
   resetDraftBindingsFromActive();
   controlsMenu.style.display = "none";
   controlsMenu.classList.remove("pauseControlsMode");

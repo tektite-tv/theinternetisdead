@@ -5181,6 +5181,65 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+
+<style id="controlsHubOpensAloneSameFootprintFinal">
+  /* v2.XX: Hub > Options > Controls opens a single standalone 16:9 panel.
+     It must not leave Start, Hub, Options, Cheats, Stats, or Images visible beside it. */
+  html body.controls-menu-open #startMenu,
+  html body.controls-menu-open #menuHubPanel,
+  html body.controls-menu-open #optionsMenu,
+  html body.controls-menu-open #cheatsMenu,
+  html body.controls-menu-open #statsPanel,
+  html body.controls-menu-open #imagesPanel{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+
+  html body.controls-menu-open:not(.controls-preview-open) #controlsMenu.panel.shooter-menu16x9Surface{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    min-width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    min-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    aspect-ratio:16 / 9 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+    transform:none !important;
+    transform-origin:center center !important;
+    padding:var(--shooter-menu-footprint-padding, 10px) !important;
+    border:2px solid rgba(0,255,80,0.72) !important;
+    border-radius:var(--shooter-menu-footprint-radius, 16px) !important;
+    background:rgba(75,0,118,0.62) !important;
+    box-shadow:0 0 18px rgba(0,255,80,0.35), inset 0 0 26px rgba(0,0,0,0.24) !important;
+    flex-direction:column !important;
+  }
+
+  html body.controls-menu-open:not(.controls-preview-open) #controlsMenuInner{
+    width:100% !important;
+    height:100% !important;
+    max-height:100% !important;
+    min-height:0 !important;
+    box-sizing:border-box !important;
+    display:flex !important;
+    flex-direction:column !important;
+    overflow:hidden !important;
+  }
+
+  html body.controls-menu-open:not(.controls-preview-open) #controlsMenu .menuMiddleScroll,
+  html body.controls-menu-open:not(.controls-preview-open) #controlsMenu #controlsList{
+    min-height:0 !important;
+    overflow:auto !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -5554,7 +5613,7 @@ body.menu-hub-open #menuHubPanel{
     </div>
   </div>
 
-  <div id="controlsMenu" class="panel" style="display:none;">
+  <div id="controlsMenu" class="panel shooter-menu16x9Surface" style="display:none;" aria-hidden="true">
     <div id="controlsMenuInner">
       <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
       <div class="controlsGrid">
