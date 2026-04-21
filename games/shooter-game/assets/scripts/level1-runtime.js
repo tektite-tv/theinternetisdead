@@ -3135,7 +3135,35 @@ function sizeMenuLikeStartMenu(menuEl, innerEl=null, scrollEl=null){
   }
 }
 
+function isHubOptionsControlsFrameActive(){
+  return !!(
+    document.body &&
+    document.body.classList.contains("controls-menu-open") &&
+    document.body.classList.contains("controls-hub-options-mode") &&
+    !document.body.classList.contains("controls-preview-open") &&
+    controlsMenu &&
+    controlsMenu.classList.contains("hubOptionsControlsMode")
+  );
+}
+
+function clearControlsMenuMeasuredInlineSizing(){
+  if (!controlsMenu) return;
+  ["width", "minWidth", "maxWidth", "height", "minHeight", "maxHeight", "transform", "margin", "transformOrigin"].forEach(prop => {
+    try{ controlsMenu.style[prop] = ""; }catch(e){}
+  });
+  if (controlsMenuInner){
+    ["width", "height", "minHeight", "maxHeight", "transform", "marginBottom"].forEach(prop => {
+      try{ controlsMenuInner.style[prop] = ""; }catch(e){}
+    });
+  }
+}
+
 function fitControlsMenuToViewport(){
+  if (isHubOptionsControlsFrameActive()){
+    clearControlsMenuMeasuredInlineSizing();
+    if (controlsListScroll) controlsListScroll.scrollTop = 0;
+    return;
+  }
   sizeMenuLikeStartMenu(controlsMenu, controlsMenuInner, controlsListScroll);
 }
 

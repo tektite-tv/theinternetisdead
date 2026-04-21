@@ -5397,6 +5397,60 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+
+<style id="hubControlsTrue16x9FinalAuthority">
+  /* v2.XX: Hub > Options > Controls must be a real 16:9 panel.
+     This final rule intentionally ignores the old native Controls sizing and
+     the older Start/Menu measuring helpers. Only the Hub-launched Controls
+     menu gets this frame; native pause Controls keeps its own layout. */
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode{
+    --hub-controls-16x9-width:min(520px, 92vw, calc((100vh - 32px) * 16 / 9));
+    width:var(--hub-controls-16x9-width) !important;
+    min-width:var(--hub-controls-16x9-width) !important;
+    max-width:var(--hub-controls-16x9-width) !important;
+    height:calc(var(--hub-controls-16x9-width) * 9 / 16) !important;
+    min-height:calc(var(--hub-controls-16x9-width) * 9 / 16) !important;
+    max-height:calc(var(--hub-controls-16x9-width) * 9 / 16) !important;
+    aspect-ratio:16 / 9 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+    padding:var(--shooter-menu-footprint-padding, 10px) !important;
+    border:2px solid rgba(0,255,80,0.72) !important;
+    border-radius:var(--shooter-menu-footprint-radius, 16px) !important;
+    background:rgba(75,0,118,0.62) !important;
+    box-shadow:0 0 18px rgba(0,255,80,0.35), inset 0 0 26px rgba(0,0,0,0.24) !important;
+    transform:none !important;
+    transform-origin:center center !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode #controlsMenuInner{
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    overflow:hidden !important;
+    transform:none !important;
+    box-sizing:border-box !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode #controlsListScroll{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    overflow:auto !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
