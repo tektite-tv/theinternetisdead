@@ -1867,7 +1867,7 @@ function closeStatsPanel(){
     statsPanel.setAttribute("aria-hidden", "true");
     statsPanel.removeAttribute("aria-modal");
   }
-  if (startMenu) startMenu.style.display = "block";
+  if (startMenu) startMenu.style.display = "flex";
   if (overlayPanelReturnTarget === STATE.HUB && menuHubPanel){
     openMenuHub();
     return;
@@ -2011,7 +2011,7 @@ function closeImagesPanel(){
     imagesPanel.setAttribute("aria-hidden", "true");
     imagesPanel.removeAttribute("aria-modal");
   }
-  if (startMenu) startMenu.style.display = "block";
+  if (startMenu) startMenu.style.display = "flex";
   if (overlayPanelReturnTarget === STATE.HUB && menuHubPanel){
     openMenuHub();
     return;
@@ -3067,7 +3067,7 @@ function getFallbackMenuRect(){
       const previousPointerEvents = startMenu.style.pointerEvents;
       startMenu.style.visibility = "hidden";
       startMenu.style.pointerEvents = "none";
-      startMenu.style.display = "block";
+      startMenu.style.display = "flex";
   rememberStartMenuPanelRect();
       const rect = startMenu.getBoundingClientRect();
       startMenu.style.display = previousDisplay;
@@ -5728,7 +5728,7 @@ function showMenu(){
 
   document.body.classList.remove("menu-hub-open");
   if (startMenu){
-    startMenu.style.setProperty("display", "block");
+    startMenu.style.setProperty("display", "flex");
     startMenu.setAttribute("aria-hidden", "false");
     setStartMenuInteractive(true);
   }
@@ -5804,7 +5804,7 @@ function closeMenuHub(){
   uiRoot.classList.remove("optionsBackdrop");
   document.body.classList.remove("menu-hub-open");
   if (startMenu){
-    startMenu.style.setProperty("display", "block");
+    startMenu.style.setProperty("display", "flex");
     startMenu.setAttribute("aria-hidden", "false");
     setStartMenuInteractive(true);
   }

@@ -2366,7 +2366,7 @@ body.invert-colors {
     padding:var(--shooter-menu-footprint-padding) !important;
     border-radius:var(--shooter-menu-footprint-radius) !important;
     text-align:center !important;
-    transform:scale(0.975) !important;
+    transform:none !important;
     transform-origin:center center !important;
   }
   #startMenu.panel,
@@ -4048,9 +4048,15 @@ line-height:1;
    pretending a fixed-height shell can magically create equal row spacing. */
 #startMenu.panel{
   --start-menu-compact-gap:8px !important;
-  height:auto !important;
-  min-height:0 !important;
-  max-height:calc(100vh - 32px) !important;
+  width:var(--shooter-menu-footprint-width) !important;
+  min-width:var(--shooter-menu-footprint-width) !important;
+  max-width:var(--shooter-menu-footprint-width) !important;
+  height:var(--shooter-menu-footprint-height) !important;
+  min-height:var(--shooter-menu-footprint-height) !important;
+  max-height:var(--shooter-menu-footprint-height) !important;
+  box-sizing:border-box !important;
+  transform:none !important;
+  transform-origin:center center !important;
   padding:18px !important;
   display:flex !important;
   flex-direction:column !important;
@@ -4139,3 +4145,33 @@ body.menu-hub-open #menuHubPanel{
 }
 </style>
 
+
+<style>
+/* v2.XX: Final Start Menu native footprint lock.
+   This exists last so refresh, nickname state, and script display flips cannot resize it. */
+#startMenu.panel{
+  width:var(--shooter-menu-footprint-width) !important;
+  min-width:var(--shooter-menu-footprint-width) !important;
+  max-width:var(--shooter-menu-footprint-width) !important;
+  height:var(--shooter-menu-footprint-height) !important;
+  min-height:var(--shooter-menu-footprint-height) !important;
+  max-height:var(--shooter-menu-footprint-height) !important;
+  box-sizing:border-box !important;
+  transform:none !important;
+  transform-origin:center center !important;
+  transition:none !important;
+}
+#startMenu #startNicknameRow{
+  height:42px !important;
+  min-height:42px !important;
+  max-height:42px !important;
+  flex:0 0 42px !important;
+  overflow:hidden !important;
+}
+#startMenu #btnEnterNickname,
+#startMenu #startNicknameInput,
+#startMenu #startWelcomeNickname{
+  min-height:34px !important;
+  max-height:42px !important;
+}
+</style>
