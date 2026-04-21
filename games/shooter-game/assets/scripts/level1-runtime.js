@@ -6568,11 +6568,6 @@ function fitStatsStartButtonNicknameLabel(){
 }
 
 function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()){
-  const root = document.documentElement;
-  if (root && root.classList){
-    root.classList.remove("sg-start-nickname-prepaint", "sg-start-nickname-needs-name", "sg-start-nickname-has-name");
-    if (root.style && root.style.removeProperty) root.style.removeProperty("--sg-start-nickname-welcome");
-  }
   if (!btnEnterNickname && !startWelcomeNickname) return;
   const nicknameText = String(savedNickname || "").trim();
   const needsNickname = !nicknameText;
@@ -6613,6 +6608,7 @@ function resetStartNicknameEntry(){
 
 function showStartNicknameInput(){
   if (!startNicknameInput || !btnEnterNickname) return false;
+  btnEnterNickname.classList.remove("needsNickname");
   btnEnterNickname.style.display = "none";
   btnEnterNickname.setAttribute("aria-hidden", "true");
   btnEnterNickname.tabIndex = -1;

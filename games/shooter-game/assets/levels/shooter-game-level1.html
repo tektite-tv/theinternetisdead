@@ -4734,6 +4734,37 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+<style id="startMenuNicknameInputActiveHidesButtonFinal">
+  /* v2.XX: When the Start Menu nickname input is active, the Enter Nickname
+     button must be fully gone, even if an older .needsNickname class remains
+     for one frame. This fixes the button label sitting on top of the input. */
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow:has(> #startNicknameInput.nicknameEntryActive) > #btnEnterNickname{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow:has(> #startNicknameInput.nicknameEntryActive) > #startNicknameInput.nicknameEntryActive{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    grid-column:1 !important;
+    grid-row:1 !important;
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    box-sizing:border-box !important;
+    text-align:center !important;
+    cursor:text !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
