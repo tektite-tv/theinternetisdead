@@ -3846,7 +3846,7 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
 </div>
 
 <div id="uiRoot">
-  <div id="startMenu" class="panel shooter-menu16x9Surface" style="background: rgba(75,0,118,0.50); border-width: 3px;">
+  <div id="startMenu" class="panel shooter-menu16x9Surface">
     <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title. Audio enabled."><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
     <div class="titleSubWrap">
       <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
@@ -4303,5 +4303,63 @@ body.menu-hub-open #menuHubPanel{
   #menuHubPanelInner.shooter-menu16x9Surface #statsLockedList{
     max-height: 100% !important;
     overflow: auto !important;
+  }
+</style>
+
+<style id="startMenuLockedToHubFootprintSourceOfTruth">
+  /* v2.XX: Hub Menu is now the source of truth for the Start Menu frame.
+     The Start Menu no longer has its own background/outline footprint.
+     Switching Start -> Hub should keep the green border in the exact same place. */
+  :root{
+    --hub-menu-source-height: var(--shooter-start-hub-frame-height);
+    --hub-menu-source-width: var(--shooter-start-hub-frame-width);
+    --hub-menu-source-padding: var(--shooter-start-hub-frame-padding);
+    --hub-menu-source-radius: var(--shooter-start-hub-frame-radius);
+    --hub-menu-source-border: var(--shooter-start-hub-frame-border);
+    --hub-menu-source-bg: var(--shooter-start-hub-frame-bg);
+    --hub-menu-source-shadow: var(--shooter-start-hub-frame-shadow);
+  }
+
+  #startMenu.shooter-menu16x9Surface{
+    width: var(--hub-menu-source-width) !important;
+    min-width: var(--hub-menu-source-width) !important;
+    max-width: var(--hub-menu-source-width) !important;
+    height: var(--hub-menu-source-height) !important;
+    min-height: var(--hub-menu-source-height) !important;
+    max-height: var(--hub-menu-source-height) !important;
+    aspect-ratio: 16 / 9 !important;
+    box-sizing: border-box !important;
+    padding: var(--hub-menu-source-padding) !important;
+    border: var(--hub-menu-source-border) !important;
+    border-width: 2px !important;
+    border-radius: var(--hub-menu-source-radius) !important;
+    background: var(--hub-menu-source-bg) !important;
+    box-shadow: var(--hub-menu-source-shadow) !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    flex: 0 0 auto !important;
+  }
+
+  #menuHubPanelInner.shooter-menu16x9Surface{
+    width: var(--hub-menu-source-width) !important;
+    min-width: var(--hub-menu-source-width) !important;
+    max-width: var(--hub-menu-source-width) !important;
+    height: var(--hub-menu-source-height) !important;
+    min-height: var(--hub-menu-source-height) !important;
+    max-height: var(--hub-menu-source-height) !important;
+    aspect-ratio: 16 / 9 !important;
+    box-sizing: border-box !important;
+    padding: var(--hub-menu-source-padding) !important;
+    border: var(--hub-menu-source-border) !important;
+    border-width: 2px !important;
+    border-radius: var(--hub-menu-source-radius) !important;
+    background: var(--hub-menu-source-bg) !important;
+    box-shadow: var(--hub-menu-source-shadow) !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+    overflow: hidden !important;
   }
 </style>
