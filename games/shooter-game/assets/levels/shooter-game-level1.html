@@ -99,7 +99,7 @@
     content:"Check Back Later" !important;
     top:calc(50% + 12px) !important;
     min-height:26px !important;
-    color:#00ffff !important;
+    color:#00ffff;
     font-size:clamp(13px, 2vw, 20px) !important;
     text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
   }
@@ -5033,13 +5033,13 @@ body.menu-hub-open #menuHubPanel{
     font-size:var(--menu-button-font-size, 14px) !important;
     font-weight:900 !important;
     line-height:1.1 !important;
-    color:#00ffff !important;
+    color:#00ffff;
     background:rgba(0,0,0,0.65) !important;
     border:2px solid rgba(0,255,0,0.78) !important;
     border-radius:10px !important;
     outline:none !important;
     box-shadow:0 0 18px rgba(0,255,102,0.18) !important;
-    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25) !important;
+    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25);
     animation:none !important;
     caret-color:#00ffff !important;
     cursor:text !important;
@@ -5055,7 +5055,16 @@ body.menu-hub-open #menuHubPanel{
     animation:none !important;
   }
 
+  #statsNicknameInput.nicknameEntryActive:not(.nicknameHasDraft){
+    color:#00ffff;
+    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25);
+    animation:none !important;
+    caret-color:#00ffff !important;
+  }
+
   #statsNicknameInput.nicknameEntryActive.nicknameHasDraft{
+    color:#00ffff;
+    text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25);
     animation:startNicknameTypedTextHueShift 1.25s linear infinite !important;
     caret-color:#00ffff !important;
   }

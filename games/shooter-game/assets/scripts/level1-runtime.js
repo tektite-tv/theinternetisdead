@@ -5067,7 +5067,8 @@ function showStatsNicknameInput(){
   statsNicknameInput.classList.remove("nicknameHasDraft");
   statsNicknameInput.readOnly = false;
   statsNicknameInput.disabled = false;
-  statsNicknameInput.placeholder = "Enter Nickname";
+  // Keep the label on the button only. Once it becomes a real input, a centered placeholder puts the caret inside the words.
+  statsNicknameInput.placeholder = "";
   const items = getStatsControllerTargets();
   const inputIndex = items.indexOf(statsNicknameInput);
   if (inputIndex >= 0) statsFocusIndex = inputIndex;
