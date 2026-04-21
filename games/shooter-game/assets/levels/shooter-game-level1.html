@@ -3284,6 +3284,24 @@ body.invert-colors {
     min-height:0 !important;
     padding:0 8px !important;
   }
+
+  /* v2.XX: Controller-selected Start Menu items now reuse the exact glow state
+     used by mouse hover. The earlier rules existed above the global focus-killer,
+     so the browser gleefully erased the glow like a tiny bureaucrat. */
+  body.controller-active #startMenuTitle.controllerFocus,
+  body.controller-active #startMenuTitle.controller-selected{
+    background: rgba(75,0,118,0.55) !important;
+    border-color: rgba(0,255,0,0.9) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+  }
+  body.controller-active #startMenu #btnStart.controllerFocus,
+  body.controller-active #startMenu #btnMenu.controllerFocus,
+  body.controller-active #startMenu #btnStart.controller-selected,
+  body.controller-active #startMenu #btnMenu.controller-selected{
+    background: rgba(75,0,118,0.55) !important;
+    border-color: rgba(0,255,0,0.9) !important;
+    box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
+  }
 </style>
 
 <style>
