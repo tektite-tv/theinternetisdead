@@ -5289,6 +5289,114 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+
+<style id="controlsHubOptionsInlineMoveButtonsFinal">
+  /* v2.XX: Hub > Options > Controls gets the same 16:9 menu footprint as
+     Start/Hub and keeps the four Move Controls bind buttons on one line.
+     This is intentionally scoped to the hub-launched Controls panel only. */
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    min-width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    min-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    aspect-ratio:16 / 9 !important;
+    padding:var(--shooter-menu-footprint-padding, 10px) !important;
+    border:2px solid rgba(0,255,80,0.72) !important;
+    border-radius:var(--shooter-menu-footprint-radius, 16px) !important;
+    background:rgba(75,0,118,0.62) !important;
+    box-shadow:0 0 18px rgba(0,255,80,0.35), inset 0 0 26px rgba(0,0,0,0.24) !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+    transform:none !important;
+    transform-origin:center center !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode #controlsMenuInner{
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+    transform:none !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode #controlsListScroll{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow:auto !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode .controlsMoveRow{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:6px !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode .controlsMoveButtonGroup{
+    display:grid !important;
+    grid-template-columns:repeat(4, minmax(0, 1fr)) !important;
+    gap:6px !important;
+    align-items:stretch !important;
+    justify-content:stretch !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode .controlsMoveButton{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    min-height:34px !important;
+    padding:6px 6px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:4px !important;
+    box-sizing:border-box !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode .controlsMoveButton .moveBindLabel{
+    flex:0 0 auto !important;
+    font-size:15px !important;
+    line-height:1 !important;
+  }
+
+  html body.controls-menu-open.controls-hub-options-mode:not(.controls-preview-open)
+  #controlsMenu.panel.shooter-menu16x9Surface.hubOptionsControlsMode .controlsMoveButton .moveBindValue{
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    font-size:8px !important;
+    line-height:1 !important;
+    text-align:center !important;
+    overflow:hidden !important;
+    text-overflow:clip !important;
+    white-space:nowrap !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>

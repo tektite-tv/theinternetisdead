@@ -5660,7 +5660,7 @@ function activateControllerTarget(el){
     return;
   }
   if (el === btnControls){
-    showControlsMenu();
+    showControlsMenu({ fromHubOptions: isHubOptionsControlsLaunchContext() });
     return;
   }
   if (el === nicknameInput || el === startNicknameInput){
@@ -5878,6 +5878,12 @@ function isHubOptionsControlsLaunchContext(){
   return !!(hubVisible && (menuHubActiveTab === "options" || buttonInsideHub || optionsInnerInsideHub));
 }
 
+function shouldForceHubOptionsControlsMode(options = null){
+  if (options && options.fromHubOptions === true) return true;
+  if (options && options.fromHubOptions === false) return false;
+  return isHubOptionsControlsLaunchContext();
+}
+
 function setControlsStandaloneMenuOpen(isOpen, options = null){
   const fromHubOptions = !!(options && options.fromHubOptions);
   document.body.classList.toggle("controls-menu-open", !!isOpen);
@@ -5912,10 +5918,10 @@ function setControlsStandaloneMenuOpen(isOpen, options = null){
   }
 }
 
-function showControlsMenu(){
+function showControlsMenu(options = null){
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
-  const fromHubOptions = isHubOptionsControlsLaunchContext();
+  const fromHubOptions = shouldForceHubOptionsControlsMode(options);
   const fromOptions = (optionsMenu && optionsMenu.style.display !== "none") || fromHubOptions;
   const fromMenu = startMenu && startMenu.style.display !== "none";
   if (!fromOptions && !fromMenu && !pauseControlsOpen) return;
@@ -5948,6 +5954,7 @@ function showControlsMenu(){
   controlsMenu.style.display = "flex";
   controlsMenu.setAttribute("aria-hidden", "false");
   controlsMenu.classList.remove("pauseControlsMode");
+  controlsMenu.classList.add("shooter-menu16x9Surface");
   controlsMenu.classList.toggle("hubOptionsControlsMode", !!fromHubOptions);
   uiRoot.style.display = "flex";
   updateControlsDisplay();
@@ -7298,7 +7305,9 @@ if (btnStatsLockedToggle){
 
 if (btnStart) btnStart.addEventListener("click", startGame);
 if (btnOptions) btnOptions.addEventListener("click", () => showOptions(false));
-if (btnControls) btnControls.addEventListener("click", showControlsMenu);
+if (btnControls) btnControls.addEventListener("click", () => {
+  showControlsMenu({ fromHubOptions: isHubOptionsControlsLaunchContext() });
+});
 if (btnCheats) btnCheats.addEventListener("click", armCheatsUnlockCountdown);
 if (btnCheats) btnCheats.addEventListener("keydown", handleCheatsButtonTypedKey);
 if (cheatermodeCountdownDisplay){
