@@ -4324,3 +4324,111 @@ body.menu-hub-open #menuHubPanel{
     box-sizing:border-box !important;
   }
 </style>
+
+<style id="allMenusHard16x9VisibleFrameFix">
+  /* v2.XX: Hard visible-frame 16:9 menu fix.
+     This block intentionally lives last because earlier menu CSS still contains
+     transforms, max-height rules, and one post-HTML Hub scale override. The visible
+     menu rectangle itself is now a single 16:9 frame, not a polite suggestion. */
+  :root{
+    --sg-menu-frame-w:min(720px, calc(100vw - 48px), calc((100vh - 48px) * 16 / 9));
+    --sg-menu-frame-h:calc(var(--sg-menu-frame-w) * 9 / 16);
+    --sg-menu-frame-padding:18px;
+    --sg-menu-frame-radius:16px;
+    --sg-menu-frame-border:2px solid rgba(0,255,102,0.65);
+    --sg-menu-frame-shadow:0 0 28px rgba(0,255,102,0.20);
+  }
+
+  #startMenu.panel,
+  #pausePanel,
+  #deathPanel,
+  #winPanel,
+  #menuHubPanel #menuHubPanelInner,
+  #scoreStorePanel,
+  #optionsMenu,
+  #cheatsMenu,
+  #controlsMenu,
+  #controlsPreviewMenu,
+  #imagesPanel #imagesPanelInner,
+  #statsPanel #statsPanelInner{
+    width:var(--sg-menu-frame-w) !important;
+    min-width:var(--sg-menu-frame-w) !important;
+    max-width:var(--sg-menu-frame-w) !important;
+    height:var(--sg-menu-frame-h) !important;
+    min-height:var(--sg-menu-frame-h) !important;
+    max-height:var(--sg-menu-frame-h) !important;
+    aspect-ratio:16 / 9 !important;
+    box-sizing:border-box !important;
+    transform:none !important;
+    transform-origin:center center !important;
+    border:var(--sg-menu-frame-border) !important;
+    border-radius:var(--sg-menu-frame-radius) !important;
+    box-shadow:var(--sg-menu-frame-shadow) !important;
+    overflow:hidden !important;
+  }
+
+  #startMenu.panel,
+  #pausePanel,
+  #deathPanel,
+  #winPanel{
+    padding:var(--sg-menu-frame-padding) !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+
+  body.menu-hub-open #menuHubPanel{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+
+  #menuHubPanel #menuHubPanelInner,
+  #imagesPanel #imagesPanelInner,
+  #statsPanel #statsPanelInner{
+    padding:var(--sg-menu-frame-padding) !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+  }
+
+  #optionsMenu,
+  #cheatsMenu,
+  #controlsMenu,
+  #controlsPreviewMenu,
+  #scoreStorePanel{
+    padding:var(--sg-menu-frame-padding) !important;
+  }
+
+  #menuHubContent,
+  #optionsMenuInner,
+  #cheatsMenuInner,
+  #controlsMenuInner{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+
+  #optionsScroll,
+  #cheatsScroll,
+  #controlsListScroll,
+  #statsScroll,
+  #imagesList{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    overflow:auto !important;
+    box-sizing:border-box !important;
+  }
+
+  @media (max-width:560px), (max-height:460px){
+    :root{
+      --sg-menu-frame-w:min(calc(100vw - 24px), calc((100vh - 24px) * 16 / 9));
+      --sg-menu-frame-padding:12px;
+    }
+  }
+</style>
