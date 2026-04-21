@@ -761,9 +761,24 @@ function hidePauseControlsMenu(){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncPauseControllerFocus();
   else clearControllerFocus();
 }
+function openMenuHubFromPause(){
+  // v2.XX: The Pause menu button now opens the same Menu Hub used by the Start Menu.
+  // Close pause-specific overlays first so the hub is the only visible menu panel,
+  // instead of Start/Pause/Hub forming a cursed UI conga line.
+  optionsOpenedFromPause = false;
+  cheatsOpenedFromPause = false;
+  pauseControlsOpen = false;
+  if (pauseOverlay){
+    pauseOverlay.classList.remove("pauseControlsVisible", "scoreStoreVisible");
+    pauseOverlay.style.display = "none";
+  }
+  if (uiRoot) uiRoot.classList.remove("pauseControlsOpen");
+  if (controlsMenu) controlsMenu.classList.remove("pauseControlsMode");
+  openMenuHub();
+}
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
-    showOptions(true);
+    openMenuHubFromPause();
   });
 }
 
