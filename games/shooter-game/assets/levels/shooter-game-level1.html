@@ -279,10 +279,28 @@
   .cheatsButtonRow.cheatermodeUnlocked .cheatermodeCountdownDisplay{ display:none !important; }
   #optionsMenu .commandOptionRow .cheatermodeUnlockedControl{ display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); }
   #optionsMenu .commandOptionRow.cheatermodeUnlocked .cheatermodeUnlockedControl{ display:inline-flex; align-items:center; }
-  .cheatermodeComboButton{ font-weight:900; text-shadow:0 0 8px currentColor; }
-  .cheatermodeComboButton.comboNone{ color:#ff3b3b; }
-  .cheatermodeComboButton.comboPartial{ color:#ffd84d; }
-  .cheatermodeComboButton.comboBoth{ color:#00ff66; }
+  .cheatermodeComboButton{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    height:30px;
+    margin:0 2px;
+    vertical-align:middle;
+    color:#00ff66;
+    filter:drop-shadow(0 0 6px currentColor);
+  }
+  .cheatermodeComboButton img{
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    image-rendering:auto;
+    filter:var(--cheatermode-icon-filter, none) drop-shadow(0 0 3px currentColor);
+  }
+  .cheatermodeComboButton.comboNone{ color:#ff3b3b; --cheatermode-icon-filter:hue-rotate(240deg) saturate(2.4) brightness(1.05); }
+  .cheatermodeComboButton.comboPartial{ color:#ffd84d; --cheatermode-icon-filter:hue-rotate(290deg) saturate(2.1) brightness(1.22); }
+  .cheatermodeComboButton.comboBoth{ color:#00ff66; --cheatermode-icon-filter:saturate(1.45) brightness(1.14); }
   .cheatermodeCountdown{ color:#fff; font-weight:900; text-shadow:0 0 8px #fff; }
   body.controller-active button.controllerFocus,
   body.controller-active .smallBtn.controllerFocus{
@@ -295,7 +313,7 @@
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
     background: rgba(75,0,118,0.52);
   }
-  body.controller-active .optRow .controllerFocus,
+  body.controller-active .optRow:not(.cheatsButtonRow) .controllerFocus,
   body.controller-active .controlsBindRow .controllerFocus{
     border-color: rgba(0,255,0,0.95) !important;
     box-shadow: 0 0 0 2px rgba(0,255,0,0.38), 0 0 12px rgba(0,255,0,0.22);
@@ -2526,7 +2544,429 @@ body.invert-colors {
     margin-top:8px !important;
   }
 
-  /* v2.17: make Images and Stats behave like the Options tab inside the LB/RB hub.
+  /* v2.06: make the Options tab under the LB/RB hub row use the normal Options menu layout.
+     The hub buttons are the title now, so hide any inner Options title if one sneaks back in. */
+  #menuHubPanel.menuHubTabOptions #menuHubContent > #optionsMenuInner > .title{
+    display:none !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent > #optionsMenuInner{
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    min-height:0 !important;
+    padding:0 !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    width:100% !important;
+    overflow:auto !important;
+    padding:0 8px 8px !important;
+    box-sizing:border-box !important;
+    scrollbar-width:thin;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22);
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll::-webkit-scrollbar{ width:6px; height:6px; }
+  #menuHubPanel.menuHubTabOptions #optionsScroll::-webkit-scrollbar-track{ background:rgba(0,0,0,0.22); border-radius:999px; }
+  #menuHubPanel.menuHubTabOptions #optionsScroll::-webkit-scrollbar-thumb{ background:#00ff66; border-radius:999px; box-shadow:0 0 8px rgba(0,255,102,0.35); }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optionsGrid{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:6px !important;
+    align-items:start !important;
+    width:100% !important;
+    margin-top:0 !important;
+    text-align:center !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optRow.fullRow,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optRow.checkboxGroup{
+    grid-column:1 / -1 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optRow{
+    border:1px solid rgba(0,255,0,0.2) !important;
+    border-radius:12px !important;
+    padding:6px 8px !important;
+    background:rgba(0,0,0,0.35) !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optRow.buttonOnlyRow{
+    border:none !important;
+    background:transparent !important;
+    padding:0 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow{
+    text-align:left !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatHeader{
+    display:grid !important;
+    grid-template-columns:minmax(0, 1fr) auto !important;
+    align-items:center !important;
+    gap:8px !important;
+    min-height:0 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatHeader > div:first-child{
+    display:block !important;
+    min-width:0 !important;
+    text-align:left !important;
+    white-space:normal !important;
+    overflow:visible !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatTitle{
+    display:block !important;
+    font-size:12px !important;
+    line-height:1.15 !important;
+    text-align:left !important;
+    margin:0 !important;
+    white-space:normal !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .cheatCommand{
+    display:block !important;
+    font-size:10px !important;
+    line-height:1.1 !important;
+    opacity:0.7 !important;
+    text-align:left !important;
+    margin:2px 0 0 !important;
+    padding-left:0 !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow .hint{
+    margin-top:4px !important;
+    line-height:1.15 !important;
+    font-size:10px !important;
+    text-align:left !important;
+    padding-left:0 !important;
+    white-space:normal !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:6px !important;
+    white-space:nowrap !important;
+    text-align:right !important;
+    font-size:inherit !important;
+    max-width:none !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    width:auto !important;
+    height:auto !important;
+    transform:scale(1) !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow{
+    display:grid !important;
+    grid-template-columns:minmax(0, 1fr) auto !important;
+    align-items:center !important;
+    column-gap:8px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .cheatHeader{
+    display:contents !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .cheatHeader > div:first-child{
+    grid-column:1 !important;
+    grid-row:1 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .nicknameControls{
+    grid-column:2 !important;
+    grid-row:1 / span 2 !important;
+    align-self:center !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameRow .hint{
+    grid-column:1 !important;
+    grid-row:2 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameControls,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorControls{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:6px !important;
+    min-width:170px !important;
+    max-width:none !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap{
+    position:relative !important;
+    display:inline-flex !important;
+    width:132px !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+    font-family:monospace !important;
+    font-size:12px !important;
+    color:#00ff66 !important;
+    background:rgba(0,0,0,0.55) !important;
+    border:1px solid rgba(0,255,0,0.45) !important;
+    border-radius:9px !important;
+    overflow:hidden !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap .nicknameInput{
+    position:relative !important;
+    z-index:2 !important;
+    width:100% !important;
+    color:transparent !important;
+    -webkit-text-fill-color:transparent !important;
+    caret-color:#00ff66 !important;
+    background:transparent !important;
+    border:0 !important;
+    border-radius:0 !important;
+    font-size:12px !important;
+    padding:7px 8px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputPreview{
+    position:absolute !important;
+    inset:0 !important;
+    z-index:1 !important;
+    box-sizing:border-box !important;
+    padding:7px 8px !important;
+    line-height:normal !important;
+    white-space:pre !important;
+    overflow:hidden !important;
+    pointer-events:none !important;
+    font-size:12px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameActionBtn{
+    width:auto !important;
+    min-width:0 !important;
+    height:auto !important;
+    min-height:0 !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    box-sizing:border-box !important;
+    font-size:16px !important;
+    line-height:1 !important;
+    color:#0f0 !important;
+    background:rgba(0,0,0,0.55) !important;
+    border:0 !important;
+    border-radius:0 !important;
+    padding:0 !important;
+    cursor:pointer !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+    width:92px !important;
+    box-sizing:border-box !important;
+    font-family:monospace !important;
+    font-size:12px !important;
+    color:#00ff66 !important;
+    background:rgba(0,0,0,0.55) !important;
+    border:1px solid rgba(0,255,0,0.45) !important;
+    border-radius:9px !important;
+    padding:7px 8px !important;
+    outline:none !important;
+    text-transform:uppercase !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorPicker{
+    width:38px !important;
+    height:34px !important;
+    box-sizing:border-box !important;
+    border:1px solid rgba(0,255,0,0.45) !important;
+    border-radius:9px !important;
+    background:rgba(0,0,0,0.55) !important;
+    padding:2px !important;
+    cursor:pointer !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .buttonOnlyRow .smallBtn{
+    width:100% !important;
+    min-height:46px !important;
+    font-size:16px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .menuBottomRow{
+    flex:0 0 auto !important;
+    width:100% !important;
+    box-sizing:border-box !important;
+    padding:0 8px !important;
+    margin-top:14px !important;
+  }
+
+
+  /* v2.07: keep Options command controls stable inside the LB/RB tab hub.
+     Text inputs use the normal Options-menu footprint, and checkbox toggles keep
+     their actual boxes aligned whether the status says Enabled or Disabled. */
+  #optionsMenu .commandOptionRow label,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    width:88px !important;
+    min-width:88px !important;
+    display:grid !important;
+    grid-template-columns:18px 64px !important;
+    align-items:center !important;
+    justify-content:end !important;
+    justify-items:start !important;
+    column-gap:6px !important;
+    text-align:left !important;
+    white-space:nowrap !important;
+  }
+  #optionsMenu .commandOptionRow label > span,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label > span{
+    display:inline-block !important;
+    width:64px !important;
+    min-width:64px !important;
+    text-align:left !important;
+  }
+  #optionsMenu .commandOptionRow input[type="checkbox"],
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    justify-self:start !important;
+    flex:0 0 auto !important;
+    margin:0 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameControls,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorControls{
+    width:170px !important;
+    min-width:170px !important;
+    max-width:170px !important;
+    flex:0 0 170px !important;
+    justify-content:flex-end !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap{
+    width:132px !important;
+    height:34px !important;
+    min-height:34px !important;
+    flex:0 0 132px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputWrap .nicknameInput,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .nicknameInputPreview{
+    height:32px !important;
+    min-height:32px !important;
+    font-size:12px !important;
+    line-height:18px !important;
+    padding:7px 8px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorHex{
+    width:92px !important;
+    height:34px !important;
+    min-height:34px !important;
+    flex:0 0 92px !important;
+    font-size:12px !important;
+    line-height:18px !important;
+    padding:7px 8px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .backgroundColorPicker{
+    width:38px !important;
+    height:34px !important;
+    min-height:34px !important;
+    flex:0 0 38px !important;
+    box-sizing:border-box !important;
+  }
+
+
+  /* v2.08: Status text sits before each toggle box in the LB/RB Options tab.
+     The longest normal word, Disabled, reserves the text column and pushes every
+     checkbox to the same right-side position instead of letting Enabled drift. */
+  #optionsMenu .commandOptionRow label,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    width:100px !important;
+    min-width:100px !important;
+    display:grid !important;
+    grid-template-columns:72px 18px !important;
+    align-items:center !important;
+    justify-content:end !important;
+    justify-items:start !important;
+    column-gap:8px !important;
+    text-align:left !important;
+    white-space:nowrap !important;
+  }
+  #optionsMenu .commandOptionRow label > span,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label > span{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    display:inline-block !important;
+    width:72px !important;
+    min-width:72px !important;
+    max-width:72px !important;
+    text-align:right !important;
+    overflow:visible !important;
+  }
+  #optionsMenu .commandOptionRow input[type="checkbox"],
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    justify-self:start !important;
+    flex:0 0 auto !important;
+    margin:0 !important;
+  }
+
+
+  /* v2.12: Options tab content must fit inside the Start-menu-sized hub.
+     Give the first Controls row and last Cheats row breathing room inside the
+     scrollbox instead of letting focus shadows get shaved off at the edges. */
+  #menuHubPanel.menuHubTabOptions #menuHubTopButtons{
+    gap:8px !important;
+    margin:0 0 8px !important;
+    padding:0 48px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubTopButtons::before,
+  #menuHubPanel.menuHubTabOptions #menuHubTopButtons::after{
+    width:36px !important;
+    height:36px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubTopButtons .smallBtn{
+    min-height:44px !important;
+    font-size:14px !important;
+    line-height:1.05 !important;
+    padding:6px 8px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll{
+    padding:6px 8px 16px !important;
+    scroll-padding-top:8px !important;
+    scroll-padding-bottom:18px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .optionsGrid{
+    padding:2px 0 10px !important;
+    box-sizing:border-box !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .buttonOnlyRow .smallBtn{
+    min-height:42px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #cheatsButtonRow{
+    margin-bottom:2px !important;
+  }
+
+  /* v2.16: Keep the Options Back button fully inside the Start-menu-sized hub.
+     The bottom row was sitting flush against an overflow-hidden panel, so the
+     bottom edge/focus glow got clipped. Naturally the last 4 pixels declared
+     independence. */
+  #menuHubPanel.menuHubTabOptions #menuHubContent > #optionsMenuInner{
+    padding:0 0 10px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .menuBottomRow{
+    margin-top:6px !important;
+    padding:0 8px 10px !important;
+  }
+  #menuHubPanel.menuHubTabOptions #menuHubContent .menuBottomRow #btnBack{
+    min-height:38px !important;
+    line-height:1.05 !important;
+  }
+  #menuHubPanel.menuHubTabOptions #optionsScroll{
+    padding-bottom:10px !important;
+  }
+
+  /* v2.14: Treat the Cheats button like the normal Options menu does:
+     one controller focus target, one visible outline, no parent-row glow stacked
+     under the button glow. */
+  body.controller-active #cheatsButtonRow.controllerFocus{
+    border-color:transparent !important;
+    box-shadow:none !important;
+    background:transparent !important;
+  }
+  body.controller-active #cheatsButtonRow > #btnCheats.controllerFocus{
+    outline:none !important;
+    border-color:rgba(0,255,0,0.95) !important;
+    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.24) !important;
+    background:rgba(75,0,118,0.55) !important;
+  }
+
+
+
+/* v2.17: make Images and Stats behave like the Options tab inside the LB/RB hub.
      Same start-menu footprint, same internal scrollbox, same bottom-button breathing room. */
   #menuHubPanel.menuHubTabImages #menuHubContent,
   #menuHubPanel.menuHubTabStats #menuHubContent{
@@ -2614,26 +3054,17 @@ body.invert-colors {
     }
   }
 
-  /* v2.19: keep the good Options content fit from v2.17/v2.16 intact.
-     Only Images and Stats inherit the Options hub header footprint; Options itself is not overridden here. */
+
+  /* v2.20: Images/Stats hub tabs use the same top LB/RB row sizing as the fixed Options tab.
+     Options keeps its v2.12/v2.16 content layout; these selectors only touch Images and Stats. */
   #menuHubPanel.menuHubTabImages #menuHubTopButtons,
   #menuHubPanel.menuHubTabStats #menuHubTopButtons{
-    min-height:52px !important;
-    margin:0 0 14px !important;
-    padding:0 56px !important;
+    gap:8px !important;
+    margin:0 0 8px !important;
+    padding:0 48px !important;
+    min-height:44px !important;
     flex:0 0 auto !important;
     align-items:stretch !important;
-    box-sizing:border-box !important;
-  }
-  #menuHubPanel.menuHubTabImages #menuHubTopButtons .smallBtn,
-  #menuHubPanel.menuHubTabStats #menuHubTopButtons .smallBtn{
-    min-height:52px !important;
-    padding:0 10px !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    font-size:15px !important;
-    line-height:1.1 !important;
     box-sizing:border-box !important;
   }
   #menuHubPanel.menuHubTabImages #menuHubTopButtons::before,
@@ -2641,22 +3072,22 @@ body.invert-colors {
   #menuHubPanel.menuHubTabStats #menuHubTopButtons::before,
   #menuHubPanel.menuHubTabStats #menuHubTopButtons::after{
     top:50% !important;
-    width:42px !important;
-    height:42px !important;
+    width:36px !important;
+    height:36px !important;
     transform:translateY(-50%) !important;
   }
-  @media (max-width: 460px){
-    #menuHubPanel.menuHubTabImages #menuHubTopButtons,
-    #menuHubPanel.menuHubTabStats #menuHubTopButtons{
-      min-height:42px !important;
-      padding:0 42px !important;
-    }
-    #menuHubPanel.menuHubTabImages #menuHubTopButtons .smallBtn,
-    #menuHubPanel.menuHubTabStats #menuHubTopButtons .smallBtn{
-      min-height:42px !important;
-      font-size:14px !important;
-    }
+  #menuHubPanel.menuHubTabImages #menuHubTopButtons .smallBtn,
+  #menuHubPanel.menuHubTabStats #menuHubTopButtons .smallBtn{
+    min-height:44px !important;
+    font-size:14px !important;
+    line-height:1.05 !important;
+    padding:6px 8px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    box-sizing:border-box !important;
   }
+
 
 </style>
 
@@ -2756,6 +3187,43 @@ body.invert-colors {
   margin-left:0;
   vertical-align:middle;
 }
+
+  /* v2.08: Status text sits before each toggle box in the LB/RB Options tab.
+     The longest normal word, Disabled, reserves the text column and pushes every
+     checkbox to the same right-side position instead of letting Enabled drift. */
+  #optionsMenu .commandOptionRow label,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label{
+    width:100px !important;
+    min-width:100px !important;
+    display:grid !important;
+    grid-template-columns:72px 18px !important;
+    align-items:center !important;
+    justify-content:end !important;
+    justify-items:start !important;
+    column-gap:8px !important;
+    text-align:left !important;
+    white-space:nowrap !important;
+  }
+  #optionsMenu .commandOptionRow label > span,
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow label > span{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    display:inline-block !important;
+    width:72px !important;
+    min-width:72px !important;
+    max-width:72px !important;
+    text-align:right !important;
+    overflow:visible !important;
+  }
+  #optionsMenu .commandOptionRow input[type="checkbox"],
+  #menuHubPanel.menuHubTabOptions #menuHubContent .commandOptionRow input[type="checkbox"]{
+    grid-column:2 !important;
+    grid-row:1 !important;
+    justify-self:start !important;
+    flex:0 0 auto !important;
+    margin:0 !important;
+  }
+
 </style>
 
 </head>
