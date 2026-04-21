@@ -3882,6 +3882,193 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
   }
 </style>
 
+<style id="startMenuPrepaintMatchesFinalLayoutAndNicknameButton">
+  /* v2.XX: First-paint guard for the final Start Menu layout.
+     This lives in <head>, before the Start Menu exists, so the browser uses
+     the same proportional 16:9 layout during refresh that it uses after the
+     runtime hydrates. No old-layout flash, no tiny nickname postage stamp. */
+  :root{
+    --shooter-start-hub-frame-height: min(405px, 51.75vw, calc(100vh - 96px));
+    --shooter-start-hub-frame-width: calc(var(--shooter-start-hub-frame-height) * 16 / 9);
+    --shooter-start-hub-frame-padding: 18px;
+    --shooter-start-hub-frame-radius: 16px;
+    --shooter-start-hub-frame-border: 2px solid rgba(0,255,102,0.65);
+    --shooter-start-hub-frame-bg: rgba(75,0,118,0.50);
+    --shooter-start-hub-frame-shadow: 0 0 28px rgba(0,255,102,0.20);
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface{
+    width:var(--shooter-start-hub-frame-width) !important;
+    min-width:var(--shooter-start-hub-frame-width) !important;
+    max-width:var(--shooter-start-hub-frame-width) !important;
+    height:var(--shooter-start-hub-frame-height) !important;
+    min-height:var(--shooter-start-hub-frame-height) !important;
+    max-height:var(--shooter-start-hub-frame-height) !important;
+    aspect-ratio:16 / 9 !important;
+    box-sizing:border-box !important;
+    padding:10px !important;
+    border:var(--shooter-start-hub-frame-border) !important;
+    border-width:2px !important;
+    border-radius:var(--shooter-start-hub-frame-radius) !important;
+    background:var(--shooter-start-hub-frame-bg) !important;
+    box-shadow:var(--shooter-start-hub-frame-shadow) !important;
+    transform:none !important;
+    margin:0 !important;
+    overflow:hidden !important;
+    display:grid !important;
+    grid-template-rows:0.42fr 0.20fr 1.10fr 0.52fr 0.42fr 0.42fr !important;
+    gap:8px !important;
+    align-items:stretch !important;
+    justify-items:center !important;
+    justify-content:stretch !important;
+    align-content:stretch !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface > *{
+    width:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+    transform:none !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #startMenuTitle,
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface .titleSubWrap,
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface .menuBlurb,
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow{
+    height:100% !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding-top:0 !important;
+    padding-bottom:0 !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface .subimg{
+    width:auto !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    object-fit:contain !important;
+    display:block !important;
+    margin:0 !important;
+    align-self:center !important;
+    justify-self:center !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface .menuBlurb{
+    padding-left:8px !important;
+    padding-right:8px !important;
+    line-height:1.16 !important;
+    overflow:hidden !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface .btnRowTop{
+    height:100% !important;
+    display:grid !important;
+    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
+    gap:10px !important;
+    align-items:stretch !important;
+    justify-items:stretch !important;
+    justify-content:stretch !important;
+    align-content:stretch !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #btnStart,
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #btnMenu{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    box-sizing:border-box !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow{
+    display:grid !important;
+    grid-template-columns:minmax(0, 1fr) !important;
+    grid-template-rows:minmax(0, 1fr) !important;
+    align-items:stretch !important;
+    justify-items:stretch !important;
+    width:100% !important;
+    height:100% !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    padding:0 !important;
+    margin:0 !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname,
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput,
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startWelcomeNickname{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    align-self:stretch !important;
+    justify-self:stretch !important;
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #btnEnterNickname,
+  html.sg-start-nickname-prepaint body #startMenu.panel.shooter-menu16x9Surface #startNicknameInput{
+    border:2px solid rgba(0,255,102,0.65) !important;
+    border-radius:10px !important;
+    background:rgba(0,0,0,0.55) !important;
+    box-shadow:0 0 18px rgba(0,255,102,0.18) !important;
+    color:#0f0 !important;
+    text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(0,255,102,0.25) !important;
+    font-family:monospace !important;
+    font-weight:900 !important;
+    font-size:clamp(13px, 1.25vw, 17px) !important;
+    line-height:1 !important;
+    padding:0 14px !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-align:center !important;
+  }
+
+  html.sg-start-nickname-prepaint.sg-start-nickname-needs-name body #startMenu.panel.shooter-menu16x9Surface #btnEnterNickname{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:auto !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+  html.sg-start-nickname-prepaint.sg-start-nickname-needs-name body #startMenu.panel.shooter-menu16x9Surface #startNicknameInput,
+  html.sg-start-nickname-prepaint.sg-start-nickname-needs-name body #startMenu.panel.shooter-menu16x9Surface #startWelcomeNickname,
+  html.sg-start-nickname-prepaint.sg-start-nickname-has-name body #startMenu.panel.shooter-menu16x9Surface #btnEnterNickname,
+  html.sg-start-nickname-prepaint.sg-start-nickname-has-name body #startMenu.panel.shooter-menu16x9Surface #startNicknameInput{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+  html.sg-start-nickname-prepaint.sg-start-nickname-has-name body #startMenu.panel.shooter-menu16x9Surface #startWelcomeNickname{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    pointer-events:none !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:0 8px !important;
+    line-height:1.1 !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -4859,5 +5046,29 @@ body.menu-hub-open #menuHubPanel{
     max-height:100% !important;
     padding:0 8px !important;
     box-sizing:border-box !important;
+  }
+</style>
+
+<style id="startMenuNicknameButtonOutlineFinal">
+  /* v2.XX: Steady-state nickname button outline fix.
+     Only the nickname control styling changes. The Start/Hub footprint and
+     proportional interior layout are left alone. */
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname,
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #startNicknameInput.nicknameEntryActive{
+    border:2px solid rgba(0,255,102,0.65) !important;
+    border-radius:10px !important;
+    background:rgba(0,0,0,0.55) !important;
+    box-shadow:0 0 18px rgba(0,255,102,0.18) !important;
+    color:#0f0 !important;
+    text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(0,255,102,0.25) !important;
+    font-family:monospace !important;
+    font-weight:900 !important;
+    outline:none !important;
+  }
+
+  html body #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname:hover,
+  html body.controller-active #startMenu.panel.shooter-menu16x9Surface #startNicknameRow.startMenuNicknameRow > #btnEnterNickname.needsNickname.controllerFocus{
+    border-color:rgba(0,255,0,0.9) !important;
+    box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
   }
 </style>
