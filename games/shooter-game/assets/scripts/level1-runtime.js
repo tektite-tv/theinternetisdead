@@ -774,7 +774,8 @@ function openMenuHubFromPause(){
   }
   if (uiRoot) uiRoot.classList.remove("pauseControlsOpen");
   if (controlsMenu) controlsMenu.classList.remove("pauseControlsMode");
-  openMenuHub();
+  // Keep isPaused true so the gameplay layer stays frozen while the Hub replaces the Pause menu.
+  openMenuHub({ keepGameplayPaused:true });
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
@@ -5466,19 +5467,19 @@ function syncControllerFocusForCurrentState(){
     syncControlsControllerFocus();
     return;
   }
+  if (gameState === STATE.HUB){
+    if (menuHubImagesContentFocused){ syncImagesControllerFocus(); return; }
+    if (menuHubStatsContentFocused){ syncStatsControllerFocus(); return; }
+    if (menuHubOptionsContentFocused){ syncOptionsControllerFocus(); return; }
+    syncMenuHubControllerFocus();
+    return;
+  }
   if (isPaused){
     syncPauseControllerFocus();
     return;
   }
   if (gameState === STATE.MENU){
     syncMenuControllerFocus();
-    return;
-  }
-  if (gameState === STATE.HUB){
-    if (menuHubImagesContentFocused){ syncImagesControllerFocus(); return; }
-    if (menuHubStatsContentFocused){ syncStatsControllerFocus(); return; }
-    if (menuHubOptionsContentFocused){ syncOptionsControllerFocus(); return; }
-    syncMenuHubControllerFocus();
     return;
   }
   if (gameState === STATE.OPTIONS){
@@ -5914,10 +5915,12 @@ function showMenu(){
   renderSavedImages();
 }
 
-function openMenuHub(){
+function openMenuHub(options = null){
   setControlsStandaloneMenuOpen(false);
   if (!menuHubPanel) return;
-  setPaused(false);
+  const keepGameplayPaused = !!(options && options.keepGameplayPaused);
+  if (!keepGameplayPaused) setPaused(false);
+  else if (pauseOverlay) pauseOverlay.style.display = "none";
   unlockAudioOnce();
   gameState = STATE.HUB;
   syncStartMenuHudLayerMode();
