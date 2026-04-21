@@ -669,6 +669,7 @@ function requestOpenChatFromPause(){
 }
 function showPauseControlsMenu(){
   if (!controlsMenu || !isPaused) return;
+  document.body.classList.remove("controls-hub-options-mode");
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   pauseControlsOpen = true;
   resetDraftBindingsFromActive();
@@ -5736,6 +5737,7 @@ function adjustControllerCheat(delta){
 }
 function showMenu(){
   document.body.classList.remove("controls-menu-open");
+  document.body.classList.remove("controls-hub-options-mode");
   setPaused(false);
   playerSpectatorMode = false;
   try{ document.body.classList.remove("zeroLivesSpectatorMode"); }catch(e){}
@@ -5786,6 +5788,7 @@ function showMenu(){
 
 function openMenuHub(){
   document.body.classList.remove("controls-menu-open");
+  document.body.classList.remove("controls-hub-options-mode");
   if (!menuHubPanel) return;
   setPaused(false);
   unlockAudioOnce();
@@ -5900,6 +5903,7 @@ function showControlsMenu(){
   if (statsPanel){ statsPanel.style.display = "none"; statsPanel.setAttribute("aria-hidden", "true"); statsPanel.removeAttribute("aria-modal"); }
   document.body.classList.remove("menu-hub-open");
   document.body.classList.add("controls-menu-open");
+  document.body.classList.toggle("controls-hub-options-mode", !!fromHubOptions);
 
   setPaused(false);
   pauseControlsOpen = false;
@@ -5934,6 +5938,7 @@ function showControlsMenu(){
 }
 function hideControlsMenu(){
   document.body.classList.remove("controls-menu-open");
+  document.body.classList.remove("controls-hub-options-mode");
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   resetDraftBindingsFromActive();

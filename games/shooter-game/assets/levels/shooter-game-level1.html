@@ -103,6 +103,38 @@
     font-size:clamp(13px, 2vw, 20px) !important;
     text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
   }
+
+  /* Hub Options Controls mode only: keep Move Controls direction buttons on one line.
+     Native/pause Controls menu keeps its existing stacked layout. */
+  body.controls-hub-options-mode #controlsMenu .controlsMoveButtonGroup{
+    display:grid !important;
+    grid-template-columns:repeat(4, minmax(0, 1fr)) !important;
+    grid-auto-flow:column !important;
+    gap:6px !important;
+    align-items:stretch !important;
+    justify-content:stretch !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+  body.controls-hub-options-mode #controlsMenu .controlsMoveButton{
+    width:100% !important;
+    min-width:0 !important;
+    max-width:none !important;
+    padding:6px 4px !important;
+    justify-content:center !important;
+    gap:4px !important;
+    white-space:nowrap !important;
+  }
+  body.controls-hub-options-mode #controlsMenu .controlsMoveButton .moveBindLabel{
+    font-size:13px !important;
+    flex:0 0 auto !important;
+  }
+  body.controls-hub-options-mode #controlsMenu .controlsMoveButton .moveBindValue{
+    font-size:8px !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+    text-overflow:clip !important;
+  }
 </style>
 <style>
   html.sg-start-nickname-prepaint #startMenu #startNicknameRow{
