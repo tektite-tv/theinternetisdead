@@ -2422,7 +2422,7 @@ body.invert-colors {
     padding:var(--shooter-menu-footprint-padding) !important;
     border-radius:var(--shooter-menu-footprint-radius) !important;
     text-align:center !important;
-    transform:scale(0.975) !important;
+    transform:scale(0.94) !important;
     transform-origin:center center !important;
   }
   #startMenu.panel{
@@ -3642,7 +3642,7 @@ html #startMenu.panel{
   justify-content:center !important;
   gap:10px !important;
   overflow:hidden !important;
-  transform:scale(0.975) !important;
+  transform:scale(0.94) !important;
   transform-origin:center center !important;
 }
 html #startMenu.panel > *{
@@ -4239,5 +4239,17 @@ body.menu-hub-open #menuHubPanel{
   #menuHubPanel #menuHubPanelInner{
     transform:scale(0.94) !important;
     transform-origin:center center !important;
+  }
+</style>
+<style id="startMenuUseHubOutlineFootprintFix">
+  /* v2.XX: Start Menu outer outline uses the same visible footprint as the Hub Menu.
+     The hub is 520x430 scaled to 0.94, so the Start Menu shell uses the same scale. */
+  #startMenu.panel{
+    transform:scale(0.94) !important;
+    transform-origin:center center !important;
+    border:2px solid rgba(0,255,102,0.65) !important;
+    border-radius:var(--shooter-menu-footprint-radius, 16px) !important;
+    box-shadow:0 0 28px rgba(0,255,102,0.20) !important;
+    box-sizing:border-box !important;
   }
 </style>
