@@ -5877,8 +5877,22 @@ function showControlsMenu(){
   controlsReturnState = fromHubOptions ? STATE.HUB : (fromOptions ? STATE.OPTIONS : STATE.MENU);
   if (fromHubOptions){
     restoreMenuHubActiveInner();
-    if (menuHubPanel) menuHubPanel.style.display = "none";
+    if (menuHubPanel){
+      menuHubPanel.style.setProperty("display", "none", "important");
+      menuHubPanel.setAttribute("aria-hidden", "true");
+    }
   }
+
+  // v2.XX: Controls opens as its own full Start/Hub-sized menu, not as a
+  // cursed extra panel beside/inside the Hub Options tab.
+  restoreMenuHubActiveInner();
+  if (menuHubPanel){
+    menuHubPanel.style.setProperty("display", "none", "important");
+    menuHubPanel.setAttribute("aria-hidden", "true");
+  }
+  if (imagesPanel){ imagesPanel.style.display = "none"; imagesPanel.setAttribute("aria-hidden", "true"); }
+  if (statsPanel){ statsPanel.style.display = "none"; statsPanel.setAttribute("aria-hidden", "true"); statsPanel.removeAttribute("aria-modal"); }
+  document.body.classList.remove("menu-hub-open");
 
   setPaused(false);
   pauseControlsOpen = false;

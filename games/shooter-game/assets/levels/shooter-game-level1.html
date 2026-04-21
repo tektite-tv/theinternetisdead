@@ -5162,6 +5162,58 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+<style id="controlsMenuMatchesStartHubFootprintFinal">
+  /* v2.XX: Controls menu must use the exact same visible 16:9 frame as the
+     Start Menu and Hub Menu. This only changes the Controls shell footprint;
+     inner content remains scrollable inside the fixed panel. */
+  html body #controlsMenu.panel.shooter-menu16x9Surface{
+    width: var(--shooter-start-hub-frame-width) !important;
+    min-width: var(--shooter-start-hub-frame-width) !important;
+    max-width: var(--shooter-start-hub-frame-width) !important;
+    height: var(--shooter-start-hub-frame-height) !important;
+    min-height: var(--shooter-start-hub-frame-height) !important;
+    max-height: var(--shooter-start-hub-frame-height) !important;
+    aspect-ratio: 16 / 9 !important;
+    box-sizing: border-box !important;
+    padding: var(--shooter-start-hub-frame-padding) !important;
+    border: var(--shooter-start-hub-frame-border) !important;
+    border-width: 2px !important;
+    border-radius: var(--shooter-start-hub-frame-radius) !important;
+    background: var(--shooter-start-hub-frame-bg) !important;
+    box-shadow: var(--shooter-start-hub-frame-shadow) !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    flex: 0 0 auto !important;
+  }
+
+  html body #controlsMenu.panel.shooter-menu16x9Surface #controlsMenuInner{
+    height: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+    margin: 0 !important;
+  }
+
+  html body #controlsMenu.panel.shooter-menu16x9Surface #controlsMenuTitle,
+  html body #controlsMenu.panel.shooter-menu16x9Surface .menuBottomRow{
+    flex: 0 0 auto !important;
+  }
+
+  html body #controlsMenu.panel.shooter-menu16x9Surface .controlsGrid{
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+    box-sizing: border-box !important;
+  }
+</style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -5535,7 +5587,7 @@ body.menu-hub-open #menuHubPanel{
     </div>
   </div>
 
-  <div id="controlsMenu" class="panel" style="display:none;">
+  <div id="controlsMenu" class="panel shooter-menu16x9Surface" style="display:none;">
     <div id="controlsMenuInner">
       <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
       <div class="controlsGrid">
