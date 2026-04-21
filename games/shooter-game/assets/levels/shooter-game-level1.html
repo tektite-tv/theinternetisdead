@@ -147,6 +147,26 @@
     align-items:center;
     justify-content:center;
   }
+  #startMenu #startNicknameInput{
+    display:none;
+    width:160px;
+    min-width:160px;
+    box-sizing:border-box;
+    text-align:center;
+    font-family:"Courier New", monospace;
+    font-weight:900;
+    color:#00ffff;
+    background:rgba(0,0,0,0.65);
+    border:2px solid rgba(0,255,0,0.78);
+    outline:none;
+  }
+  #startMenu #startNicknameInput.nicknameEntryActive{
+    display:inline-flex;
+  }
+  body.controller-active #startMenu #startNicknameInput.controllerFocus{
+    border-color:#00ffff;
+    box-shadow:0 0 0 2px rgba(0,255,255,0.25), 0 0 16px rgba(0,255,255,0.35);
+  }
 
   /* Controller-selected Start menu A-button hint.
      Absolutely positioned so the four Start menu buttons keep their exact footprint. */
@@ -3390,6 +3410,7 @@ body.invert-colors {
       <button id="btnStart"><span class="startMenuButtonText">Start Game</span></button>
       <button id="btnMenu" class="smallBtn" type="button"><span class="startMenuButtonText">Menu</span></button>
       <button id="btnEnterNickname" class="smallBtn" type="button"><span class="startMenuButtonText">Enter Nickname</span></button>
+      <input id="startNicknameInput" class="smallBtn" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname" />
     </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>

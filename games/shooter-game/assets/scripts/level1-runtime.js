@@ -3294,6 +3294,7 @@ function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 const btnStart = document.getElementById("btnStart");
 const btnMenu = document.getElementById("btnMenu");
 const btnEnterNickname = document.getElementById("btnEnterNickname");
+const startNicknameInput = document.getElementById("startNicknameInput");
 const btnOptions = document.getElementById("btnOptions");
 const startMenuTitle = document.getElementById("startMenuTitle");
 const stageHud = document.getElementById("stageHud");
@@ -4487,8 +4488,17 @@ function markControlsClean(applied=false){
   updateControlsApplyButtonState();
 }
 
+function isStartNicknameInputActive(){
+  return !!(startNicknameInput && startNicknameInput.classList.contains("nicknameEntryActive") && startNicknameInput.style.display !== "none");
+}
+
+function getStartNicknameMenuTarget(){
+  if (isStartNicknameInputActive()) return startNicknameInput;
+  return (btnEnterNickname && btnEnterNickname.style.display !== "none") ? btnEnterNickname : null;
+}
+
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnMenu, (btnEnterNickname && btnEnterNickname.style.display !== "none" ? btnEnterNickname : null)].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnMenu, getStartNicknameMenuTarget()].filter(Boolean);
 }
 
 function getMenuHubControllerTargets(){
@@ -5347,7 +5357,8 @@ function moveMenuControllerFocusDirectional(direction){
   const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
   const menuIndex = items.indexOf(btnMenu);
-  const nicknameIndex = items.indexOf(btnEnterNickname);
+  const nicknameTarget = getStartNicknameMenuTarget();
+  const nicknameIndex = items.indexOf(nicknameTarget);
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
@@ -5625,7 +5636,7 @@ function activateControllerTarget(el){
     showControlsMenu();
     return;
   }
-  if (el === nicknameInput){
+  if (el === nicknameInput || el === startNicknameInput){
     el.focus();
     focusControllerElement(el);
     return;
@@ -6527,32 +6538,68 @@ function fitStatsStartButtonNicknameLabel(){
 function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()){
   if (!btnEnterNickname) return;
   const needsNickname = !savedNickname;
-  btnEnterNickname.classList.toggle("needsNickname", needsNickname);
-  btnEnterNickname.style.display = needsNickname ? "" : "none";
-  btnEnterNickname.setAttribute("aria-hidden", needsNickname ? "false" : "true");
-  btnEnterNickname.tabIndex = needsNickname ? 0 : -1;
+  const inputActive = isStartNicknameInputActive();
+  btnEnterNickname.classList.toggle("needsNickname", needsNickname && !inputActive);
+  btnEnterNickname.style.display = (needsNickname && !inputActive) ? "" : "none";
+  btnEnterNickname.setAttribute("aria-hidden", (needsNickname && !inputActive) ? "false" : "true");
+  btnEnterNickname.tabIndex = (needsNickname && !inputActive) ? 0 : -1;
+  if (startNicknameInput && (!needsNickname || !inputActive)){
+    startNicknameInput.classList.remove("nicknameEntryActive");
+    startNicknameInput.style.display = "none";
+  }
   if (!needsNickname){
     const items = getMenuControllerTargets();
     if (menuFocusIndex >= items.length) menuFocusIndex = Math.max(0, items.length - 1);
   }
 }
 
-function openNicknameMenuFromStart(){
-  openMenuHub();
-  selectMenuHubTab("options", true);
-  const items = getOptionsControllerTargets();
-  const nicknameIndex = items.indexOf(nicknameInput);
-  menuHubImagesContentFocused = false;
-  menuHubStatsContentFocused = false;
-  menuHubOptionsContentFocused = true;
-  optionsFocusIndex = nicknameIndex >= 0 ? nicknameIndex : 0;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
-  else {
-    clearControllerFocus();
-    if (nicknameInput && typeof nicknameInput.focus === "function"){
-      try{ nicknameInput.focus({ preventScroll:true }); }catch(_){ try{ nicknameInput.focus(); }catch(__){} }
-    }
+function resetStartNicknameEntry(){
+  if (startNicknameInput){
+    startNicknameInput.classList.remove("nicknameEntryActive");
+    startNicknameInput.style.display = "none";
+    startNicknameInput.value = "";
   }
+  syncStartMenuNicknameButton();
+}
+
+function showStartNicknameInput(){
+  if (!startNicknameInput || !btnEnterNickname) return false;
+  btnEnterNickname.style.display = "none";
+  btnEnterNickname.setAttribute("aria-hidden", "true");
+  btnEnterNickname.tabIndex = -1;
+  startNicknameInput.classList.add("nicknameEntryActive");
+  startNicknameInput.style.display = "inline-flex";
+  startNicknameInput.value = "";
+  startNicknameInput.readOnly = false;
+  startNicknameInput.disabled = false;
+  startNicknameInput.placeholder = "Enter Nickname";
+  const items = getMenuControllerTargets();
+  const inputIndex = items.indexOf(startNicknameInput);
+  if (inputIndex >= 0) menuFocusIndex = inputIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  try{ startNicknameInput.focus({ preventScroll:true }); }catch(_){ try{ startNicknameInput.focus(); }catch(__){} }
+  try{ startNicknameInput.select(); }catch(_){}
+  return true;
+}
+
+function commitStartNicknameInput(){
+  if (!startNicknameInput) return false;
+  const draft = String(startNicknameInput.value || "").trim();
+  if (!draft){
+    resetStartNicknameEntry();
+    return false;
+  }
+  applyNicknameFromControls(draft, false);
+  resetStartNicknameEntry();
+  const items = getMenuControllerTargets();
+  const startIndex = items.indexOf(btnStart);
+  menuFocusIndex = startIndex >= 0 ? startIndex : 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+  return true;
+}
+
+function openNicknameMenuFromStart(){
+  return showStartNicknameInput();
 }
 
 function syncNicknameStatsLabels(){
@@ -6977,6 +7024,26 @@ if (btnStats) btnStats.addEventListener("click", openStatsPanel);
 if (btnImages) btnImages.addEventListener("click", openImagesPanel);
 if (btnMenu) btnMenu.addEventListener("click", openMenuHub);
 if (btnEnterNickname) btnEnterNickname.addEventListener("click", openNicknameMenuFromStart);
+if (startNicknameInput){
+  startNicknameInput.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+  });
+  startNicknameInput.addEventListener("keydown", (event) => {
+    event.stopPropagation();
+    if (event.key === "Enter"){
+      event.preventDefault();
+      commitStartNicknameInput();
+    } else if (event.key === "Escape"){
+      event.preventDefault();
+      resetStartNicknameEntry();
+      if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
+    }
+  });
+  startNicknameInput.addEventListener("blur", () => {
+    if (!String(startNicknameInput.value || "").trim()) resetStartNicknameEntry();
+  });
+}
 if (btnMenuHubImages) btnMenuHubImages.addEventListener("click", () => selectMenuHubTab("images", true));
 if (btnMenuHubStats) btnMenuHubStats.addEventListener("click", () => selectMenuHubTab("stats", true));
 if (btnMenuHubOptions) btnMenuHubOptions.addEventListener("click", () => selectMenuHubTab("options", true));
