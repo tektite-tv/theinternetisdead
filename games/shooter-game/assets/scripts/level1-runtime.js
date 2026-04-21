@@ -3293,6 +3293,7 @@ function getHeartsHudEl(){ return document.getElementById("heartsHud"); }
 
 const btnStart = document.getElementById("btnStart");
 const btnMenu = document.getElementById("btnMenu");
+const btnEnterNickname = document.getElementById("btnEnterNickname");
 const btnOptions = document.getElementById("btnOptions");
 const startMenuTitle = document.getElementById("startMenuTitle");
 const stageHud = document.getElementById("stageHud");
@@ -4487,7 +4488,7 @@ function markControlsClean(applied=false){
 }
 
 function getMenuControllerTargets(){
-  return [startMenuTitle, titleHoverReveal, btnStart, btnMenu].filter(Boolean);
+  return [startMenuTitle, titleHoverReveal, btnStart, btnMenu, (btnEnterNickname && btnEnterNickname.style.display !== "none" ? btnEnterNickname : null)].filter(Boolean);
 }
 
 function getMenuHubControllerTargets(){
@@ -5346,17 +5347,20 @@ function moveMenuControllerFocusDirectional(direction){
   const revealIndex = items.indexOf(titleHoverReveal);
   const startIndex = items.indexOf(btnStart);
   const menuIndex = items.indexOf(btnMenu);
+  const nicknameIndex = items.indexOf(btnEnterNickname);
   let nextIndex = menuFocusIndex;
 
   if (direction === "left"){
-    if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
+    if (menuFocusIndex === nicknameIndex && menuIndex !== -1) nextIndex = menuIndex;
+    else if (menuFocusIndex === menuIndex && startIndex !== -1) nextIndex = startIndex;
   } else if (direction === "right"){
     if (menuFocusIndex === startIndex && menuIndex !== -1) nextIndex = menuIndex;
+    else if (menuFocusIndex === menuIndex && nicknameIndex !== -1) nextIndex = nicknameIndex;
   } else if (direction === "down"){
     if (menuFocusIndex === titleIndex && revealIndex !== -1) nextIndex = revealIndex;
     else if (menuFocusIndex === revealIndex && startIndex !== -1) nextIndex = startIndex;
   } else if (direction === "up"){
-    if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex) && revealIndex !== -1) nextIndex = revealIndex;
+    if ((menuFocusIndex === startIndex || menuFocusIndex === menuIndex || menuFocusIndex === nicknameIndex) && revealIndex !== -1) nextIndex = revealIndex;
     else if (menuFocusIndex === revealIndex && titleIndex !== -1) nextIndex = titleIndex;
   }
 
@@ -6520,8 +6524,40 @@ function fitStatsStartButtonNicknameLabel(){
   btnStats.style.setProperty("--stats-button-focus-font-size", `${Math.min(baseSize, nextSize)}px`);
 }
 
+function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()){
+  if (!btnEnterNickname) return;
+  const needsNickname = !savedNickname;
+  btnEnterNickname.classList.toggle("needsNickname", needsNickname);
+  btnEnterNickname.style.display = needsNickname ? "" : "none";
+  btnEnterNickname.setAttribute("aria-hidden", needsNickname ? "false" : "true");
+  btnEnterNickname.tabIndex = needsNickname ? 0 : -1;
+  if (!needsNickname){
+    const items = getMenuControllerTargets();
+    if (menuFocusIndex >= items.length) menuFocusIndex = Math.max(0, items.length - 1);
+  }
+}
+
+function openNicknameMenuFromStart(){
+  openMenuHub();
+  selectMenuHubTab("options", true);
+  const items = getOptionsControllerTargets();
+  const nicknameIndex = items.indexOf(nicknameInput);
+  menuHubImagesContentFocused = false;
+  menuHubStatsContentFocused = false;
+  menuHubOptionsContentFocused = true;
+  optionsFocusIndex = nicknameIndex >= 0 ? nicknameIndex : 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+  else {
+    clearControllerFocus();
+    if (nicknameInput && typeof nicknameInput.focus === "function"){
+      try{ nicknameInput.focus({ preventScroll:true }); }catch(_){ try{ nicknameInput.focus(); }catch(__){} }
+    }
+  }
+}
+
 function syncNicknameStatsLabels(){
   const savedNickname = getSavedChatNicknameValue();
+  syncStartMenuNicknameButton(savedNickname);
   syncPauseTitleNickname();
   if (btnStats){
     btnStats.classList.toggle("statsNicknameLabel", !!savedNickname);
@@ -6940,6 +6976,7 @@ document.addEventListener("touchstart", primeMenuMusicOnFirstGesture, { capture:
 if (btnStats) btnStats.addEventListener("click", openStatsPanel);
 if (btnImages) btnImages.addEventListener("click", openImagesPanel);
 if (btnMenu) btnMenu.addEventListener("click", openMenuHub);
+if (btnEnterNickname) btnEnterNickname.addEventListener("click", openNicknameMenuFromStart);
 if (btnMenuHubImages) btnMenuHubImages.addEventListener("click", () => selectMenuHubTab("images", true));
 if (btnMenuHubStats) btnMenuHubStats.addEventListener("click", () => selectMenuHubTab("stats", true));
 if (btnMenuHubOptions) btnMenuHubOptions.addEventListener("click", () => selectMenuHubTab("options", true));

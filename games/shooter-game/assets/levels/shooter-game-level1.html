@@ -134,11 +134,25 @@
   #startMenu .btnRowTop,
   #startMenu .btnRowBottom{ transform:translateY(-14px); }
   #btnControls{ min-width:160px; }
+  #startMenu .btnRowTop button{
+    width:160px;
+    min-width:160px;
+    box-sizing:border-box;
+  }
+  #startMenu #btnEnterNickname{
+    display:none;
+  }
+  #startMenu #btnEnterNickname.needsNickname{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
 
   /* Controller-selected Start menu A-button hint.
      Absolutely positioned so the four Start menu buttons keep their exact footprint. */
   #startMenu #btnStart,
   #startMenu #btnMenu,
+  #startMenu #btnEnterNickname,
   #startMenu #btnOptions,
   #startMenu #btnImages,
   #startMenu #btnStats{
@@ -160,6 +174,7 @@
   }
   body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnMenu.controllerFocus .startMenuButtonText,
+  body.controller-active #startMenu #btnEnterNickname.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnOptions.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnImages.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnStats.controllerFocus .startMenuButtonText{
@@ -182,6 +197,7 @@
   /* Keep compact start-menu labels centered while the A icon is shown. */
   body.controller-active #startMenu #btnStart.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnMenu.controllerFocus .startMenuButtonText,
+  body.controller-active #startMenu #btnEnterNickname.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnImages.controllerFocus .startMenuButtonText,
   body.controller-active #startMenu #btnOptions.controllerFocus .startMenuButtonText{
     position:relative;
@@ -208,6 +224,7 @@
   }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
   body.controller-active #startMenu #btnMenu.controllerFocus::after,
+  body.controller-active #startMenu #btnEnterNickname.controllerFocus::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
   body.controller-active #startMenu #btnImages.controllerFocus::after,
   body.controller-active #startMenu #btnStats.controllerFocus::after{
@@ -3372,6 +3389,7 @@ body.invert-colors {
     <div class="btnRow btnRowTop">
       <button id="btnStart"><span class="startMenuButtonText">Start Game</span></button>
       <button id="btnMenu" class="smallBtn" type="button"><span class="startMenuButtonText">Menu</span></button>
+      <button id="btnEnterNickname" class="smallBtn" type="button"><span class="startMenuButtonText">Enter Nickname</span></button>
     </div>
     <div id="assetStatus" class="statusLine" style="display:none;"></div>
   </div>
@@ -3653,7 +3671,7 @@ body.invert-colors {
 
 <script>
 (function(){
-  const START_MENU_BUTTON_IDS = ["btnStart", "btnImages", "btnStats", "btnOptions"];
+  const START_MENU_BUTTON_IDS = ["btnStart", "btnMenu", "btnEnterNickname", "btnImages", "btnStats", "btnOptions"];
 
   function wrapStartMenuButtonText(button){
     let textSpan = button.querySelector(":scope > .startMenuButtonText");
