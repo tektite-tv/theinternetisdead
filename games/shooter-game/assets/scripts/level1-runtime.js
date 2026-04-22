@@ -101,9 +101,6 @@ const MUSIC_TRACKS = {
   "spaceinvaders.mp3": AUDIO_BG_MUSIC,
   "do-that-there.mp3": AUDIO_EXTRA_MUSIC
 };
-let hudMusicSelection = "Muted";
-let initialAudioGateMuted = true;
-let initialAudioGateReleasedAt = 0;
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
@@ -123,23 +120,15 @@ const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
 sfxDeath.volume = 0.10;
 
-// Global mute toggle (M key). Starts gated/muted until the first real user gesture.
-let audioMuted = true;
+// Global mute toggle (M key)
+let audioMuted = false;
 let manualAudioMuted = false;
 
 function isMuteNicknameActive(){
   try{ return String(getSavedChatNicknameValue ? getSavedChatNicknameValue() : "").trim().toLowerCase() === "_mute"; }catch(_){ return false; }
 }
 function effectiveAudioMuted(){
-  return !!initialAudioGateMuted || !!manualAudioMuted || isMuteNicknameActive();
-}
-function releaseInitialAudioGate(){
-  if (!initialAudioGateMuted) return false;
-  initialAudioGateMuted = false;
-  initialAudioGateReleasedAt = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-  if (!manualAudioMuted && hudMusicSelection === "Muted") hudMusicSelection = "Game Music";
-  audioMuted = effectiveAudioMuted();
-  return true;
+  return !!manualAudioMuted || isMuteNicknameActive();
 }
 function musicFilenameFromPath(path){
   const raw = String(path || "").split("?")[0].split("#")[0];
@@ -162,35 +151,24 @@ function setAudioElementTrack(audioEl, filename, restart=true){
 function getActiveMusicAudioElement(){
   return isPreGameplayMenuAudioState() ? menuMusicBg : musicBg;
 }
-function getDefaultMusicFilenameForCurrentState(){
-  return isPreGameplayMenuAudioState() ? musicFilenameFromPath(AUDIO_MENU_MUSIC) : musicFilenameFromPath(AUDIO_BG_MUSIC);
-}
 function getActiveMusicFilename(){
   if (effectiveAudioMuted()) return "Muted";
   return musicFilenameFromPath(getActiveMusicAudioElement().src || getActiveMusicAudioElement().currentSrc || (isPreGameplayMenuAudioState() ? AUDIO_MENU_MUSIC : AUDIO_BG_MUSIC));
 }
 function setHudMusicSelection(filename){
   if (filename === "Muted"){
-    initialAudioGateMuted = false;
-    hudMusicSelection = "Muted";
     setMuteOptionEnabled(true);
     return;
   }
-  releaseInitialAudioGate();
+  if (!MUSIC_TRACKS[filename]) return;
   manualAudioMuted = false;
   audioMuted = effectiveAudioMuted();
-  if (filename === "Game Music"){
-    hudMusicSelection = "Game Music";
-    setAudioElementTrack(getActiveMusicAudioElement(), getDefaultMusicFilenameForCurrentState(), false);
-  }else{
-    if (!MUSIC_TRACKS[filename]) return;
-    hudMusicSelection = filename;
-    setAudioElementTrack(getActiveMusicAudioElement(), filename, true);
-  }
+  const activeAudio = getActiveMusicAudioElement();
+  setAudioElementTrack(activeAudio, filename, true);
   applyMuteState();
   if (!audioMuted){
-    if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(filename !== "Game Music");
-    else if (gameState === STATE.PLAYING) ensureMusicPlaying(filename !== "Game Music");
+    if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
+    else if (gameState === STATE.PLAYING) ensureMusicPlaying(true);
   }
   updateMusicHud();
 }
@@ -212,10 +190,7 @@ function applyMuteState(){
 }
 
 function setMuteOptionEnabled(shouldEnable){
-  initialAudioGateMuted = false;
   manualAudioMuted = !!shouldEnable;
-  if (manualAudioMuted) hudMusicSelection = "Muted";
-  else if (hudMusicSelection === "Muted") hudMusicSelection = "Game Music";
   audioMuted = effectiveAudioMuted();
   applyMuteState();
   if (!audioMuted){
@@ -3364,7 +3339,6 @@ function unlockAudioOnce(){
     sfxDeath.play().then(()=>{ sfxDeath.pause(); sfxDeath.currentTime = 0; sfxDeath.muted = false; }).catch(()=>{ sfxDeath.muted = false; });
   }catch(e){}
 
-  releaseInitialAudioGate();
   applyMuteState();
   if (!audioMuted && isPreGameplayMenuAudioState()){
     ensureMenuMusicPlaying();
@@ -3474,35 +3448,6 @@ const stageHud = document.getElementById("stageHud");
 const stageHudLabel = document.getElementById("stageHudLabel");
 const stageHudSpeaker = document.getElementById("stageHudSpeaker");
 const musicFileDropdown = document.getElementById("musicFileDropdown");
-const stageWaveDropdownWrap = document.getElementById("stageWaveDropdownWrap");
-const stageWaveDropdown = document.getElementById("stageWaveDropdown");
-function syncStageWaveDropdownTextWidth(){
-  if (!stageWaveDropdown) return;
-  const selectedOption = stageWaveDropdown.options && stageWaveDropdown.selectedIndex >= 0 ? stageWaveDropdown.options[stageWaveDropdown.selectedIndex] : null;
-  const label = String(selectedOption ? selectedOption.textContent : stageWaveDropdown.value || "Wave 1").trim() || "Wave 1";
-  stageWaveDropdown.style.setProperty("--stage-wave-select-ch", String(Math.max(6, label.length)));
-}
-function isStageWaveDropdownEligible(){
-  return !!cheatsUnlockedByPassphrase && (gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused));
-}
-function syncStageWaveHudControl(){
-  const shouldShow = isStageWaveDropdownEligible();
-  if (stageHudLabel) stageHudLabel.hidden = !!shouldShow;
-  if (stageWaveDropdownWrap){
-    stageWaveDropdownWrap.hidden = !shouldShow;
-    stageWaveDropdownWrap.setAttribute("aria-hidden", shouldShow ? "false" : "true");
-  }
-  if (stageWaveDropdown){
-    stageWaveDropdown.value = String(Math.max(1, Math.min(21, parseInt(wave, 10) || 1)));
-    syncStageWaveDropdownTextWidth();
-  }
-}
-function syncMusicDropdownTextWidth(){
-  if (!musicFileDropdown) return;
-  const selectedOption = musicFileDropdown.options && musicFileDropdown.selectedIndex >= 0 ? musicFileDropdown.options[musicFileDropdown.selectedIndex] : null;
-  const label = String(selectedOption ? selectedOption.textContent : musicFileDropdown.value || "Game Music").trim() || "Game Music";
-  musicFileDropdown.style.setProperty("--music-select-ch", String(Math.max(5, label.length)));
-}
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const constructionHoverReveal = document.getElementById("constructionHoverReveal");
 function updateMusicHud(labelText){
@@ -3516,18 +3461,14 @@ function updateMusicHud(labelText){
   }
   if (musicFileDropdown){
     const filename = getActiveMusicFilename();
-    const dropdownValue = audioMuted ? "Muted" : (hudMusicSelection === "Game Music" ? "Game Music" : filename);
-    musicFileDropdown.value = dropdownValue;
-    if (musicFileDropdown.value !== dropdownValue) musicFileDropdown.value = audioMuted ? "Muted" : "Game Music";
+    musicFileDropdown.value = filename;
+    if (musicFileDropdown.value !== filename) musicFileDropdown.value = "Muted";
     musicFileDropdown.classList.toggle("isMuted", !!audioMuted);
-    musicFileDropdown.title = audioMuted ? "Muted" : (dropdownValue === "Game Music" ? "Game Music (" + filename + ")" : filename);
-    syncMusicDropdownTextWidth();
+    musicFileDropdown.title = audioMuted ? "Muted" : filename;
   }
-  syncStageWaveHudControl();
   if (stageHud){
     stageHud.dataset.audioIcon = icon;
-    const waveHudLabel = (stageWaveDropdown && stageWaveDropdownWrap && !stageWaveDropdownWrap.hidden) ? (stageWaveDropdown.options[stageWaveDropdown.selectedIndex]?.textContent || stageWaveDropdown.value || "Wave") : (stageHudLabel ? stageHudLabel.textContent : "HUD");
-    stageHud.setAttribute("aria-label", `${waveHudLabel}. Audio ${audioMuted ? "muted" : "enabled"}.`);
+    stageHud.setAttribute("aria-label", `${stageHudLabel ? stageHudLabel.textContent : "HUD"}. Audio ${audioMuted ? "muted" : "enabled"}.`);
     stageHud.title = audioMuted ? "Unmute all game audio" : "Mute all game audio";
   }
 }
@@ -3541,55 +3482,16 @@ function syncStartMenuMuteIcon(){
   updateMusicHud();
 }
 function toggleStartMenuTitleMute(){
-  const wasInitialAudioGate = !!initialAudioGateMuted;
   unlockAudioOnce();
-  const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
-  const justReleasedInitialAudioGate = !manualAudioMuted && !audioMuted && initialAudioGateReleasedAt && (now - initialAudioGateReleasedAt < 500);
-  if ((wasInitialAudioGate || justReleasedInitialAudioGate) && !manualAudioMuted){
-    setMuteOptionEnabled(false);
-  }else{
-    setMuteOptionEnabled(!audioMuted);
-  }
-  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(false);
+  setMuteOptionEnabled(!audioMuted);
+  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
 }
 function primeMenuMusicOnFirstGesture(){
   unlockAudioOnce();
-  releaseInitialAudioGate();
-  applyMuteState();
   if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
 }
-function jumpToCheaterHudWave(rawValue){
-  if (!cheatsUnlockedByPassphrase) return;
-  const nextWave = Math.max(1, Math.min(21, parseInt(rawValue, 10) || 1));
-  if (stageWaveDropdown) stageWaveDropdown.value = String(nextWave);
-  if (startWaveSelect) startWaveSelect.value = String(nextWave);
-  START_WAVE = nextWave;
-  syncStartOptionsLabels();
-  markCheatsDirty();
-  if (!(gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused))){
-    syncStageWaveHudControl();
-    return;
-  }
-  wave = nextWave;
-  firstBossSpawned = false;
-  bullets.length = 0;
-  enemyBullets.length = 0;
-  bomb = null;
-  ufo = null;
-  fireCooldown = 0;
-  resetFormation();
-  spawnEnemies();
-  if (!isGameSpeedFrozen()) trySpawnUFO();
-  showWaveBanner(wave);
-  syncStageWaveHudControl();
-}
-if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", (event) => {
-  event.preventDefault();
-  event.stopPropagation();
-  toggleStartMenuTitleMute();
-});
+if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", toggleStartMenuTitleMute);
 if (musicFileDropdown) musicFileDropdown.addEventListener("change", () => setHudMusicSelection(musicFileDropdown.value));
-if (stageWaveDropdown) stageWaveDropdown.addEventListener("change", () => jumpToCheaterHudWave(stageWaveDropdown.value));
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const menuHubPanel = document.getElementById("menuHubPanel");
@@ -5987,7 +5889,7 @@ function stepNumberInput(inputEl, delta){
 function activateControllerTarget(el){
   if (!el) return;
   playUiActivateSoundFor(el, 'controller');
-  if (el === stageHudSpeaker){
+  if (el === startMenuTitle){
     toggleStartMenuTitleMute();
     return true;
   }
@@ -7629,6 +7531,14 @@ if (backgroundColorPicker){
 }
 
 applyMuteState();
+if (stageHud){
+  stageHud.addEventListener("click", (event) => {
+    if (!isPreGameplayMenuAudioState()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleStartMenuTitleMute();
+  });
+}
 document.addEventListener("pointerdown", primeMenuMusicOnFirstGesture, { capture:true, once:true });
 document.addEventListener("keydown", primeMenuMusicOnFirstGesture, { capture:true, once:true });
 document.addEventListener("touchstart", primeMenuMusicOnFirstGesture, { capture:true, once:true });
