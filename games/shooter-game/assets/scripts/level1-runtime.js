@@ -4386,6 +4386,9 @@ let controllerRebindReady = false;
 let pauseControlsOpen = false;
 let optionsOpenedFromPause = false;
 let cheatsOpenedFromPause = false;
+// Tracks Cheats opened from Options while Options is hosted inside the Menu Hub.
+// Back should restore Hub -> Options, not the standalone Options menu or Start menu.
+let cheatsOpenedFromHubOptions = false;
 let controlsPreviewOpen = false;
 let controlsPreviewControllerCaptured = false;
 let controlsPreviewReleaseArmed = false;
@@ -6601,8 +6604,19 @@ function restartRun(){
   startGame();
 }
 function showCheats(){
+  const optionsInner = document.getElementById("optionsMenuInner");
+  const openingFromHubOptions = !!(
+    gameState === STATE.HUB &&
+    menuHubActiveTab === "options" &&
+    menuHubPanel &&
+    menuHubPanel.style.display !== "none" &&
+    menuHubContent &&
+    optionsInner &&
+    menuHubContent.contains(optionsInner)
+  );
   const openingFromPauseOptions = !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
   cheatsOpenedFromPause = openingFromPauseOptions;
+  cheatsOpenedFromHubOptions = openingFromHubOptions;
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
   if (openingFromPauseOptions){
@@ -6645,9 +6659,33 @@ function showCheats(){
 
 function hideCheats(){
   const returningToPauseOptions = !!(cheatsOpenedFromPause && isPaused);
-  gameState = returningToPauseOptions ? STATE.PLAYING : STATE.OPTIONS;
+  const returningToHubOptions = !!cheatsOpenedFromHubOptions;
   cheatsOpenedFromPause = false;
+  cheatsOpenedFromHubOptions = false;
   if (cheatsMenu) cheatsMenu.style.display = "none";
+
+  if (returningToHubOptions){
+    gameState = STATE.HUB;
+    syncStartMenuHudLayerMode();
+    if (optionsMenu) optionsMenu.style.display = "none";
+    if (menuHubPanel){
+      menuHubPanel.style.display = "flex";
+      menuHubPanel.setAttribute("aria-hidden", "false");
+    }
+    uiRoot.classList.add("optionsBackdrop");
+    uiRoot.style.display = "flex";
+    resetCheatsUnlockGate();
+    selectMenuHubTab("options", false);
+    menuHubOptionsContentFocused = true;
+    optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
+    fitMenuHubToStartMenu();
+    if (activeInputMode === INPUT_MODE_CONTROLLER) syncOptionsControllerFocus();
+    else clearControllerFocus();
+    renderMenuHudPreview();
+    return;
+  }
+
+  gameState = returningToPauseOptions ? STATE.PLAYING : STATE.OPTIONS;
   optionsMenu.style.display = "block";
   uiRoot.classList.add("optionsBackdrop");
   resetCheatsUnlockGate();
@@ -7323,6 +7361,8 @@ function showOptions(fromPause = false){
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   optionsOpenedFromPause = !!fromPause;
   cheatsOpenedFromPause = false;
+  cheatsOpenedFromHubOptions = false;
+  cheatsOpenedFromHubOptions = false;
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
   if (!fromPause){
