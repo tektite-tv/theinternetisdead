@@ -6605,14 +6605,12 @@ function restartRun(){
 }
 function showCheats(){
   const optionsInner = document.getElementById("optionsMenuInner");
+  const hubOptionsInnerMounted = !!(menuHubContent && optionsInner && menuHubContent.contains(optionsInner));
+  const cheatsButtonHostedInHub = !!(menuHubPanel && btnCheats && menuHubPanel.contains(btnCheats));
+  const hubOptionsTabActive = menuHubActiveTab === "options";
   const openingFromHubOptions = !!(
-    gameState === STATE.HUB &&
-    menuHubActiveTab === "options" &&
-    menuHubPanel &&
-    menuHubPanel.style.display !== "none" &&
-    menuHubContent &&
-    optionsInner &&
-    menuHubContent.contains(optionsInner)
+    hubOptionsTabActive &&
+    (hubOptionsInnerMounted || cheatsButtonHostedInHub || gameState === STATE.HUB)
   );
   const openingFromPauseOptions = !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
   cheatsOpenedFromPause = openingFromPauseOptions;
@@ -6643,10 +6641,19 @@ function showCheats(){
   syncStartOptionsLabels();
   syncCheatsMenuState();
   markCheatsClean(false);
-  startMenu.style.display = "none";
-  if (menuHubPanel){ menuHubPanel.style.display = "none"; menuHubPanel.setAttribute("aria-hidden", "true"); }
-  if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode"); }
-  optionsMenu.style.display = "none";
+  // When Cheats opens from Hub -> Options, it must be the only menu panel visible.
+  // Hard-hide Start and Hub so the unlocked Cheats panel does not stack over them.
+  if (startMenu){
+    startMenu.style.setProperty("display", "none", "important");
+    startMenu.setAttribute("aria-hidden", "true");
+    setStartMenuInteractive(false);
+  }
+  if (menuHubPanel){
+    menuHubPanel.style.setProperty("display", "none", "important");
+    menuHubPanel.setAttribute("aria-hidden", "true");
+  }
+  if (controlsMenu) { controlsMenu.style.display = "none"; controlsMenu.classList.remove("pauseControlsMode", "hubOptionsControlsMode"); }
+  if (optionsMenu) optionsMenu.style.display = "none";
   if (cheatsMenu) cheatsMenu.style.display = "block";
   uiRoot.classList.remove("optionsBackdrop");
   uiRoot.style.display = "flex";
@@ -6667,9 +6674,15 @@ function hideCheats(){
   if (returningToHubOptions){
     gameState = STATE.HUB;
     syncStartMenuHudLayerMode();
+    document.body.classList.add("menu-hub-open");
+    if (startMenu){
+      startMenu.style.setProperty("display", "none", "important");
+      startMenu.setAttribute("aria-hidden", "true");
+      setStartMenuInteractive(false);
+    }
     if (optionsMenu) optionsMenu.style.display = "none";
     if (menuHubPanel){
-      menuHubPanel.style.display = "flex";
+      menuHubPanel.style.setProperty("display", "flex");
       menuHubPanel.setAttribute("aria-hidden", "false");
     }
     uiRoot.classList.add("optionsBackdrop");
