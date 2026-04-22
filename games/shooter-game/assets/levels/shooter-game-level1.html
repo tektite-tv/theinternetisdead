@@ -1280,11 +1280,17 @@
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:1ch;
   vertical-align:middle;
   pointer-events:auto;
 }
 #stageWaveDropdownWrap[hidden]{ display:none !important; }
+.stageTightDropdownControl{
+  display:inline-flex;
+  align-items:center;
+  gap:1ch;
+  pointer-events:auto;
+  cursor:pointer;
+}
 
 /* v2.XX: When the cheatermode wave dropdown is visible, hide the old plain wave label.
    The select becomes the HUD wave text instead of duplicating it beside the original. */
@@ -1409,6 +1415,14 @@
   box-shadow:0 0 0 2px rgba(0,255,0,0.22), 0 0 14px rgba(0,255,0,0.24);
   outline:none;
 }
+#musicDropdownWrap{
+  display:inline-flex;
+  align-items:center;
+  gap:1ch;
+  pointer-events:auto;
+  cursor:pointer;
+  vertical-align:middle;
+}
 #musicFileDropdown{
   pointer-events:auto;
   appearance:none;
@@ -1448,7 +1462,7 @@
   color:#ff5050;
   text-shadow:0 0 6px rgba(255,0,0,0.45);
 }
-#musicFileDropdown.isMuted + #musicDropdownCaret{
+#musicFileDropdown.isMuted ~ #musicDropdownCaret{
   color:#ffffff !important;
   text-shadow:0 0 6px rgba(255,255,255,0.45);
 }
@@ -6027,7 +6041,8 @@ body.menu-hub-open #menuHubPanel{
 ">
   <span id="stageHudLabel">Start Menu</span>
   <span id="stageWaveDropdownWrap" hidden aria-hidden="true">
-    <select id="stageWaveDropdown" aria-label="Current wave">
+    <span class="stageTightDropdownControl">
+      <select id="stageWaveDropdown" aria-label="Current wave">
       <option value="menu">Start Menu</option>
       <option value="1">Wave 1</option>
       <option value="2">Wave 2</option>
@@ -6050,16 +6065,19 @@ body.menu-hub-open #menuHubPanel{
       <option value="19">Insanity 8</option>
       <option value="20">Insanity 9</option>
       <option value="21">Insanity 10</option>
-    </select><span id="stageWaveDropdownCaret" aria-hidden="true">∨</span>
+      </select><span id="stageWaveDropdownCaret" aria-hidden="true">∨</span>
+    </span>
   </span>
   <button id="stageHudSpeaker" type="button" aria-label="Unmute audio" title="Unmute all game audio">🔇</button>
-  <select id="musicFileDropdown" aria-label="Music file">
-    <option value="Game Music">Game Music</option>
-    <option value="Muted" selected>Muted</option>
-    <option value="wii-shop-music.mp3">wii-shop-music.mp3</option>
-    <option value="spaceinvaders.mp3">spaceinvaders.mp3</option>
-    <option value="do-that-there.mp3">do-that-there.mp3</option>
-  </select><span id="musicDropdownCaret" aria-hidden="true">∨</span>
+  <span id="musicDropdownWrap">
+    <select id="musicFileDropdown" aria-label="Music file">
+      <option value="Game Music">Game Music</option>
+      <option value="Muted" selected>Muted</option>
+      <option value="wii-shop-music.mp3">wii-shop-music.mp3</option>
+      <option value="spaceinvaders.mp3">spaceinvaders.mp3</option>
+      <option value="do-that-there.mp3">do-that-there.mp3</option>
+    </select><span id="musicDropdownCaret" aria-hidden="true">∨</span>
+  </span>
 </div>
 <button id="scoreStoreHud" type="button" disabled aria-label="Score HUD">
   <div id="accuracyScore">Score: 0pts</div>

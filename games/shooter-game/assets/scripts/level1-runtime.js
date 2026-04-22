@@ -3449,6 +3449,7 @@ const stageHudLabel = document.getElementById("stageHudLabel");
 const stageHudSpeaker = document.getElementById("stageHudSpeaker");
 const stageWaveDropdownWrap = document.getElementById("stageWaveDropdownWrap");
 const stageWaveDropdown = document.getElementById("stageWaveDropdown");
+const musicDropdownWrap = document.getElementById("musicDropdownWrap");
 const musicFileDropdown = document.getElementById("musicFileDropdown");
 let stageWaveMenuSelection = "menu";
 const titleHoverReveal = document.getElementById("titleHoverReveal");
@@ -3463,6 +3464,14 @@ function syncTightSelectWidth(selectEl, cssVarName){
   const text = getSelectDisplayText(selectEl);
   const ch = Math.max(4, text.length + 0.75);
   selectEl.style.setProperty(cssVarName, String(ch));
+}
+function focusDropdownFromWrapper(selectEl, event){
+  if (!selectEl || !event) return;
+  if (event.target === selectEl) return;
+  event.preventDefault();
+  event.stopPropagation();
+  selectEl.focus();
+  try{ selectEl.click(); }catch(_err){}
 }
 function isStageWaveDropdownAllowed(){
   return !!cheatsUnlockedByPassphrase;
@@ -3555,6 +3564,9 @@ if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleStartMenuTitleMute();
 });
+if (stageWaveDropdownWrap) stageWaveDropdownWrap.addEventListener("click", (event) => {
+  focusDropdownFromWrapper(stageWaveDropdown, event);
+});
 if (stageWaveDropdown) stageWaveDropdown.addEventListener("change", (event) => {
   event.preventDefault();
   event.stopPropagation();
@@ -3566,6 +3578,9 @@ if (stageWaveDropdown) stageWaveDropdown.addEventListener("change", (event) => {
     return;
   }
   jumpToWaveFromHudSelect(selected);
+});
+if (musicDropdownWrap) musicDropdownWrap.addEventListener("click", (event) => {
+  focusDropdownFromWrapper(musicFileDropdown, event);
 });
 if (musicFileDropdown) musicFileDropdown.addEventListener("change", (event) => {
   event.preventDefault();
@@ -7626,7 +7641,7 @@ if (backgroundColorPicker){
 applyMuteState();
 if (stageHud){
   stageHud.addEventListener("click", (event) => {
-    if (event.target && event.target.closest && event.target.closest("#stageHudSpeaker, #stageWaveDropdown, #musicFileDropdown")) return;
+    if (event.target && event.target.closest && event.target.closest("#stageHudSpeaker, #stageWaveDropdownWrap, #musicDropdownWrap, #stageWaveDropdown, #musicFileDropdown")) return;
     if (!isPreGameplayMenuAudioState()) return;
     event.preventDefault();
     event.stopPropagation();
