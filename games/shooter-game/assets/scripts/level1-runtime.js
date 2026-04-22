@@ -539,11 +539,9 @@ if (btnPauseResume){
   });
 }
 if (btnPauseOpenStore){
-  btnPauseOpenStore.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!isStoreUnlocked()) return;
-    openScoreStoreMenu({ fromPauseMenu:true });
+  btnPauseOpenStore.addEventListener("click", () => {
+    if (!canOpenStore()) return;
+    openScoreStoreMenu();
   });
 }
 function setScoreStoreOverlayVisible(visible){
@@ -701,11 +699,8 @@ function renderScoreStoreMenu(){
     scoreStoreItemsEl.appendChild(row);
   });
 }
-function openScoreStoreMenu(options = null){
-  if (!pauseOverlay || isDead || !isStoreUnlocked()) return;
-  // The score HUD opens this during live play; the Pause menu opens it while already frozen.
-  // Either route should pause gameplay and swap the visible panel.
-  if (gameState !== STATE.PLAYING) gameState = STATE.PLAYING;
+function openScoreStoreMenu(){
+  if (!pauseOverlay || gameState !== STATE.PLAYING || isDead || !isStoreUnlocked()) return;
   setPaused(true);
   renderScoreStoreMenu();
   setScoreStoreOverlayVisible(true);
@@ -2158,7 +2153,7 @@ function commitRunLifetimeStats({won=false, died=false} = {}){
   renderLifetimeStats();
 }
 
-const STORE_UNLOCK_SCORE_THRESHOLD = 100;
+const STORE_UNLOCK_SCORE_THRESHOLD = 0;
 const PLAYER_BULLET_RADIUS = 5;
 const BIG_BULLET_RADIUS_MULTIPLIER = 2;
 const BIG_BULLET_DURATION_SECS = 30;
@@ -2318,11 +2313,9 @@ const winStatBonusDragonsEl = document.getElementById("winStatBonusDragons");
 const winStatBonusFrogsEl = document.getElementById("winStatBonusFrogs");
 const winStatTimeEl = document.getElementById("winStatTime");
 if (scoreStoreHud){
-  scoreStoreHud.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
+  scoreStoreHud.addEventListener("click", () => {
     if (!canOpenStore()) return;
-    openScoreStoreMenu({ fromScoreHud:true });
+    openScoreStoreMenu();
   });
 }
 function updateAccuracyScoreHUD(){
