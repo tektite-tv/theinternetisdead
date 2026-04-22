@@ -3447,9 +3447,67 @@ const startMenuTitle = document.getElementById("startMenuTitle");
 const stageHud = document.getElementById("stageHud");
 const stageHudLabel = document.getElementById("stageHudLabel");
 const stageHudSpeaker = document.getElementById("stageHudSpeaker");
+const stageWaveDropdownWrap = document.getElementById("stageWaveDropdownWrap");
+const stageWaveDropdown = document.getElementById("stageWaveDropdown");
 const musicFileDropdown = document.getElementById("musicFileDropdown");
+let stageWaveMenuSelection = "menu";
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const constructionHoverReveal = document.getElementById("constructionHoverReveal");
+function getSelectDisplayText(selectEl){
+  if (!selectEl) return "";
+  const option = selectEl.options && selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
+  return option ? option.textContent.trim() : String(selectEl.value || "");
+}
+function syncTightSelectWidth(selectEl, cssVarName){
+  if (!selectEl || !cssVarName) return;
+  const text = getSelectDisplayText(selectEl);
+  const ch = Math.max(4, text.length + 0.75);
+  selectEl.style.setProperty(cssVarName, String(ch));
+}
+function isStageWaveDropdownAllowed(){
+  return !!cheatsUnlockedByPassphrase;
+}
+function setStageWaveDropdownVisible(visible){
+  if (!stageWaveDropdownWrap) return;
+  stageWaveDropdownWrap.hidden = !visible;
+  stageWaveDropdownWrap.setAttribute("aria-hidden", visible ? "false" : "true");
+}
+function syncStageWaveDropdown(){
+  if (!stageWaveDropdown || !stageWaveDropdownWrap) return;
+  if (!isStageWaveDropdownAllowed()){
+    setStageWaveDropdownVisible(false);
+    return;
+  }
+  setStageWaveDropdownVisible(true);
+  const isGameplayHud = gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused);
+  const desiredValue = isGameplayHud ? String(wave || START_WAVE || 1) : String(stageWaveMenuSelection || "menu");
+  if (stageWaveDropdown.value !== desiredValue) stageWaveDropdown.value = desiredValue;
+  if (stageWaveDropdown.value !== desiredValue) stageWaveDropdown.value = "menu";
+  syncTightSelectWidth(stageWaveDropdown, "--stage-wave-select-ch");
+}
+function jumpToWaveFromHudSelect(nextWave){
+  const n = Math.max(1, Math.min(21, parseInt(nextWave, 10) || 1));
+  START_WAVE = n;
+  if (startWaveSelect) startWaveSelect.value = String(n);
+  if (startWaveLabel) startWaveLabel.textContent = getStartWaveText(n);
+  syncStartOptionsLabels();
+  if (!(gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused))){
+    stageWaveMenuSelection = String(n);
+    syncStageWaveDropdown();
+    return;
+  }
+  wave = n;
+  bullets.length = 0;
+  enemyBullets.length = 0;
+  fireCooldown = 0;
+  bomb = null;
+  ufo = null;
+  resetFormation();
+  showWaveBanner(wave);
+  spawnEnemies();
+  trySpawnUFO();
+  syncStageWaveDropdown();
+}
 function updateMusicHud(labelText){
   audioMuted = effectiveAudioMuted();
   const icon = audioMuted ? "🔇" : "🔊";
@@ -3465,7 +3523,9 @@ function updateMusicHud(labelText){
     if (musicFileDropdown.value !== filename) musicFileDropdown.value = "Muted";
     musicFileDropdown.classList.toggle("isMuted", !!audioMuted);
     musicFileDropdown.title = audioMuted ? "Muted" : filename;
+    syncTightSelectWidth(musicFileDropdown, "--music-select-ch");
   }
+  syncStageWaveDropdown();
   if (stageHud){
     stageHud.dataset.audioIcon = icon;
     stageHud.setAttribute("aria-label", `${stageHudLabel ? stageHudLabel.textContent : "HUD"}. Audio ${audioMuted ? "muted" : "enabled"}.`);
@@ -3490,8 +3550,29 @@ function primeMenuMusicOnFirstGesture(){
   unlockAudioOnce();
   if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
 }
-if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", toggleStartMenuTitleMute);
-if (musicFileDropdown) musicFileDropdown.addEventListener("change", () => setHudMusicSelection(musicFileDropdown.value));
+if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  toggleStartMenuTitleMute();
+});
+if (stageWaveDropdown) stageWaveDropdown.addEventListener("change", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  const selected = stageWaveDropdown.value;
+  if (selected === "menu"){
+    stageWaveMenuSelection = "menu";
+    if (gameState === STATE.PLAYING) showMenu();
+    syncStageWaveDropdown();
+    return;
+  }
+  jumpToWaveFromHudSelect(selected);
+});
+if (musicFileDropdown) musicFileDropdown.addEventListener("change", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  setHudMusicSelection(musicFileDropdown.value);
+  syncTightSelectWidth(musicFileDropdown, "--music-select-ch");
+});
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const menuHubPanel = document.getElementById("menuHubPanel");
@@ -3948,6 +4029,7 @@ function unlockCheatermode(source = "typed"){
   }
   syncCheatsMenuState();
   updateCheatsUnlockModeHint();
+  syncStageWaveDropdown();
   if ((source === "typed-countdown" || source === "typed-instant") && (gameState === STATE.OPTIONS || isPauseOptionsOpen())){
     optionsFocusIndex = Math.max(0, getOptionsControllerTargets().indexOf(btnCheats));
     scrollOptionsToCheatsButton();
@@ -4181,8 +4263,14 @@ function syncStartOptionsLabels(){
     speedSlider.addEventListener("input", syncStartOptionsLabels);
     speedSlider.addEventListener("change", syncStartOptionsLabels);
   }
-  if (startWaveSelect) startWaveSelect.addEventListener("change", syncStartOptionsLabels);
+  if (startWaveSelect) startWaveSelect.addEventListener("change", () => {
+    START_WAVE = Math.max(1, Math.min(21, parseInt(startWaveSelect.value, 10) || 1));
+    stageWaveMenuSelection = String(START_WAVE);
+    syncStartOptionsLabels();
+    syncStageWaveDropdown();
+  });
   syncStartOptionsLabels();
+  syncStageWaveDropdown();
   syncCheatsMenuState();
   syncBackgroundColorControls();
   syncScoreTrackingState();
@@ -7316,6 +7404,11 @@ function startGame(){
   playerGhostSpawnT = 0;
   playerTurnT = 1;
 
+  if (stageWaveDropdown && stageWaveDropdown.value !== "menu" && !isNaN(parseInt(stageWaveDropdown.value, 10))){
+    START_WAVE = Math.max(1, Math.min(21, parseInt(stageWaveDropdown.value, 10) || START_WAVE || 1));
+    if (startWaveSelect) startWaveSelect.value = String(START_WAVE);
+  }
+
   const frozenStaringContest = isGameSpeedFrozen();
 
   // Speed 0 is an intentional static tableau: Wave 1 player vs one enemy, no progress.
@@ -7533,6 +7626,7 @@ if (backgroundColorPicker){
 applyMuteState();
 if (stageHud){
   stageHud.addEventListener("click", (event) => {
+    if (event.target && event.target.closest && event.target.closest("#stageHudSpeaker, #stageWaveDropdown, #musicFileDropdown")) return;
     if (!isPreGameplayMenuAudioState()) return;
     event.preventDefault();
     event.stopPropagation();
@@ -7717,6 +7811,7 @@ function applyStartSettingsFromControls(){
   START_SHIELDS_INFINITE = shieldsOpt.infinite;
   START_BOMBS_INFINITE = bombsOpt.infinite;
   START_WAVE = startWaveSelect ? (parseInt(startWaveSelect.value, 10) || 1) : 1;
+  if (stageWaveMenuSelection !== "menu") stageWaveMenuSelection = String(START_WAVE);
   applyGameSpeedValue(getSpeedValueFromSlider(), false);
 
   // Apply resource changes to the current run too, not just the next start state.
