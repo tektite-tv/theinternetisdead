@@ -780,6 +780,26 @@ function openMenuHubFromPause(){
   if (controlsMenu) controlsMenu.classList.remove("pauseControlsMode");
   // Keep isPaused true so the gameplay layer stays frozen while the Hub replaces the Pause menu.
   openMenuHub({ keepGameplayPaused:true, fromPause:true });
+
+  // v2.XX: Opening the Hub from Pause must seed controller focus into the
+  // Hub itself. The Start-menu path already gets this naturally, but the
+  // Pause path can lose the visible .controllerFocus class when the pause
+  // overlay is hidden during the same input frame. Wonderful.
+  if (activeInputMode === INPUT_MODE_CONTROLLER){
+    resetMenuHubControllerFocus();
+    selectMenuHubTab("images", false);
+    syncMenuHubControllerFocus();
+    requestAnimationFrame(() => {
+      if (gameState === STATE.HUB && menuHubOpenedFromPause && activeInputMode === INPUT_MODE_CONTROLLER){
+        syncMenuHubControllerFocus();
+      }
+    });
+    setTimeout(() => {
+      if (gameState === STATE.HUB && menuHubOpenedFromPause && activeInputMode === INPUT_MODE_CONTROLLER){
+        syncMenuHubControllerFocus();
+      }
+    }, 0);
+  }
 }
 if (btnPauseOpenChat){
   btnPauseOpenChat.addEventListener("click", () => {
