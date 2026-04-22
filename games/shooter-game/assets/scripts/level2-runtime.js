@@ -709,9 +709,8 @@ function renderScoreStoreMenu(){
     title.className = "scoreStoreItemTitle";
     title.textContent = item.label;
 
-    const cost = document.createElement("div");
-    cost.className = "scoreStoreCost";
-    cost.textContent = String(item.cost) + " pts";
+    // v6: Keep cost only on the purchase button.
+    // The separate yellow cost label outside the button was redundant.
 
     const detail = document.createElement("div");
     detail.className = "scoreStoreItemDetail";
@@ -734,7 +733,6 @@ function renderScoreStoreMenu(){
     });
 
     head.appendChild(title);
-    head.appendChild(cost);
     meta.appendChild(head);
     meta.appendChild(detail);
     if (preview) meta.appendChild(preview);
