@@ -6679,6 +6679,77 @@ line-height:1;
   }
 </style>
 
+
+
+<style id="scoreStorePauseExactFootprintFinalPatch">
+  /* Final store footprint patch: store replaces Pause and inherits the same 16:9 Start/Pause shell. */
+  html body #pauseOverlay.scoreStoreVisible > #pausePanel,
+  html body #pauseOverlay.scoreStoreVisible #pausePanel.shooter-menu16x9Surface{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+
+  html body #pauseOverlay > #scoreStorePanel.panel,
+  html body #pauseOverlay #scoreStorePanel{
+    position:absolute !important;
+    top:50% !important;
+    left:50% !important;
+    width:var(--shooter-start-hub-frame-width, var(--shooter-menu-footprint-width, min(520px, 92vw))) !important;
+    min-width:var(--shooter-start-hub-frame-width, var(--shooter-menu-footprint-width, min(520px, 92vw))) !important;
+    max-width:var(--shooter-start-hub-frame-width, var(--shooter-menu-footprint-width, min(520px, 92vw))) !important;
+    height:var(--shooter-start-hub-frame-height, var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)))) !important;
+    min-height:var(--shooter-start-hub-frame-height, var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)))) !important;
+    max-height:var(--shooter-start-hub-frame-height, var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)))) !important;
+    aspect-ratio:16 / 9 !important;
+    box-sizing:border-box !important;
+    padding:var(--shooter-start-hub-frame-padding, var(--shooter-menu-footprint-padding, 18px)) !important;
+    border:var(--shooter-start-hub-frame-border, 2px solid rgba(0,255,102,0.65)) !important;
+    border-radius:var(--shooter-start-hub-frame-radius, var(--shooter-menu-footprint-radius, 16px)) !important;
+    background:var(--shooter-start-hub-frame-bg, rgba(75,0,118,0.50)) !important;
+    box-shadow:var(--shooter-start-hub-frame-shadow, 0 0 28px rgba(0,255,102,0.20)) !important;
+    transform:translate(-50%, -50%) !important;
+    transform-origin:center center !important;
+    margin:0 !important;
+    overflow:hidden !important;
+    pointer-events:auto !important;
+    text-align:center !important;
+  }
+
+  html body #pauseOverlay.scoreStoreVisible > #scoreStorePanel.panel,
+  html body #pauseOverlay.scoreStoreVisible #scoreStorePanel{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    gap:8px !important;
+  }
+
+  html body #pauseOverlay #scoreStorePanel .title,
+  html body #pauseOverlay #scoreStoreHint,
+  html body #pauseOverlay #scoreStoreCurrentScore,
+  html body #pauseOverlay #scoreStoreStatus,
+  html body #pauseOverlay #btnScoreStoreClose{
+    flex:0 0 auto !important;
+  }
+
+  html body #pauseOverlay #scoreStoreItems{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow:auto !important;
+    scrollbar-width:none !important;
+    -ms-overflow-style:none !important;
+  }
+  html body #pauseOverlay #scoreStoreItems::-webkit-scrollbar{
+    width:0 !important;
+    height:0 !important;
+    display:none !important;
+  }
+</style>
+
 </body>
 
 </html>
