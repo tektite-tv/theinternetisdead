@@ -5775,7 +5775,7 @@ body.menu-hub-open #menuHubPanel{
 <style id="pauseMenuStartHubFootprintAndGameplayOnlyDimmingFinalPatch">
   html body #pauseOverlay{
     z-index:120 !important;
-    /* v2.XX: Pause dimming is now enemy-only. The overlay panel stays; HUD/player do not get darkened. */
+    /* Enemy-only pause dim: keep pause panel and HUD/player bright; dim enemies in the game draw layer instead. */
     background:transparent !important;
     align-items:center !important;
     justify-content:center !important;
@@ -5943,23 +5943,8 @@ body.menu-hub-open #menuHubPanel{
 
 
 <style id="pauseHubEnemyOnlyDimmingPatch">
-  /* v2.XX: Reuse the pause dimming idea, but apply it only to enemies.
-     This covers normal Pause and Pause -> Menu Hub. HUD, menus, player, hearts, shields, bombs,
-     score, title, and timer stay bright instead of getting dragged into the mud. */
-  html body.pause-enemy-dim #game{
-    filter:none !important;
-    opacity:1 !important;
-  }
-  html body.pause-enemy-dim #stageHud,
-  html body.pause-enemy-dim #scoreStoreHud,
-  html body.pause-enemy-dim #timerHud,
-  html body.pause-enemy-dim #livesSlot,
-  html body.pause-enemy-dim #powerupSlot,
-  html body.pause-enemy-dim #heartsHud{
-    filter:none !important;
-    opacity:1 !important;
-  }
-  html body.pause-enemy-dim .enemy-gif-sprite{
+  /* Runtime adds this only to animated DOM enemy sprites while Pause or Pause -> Hub is active. */
+  html body .enemy-gif-sprite.pauseEnemyDimSprite{
     filter:brightness(0.45) !important;
     opacity:1 !important;
   }
