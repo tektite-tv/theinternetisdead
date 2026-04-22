@@ -273,7 +273,8 @@
     box-sizing:border-box;
   }
   #startMenu #btnStart,
-  #startMenu #btnMenu{
+  #startMenu #btnMenu,
+  #startMenu #btnEnterNickname.needsNickname{
     border:2px solid rgba(0,255,102,0.65);
     background:rgba(0,0,0,0.55);
     box-shadow:0 0 18px rgba(0,255,102,0.18);
@@ -409,7 +410,7 @@
   }
   body.controller-active #startMenu #btnStart::after,
   body.controller-active #startMenu #btnMenu::after,
-  body.controller-active #startMenu #btnEnterNickname.controllerFocus::after,
+  body.controller-active #startMenu #btnEnterNickname.needsNickname::after,
   body.controller-active #startMenu #btnOptions.controllerFocus::after,
   body.controller-active #startMenu #btnImages.controllerFocus::after,
   body.controller-active #startMenu #btnStats.controllerFocus::after{
@@ -435,7 +436,8 @@
     background-image:url('/games/shooter-game/assets/controller-buttons/menu.webp');
   }
   body.controller-active #startMenu #btnStart.controllerFocus::after,
-  body.controller-active #startMenu #btnMenu.controllerFocus::after{
+  body.controller-active #startMenu #btnMenu.controllerFocus::after,
+  body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocus::after{
     background-color:rgba(0,255,102,0.5);
   }
 
@@ -3643,7 +3645,8 @@ body.invert-colors {
     width:100% !important;
   }
   #startMenu #btnStart,
-  #startMenu #btnMenu{
+  #startMenu #btnMenu,
+  #startMenu #btnEnterNickname.needsNickname{
     width:160px !important;
     min-width:160px !important;
     max-width:160px !important;
@@ -6075,6 +6078,41 @@ body.menu-hub-open #menuHubPanel{
   }
 </style>
 
+<style>
+/* v12: Match Start Menu Enter Nickname controller affordance to Start Game/Menu Hub. */
+#startMenu #btnEnterNickname.needsNickname{
+  border:2px solid rgba(0,255,102,0.65) !important;
+  background:rgba(0,0,0,0.55) !important;
+  box-shadow:0 0 18px rgba(0,255,102,0.18) !important;
+  text-shadow:0 0 8px rgba(0,255,102,0.55), 0 0 18px rgba(0,255,102,0.25) !important;
+}
+body.controller-active #startMenu #btnEnterNickname.needsNickname::after{
+  content:"" !important;
+  position:absolute !important;
+  right:4px !important;
+  top:50% !important;
+  width:18px !important;
+  height:18px !important;
+  transform:translateY(-50%) !important;
+  background-color:transparent !important;
+  background-image:url('/games/shooter-game/assets/controller-buttons/button-a.webp') !important;
+  background-position:center !important;
+  background-size:contain !important;
+  background-repeat:no-repeat !important;
+  border-radius:50% !important;
+  image-rendering:auto !important;
+  pointer-events:none !important;
+  filter:drop-shadow(0 0 4px rgba(0,255,0,0.75)) !important;
+  z-index:2 !important;
+}
+body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocus::after{
+  background-color:rgba(0,255,102,0.5) !important;
+}
+body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocus{
+  border-color:#00ff66 !important;
+  box-shadow:0 0 0 2px rgba(0,255,102,0.28), 0 0 18px rgba(0,255,102,0.34) !important;
+}
+</style>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -6823,20 +6861,6 @@ line-height:1;
   }
 </style>
 
-
-<style id="scoreStoreGridFocusRowPatch">
-  /* v9: Controller selection belongs to the whole store card, not only the tiny purchase button. */
-  html body.controller-active #pauseOverlay #scoreStoreItems .scoreStoreRow.controllerFocus{
-    outline:2px solid #00ff00 !important;
-    box-shadow:0 0 0 2px rgba(0,0,0,0.65), 0 0 18px rgba(0,255,0,0.75) !important;
-    background:rgba(75,0,118,0.72) !important;
-  }
-  html body.controller-active #pauseOverlay #scoreStoreItems .scoreStoreRow.controllerFocus .scoreStoreAction{
-    background:#00ff00 !important;
-    color:#000000 !important;
-    border-color:#ffffff !important;
-  }
-</style>
 </body>
 
 </html>
