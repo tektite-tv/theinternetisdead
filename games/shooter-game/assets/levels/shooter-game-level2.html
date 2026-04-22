@@ -540,57 +540,33 @@
     border-color: rgba(0,255,0,0.9);
     box-shadow: 0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22);
   }
-  #pauseOverlay.scoreStoreVisible #pausePanel{ display:none !important; }
+  #pauseOverlay.scoreStoreVisible #pausePanel{ display:none; }
   #scoreStorePanel{
-    /* Store swaps into the Pause menu slot: same outer footprint as Start/Pause. */
     display:none;
     position:absolute;
     top:50%;
     left:50%;
     transform:translate(-50%, -50%);
-    z-index:2;
-    width:var(--shooter-menu-footprint-width, min(520px, 92vw));
-    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw));
-    height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
-    max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px)));
-    min-height:0;
-    border:2px solid rgba(0,255,0,0.65);
-    border-radius:var(--shooter-menu-footprint-radius, 16px);
-    background:rgba(75,0,118,0.50);
-    padding:var(--shooter-menu-footprint-padding, 18px 18px 18px);
+    z-index:1;
+    width:min(640px, 94vw);
+    border:3px solid rgba(0,255,0,0.65);
+    border-radius:16px;
+    background: rgba(75,0,118,0.72);
+    padding:12px 12px 10px;
     text-align:center;
-    box-shadow:0 0 28px rgba(0,255,102,0.20);
+    box-shadow: 0 0 36px rgba(0,255,0,0.14);
     pointer-events:auto;
     box-sizing:border-box;
-    overflow:hidden;
-    scrollbar-width:none;
-    -ms-overflow-style:none;
-  }
-  #scoreStorePanel::-webkit-scrollbar{ width:0; height:0; display:none; }
-  #pauseOverlay.scoreStoreVisible #scoreStorePanel{
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:stretch !important;
-    justify-content:flex-start !important;
-    gap:8px !important;
-  }
-  #scoreStorePanel .title{
-    font-size:18px;
-    margin:1px 0 5px;
-  }
-  #scoreStorePanel #scoreStoreItems{
-    flex:1 1 auto;
-    min-height:0;
+    max-height:min(88vh, 640px);
     overflow:auto;
     scrollbar-width:none;
     -ms-overflow-style:none;
   }
-  #scoreStorePanel #scoreStoreItems::-webkit-scrollbar{ width:0; height:0; display:none; }
-  #scoreStorePanel #btnScoreStoreClose{
-    flex:0 0 auto;
-    width:100%;
-    max-width:none;
-    min-height:42px;
+  #scoreStorePanel::-webkit-scrollbar{ width:0; height:0; display:none; }
+  #pauseOverlay.scoreStoreVisible #scoreStorePanel{ display:block; }
+  #scoreStorePanel .title{
+    font-size:18px;
+    margin:1px 0 5px;
   }
   #scoreStoreHint{
     margin:0 0 6px;
@@ -1115,6 +1091,59 @@ body.invert-colors {
   }
   body.start-menu-hud-over-gameplay #stageHud{
     z-index:10070 !important;
+  }
+</style>
+
+<style id="scoreStorePauseSwapTrue16x9Patch">
+  /* Store must replace the pause panel, not stack on top of it. Yes, apparently CSS needs adult supervision. */
+  html body #pauseOverlay.scoreStoreVisible #pausePanel{
+    display:none !important;
+  }
+
+  html body #pauseOverlay #scoreStorePanel{
+    width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    max-width:var(--shooter-menu-footprint-width, min(520px, 92vw)) !important;
+    height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    max-height:var(--shooter-menu-footprint-height, min(430px, calc(100vh - 32px))) !important;
+    min-height:0 !important;
+    box-sizing:border-box !important;
+    padding:var(--shooter-menu-footprint-padding, 18px 18px 18px) !important;
+    border:2px solid rgba(0,255,102,0.65) !important;
+    border-radius:var(--shooter-menu-footprint-radius, 16px) !important;
+    background:rgba(75,0,118,0.50) !important;
+    box-shadow:0 0 28px rgba(0,255,102,0.20) !important;
+    overflow:hidden !important;
+    transform:translate(-50%, -50%) scale(0.94) !important;
+    transform-origin:center center !important;
+  }
+
+  html body #pauseOverlay.scoreStoreVisible #scoreStorePanel{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    gap:8px !important;
+  }
+
+  html body #pauseOverlay #scoreStoreItems{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow:auto !important;
+    scrollbar-width:none !important;
+    -ms-overflow-style:none !important;
+  }
+  html body #pauseOverlay #scoreStoreItems::-webkit-scrollbar{
+    width:0 !important;
+    height:0 !important;
+    display:none !important;
+  }
+
+  html body #pauseOverlay #scoreStorePanel .title,
+  html body #pauseOverlay #scoreStoreHint,
+  html body #pauseOverlay #scoreStoreCurrentScore,
+  html body #pauseOverlay #scoreStoreStatus,
+  html body #pauseOverlay #btnScoreStoreClose{
+    flex:0 0 auto !important;
   }
 </style>
 
