@@ -101,6 +101,7 @@ const MUSIC_TRACKS = {
   "spaceinvaders.mp3": AUDIO_BG_MUSIC,
   "do-that-there.mp3": AUDIO_EXTRA_MUSIC
 };
+let hudMusicSelection = "Game Music";
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
@@ -151,24 +152,33 @@ function setAudioElementTrack(audioEl, filename, restart=true){
 function getActiveMusicAudioElement(){
   return isPreGameplayMenuAudioState() ? menuMusicBg : musicBg;
 }
+function getDefaultMusicFilenameForCurrentState(){
+  return isPreGameplayMenuAudioState() ? musicFilenameFromPath(AUDIO_MENU_MUSIC) : musicFilenameFromPath(AUDIO_BG_MUSIC);
+}
 function getActiveMusicFilename(){
   if (effectiveAudioMuted()) return "Muted";
   return musicFilenameFromPath(getActiveMusicAudioElement().src || getActiveMusicAudioElement().currentSrc || (isPreGameplayMenuAudioState() ? AUDIO_MENU_MUSIC : AUDIO_BG_MUSIC));
 }
 function setHudMusicSelection(filename){
   if (filename === "Muted"){
+    hudMusicSelection = "Muted";
     setMuteOptionEnabled(true);
     return;
   }
-  if (!MUSIC_TRACKS[filename]) return;
   manualAudioMuted = false;
   audioMuted = effectiveAudioMuted();
-  const activeAudio = getActiveMusicAudioElement();
-  setAudioElementTrack(activeAudio, filename, true);
+  if (filename === "Game Music"){
+    hudMusicSelection = "Game Music";
+    setAudioElementTrack(getActiveMusicAudioElement(), getDefaultMusicFilenameForCurrentState(), false);
+  }else{
+    if (!MUSIC_TRACKS[filename]) return;
+    hudMusicSelection = filename;
+    setAudioElementTrack(getActiveMusicAudioElement(), filename, true);
+  }
   applyMuteState();
   if (!audioMuted){
-    if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
-    else if (gameState === STATE.PLAYING) ensureMusicPlaying(true);
+    if (isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(filename !== "Game Music");
+    else if (gameState === STATE.PLAYING) ensureMusicPlaying(filename !== "Game Music");
   }
   updateMusicHud();
 }
@@ -191,6 +201,8 @@ function applyMuteState(){
 
 function setMuteOptionEnabled(shouldEnable){
   manualAudioMuted = !!shouldEnable;
+  if (manualAudioMuted) hudMusicSelection = "Muted";
+  else if (hudMusicSelection === "Muted") hudMusicSelection = "Game Music";
   audioMuted = effectiveAudioMuted();
   applyMuteState();
   if (!audioMuted){
@@ -3461,10 +3473,11 @@ function updateMusicHud(labelText){
   }
   if (musicFileDropdown){
     const filename = getActiveMusicFilename();
-    musicFileDropdown.value = filename;
-    if (musicFileDropdown.value !== filename) musicFileDropdown.value = "Muted";
+    const dropdownValue = audioMuted ? "Muted" : (hudMusicSelection === "Game Music" ? "Game Music" : filename);
+    musicFileDropdown.value = dropdownValue;
+    if (musicFileDropdown.value !== dropdownValue) musicFileDropdown.value = audioMuted ? "Muted" : "Game Music";
     musicFileDropdown.classList.toggle("isMuted", !!audioMuted);
-    musicFileDropdown.title = audioMuted ? "Muted" : filename;
+    musicFileDropdown.title = audioMuted ? "Muted" : (dropdownValue === "Game Music" ? "Game Music (" + filename + ")" : filename);
   }
   if (stageHud){
     stageHud.dataset.audioIcon = icon;
@@ -3484,13 +3497,17 @@ function syncStartMenuMuteIcon(){
 function toggleStartMenuTitleMute(){
   unlockAudioOnce();
   setMuteOptionEnabled(!audioMuted);
-  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(true);
+  if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(false);
 }
 function primeMenuMusicOnFirstGesture(){
   unlockAudioOnce();
   if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
 }
-if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", toggleStartMenuTitleMute);
+if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  toggleStartMenuTitleMute();
+});
 if (musicFileDropdown) musicFileDropdown.addEventListener("change", () => setHudMusicSelection(musicFileDropdown.value));
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
@@ -5889,7 +5906,7 @@ function stepNumberInput(inputEl, delta){
 function activateControllerTarget(el){
   if (!el) return;
   playUiActivateSoundFor(el, 'controller');
-  if (el === startMenuTitle){
+  if (el === stageHudSpeaker){
     toggleStartMenuTitleMute();
     return true;
   }
@@ -7531,14 +7548,6 @@ if (backgroundColorPicker){
 }
 
 applyMuteState();
-if (stageHud){
-  stageHud.addEventListener("click", (event) => {
-    if (!isPreGameplayMenuAudioState()) return;
-    event.preventDefault();
-    event.stopPropagation();
-    toggleStartMenuTitleMute();
-  });
-}
 document.addEventListener("pointerdown", primeMenuMusicOnFirstGesture, { capture:true, once:true });
 document.addEventListener("keydown", primeMenuMusicOnFirstGesture, { capture:true, once:true });
 document.addEventListener("touchstart", primeMenuMusicOnFirstGesture, { capture:true, once:true });

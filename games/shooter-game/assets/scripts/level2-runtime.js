@@ -108,6 +108,7 @@ const MUSIC_TRACKS = {
   "spaceinvaders.mp3": AUDIO_LEVEL1_MUSIC,
   "do-that-there.mp3": AUDIO_BG_MUSIC
 };
+let hudMusicSelection = "Game Music";
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
@@ -148,21 +149,31 @@ function setAudioElementTrack(audioEl, filename, restart=true){
   if (wasPlaying && !audioMuted) tryPlayWithRetry(audioEl, 30, 80);
   return true;
 }
+function getDefaultMusicFilenameForCurrentState(){
+  return musicFilenameFromPath(AUDIO_BG_MUSIC);
+}
 function getActiveMusicFilename(){
   if (effectiveAudioMuted()) return "Muted";
   return musicFilenameFromPath(musicBg.src || musicBg.currentSrc || AUDIO_BG_MUSIC);
 }
 function setHudMusicSelection(filename){
   if (filename === "Muted"){
+    hudMusicSelection = "Muted";
     setMuteOptionEnabled(true);
     return;
   }
-  if (!MUSIC_TRACKS[filename]) return;
   manualAudioMuted = false;
   audioMuted = effectiveAudioMuted();
-  setAudioElementTrack(musicBg, filename, true);
+  if (filename === "Game Music"){
+    hudMusicSelection = "Game Music";
+    setAudioElementTrack(musicBg, getDefaultMusicFilenameForCurrentState(), false);
+  }else{
+    if (!MUSIC_TRACKS[filename]) return;
+    hudMusicSelection = filename;
+    setAudioElementTrack(musicBg, filename, true);
+  }
   applyMuteState();
-  if (!audioMuted && gameState === STATE.PLAYING) ensureMusicPlaying(true);
+  if (!audioMuted && gameState === STATE.PLAYING) ensureMusicPlaying(filename !== "Game Music");
   updateMusicHud();
 }
 function updateMusicHud(labelText){
@@ -180,10 +191,11 @@ function updateMusicHud(labelText){
   }
   if (dropdownEl){
     const filename = getActiveMusicFilename();
-    dropdownEl.value = filename;
-    if (dropdownEl.value !== filename) dropdownEl.value = "Muted";
+    const dropdownValue = audioMuted ? "Muted" : (hudMusicSelection === "Game Music" ? "Game Music" : filename);
+    dropdownEl.value = dropdownValue;
+    if (dropdownEl.value !== dropdownValue) dropdownEl.value = audioMuted ? "Muted" : "Game Music";
     dropdownEl.classList.toggle("isMuted", !!audioMuted);
-    dropdownEl.title = audioMuted ? "Muted" : filename;
+    dropdownEl.title = audioMuted ? "Muted" : (dropdownValue === "Game Music" ? "Game Music (" + filename + ")" : filename);
   }
   if (stageHudEl){
     stageHudEl.dataset.audioIcon = icon;
@@ -205,6 +217,8 @@ function applyMuteState(){
 
 function setMuteOptionEnabled(shouldEnable){
   manualAudioMuted = !!shouldEnable;
+  if (manualAudioMuted) hudMusicSelection = "Muted";
+  else if (hudMusicSelection === "Muted") hudMusicSelection = "Game Music";
   audioMuted = effectiveAudioMuted();
   applyMuteState();
   // Only resume music when gameplay is actually running.
@@ -482,7 +496,12 @@ function getSavedChatNicknameValue(){
 }
 const stageHudSpeaker = document.getElementById("stageHudSpeaker");
 const musicFileDropdown = document.getElementById("musicFileDropdown");
-if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", () => { unlockAudioOnce(); setMuteOptionEnabled(!audioMuted); });
+if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  unlockAudioOnce();
+  setMuteOptionEnabled(!audioMuted);
+});
 if (musicFileDropdown) musicFileDropdown.addEventListener("change", () => setHudMusicSelection(musicFileDropdown.value));
 applyMuteState();
 
