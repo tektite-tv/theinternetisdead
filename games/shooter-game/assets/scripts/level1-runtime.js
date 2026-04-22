@@ -3474,6 +3474,29 @@ const stageHud = document.getElementById("stageHud");
 const stageHudLabel = document.getElementById("stageHudLabel");
 const stageHudSpeaker = document.getElementById("stageHudSpeaker");
 const musicFileDropdown = document.getElementById("musicFileDropdown");
+const stageWaveDropdownWrap = document.getElementById("stageWaveDropdownWrap");
+const stageWaveDropdown = document.getElementById("stageWaveDropdown");
+function syncStageWaveDropdownTextWidth(){
+  if (!stageWaveDropdown) return;
+  const selectedOption = stageWaveDropdown.options && stageWaveDropdown.selectedIndex >= 0 ? stageWaveDropdown.options[stageWaveDropdown.selectedIndex] : null;
+  const label = String(selectedOption ? selectedOption.textContent : stageWaveDropdown.value || "Wave 1").trim() || "Wave 1";
+  stageWaveDropdown.style.setProperty("--stage-wave-select-ch", String(Math.max(6, label.length)));
+}
+function isStageWaveDropdownEligible(){
+  return !!cheatsUnlockedByPassphrase && (gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused));
+}
+function syncStageWaveHudControl(){
+  const shouldShow = isStageWaveDropdownEligible();
+  if (stageHudLabel) stageHudLabel.hidden = !!shouldShow;
+  if (stageWaveDropdownWrap){
+    stageWaveDropdownWrap.hidden = !shouldShow;
+    stageWaveDropdownWrap.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+  }
+  if (stageWaveDropdown){
+    stageWaveDropdown.value = String(Math.max(1, Math.min(21, parseInt(wave, 10) || 1)));
+    syncStageWaveDropdownTextWidth();
+  }
+}
 function syncMusicDropdownTextWidth(){
   if (!musicFileDropdown) return;
   const selectedOption = musicFileDropdown.options && musicFileDropdown.selectedIndex >= 0 ? musicFileDropdown.options[musicFileDropdown.selectedIndex] : null;
@@ -3500,9 +3523,11 @@ function updateMusicHud(labelText){
     musicFileDropdown.title = audioMuted ? "Muted" : (dropdownValue === "Game Music" ? "Game Music (" + filename + ")" : filename);
     syncMusicDropdownTextWidth();
   }
+  syncStageWaveHudControl();
   if (stageHud){
     stageHud.dataset.audioIcon = icon;
-    stageHud.setAttribute("aria-label", `${stageHudLabel ? stageHudLabel.textContent : "HUD"}. Audio ${audioMuted ? "muted" : "enabled"}.`);
+    const waveHudLabel = (stageWaveDropdown && stageWaveDropdownWrap && !stageWaveDropdownWrap.hidden) ? (stageWaveDropdown.options[stageWaveDropdown.selectedIndex]?.textContent || stageWaveDropdown.value || "Wave") : (stageHudLabel ? stageHudLabel.textContent : "HUD");
+    stageHud.setAttribute("aria-label", `${waveHudLabel}. Audio ${audioMuted ? "muted" : "enabled"}.`);
     stageHud.title = audioMuted ? "Unmute all game audio" : "Mute all game audio";
   }
 }
@@ -3533,12 +3558,38 @@ function primeMenuMusicOnFirstGesture(){
   applyMuteState();
   if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
 }
+function jumpToCheaterHudWave(rawValue){
+  if (!cheatsUnlockedByPassphrase) return;
+  const nextWave = Math.max(1, Math.min(21, parseInt(rawValue, 10) || 1));
+  if (stageWaveDropdown) stageWaveDropdown.value = String(nextWave);
+  if (startWaveSelect) startWaveSelect.value = String(nextWave);
+  START_WAVE = nextWave;
+  syncStartOptionsLabels();
+  markCheatsDirty();
+  if (!(gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused))){
+    syncStageWaveHudControl();
+    return;
+  }
+  wave = nextWave;
+  firstBossSpawned = false;
+  bullets.length = 0;
+  enemyBullets.length = 0;
+  bomb = null;
+  ufo = null;
+  fireCooldown = 0;
+  resetFormation();
+  spawnEnemies();
+  if (!isGameSpeedFrozen()) trySpawnUFO();
+  showWaveBanner(wave);
+  syncStageWaveHudControl();
+}
 if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", (event) => {
   event.preventDefault();
   event.stopPropagation();
   toggleStartMenuTitleMute();
 });
 if (musicFileDropdown) musicFileDropdown.addEventListener("change", () => setHudMusicSelection(musicFileDropdown.value));
+if (stageWaveDropdown) stageWaveDropdown.addEventListener("change", () => jumpToCheaterHudWave(stageWaveDropdown.value));
 const btnControls = document.getElementById("btnControls");
 const btnMysteryLink = document.getElementById("btnMysteryLink");
 const menuHubPanel = document.getElementById("menuHubPanel");

@@ -1276,6 +1276,53 @@
   pointer-events:auto !important;
   cursor:default;
 }
+#stageWaveDropdownWrap{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  vertical-align:middle;
+  pointer-events:auto;
+}
+#stageWaveDropdownWrap[hidden]{ display:none !important; }
+#stageWaveDropdown{
+  pointer-events:auto;
+  appearance:none;
+  -webkit-appearance:none;
+  box-sizing:content-box;
+  flex:0 0 auto;
+  width:calc(var(--stage-wave-select-ch, 6) * 1ch);
+  min-width:0;
+  max-width:none;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:inherit;
+  font:bold 20px monospace;
+  text-align:center;
+  text-align-last:center;
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  padding:0;
+  margin:0;
+  cursor:pointer;
+}
+#stageWaveDropdown option{
+  background:#050008;
+  color:#00ff66;
+}
+#stageWaveDropdownCaret{
+  display:inline-block;
+  flex:0 0 auto;
+  color:inherit;
+  font:bold 20px monospace;
+  line-height:1;
+  margin-left:calc(-10px + 1ch);
+  text-shadow:0 0 8px rgba(0,0,0,0.65);
+  pointer-events:none;
+  user-select:none;
+  transform:translateY(-1px);
+}
+
 #stageHud.stageMenuAudioToggle::after{
   content: attr(data-audio-icon);
   display:inline-grid;
@@ -5973,6 +6020,31 @@ body.menu-hub-open #menuHubPanel{
   z-index:20;
 ">
   <span id="stageHudLabel">Start Menu</span>
+  <span id="stageWaveDropdownWrap" hidden aria-hidden="true">
+    <select id="stageWaveDropdown" aria-label="Current wave">
+      <option value="1">Wave 1</option>
+      <option value="2">Wave 2</option>
+      <option value="3">Wave 3</option>
+      <option value="4">Wave 4</option>
+      <option value="5">Wave 5</option>
+      <option value="6">Wave 6</option>
+      <option value="7">Wave 7</option>
+      <option value="8">Wave 8</option>
+      <option value="9">Wave 9</option>
+      <option value="10">Wave 10</option>
+      <option value="11">Boss Mode</option>
+      <option value="12">Insanity 1</option>
+      <option value="13">Insanity 2</option>
+      <option value="14">Insanity 3</option>
+      <option value="15">Insanity 4</option>
+      <option value="16">Insanity 5</option>
+      <option value="17">Insanity 6</option>
+      <option value="18">Insanity 7</option>
+      <option value="19">Insanity 8</option>
+      <option value="20">Insanity 9</option>
+      <option value="21">Insanity 10</option>
+    </select><span id="stageWaveDropdownCaret" aria-hidden="true">∨</span>
+  </span>
   <button id="stageHudSpeaker" type="button" aria-label="Unmute audio" title="Unmute all game audio">🔇</button>
   <select id="musicFileDropdown" aria-label="Music file">
     <option value="Game Music">Game Music</option>
