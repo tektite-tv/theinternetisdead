@@ -520,6 +520,7 @@ if (pauseCloseBtn){
 let isPaused = false;
 let isScoreStoreOpen = false;
 let scoreStoreFocusIndex = 0;
+const SCORE_STORE_GRID_COLUMNS = 3;
 const btnPauseQuit = document.getElementById("btnPauseQuit");
 if (btnPauseQuit){
   btnPauseQuit.addEventListener("click", () => {
@@ -657,6 +658,8 @@ function renderScoreStoreMenu(){
   sortedStoreItems.forEach((item) => {
     const row = document.createElement("div");
     row.className = "scoreStoreRow optRow";
+    row.tabIndex = -1;
+    row.dataset.scoreStoreItemId = item.id;
 
     const meta = document.createElement("div");
     meta.className = "scoreStoreMeta";
@@ -5088,7 +5091,7 @@ function getPauseOptionsReturnFocusIndex(){
 }
 
 function getScoreStoreControllerTargets(){
-  return [...Array.from(document.querySelectorAll('#scoreStoreItems .scoreStoreAction')), btnScoreStoreClose].filter(Boolean);
+  return [...Array.from(document.querySelectorAll('#scoreStoreItems .scoreStoreRow')), btnScoreStoreClose].filter(Boolean);
 }
 
 function getStatsControllerTargets(){
@@ -5344,7 +5347,11 @@ function syncScoreStoreControllerFocus(){
   const items = getScoreStoreControllerTargets();
   if (!items.length) return;
   scoreStoreFocusIndex = Math.max(0, Math.min(scoreStoreFocusIndex, items.length - 1));
-  focusControllerElement(items[scoreStoreFocusIndex]);
+  const target = items[scoreStoreFocusIndex];
+  focusControllerElement(target);
+  if (scoreStoreItemsEl && scoreStoreFocusIndex < SCORE_STORE_GRID_COLUMNS){
+    try{ scoreStoreItemsEl.scrollTop = 0; }catch(_){}
+  }
 }
 
 function syncStatsControllerFocus(){
@@ -5794,6 +5801,21 @@ function moveScoreStoreControllerFocus(delta){
   syncScoreStoreControllerFocus();
 }
 
+function moveScoreStoreControllerFocusGrid(delta){
+  const items = getScoreStoreControllerTargets();
+  if (!items.length) return;
+  const closeIndex = items.indexOf(btnScoreStoreClose);
+  const cardCount = closeIndex >= 0 ? closeIndex : items.length;
+  if (delta === SCORE_STORE_GRID_COLUMNS && scoreStoreFocusIndex >= Math.max(0, cardCount - SCORE_STORE_GRID_COLUMNS) && closeIndex >= 0){
+    scoreStoreFocusIndex = closeIndex;
+  } else if (delta === -SCORE_STORE_GRID_COLUMNS && scoreStoreFocusIndex === closeIndex && cardCount > 0){
+    scoreStoreFocusIndex = Math.max(0, cardCount - SCORE_STORE_GRID_COLUMNS);
+  } else {
+    scoreStoreFocusIndex = (scoreStoreFocusIndex + delta + items.length) % items.length;
+  }
+  syncScoreStoreControllerFocus();
+}
+
 function moveStatsControllerFocus(delta){
   const items = getStatsControllerTargets();
   if (!items.length) return;
@@ -5995,6 +6017,11 @@ function activateControllerTarget(el){
   playUiActivateSoundFor(el, 'controller');
   if (el === startMenuTitle){
     toggleStartMenuTitleMute();
+    return true;
+  }
+  if (el.classList && el.classList.contains('scoreStoreRow')){
+    const action = el.querySelector('.scoreStoreAction');
+    if (action && typeof action.click === 'function') action.click();
     return true;
   }
   if (el.tagName === "A"){
@@ -8587,8 +8614,10 @@ function pollGamepad(dt){
       if (isScoreStoreOpen){
         if (pressListTop) jumpControllerFocusToListEdge(getScoreStoreControllerTargets(), scoreStoreFocusIndex, (index) => { scoreStoreFocusIndex = index; }, syncScoreStoreControllerFocus, -1);
         if (pressListBottom) jumpControllerFocusToListEdge(getScoreStoreControllerTargets(), scoreStoreFocusIndex, (index) => { scoreStoreFocusIndex = index; }, syncScoreStoreControllerFocus, 1);
-        if (navUp || navLeft) moveScoreStoreControllerFocus(-1);
-        if (navDown || navRight) moveScoreStoreControllerFocus(1);
+        if (navLeft) moveScoreStoreControllerFocusGrid(-1);
+        if (navRight) moveScoreStoreControllerFocusGrid(1);
+        if (navUp) moveScoreStoreControllerFocusGrid(-SCORE_STORE_GRID_COLUMNS);
+        if (navDown) moveScoreStoreControllerFocusGrid(SCORE_STORE_GRID_COLUMNS);
         if (pressMenuSelect) activateControllerTarget(getScoreStoreControllerTargets()[scoreStoreFocusIndex]);
         if (pressMenuBack) handleScoreStoreControllerBackButton();
         if (pressPause) togglePause();
