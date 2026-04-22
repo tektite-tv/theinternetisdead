@@ -1285,6 +1285,12 @@
   pointer-events:auto;
 }
 #stageWaveDropdownWrap[hidden]{ display:none !important; }
+
+/* v2.XX: When the cheatermode wave dropdown is visible, hide the old plain wave label.
+   The select becomes the HUD wave text instead of duplicating it beside the original. */
+#stageHud:has(#stageWaveDropdownWrap:not([hidden])) #stageHudLabel{
+  display:none !important;
+}
 #stageWaveDropdown{
   pointer-events:auto;
   appearance:none;
