@@ -695,7 +695,10 @@ function renderScoreStoreMenu(){
   setScoreStoreStatus("");
   if (!scoreStoreItemsEl) return;
   scoreStoreItemsEl.innerHTML = "";
-  SCORE_STORE_ITEMS.forEach((item) => {
+  // v7: Show store cards from most expensive to least expensive.
+  // Costs are stored as negative score spends, so sort by absolute value.
+  const sortedStoreItems = [...SCORE_STORE_ITEMS].sort((a, b) => Math.abs(Number(b.cost) || 0) - Math.abs(Number(a.cost) || 0));
+  sortedStoreItems.forEach((item) => {
     const row = document.createElement("div");
     row.className = "scoreStoreRow optRow";
 
