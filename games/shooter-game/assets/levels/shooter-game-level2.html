@@ -1433,6 +1433,19 @@ line-height:1;
   }
 </style>
 
+
+<style id="pauseStoreStartOpacityMatchFinalPatch">
+  /* Keep Pause and Store panel surfaces at the same purple opacity as the Start panel.
+     Level 1 defines the Start panel color through --shooter-start-hub-frame-bg;
+     Level 2's Start panel uses rgba(75,0,118,0.72), so that is the fallback. */
+  html body #pauseOverlay #pausePanel,
+  html body #pauseOverlay #pausePanel.shooter-menu16x9Surface,
+  html body #pauseOverlay #scoreStorePanel,
+  html body #pauseOverlay #scoreStorePanel.panel{
+    background:var(--shooter-start-hub-frame-bg, rgba(75,0,118,0.72)) !important;
+  }
+</style>
+
 </body>
 
 </html>
