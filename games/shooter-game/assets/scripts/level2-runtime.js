@@ -744,6 +744,7 @@ function renderScoreStoreMenu(){
   });
 }
 function openScoreStoreMenu(){
+  // v2.XX: Opening from either Pause -> Open Store or the HUD Score Store button hard-pauses first.
   if (!pauseOverlay || gameState !== STATE.PLAYING || mazeSummaryActive || isDead || !isStoreUnlocked()) return;
   setPaused(true);
   renderScoreStoreMenu();
