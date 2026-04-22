@@ -583,9 +583,11 @@ if (btnPauseResume){
   });
 }
 if (btnPauseOpenStore){
-  btnPauseOpenStore.addEventListener("click", () => {
-    if (!canOpenStore()) return;
-    openScoreStoreMenu();
+  btnPauseOpenStore.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isStoreUnlocked()) return;
+    openScoreStoreMenu({ fromPauseMenu:true });
   });
 }
 function setScoreStoreOverlayVisible(visible){
@@ -743,9 +745,11 @@ function renderScoreStoreMenu(){
     scoreStoreItemsEl.appendChild(row);
   });
 }
-function openScoreStoreMenu(){
-  // v2.XX: Opening from either Pause -> Open Store or the HUD Score Store button hard-pauses first.
-  if (!pauseOverlay || gameState !== STATE.PLAYING || mazeSummaryActive || isDead || !isStoreUnlocked()) return;
+function openScoreStoreMenu(options = null){
+  if (!pauseOverlay || mazeSummaryActive || isDead || !isStoreUnlocked()) return;
+  // The score HUD opens this during live play; the Pause menu opens it while already frozen.
+  // Either route should pause gameplay and swap the visible panel.
+  if (gameState !== STATE.PLAYING) gameState = STATE.PLAYING;
   setPaused(true);
   renderScoreStoreMenu();
   setScoreStoreOverlayVisible(true);
@@ -1608,9 +1612,11 @@ const accuracyScoreEl = document.getElementById("accuracyScore");
 const storeUnlockedHudEl = document.getElementById("storeUnlockedHud");
 const timerHud = document.getElementById("timerHud");
 if (scoreStoreHud){
-  scoreStoreHud.addEventListener("click", () => {
+  scoreStoreHud.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (!canOpenStore()) return;
-    openScoreStoreMenu();
+    openScoreStoreMenu({ fromScoreHud:true });
   });
 }
 function updateAccuracyScoreHUD(){
