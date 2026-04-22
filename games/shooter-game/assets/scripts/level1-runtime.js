@@ -101,7 +101,9 @@ const MUSIC_TRACKS = {
   "spaceinvaders.mp3": AUDIO_BG_MUSIC,
   "do-that-there.mp3": AUDIO_EXTRA_MUSIC
 };
-let hudMusicSelection = "Game Music";
+let hudMusicSelection = "Muted";
+let initialAudioGateMuted = true;
+let initialAudioGateReleasedAt = 0;
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
 const musicBg = new Audio(AUDIO_BG_MUSIC);
@@ -121,15 +123,23 @@ const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
 sfxDeath.volume = 0.10;
 
-// Global mute toggle (M key)
-let audioMuted = false;
+// Global mute toggle (M key). Starts gated/muted until the first real user gesture.
+let audioMuted = true;
 let manualAudioMuted = false;
 
 function isMuteNicknameActive(){
   try{ return String(getSavedChatNicknameValue ? getSavedChatNicknameValue() : "").trim().toLowerCase() === "_mute"; }catch(_){ return false; }
 }
 function effectiveAudioMuted(){
-  return !!manualAudioMuted || isMuteNicknameActive();
+  return !!initialAudioGateMuted || !!manualAudioMuted || isMuteNicknameActive();
+}
+function releaseInitialAudioGate(){
+  if (!initialAudioGateMuted) return false;
+  initialAudioGateMuted = false;
+  initialAudioGateReleasedAt = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  if (!manualAudioMuted && hudMusicSelection === "Muted") hudMusicSelection = "Game Music";
+  audioMuted = effectiveAudioMuted();
+  return true;
 }
 function musicFilenameFromPath(path){
   const raw = String(path || "").split("?")[0].split("#")[0];
@@ -161,10 +171,12 @@ function getActiveMusicFilename(){
 }
 function setHudMusicSelection(filename){
   if (filename === "Muted"){
+    initialAudioGateMuted = false;
     hudMusicSelection = "Muted";
     setMuteOptionEnabled(true);
     return;
   }
+  releaseInitialAudioGate();
   manualAudioMuted = false;
   audioMuted = effectiveAudioMuted();
   if (filename === "Game Music"){
@@ -200,6 +212,7 @@ function applyMuteState(){
 }
 
 function setMuteOptionEnabled(shouldEnable){
+  initialAudioGateMuted = false;
   manualAudioMuted = !!shouldEnable;
   if (manualAudioMuted) hudMusicSelection = "Muted";
   else if (hudMusicSelection === "Muted") hudMusicSelection = "Game Music";
@@ -3351,6 +3364,7 @@ function unlockAudioOnce(){
     sfxDeath.play().then(()=>{ sfxDeath.pause(); sfxDeath.currentTime = 0; sfxDeath.muted = false; }).catch(()=>{ sfxDeath.muted = false; });
   }catch(e){}
 
+  releaseInitialAudioGate();
   applyMuteState();
   if (!audioMuted && isPreGameplayMenuAudioState()){
     ensureMenuMusicPlaying();
@@ -3502,12 +3516,21 @@ function syncStartMenuMuteIcon(){
   updateMusicHud();
 }
 function toggleStartMenuTitleMute(){
+  const wasInitialAudioGate = !!initialAudioGateMuted;
   unlockAudioOnce();
-  setMuteOptionEnabled(!audioMuted);
+  const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  const justReleasedInitialAudioGate = !manualAudioMuted && !audioMuted && initialAudioGateReleasedAt && (now - initialAudioGateReleasedAt < 500);
+  if ((wasInitialAudioGate || justReleasedInitialAudioGate) && !manualAudioMuted){
+    setMuteOptionEnabled(false);
+  }else{
+    setMuteOptionEnabled(!audioMuted);
+  }
   if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying(false);
 }
 function primeMenuMusicOnFirstGesture(){
   unlockAudioOnce();
+  releaseInitialAudioGate();
+  applyMuteState();
   if (!audioMuted && isPreGameplayMenuAudioState()) ensureMenuMusicPlaying();
 }
 if (stageHudSpeaker) stageHudSpeaker.addEventListener("click", (event) => {
