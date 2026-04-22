@@ -1058,7 +1058,7 @@ function renderMenuHudPreview(){
   if (accuracyScoreEl){
     accuracyScoreEl.style.display = "block";
     accuracyScoreEl.style.color = scoreTrackingDisabled ? "#00ff66" : "";
-    accuracyScoreEl.textContent = scoreTrackingDisabled ? "Cheats: Enabled" : "Score: 0pts";
+    accuracyScoreEl.textContent = scoreTrackingDisabled ? "Cheats: ∞pts" : "Score: 0pts";
   }
   if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
   if (timerHud){
@@ -2360,7 +2360,7 @@ function updateAccuracyScoreHUD(){
   if (btnPauseOpenStore) btnPauseOpenStore.style.display = storeUnlocked ? "block" : "none";
   accuracyScoreEl.style.display = hudVisible ? "block" : "none";
   accuracyScoreEl.style.color = cheatsVisible ? "#00ff66" : "";
-  accuracyScoreEl.textContent = cheatsVisible ? "Cheats: Enabled" : ("Score: " + String(Math.floor(score)) + "pts");
+  accuracyScoreEl.textContent = cheatsVisible ? "Cheats: ∞pts" : ("Score: " + String(Math.floor(score)) + "pts");
   if (storeUnlockedHudEl){
     storeUnlockedHudEl.style.display = scoreVisible && storeUnlocked ? "block" : "none";
     storeUnlockedHudEl.textContent = canOpen ? "Open Store" : "Store Unlocked";
