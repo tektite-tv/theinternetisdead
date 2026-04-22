@@ -156,6 +156,13 @@ function getActiveMusicFilename(){
   if (effectiveAudioMuted()) return "Muted";
   return musicFilenameFromPath(musicBg.src || musicBg.currentSrc || AUDIO_BG_MUSIC);
 }
+function syncMusicDropdownTextWidth(dropdownEl){
+  if (!dropdownEl) return;
+  const selectedOption = dropdownEl.options && dropdownEl.selectedIndex >= 0 ? dropdownEl.options[dropdownEl.selectedIndex] : null;
+  const label = String(selectedOption ? selectedOption.textContent : dropdownEl.value || "Game Music").trim() || "Game Music";
+  dropdownEl.style.setProperty("--music-select-ch", String(Math.max(5, label.length)));
+}
+
 function setHudMusicSelection(filename){
   if (filename === "Muted"){
     hudMusicSelection = "Muted";
@@ -196,6 +203,7 @@ function updateMusicHud(labelText){
     if (dropdownEl.value !== dropdownValue) dropdownEl.value = audioMuted ? "Muted" : "Game Music";
     dropdownEl.classList.toggle("isMuted", !!audioMuted);
     dropdownEl.title = audioMuted ? "Muted" : (dropdownValue === "Game Music" ? "Game Music (" + filename + ")" : filename);
+    syncMusicDropdownTextWidth(dropdownEl);
   }
   if (stageHudEl){
     stageHudEl.dataset.audioIcon = icon;

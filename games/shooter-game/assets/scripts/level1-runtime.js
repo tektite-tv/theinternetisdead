@@ -3460,6 +3460,12 @@ const stageHud = document.getElementById("stageHud");
 const stageHudLabel = document.getElementById("stageHudLabel");
 const stageHudSpeaker = document.getElementById("stageHudSpeaker");
 const musicFileDropdown = document.getElementById("musicFileDropdown");
+function syncMusicDropdownTextWidth(){
+  if (!musicFileDropdown) return;
+  const selectedOption = musicFileDropdown.options && musicFileDropdown.selectedIndex >= 0 ? musicFileDropdown.options[musicFileDropdown.selectedIndex] : null;
+  const label = String(selectedOption ? selectedOption.textContent : musicFileDropdown.value || "Game Music").trim() || "Game Music";
+  musicFileDropdown.style.setProperty("--music-select-ch", String(Math.max(5, label.length)));
+}
 const titleHoverReveal = document.getElementById("titleHoverReveal");
 const constructionHoverReveal = document.getElementById("constructionHoverReveal");
 function updateMusicHud(labelText){
@@ -3478,6 +3484,7 @@ function updateMusicHud(labelText){
     if (musicFileDropdown.value !== dropdownValue) musicFileDropdown.value = audioMuted ? "Muted" : "Game Music";
     musicFileDropdown.classList.toggle("isMuted", !!audioMuted);
     musicFileDropdown.title = audioMuted ? "Muted" : (dropdownValue === "Game Music" ? "Game Music (" + filename + ")" : filename);
+    syncMusicDropdownTextWidth();
   }
   if (stageHud){
     stageHud.dataset.audioIcon = icon;

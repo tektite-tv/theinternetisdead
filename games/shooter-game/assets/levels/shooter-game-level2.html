@@ -766,13 +766,18 @@
   pointer-events:auto;
   appearance:none;
   -webkit-appearance:none;
+  box-sizing:content-box;
+  flex:0 0 auto;
+  width:calc(var(--music-select-ch, 10) * 1ch);
+  min-width:0;
+  max-width:none;
   border:0;
   outline:0;
   background:transparent;
   color:#00ff66;
   font:bold 14px monospace;
   text-shadow:0 0 6px rgba(0,255,0,0.35);
-  padding:0 12px 0 0;
+  padding:0;
   margin:0;
   cursor:pointer;
 }
@@ -782,10 +787,11 @@
 }
 #musicDropdownCaret{
   display:inline-block;
+  flex:0 0 auto;
   color:#00ff66;
   font:bold 15px monospace;
   line-height:1;
-  margin-left:-8px;
+  margin-left:calc(-8px + 1ch);
   text-shadow:0 0 6px rgba(0,255,0,0.35);
   pointer-events:none;
   user-select:none;
