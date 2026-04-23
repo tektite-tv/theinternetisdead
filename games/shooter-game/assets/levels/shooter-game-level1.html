@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tektite's Bananaman Shooter Game</title>
+
 <!-- v2.XX: First-paint nickname state guard.
      This runs before the main CSS so the Start Menu nickname row does not
      blink empty during refresh while the full runtime wakes up. Because yes,
@@ -3763,6 +3763,7 @@ body.invert-colors {
   }
 
 </style>
+
 <style>
 /* YOU WIN CLEAN FIT PATCH */
 #levelCompleteOverlay,
@@ -3897,6 +3898,8 @@ body.invert-colors {
   }
 
 </style>
+
+
 <style>
 /* v2.XX: Start Menu first-paint layout lock.
    The refresh state now uses the same native box model as the hydrated state,
@@ -4024,6 +4027,7 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
   opacity:1 !important;
 }
 </style>
+
 <style id="startMenuRowsFillExistingFootprintOnly">
   /* v2.XX: Start Menu interior layout only.
      Do not change the outer purple/green 16:9 frame. The panel keeps whatever
@@ -4153,6 +4157,7 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
     line-height:1.1 !important;
   }
 </style>
+
 <style id="startMenuPrepaintMatchesFinalLayoutAndNicknameButton">
   /* v2.XX: First-paint guard for the final Start Menu layout.
      This lives in <head>, before the Start Menu exists, so the browser uses
@@ -4339,7 +4344,11 @@ html.sg-start-nickname-prepaint.sg-start-nickname-has-name #startMenu #startWelc
     line-height:1.1 !important;
   }
 </style>
+
+
 <!-- v2.XX: Moved final Start/Hub/menu CSS into <head> so refresh never paints the old layout first. -->
+
+
 <style>
 /* v2.XX: Menu hub should replace the Start Menu, not sit beside it.
    Also force the hub shell to use the same visible footprint as the Start Menu. */
@@ -4362,6 +4371,8 @@ body.menu-hub-open #menuHubPanel{
   transform-origin:center center !important;
 }
 </style>
+
+
 <style id="startHubShared16x9SourceOfTruth">
   /* v2.XX: SINGLE SOURCE OF TRUTH for the Start Menu and Hub Menu outer background.
      Both surfaces share this class so the visible green outline/background is the same 16:9 frame.
@@ -4432,6 +4443,7 @@ body.menu-hub-open #menuHubPanel{
     overflow: auto !important;
   }
 </style>
+
 <style id="startMenuLockedToHubFootprintSourceOfTruth">
   /* v2.XX: Hub Menu is now the source of truth for the Start Menu frame.
      The Start Menu no longer has its own background/outline footprint.
@@ -4489,6 +4501,7 @@ body.menu-hub-open #menuHubPanel{
     overflow: hidden !important;
   }
 </style>
+
 <style id="startHubTrueSameVisibleFootprintFinalOverride">
   /* v2.XX: FINAL source-of-truth guard for Start + Hub visible frame.
      This intentionally beats the older first-paint Start Menu lock and the hub-tab
@@ -4550,6 +4563,8 @@ body.menu-hub-open #menuHubPanel{
     gap: 10px !important;
   }
 </style>
+
+
 <style id="startMenuProportionalInteriorSameFootprintFinal">
   /* v2.XX: Start Menu interior-only correction.
      Keep the Hub-matched purple/green outer frame unchanged. Inside that fixed
@@ -4671,6 +4686,7 @@ body.menu-hub-open #menuHubPanel{
     line-height:1.1 !important;
   }
 </style>
+
 <style id="startMenuEnterNicknameFillRowFinal">
   /* v2.XX: Final Start Menu nickname-row fix.
      Keep the proven Start/Hub outer footprint and proportional layout untouched.
@@ -4735,6 +4751,8 @@ body.menu-hub-open #menuHubPanel{
     text-overflow:clip !important;
   }
 </style>
+
+
 <style id="startMenuNicknameExclusiveVisibleLayerFix">
   /* v2.XX: Final Start Menu nickname state-layer fix.
      The nickname row is one grid cell. Only ONE child is allowed to render and
@@ -4808,6 +4826,7 @@ body.menu-hub-open #menuHubPanel{
     box-sizing:border-box !important;
   }
 </style>
+
 <style id="startMenuNicknameButtonOutlineFinal">
   /* v2.XX: Steady-state nickname button outline fix.
      Only the nickname control styling changes. The Start/Hub footprint and
@@ -4840,6 +4859,7 @@ body.menu-hub-open #menuHubPanel{
     box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
   }
 </style>
+
 <style id="startMenuPrepaintNoOldLayoutFinalWinner">
   /* v2.XX: Final first-paint override.
      This is deliberately the last Start Menu CSS in <head> so refresh never
@@ -4998,6 +5018,8 @@ body.menu-hub-open #menuHubPanel{
     content:var(--sg-start-nickname-welcome, '');
   }
 </style>
+
+
 <style id="startMenuNicknameInputActiveHidesButtonFinal">
   /* v2.XX: When the Start Menu nickname input is active, the Enter Nickname
      button must be fully gone, even if an older .needsNickname class remains
@@ -5027,7 +5049,11 @@ body.menu-hub-open #menuHubPanel{
     cursor:text !important;
   }
 </style>
+
+
+
 <!-- v2.XX: Hue-shift only the typed nickname text after the player enters text. -->
+
 <style id="startMenuNicknameRuntimeSingleLayerFinal">
   /* v2.XX: Runtime owns the nickname row after hydration.
      The first-paint ::before welcome is only for refresh prepaint; once runtime
@@ -5037,6 +5063,7 @@ body.menu-hub-open #menuHubPanel{
     display:none !important;
   }
 </style>
+
 <style id="startMenuNicknameTypedHueShiftOnly">
   #startMenu #startNicknameInput{
     animation:none !important;
@@ -5059,6 +5086,10 @@ body.menu-hub-open #menuHubPanel{
     100%{ color:#00ffff; text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 14px rgba(0,255,255,0.25); }
   }
 </style>
+
+
+
+
 <style id="statsNicknameInputMatchesStartMenuFinal">
   /* v2.XX: Stats inline nickname entry uses the same active input styling as
      the Start Menu nickname input, including the typed-text hue shift. */
@@ -5165,6 +5196,9 @@ body.menu-hub-open #menuHubPanel{
     text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
   }
 </style>
+
+
+
 <style id="startMenuConstructionLastUpdatedNotice">
   /* v2.XX: Construction gate visible content.
      This replaces the pseudo-element construction message with real DOM so the
@@ -5328,6 +5362,8 @@ body.menu-hub-open #menuHubPanel{
     line-height:1 !important;
   }
 </style>
+
+
 <style id="startMenuConstructionUnifiedBackgroundOnly">
   /* v2.XX: Construction screen only. The three-line construction message now
      shares one background capsule copied from the old Last updated strip.
@@ -5368,6 +5404,9 @@ body.menu-hub-open #menuHubPanel{
     padding:0 28px !important;
   }
 </style>
+
+
+
 <style id="startMenuConstructionWholeNoticeLinkOnly">
   /* v2.XX: Construction screen only. The entire three-line notice is the refresh link;
      the Last updated row is just text inside it. Outer menu footprint is untouched. */
@@ -5389,6 +5428,7 @@ body.menu-hub-open #menuHubPanel{
     pointer-events:none !important;
   }
 </style>
+
 <style id="controlsPreviewOwnsScreenHideKeybindsFinal">
   /* v2.XX: When Test Controller opens from Hub > Options > Controls,
      the preview owns the menu layer. Hide the Controls keybinds panel so it
@@ -5407,6 +5447,9 @@ body.menu-hub-open #menuHubPanel{
     pointer-events:auto !important;
   }
 </style>
+
+
+
 <style id="controlsHubOpensAloneSameFootprintFinal">
   /* v2.XX: Hub > Options > Controls opens a single standalone 16:9 panel.
      It must not leave Start, Hub, Options, Cheats, Stats, or Images visible beside it. */
@@ -5463,6 +5506,8 @@ body.menu-hub-open #menuHubPanel{
     overflow:auto !important;
   }
 </style>
+
+
 <style id="controlsHubOptionsUsesShared16x9FrameFinal">
   /* v2.XX: Hub > Options > Controls must use the same menu surface as Start/Hub,
      not the native pause Controls layout. This only applies to that launch path. */
@@ -5510,6 +5555,8 @@ body.menu-hub-open #menuHubPanel{
     overflow:auto !important;
   }
 </style>
+
+
 <style id="controlsHubOptionsInlineMoveButtonsFinal">
   /* v2.XX: Hub > Options > Controls gets the same 16:9 menu footprint as
      Start/Hub and keeps the four Move Controls bind buttons on one line.
@@ -5616,6 +5663,9 @@ body.menu-hub-open #menuHubPanel{
     white-space:nowrap !important;
   }
 </style>
+
+
+
 <style id="hubControlsTrue16x9FinalAuthority">
   /* v2.XX: Hub > Options > Controls must be a real 16:9 panel.
      This final rule intentionally ignores the old native Controls sizing and
@@ -5669,6 +5719,7 @@ body.menu-hub-open #menuHubPanel{
     overflow:auto !important;
   }
 </style>
+
 <style id="hubMenusNoDarkGameplayBackdrop">
   /* v2.XX: Hub tabs should sit over the gameplay without the extra black dimmer.
      Controls already behaved this way; apply the same no-backdrop behavior to
@@ -5701,8 +5752,10 @@ body.menu-hub-open #menuHubPanel{
     box-shadow:var(--shooter-start-hub-frame-shadow) !important;
   }
 </style>
-<!-- v2.XX: Start/Menu controller glyphs sit beside their labels instead of floating at the far right. -->
-<style id="startMenuControllerGlyphsInlineBesideText">
+
+
+  <!-- v2.XX: Start/Menu controller glyphs sit beside their labels instead of floating at the far right. -->
+  <style id="startMenuControllerGlyphsInlineBesideText">
     body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart,
     body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnMenu,
     body.controller-active #startMenu.panel.shooter-menu16x9Surface #btnStart.controllerFocus,
@@ -5775,6 +5828,8 @@ body.menu-hub-open #menuHubPanel{
       background-image:url('/games/shooter-game/assets/controller-buttons/menu.webp') !important;
     }
   </style>
+
+
 <style id="startMenuHudAboveGameplayBackdrop">
   /* v2.XX: On the Start Menu, the dim layer is for the gameplay/canvas layer only.
      Keep score, title/audio dropdown, timer, lives, hearts, and bombs above it. */
@@ -5790,6 +5845,9 @@ body.menu-hub-open #menuHubPanel{
     z-index:10070 !important;
   }
 </style>
+
+
+
 <style id="pauseMenuStartHubFootprintAndGameplayOnlyDimmingFinalPatch">
   html body #pauseOverlay{
     z-index:120 !important;
@@ -5958,6 +6016,8 @@ body.menu-hub-open #menuHubPanel{
     z-index:100010 !important;
   }
 </style>
+
+
 <style id="pauseHubEnemyOnlyDimmingPatch">
   /* Runtime adds this only to animated DOM enemy sprites while Pause or Pause -> Hub is active. */
   html body .enemy-gif-sprite.pauseEnemyDimSprite{
@@ -6017,6 +6077,7 @@ body.menu-hub-open #menuHubPanel{
     flex:0 0 auto !important;
   }
 </style>
+
 <style>
 /* v12: Match Start Menu Enter Nickname controller affordance to Start Game/Menu Hub. */
 #startMenu #btnEnterNickname.needsNickname{
@@ -6052,6 +6113,8 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
   box-shadow:0 0 0 2px rgba(0,255,102,0.28), 0 0 18px rgba(0,255,102,0.34) !important;
 }
 </style>
+
+
 <style id="startMenuEnterNicknameControllerGlyphAndFocusFinalV13">
   /* v13: Enter Nickname now uses the same controller affordance system as
      Start Game/Menu Hub. The A glyph sits inline beside the label whenever
@@ -6121,11 +6184,13 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
     background-color:rgba(0,255,102,0.5) !important;
   }
 </style>
+
 </head>
 <body>
 <canvas id="game"></canvas>
-<div aria-hidden="true" hidden="" id="overlay" style="display:none !important;"></div>
-<div data-audio-icon="🔊" id="stageHud" style="
+<div id="overlay" hidden aria-hidden="true" style="display:none !important;"></div>
+
+<div id="stageHud" data-audio-icon="🔊" style="
   position:absolute;
   top:10px;
   left:0;
@@ -6137,97 +6202,103 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
   pointer-events:none;
   z-index:20;
 ">
-<span id="stageHudLabel">Start Menu</span>
-<span aria-hidden="true" hidden="" id="stageWaveDropdownWrap">
-<span class="stageTightDropdownControl">
-<select aria-label="Current wave" id="stageWaveDropdown">
-<option value="menu">Start Menu</option>
-<option value="1">Wave 1</option>
-<option value="2">Wave 2</option>
-<option value="3">Wave 3</option>
-<option value="4">Wave 4</option>
-<option value="5">Wave 5</option>
-<option value="6">Wave 6</option>
-<option value="7">Wave 7</option>
-<option value="8">Wave 8</option>
-<option value="9">Wave 9</option>
-<option value="10">Wave 10</option>
-<option value="11">Boss Mode</option>
-<option value="12">Insanity 1</option>
-<option value="13">Insanity 2</option>
-<option value="14">Insanity 3</option>
-<option value="15">Insanity 4</option>
-<option value="16">Insanity 5</option>
-<option value="17">Insanity 6</option>
-<option value="18">Insanity 7</option>
-<option value="19">Insanity 8</option>
-<option value="20">Insanity 9</option>
-<option value="21">Insanity 10</option>
-</select><span aria-hidden="true" id="stageWaveDropdownCaret">∨</span>
-</span>
-</span>
-<button aria-label="Unmute audio" id="stageHudSpeaker" title="Unmute all game audio" type="button">🔇</button>
-<span id="musicDropdownWrap">
-<select aria-label="Music file" id="musicFileDropdown">
-<option value="Game Music">Game Music</option>
-<option selected="" value="Muted">Muted</option>
-<option value="wii-shop-music.mp3">wii-shop-music.mp3</option>
-<option value="spaceinvaders.mp3">spaceinvaders.mp3</option>
-<option value="do-that-there.mp3">do-that-there.mp3</option>
-</select><span aria-hidden="true" id="musicDropdownCaret">∨</span>
-</span>
+  <span id="stageHudLabel">Start Menu</span>
+  <span id="stageWaveDropdownWrap" hidden aria-hidden="true">
+    <span class="stageTightDropdownControl">
+      <select id="stageWaveDropdown" aria-label="Current wave">
+      <option value="menu">Start Menu</option>
+      <option value="1">Wave 1</option>
+      <option value="2">Wave 2</option>
+      <option value="3">Wave 3</option>
+      <option value="4">Wave 4</option>
+      <option value="5">Wave 5</option>
+      <option value="6">Wave 6</option>
+      <option value="7">Wave 7</option>
+      <option value="8">Wave 8</option>
+      <option value="9">Wave 9</option>
+      <option value="10">Wave 10</option>
+      <option value="11">Boss Mode</option>
+      <option value="12">Insanity 1</option>
+      <option value="13">Insanity 2</option>
+      <option value="14">Insanity 3</option>
+      <option value="15">Insanity 4</option>
+      <option value="16">Insanity 5</option>
+      <option value="17">Insanity 6</option>
+      <option value="18">Insanity 7</option>
+      <option value="19">Insanity 8</option>
+      <option value="20">Insanity 9</option>
+      <option value="21">Insanity 10</option>
+      </select><span id="stageWaveDropdownCaret" aria-hidden="true">∨</span>
+    </span>
+  </span>
+  <button id="stageHudSpeaker" type="button" aria-label="Unmute audio" title="Unmute all game audio">🔇</button>
+  <span id="musicDropdownWrap">
+    <select id="musicFileDropdown" aria-label="Music file">
+      <option value="Game Music">Game Music</option>
+      <option value="Muted" selected>Muted</option>
+      <option value="wii-shop-music.mp3">wii-shop-music.mp3</option>
+      <option value="spaceinvaders.mp3">spaceinvaders.mp3</option>
+      <option value="do-that-there.mp3">do-that-there.mp3</option>
+    </select><span id="musicDropdownCaret" aria-hidden="true">∨</span>
+  </span>
 </div>
-<button aria-label="Score HUD" disabled="" id="scoreStoreHud" type="button">
-<div id="accuracyScore">Score: 0pts</div>
-<div id="storeUnlockedHud">Store Unlocked</div>
+<button id="scoreStoreHud" type="button" disabled aria-label="Score HUD">
+  <div id="accuracyScore">Score: 0pts</div>
+  <div id="storeUnlockedHud">Store Unlocked</div>
 </button>
 <div id="timerHud">0.0s</div>
-<div class="cornerSlot livesButton" id="livesSlot" style="left:14px; bottom:14px;">
-<span class="livesLabel">LIVES:</span>
-<img alt="lives" src="/games/shooter-game/assets/bananarama.webp"/>
-<div class="subtxt" id="livesText">x1</div>
+
+<div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
+  <span class="livesLabel">LIVES:</span>
+<img src="/games/shooter-game/assets/bananarama.webp" alt="lives"/>
+  <div id="livesText" class="subtxt">x1</div>
 </div>
-<div class="cornerSlot" id="powerupSlot" style="right:14px; bottom:14px; display:none;">
-<div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
-<div class="subtxt" id="powerupHint">Press Q</div>
+
+<div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
+  <div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
+  <div id="powerupHint" class="subtxt">Press Q</div>
 </div>
+
 <div id="deathOverlay">
-<div id="deathPanel">
-<div id="deathTitle">YOU DIED</div>
-<button class="deathBtn" id="btnRestart">Restart</button>
-<button class="deathBtn" id="btnDeathQuitToMenu">Quit to Menu</button>
+  <div id="deathPanel">
+    <div id="deathTitle">YOU DIED</div>
+    <button id="btnRestart" class="deathBtn">Restart</button>
+    <button id="btnDeathQuitToMenu" class="deathBtn">Quit to Menu</button>
 </div>
 </div>
-<div aria-hidden="true" hidden="" id="winOverlay">
-<div id="winPanel">
-<div class="winControllerTarget" id="winTitle" tabindex="-1">You Win!</div>
-<div class="winControllerTarget" id="winStatsTitle" tabindex="-1">Level 1 Completion Stats</div>
-<div id="winStatsList">
-<div class="winStatRow winControllerTarget" id="winStatTime" tabindex="-1">Time: 0.0s</div>
-<div class="winStatRow winControllerTarget" id="winStatScore" tabindex="-1">Score: 0</div>
-<div class="winStatRow winControllerTarget" id="winStatKills" tabindex="-1">Enemies Killed: 0 / 0</div>
-<div class="winStatRow winControllerTarget" id="winStatBullets" tabindex="-1">Bullets Shot: 0</div>
-<div class="winStatRow winControllerTarget" id="winStatAccuracy" tabindex="-1">Accuracy: 0%</div>
-<div class="winStatRow winControllerTarget" id="winStatBombKills" tabindex="-1">Bomb Kills: 0</div>
-<div class="winStatRow" id="winStatKillBreakdown">
-<div class="winStatBreakdownTitle winControllerTarget" tabindex="-1">Kills By Enemy</div>
-<div id="winStatKillBreakdownList"></div>
-</div>
-<div class="winStatRow" id="winStatBonus">
-<div class="winStatBonusTitle winControllerTarget" tabindex="-1">BONUS POINTS</div>
-<div class="winStatBonusLine winControllerTarget" id="winStatBonusDragons" tabindex="-1">Dragons Bombed: +0</div>
-<div class="winStatBonusLine winControllerTarget" id="winStatBonusFrogs" tabindex="-1">Frogs Bombed: +0</div>
-</div>
-</div>
-<div class="level2-win-action-stack">
-<a aria-label="Continue to Level 2" class="bananarama-level2-link" href="javascript:void(0);">
-<img alt="Level 2 player icon" src="/games/shooter-game/assets/bananarama.webp"/>
-<span class="bananarama-level2-number">2</span>
+
+<div id="winOverlay" hidden aria-hidden="true">
+  <div id="winPanel">
+    <div id="winTitle" class="winControllerTarget" tabindex="-1">You Win!</div>
+    <div id="winStatsTitle" class="winControllerTarget" tabindex="-1">Level 1 Completion Stats</div>
+    <div id="winStatsList">
+      <div id="winStatTime" class="winStatRow winControllerTarget" tabindex="-1">Time: 0.0s</div>
+      <div id="winStatScore" class="winStatRow winControllerTarget" tabindex="-1">Score: 0</div>
+      <div id="winStatKills" class="winStatRow winControllerTarget" tabindex="-1">Enemies Killed: 0 / 0</div>
+      <div id="winStatBullets" class="winStatRow winControllerTarget" tabindex="-1">Bullets Shot: 0</div>
+      <div id="winStatAccuracy" class="winStatRow winControllerTarget" tabindex="-1">Accuracy: 0%</div>
+      <div id="winStatBombKills" class="winStatRow winControllerTarget" tabindex="-1">Bomb Kills: 0</div>
+      <div id="winStatKillBreakdown" class="winStatRow">
+        <div class="winStatBreakdownTitle winControllerTarget" tabindex="-1">Kills By Enemy</div>
+        <div id="winStatKillBreakdownList"></div>
+      </div>
+      <div id="winStatBonus" class="winStatRow">
+        <div class="winStatBonusTitle winControllerTarget" tabindex="-1">BONUS POINTS</div>
+        <div id="winStatBonusDragons" class="winStatBonusLine winControllerTarget" tabindex="-1">Dragons Bombed: +0</div>
+        <div id="winStatBonusFrogs" class="winStatBonusLine winControllerTarget" tabindex="-1">Frogs Bombed: +0</div>
+      </div>
+    </div>
+    <div class="level2-win-action-stack">
+<a class="bananarama-level2-link" href="javascript:void(0);" aria-label="Continue to Level 2">
+<img src="/games/shooter-game/assets/bananarama.webp" alt="Level 2 player icon">
+  <span class="bananarama-level2-number">2</span>
 </a>
-<button class="winControllerTarget" id="btnContinue">Continue to Level 2</button>
+<button id="btnContinue" class="winControllerTarget">Continue to Level 2</button>
 </div>
+  </div>
 </div>
-</div>
+
+
 <style id="pauseMenuFourButtonNativeListFix">
   /* Keep the visible pause controls as normal stacked buttons: Resume, Open Store, Options, Quit.
      The hidden command suggestion placeholder is not part of the normal pause layout. */
@@ -6272,272 +6343,334 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
     box-sizing:border-box !important;
   }
 </style>
+
 <div id="pauseOverlay">
-<div class="menu-panel-iframe-host" id="pausePanel"><iframe aria-hidden="false" id="pausePanelFrame" loading="eager" referrerpolicy="same-origin" src="/games/shooter-game/assets/menu-panels/pause-menu-panel.html" style="width:100%;height:100%;border:0;display:block;background:transparent;" tabindex="-1" title="Pause menu panel"></iframe></div>
-<div class="panel" id="scoreStorePanel">
-<div class="title">Score Store</div>
-<div id="scoreStoreHint">Spend current score points on future upgrades and supplies.</div>
-<div id="scoreStoreCurrentScore">Current Score: 0pts</div>
-<div id="scoreStoreItems"></div>
-<div id="scoreStoreStatus"></div>
-<button class="smallBtn" id="btnScoreStoreClose" type="button">Back</button>
+  <div id="pausePanel" class="shooter-menu16x9Surface">
+    <div id="pauseTitle">Hello User!<br>GAME PAUSED</div>
+    <div id="pauseHint">Press ESC to Resume</div>
+    <div id="pauseCmdSuggest" aria-live="polite" aria-hidden="true" hidden></div>
+    <button id="btnPauseResume" class="pauseMenuBtn" type="button" style="font-size:18px;">Resume</button>
+    <button id="btnPauseOpenStore" class="pauseMenuBtn" type="button" style="font-size:18px; display:none;">Open Store</button>
+    <button id="btnPauseOpenChat" class="pauseMenuBtn" type="button" style="font-size:18px;">Menu Hub</button>
+    <button id="btnPauseQuit" class="pauseMenuBtn" style="font-size:18px;">Quit to Menu</button>
+
+  </div>
+  <div id="scoreStorePanel" class="panel">
+    <div class="title">Score Store</div>
+    <div id="scoreStoreHint">Spend current score points on future upgrades and supplies.</div>
+    <div id="scoreStoreCurrentScore">Current Score: 0pts</div>
+    <div id="scoreStoreItems"></div>
+    <div id="scoreStoreStatus"></div>
+    <button id="btnScoreStoreClose" class="smallBtn" type="button">Back</button>
+  </div>
 </div>
-</div>
+
 <div id="uiRoot">
-<div class="panel menu-panel-iframe-host" id="startMenu"><iframe aria-hidden="false" id="startMenuFrame" loading="eager" referrerpolicy="same-origin" src="/games/shooter-game/assets/menu-panels/start-menu-panel.html" style="width:100%;height:100%;border:0;display:block;background:transparent;" tabindex="-1" title="Start menu panel"></iframe></div>
-<div aria-hidden="true" id="menuHubPanel">
-<div class="shooter-menu16x9Surface" id="menuHubPanelInner">
-<div id="menuHubTopButtons">
-<button aria-pressed="true" class="smallBtn" data-menu-hub-tab="images" id="btnMenuHubImages" type="button">Images</button>
-<button aria-pressed="false" class="smallBtn" data-menu-hub-tab="stats" id="btnMenuHubStats" type="button">Stats</button>
-<button aria-pressed="false" class="smallBtn" data-menu-hub-tab="options" id="btnMenuHubOptions" type="button">Options</button>
-</div>
-<div aria-live="polite" id="menuHubContent"></div>
-</div>
-</div>
-<div aria-hidden="true" id="statsPanel">
-<div id="statsPanelInner">
-<div class="menuMiddleScroll" id="statsScroll">
-<button class="smallBtn statsToggleBtn statsNicknamePromptBtn" hidden="" id="btnStatsEnterNickname" type="button">Enter Nickname to Track Stats</button>
-<input aria-label="Enter nickname to track stats" autocomplete="off" class="smallBtn statsToggleBtn statsNicknamePromptInput" hidden="" id="statsNicknameInput" maxlength="24" placeholder="Enter Nickname" spellcheck="false" type="text"/>
-<div id="statsList">
-<div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score</span><span class="statsValue" id="statLifetimeScore">0</span></div>
-<div class="statsRow" data-stat-row="lifetimeEnemiesKilled"><span>Lifetime Enemies Killed</span><span class="statsValue" id="statLifetimeEnemies">0</span></div>
-<div class="statsRow" data-stat-row="lifetimeUfosKilled"><span>Lifetime UFOs Killed</span><span class="statsValue" id="statLifetimeUfos">0</span></div>
-<div class="statsRow" data-stat-row="lifetimeGamesWon"><span>Lifetime Games Won</span><span class="statsValue" id="statLifetimeWins">0</span></div>
-<div class="statsRow" data-stat-row="lifetimeTotalDeaths"><span>Lifetime Total Deaths</span><span class="statsValue" id="statLifetimeDeaths">0</span></div>
-<div class="statsRow" data-stat-row="lifetimeBulletsFired"><span>Lifetime Bullets Fired</span><span class="statsValue" id="statLifetimeBullets">0</span></div>
-<div class="statsRow" data-stat-row="lifetimeBombKills"><span>Lifetime Bomb Kills</span><span class="statsValue" id="statLifetimeBombKills">0</span></div>
-</div>
-<div hidden="" id="statsLockedDetails">
-<button aria-expanded="false" class="smallBtn statsToggleBtn" id="btnStatsLockedToggle" type="button">Play More To Unlock</button>
-<div hidden="" id="statsLockedList"></div>
-</div>
-</div>
-<div class="btnRow menuBottomRow" id="statsPanelButtons">
-<button class="smallBtn" id="btnStatsClose" type="button">Back</button>
-<button class="smallBtn" id="btnStatsReset" type="button">Reset Stats</button>
-</div>
-</div>
-</div>
-<div aria-hidden="true" id="imagesPanel">
-<div id="imagesPanelInner">
-<div id="imagesList">
-<div id="imagesEmpty">No saved images yet.<br/>Press Y + View during gameplay to save one here.</div>
-</div>
-<div class="btnRow menuBottomRow" id="imagesPanelButtons">
-<button class="smallBtn" id="btnImagesClose" type="button">Back</button>
-<button class="smallBtn" id="btnImagesClear" type="button">Clear Images</button>
-</div>
-</div>
-</div>
-<div class="panel" id="optionsMenu" style="display:none;">
-<div id="optionsMenuInner">
-<div class="menuMiddleScroll" id="optionsScroll">
-<div class="optionsGrid">
-<div class="optRow fullRow buttonOnlyRow">
-<button class="smallBtn" id="btnControls" style="width:100%; min-height:46px; font-size:16px;" type="button">Controls</button>
-</div>
-<div class="optRow cheatRow commandOptionRow nicknameRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Nickname</div>
-<div class="cheatCommand">/nickname</div>
-</div>
-<div class="nicknameControls">
-<span class="nicknameInputWrap">
-<input aria-label="Nickname" autocomplete="off" class="nicknameInput" id="nicknameInput" maxlength="24" placeholder="User" spellcheck="false" type="text"/>
-<span aria-hidden="true" class="nicknameInputPreview"><span class="nicknameInputGhost" id="nicknameInputGhost"></span></span>
-</span>
-<button aria-label="Clear nickname" class="nicknameActionBtn" id="btnNicknameAction" type="button">❌</button>
-</div>
-</div>
-<div class="hint">Set the name shown before your chat messages.</div>
-</div>
-<div class="optRow cheatRow commandOptionRow backgroundColorRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Background Color</div>
-<div class="cheatCommand">/background_color</div>
-</div>
-<div class="backgroundColorControls">
-<input aria-label="Background color hex code" autocomplete="off" class="backgroundColorHex" id="backgroundColorHex" maxlength="7" spellcheck="false" type="text" value="#000000"/>
-<input aria-label="Background color picker" class="backgroundColorPicker" id="backgroundColorPicker" type="color" value="#000000"/>
-</div>
-</div>
-<div class="hint">Set the starfield background color with a hex code.</div>
-</div>
-<div class="optRow cheatRow commandOptionRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Mute</div>
-<div class="cheatCommand">/mute</div>
-</div>
-<label><input id="muteCheckbox" type="checkbox"/><span id="muteStatus" style="margin-left:0;">Disabled</span></label>
-</div>
-<div class="hint">Toggle all shooter music and sound effects on or off.</div>
-</div>
-<div class="optRow cheatRow commandOptionRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Fullscreen</div>
-<div class="cheatCommand">/fullscreen</div>
-</div>
-<label><input id="fullscreenCheckbox" type="checkbox"/><span id="fullscreenStatus" style="margin-left:0;">Disabled</span></label>
-</div>
-<div class="hint">Toggle browser fullscreen for the whole shooter shell.</div>
-</div>
-<div class="optRow cheatRow commandOptionRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Invert Colors</div>
-<div class="cheatCommand">/color_invert</div>
-</div>
-<label><input id="invertColorsCheckbox" type="checkbox"/><span id="invertColorsStatus" style="margin-left:0;">Disabled</span></label>
-</div>
-<div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
-</div>
-<div class="optRow cheatRow commandOptionRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Video FX</div>
-<div class="cheatCommand">/video_fx</div>
-</div>
-<label><input id="videoFxCheckbox" type="checkbox"/><span id="videoFxStatus" style="margin-left:0;">Disabled</span></label>
-</div>
-<div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
-</div>
-<div class="optRow cheatRow commandOptionRow cheatermodeOptionRow" id="cheatermodeOptionRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Cheatermode</div>
-<div class="cheatCommand">/cheatermode</div>
-</div>
-<label class="cheatermodeUnlockedControl" hidden="" id="cheatermodeUnlockedControl"><input checked="" id="cheatermodeUnlockedCheckbox" type="checkbox"/><span id="cheatermodeUnlockedStatus" style="margin-left:0;">Enabled</span></label>
-</div>
-<div class="hint">Type cheatermode on the Cheats button to unlock the Cheats list.</div>
-</div>
-<div class="optRow fullRow buttonOnlyRow cheatsButtonRow" id="cheatsButtonRow">
-<button class="smallBtn" id="btnCheats" style="width:100%; min-height:46px; font-size:16px;" type="button">Cheats</button>
-<input aria-label="Type cheatermode to unlock cheat commands" autocomplete="off" class="cheatsUnlockInput" id="btnCheatsUnlockInput" spellcheck="false" style="display:none;" type="text" value="Type cheatermode"/>
-<div aria-live="polite" class="cheatermodeCountdownDisplay" hidden="" id="cheatermodeCountdownDisplay" role="status"></div>
-</div>
-</div>
-</div>
-<div class="btnRow menuBottomRow" style="margin-top:14px;">
-<button class="smallBtn" id="btnBack">Back</button>
-<button class="smallBtn applyStateBtn" id="btnApply" style="display:none;" type="button">Apply? <span class="applyX">(✕)</span></button>
-</div>
-</div>
-</div>
-<div class="panel" id="cheatsMenu" style="display:none;">
-<div id="cheatsMenuInner">
-<div class="title">Cheats</div>
-<div class="menuMiddleScroll" id="cheatsScroll">
-<div class="cheatsGrid">
-<div class="optRow cheatRow commandOptionRow gameSpeedCommandRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Game Speed</div>
-<div class="cheatCommand">/game_speed # (-5 slowest / 1 normal / 20 fastest)</div>
-</div>
-<span class="cheatStatusText" id="speedVal">1</span>
-</div>
-<input id="speedSlider" max="25" min="0" step="1" type="range" value="6"/>
-<div class="hint">0 = static Wave 1/UFO staring contest. 1 = normal. Right side = 2 to 20 chaos.</div>
-</div>
+  <div id="startMenu" class="panel shooter-menu16x9Surface">
+    <a id="startConstructionNotice" href="javascript:window.top.location.reload();" title="Refresh entire page" aria-label="Refresh entire page" aria-live="polite">
+      <div class="startConstructionTitle">Under Construction</div>
+      <div id="constructionHoverReveal" class="titleSub constructionHoverReveal" tabindex="-1" aria-hidden="true">
+        <span class="titleSubDefault" aria-hidden="true"></span>
+        <span class="titleSubHover" data-file-last-updated>(Last updated: loading)</span>
+      </div>
+      <div class="startConstructionSubtitle">Check Back Later</div>
+    </a>
+    <div id="startMenuTitle" class="title" tabindex="-1" aria-label="Game title. Audio enabled."><span class="titleText">Tektite's Bananaman Shooter Game</span></div>
+    <div class="titleSubWrap">
+      <!-- Last updated text is populated from this HTML file's served Last-Modified metadata. -->
+    <div id="titleHoverReveal" class="titleSub" tabindex="-1" role="button" aria-label="Refresh entire page"><span class="titleSubDefault">(New and Improved)</span><a class="titleSubHover" data-file-last-updated href="javascript:window.top.location.reload();" title="Refresh entire page">(Last updated: loading)</a></div>
+    </div>
+<img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
+    <div class="menuBlurb">Pilot Bananaman through escalating waves of neon space nonsense, dodge incoming fire, manage bombs and shields, and survive long enough to crush the boss.</div>
+    <div class="btnRow btnRowTop">
+      <button id="btnStart"><span class="startMenuButtonText">Start Game</span></button>
+      <button id="btnMenu" class="smallBtn" type="button"><span class="startMenuButtonText">Menu Hub</span></button>
+    </div>
+    <div id="startNicknameRow" class="startMenuNicknameRow">
+      <button id="btnEnterNickname" class="smallBtn" type="button"><span class="startMenuButtonText">Enter Nickname</span></button>
+      <input id="startNicknameInput" class="smallBtn" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname" />
+      <div id="startWelcomeNickname" class="startMenuWelcomeNickname" aria-live="polite"></div>
+    </div>
+    <div id="assetStatus" class="statusLine" style="display:none;"></div>
+  </div>
+
+  <div id="menuHubPanel" aria-hidden="true">
+    <div id="menuHubPanelInner" class="shooter-menu16x9Surface">
+      <div id="menuHubTopButtons">
+        <button id="btnMenuHubImages" class="smallBtn" type="button" data-menu-hub-tab="images" aria-pressed="true">Images</button>
+        <button id="btnMenuHubStats" class="smallBtn" type="button" data-menu-hub-tab="stats" aria-pressed="false">Stats</button>
+        <button id="btnMenuHubOptions" class="smallBtn" type="button" data-menu-hub-tab="options" aria-pressed="false">Options</button>
+      </div>
+      <div id="menuHubContent" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="statsPanel" aria-hidden="true">
+    <div id="statsPanelInner">
+      <div id="statsScroll" class="menuMiddleScroll">
+        <div id="statsList">
+          <div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score</span><span id="statLifetimeScore" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeEnemiesKilled"><span>Lifetime Enemies Killed</span><span id="statLifetimeEnemies" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeUfosKilled"><span>Lifetime UFOs Killed</span><span id="statLifetimeUfos" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeGamesWon"><span>Lifetime Games Won</span><span id="statLifetimeWins" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeTotalDeaths"><span>Lifetime Total Deaths</span><span id="statLifetimeDeaths" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeBulletsFired"><span>Lifetime Bullets Fired</span><span id="statLifetimeBullets" class="statsValue">0</span></div>
+          <div class="statsRow" data-stat-row="lifetimeBombKills"><span>Lifetime Bomb Kills</span><span id="statLifetimeBombKills" class="statsValue">0</span></div>
+        </div>
+        <button id="btnStatsEnterNickname" class="smallBtn statsToggleBtn statsNicknamePromptBtn" type="button" hidden>Enter Nickname to Track Stats</button>
+        <input id="statsNicknameInput" class="smallBtn statsToggleBtn statsNicknamePromptInput" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname to track stats" hidden />
+        <div id="statsLockedDetails" hidden>
+          <button id="btnStatsLockedToggle" class="smallBtn statsToggleBtn" type="button" aria-expanded="false">Play More To Unlock</button>
+          <div id="statsLockedList" hidden></div>
+        </div>
+      </div>
+      <div id="statsPanelButtons" class="btnRow menuBottomRow">
+        <button id="btnStatsClose" class="smallBtn" type="button">Back</button>
+        <button id="btnStatsReset" class="smallBtn" type="button">Reset Stats</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="imagesPanel" aria-hidden="true">
+    <div id="imagesPanelInner">
+      <div id="imagesList">
+        <div id="imagesEmpty">No saved images yet.<br>Press Y + View during gameplay to save one here.</div>
+      </div>
+      <div id="imagesPanelButtons" class="btnRow menuBottomRow">
+        <button id="btnImagesClose" class="smallBtn" type="button">Back</button>
+        <button id="btnImagesClear" class="smallBtn" type="button">Clear Images</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="optionsMenu" class="panel" style="display:none;">
+    <div id="optionsMenuInner">
+      <div id="optionsScroll" class="menuMiddleScroll">
+        <div class="optionsGrid">
+      <div class="optRow fullRow buttonOnlyRow">
+        <button id="btnControls" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Controls</button>
+      </div>
+      <div class="optRow cheatRow commandOptionRow nicknameRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Nickname</div>
+            <div class="cheatCommand">/nickname</div>
+          </div>
+          <div class="nicknameControls">
+            <span class="nicknameInputWrap">
+              <input id="nicknameInput" class="nicknameInput" type="text" placeholder="User" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Nickname" />
+              <span class="nicknameInputPreview" aria-hidden="true"><span id="nicknameInputGhost" class="nicknameInputGhost"></span></span>
+            </span>
+            <button id="btnNicknameAction" class="nicknameActionBtn" type="button" aria-label="Clear nickname">❌</button>
+          </div>
+        </div>
+        <div class="hint">Set the name shown before your chat messages.</div>
+      </div>
+      <div class="optRow cheatRow commandOptionRow backgroundColorRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Background Color</div>
+            <div class="cheatCommand">/background_color</div>
+          </div>
+          <div class="backgroundColorControls">
+            <input id="backgroundColorHex" class="backgroundColorHex" type="text" value="#000000" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Background color hex code" />
+            <input id="backgroundColorPicker" class="backgroundColorPicker" type="color" value="#000000" aria-label="Background color picker" />
+          </div>
+        </div>
+        <div class="hint">Set the starfield background color with a hex code.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Mute</div>
+            <div class="cheatCommand">/mute</div>
+          </div>
+          <label><input id="muteCheckbox" type="checkbox" /><span id="muteStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Toggle all shooter music and sound effects on or off.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Fullscreen</div>
+            <div class="cheatCommand">/fullscreen</div>
+          </div>
+          <label><input id="fullscreenCheckbox" type="checkbox" /><span id="fullscreenStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Toggle browser fullscreen for the whole shooter shell.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Invert Colors</div>
+            <div class="cheatCommand">/color_invert</div>
+          </div>
+          <label><input id="invertColorsCheckbox" type="checkbox" /><span id="invertColorsStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Flips the whole screen instantly, because your eyeballs apparently owed someone money.</div>
+      </div>
+
+      <div class="optRow cheatRow commandOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Video FX</div>
+            <div class="cheatCommand">/video_fx</div>
+          </div>
+          <label><input id="videoFxCheckbox" type="checkbox" /><span id="videoFxStatus" style="margin-left:0;">Disabled</span></label>
+        </div>
+        <div class="hint">Chromatic weirdness and hue drift. Toggle live if you miss suffering.</div>
+      </div>
+
+      <div id="cheatermodeOptionRow" class="optRow cheatRow commandOptionRow cheatermodeOptionRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Cheatermode</div>
+            <div class="cheatCommand">/cheatermode</div>
+          </div>
+          <label id="cheatermodeUnlockedControl" class="cheatermodeUnlockedControl" hidden><input id="cheatermodeUnlockedCheckbox" type="checkbox" checked /><span id="cheatermodeUnlockedStatus" style="margin-left:0;">Enabled</span></label>
+        </div>
+        <div class="hint">Type cheatermode on the Cheats button to unlock the Cheats list.</div>
+      </div>
+
+<div id="cheatsButtonRow" class="optRow fullRow buttonOnlyRow cheatsButtonRow">
+        <button id="btnCheats" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Cheats</button>
+        <input id="btnCheatsUnlockInput" class="cheatsUnlockInput" type="text" value="Type cheatermode" spellcheck="false" autocomplete="off" aria-label="Type cheatermode to unlock cheat commands" style="display:none;" />
+        <div id="cheatermodeCountdownDisplay" class="cheatermodeCountdownDisplay" role="status" aria-live="polite" hidden></div>
+      </div>
+        </div>
+      </div>
+
+      <div class="btnRow menuBottomRow" style="margin-top:14px;">
+        <button id="btnBack" class="smallBtn">Back</button>
+        <button id="btnApply" class="smallBtn applyStateBtn" type="button" style="display:none;">Apply? <span class="applyX">(✕)</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cheatsMenu" class="panel" style="display:none;">
+    <div id="cheatsMenuInner">
+      <div class="title">Cheats</div>
+
+      <div id="cheatsScroll" class="menuMiddleScroll">
+        <div class="cheatsGrid">
+                <div class="optRow cheatRow commandOptionRow gameSpeedCommandRow">
+        <div class="cheatHeader">
+          <div>
+            <div class="cheatTitle">Game Speed</div>
+            <div class="cheatCommand">/game_speed # (-5 slowest / 1 normal / 20 fastest)</div>
+          </div>
+          <span id="speedVal" class="cheatStatusText">1</span>
+        </div>
+        <input id="speedSlider" type="range" min="0" max="25" value="6" step="1" />
+        <div class="hint">0 = static Wave 1/UFO staring contest. 1 = normal. Right side = 2 to 20 chaos.</div>
+      </div>
+
 <div class="optRow fullRow">
-<div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
-<select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
-<option value="1">Wave 1</option>
-<option value="2">Wave 2</option>
-<option value="3">Wave 3</option>
-<option value="4">Wave 4</option>
-<option value="5">Wave 5</option>
-<option value="6">Wave 6</option>
-<option value="7">Wave 7</option>
-<option value="8">Wave 8</option>
-<option value="9">Wave 9</option>
-<option value="10">Wave 10</option>
-<option value="11">Boss Mode</option>
-<option value="12">Insanity 1</option>
-<option value="13">Insanity 2</option>
-<option value="14">Insanity 3</option>
-<option value="15">Insanity 4</option>
-<option value="16">Insanity 5</option>
-<option value="17">Insanity 6</option>
-<option value="18">Insanity 7</option>
-<option value="19">Insanity 8</option>
-<option value="20">Insanity 9</option>
-<option value="21">Insanity 10</option>
-</select>
-<div class="hint">Pick exactly where a new run should begin: Wave 1-10, Boss Mode, or Insanity 1-10.</div>
+            <div class="optLabel"><span>Starting Wave</span><span id="startWaveLabel">1</span></div>
+            <select id="startWaveSelect" style="width:100%; padding:10px 12px; font-family:monospace; font-size:14px; color:#00ff66; background:rgba(0,0,0,0.55); border:1px solid rgba(0,255,0,0.45); border-radius:12px; outline:none;">
+              <option value="1">Wave 1</option>
+              <option value="2">Wave 2</option>
+              <option value="3">Wave 3</option>
+              <option value="4">Wave 4</option>
+              <option value="5">Wave 5</option>
+              <option value="6">Wave 6</option>
+              <option value="7">Wave 7</option>
+              <option value="8">Wave 8</option>
+              <option value="9">Wave 9</option>
+              <option value="10">Wave 10</option>
+              <option value="11">Boss Mode</option>
+              <option value="12">Insanity 1</option>
+              <option value="13">Insanity 2</option>
+              <option value="14">Insanity 3</option>
+              <option value="15">Insanity 4</option>
+              <option value="16">Insanity 5</option>
+              <option value="17">Insanity 6</option>
+              <option value="18">Insanity 7</option>
+              <option value="19">Insanity 8</option>
+              <option value="20">Insanity 9</option>
+              <option value="21">Insanity 10</option>
+            </select>
+            <div class="hint">Pick exactly where a new run should begin: Wave 1-10, Boss Mode, or Insanity 1-10.</div>
+          </div>
+
+          <div class="optRow fullRow">
+            <div class="optLabel"><span>Starting Hearts / Shields / Lives / Bombs</span></div>
+            <div class="startStatsRow">
+              <div class="startStatField">
+                <label for="heartsSlider">Hearts</label>
+                <input id="heartsSlider" class="resourceNumberInput" type="text" min="1" max="100" value="5" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="shieldsSlider">Shields</label>
+                <input id="shieldsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="livesSlider">Lives</label>
+                <input id="livesSlider" class="resourceNumberInput" type="text" min="0" max="100" value="3" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+              <div class="startStatField">
+                <label for="bombsSlider">Bombs</label>
+                <input id="bombsSlider" class="resourceNumberInput" type="text" min="0" max="100" value="0" step="1" inputmode="numeric" autocomplete="off" spellcheck="false" />
+              </div>
+            </div>
+            <div class="hint">Use 0-99 for exact values. 100 = INFINITE</div>
+          </div>
+
+          <div class="optRow cheatRow">
+            <div class="cheatHeader">
+              <div>
+                <div class="cheatTitle">Infinite Mode</div>
+                <div class="cheatCommand">/infinite</div>
+              </div>
+              <label><input id="infiniteToggle" type="checkbox" /><span id="infiniteToggleStatus" style="margin-left:0;">Disabled</span></label>
+            </div>
+            <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
+          </div>
+
+          
+
+          
+
+          <div class="fullRow buttonOnlyRow cheatsSkipRow">
+            <button id="btnSkipToLevel2" class="smallBtn" type="button" style="width:100%; min-height:46px; font-size:16px;">Skip to Level 2</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="btnRow menuBottomRow" style="margin-top:14px;">
+        <button id="btnCheatsBack" class="smallBtn">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="controlsMenu" class="panel shooter-menu16x9Surface" style="display:none;" aria-hidden="true">
+    <div id="controlsMenuInner">
+      <div id="controlsMenuTitle" class="title">Keyboard / Mouse Controls</div>
+      <div class="controlsGrid">
+        <div id="controlsListScroll">
+          <div class="optRow controlsListPanel">
+            <div id="controlsBindList" class="controlsBindList"></div>
+          </div>
+        </div>
+      </div>
+      <div class="btnRow menuBottomRow" style="margin-top:14px;">
+        <button id="controlsBack" class="smallBtn" type="button">Back</button>
+        <button id="controlsResetBinds" class="smallBtn" type="button">Reset Defaults</button>
+        <button id="controlsApplyBinds" class="smallBtn applyStateBtn" type="button" style="display:none;">Apply? <span class="applyX">(✕)</span></button>
+      </div>
+    </div>
+  </div>
+  <div id="controlsPreviewMenu" class="panel" style="display:none;" aria-label="Controller input preview">
+    <div id="controlsPreviewTitle" class="title">Test Controller</div>
+    <iframe id="controlsPreviewFrame" src="/games/shooter-game/assets/controller-buttons/controls.html" title="Xbox One controller input preview" allow="gamepad" tabindex="0"></iframe>
+    <button id="controlsPreviewBack" class="smallBtn" type="button">Back</button>
+  </div>
 </div>
-<div class="optRow fullRow">
-<div class="optLabel"><span>Starting Hearts / Shields / Lives / Bombs</span></div>
-<div class="startStatsRow">
-<div class="startStatField">
-<label for="heartsSlider">Hearts</label>
-<input autocomplete="off" class="resourceNumberInput" id="heartsSlider" inputmode="numeric" max="100" min="1" spellcheck="false" step="1" type="text" value="5"/>
-</div>
-<div class="startStatField">
-<label for="shieldsSlider">Shields</label>
-<input autocomplete="off" class="resourceNumberInput" id="shieldsSlider" inputmode="numeric" max="100" min="0" spellcheck="false" step="1" type="text" value="0"/>
-</div>
-<div class="startStatField">
-<label for="livesSlider">Lives</label>
-<input autocomplete="off" class="resourceNumberInput" id="livesSlider" inputmode="numeric" max="100" min="0" spellcheck="false" step="1" type="text" value="3"/>
-</div>
-<div class="startStatField">
-<label for="bombsSlider">Bombs</label>
-<input autocomplete="off" class="resourceNumberInput" id="bombsSlider" inputmode="numeric" max="100" min="0" spellcheck="false" step="1" type="text" value="0"/>
-</div>
-</div>
-<div class="hint">Use 0-99 for exact values. 100 = INFINITE</div>
-</div>
-<div class="optRow cheatRow">
-<div class="cheatHeader">
-<div>
-<div class="cheatTitle">Infinite Mode</div>
-<div class="cheatCommand">/infinite</div>
-</div>
-<label><input id="infiniteToggle" type="checkbox"/><span id="infiniteToggleStatus" style="margin-left:0;">Disabled</span></label>
-</div>
-<div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
-</div>
-<div class="fullRow buttonOnlyRow cheatsSkipRow">
-<button class="smallBtn" id="btnSkipToLevel2" style="width:100%; min-height:46px; font-size:16px;" type="button">Skip to Level 2</button>
-</div>
-</div>
-</div>
-<div class="btnRow menuBottomRow" style="margin-top:14px;">
-<button class="smallBtn" id="btnCheatsBack">Back</button>
-</div>
-</div>
-</div>
-<div aria-hidden="true" class="panel shooter-menu16x9Surface" id="controlsMenu" style="display:none;">
-<div id="controlsMenuInner">
-<div class="title" id="controlsMenuTitle">Keyboard / Mouse Controls</div>
-<div class="controlsGrid">
-<div id="controlsListScroll">
-<div class="optRow controlsListPanel">
-<div class="controlsBindList" id="controlsBindList"></div>
-</div>
-</div>
-</div>
-<div class="btnRow menuBottomRow" style="margin-top:14px;">
-<button class="smallBtn" id="controlsBack" type="button">Back</button>
-<button class="smallBtn" id="controlsResetBinds" type="button">Reset Defaults</button>
-<button class="smallBtn applyStateBtn" id="controlsApplyBinds" style="display:none;" type="button">Apply? <span class="applyX">(✕)</span></button>
-</div>
-</div>
-</div>
-<div aria-label="Controller input preview" class="panel" id="controlsPreviewMenu" style="display:none;">
-<div class="title" id="controlsPreviewTitle">Test Controller</div>
-<iframe allow="gamepad" id="controlsPreviewFrame" src="/games/shooter-game/assets/controller-buttons/controls.html" tabindex="0" title="Xbox One controller input preview"></iframe>
-<button class="smallBtn" id="controlsPreviewBack" type="button">Back</button>
-</div>
-</div>
+
 <script>
 (function(){
   const START_MENU_BUTTON_IDS = ["btnStart", "btnMenu", "btnEnterNickname", "btnImages", "btnStats", "btnOptions"];
@@ -6574,6 +6707,7 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
   });
 })();
 </script>
+
 <script src="/games/shooter-game/assets/scripts/level-frame-bridge.js"></script>
 <script src="/games/shooter-game/assets/scripts/level-shared-commands.js"></script>
 <script src="/games/shooter-game/assets/scripts/level-bg-suggest.js"></script>
@@ -6588,6 +6722,7 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
 <script src="/games/shooter-game/assets/scripts/level1-runtime.js"></script>
 <script src="/games/shooter-game/assets/scripts/time-easter-egg.js"></script>
 <script src="/games/shooter-game/assets/scripts/level1-win-fallbacks.js"></script>
+
 <div id="heartsHud" style="
 position:fixed;
 bottom:12px;
@@ -6602,6 +6737,8 @@ display:none;
 white-space:nowrap;
 line-height:1;
 ">❤️ ❤️ ❤️ ❤️</div>
+
+
 <style id="statsNicknameTrackButtonMatchesHubControlsButtonFinal">
   /* v2.XX: Make the Stats tab nickname prompt/input match the Hub > Options Controls button footprint. */
   #btnStatsEnterNickname,
@@ -6651,6 +6788,9 @@ line-height:1;
     box-shadow:0 0 0 2px rgba(0,255,0,0.45), 0 0 18px rgba(0,255,0,0.22) !important;
   }
 </style>
+
+
+
 <style id="scoreStorePauseExactFootprintFinalPatch">
   /* Final store footprint patch: store replaces Pause and inherits the same 16:9 Start/Pause shell. */
   html body #pauseOverlay.scoreStoreVisible > #pausePanel,
@@ -6719,6 +6859,8 @@ line-height:1;
     display:none !important;
   }
 </style>
+
+
 <style id="pauseStoreStartOpacityMatchFinalPatch">
   /* Keep Pause and Store panel surfaces at the same purple opacity as the Start panel.
      Level 1 defines the Start panel color through --shooter-start-hub-frame-bg;
@@ -6730,6 +6872,8 @@ line-height:1;
     background:var(--shooter-start-hub-frame-bg, rgba(75,0,118,0.72)) !important;
   }
 </style>
+
+
 <style id="scoreStoreThreeColumnGridFinalPatch">
   /* v7: Store items use a three-column card grid inside the existing 16:9 store shell. */
   html body #pauseOverlay #scoreStoreItems{
@@ -6788,6 +6932,8 @@ line-height:1;
     }
   }
 </style>
+
+
 <style id="cheatsInfinityLivesOutlinePatch">
   /* v14: Match the lives counter outline to the HUD box thickness/color all the time. */
   html body #livesSlot.cornerSlot,
@@ -6796,6 +6942,8 @@ line-height:1;
     box-shadow:0 0 18px rgba(0,255,102,0.16) !important;
   }
 </style>
+
+
 <style id="hudBigCountsAndBombOutlinePatch">
   /* v17: HUD clarity pass. Bigger cheat infinity, bigger resource counts, matching bomb/lives outlines. */
   html body #accuracyScore .cheatsInfinitySymbol{
@@ -6827,62 +6975,7 @@ line-height:1;
     box-shadow:0 0 18px rgba(0,255,102,0.16) !important;
   }
 </style>
-<style id="iframeMenuPanelHostSizing">
-html body #startMenu.menu-panel-iframe-host,
-html body #pausePanel.menu-panel-iframe-host{
-  width:var(--shooter-start-hub-frame-width, min(640px, 92vw)) !important;
-  min-width:var(--shooter-start-hub-frame-width, min(640px, 92vw)) !important;
-  max-width:var(--shooter-start-hub-frame-width, min(640px, 92vw)) !important;
-  height:var(--shooter-start-hub-frame-height, min(360px, calc(100vh - 32px))) !important;
-  min-height:var(--shooter-start-hub-frame-height, min(360px, calc(100vh - 32px))) !important;
-  max-height:var(--shooter-start-hub-frame-height, min(360px, calc(100vh - 32px))) !important;
-  aspect-ratio:16 / 9 !important;
-  box-sizing:border-box !important;
-  margin:0 auto !important;
-  padding:0 !important;
-  border:0 !important;
-  border-radius:0 !important;
-  background:transparent !important;
-  box-shadow:none !important;
-  overflow:visible !important;
-  position:relative !important;
-  display:block !important;
-}
-html body #startMenu.menu-panel-iframe-host > iframe,
-html body #pausePanel.menu-panel-iframe-host > iframe{
-  display:block !important;
-  width:100% !important;
-  height:100% !important;
-  min-width:100% !important;
-  min-height:100% !important;
-  border:0 !important;
-  background:transparent !important;
-}
-</style>
-<style id="menuPanelIframeHostTransparencyFinalOverride">
-html body #uiRoot > #startMenu.menu-panel-iframe-host,
-html body #uiRoot > #startMenu.menu-panel-iframe-host.panel,
-html body #pauseOverlay > #pausePanel.menu-panel-iframe-host,
-html body #pauseOverlay > #pausePanel.menu-panel-iframe-host.panel{
-  background:transparent !important;
-  border:0 !important;
-  box-shadow:none !important;
-  padding:0 !important;
-  outline:0 !important;
-}
-html body #uiRoot > #startMenu.menu-panel-iframe-host::before,
-html body #uiRoot > #startMenu.menu-panel-iframe-host::after,
-html body #pauseOverlay > #pausePanel.menu-panel-iframe-host::before,
-html body #pauseOverlay > #pausePanel.menu-panel-iframe-host::after{
-  content:none !important;
-  display:none !important;
-}
-html body #uiRoot > #startMenu.menu-panel-iframe-host > iframe,
-html body #pauseOverlay > #pausePanel.menu-panel-iframe-host > iframe{
-  border:0 !important;
-  background:transparent !important;
-  box-shadow:none !important;
-}
-</style>
+
 </body>
+
 </html>
