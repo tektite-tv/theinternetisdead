@@ -1300,6 +1300,16 @@ window.addEventListener("message", (event) => {
     return;
   }
 
+  if (data.type === "menu-content:action"){
+    const action = String(data.action || "").trim().toLowerCase();
+    if (action === "start-game") {
+      startGame();
+    } else if (action === "resume") {
+      if (isPaused) setPaused(false);
+    }
+    return;
+  }
+
   if (data.type === "tektite:pause-for-chat"){
     if (gameState === STATE.PLAYING && !isPaused && !isDead && !(deathOverlay && deathOverlay.style.display === "flex")){
       setPaused(true);
@@ -1906,6 +1916,16 @@ function renderLifetimeStats(){
     nicknamePrompt.hidden = !showNicknamePrompt;
     nicknamePrompt.setAttribute("aria-hidden", showNicknamePrompt ? "false" : "true");
     nicknamePrompt.tabIndex = showNicknamePrompt ? 0 : -1;
+    if (statsList && nicknamePrompt.parentNode !== statsScroll && statsScroll){
+      statsScroll.insertBefore(nicknamePrompt, statsScroll.firstChild || null);
+    } else if (statsList && statsScroll && statsScroll.firstElementChild !== nicknamePrompt){
+      statsScroll.insertBefore(nicknamePrompt, statsScroll.firstChild || null);
+    }
+  }
+  if (nicknameStatsInput && statsScroll && statsScroll.firstElementChild !== nicknameStatsInput && isStatsNicknameInputActive()){
+    const anchor = statsList || statsScroll.firstChild || null;
+    statsScroll.insertBefore(nicknameStatsInput, anchor);
+    if (nicknamePrompt && nicknamePrompt.parentNode === statsScroll) statsScroll.insertBefore(nicknamePrompt, nicknameStatsInput);
   }
   if (nicknameStatsInput && (!needsNicknameForStats || !statsInputActive)){
     nicknameStatsInput.hidden = true;
@@ -7842,7 +7862,7 @@ if (btnStatsLockedToggle){
   });
 }
 
-if (btnStart) btnStart.addEventListener("click", startGame);
+if (btnStart) if (btnStart) btnStart.addEventListener("click", startGame);
 if (btnOptions) btnOptions.addEventListener("click", () => showOptions(false));
 if (btnControls) btnControls.addEventListener("click", () => {
   showControlsMenu({ fromHubOptions: isHubOptionsControlsLaunchContext() });
