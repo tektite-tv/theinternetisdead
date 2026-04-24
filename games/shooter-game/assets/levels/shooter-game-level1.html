@@ -1573,26 +1573,28 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
   text-transform:none;
 }
 
-/* v2.XX: Uniform HUD counter boxes.
-   Score, Time, Lives, and Bombs now share the same footprint/aspect ratio.
-   The inner text is split into a small label over a larger value so the HUD reads
-   like one coordinated interface instead of four unrelated parking meters. */
+/* v2.XX: Square HUD counter boxes.
+   Score, Time, Lives, and Bombs now use the same compact square footprint.
+   The label/value stack is tuned to stay readable without letting the HUD balloon
+   back into a neon filing cabinet. */
 #scoreStoreHud,
 #timerHud,
 #livesSlot,
 #powerupSlot{
-  width:132px !important;
-  min-width:132px !important;
-  height:54px !important;
-  min-height:54px !important;
+  width:72px !important;
+  min-width:72px !important;
+  max-width:72px !important;
+  height:72px !important;
+  min-height:72px !important;
+  max-height:72px !important;
   box-sizing:border-box !important;
-  padding:5px 8px !important;
+  padding:6px 5px !important;
   border-radius:12px !important;
-  display:flex;
+  display:flex !important;
   align-items:center !important;
   justify-content:center !important;
   flex-direction:column !important;
-  gap:2px !important;
+  gap:4px !important;
   text-align:center !important;
   line-height:1 !important;
 }
@@ -1601,11 +1603,12 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
   text-align:center !important;
 }
 #timerHud{
-  font-size:18px;
+  font-size:16px;
 }
 #livesSlot,
 #powerupSlot{
   border-width:2px !important;
+  transform:none !important;
 }
 .hudBoxLabel,
 .timerHudLabel,
@@ -1615,12 +1618,12 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
   width:100%;
   margin:0 !important;
   font-family:"Courier New", monospace;
-  font-size:11px !important;
+  font-size:10px !important;
   font-weight:900 !important;
   line-height:1 !important;
-  letter-spacing:0.08em;
+  letter-spacing:0.04em;
   text-transform:uppercase;
-  opacity:0.86;
+  opacity:0.9;
   white-space:nowrap;
   text-align:center;
 }
@@ -1631,10 +1634,13 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
 #timerHud > div:last-child{
   display:block;
   width:100%;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:clip;
   font-family:"Courier New", monospace;
-  font-size:19px !important;
+  font-size:15px !important;
   font-weight:900 !important;
-  line-height:1 !important;
+  line-height:1.08 !important;
   text-align:center;
   white-space:nowrap;
 }
@@ -1642,10 +1648,11 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
   color:#ffd400;
 }
 #storeUnlockedHud{
-  font-size:9px !important;
+  font-size:7px !important;
   line-height:1 !important;
-  margin-top:1px;
+  margin-top:0;
   text-align:center;
+  white-space:nowrap;
 }
 #livesSlot img,
 #powerupEmoji{
@@ -1662,12 +1669,10 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
   margin:0;
 }
 .cheatsInfinitySymbol{
-  font-size:1.45em;
-  line-height:0.7;
+  font-size:1.35em;
+  line-height:0.72;
   vertical-align:-0.08em;
 }
-
-
 /* =======================
    Invert Colors Mode
 ======================= */
@@ -7091,24 +7096,25 @@ line-height:1;
 </style>
 
 
-<style id="hudBigCountsAndBombOutlinePatch">
-  /* v17: HUD clarity pass. Bigger cheat infinity, bigger resource counts, matching bomb/lives outlines. */
+<style id="hudSquareReadableCountsPatch">
+  /* v19: Keep the square HUD counters readable. The earlier giant count patch made
+     the numbers cosplay as billboards, which is charming until the box is square. */
   html body #accuracyScore .cheatsInfinitySymbol{
     display:inline-block !important;
     font-family:inherit !important;
-    font-size:3em !important;
+    font-size:1.65em !important;
     font-weight:900 !important;
     line-height:0.72 !important;
-    vertical-align:-0.16em !important;
-    margin:0 0.02em !important;
+    vertical-align:-0.12em !important;
+    margin:0 0.01em !important;
     color:#00ff66 !important;
     text-shadow:0 0 10px rgba(0,255,102,0.5), 0 0 18px rgba(0,255,102,0.28) !important;
   }
   html body #livesSlot #livesText,
   html body #powerupSlot #powerupHint{
-    font-size:54px !important;
+    font-size:15px !important;
     font-weight:900 !important;
-    line-height:0.86 !important;
+    line-height:1.08 !important;
     color:#00ff66 !important;
     opacity:1 !important;
     text-shadow:0 0 10px rgba(0,255,102,0.42), 0 0 18px rgba(0,255,102,0.2) !important;
@@ -7122,6 +7128,8 @@ line-height:1;
     box-shadow:0 0 18px rgba(0,255,102,0.16) !important;
   }
 </style>
+
+
 
 
 <style id="youDiedHalfSize16x9FinalPatch">
