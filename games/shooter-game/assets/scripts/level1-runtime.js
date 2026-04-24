@@ -1384,6 +1384,12 @@ window.addEventListener("message", (event) => {
     return;
   }
 
+  if (data.type === "tektite:saved-images-updated"){
+    if (typeof renderSavedImages === "function") renderSavedImages();
+    showSavedImageStatus(String(data.message || (data.ok === false ? "Unable to save screenshot." : "Screenshot saved to Profile > Saved Images.")), data.ok !== false);
+    return;
+  }
+
   if (data.type !== "tektite:execute-command") return;
 
   const command = String(data.command || "").trim();
@@ -1774,6 +1780,28 @@ async function saveCurrentGameImage(levelLabel="Level 1"){
     return saved;
   }catch(error){
     console.error("In-game screenshot save failed:", error);
+    return false;
+  }
+}
+
+function showSavedImageStatus(message, ok = true){
+  if (typeof assetStatus === "undefined" || !assetStatus) return;
+  assetStatus.style.display = "block";
+  assetStatus.textContent = message || (ok ? "Screenshot saved to Profile > Saved Images." : "Unable to save screenshot.");
+  window.clearTimeout(showSavedImageStatus._statusTimer);
+  showSavedImageStatus._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, ok ? 1800 : 2400);
+}
+
+function requestParentPageScreenshot(levelLabel="Level 1"){
+  if (!window.parent || window.parent === window) return false;
+  try{
+    window.parent.postMessage({
+      type: "tektite:request-page-screenshot",
+      level: levelLabel
+    }, "*");
+    showSavedImageStatus("Saving screenshot...");
+    return true;
+  }catch(error){
     return false;
   }
 }
@@ -8989,7 +9017,9 @@ function pollGamepad(dt){
   }
 
   if (pressScreenshotCombo){
-    saveCurrentGameImage("Level 1");
+    if (!requestParentPageScreenshot("Level 1")){
+      saveCurrentGameImage("Level 1");
+    }
   }
 
   const navUp = consumeMenuAxis('up', dUp || ly < -GP_MENU_AXIS_THRESHOLD, dt);

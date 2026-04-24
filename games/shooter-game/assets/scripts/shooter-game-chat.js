@@ -58,6 +58,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/nickname', desc: 'Set the displayed username used by system messages', usage: '/nickname ', suggestions: ['Tektite', 'Guest', 'User'] },
       { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'], cheatOnly: true },
       { name: '/shoot', desc: 'Set player bullet mode', usage: '/shoot [normal|big_bullets|glitch]', suggestions: ['normal', 'big_bullets', 'glitch'], cheatOnly: true },
+      { name: '/screenshot', desc: 'Save a browser-matched screenshot to Profile > Saved Images', usage: '/screenshot' },
       { name: '/video_fx', desc: 'Toggle video effects on or off', usage: '/video_fx' }
     ];
     let hasSwitchedToLevel2 = false;
@@ -122,6 +123,189 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           }, '*');
         }
       } catch (error) {}
+    }
+
+
+    const SHOOTER_SAVED_IMAGES_KEY = 'tektiteShooterSavedImages';
+    const SHOOTER_SAVED_IMAGES_MAX = 10;
+
+    async function loadHtml2CanvasInto(doc, win) {
+      if (!doc || !win) throw new Error('Screenshot target is not ready.');
+      if (typeof win.html2canvas === 'function') return win.html2canvas;
+      const existing = doc.querySelector('script[data-html2canvas-loader="true"]');
+      if (existing) {
+        await new Promise((resolve, reject) => {
+          if (typeof win.html2canvas === 'function') return resolve();
+          existing.addEventListener('load', () => resolve(), { once: true });
+          existing.addEventListener('error', () => reject(new Error('Unable to load screenshot renderer.')), { once: true });
+        });
+        if (typeof win.html2canvas === 'function') return win.html2canvas;
+      }
+      await new Promise((resolve, reject) => {
+        const script = doc.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        script.async = true;
+        script.dataset.html2canvasLoader = 'true';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Unable to load screenshot renderer.'));
+        (doc.head || doc.documentElement || doc.body).appendChild(script);
+      });
+      if (typeof win.html2canvas !== 'function') throw new Error('Screenshot renderer did not initialize.');
+      return win.html2canvas;
+    }
+
+    function waitForImagesInDocument(doc) {
+      if (!doc) return Promise.resolve();
+      return Promise.all(Array.from(doc.images || []).map((img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          const done = () => resolve();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        });
+      }));
+    }
+
+    async function renderShooterHostCanvas() {
+      const html2canvas = await loadHtml2CanvasInto(document, window);
+      await waitForImagesInDocument(document);
+      const width = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1));
+      const height = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1));
+      return html2canvas(document.documentElement, {
+        backgroundColor: window.getComputedStyle(document.body).backgroundColor || '#000',
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        scale: 1,
+        width,
+        height,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: width,
+        windowHeight: height,
+        ignoreElements: (el) => el && (el.id === 'tektite-frame' || el.id === 'chat-sandbox-frame')
+      });
+    }
+
+    async function renderShooterLevelFrameCanvas() {
+      if (!tektiteFrame || !tektiteFrame.contentWindow) throw new Error('Shooter level frame is not ready.');
+      const frameWindow = tektiteFrame.contentWindow;
+      const frameDoc = frameWindow.document;
+      const frameRect = tektiteFrame.getBoundingClientRect();
+      const rawFrameWidth = Math.max(1, tektiteFrame.clientWidth || Math.round(frameRect.width));
+      const rawFrameHeight = Math.max(1, tektiteFrame.clientHeight || Math.round(frameRect.height));
+      if (!frameDoc || !frameDoc.documentElement || rawFrameWidth <= 0 || rawFrameHeight <= 0) throw new Error('Shooter level frame has no visible size.');
+      try {
+        const html2canvas = await loadHtml2CanvasInto(frameDoc, frameWindow);
+        await waitForImagesInDocument(frameDoc);
+        return await html2canvas(frameDoc.documentElement, {
+          backgroundColor: frameWindow.getComputedStyle(frameDoc.body).backgroundColor || '#000',
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          scale: 1,
+          x: Math.max(0, Math.round(frameWindow.scrollX || 0)),
+          y: Math.max(0, Math.round(frameWindow.scrollY || 0)),
+          width: rawFrameWidth,
+          height: rawFrameHeight,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: Math.max(rawFrameWidth, frameDoc.documentElement.scrollWidth || rawFrameWidth),
+          windowHeight: Math.max(rawFrameHeight, frameDoc.documentElement.scrollHeight || rawFrameHeight)
+        });
+      } catch (error) {
+        if (typeof frameWindow.tektiteCreateLevelScreenshotDataUrl !== 'function') throw error;
+        const dataUrl = await frameWindow.tektiteCreateLevelScreenshotDataUrl({
+          canvas: frameDoc.getElementById('game'),
+          type: 'image/jpeg',
+          quality: 0.88
+        });
+        const image = new Image();
+        await new Promise((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(error);
+          image.src = dataUrl;
+        });
+        const canvas = document.createElement('canvas');
+        canvas.width = rawFrameWidth;
+        canvas.height = rawFrameHeight;
+        const context = canvas.getContext('2d', { alpha: false });
+        context.drawImage(image, 0, 0, rawFrameWidth, rawFrameHeight);
+        return canvas;
+      }
+    }
+
+    async function createShooterPageScreenshotDataUrl() {
+      const [hostCanvas, levelCanvas] = await Promise.all([renderShooterHostCanvas(), renderShooterLevelFrameCanvas()]);
+      const width = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1));
+      const height = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1));
+      const frameRect = tektiteFrame.getBoundingClientRect();
+      const outputCanvas = document.createElement('canvas');
+      outputCanvas.width = width;
+      outputCanvas.height = height;
+      const context = outputCanvas.getContext('2d', { alpha: false });
+      if (!context) throw new Error('Unable to create screenshot canvas.');
+      context.fillStyle = window.getComputedStyle(document.body).backgroundColor || '#000';
+      context.fillRect(0, 0, width, height);
+      context.drawImage(hostCanvas, 0, 0, hostCanvas.width, hostCanvas.height, 0, 0, width, height);
+      context.drawImage(levelCanvas, 0, 0, levelCanvas.width, levelCanvas.height, Math.round(frameRect.left), Math.round(frameRect.top), Math.round(frameRect.width), Math.round(frameRect.height));
+      return outputCanvas.toDataURL('image/jpeg', 0.88);
+    }
+
+    function notifyLevelSavedImagesUpdated(payload = {}) {
+      try {
+        if (tektiteFrame && tektiteFrame.contentWindow) {
+          tektiteFrame.contentWindow.postMessage({
+            type: 'tektite:saved-images-updated',
+            ok: payload.ok !== false,
+            message: payload.message || ''
+          }, '*');
+        }
+      } catch (error) {}
+    }
+
+    function saveShooterPageScreenshotToStorage(dataUrl, label) {
+      if (!dataUrl) return false;
+      const entry = {
+        id: `shot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: new Date().toISOString(),
+        level: label || (hasSwitchedToLevel2 ? 'Level 2' : 'Level 1'),
+        dataUrl
+      };
+      let images = [];
+      try {
+        const parsed = JSON.parse(localStorage.getItem(SHOOTER_SAVED_IMAGES_KEY) || '[]');
+        images = Array.isArray(parsed) ? parsed.filter((item) => item && item.dataUrl) : [];
+      } catch (error) {
+        images = [];
+      }
+      images.unshift(entry);
+      try {
+        localStorage.setItem(SHOOTER_SAVED_IMAGES_KEY, JSON.stringify(images.slice(0, SHOOTER_SAVED_IMAGES_MAX)));
+        notifyLevelSavedImagesUpdated({ ok: true, message: 'Screenshot saved to Profile > Saved Images.' });
+        return true;
+      } catch (error) {
+        try {
+          localStorage.setItem(SHOOTER_SAVED_IMAGES_KEY, JSON.stringify(images.slice(0, Math.max(1, Math.floor(SHOOTER_SAVED_IMAGES_MAX / 2)))));
+          notifyLevelSavedImagesUpdated({ ok: true, message: 'Screenshot saved to Profile > Saved Images.' });
+          return true;
+        } catch (secondError) {
+          notifyLevelSavedImagesUpdated({ ok: false, message: 'Could not save screenshot. Local storage is full.' });
+          return false;
+        }
+      }
+    }
+
+    async function saveShooterPageScreenshot(options = {}) {
+      try {
+        const dataUrl = await createShooterPageScreenshotDataUrl();
+        const saved = saveShooterPageScreenshotToStorage(dataUrl, options.level || (hasSwitchedToLevel2 ? 'Level 2' : 'Level 1'));
+        return { ok: saved, message: saved ? 'Screenshot saved to Profile > Saved Images.' : 'Could not save screenshot. Local storage is full.' };
+      } catch (error) {
+        console.error('Shooter page screenshot failed:', error);
+        notifyLevelSavedImagesUpdated({ ok: false, message: 'Unable to save screenshot.' });
+        return { ok: false, message: 'Unable to save screenshot.' };
+      }
     }
 
     function setChatFrameVisible(visible) {
@@ -893,6 +1077,16 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
             });
             return;
           }
+          if (commandName === '/screenshot') {
+            const result = await saveShooterPageScreenshot({ level: hasSwitchedToLevel2 ? 'Level 2' : 'Level 1' });
+            postToChatSandbox({
+              type: 'pageChatResult',
+              command: '/screenshot',
+              message: result.message,
+              announce: true
+            });
+            return;
+          }
           if (commandName === '/nickname') {
             const nextNickname = rawCommand.slice('/nickname'.length).trim();
             postToChatSandbox({
@@ -912,6 +1106,12 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           }
           return;
         }
+      }
+
+      if (data.type === 'tektite:request-page-screenshot') {
+        const label = String(data.level || (hasSwitchedToLevel2 ? 'Level 2' : 'Level 1')).trim() || 'Shooter Game';
+        saveShooterPageScreenshot({ level: label });
+        return;
       }
 
       if (data.type === 'tektite:input-mode') {
