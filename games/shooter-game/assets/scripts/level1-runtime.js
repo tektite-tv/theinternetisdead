@@ -3468,7 +3468,6 @@ function clearControlsMenuMeasuredInlineSizing(){
 function fitControlsMenuToViewport(){
   if (isHubOptionsControlsFrameActive()){
     clearControlsMenuMeasuredInlineSizing();
-    if (controlsListScroll) controlsListScroll.scrollTop = 0;
     return;
   }
   sizeMenuLikeStartMenu(controlsMenu, controlsMenuInner, controlsListScroll);
@@ -5442,11 +5441,29 @@ function openNicknamePromptFromStats(){
   return showStatsNicknameInput();
 }
 
+function scrollElementByPixels(el, delta){
+  if (!el || !delta) return false;
+  const maxScroll = Math.max(0, (el.scrollHeight || 0) - (el.clientHeight || 0));
+  if (maxScroll <= 0) return false;
+  const previous = el.scrollTop || 0;
+  el.scrollTop = Math.max(0, Math.min(maxScroll, previous + delta));
+  return el.scrollTop !== previous;
+}
+
 function scrollStatsPanelBy(delta){
-  if (!statsScroll || !delta) return false;
-  const previous = statsScroll.scrollTop;
-  statsScroll.scrollTop = Math.max(0, previous + delta);
-  return statsScroll.scrollTop !== previous;
+  return scrollElementByPixels(statsScroll, delta);
+}
+
+function scrollOptionsPanelBy(delta){
+  return scrollElementByPixels(optionsScroll, delta);
+}
+
+function scrollCheatsPanelBy(delta){
+  return scrollElementByPixels(cheatsScroll, delta);
+}
+
+function scrollControlsPanelBy(delta){
+  return scrollElementByPixels(controlsListScroll, delta);
 }
 
 function getWinControllerTargets(){
@@ -5626,11 +5643,41 @@ function syncWinFocusIndexFromElement(target){
   return true;
 }
 
+function getControlsScrollTargetElement(el){
+  if (!el) return null;
+  return el.closest('.controlsBindRow, .controlsPreviewRow, .buttonOnlyRow') || el;
+}
+
+function keepControlsControllerTargetFullyVisible(el){
+  if (!controlsListScroll || !el) return;
+  const target = getControlsScrollTargetElement(el);
+  if (!target) return;
+
+  const adjust = () => {
+    if (!controlsListScroll || !target.isConnected) return;
+    const containerRect = controlsListScroll.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const marginTop = 12;
+    const marginBottom = 18;
+
+    if (targetRect.top < containerRect.top + marginTop){
+      controlsListScroll.scrollTop = Math.max(0, controlsListScroll.scrollTop - ((containerRect.top + marginTop) - targetRect.top));
+    } else if (targetRect.bottom > containerRect.bottom - marginBottom){
+      controlsListScroll.scrollTop += targetRect.bottom - (containerRect.bottom - marginBottom);
+    }
+  };
+
+  try{ adjust(); }catch(_){ }
+  try{ requestAnimationFrame(adjust); }catch(_){ setTimeout(adjust, 0); }
+}
+
 function syncControlsControllerFocus(){
   const items = getControlsControllerTargets();
   if (!items.length) return;
   controlsFocusIndex = Math.max(0, Math.min(controlsFocusIndex, items.length - 1));
-  focusControllerElement(items[controlsFocusIndex]);
+  const target = items[controlsFocusIndex];
+  focusControllerElement(target);
+  keepControlsControllerTargetFullyVisible(target);
 }
 
 function blurCapturedControllerInputIfNeeded(backButton){
@@ -6101,7 +6148,6 @@ function moveControlsControllerFocus(delta){
   }
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncControlsControllerFocus();
   else clearControllerFocus();
-  fitControlsMenuToViewport();
 }
 
 function moveStartingStatFocus(delta){
@@ -8873,13 +8919,13 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
-        if (rNavUp) adjustControllerCheat(1);
-        if (rNavDown) adjustControllerCheat(-1);
+        if (rNavUp) scrollCheatsPanelBy(-72);
+        if (rNavDown) scrollCheatsPanelBy(72);
       } else {
         if (navLeft) adjustControllerCheat(-1);
         if (navRight) adjustControllerCheat(1);
-        if (rNavUp) adjustControllerCheat(1);
-        if (rNavDown) adjustControllerCheat(-1);
+        if (rNavUp) scrollCheatsPanelBy(-72);
+        if (rNavDown) scrollCheatsPanelBy(72);
       }
       if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
       if (pressMenuBack) handleCheatsControllerBackButton();
@@ -8894,13 +8940,13 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
-        if (rNavUp) adjustControllerOption(1);
-        if (rNavDown) adjustControllerOption(-1);
+        if (rNavUp) scrollOptionsPanelBy(-72);
+        if (rNavDown) scrollOptionsPanelBy(72);
       } else {
         if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
         if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
-        if (rNavUp) adjustControllerOption(1);
-        if (rNavDown) adjustControllerOption(-1);
+        if (rNavUp) scrollOptionsPanelBy(-72);
+        if (rNavDown) scrollOptionsPanelBy(72);
       }
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) handleOptionsControllerBackButton();
@@ -8988,13 +9034,13 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
-        if (rNavUp) adjustControllerCheat(1);
-        if (rNavDown) adjustControllerCheat(-1);
+        if (rNavUp) scrollCheatsPanelBy(-72);
+        if (rNavDown) scrollCheatsPanelBy(72);
       } else {
         if (navLeft) adjustControllerCheat(-1);
         if (navRight) adjustControllerCheat(1);
-        if (rNavUp) adjustControllerCheat(1);
-        if (rNavDown) adjustControllerCheat(-1);
+        if (rNavUp) scrollCheatsPanelBy(-72);
+        if (rNavDown) scrollCheatsPanelBy(72);
       }
       if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
       if (pressMenuBack) handleCheatsControllerBackButton();
@@ -9013,6 +9059,8 @@ function pollGamepad(dt){
         if (navLeft) moveControlsControllerFocus(-1);
         if (navRight) moveControlsControllerFocus(1);
       }
+      if (rNavUp) scrollControlsPanelBy(-72);
+      if (rNavDown) scrollControlsPanelBy(72);
       if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
       if (pressMenuBack){
         if (bindingEditState) cancelBindingEdit();
@@ -9035,6 +9083,8 @@ function pollGamepad(dt){
         if (pressListBottom) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, 1);
         if (navUp || navLeft) moveControlsControllerFocus(-1);
         if (navDown || navRight) moveControlsControllerFocus(1);
+        if (rNavUp) scrollControlsPanelBy(-72);
+        if (rNavDown) scrollControlsPanelBy(72);
         if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
         if (pressMenuBack){
           if (bindingEditState) cancelBindingEdit();
@@ -9101,13 +9151,13 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
-        if (rNavUp) adjustControllerOption(1);
-        if (rNavDown) adjustControllerOption(-1);
+        if (rNavUp) scrollOptionsPanelBy(-72);
+        if (rNavDown) scrollOptionsPanelBy(72);
       } else {
         if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
         if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
-        if (rNavUp) adjustControllerOption(1);
-        if (rNavDown) adjustControllerOption(-1);
+        if (rNavUp) scrollOptionsPanelBy(-72);
+        if (rNavDown) scrollOptionsPanelBy(72);
       }
       if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
       if (pressMenuBack) handleOptionsControllerBackButton();
@@ -9119,13 +9169,13 @@ function pollGamepad(dt){
       if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
         if (navLeft) moveStartingStatFocus(-1);
         if (navRight) moveStartingStatFocus(1);
-        if (rNavUp) adjustControllerCheat(1);
-        if (rNavDown) adjustControllerCheat(-1);
+        if (rNavUp) scrollCheatsPanelBy(-72);
+        if (rNavDown) scrollCheatsPanelBy(72);
       } else {
         if (navLeft) adjustControllerCheat(-1);
         if (navRight) adjustControllerCheat(1);
-        if (rNavUp) adjustControllerCheat(1);
-        if (rNavDown) adjustControllerCheat(-1);
+        if (rNavUp) scrollCheatsPanelBy(-72);
+        if (rNavDown) scrollCheatsPanelBy(72);
       }
       if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
       if (pressMenuBack) handleCheatsControllerBackButton();
