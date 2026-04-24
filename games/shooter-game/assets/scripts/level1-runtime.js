@@ -2589,6 +2589,27 @@ function getSavedImagePanelViewerCards(){
   });
 }
 
+function getSavedImagePanelViewerControllerTargets(){
+  return [btnSavedImagePanelBack, btnSavedImagePanelFullscreen].filter(Boolean);
+}
+
+function syncSavedImagePanelViewerControllerFocus(){
+  if (!savedImagePanelViewerActive || activeInputMode !== INPUT_MODE_CONTROLLER) return false;
+  const items = getSavedImagePanelViewerControllerTargets();
+  if (!items.length) return false;
+  savedImagePanelViewerFocusIndex = Math.max(0, Math.min(savedImagePanelViewerFocusIndex, items.length - 1));
+  focusControllerElement(items[savedImagePanelViewerFocusIndex]);
+  return true;
+}
+
+function moveSavedImagePanelViewerControllerFocus(delta){
+  if (!savedImagePanelViewerActive) return false;
+  const items = getSavedImagePanelViewerControllerTargets();
+  if (!items.length) return false;
+  savedImagePanelViewerFocusIndex = (savedImagePanelViewerFocusIndex + delta + items.length) % items.length;
+  return syncSavedImagePanelViewerControllerFocus();
+}
+
 function syncSavedImagePanelViewerImage(){
   const cards = getSavedImagePanelViewerCards();
   if (!cards.length || !savedImagePanelViewerImage) return false;
@@ -2613,7 +2634,9 @@ function openSavedImagePanelViewer(indexOrCard){
   savedImagePanelViewerActive = true;
   if (menuHubPanel) menuHubPanel.classList.add("savedImageViewerMode");
   if (savedImagePanelViewer) savedImagePanelViewer.setAttribute("aria-hidden", "false");
-  clearControllerFocus();
+  savedImagePanelViewerFocusIndex = 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncSavedImagePanelViewerControllerFocus();
+  else clearControllerFocus();
   return true;
 }
 
@@ -4632,6 +4655,7 @@ let btnSavedImagePanelFullscreen = null;
 let savedImagePanelViewerActive = false;
 let savedImagePanelViewerIndex = 0;
 let savedImagePanelViewerReturnFocus = null;
+let savedImagePanelViewerFocusIndex = 0;
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
@@ -9981,9 +10005,16 @@ function pollGamepad(dt){
       if (pressPause) activateControllerTarget(btnBack);
     } else if (gameState === STATE.HUB){
       if (savedImagePanelViewerActive){
-        if (navLeft || rNavLeft) moveSavedImagePanelViewer(-1);
-        if (navRight || rNavRight) moveSavedImagePanelViewer(1);
-        if (pressMenuSelect) requestSavedImagePanelFullscreen();
+        // In the full-panel image view, controller focus belongs to the two
+        // visible buttons. A activates the focused button; right stick still
+        // flips through saved images without stealing that focus.
+        if (rNavLeft) moveSavedImagePanelViewer(-1);
+        if (rNavRight) moveSavedImagePanelViewer(1);
+        if (navLeft || navUp) moveSavedImagePanelViewerControllerFocus(-1);
+        if (navRight || navDown) moveSavedImagePanelViewerControllerFocus(1);
+        if (pressListTop) { savedImagePanelViewerFocusIndex = 0; syncSavedImagePanelViewerControllerFocus(); }
+        if (pressListBottom) { savedImagePanelViewerFocusIndex = getSavedImagePanelViewerControllerTargets().length - 1; syncSavedImagePanelViewerControllerFocus(); }
+        if (pressMenuSelect) activateControllerTarget(getSavedImagePanelViewerControllerTargets()[savedImagePanelViewerFocusIndex]);
         if (pressMenuBack || pressPause) closeSavedImagePanelViewer();
         return;
       }
