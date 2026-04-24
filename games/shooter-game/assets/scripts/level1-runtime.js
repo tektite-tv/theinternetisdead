@@ -1445,7 +1445,7 @@ let shieldHoldGrace = 0;
 const SHIELD_HOLD_GRACE_SECS = 0.25;
 
 function hasActivePlayer(){
-  return (gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused)) && !playerSpectatorMode;
+  return (isPausedGameplayMenuBackdropState()) && !playerSpectatorMode;
 }
 
 function canActivateShield(){
@@ -2524,7 +2524,7 @@ if (scoreStoreHud){
 }
 function updateAccuracyScoreHUD(){
   if (!accuracyScoreEl) return;
-  const isPlaying = (gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused));
+  const isPlaying = (isPausedGameplayMenuBackdropState());
   const scoreVisible = isPlaying && !scoreTrackingDisabled;
   const cheatsVisible = isPlaying && scoreTrackingDisabled;
   const hudVisible = scoreVisible || cheatsVisible;
@@ -2624,7 +2624,7 @@ function refreshWinStats(){
 function updateTimerHUD(){
   if (!timerHud) return;
   // Show timer during gameplay and during the frozen Pause -> Menu Hub snapshot.
-  if (!(gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused))){
+  if (!(isPausedGameplayMenuBackdropState())){
     timerHud.style.display = "none";
     return;
   }
@@ -3692,7 +3692,7 @@ function syncStageWaveDropdown(){
     return;
   }
   setStageWaveDropdownVisible(true);
-  const isGameplayHud = gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused);
+  const isGameplayHud = isPausedGameplayMenuBackdropState();
   const desiredValue = isGameplayHud ? String(wave || START_WAVE || 1) : String(stageWaveMenuSelection || "menu");
   if (stageWaveDropdown.value !== desiredValue) stageWaveDropdown.value = desiredValue;
   if (stageWaveDropdown.value !== desiredValue) stageWaveDropdown.value = "menu";
@@ -3704,7 +3704,7 @@ function jumpToWaveFromHudSelect(nextWave){
   if (startWaveSelect) startWaveSelect.value = String(n);
   if (startWaveLabel) startWaveLabel.textContent = getStartWaveText(n);
   syncStartOptionsLabels();
-  if (!(gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused))){
+  if (!(isPausedGameplayMenuBackdropState())){
     stageWaveMenuSelection = String(n);
     syncStageWaveDropdown();
     return;
@@ -4569,6 +4569,11 @@ let cheatsOpenedFromPause = false;
 // Tracks Cheats opened from Options while Options is hosted inside the Menu Hub.
 // Back should restore Hub -> Options, not the standalone Options menu or Start menu.
 let cheatsOpenedFromHubOptions = false;
+// v13.05: Tracks Hub -> Options child panels launched while the Hub itself came
+// from Pause. Those screens must keep gameplay frozen behind them instead of
+// secretly resuming the run. Humanity survives another focus-state bug.
+let controlsOpenedFromPausedHubOptions = false;
+let cheatsOpenedFromPausedHubOptions = false;
 let controlsPreviewOpen = false;
 let controlsPreviewControllerCaptured = false;
 let controlsPreviewReleaseArmed = false;
@@ -5270,6 +5275,22 @@ function getPauseControllerTargets(){
 
 function isPauseOptionsOpen(){
   return !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+}
+
+function isPausedGameplayMenuBackdropState(){
+  return !!(
+    gameState === STATE.PLAYING ||
+    (
+      isPaused &&
+      (
+        (menuHubOpenedFromPause && (gameState === STATE.HUB || gameState === STATE.CONTROLS || gameState === STATE.CHEATS)) ||
+        (optionsOpenedFromPause && gameState === STATE.OPTIONS) ||
+        (cheatsOpenedFromPause && gameState === STATE.CHEATS) ||
+        (controlsOpenedFromPausedHubOptions && gameState === STATE.CONTROLS) ||
+        (cheatsOpenedFromPausedHubOptions && gameState === STATE.CHEATS)
+      )
+    )
+  );
 }
 
 function isCheatermodeOptionsContextOpen(){
@@ -6550,6 +6571,7 @@ function showControlsMenu(options = null){
   if (!controlsMenu) return;
   hideControlsPreviewMenu({ restoreControlsMenu: false });
   const fromHubOptions = shouldForceHubOptionsControlsMode(options);
+  const openingFromPausedHubOptions = !!(fromHubOptions && menuHubOpenedFromPause && isPaused);
   const fromOptions = (optionsMenu && optionsMenu.style.display !== "none") || fromHubOptions;
   const fromMenu = startMenu && startMenu.style.display !== "none";
   if (!fromOptions && !fromMenu && !pauseControlsOpen) return;
@@ -6558,20 +6580,28 @@ function showControlsMenu(options = null){
   else getFallbackMenuRect();
 
   controlsReturnState = fromHubOptions ? STATE.HUB : (fromOptions ? STATE.OPTIONS : STATE.MENU);
+  controlsOpenedFromPausedHubOptions = openingFromPausedHubOptions;
   setControlsStandaloneMenuOpen(true, { fromHubOptions });
   if (fromHubOptions){
     restoreMenuHubActiveInner();
   }
 
-  setPaused(false);
+  if (openingFromPausedHubOptions){
+    isPaused = true;
+    if (pauseOverlay) pauseOverlay.style.display = "none";
+  } else {
+    setPaused(false);
+  }
   pauseControlsOpen = false;
   pauseOverlay.classList.remove("pauseControlsVisible");
   uiRoot.classList.remove("pauseControlsOpen");
   uiRoot.classList.remove("optionsBackdrop");
   gameState = STATE.CONTROLS;
   syncStartMenuHudLayerMode();
-  unlockAudioOnce();
-  if (!audioMuted) ensureMenuMusicPlaying();
+  if (!openingFromPausedHubOptions){
+    unlockAudioOnce();
+    if (!audioMuted) ensureMenuMusicPlaying();
+  }
   resetDraftBindingsFromActive();
   markControlsClean(false);
   lockControlsInputMode(activeInputMode);
@@ -6613,10 +6643,13 @@ function hideControlsMenu(){
     return;
   }
   if (controlsReturnState === STATE.HUB){
-    openMenuHub();
+    const returnToPausedHubOptions = !!(controlsOpenedFromPausedHubOptions && isPaused);
+    controlsOpenedFromPausedHubOptions = false;
+    openMenuHub(returnToPausedHubOptions ? { keepGameplayPaused:true, fromPause:true } : null);
     selectMenuHubTab("options", activeInputMode === INPUT_MODE_CONTROLLER);
     return;
   }
+  controlsOpenedFromPausedHubOptions = false;
   showMenu();
 }
 
@@ -6794,18 +6827,21 @@ function showCheats(){
     (hubOptionsInnerMounted || cheatsButtonHostedInHub || gameState === STATE.HUB)
   );
   const openingFromPauseOptions = !!(optionsOpenedFromPause && isPaused && optionsMenu && optionsMenu.style.display === "block");
+  const openingFromPausedHubOptions = !!(openingFromHubOptions && menuHubOpenedFromPause && isPaused);
   cheatsOpenedFromPause = openingFromPauseOptions;
   cheatsOpenedFromHubOptions = openingFromHubOptions;
+  cheatsOpenedFromPausedHubOptions = openingFromPausedHubOptions;
   if (startMenu && startMenu.style.display !== "none") rememberStartMenuPanelRect();
   else getFallbackMenuRect();
-  if (openingFromPauseOptions){
+  if (openingFromPauseOptions || openingFromPausedHubOptions){
+    isPaused = true;
     if (pauseOverlay) pauseOverlay.style.display = "none";
   } else {
     setPaused(false);
   }
   gameState = STATE.CHEATS;
   syncStartMenuHudLayerMode();
-  if (!openingFromPauseOptions){
+  if (!openingFromPauseOptions && !openingFromPausedHubOptions){
     unlockAudioOnce();
     if (!audioMuted) ensureMenuMusicPlaying();
   }
@@ -6848,11 +6884,14 @@ function showCheats(){
 function hideCheats(){
   const returningToPauseOptions = !!(cheatsOpenedFromPause && isPaused);
   const returningToHubOptions = !!cheatsOpenedFromHubOptions;
+  const returningToPausedHubOptions = !!(cheatsOpenedFromPausedHubOptions && isPaused);
   cheatsOpenedFromPause = false;
   cheatsOpenedFromHubOptions = false;
+  cheatsOpenedFromPausedHubOptions = false;
   if (cheatsMenu) cheatsMenu.style.display = "none";
 
   if (returningToHubOptions){
+    if (returningToPausedHubOptions) menuHubOpenedFromPause = true;
     gameState = STATE.HUB;
     syncStartMenuHudLayerMode();
     document.body.classList.add("menu-hub-open");
@@ -8092,6 +8131,8 @@ btnBack.addEventListener("click", () => {
     return;
   }
   optionsOpenedFromPause = false;
+  controlsOpenedFromPausedHubOptions = false;
+  cheatsOpenedFromPausedHubOptions = false;
   showMenu();
 });
 function applyStartSettingsFromControls(){
@@ -8248,7 +8289,7 @@ function drawStaticPlayerSprite(alpha = 1, xOff = 0, yOff = 0, extraWidthScale =
 }
 
 function redrawPlayerSpriteAfterVideoFx(){
-  if (!(gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused))) return;
+  if (!(isPausedGameplayMenuBackdropState())) return;
   if (isDead || gameWon) return;
   const flicker = player.invuln > 0 && Math.floor(time * 20) % 2 === 0;
   if (flicker) return;
@@ -10788,7 +10829,7 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
   drawBomb();
 
   // enemies
-  const pauseEnemyDimActive = !!(isPaused && (gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause)));
+  const pauseEnemyDimActive = !!(isPaused && (isPausedGameplayMenuBackdropState()));
   for (const e of enemies){
     // v1.96: frog enemies get a pulsing green aura ring
     if (e.isFrog){
@@ -10985,13 +11026,13 @@ if (isDragonEnemy(e)){
   updateTimerHUD();
 
   // v1.96: corner HUD updates
-  if (gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused)){
+  if (isPausedGameplayMenuBackdropState()){
     livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
     _syncBombHud();
   } else if (gameState === STATE.MENU || gameState === STATE.HUB || gameState === STATE.OPTIONS || gameState === STATE.CONTROLS || gameState === STATE.CHEATS){
     renderMenuHudPreview();
   }
-  if (gameState === STATE.PLAYING || (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused)){
+  if (isPausedGameplayMenuBackdropState()){
     const info = getStageInfo(wave);
     const clampedWave = Math.min(wave, info.end);
     const lab = getWaveLabel(wave);
