@@ -6408,6 +6408,10 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
   <div id="statsPanel" aria-hidden="true">
     <div id="statsPanelInner">
       <div id="statsScroll" class="menuMiddleScroll">
+        <!-- v2.XX: Keep both Stats nickname states directly under the Stats hub tab/button,
+             above lifetime stat rows, instead of burying them after the list. -->
+        <button id="btnStatsEnterNickname" class="smallBtn statsToggleBtn statsNicknamePromptBtn" type="button" hidden>Enter Nickname to Track Stats</button>
+        <input id="statsNicknameInput" class="smallBtn statsToggleBtn statsNicknamePromptInput" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname to track stats" hidden />
         <div id="statsList">
           <div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score</span><span id="statLifetimeScore" class="statsValue">0</span></div>
           <div class="statsRow" data-stat-row="lifetimeEnemiesKilled"><span>Lifetime Enemies Killed</span><span id="statLifetimeEnemies" class="statsValue">0</span></div>
@@ -6417,8 +6421,6 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
           <div class="statsRow" data-stat-row="lifetimeBulletsFired"><span>Lifetime Bullets Fired</span><span id="statLifetimeBullets" class="statsValue">0</span></div>
           <div class="statsRow" data-stat-row="lifetimeBombKills"><span>Lifetime Bomb Kills</span><span id="statLifetimeBombKills" class="statsValue">0</span></div>
         </div>
-        <button id="btnStatsEnterNickname" class="smallBtn statsToggleBtn statsNicknamePromptBtn" type="button" hidden>Enter Nickname to Track Stats</button>
-        <input id="statsNicknameInput" class="smallBtn statsToggleBtn statsNicknamePromptInput" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname to track stats" hidden />
         <div id="statsLockedDetails" hidden>
           <button id="btnStatsLockedToggle" class="smallBtn statsToggleBtn" type="button" aria-expanded="false">Play More To Unlock</button>
           <div id="statsLockedList" hidden></div>
@@ -6789,6 +6791,18 @@ line-height:1;
   }
 </style>
 
+<style id="statsNicknameAboveLifetimeRowsFinalPatch">
+  /* v2.XX: Stats nickname prompt/profile label sits immediately under the Stats tab/button row. */
+  #menuHubPanel.menuHubTabStats #btnStatsEnterNickname,
+  #menuHubPanel.menuHubTabStats #statsNicknameInput{
+    margin:0 0 8px !important;
+    flex:0 0 auto !important;
+  }
+
+  #menuHubPanel.menuHubTabStats #statsList{
+    margin:0 0 8px !important;
+  }
+</style>
 
 
 <style id="scoreStorePauseExactFootprintFinalPatch">
