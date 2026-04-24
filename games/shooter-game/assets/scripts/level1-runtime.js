@@ -2648,7 +2648,15 @@ function requestSavedImagePanelFullscreen(){
 function prepareSavedImageCard(card, index){
   if (!card) return card;
   card.dataset.savedImageIndex = String(index);
+  card.dataset.controllerTarget = "saved-image-card";
+  card.tabIndex = 0;
   card.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openSavedImagePanelViewer(card);
+  });
+  card.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     event.stopPropagation();
     openSavedImagePanelViewer(card);
@@ -2678,7 +2686,7 @@ function renderSavedImages(){
   images.forEach((item, index) => {
     const card = document.createElement("div");
     card.className = "savedImageCard";
-    card.tabIndex = -1;
+    card.tabIndex = 0;
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", `Saved image ${index + 1}`);
     const img = document.createElement("img");
@@ -2786,7 +2794,7 @@ async function renderSavedImagesFromFolder(){
     if (item && item.objectUrl) savedImagePreviewUrls.push(item.objectUrl);
     const card = document.createElement("div");
     card.className = "savedImageCard";
-    card.tabIndex = -1;
+    card.tabIndex = 0;
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", `Saved image ${index + 1}`);
     const img = document.createElement("img");
@@ -6195,7 +6203,23 @@ function isStatsSavedImagesExpanded(){
 
 function getStatsSavedImageCardTargets(){
   if (!statsSavedImagesList || statsSavedImagesList.hidden || !imagesList) return [];
-  return Array.from(imagesList.querySelectorAll(".savedImageCard"));
+  return Array.from(imagesList.querySelectorAll(".savedImageCard")).filter(card => {
+    if (!card || !card.isConnected || card.hidden) return false;
+    const style = window.getComputedStyle(card);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+    return !(card.getClientRects && card.getClientRects().length === 0);
+  });
+}
+
+function focusFirstStatsSavedImageCard(){
+  const cards = getStatsSavedImageCardTargets();
+  if (!cards.length) return false;
+  const items = getStatsControllerTargets();
+  const firstCardIndex = items.indexOf(cards[0]);
+  if (firstCardIndex < 0) return false;
+  statsFocusIndex = firstCardIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
+  return true;
 }
 
 function getStatsSavedImagesClearTarget(){
@@ -6245,9 +6269,14 @@ async function handleStatsSavedImagesButtonClick(){
     await renderSavedImages();
     syncStatsSavedImagesState();
     showSavedImageStatus("Saved image folder selected.", true);
+    if (activeInputMode === INPUT_MODE_CONTROLLER) focusFirstStatsSavedImageCard();
     return true;
   }
-  return toggleStatsSavedImages();
+  const opened = toggleStatsSavedImages();
+  if (opened && activeInputMode === INPUT_MODE_CONTROLLER){
+    setTimeout(() => { focusFirstStatsSavedImageCard(); }, 0);
+  }
+  return opened;
 }
 
 function syncStatsLockedSummaryState(){
@@ -7214,6 +7243,10 @@ function activateControllerTarget(el){
   if (el.classList && el.classList.contains('scoreStoreRow')){
     const action = el.querySelector('.scoreStoreAction');
     if (action && typeof action.click === 'function') action.click();
+    return true;
+  }
+  if (el.classList && el.classList.contains('savedImageCard')){
+    openSavedImagePanelViewer(el);
     return true;
   }
   if (el.tagName === "A"){
