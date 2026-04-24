@@ -688,17 +688,35 @@ function getScoreStoreItemDescription(item){
   if (!remainingSeconds) return item.description || "";
   return `${item.description} ${Math.ceil(remainingSeconds)}s remaining.`;
 }
+function isCheatermodeStoreFree(){
+  return !!(
+    (typeof cheatsUnlockedByPassphrase !== "undefined" && cheatsUnlockedByPassphrase) ||
+    (typeof isTektiteNicknameCheatermodeUnlock === "function" && isTektiteNicknameCheatermodeUnlock())
+  );
+}
+function getScoreStoreEffectiveCost(item){
+  if (!item) return 0;
+  if (isCheatermodeStoreFree()) return 0;
+  return Math.abs(Number(item.cost) || 0);
+}
+function getScoreStoreCostLabel(item){
+  return String(isCheatermodeStoreFree() ? 0 : (Number(item && item.cost) || 0)) + " pts";
+}
+function getScoreStoreCurrentScoreLabel(){
+  return isCheatermodeStoreFree() ? "Current Score: ∞pts" : ("Current Score: " + String(Math.floor(score)) + "pts");
+}
 function spendScoreStoreItem(item){
+
   if (!item) return false;
-  const price = Math.abs(Number(item.cost) || 0);
+  const price = getScoreStoreEffectiveCost(item);
   const currentScore = Math.floor(score);
   if (currentScore < price){
-    setScoreStoreStatus(item.label + " costs " + String(item.cost) + " pts. You only have " + currentScore + " pts.");
+    setScoreStoreStatus(item.label + " costs " + getScoreStoreCostLabel(item) + ". You only have " + currentScore + " pts.");
     return false;
   }
 
   scoreStoreUnlockedThisRun = true;
-  score = Math.max(0, score - price);
+  if (price > 0) score = Math.max(0, score - price);
 
   if (item.id === "hearts"){
     MAX_HEARTS = Math.max(1, Math.floor(MAX_HEARTS || 1) + 1);
@@ -724,19 +742,19 @@ function spendScoreStoreItem(item){
 
   updateAccuracyScoreHUD();
   if (scoreStoreCurrentScoreEl){
-    scoreStoreCurrentScoreEl.textContent = "Current Score: " + String(Math.floor(score)) + "pts";
+    scoreStoreCurrentScoreEl.textContent = getScoreStoreCurrentScoreLabel();
   }
   if ((item.id === "full_health_restore" || item.id === "big_bullets") && typeof renderScoreStoreMenu === "function") renderScoreStoreMenu();
   if (item.id === "big_bullets"){
-    setScoreStoreStatus("Purchased " + item.label + " for " + String(item.cost) + " pts. " + String(Math.ceil(Math.max(0, bigBulletBuffEndTime - time))) + "s active.");
+    setScoreStoreStatus("Purchased " + item.label + " for " + getScoreStoreCostLabel(item) + ". " + String(Math.ceil(Math.max(0, bigBulletBuffEndTime - time))) + "s active.");
   } else {
-    setScoreStoreStatus("Purchased " + item.label + " for " + String(item.cost) + " pts.");
+    setScoreStoreStatus("Purchased " + item.label + " for " + getScoreStoreCostLabel(item) + ".");
   }
   return true;
 }
 function renderScoreStoreMenu(){
   if (scoreStoreCurrentScoreEl){
-    scoreStoreCurrentScoreEl.textContent = "Current Score: " + String(Math.floor(score)) + "pts";
+    scoreStoreCurrentScoreEl.textContent = getScoreStoreCurrentScoreLabel();
   }
   setScoreStoreStatus("");
   if (!scoreStoreItemsEl) return;
@@ -778,7 +796,7 @@ function renderScoreStoreMenu(){
     action.type = "button";
     action.className = "scoreStoreAction smallBtn";
     action.dataset.scoreStoreItemId = item.id;
-    action.textContent = String(item.cost) + " pts";
+    action.textContent = getScoreStoreCostLabel(item);
     action.addEventListener("click", () => {
       spendScoreStoreItem(item);
     });
@@ -793,7 +811,7 @@ function renderScoreStoreMenu(){
   });
 }
 function openScoreStoreMenu(){
-  if (!pauseOverlay || gameState !== STATE.PLAYING || mazeSummaryActive || isDead || !isStoreUnlocked()) return;
+  if (!pauseOverlay || gameState !== STATE.PLAYING || mazeSummaryActive || isDead || !canOpenStore()) return;
   setPaused(true);
   renderScoreStoreMenu();
   setScoreStoreOverlayVisible(true);
@@ -1643,7 +1661,7 @@ function hasScoreDisqualifyingSettings(){
 function syncScoreTrackingState(){
   const nextDisabled = !!(scoreTrackingLocked || isTektiteNicknameCheatermodeUnlock() || hasScoreDisqualifyingSettings());
   scoreTrackingDisabled = nextDisabled;
-  if (nextDisabled && isScoreStoreOpen && typeof closeScoreStoreMenu === "function"){
+  if (isScoreStoreOpen && typeof closeScoreStoreMenu === "function" && typeof canOpenStore === "function" && !canOpenStore()){
     closeScoreStoreMenu();
   }
   if (typeof updateAccuracyScoreHUD === "function") updateAccuracyScoreHUD();
@@ -1669,13 +1687,14 @@ function awardScore(basePoints){
 }
 
 function isStoreUnlocked(){
+  if (isCheatermodeStoreFree()) return true;
   if (scoreTrackingDisabled) return false;
   if (Math.floor(score) >= STORE_UNLOCK_SCORE_THRESHOLD) scoreStoreUnlockedThisRun = true;
   return scoreStoreUnlockedThisRun;
 }
 
 function canOpenStore(){
-  return !scoreTrackingDisabled && gameState === STATE.PLAYING && isStoreUnlocked();
+  return gameState === STATE.PLAYING && !mazeSummaryActive && !isDead && (isCheatermodeStoreFree() || (!scoreTrackingDisabled && isStoreUnlocked()));
 }
 
 const scoreStoreHud = document.getElementById("scoreStoreHud");
@@ -1695,8 +1714,8 @@ function updateAccuracyScoreHUD(){
   const scoreVisible = isPlaying && !scoreTrackingDisabled;
   const cheatsVisible = isPlaying && scoreTrackingDisabled;
   const hudVisible = scoreVisible || cheatsVisible;
-  const storeUnlocked = scoreVisible && isStoreUnlocked();
-  const canOpen = scoreVisible && canOpenStore();
+  const storeUnlocked = isPlaying && isStoreUnlocked();
+  const canOpen = isPlaying && canOpenStore();
   if (scoreStoreHud){
     scoreStoreHud.style.display = hudVisible ? "flex" : "none";
     scoreStoreHud.classList.toggle("storeReady", canOpen);
@@ -1704,13 +1723,13 @@ function updateAccuracyScoreHUD(){
     scoreStoreHud.tabIndex = canOpen ? 0 : -1;
     scoreStoreHud.setAttribute("aria-disabled", canOpen ? "false" : "true");
   }
-  if (btnPauseOpenStore) btnPauseOpenStore.style.display = storeUnlocked ? "block" : "none";
+  if (btnPauseOpenStore) btnPauseOpenStore.style.display = canOpen ? "block" : "none";
   accuracyScoreEl.style.display = hudVisible ? "block" : "none";
   accuracyScoreEl.style.color = cheatsVisible ? "#00ff66" : "";
   if (scoreHudLabelEl) scoreHudLabelEl.textContent = cheatsVisible ? "Cheats" : "Score";
   accuracyScoreEl.textContent = cheatsVisible ? "Enabled" : (String(Math.floor(score)) + "pts");
   if (storeUnlockedHudEl){
-    storeUnlockedHudEl.style.display = scoreVisible && storeUnlocked ? "block" : "none";
+    storeUnlockedHudEl.style.display = storeUnlocked ? "block" : "none";
     storeUnlockedHudEl.textContent = canOpen ? "Open Store" : "Store Unlocked";
   }
 }
