@@ -2230,6 +2230,7 @@ const deathButtons = [];
 
 
 let wave = 1;
+const START_MENU_PREVIEW_WAVE = 9; // v13.01: Start screen enemy tableau, because apparently menus now need stage directions.
 let firstBossSpawned = false; // track first boss size
 
 
@@ -2266,6 +2267,28 @@ function syncStartMenuHudLayerMode(){
   try{
     document.body.classList.toggle("start-menu-hud-over-gameplay", gameState === STATE.MENU);
   }catch(_){ }
+}
+
+function isStartMenuEnemyPreviewActive(){
+  return gameState === STATE.MENU && !isPaused;
+}
+
+function setupStartMenuEnemyPreview(){
+  // v13.01: The start menu gets a frozen Wave 9 enemy preview behind the panel.
+  // It is only decoration. Starting the game still uses the normal START_WAVE path,
+  // which defaults to Wave 1 unless cheatermode deliberately overrides it. Humanity survives.
+  if (gameState !== STATE.MENU) return;
+  bullets.length = 0;
+  enemyBullets.length = 0;
+  bomb = null;
+  ufo = null;
+  waveBanner.t = 0;
+  waveBanner.text = "";
+  firstBossSpawned = false;
+  wave = START_MENU_PREVIEW_WAVE;
+  resetFormation();
+  spawnEnemies();
+  positionFrozenStaringContestEnemies();
 }
 
 let gameWon = false;
@@ -6180,6 +6203,7 @@ function showMenu(){
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncMenuControllerFocus();
   else clearControllerFocus();
   rememberStartMenuPanelRect();
+  setupStartMenuEnemyPreview();
   renderMenuHudPreview();
   syncSpeedZeroStaticImages();
   syncNicknameStatsLabels();
@@ -8974,6 +8998,7 @@ async function loadEnemyImagesFromEnemyWebpsJson(){
 
     enemyImages = imgs;
     assetsReady = true;
+    if (typeof setupStartMenuEnemyPreview === "function") setupStartMenuEnemyPreview();
     setAssetStatus("");
   }catch(err){
     console.warn("Failed to load enemy-webps.json enemy list:", err);
@@ -8981,6 +9006,7 @@ async function loadEnemyImagesFromEnemyWebpsJson(){
     let imgs = await preloadImages(FALLBACK_URLS);
     enemyImages = imgs.filter(img => img && img.naturalWidth > 0);
     assetsReady = true;
+    if (typeof setupStartMenuEnemyPreview === "function") setupStartMenuEnemyPreview();
     setAssetStatus("");
   }
 }
@@ -10625,7 +10651,8 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
     const drawW = e.w * deathGrow;
     const drawH = e.h * deathGrow;
     const ex = e.x - drawW/2, ey = e.y - drawH/2;
-    const enemySource = isGameSpeedFrozen() ? (getStaticFrameForImage(e.img) || e.img) : e.img;
+    const freezeEnemyImage = isGameSpeedFrozen() || isStartMenuEnemyPreviewActive();
+    const enemySource = freezeEnemyImage ? (getStaticFrameForImage(e.img) || e.img) : e.img;
     ctx.save();
     ctx.globalAlpha = alpha;
     if (pauseEnemyDimActive) ctx.filter = "brightness(0.45)";
@@ -10640,15 +10667,20 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
         drawEnemyPixelMaskedHitFlash(ctx, enemySource, ex, ey, drawW, drawH, p, alpha, deathProgress);
       }
     } else {
-      const drewDomEnemy = syncAnimatedGifSprite(
-        e,
-        e.img,
-        ex,
-        ey,
-        drawW,
-        drawH,
-        { className: pauseEnemyDimActive ? "enemy-gif-sprite pauseEnemyDimSprite" : "enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
-      );
+      let drewDomEnemy = false;
+      if (freezeEnemyImage){
+        hideAnimatedGifSprite(e);
+      } else {
+        drewDomEnemy = syncAnimatedGifSprite(
+          e,
+          e.img,
+          ex,
+          ey,
+          drawW,
+          drawH,
+          { className: pauseEnemyDimActive ? "enemy-gif-sprite pauseEnemyDimSprite" : "enemy-gif-sprite", alpha, hitFlash:e.hitFlash > 0 }
+        );
+      }
       if (!drewDomEnemy){
         ctx.drawImage(enemySource, ex, ey, drawW, drawH);
         if (e.hitFlash > 0){
@@ -10927,7 +10959,7 @@ resetStarfield();
 resize(); // also resets starfield + anchors player
 showMenu();
 powerupSlot.style.display = "none";
-spawnEnemies();
+setupStartMenuEnemyPreview();
 updateHearts();
 
 requestAnimationFrame(loop);
