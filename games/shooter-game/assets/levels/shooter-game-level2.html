@@ -4,6 +4,24 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Bananaman Shooter v1.96</title>
+<script>
+(function(){
+  document.documentElement.classList.add('sg-hud-pregame');
+})();
+</script>
+<style id="hudPregameFirstPaintHidePatch">
+  /* v26: Hide corner HUD counters before runtime boots so refreshes do not flash
+     Score/Time/Lives/Bombs over the Start Menu. */
+  html.sg-hud-pregame body #scoreStoreHud,
+  html.sg-hud-pregame body #timerHud,
+  html.sg-hud-pregame body #livesSlot,
+  html.sg-hud-pregame body #powerupSlot{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+</style>
 <style>
   html, body { margin:0; padding:0; background:transparent; overflow:hidden; color:#0f0; font-family:monospace; }
   canvas { display:block; background:transparent; }

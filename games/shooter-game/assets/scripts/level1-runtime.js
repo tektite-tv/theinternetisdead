@@ -1113,31 +1113,15 @@ function renderMenuHudPreview(){
   const previewBombs = previewBombsInfinite ? 100 : Math.max(0, parseInt(bombsPreview.value, 10) || 0);
   const maxVisibleHudIcons = 5;
 
-  if (livesSlot) livesSlot.style.display = (previewLivesInfinite || previewLives > 0) ? "flex" : "none";
+  // Keep the corner counter HUD hidden during pregame/menu preview.
+  // Values are still prepared below where needed, but display is not toggled visible
+  // before the final hide pass, avoiding a one-frame refresh flash.
   if (livesText) livesText.textContent = previewLivesInfinite ? "x∞" : ("x" + previewLives);
-
-  if (powerupSlot) powerupSlot.style.display = (previewBombsInfinite || previewBombs > 0) ? "flex" : "none";
   if (powerupHint){
     if (previewBombsInfinite) powerupHint.textContent = "Q ∞";
     else powerupHint.textContent = "Q x" + Math.max(1, previewBombs);
   }
-
-  if (scoreStoreHud){
-    scoreStoreHud.style.display = "flex";
-    scoreStoreHud.classList.remove("storeReady");
-    scoreStoreHud.disabled = true;
-    scoreStoreHud.tabIndex = -1;
-    scoreStoreHud.setAttribute("aria-disabled", "true");
-  }
-  if (accuracyScoreEl){
-    accuracyScoreEl.style.display = "block";
-    accuracyScoreEl.style.color = scoreTrackingDisabled ? "#00ff66" : "";
-    if (scoreHudLabelEl) scoreHudLabelEl.textContent = scoreTrackingDisabled ? "Cheats" : "Score";
-    accuracyScoreEl.innerHTML = scoreTrackingDisabled ? '<span class="cheatsInfinitySymbol">∞</span>pts' : "0pts";
-  }
-  if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
   if (timerHud){
-    timerHud.style.display = "none";
     timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div class="timerHudValue">0.0s</div>';
   }
 
@@ -2369,7 +2353,9 @@ function isStartMenuEnemyPreviewActive(){
 
 function syncStartMenuHudLayerMode(){
   try{
-    document.body.classList.toggle("start-menu-hud-over-gameplay", isStartMenuEnemyPreviewActive());
+    const pregameHudHidden = isStartMenuEnemyPreviewActive();
+    document.body.classList.toggle("start-menu-hud-over-gameplay", pregameHudHidden);
+    document.documentElement.classList.toggle("sg-hud-pregame", pregameHudHidden);
   }catch(_){ }
 }
 

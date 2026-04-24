@@ -12,6 +12,7 @@
 <script>
 (function(){
   var root = document.documentElement;
+  root.classList.add('sg-hud-pregame');
   /* Start Menu access mode switch.
      public = normal Start Menu for everyone; nickname _debug previews construction.
      dev = nickname _debug is required for the normal Start Menu; everyone else sees construction.
@@ -102,6 +103,20 @@
     color:#00ffff;
     font-size:clamp(13px, 2vw, 20px) !important;
     text-shadow:0 0 8px rgba(0,255,255,0.55), 0 0 16px rgba(128,0,255,0.35) !important;
+  }
+</style>
+<style id="hudPregameFirstPaintHidePatch">
+  /* v26: Hide corner HUD counters before runtime boots so refreshes do not flash
+     Score/Time/Lives/Bombs over the Start Menu. Hearts/Shields remain controlled
+     by the runtime preview. */
+  html.sg-hud-pregame body #scoreStoreHud,
+  html.sg-hud-pregame body #timerHud,
+  html.sg-hud-pregame body #livesSlot,
+  html.sg-hud-pregame body #powerupSlot{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
   }
 </style>
 <style>
