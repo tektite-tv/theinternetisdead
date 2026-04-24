@@ -1044,8 +1044,8 @@ function renderMenuHudPreview(){
 
   if (powerupSlot) powerupSlot.style.display = (previewBombsInfinite || previewBombs > 0) ? "flex" : "none";
   if (powerupHint){
-    if (previewBombsInfinite) powerupHint.textContent = "Press Q (∞)";
-    else powerupHint.textContent = "Press Q" + (previewBombs > 1 ? (" x" + previewBombs) : "");
+    if (previewBombsInfinite) powerupHint.textContent = "Q ∞";
+    else powerupHint.textContent = "Q x" + Math.max(1, previewBombs);
   }
 
   if (scoreStoreHud){
@@ -1058,7 +1058,8 @@ function renderMenuHudPreview(){
   if (accuracyScoreEl){
     accuracyScoreEl.style.display = "block";
     accuracyScoreEl.style.color = scoreTrackingDisabled ? "#00ff66" : "";
-    accuracyScoreEl.innerHTML = scoreTrackingDisabled ? 'Cheats: <span class="cheatsInfinitySymbol">∞</span>pts' : "Score: 0pts";
+    if (scoreHudLabelEl) scoreHudLabelEl.textContent = scoreTrackingDisabled ? "Cheats" : "Score";
+    accuracyScoreEl.innerHTML = scoreTrackingDisabled ? '<span class="cheatsInfinitySymbol">∞</span>pts' : "0pts";
   }
   if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
   if (timerHud){
@@ -2504,6 +2505,7 @@ function canOpenStore(){
 
 const scoreStoreHud = document.getElementById("scoreStoreHud");
 const accuracyScoreEl = document.getElementById("accuracyScore");
+const scoreHudLabelEl = document.getElementById("scoreHudLabel");
 const storeUnlockedHudEl = document.getElementById("storeUnlockedHud");
 const timerHud = document.getElementById("timerHud");
 const winStatScoreEl = document.getElementById("winStatScore");
@@ -2541,7 +2543,8 @@ function updateAccuracyScoreHUD(){
   if (btnPauseOpenStore) btnPauseOpenStore.style.display = storeUnlocked ? "block" : "none";
   accuracyScoreEl.style.display = hudVisible ? "block" : "none";
   accuracyScoreEl.style.color = cheatsVisible ? "#00ff66" : "";
-  accuracyScoreEl.innerHTML = cheatsVisible ? 'Cheats: <span class="cheatsInfinitySymbol">∞</span>pts' : ("Score: " + String(Math.floor(score)) + "pts");
+  if (scoreHudLabelEl) scoreHudLabelEl.textContent = cheatsVisible ? "Cheats" : "Score";
+  accuracyScoreEl.innerHTML = cheatsVisible ? '<span class="cheatsInfinitySymbol">∞</span>pts' : (String(Math.floor(score)) + "pts");
   if (storeUnlockedHudEl){
     storeUnlockedHudEl.style.display = scoreVisible && storeUnlocked ? "block" : "none";
     storeUnlockedHudEl.textContent = canOpen ? "Open Store" : "Store Unlocked";

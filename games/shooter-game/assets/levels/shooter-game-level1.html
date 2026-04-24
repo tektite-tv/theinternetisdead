@@ -1573,6 +1573,101 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
   text-transform:none;
 }
 
+/* v2.XX: Uniform HUD counter boxes.
+   Score, Time, Lives, and Bombs now share the same footprint/aspect ratio.
+   The inner text is split into a small label over a larger value so the HUD reads
+   like one coordinated interface instead of four unrelated parking meters. */
+#scoreStoreHud,
+#timerHud,
+#livesSlot,
+#powerupSlot{
+  width:132px !important;
+  min-width:132px !important;
+  height:54px !important;
+  min-height:54px !important;
+  box-sizing:border-box !important;
+  padding:5px 8px !important;
+  border-radius:12px !important;
+  display:flex;
+  align-items:center !important;
+  justify-content:center !important;
+  flex-direction:column !important;
+  gap:2px !important;
+  text-align:center !important;
+  line-height:1 !important;
+}
+#scoreStoreHud{
+  align-items:center !important;
+  text-align:center !important;
+}
+#timerHud{
+  font-size:18px;
+}
+#livesSlot,
+#powerupSlot{
+  border-width:2px !important;
+}
+.hudBoxLabel,
+.timerHudLabel,
+.livesLabel,
+.powerupLabel{
+  display:block;
+  width:100%;
+  margin:0 !important;
+  font-family:"Courier New", monospace;
+  font-size:11px !important;
+  font-weight:900 !important;
+  line-height:1 !important;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  opacity:0.86;
+  white-space:nowrap;
+  text-align:center;
+}
+.hudBoxValue,
+#accuracyScore,
+#livesText,
+#powerupHint,
+#timerHud > div:last-child{
+  display:block;
+  width:100%;
+  font-family:"Courier New", monospace;
+  font-size:19px !important;
+  font-weight:900 !important;
+  line-height:1 !important;
+  text-align:center;
+  white-space:nowrap;
+}
+#accuracyScore{
+  color:#ffd400;
+}
+#storeUnlockedHud{
+  font-size:9px !important;
+  line-height:1 !important;
+  margin-top:1px;
+  text-align:center;
+}
+#livesSlot img,
+#powerupEmoji{
+  display:none !important;
+}
+#livesText{
+  color:#00ff66;
+}
+#powerupHint{
+  color:#00d5ff;
+}
+#powerupSlot .subtxt,
+#livesSlot .subtxt{
+  margin:0;
+}
+.cheatsInfinitySymbol{
+  font-size:1.45em;
+  line-height:0.7;
+  vertical-align:-0.08em;
+}
+
+
 /* =======================
    Invert Colors Mode
 ======================= */
@@ -6262,20 +6357,22 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
   </span>
 </div>
 <button id="scoreStoreHud" type="button" disabled aria-label="Score HUD">
-  <div id="accuracyScore">Score: 0pts</div>
+  <div id="scoreHudLabel" class="hudBoxLabel">Score</div>
+  <div id="accuracyScore" class="hudBoxValue">0pts</div>
   <div id="storeUnlockedHud">Store Unlocked</div>
 </button>
 <div id="timerHud">0.0s</div>
 
 <div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
-  <span class="livesLabel">LIVES:</span>
-<img src="/games/shooter-game/assets/bananarama.webp" alt="lives"/>
-  <div id="livesText" class="subtxt">x1</div>
+  <span class="livesLabel hudBoxLabel">Lives</span>
+  <img src="/games/shooter-game/assets/bananarama.webp" alt="lives"/>
+  <div id="livesText" class="subtxt hudBoxValue">x1</div>
 </div>
 
 <div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
+  <div class="powerupLabel hudBoxLabel">Bombs</div>
   <div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
-  <div id="powerupHint" class="subtxt">Press Q</div>
+  <div id="powerupHint" class="subtxt hudBoxValue">Q x1</div>
 </div>
 
 <div id="deathOverlay">
