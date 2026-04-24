@@ -1197,7 +1197,7 @@ function execPauseCommand(cmd){
   const lowerRaw = raw.toLowerCase();
   if (lowerRaw === "/jinclops" || lowerRaw === "/tektite"){
     const secretNickname = lowerRaw === "/jinclops" ? "Jinclops" : "Tektite";
-    applyNicknameFromControls(secretNickname, true, { skipTektiteCheatermodeUnlock: true });
+    applyNicknameFromControls(secretNickname, true);
     return { ok:true, message:`Nickname set to ${secretNickname}` };
   }
 
@@ -7198,10 +7198,15 @@ function resetScoreTrackedStartOptionsToDefaults(){
   if (startWaveSelect) startWaveSelect.value = String(DEFAULT_START_WAVE);
   INFINITE_MODE = false;
   infiniteModeActive = false;
+  shootCheatMode = "normal";
+  bigBulletBuffEndTime = 0;
+  glitchBackgroundPulse = 0;
   applyGameSpeedValue(DEFAULT_START_GAME_SPEED, true);
   syncCheatsMenuState();
   syncStartOptionsLabels();
   resetScoreTrackingState();
+  resetTektiteNicknameLoadoutGate();
+  syncTektiteNicknameCheatermodeUnlock({ forceLoadout: true });
 }
 
 function isGameSpeedFrozen(){
@@ -7406,8 +7411,40 @@ function isTektiteNicknameCheatermodeUnlock(){
   return getSavedChatNicknameValue().trim().toLowerCase() === "tektite";
 }
 
-function syncTektiteNicknameCheatermodeUnlock(){
-  if (!isTektiteNicknameCheatermodeUnlock()) return false;
+let tektiteNicknameLoadoutApplied = false;
+
+function resetTektiteNicknameLoadoutGate(){
+  tektiteNicknameLoadoutApplied = false;
+}
+
+function applyTektiteNicknameLoadoutOnce(options={}){
+  if (!isTektiteNicknameCheatermodeUnlock()){
+    resetTektiteNicknameLoadoutGate();
+    return false;
+  }
+  const forceLoadout = !!(options && options.forceLoadout);
+  if (tektiteNicknameLoadoutApplied && !forceLoadout) return false;
+
+  // Tektite gets the start-menu loadout once per fresh load / quit-to-menu.
+  // After that, the player can toggle Infinite Mode or Shoot Type off without
+  // the nickname sync immediately turning them back on like a needy debug ghost.
+  applyGlobalInfiniteMode(true);
+  shootCheatMode = "glitch";
+  bigBulletBuffEndTime = 0;
+  glitchBackgroundPulse = Math.max(glitchBackgroundPulse || 0, 0.85);
+  tektiteNicknameLoadoutApplied = true;
+  lockScoreTrackingState();
+  syncCheatsMenuState();
+  syncStartOptionsLabels();
+  if (typeof renderMenuHudPreview === "function") renderMenuHudPreview();
+  return true;
+}
+
+function syncTektiteNicknameCheatermodeUnlock(options={}){
+  if (!isTektiteNicknameCheatermodeUnlock()){
+    resetTektiteNicknameLoadoutGate();
+    return false;
+  }
   if (!cheatsUnlockedByPassphrase){
     unlockCheatermode("nickname-tektite");
   } else {
@@ -7416,6 +7453,7 @@ function syncTektiteNicknameCheatermodeUnlock(){
     syncCheatsMenuState();
     updateCheatsUnlockModeHint();
   }
+  applyTektiteNicknameLoadoutOnce(options);
   return true;
 }
 
