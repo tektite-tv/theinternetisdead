@@ -6976,6 +6976,53 @@ line-height:1;
   }
 </style>
 
+
+<style id="youDiedHalfSize16x9FinalPatch">
+  /* v18: You Died panel is now a 16:9 card at half the Start Menu footprint.
+     Humanity demanded geometric dignity from the failure screen, so here we are. */
+  :root{
+    --you-died-half-frame-height: calc(var(--shooter-start-hub-frame-height, min(405px, 51.75vw, calc(100vh - 96px))) / 2);
+    --you-died-half-frame-width: calc(var(--you-died-half-frame-height) * 16 / 9);
+  }
+
+  html body #deathOverlay #deathPanel{
+    width: var(--you-died-half-frame-width) !important;
+    min-width: var(--you-died-half-frame-width) !important;
+    max-width: var(--you-died-half-frame-width) !important;
+    height: var(--you-died-half-frame-height) !important;
+    min-height: var(--you-died-half-frame-height) !important;
+    max-height: var(--you-died-half-frame-height) !important;
+    aspect-ratio: 16 / 9 !important;
+    box-sizing: border-box !important;
+    padding: 12px !important;
+    border-radius: 14px !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    overflow: hidden !important;
+  }
+
+  html body #deathOverlay #deathTitle{
+    font-size: clamp(26px, 4.2vw, 38px) !important;
+    line-height: 0.95 !important;
+    margin: 0 0 2px !important;
+    letter-spacing: 1px !important;
+  }
+
+  html body #deathOverlay #deathPanel .deathBtn{
+    width: min(78%, 260px) !important;
+    min-height: 34px !important;
+    margin: 0 !important;
+    padding: 6px 12px !important;
+    border-radius: 10px !important;
+    font-size: clamp(13px, 2vw, 16px) !important;
+    line-height: 1.1 !important;
+  }
+</style>
+
 </body>
 
 </html>
