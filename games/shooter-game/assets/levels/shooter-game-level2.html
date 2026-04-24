@@ -1828,6 +1828,28 @@ line-height:1;
   }
 </style>
 
+
+
+<style id="startMenuHideCornerHudBoxesPatch">
+  /* v25: Pregame/start-menu enemy preview keeps only Hearts/Shields visible.
+     The square HUD CSS uses display:flex !important, so these corner boxes need
+     a later, equally stubborn rule or they keep photobombing the Start Menu. */
+  html body.start-menu-hud-over-gameplay #scoreStoreHud,
+  html body.start-menu-hud-over-gameplay #timerHud,
+  html body.start-menu-hud-over-gameplay #livesSlot,
+  html body.start-menu-hud-over-gameplay #powerupSlot{
+    display:none !important;
+    visibility:hidden !important;
+    opacity:0 !important;
+    pointer-events:none !important;
+  }
+
+  html body.start-menu-hud-over-gameplay #heartsHud{
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+  }
+</style>
 </body>
 
 </html>
