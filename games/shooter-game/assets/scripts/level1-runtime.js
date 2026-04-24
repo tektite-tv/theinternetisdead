@@ -2033,6 +2033,10 @@ function openStatsPanel(){
     btnStatsLockedToggle.setAttribute("aria-expanded", "false");
     syncStatsLockedSummaryState();
   }
+  if (btnStatsSavedImagesToggle){
+    btnStatsSavedImagesToggle.setAttribute("aria-expanded", "false");
+    syncStatsSavedImagesState();
+  }
   const statsTargets = getStatsControllerTargets();
   const defaultStatsFocusIndex = statsTargets.indexOf(btnStatsClose);
   statsFocusIndex = defaultStatsFocusIndex >= 0 ? defaultStatsFocusIndex : 0;
@@ -2128,8 +2132,8 @@ function fitImagesPanelToStartMenu(){
 }
 
 function getImagesControllerTargets(){
-  const imageCards = imagesList ? Array.from(imagesList.querySelectorAll(".savedImageCard")) : [];
-  return [...imageCards, btnImagesClose, btnImagesClear].filter(Boolean);
+  // The Hub's former Images tab is now Achievements and intentionally has no saved-image list.
+  return [btnImagesClose].filter(Boolean);
 }
 
 function syncImagesControllerFocus(){
@@ -2175,7 +2179,6 @@ function moveImagesControllerFocusDirectional(direction){
 function openImagesPanel(){
   restoreMenuHubActiveInner();
   overlayPanelReturnTarget = (gameState === STATE.HUB) ? STATE.HUB : STATE.MENU;
-  renderSavedImages();
   imagesFocusIndex = 0;
   rememberStartMenuPanelRect();
   setStartMenuInteractive(false);
@@ -2215,6 +2218,7 @@ function closeImagesPanel(){
 function clearSavedImages(){
   writeSavedImages([]);
   renderSavedImages();
+  syncStatsSavedImagesState();
 }
 
 function isImagesPanelOpen(){
@@ -3896,6 +3900,8 @@ const statsLockedDetails = document.getElementById("statsLockedDetails");
 const btnStatsEnterNickname = document.getElementById("btnStatsEnterNickname");
 const statsNicknameInput = document.getElementById("statsNicknameInput");
 const btnStatsLockedToggle = document.getElementById("btnStatsLockedToggle");
+const btnStatsSavedImagesToggle = document.getElementById("btnStatsSavedImagesToggle");
+const statsSavedImagesList = document.getElementById("statsSavedImagesList");
 const btnStatsClose = document.getElementById("btnStatsClose");
 const btnStatsReset = document.getElementById("btnStatsReset");
 const btnImages = document.getElementById("btnImages");
@@ -5163,8 +5169,7 @@ function selectMenuHubTab(tab, focusTab=false){
     menuHubActiveInner = targetInner;
   }
 
-  if (tab === "images") renderSavedImages();
-  if (tab === "stats"){ syncNicknameStatsLabels(); renderLifetimeStats(); }
+  if (tab === "stats"){ syncNicknameStatsLabels(); renderLifetimeStats(); syncStatsSavedImagesState(); }
   if (tab === "options"){
     markOptionsClean(false);
     if (livesSlider) livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
@@ -5421,7 +5426,18 @@ function getStatsControllerTargets(){
   const statRows = getStatsRowTargets();
   const nicknamePrompt = getStatsNicknamePromptTarget();
   const lockedSummary = getStatsLockedSummaryTarget();
-  return [...statRows, nicknamePrompt, lockedSummary, ...getStatsLockedRowTargets(), btnStatsClose, btnStatsReset].filter(Boolean);
+  const savedImagesToggle = getStatsSavedImagesToggleTarget();
+  return [
+    ...statRows,
+    nicknamePrompt,
+    lockedSummary,
+    ...getStatsLockedRowTargets(),
+    savedImagesToggle,
+    ...getStatsSavedImageCardTargets(),
+    getStatsSavedImagesClearTarget(),
+    btnStatsClose,
+    btnStatsReset
+  ].filter(Boolean);
 }
 
 function isStatsNicknameInputActive(){
@@ -5448,6 +5464,40 @@ function getStatsLockedSummaryTarget(){
 function getStatsLockedRowTargets(){
   if (!statsLockedList || statsLockedList.hidden) return [];
   return Array.from(statsLockedList.querySelectorAll(".statsSelectableRow"));
+}
+
+function getStatsSavedImagesToggleTarget(){
+  return btnStatsSavedImagesToggle || null;
+}
+
+function isStatsSavedImagesExpanded(){
+  return !!(btnStatsSavedImagesToggle && btnStatsSavedImagesToggle.getAttribute("aria-expanded") === "true");
+}
+
+function getStatsSavedImageCardTargets(){
+  if (!statsSavedImagesList || statsSavedImagesList.hidden || !imagesList) return [];
+  return Array.from(imagesList.querySelectorAll(".savedImageCard"));
+}
+
+function getStatsSavedImagesClearTarget(){
+  if (!statsSavedImagesList || statsSavedImagesList.hidden) return null;
+  return btnImagesClear || null;
+}
+
+function syncStatsSavedImagesState(){
+  if (!btnStatsSavedImagesToggle || !statsSavedImagesList) return;
+  const isOpen = btnStatsSavedImagesToggle.getAttribute("aria-expanded") === "true";
+  statsSavedImagesList.hidden = !isOpen;
+  if (isOpen) renderSavedImages();
+}
+
+function toggleStatsSavedImages(){
+  if (!btnStatsSavedImagesToggle || !statsSavedImagesList) return false;
+  const nextOpen = btnStatsSavedImagesToggle.getAttribute("aria-expanded") !== "true";
+  btnStatsSavedImagesToggle.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+  syncStatsSavedImagesState();
+  focusControllerElement(btnStatsSavedImagesToggle);
+  return true;
 }
 
 function syncStatsLockedSummaryState(){
@@ -6197,37 +6247,22 @@ function moveStatsControllerFocus(delta){
 function moveStatsControllerFocusDirectional(direction){
   const items = getStatsControllerTargets();
   if (!items.length) return false;
+  statsFocusIndex = Math.max(0, Math.min(statsFocusIndex, items.length - 1));
   const current = items[statsFocusIndex];
-  const nicknamePrompt = getStatsNicknamePromptTarget();
-  const lockedSummary = getStatsLockedSummaryTarget();
-  const lockedRows = getStatsLockedRowTargets();
-  const currentLockedRowIndex = lockedRows.indexOf(current);
-  const firstLockedRow = lockedRows[0] || null;
-  const lastLockedRow = lockedRows.length ? lockedRows[lockedRows.length - 1] : null;
   const backIndex = items.indexOf(btnStatsClose);
   const resetIndex = items.indexOf(btnStatsReset);
-  const nicknamePromptIndex = nicknamePrompt ? items.indexOf(nicknamePrompt) : -1;
-  const summaryIndex = lockedSummary ? items.indexOf(lockedSummary) : -1;
   let nextIndex = statsFocusIndex;
 
   if (direction === "up"){
-    if ((current === btnStatsClose || current === btnStatsReset) && lastLockedRow) nextIndex = items.indexOf(lastLockedRow);
-    else if ((current === btnStatsClose || current === btnStatsReset) && summaryIndex !== -1) nextIndex = summaryIndex;
-    else if ((current === btnStatsClose || current === btnStatsReset) && nicknamePromptIndex !== -1) nextIndex = nicknamePromptIndex;
-    else if (currentLockedRowIndex > 0) nextIndex = items.indexOf(lockedRows[currentLockedRowIndex - 1]);
-    else if (currentLockedRowIndex === 0 && summaryIndex !== -1) nextIndex = summaryIndex;
-    else if (current === lockedSummary && nicknamePromptIndex !== -1) nextIndex = nicknamePromptIndex;
+    nextIndex = (statsFocusIndex - 1 + items.length) % items.length;
   } else if (direction === "down"){
-    if (current === nicknamePrompt && summaryIndex !== -1) nextIndex = summaryIndex;
-    else if (current === nicknamePrompt && backIndex !== -1) nextIndex = backIndex;
-    else if (current === lockedSummary && firstLockedRow) nextIndex = items.indexOf(firstLockedRow);
-    else if (current === lockedSummary && backIndex !== -1) nextIndex = backIndex;
-    else if (currentLockedRowIndex >= 0 && currentLockedRowIndex < lockedRows.length - 1) nextIndex = items.indexOf(lockedRows[currentLockedRowIndex + 1]);
-    else if (currentLockedRowIndex === lockedRows.length - 1 && backIndex !== -1) nextIndex = backIndex;
+    nextIndex = (statsFocusIndex + 1 + items.length) % items.length;
   } else if (direction === "left"){
     if (current === btnStatsReset && backIndex !== -1) nextIndex = backIndex;
+    else nextIndex = (statsFocusIndex - 1 + items.length) % items.length;
   } else if (direction === "right"){
     if (current === btnStatsClose && resetIndex !== -1) nextIndex = resetIndex;
+    else nextIndex = (statsFocusIndex + 1 + items.length) % items.length;
   }
 
   if (nextIndex === statsFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
@@ -8245,6 +8280,11 @@ if (statsNicknameInput){
 if (btnStatsLockedToggle){
   btnStatsLockedToggle.addEventListener("click", () => {
     toggleStatsLockedSummary();
+  });
+}
+if (btnStatsSavedImagesToggle){
+  btnStatsSavedImagesToggle.addEventListener("click", () => {
+    toggleStatsSavedImages();
   });
 }
 

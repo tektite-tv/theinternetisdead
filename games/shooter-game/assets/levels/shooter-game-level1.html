@@ -2734,6 +2734,39 @@ body.invert-colors {
     background:rgba(75,0,118,0.55);
     box-shadow:0 0 0 2px rgba(0,255,102,0.55) inset;
   }
+  #statsSavedImagesDetails{
+    margin:6px 0 14px;
+    border:1px dashed rgba(0,255,102,0.34);
+    border-radius:12px;
+    background:rgba(0,0,0,0.26);
+    overflow:hidden;
+    padding:10px;
+  }
+  #statsSavedImagesDetails .statsToggleBtn{
+    display:block;
+    width:100%;
+    margin:0;
+  }
+  #statsSavedImagesList{
+    padding-top:10px;
+  }
+  #statsSavedImagesList[hidden]{
+    display:none !important;
+  }
+  #statsSavedImagesList #imagesList{
+    max-height:min(240px, 36vh);
+    margin-bottom:10px;
+    padding:0 0 8px;
+  }
+  #achievementsEmpty{
+    flex:1 1 auto;
+    min-height:0;
+  }
+  body.controller-active #statsSavedImagesDetails button.controllerFocus,
+  body.controller-active #statsSavedImagesList .savedImageCard.controllerFocus{
+    outline:2px solid #00ff66;
+    box-shadow:0 0 16px rgba(0,255,102,0.55);
+  }
 
 
   @keyframes statsTitleHueShift{
@@ -6533,8 +6566,8 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
   <div id="menuHubPanel" aria-hidden="true">
     <div id="menuHubPanelInner" class="shooter-menu16x9Surface">
       <div id="menuHubTopButtons">
-        <button id="btnMenuHubImages" class="smallBtn" type="button" data-menu-hub-tab="images" aria-pressed="true">Images</button>
-        <button id="btnMenuHubStats" class="smallBtn" type="button" data-menu-hub-tab="stats" aria-pressed="false">Stats</button>
+        <button id="btnMenuHubImages" class="smallBtn" type="button" data-menu-hub-tab="images" aria-pressed="true">Achievements</button>
+        <button id="btnMenuHubStats" class="smallBtn" type="button" data-menu-hub-tab="stats" aria-pressed="false">Profile</button>
         <button id="btnMenuHubOptions" class="smallBtn" type="button" data-menu-hub-tab="options" aria-pressed="false">Options</button>
       </div>
       <div id="menuHubContent" aria-live="polite"></div>
@@ -6561,6 +6594,15 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
           <button id="btnStatsLockedToggle" class="smallBtn statsToggleBtn" type="button" aria-expanded="false">Play More To Unlock</button>
           <div id="statsLockedList" hidden></div>
         </div>
+        <div id="statsSavedImagesDetails" class="statsSavedImagesDetails">
+          <button id="btnStatsSavedImagesToggle" class="smallBtn statsToggleBtn" type="button" aria-expanded="false">Saved Images</button>
+          <div id="statsSavedImagesList" hidden>
+            <div id="imagesList">
+              <div id="imagesEmpty">No saved images yet.<br>Press Y + View during gameplay to save one here.</div>
+            </div>
+            <button id="btnImagesClear" class="smallBtn statsToggleBtn" type="button">Clear Images</button>
+          </div>
+        </div>
       </div>
       <div id="statsPanelButtons" class="btnRow menuBottomRow">
         <button id="btnStatsClose" class="smallBtn" type="button">Back</button>
@@ -6572,12 +6614,9 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
 
   <div id="imagesPanel" aria-hidden="true">
     <div id="imagesPanelInner">
-      <div id="imagesList">
-        <div id="imagesEmpty">No saved images yet.<br>Press Y + View during gameplay to save one here.</div>
-      </div>
+      <div id="achievementsEmpty" aria-hidden="true"></div>
       <div id="imagesPanelButtons" class="btnRow menuBottomRow">
         <button id="btnImagesClose" class="smallBtn" type="button">Back</button>
-        <button id="btnImagesClear" class="smallBtn" type="button">Clear Images</button>
       </div>
     </div>
   </div>
