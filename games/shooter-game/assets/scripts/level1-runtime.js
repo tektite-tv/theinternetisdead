@@ -8977,6 +8977,48 @@ function pollGamepad(dt){
         if (pressMenuSelect) selectMenuHubTab(getMenuHubTabForButton(getMenuHubControllerTargets()[menuHubFocusIndex]), true);
         if (pressMenuBack) closeMenuHub();
       }
+    } else if (gameState === STATE.CHEATS && cheatsOpenedFromPausedHubOptions && isPaused){
+      // v13.06: Cheats opened from Pause -> Hub -> Options is still a paused
+      // gameplay child panel. Route controller input to Cheats instead of the
+      // hidden Pause menu, because apparently menus enjoy identity theft.
+      if (pressListTop) jumpControllerFocusToListEdge(getCheatsControllerTargets(), cheatsFocusIndex, (index) => { cheatsFocusIndex = index; }, syncCheatsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getCheatsControllerTargets(), cheatsFocusIndex, (index) => { cheatsFocusIndex = index; }, syncCheatsControllerFocus, 1);
+      if (navUp) moveCheatsControllerFocus(-1);
+      if (navDown) moveCheatsControllerFocus(1);
+      if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
+        if (navLeft) moveStartingStatFocus(-1);
+        if (navRight) moveStartingStatFocus(1);
+        if (rNavUp) adjustControllerCheat(1);
+        if (rNavDown) adjustControllerCheat(-1);
+      } else {
+        if (navLeft) adjustControllerCheat(-1);
+        if (navRight) adjustControllerCheat(1);
+        if (rNavUp) adjustControllerCheat(1);
+        if (rNavDown) adjustControllerCheat(-1);
+      }
+      if (pressMenuSelect) activateControllerTarget(getCheatsControllerTargets()[cheatsFocusIndex]);
+      if (pressMenuBack) handleCheatsControllerBackButton();
+      if (pressPause) hideCheats();
+    } else if (gameState === STATE.CONTROLS && controlsOpenedFromPausedHubOptions && isPaused){
+      // v13.06: Controls opened from Pause -> Hub -> Options must keep its own
+      // controller navigation even though isPaused remains true behind it.
+      if (pressListTop) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, -1);
+      if (pressListBottom) jumpControllerFocusToListEdge(getControlsControllerTargets(), controlsFocusIndex, (index) => { controlsFocusIndex = index; }, syncControlsControllerFocus, 1);
+      if (navUp) moveControlsControllerFocus(-1);
+      if (navDown) moveControlsControllerFocus(1);
+      if (isControlsMoveFocused()){
+        if (navLeft) moveControlsMoveFocus(-1);
+        if (navRight) moveControlsMoveFocus(1);
+      } else {
+        if (navLeft) moveControlsControllerFocus(-1);
+        if (navRight) moveControlsControllerFocus(1);
+      }
+      if (pressMenuSelect) activateControllerTarget(getControlsControllerTargets()[controlsFocusIndex]);
+      if (pressMenuBack){
+        if (bindingEditState) cancelBindingEdit();
+        else handleControlsControllerBackButton();
+      }
+      if (pressPause) hideControlsMenu();
     } else if (isPaused){
       if (isScoreStoreOpen){
         if (pressListTop) jumpControllerFocusToListEdge(getScoreStoreControllerTargets(), scoreStoreFocusIndex, (index) => { scoreStoreFocusIndex = index; }, syncScoreStoreControllerFocus, -1);
