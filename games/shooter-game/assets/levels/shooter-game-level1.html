@@ -2660,6 +2660,25 @@ body.invert-colors {
     box-sizing:border-box;
     margin-top:8px;
   }
+  #cheatsMenu .shootTypeCommandRow select{
+    width:100%;
+    box-sizing:border-box;
+    margin-top:8px;
+    padding:10px 12px;
+    font-family:"Courier New", monospace;
+    font-size:14px;
+    font-weight:900;
+    color:#00ff66;
+    background:rgba(0,0,0,0.55);
+    border:1px solid rgba(0,255,102,0.45);
+    border-radius:12px;
+    outline:none;
+  }
+  body.controller-active #cheatsMenu .shootTypeCommandRow select.controllerFocus{
+    outline:2px solid #00ff66;
+    box-shadow:0 0 16px rgba(0,255,102,0.55);
+  }
+
 
 
   /* Unified overlay menu footprint: Start, Pause, Death, and Win now share the same shell size. */
@@ -6632,6 +6651,23 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
             </div>
             <div class="hint">No damage, no bomb drain, no consequences. Humanity begged for a debug switch.</div>
           </div>
+
+          <div class="optRow cheatRow commandOptionRow shootTypeCommandRow">
+            <div class="cheatHeader">
+              <div>
+                <div class="cheatTitle">Shoot Bullet Type</div>
+                <div class="cheatCommand">/shoot normal | /shoot big_bullets | /shoot glitch</div>
+              </div>
+              <span id="shootTypeStatus" class="cheatStatusText">normal</span>
+            </div>
+            <select id="shootTypeSelect" aria-label="Shoot Bullet Type">
+              <option value="normal">normal</option>
+              <option value="big_bullets">big_bullets</option>
+              <option value="glitch">glitch</option>
+            </select>
+            <div class="hint">Switches the active /shoot command without typing it like some kind of command-line monk.</div>
+          </div>
+
 
           
 

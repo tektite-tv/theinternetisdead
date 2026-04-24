@@ -1113,6 +1113,7 @@ function execPauseCommand(cmd){
     shootCheatMode = "big_bullets";
     glitchBackgroundPulse = 0;
     lockScoreTrackingState();
+    syncCheatsMenuState();
     return { ok:true, message:`Nickname set to ${secretNickname}. Cheat commands unlocked, Infinite Mode enabled, and /shoot big_bullets applied` };
   }
 
@@ -1239,12 +1240,14 @@ function execPauseCommand(cmd){
       bigBulletBuffEndTime = 0;
       glitchBackgroundPulse = 0;
       lockScoreTrackingState();
+      syncCheatsMenuState();
       return { ok:true, message:"Shoot mode set to normal bullets" };
     }
     if (arg === "big_bullets" || arg === "big-bullets"){
       shootCheatMode = "big_bullets";
       glitchBackgroundPulse = 0;
       lockScoreTrackingState();
+      syncCheatsMenuState();
       return { ok:true, message:"Shoot mode set to big bullets" };
     }
     if (arg === "glitch"){
@@ -1252,6 +1255,7 @@ function execPauseCommand(cmd){
       bigBulletBuffEndTime = 0;
       glitchBackgroundPulse = Math.max(glitchBackgroundPulse, 0.85);
       lockScoreTrackingState();
+      syncCheatsMenuState();
       return { ok:true, message:"Shoot mode set to EMT glitch cannon" };
     }
     return { ok:false, message:"Usage: /shoot [normal|big_bullets|glitch]" };
@@ -3861,6 +3865,8 @@ const btnCheatsApply = document.getElementById("btnCheatsApply");
   const bombsSlider = document.getElementById("bombsSlider");
   const speedSlider = document.getElementById("speedSlider");
   const infiniteToggle = document.getElementById("infiniteToggle");
+  const shootTypeSelect = document.getElementById("shootTypeSelect");
+  const shootTypeStatus = document.getElementById("shootTypeStatus");
   const startWaveSelect = document.getElementById("startWaveSelect");
 const btnSkipToLevel2 = document.getElementById("btnSkipToLevel2");
   const startWaveLabel = document.getElementById("startWaveLabel");
@@ -4373,11 +4379,22 @@ function syncCheatsMenuState(){
   if (muteStatus) muteStatus.textContent = audioMuted ? "Enabled" : "Disabled";
   if (invertColorsStatus) invertColorsStatus.textContent = INVERT_COLORS ? "Enabled" : "Disabled";
   if (videoFxStatus) videoFxStatus.textContent = VIDEO_FX_ENABLED ? "Enabled" : "Disabled";
+  if (shootTypeSelect) shootTypeSelect.value = shootCheatMode || "normal";
+  if (shootTypeStatus) shootTypeStatus.textContent = shootCheatMode || "normal";
 }
 
 if (infiniteToggle){
   infiniteToggle.addEventListener("change", () => {
     applyGlobalInfiniteMode(!!infiniteToggle.checked);
+  });
+}
+
+if (shootTypeSelect){
+  shootTypeSelect.addEventListener("change", () => {
+    const mode = String(shootTypeSelect.value || "normal").trim() || "normal";
+    execPauseCommand("/shoot " + mode);
+    syncCheatsMenuState();
+    focusControllerElement(shootTypeSelect);
   });
 }
 
@@ -5247,7 +5264,7 @@ function getOptionsControllerTargets(){
 function getCheatsControllerTargets(){
   const skipTarget = (typeof btnSkipToLevel2 !== "undefined") ? btnSkipToLevel2 : null;
   const statRowTarget = getStartingStatInputs()[startingStatFocusIndex] || getStartingStatInputs()[0];
-  return [speedSlider, startWaveSelect, statRowTarget, infiniteToggle, skipTarget, btnCheatsBack].filter(Boolean);
+  return [speedSlider, startWaveSelect, statRowTarget, infiniteToggle, shootTypeSelect, skipTarget, btnCheatsBack].filter(Boolean);
 }
 
 function getControlsControllerTargets(){
