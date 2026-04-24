@@ -2545,6 +2545,117 @@ function formatSavedImageTime(iso){
   }
 }
 
+function ensureSavedImagePanelViewer(){
+  if (savedImagePanelViewer || !menuHubPanelInner) return savedImagePanelViewer;
+  savedImagePanelViewer = document.createElement("div");
+  savedImagePanelViewer.id = "savedImagePanelViewer";
+  savedImagePanelViewer.setAttribute("aria-hidden", "true");
+
+  savedImagePanelViewerImage = document.createElement("img");
+  savedImagePanelViewerImage.id = "savedImagePanelViewerImage";
+  savedImagePanelViewerImage.alt = "Saved screenshot";
+
+  const controls = document.createElement("div");
+  controls.id = "savedImagePanelViewerControls";
+
+  btnSavedImagePanelBack = document.createElement("button");
+  btnSavedImagePanelBack.id = "btnSavedImagePanelBack";
+  btnSavedImagePanelBack.className = "smallBtn";
+  btnSavedImagePanelBack.type = "button";
+  btnSavedImagePanelBack.textContent = "Back";
+
+  btnSavedImagePanelFullscreen = document.createElement("button");
+  btnSavedImagePanelFullscreen.id = "btnSavedImagePanelFullscreen";
+  btnSavedImagePanelFullscreen.className = "smallBtn";
+  btnSavedImagePanelFullscreen.type = "button";
+  btnSavedImagePanelFullscreen.textContent = "Fullscreen";
+
+  controls.appendChild(btnSavedImagePanelBack);
+  controls.appendChild(btnSavedImagePanelFullscreen);
+  savedImagePanelViewer.appendChild(savedImagePanelViewerImage);
+  savedImagePanelViewer.appendChild(controls);
+  menuHubPanelInner.appendChild(savedImagePanelViewer);
+
+  btnSavedImagePanelBack.addEventListener("click", closeSavedImagePanelViewer);
+  btnSavedImagePanelFullscreen.addEventListener("click", requestSavedImagePanelFullscreen);
+  return savedImagePanelViewer;
+}
+
+function getSavedImagePanelViewerCards(){
+  if (!statsSavedImagesList || statsSavedImagesList.hidden || !imagesList) return [];
+  return Array.from(imagesList.querySelectorAll(".savedImageCard")).filter(card => {
+    const img = card && card.querySelector && card.querySelector("img");
+    return !!(img && img.src);
+  });
+}
+
+function syncSavedImagePanelViewerImage(){
+  const cards = getSavedImagePanelViewerCards();
+  if (!cards.length || !savedImagePanelViewerImage) return false;
+  savedImagePanelViewerIndex = Math.max(0, Math.min(savedImagePanelViewerIndex, cards.length - 1));
+  const card = cards[savedImagePanelViewerIndex];
+  const img = card.querySelector("img");
+  savedImagePanelViewerImage.src = img.src;
+  savedImagePanelViewerImage.alt = img.alt || `Saved screenshot ${savedImagePanelViewerIndex + 1}`;
+  savedImagePanelViewerImage.dataset.sourceIndex = String(savedImagePanelViewerIndex);
+  return true;
+}
+
+function openSavedImagePanelViewer(indexOrCard){
+  const cards = getSavedImagePanelViewerCards();
+  if (!cards.length) return false;
+  let index = typeof indexOrCard === "number" ? indexOrCard : cards.indexOf(indexOrCard);
+  if (index < 0) index = 0;
+  savedImagePanelViewerIndex = Math.max(0, Math.min(index, cards.length - 1));
+  savedImagePanelViewerReturnFocus = cards[savedImagePanelViewerIndex] || null;
+  ensureSavedImagePanelViewer();
+  if (!syncSavedImagePanelViewerImage()) return false;
+  savedImagePanelViewerActive = true;
+  if (menuHubPanel) menuHubPanel.classList.add("savedImageViewerMode");
+  if (savedImagePanelViewer) savedImagePanelViewer.setAttribute("aria-hidden", "false");
+  clearControllerFocus();
+  return true;
+}
+
+function closeSavedImagePanelViewer(){
+  if (!savedImagePanelViewerActive) return false;
+  savedImagePanelViewerActive = false;
+  if (menuHubPanel) menuHubPanel.classList.remove("savedImageViewerMode");
+  if (savedImagePanelViewer) savedImagePanelViewer.setAttribute("aria-hidden", "true");
+  if (savedImagePanelViewerReturnFocus){
+    const focusIndex = getStatsControllerTargets().indexOf(savedImagePanelViewerReturnFocus);
+    if (focusIndex >= 0) statsFocusIndex = focusIndex;
+  }
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
+  return true;
+}
+
+function moveSavedImagePanelViewer(delta){
+  if (!savedImagePanelViewerActive) return false;
+  const cards = getSavedImagePanelViewerCards();
+  if (!cards.length) return false;
+  savedImagePanelViewerIndex = (savedImagePanelViewerIndex + delta + cards.length) % cards.length;
+  savedImagePanelViewerReturnFocus = cards[savedImagePanelViewerIndex] || savedImagePanelViewerReturnFocus;
+  return syncSavedImagePanelViewerImage();
+}
+
+function requestSavedImagePanelFullscreen(){
+  const target = savedImagePanelViewerImage || savedImagePanelViewer || menuHubPanelInner;
+  if (!target || !target.requestFullscreen) return false;
+  try{ target.requestFullscreen(); return true; }catch(_){ return false; }
+}
+
+function prepareSavedImageCard(card, index){
+  if (!card) return card;
+  card.dataset.savedImageIndex = String(index);
+  card.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openSavedImagePanelViewer(card);
+  });
+  return card;
+}
+
 function renderSavedImages(){
   if (!imagesList) return;
   const currentNickname = getSavedImageProfileName();
@@ -2580,6 +2691,7 @@ function renderSavedImages(){
     meta.textContent = `${currentNickname} \u2022 Wave ${getSavedImageWaveNumber(item && item.wave)} \u2022 ${formatSavedImageTime(item.createdAt)}`;
     card.appendChild(img);
     card.appendChild(meta);
+    prepareSavedImageCard(card, index);
     imagesList.appendChild(card);
   });
 }
@@ -2685,6 +2797,7 @@ async function renderSavedImagesFromFolder(){
     meta.textContent = `${currentNickname} \u2022 Wave ${getSavedImageWaveNumber(item && item.wave)} \u2022 ${formatSavedImageTime(item.createdAt)}`;
     card.appendChild(img);
     card.appendChild(meta);
+    prepareSavedImageCard(card, index);
     imagesList.appendChild(card);
   });
 }
@@ -4504,6 +4617,13 @@ const statLifetimeWins = document.getElementById("statLifetimeWins");
 const statLifetimeDeaths = document.getElementById("statLifetimeDeaths");
 const statLifetimeBullets = document.getElementById("statLifetimeBullets");
 const statLifetimeBombKills = document.getElementById("statLifetimeBombKills");
+let savedImagePanelViewer = null;
+let savedImagePanelViewerImage = null;
+let btnSavedImagePanelBack = null;
+let btnSavedImagePanelFullscreen = null;
+let savedImagePanelViewerActive = false;
+let savedImagePanelViewerIndex = 0;
+let savedImagePanelViewerReturnFocus = null;
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
@@ -5731,6 +5851,7 @@ function syncMenuHubTabButtons(){
 }
 
 function selectMenuHubTab(tab, focusTab=false){
+  if (savedImagePanelViewerActive) closeSavedImagePanelViewer();
   if (!MENU_HUB_TABS.includes(tab)) tab = "images";
   const targetInner = getMenuHubInnerForTab(tab);
   if (!menuHubContent || !targetInner) return;
@@ -7284,6 +7405,7 @@ function openMenuHub(options = null){
   updateHearts();
 }
 function closeMenuHub(){
+  if (savedImagePanelViewerActive) closeSavedImagePanelViewer();
   const returnToPause = !!(menuHubOpenedFromPause && isPaused);
   menuHubOpenedFromPause = false;
   restoreMenuHubActiveInner();
@@ -9825,6 +9947,13 @@ function pollGamepad(dt){
       if (pressMenuBack) handleOptionsControllerBackButton();
       if (pressPause) activateControllerTarget(btnBack);
     } else if (gameState === STATE.HUB){
+      if (savedImagePanelViewerActive){
+        if (navLeft || rNavLeft) moveSavedImagePanelViewer(-1);
+        if (navRight || rNavRight) moveSavedImagePanelViewer(1);
+        if (pressMenuSelect) requestSavedImagePanelFullscreen();
+        if (pressMenuBack || pressPause) closeSavedImagePanelViewer();
+        return;
+      }
       // v2.XX: Handle Menu Hub before the generic paused branch.
       // When the Hub is opened from Pause, isPaused stays true by design,
       // so the old order routed controller input back into the hidden Pause menu.

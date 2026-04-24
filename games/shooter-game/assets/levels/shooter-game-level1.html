@@ -3762,6 +3762,69 @@ body.invert-colors {
     background:rgba(0,0,0,0.52) !important;
   }
 
+
+
+  /* v13.XX: saved screenshots open inside the existing Hub panel itself. */
+  #menuHubPanel.savedImageViewerMode #menuHubPanelInner{
+    position:relative !important;
+    overflow:hidden !important;
+  }
+  #savedImagePanelViewer{
+    position:absolute;
+    inset:0;
+    z-index:20;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    border-radius:inherit;
+    background:#000;
+    color:#00ff66;
+    font-family:"Courier New", monospace;
+  }
+  #menuHubPanel.savedImageViewerMode #savedImagePanelViewer{ display:flex !important; }
+  #menuHubPanel.savedImageViewerMode #menuHubTopButtons,
+  #menuHubPanel.savedImageViewerMode #menuHubContent{
+    visibility:hidden !important;
+    pointer-events:none !important;
+  }
+  #savedImagePanelViewerImage{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:contain;
+    background:#000;
+  }
+  #savedImagePanelViewerControls{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:2;
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    box-sizing:border-box;
+    padding:10px 12px 12px;
+    background:linear-gradient(to top, rgba(0,0,0,0.82), rgba(0,0,0,0.24), rgba(0,0,0,0));
+  }
+  #savedImagePanelViewerControls .smallBtn{
+    width:min(180px, 42%);
+    min-height:42px;
+    background:rgba(0,0,0,0.86) !important;
+    border:2px solid #00ff66 !important;
+    color:#00ff66 !important;
+    font-weight:900 !important;
+  }
+  #savedImagePanelViewerControls .smallBtn:hover,
+  body.controller-active #savedImagePanelViewerControls .smallBtn.controllerFocus{
+    color:#4b0076 !important;
+    background:rgba(0,255,102,0.86) !important;
+    outline:2px solid #00ff66 !important;
+    box-shadow:0 0 18px rgba(0,255,102,0.55) !important;
+  }
+  .savedImageCard{ cursor:pointer; }
+
   /* v2.20: Images/Stats hub tabs use the same top LB/RB row sizing as the fixed Options tab.
      Options keeps its v2.12/v2.16 content layout; these selectors only touch Images and Stats. */
   #menuHubPanel.menuHubTabImages #menuHubTopButtons,
