@@ -1731,6 +1731,17 @@ line-height:1;
   }
 </style>
 
+
+<style id="bombHudHideWhenEmptyPatch">
+  /* v22: Keep the square Bombs HUD hidden until the player actually has bombs.
+     The square HUD patch uses display:flex !important, so the runtime display:none
+     needs an equally stubborn selector to win when bombs are empty. */
+  html body #powerupSlot[style*="display:none"],
+  html body #powerupSlot[style*="display: none"]{
+    display:none !important;
+  }
+</style>
+
 <style id="youDiedHalfSize16x9FinalPatch">
   /* v18: You Died panel is now a 16:9 card at half the Start Menu footprint.
      Humanity demanded geometric dignity from the failure screen, so here we are. */
@@ -1774,6 +1785,19 @@ line-height:1;
     border-radius: 10px !important;
     font-size: clamp(13px, 2vw, 16px) !important;
     line-height: 1.1 !important;
+  }
+</style>
+
+<style id="hudTimerWhiteTextFinalPatch">
+  /* v22: Force the Time box text/value itself to bold white, including direct text nodes and runtime-injected children. */
+  html body #timerHud,
+  html body #timerHud *,
+  html body.speedZeroTimeTravel #timerHud,
+  html body.speedZeroTimeTravel #timerHud *{
+    color:#ffffff !important;
+    font-weight:900 !important;
+    opacity:1 !important;
+    text-shadow:0 0 6px rgba(0,0,0,0.92), 0 1px 2px rgba(0,0,0,0.85) !important;
   }
 </style>
 
