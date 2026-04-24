@@ -7210,6 +7210,37 @@ line-height:1;
   }
 </style>
 
+
+
+<style id="hudSquareBoldWhiteTextPatch">
+  /* v21: Force every text node inside the square HUD boxes to bold white.
+     Icons keep their images/emoji; the readable text stops changing color per box. */
+  html body #scoreStoreHud,
+  html body #timerHud,
+  html body #livesSlot,
+  html body #powerupSlot{
+    color:#ffffff !important;
+  }
+  html body #scoreStoreHud .hudBoxLabel,
+  html body #scoreStoreHud .hudBoxValue,
+  html body #scoreStoreHud #accuracyScore,
+  html body #scoreStoreHud #storeUnlockedHud,
+  html body #timerHud .timerHudLabel,
+  html body #timerHud > div,
+  html body #livesSlot .livesLabel,
+  html body #livesSlot #livesText,
+  html body #livesSlot .subtxt,
+  html body #powerupSlot .powerupLabel,
+  html body #powerupSlot #powerupHint,
+  html body #powerupSlot .subtxt,
+  html body #accuracyScore .cheatsInfinitySymbol{
+    color:#ffffff !important;
+    font-weight:900 !important;
+    opacity:1 !important;
+    text-shadow:0 0 6px rgba(0,0,0,0.92), 0 1px 2px rgba(0,0,0,0.85) !important;
+  }
+</style>
+
 <style id="youDiedHalfSize16x9FinalPatch">
   /* v18: You Died panel is now a 16:9 card at half the Start Menu footprint.
      Humanity demanded geometric dignity from the failure screen, so here we are. */
