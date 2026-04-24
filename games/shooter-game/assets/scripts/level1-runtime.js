@@ -1572,6 +1572,7 @@ let glitchBackgroundPulse = 0;
 // Yes, even for a joke browser game. People get attached to numbers. Humanity is weird like that.
 const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
 const LIFETIME_STATS_PROFILES_KEY = "tektiteShooterLevel1LifetimeStatsByNickname";
+const CHAT_NICKNAME_HISTORY_KEY = "tektiteShooterNicknameHistory";
 const LIFETIME_STATS_STAT_KEYS = [
   "lifetimeScoreEarned",
   "lifetimeEnemiesKilled",
@@ -1583,6 +1584,22 @@ const LIFETIME_STATS_STAT_KEYS = [
 ];
 const SAVED_IMAGES_KEY = "tektiteShooterSavedImages";
 const SAVED_IMAGES_MAX = 10;
+const SAVED_PROFILE_TILE_MAX = 9;
+const SAVED_PROFILE_TILE_COLUMNS = 3;
+
+function getSavedImageProfileName(){
+  return getSavedChatNicknameValue();
+}
+
+function getSavedImageWaveNumber(value = wave){
+  return Math.max(1, parseInt(value, 10) || 1);
+}
+
+function getCurrentSavedImages(){
+  const nickname = getSavedImageProfileName();
+  if (!nickname) return [];
+  return readSavedImages().filter((item) => String(item && item.nickname || "").trim() === nickname);
+}
 
 function readSavedImages(){
   try{
@@ -1732,6 +1749,16 @@ function drawCaptureHud(ctx, scaleX, scaleY){
 
 async function saveCurrentGameImage(levelLabel="Level 1"){
   if (!canvas || !canvas.width || !canvas.height) return false;
+  const nickname = getSavedImageProfileName();
+  if (!nickname){
+    if (typeof assetStatus !== "undefined" && assetStatus){
+      assetStatus.style.display = "block";
+      assetStatus.textContent = "Please set a nickname to save images.";
+      window.clearTimeout(saveCurrentGameImage._statusTimer);
+      saveCurrentGameImage._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, 2400);
+    }
+    return false;
+  }
   try{
     let dataUrl = "";
     if (typeof window.tektiteCreateLevelScreenshotDataUrl === "function"){
@@ -1762,27 +1789,36 @@ async function saveCurrentGameImage(levelLabel="Level 1"){
       dataUrl = captureCanvas.toDataURL("image/jpeg", 0.86);
     }
 
-    const images = readSavedImages();
-    images.unshift({
-      id: `shot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      createdAt: new Date().toISOString(),
-      level: levelLabel,
-      dataUrl
-    });
-    const saved = writeSavedImages(images);
-    if (saved && typeof renderSavedImages === "function") renderSavedImages();
+    const blob = await fetch(dataUrl).then((response) => response.blob());
+    const savedResult = window.tektiteShooterSavedImageStorage
+      ? await window.tektiteShooterSavedImageStorage.saveImageBlobToFolder({
+          blob,
+          nickname,
+          wave: getSavedImageWaveNumber()
+        })
+      : { ok: false, message: "Folder saving is not supported in this browser." };
+    if (savedResult.ok && typeof renderSavedImages === "function") renderSavedImages();
     if (typeof assetStatus !== "undefined" && assetStatus){
       assetStatus.style.display = "block";
-      assetStatus.textContent = saved ? "Image saved to Images." : "Could not save image. Local storage is full.";
+      assetStatus.textContent = savedResult.ok ? "Image saved to chosen folder." : String(savedResult.message || "Could not save image.");
       window.clearTimeout(saveCurrentGameImage._statusTimer);
-      saveCurrentGameImage._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, 1800);
+      saveCurrentGameImage._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, savedResult.ok ? 1800 : 2400);
     }
-    return saved;
+    return !!savedResult.ok;
   }catch(error){
     console.error("In-game screenshot save failed:", error);
     return false;
   }
 }
+
+function getSavedImageMetadata(){
+  return {
+    nickname: getSavedImageProfileName(),
+    wave: getSavedImageWaveNumber()
+  };
+}
+
+window.tektiteGetSavedImageMetadata = getSavedImageMetadata;
 
 function showSavedImageStatus(message, ok = true){
   if (typeof assetStatus === "undefined" || !assetStatus) return;
@@ -1795,9 +1831,11 @@ function showSavedImageStatus(message, ok = true){
 function requestParentPageScreenshot(levelLabel="Level 1"){
   if (!window.parent || window.parent === window) return false;
   try{
+    const metadata = getSavedImageMetadata();
     window.parent.postMessage({
       type: "tektite:request-page-screenshot",
-      level: levelLabel
+      nickname: metadata.nickname,
+      wave: metadata.wave
     }, "*");
     showSavedImageStatus("Saving screenshot...");
     return true;
@@ -1857,6 +1895,67 @@ function normalizeLifetimeStatsRecord(rawStats){
     if (!normalized.statStartedAt[key]) normalized.statStartedAt[key] = getLifetimeStatDateStamp();
   }
   return normalized;
+}
+
+function readChatNicknameHistory(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(CHAT_NICKNAME_HISTORY_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    const unique = [];
+    for (const value of parsed){
+      const nickname = limitChatNicknameLength(String(value || "").trim());
+      if (!nickname || unique.includes(nickname)) continue;
+      unique.push(nickname);
+      if (unique.length >= SAVED_PROFILE_TILE_MAX) break;
+    }
+    return unique;
+  }catch(_){
+    return [];
+  }
+}
+
+function writeChatNicknameHistory(history){
+  const safeHistory = Array.isArray(history)
+    ? history
+        .map((value) => limitChatNicknameLength(String(value || "").trim()))
+        .filter(Boolean)
+        .filter((value, index, list) => list.indexOf(value) === index)
+        .slice(0, SAVED_PROFILE_TILE_MAX)
+    : [];
+  try{
+    localStorage.setItem(CHAT_NICKNAME_HISTORY_KEY, JSON.stringify(safeHistory));
+  }catch(_){}
+  return safeHistory;
+}
+
+function rememberChatNickname(nickname){
+  const normalized = limitChatNicknameLength(String(nickname || "").trim());
+  if (!normalized) return readChatNicknameHistory();
+  const nextHistory = [normalized, ...readChatNicknameHistory().filter((value) => value !== normalized)];
+  return writeChatNicknameHistory(nextHistory);
+}
+
+function forgetChatNickname(nickname){
+  const normalized = limitChatNicknameLength(String(nickname || "").trim());
+  if (!normalized) return readChatNicknameHistory();
+  return writeChatNicknameHistory(readChatNicknameHistory().filter((value) => value !== normalized));
+}
+
+function getSavedProfileNicknames(){
+  const history = readChatNicknameHistory();
+  const profileNames = Object.keys(readLifetimeStatsProfiles())
+    .map((key) => {
+      const match = /^name:(.+)$/.exec(String(key || ""));
+      return match ? limitChatNicknameLength(match[1]) : "";
+    })
+    .filter(Boolean);
+  const combined = [];
+  for (const nickname of [...history, ...profileNames]){
+    if (!nickname || combined.includes(nickname)) continue;
+    combined.push(nickname);
+    if (combined.length >= SAVED_PROFILE_TILE_MAX) break;
+  }
+  return combined;
 }
 
 function getLifetimeStatsProfileName(){
@@ -1994,14 +2093,18 @@ function renderLifetimeStats(){
   const lockedDetails = document.getElementById("statsLockedDetails");
   const lockedToggle = document.getElementById("btnStatsLockedToggle");
   const lockedList = document.getElementById("statsLockedList");
+  const savedImagesDetails = document.getElementById("statsSavedImagesDetails");
+  const savedProfilesGrid = document.getElementById("statsSavedProfilesGrid");
   const nicknamePrompt = document.getElementById("btnStatsEnterNickname");
   const nicknameStatsInput = document.getElementById("statsNicknameInput");
   const statsProfileName = getLifetimeStatsProfileName();
   const needsNicknameForStats = !statsProfileName;
   const statsInputActive = isStatsNicknameInputActive();
+  const savedProfileNicknames = getSavedProfileNicknames();
+  const showSavedProfilesGrid = needsNicknameForStats && !statsInputActive && savedProfileNicknames.length > 0;
   if (nicknamePrompt){
     const showNicknamePrompt = !statsInputActive;
-    nicknamePrompt.textContent = needsNicknameForStats ? "Enter Nickname to Track Stats" : `${statsProfileName}'s Stats`;
+    nicknamePrompt.textContent = needsNicknameForStats ? "Enter Nickname to Create Profile" : `${statsProfileName}'s Stats`;
     nicknamePrompt.classList.toggle("statsNicknameProfileLabel", !needsNicknameForStats);
     nicknamePrompt.hidden = !showNicknamePrompt;
     nicknamePrompt.setAttribute("aria-hidden", showNicknamePrompt ? "false" : "true");
@@ -2012,6 +2115,46 @@ function renderLifetimeStats(){
     nicknameStatsInput.setAttribute("aria-hidden", "true");
     nicknameStatsInput.tabIndex = -1;
     if (!statsInputActive) nicknameStatsInput.value = "";
+  }
+  renderSavedProfileGrid(savedProfileNicknames, showSavedProfilesGrid);
+  if (savedProfilesGrid){
+    savedProfilesGrid.hidden = !showSavedProfilesGrid;
+    savedProfilesGrid.setAttribute("aria-hidden", showSavedProfilesGrid ? "false" : "true");
+  }
+  if (statsList){
+    statsList.hidden = needsNicknameForStats;
+    statsList.setAttribute("aria-hidden", needsNicknameForStats ? "true" : "false");
+  }
+  if (btnStatsReset){
+    btnStatsReset.hidden = needsNicknameForStats;
+    btnStatsReset.setAttribute("aria-hidden", needsNicknameForStats ? "true" : "false");
+    btnStatsReset.tabIndex = needsNicknameForStats ? -1 : 0;
+  }
+  if (needsNicknameForStats) cancelResetProfileConfirmation();
+  else syncResetProfileButtonState();
+  if (btnStatsExport){
+    btnStatsExport.hidden = needsNicknameForStats;
+    btnStatsExport.setAttribute("aria-hidden", needsNicknameForStats ? "true" : "false");
+    btnStatsExport.tabIndex = needsNicknameForStats ? -1 : 0;
+  }
+  if (btnStatsImport){
+    btnStatsImport.hidden = !needsNicknameForStats;
+    btnStatsImport.setAttribute("aria-hidden", needsNicknameForStats ? "false" : "true");
+    btnStatsImport.tabIndex = needsNicknameForStats ? 0 : -1;
+  }
+  if (btnStatsSavedImagesToggle){
+    btnStatsSavedImagesToggle.hidden = needsNicknameForStats;
+    btnStatsSavedImagesToggle.setAttribute("aria-hidden", needsNicknameForStats ? "true" : "false");
+    btnStatsSavedImagesToggle.tabIndex = needsNicknameForStats ? -1 : 0;
+    if (needsNicknameForStats) btnStatsSavedImagesToggle.setAttribute("aria-expanded", "false");
+  }
+  if (savedImagesDetails){
+    savedImagesDetails.hidden = needsNicknameForStats;
+    savedImagesDetails.setAttribute("aria-hidden", needsNicknameForStats ? "true" : "false");
+  }
+  if (statsSavedImagesList){
+    statsSavedImagesList.hidden = needsNicknameForStats || !isStatsSavedImagesExpanded();
+    statsSavedImagesList.setAttribute("aria-hidden", statsSavedImagesList.hidden ? "true" : "false");
   }
   let lockedCount = 0;
 
@@ -2050,6 +2193,15 @@ function renderLifetimeStats(){
     }
     syncStatsLockedSummaryState();
   }
+  if (needsNicknameForStats && lockedDetails){
+    lockedDetails.hidden = true;
+    lockedDetails.setAttribute("aria-hidden", "true");
+    if (lockedToggle) lockedToggle.setAttribute("aria-expanded", "false");
+    if (lockedList){
+      lockedList.hidden = true;
+      lockedList.setAttribute("aria-hidden", "true");
+    }
+  }
 }
 
 function openStatsPanel(){
@@ -2064,6 +2216,7 @@ function openStatsPanel(){
   if (btnStatsSavedImagesToggle){
     btnStatsSavedImagesToggle.setAttribute("aria-expanded", "false");
     syncStatsSavedImagesState();
+    renderSavedImages();
   }
   const statsTargets = getStatsControllerTargets();
   const defaultStatsFocusIndex = statsTargets.indexOf(btnStatsClose);
@@ -2084,6 +2237,7 @@ function openStatsPanel(){
 }
 
 function closeStatsPanel(){
+  cancelResetProfileConfirmation();
   if (closeMenuHubHostedPanelToStart(statsPanelInner)) return;
   if (statsPanel){
     statsPanel.style.display = "none";
@@ -2103,9 +2257,280 @@ function closeStatsPanel(){
   }
 }
 
-function resetLifetimeStats(){
-  if (hasLifetimeStatsProfile()) writeLifetimeStats(getDefaultLifetimeStats());
+function renderSavedProfileGrid(nicknames = getSavedProfileNicknames(), shouldShow = false){
+  if (!statsSavedProfilesGrid) return;
+  statsSavedProfilesGrid.innerHTML = "";
+  if (!shouldShow || !Array.isArray(nicknames) || !nicknames.length) return;
+  nicknames.slice(0, SAVED_PROFILE_TILE_MAX).forEach((nickname) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "smallBtn statsSavedProfileTile";
+    button.tabIndex = -1;
+    button.dataset.profileNickname = nickname;
+    button.setAttribute("aria-label", `${nickname}'s profile`);
+    const pin = document.createElement("span");
+    pin.className = "statsSavedProfileTilePin";
+    pin.textContent = "\u{1F4CC}";
+    button.appendChild(pin);
+    button.appendChild(document.createTextNode(`${nickname}'s Profile`));
+    statsSavedProfilesGrid.appendChild(button);
+  });
+}
+
+function resetProfile(){
+  const nickname = getSavedChatNicknameValue();
+  if (nickname) clearNicknameProfileData(nickname);
+  cancelResetProfileConfirmation();
+  applyNicknameFromControls("", false);
+  resetStatsNicknameEntry();
+  const items = getStatsControllerTargets();
+  const closeIndex = items.indexOf(btnStatsClose);
+  statsFocusIndex = closeIndex >= 0 ? closeIndex : 0;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
+}
+
+let resetProfileConfirmStage = "idle";
+let resetProfileCountdownSeconds = 0;
+let resetProfileCountdownTimer = 0;
+
+function clearResetProfileCountdownTimer(){
+  if (resetProfileCountdownTimer){
+    window.clearTimeout(resetProfileCountdownTimer);
+    resetProfileCountdownTimer = 0;
+  }
+}
+
+function syncResetProfileButtonState(){
+  if (!btnStatsReset) return;
+  if (btnStatsReset.hidden){
+    btnStatsReset.textContent = "Reset Profile";
+    btnStatsReset.style.color = "";
+    btnStatsReset.style.borderColor = "";
+    btnStatsReset.style.textShadow = "";
+    btnStatsReset.removeAttribute("data-reset-confirm-stage");
+    return;
+  }
+  if (resetProfileConfirmStage === "countdown"){
+    btnStatsReset.textContent = `Really, reset? (${Math.max(1, resetProfileCountdownSeconds)}s)`;
+    btnStatsReset.style.color = "#ff4d4d";
+    btnStatsReset.style.borderColor = "rgba(255,77,77,0.92)";
+    btnStatsReset.style.textShadow = "0 0 8px rgba(255,77,77,0.42)";
+    btnStatsReset.dataset.resetConfirmStage = "countdown";
+    return;
+  }
+  if (resetProfileConfirmStage === "confirm"){
+    btnStatsReset.textContent = "Yes, RESET!";
+    btnStatsReset.style.color = "#00ff66";
+    btnStatsReset.style.borderColor = "rgba(0,255,102,0.92)";
+    btnStatsReset.style.textShadow = "0 0 8px rgba(0,255,102,0.42)";
+    btnStatsReset.dataset.resetConfirmStage = "confirm";
+    return;
+  }
+  btnStatsReset.textContent = "Reset Profile";
+  btnStatsReset.style.color = "";
+  btnStatsReset.style.borderColor = "";
+  btnStatsReset.style.textShadow = "";
+  btnStatsReset.dataset.resetConfirmStage = "idle";
+}
+
+function cancelResetProfileConfirmation(){
+  clearResetProfileCountdownTimer();
+  resetProfileConfirmStage = "idle";
+  resetProfileCountdownSeconds = 0;
+  syncResetProfileButtonState();
+}
+
+function tickResetProfileConfirmation(){
+  clearResetProfileCountdownTimer();
+  if (resetProfileConfirmStage !== "countdown") return;
+  if (resetProfileCountdownSeconds > 1){
+    resetProfileCountdownSeconds -= 1;
+    syncResetProfileButtonState();
+    resetProfileCountdownTimer = window.setTimeout(tickResetProfileConfirmation, 1000);
+    return;
+  }
+  resetProfileConfirmStage = "confirm";
+  resetProfileCountdownSeconds = 0;
+  syncResetProfileButtonState();
+}
+
+function startResetProfileConfirmation(){
+  clearResetProfileCountdownTimer();
+  resetProfileConfirmStage = "countdown";
+  resetProfileCountdownSeconds = 3;
+  syncResetProfileButtonState();
+  resetProfileCountdownTimer = window.setTimeout(tickResetProfileConfirmation, 1000);
+}
+
+function clearNicknameProfileData(nickname){
+  const normalizedNickname = limitChatNicknameLength(String(nickname || "").trim());
+  if (!normalizedNickname) return;
+  forgetChatNickname(normalizedNickname);
+  const profileId = `name:${normalizedNickname.toLowerCase()}`;
+  const profiles = readLifetimeStatsProfiles();
+  if (Object.prototype.hasOwnProperty.call(profiles, profileId)){
+    delete profiles[profileId];
+    writeLifetimeStatsProfiles(profiles);
+  }
+  try{ localStorage.removeItem(SAVED_IMAGES_KEY); }catch(_){}
+}
+
+function handleResetProfileButtonClick(){
+  const nickname = getSavedChatNicknameValue();
+  if (!nickname) return false;
+  if (resetProfileConfirmStage === "confirm"){
+    resetProfile();
+    return true;
+  }
+  if (resetProfileConfirmStage === "countdown") return false;
+  startResetProfileConfirmation();
+  return true;
+}
+
+function getProfileExportDateStamp(date = new Date()){
+  const parsed = date instanceof Date ? date : new Date(date);
+  const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+  const dd = String(parsed.getDate()).padStart(2, "0");
+  const yyyy = String(parsed.getFullYear());
+  return `${mm}${dd}${yyyy}`;
+}
+
+function getProfileExportFilename(nickname){
+  const safeNickname = Array.from(String(nickname || "").trim()).slice(0, CHAT_NICKNAME_MAX_LENGTH).join("") || "profile";
+  return `${safeNickname}-profile-${getProfileExportDateStamp()}.json`;
+}
+
+function buildExportProfilePayload(){
+  const nickname = getSavedChatNicknameValue();
+  const profileId = nickname ? `name:${nickname.toLowerCase()}` : "";
+  const profiles = readLifetimeStatsProfiles();
+  const lifetimeStats = profileId ? normalizeLifetimeStatsRecord(profiles[profileId] || {}) : getDefaultLifetimeStats();
+  return {
+    type: "tektite-shooter-profile",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    profile: {
+      nickname,
+      nicknameExplicit: true,
+      profileId,
+      lifetimeStats
+    },
+    localStorage: {
+      tektiteChatNickname: nickname,
+      tektiteChatNicknameExplicit: "true",
+      tektiteShooterLevel1LifetimeStatsByNickname: profileId ? { [profileId]: lifetimeStats } : {}
+    }
+  };
+}
+
+async function saveProfileJsonText(text, filename){
+  if ("showSaveFilePicker" in window){
+    const handle = await window.showSaveFilePicker({
+      suggestedName: filename,
+      types: [{ description: "JSON Profile", accept: { "application/json": [".json"] } }]
+    });
+    const writable = await handle.createWritable();
+    await writable.write(text);
+    await writable.close();
+    return true;
+  }
+  const blob = new Blob([text], { type: "application/json" });
+  const objectUrl = URL.createObjectURL(blob);
+  try{
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    return true;
+  } finally {
+    window.setTimeout(() => { try{ URL.revokeObjectURL(objectUrl); }catch(_){ } }, 1500);
+  }
+}
+
+async function exportProfile(){
+  const nickname = getSavedChatNicknameValue();
+  if (!nickname) return false;
+  try{
+    const payload = buildExportProfilePayload();
+    await saveProfileJsonText(JSON.stringify(payload, null, 2), getProfileExportFilename(nickname));
+    return true;
+  }catch(error){
+    if (!(error && error.name === "AbortError")){
+      console.error("Profile export failed:", error);
+    }
+    return false;
+  }
+}
+
+function readTextFromFile(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Unable to read profile file."));
+    reader.readAsText(file);
+  });
+}
+
+async function chooseImportProfileFile(){
+  if ("showOpenFilePicker" in window){
+    const handles = await window.showOpenFilePicker({
+      multiple: false,
+      types: [{ description: "JSON Profile", accept: { "application/json": [".json"] } }]
+    });
+    const handle = handles && handles[0];
+    if (!handle) return null;
+    return handle.getFile();
+  }
+  return await new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.style.display = "none";
+    input.addEventListener("change", () => {
+      resolve(input.files && input.files[0] ? input.files[0] : null);
+      input.remove();
+    }, { once:true });
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
+function applyImportedProfilePayload(payload){
+  if (!payload || payload.type !== "tektite-shooter-profile" || !payload.profile || !payload.profile.nickname){
+    throw new Error("Invalid profile file.");
+  }
+  const nickname = limitChatNicknameLength(String(payload.profile.nickname || "").trim());
+  if (!nickname) throw new Error("Profile file is missing a nickname.");
+  const profileId = `name:${nickname.toLowerCase()}`;
+  const importedLocalStorage = payload.localStorage && typeof payload.localStorage === "object" ? payload.localStorage : {};
+  const importedProfiles = importedLocalStorage[LIFETIME_STATS_PROFILES_KEY];
+  const importedProfileStats = importedProfiles && typeof importedProfiles === "object" && !Array.isArray(importedProfiles)
+    ? importedProfiles[profileId]
+    : null;
+  const profiles = readLifetimeStatsProfiles();
+  profiles[profileId] = normalizeLifetimeStatsRecord(importedProfileStats || payload.profile.lifetimeStats || {});
+  writeLifetimeStatsProfiles(profiles);
+  applyNicknameFromControls(nickname, false);
   renderLifetimeStats();
+}
+
+async function importProfile(){
+  try{
+    const file = await chooseImportProfileFile();
+    if (!file) return false;
+    const text = await readTextFromFile(file);
+    const payload = JSON.parse(text);
+    applyImportedProfilePayload(payload);
+    return true;
+  }catch(error){
+    if (!(error && error.name === "AbortError")){
+      console.error("Profile import failed:", error);
+    }
+    return false;
+  }
 }
 
 function isStatsPanelOpen(){
@@ -2122,8 +2547,16 @@ function formatSavedImageTime(iso){
 
 function renderSavedImages(){
   if (!imagesList) return;
-  const images = readSavedImages();
+  const currentNickname = getSavedImageProfileName();
+  const images = getCurrentSavedImages();
   imagesList.innerHTML = "";
+  if (!currentNickname){
+    const empty = document.createElement("div");
+    empty.id = "imagesEmpty";
+    empty.textContent = "Enter Nickname to Track Stats";
+    imagesList.appendChild(empty);
+    return;
+  }
   if (!images.length){
     const empty = document.createElement("div");
     empty.id = "imagesEmpty";
@@ -2139,15 +2572,124 @@ function renderSavedImages(){
     card.setAttribute("aria-label", `Saved image ${index + 1}`);
     const img = document.createElement("img");
     img.src = item.dataUrl;
-    img.alt = `${item.level || "Shooter Game"} saved image ${index + 1}`;
+    img.alt = `${currentNickname} wave ${getSavedImageWaveNumber(item && item.wave)} saved image ${index + 1}`;
     const meta = document.createElement("div");
     meta.className = "savedImageMeta";
+    meta.textContent = `${currentNickname} \u2022 Wave ${getSavedImageWaveNumber(item && item.wave)} \u2022 ${formatSavedImageTime(item.createdAt)}`;
     meta.textContent = `${item.level || "Shooter Game"} • ${formatSavedImageTime(item.createdAt)}`;
+    meta.textContent = `${currentNickname} \u2022 Wave ${getSavedImageWaveNumber(item && item.wave)} \u2022 ${formatSavedImageTime(item.createdAt)}`;
     card.appendChild(img);
     card.appendChild(meta);
     imagesList.appendChild(card);
   });
 }
+
+let savedImageRenderToken = 0;
+let savedImagePreviewUrls = [];
+let savedImagesCurrentCount = 0;
+let savedImagesDirectoryName = "";
+
+function clearSavedImagePreviewUrls(){
+  for (const url of savedImagePreviewUrls){
+    try{ URL.revokeObjectURL(url); }catch(error){}
+  }
+  savedImagePreviewUrls = [];
+}
+
+function syncSavedImagesButtonLabel(count = savedImagesCurrentCount, directoryName = savedImagesDirectoryName){
+  if (!btnStatsSavedImagesToggle) return;
+  const hasNickname = !!getSavedImageProfileName();
+  if (!hasNickname){
+    btnStatsSavedImagesToggle.textContent = "Saved Images";
+    btnStatsSavedImagesToggle.dataset.savedImagesMode = "hidden";
+    return;
+  }
+  const folderName = String(directoryName || "").trim();
+  if (!folderName){
+    btnStatsSavedImagesToggle.textContent = "Choose Folder to Save Images";
+    btnStatsSavedImagesToggle.dataset.savedImagesMode = "choose-folder";
+    return;
+  }
+  btnStatsSavedImagesToggle.textContent = `Images Saved to ${folderName}`;
+  btnStatsSavedImagesToggle.dataset.savedImagesMode = "saved-images-folder";
+}
+
+async function renderSavedImagesFromFolder(){
+  if (!imagesList) return;
+  const renderToken = ++savedImageRenderToken;
+  const currentNickname = getSavedImageProfileName();
+  clearSavedImagePreviewUrls();
+  imagesList.innerHTML = "";
+  savedImagesCurrentCount = 0;
+  savedImagesDirectoryName = "";
+  syncSavedImagesButtonLabel(0);
+  if (btnImagesClear) btnImagesClear.hidden = true;
+  if (!currentNickname){
+    const empty = document.createElement("div");
+    empty.id = "imagesEmpty";
+    empty.textContent = "Enter Nickname to Track Stats";
+    imagesList.appendChild(empty);
+    return;
+  }
+  if (!window.tektiteShooterSavedImageStorage){
+    const empty = document.createElement("div");
+    empty.id = "imagesEmpty";
+    empty.textContent = "Folder saving is not supported in this browser.";
+    imagesList.appendChild(empty);
+    return;
+  }
+  const result = await window.tektiteShooterSavedImageStorage.listSavedImages({ nickname: currentNickname });
+  if (renderToken !== savedImageRenderToken){
+    if (result && Array.isArray(result.items)){
+      for (const item of result.items){
+        if (item && item.objectUrl){
+          try{ URL.revokeObjectURL(item.objectUrl); }catch(error){}
+        }
+      }
+    }
+    return;
+  }
+  const items = result && Array.isArray(result.items) ? result.items : [];
+  savedImagesCurrentCount = items.length;
+  savedImagesDirectoryName = result && result.configured ? String(result.directoryName || "").trim() : "";
+  syncSavedImagesButtonLabel(items.length, savedImagesDirectoryName);
+  if (!result || result.ok === false){
+    const empty = document.createElement("div");
+    empty.id = "imagesEmpty";
+    empty.textContent = String(result && result.message || "Could not load saved images.");
+    imagesList.appendChild(empty);
+    return;
+  }
+  if (btnImagesClear) btnImagesClear.hidden = items.length <= 0;
+  if (!items.length){
+    const empty = document.createElement("div");
+    empty.id = "imagesEmpty";
+    empty.innerHTML = result.configured
+      ? "No saved images in the selected folder yet.<br>Press Y + View during gameplay to save one here."
+      : "Choose Folder to Save Images to pick where screenshots will be saved.";
+    imagesList.appendChild(empty);
+    return;
+  }
+  items.forEach((item, index) => {
+    if (item && item.objectUrl) savedImagePreviewUrls.push(item.objectUrl);
+    const card = document.createElement("div");
+    card.className = "savedImageCard";
+    card.tabIndex = -1;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `Saved image ${index + 1}`);
+    const img = document.createElement("img");
+    img.src = item.objectUrl;
+    img.alt = `${currentNickname} wave ${getSavedImageWaveNumber(item && item.wave)} saved image ${index + 1}`;
+    const meta = document.createElement("div");
+    meta.className = "savedImageMeta";
+    meta.textContent = `${currentNickname} \u2022 Wave ${getSavedImageWaveNumber(item && item.wave)} \u2022 ${formatSavedImageTime(item.createdAt)}`;
+    card.appendChild(img);
+    card.appendChild(meta);
+    imagesList.appendChild(card);
+  });
+}
+
+renderSavedImages = renderSavedImagesFromFolder;
 
 function fitImagesPanelToStartMenu(){
   if (!imagesPanelInner) return;
@@ -2243,9 +2785,23 @@ function closeImagesPanel(){
   }
 }
 
-function clearSavedImages(){
-  writeSavedImages([]);
-  renderSavedImages();
+async function clearSavedImages(){
+  const nickname = getSavedImageProfileName();
+  if (!nickname){
+    await renderSavedImages();
+    syncStatsSavedImagesState();
+    return;
+  }
+  if (!window.tektiteShooterSavedImageStorage){
+    showSavedImageStatus("Folder saving is not supported in this browser.", false);
+    return;
+  }
+  const result = await window.tektiteShooterSavedImageStorage.deleteSavedImages({ nickname });
+  if (!result.ok){
+    showSavedImageStatus(String(result.message || "Could not clear saved images."), false);
+    return;
+  }
+  await renderSavedImages();
   syncStatsSavedImagesState();
 }
 
@@ -3927,11 +4483,14 @@ const statsScroll = document.getElementById("statsScroll");
 const statsLockedDetails = document.getElementById("statsLockedDetails");
 const btnStatsEnterNickname = document.getElementById("btnStatsEnterNickname");
 const statsNicknameInput = document.getElementById("statsNicknameInput");
+const statsSavedProfilesGrid = document.getElementById("statsSavedProfilesGrid");
 const btnStatsLockedToggle = document.getElementById("btnStatsLockedToggle");
 const btnStatsSavedImagesToggle = document.getElementById("btnStatsSavedImagesToggle");
 const statsSavedImagesList = document.getElementById("statsSavedImagesList");
 const btnStatsClose = document.getElementById("btnStatsClose");
+const btnStatsImport = document.getElementById("btnStatsImport");
 const btnStatsReset = document.getElementById("btnStatsReset");
+const btnStatsExport = document.getElementById("btnStatsExport");
 const btnImages = document.getElementById("btnImages");
 const imagesPanel = document.getElementById("imagesPanel");
 const imagesPanelInner = document.getElementById("imagesPanelInner");
@@ -5197,7 +5756,7 @@ function selectMenuHubTab(tab, focusTab=false){
     menuHubActiveInner = targetInner;
   }
 
-  if (tab === "stats"){ syncNicknameStatsLabels(); renderLifetimeStats(); syncStatsSavedImagesState(); }
+  if (tab === "stats"){ syncNicknameStatsLabels(); renderLifetimeStats(); syncStatsSavedImagesState(); renderSavedImages(); }
   if (tab === "options"){
     markOptionsClean(false);
     if (livesSlider) livesSlider.value = START_LIVES_INFINITE ? 100 : START_LIVES;
@@ -5453,18 +6012,23 @@ function getScoreStoreControllerTargets(){
 function getStatsControllerTargets(){
   const statRows = getStatsRowTargets();
   const nicknamePrompt = getStatsNicknamePromptTarget();
+  const savedProfileTiles = getStatsSavedProfileTileTargets();
   const lockedSummary = getStatsLockedSummaryTarget();
   const savedImagesToggle = getStatsSavedImagesToggleTarget();
   return [
     ...statRows,
     nicknamePrompt,
+    ...savedProfileTiles,
     lockedSummary,
     ...getStatsLockedRowTargets(),
     savedImagesToggle,
     ...getStatsSavedImageCardTargets(),
     getStatsSavedImagesClearTarget(),
     btnStatsClose,
-    btnStatsReset
+    (btnStatsImport && !btnStatsImport.hidden ? btnStatsImport : null),
+    (btnStatsReset && !btnStatsReset.hidden ? btnStatsReset : null)
+    ,
+    (btnStatsExport && !btnStatsExport.hidden ? btnStatsExport : null)
   ].filter(Boolean);
 }
 
@@ -5480,8 +6044,13 @@ function getStatsNicknamePromptTarget(){
 
 function getStatsRowTargets(){
   const list = document.getElementById("statsList");
-  if (!list) return [];
+  if (!list || list.hidden) return [];
   return Array.from(list.querySelectorAll(".statsRow"));
+}
+
+function getStatsSavedProfileTileTargets(){
+  if (!statsSavedProfilesGrid || statsSavedProfilesGrid.hidden) return [];
+  return Array.from(statsSavedProfilesGrid.querySelectorAll(".statsSavedProfileTile"));
 }
 
 function getStatsLockedSummaryTarget(){
@@ -5495,7 +6064,8 @@ function getStatsLockedRowTargets(){
 }
 
 function getStatsSavedImagesToggleTarget(){
-  return btnStatsSavedImagesToggle || null;
+  if (!btnStatsSavedImagesToggle || btnStatsSavedImagesToggle.hidden) return null;
+  return btnStatsSavedImagesToggle;
 }
 
 function isStatsSavedImagesExpanded(){
@@ -5508,24 +6078,55 @@ function getStatsSavedImageCardTargets(){
 }
 
 function getStatsSavedImagesClearTarget(){
-  if (!statsSavedImagesList || statsSavedImagesList.hidden) return null;
+  if (!statsSavedImagesList || statsSavedImagesList.hidden || !btnImagesClear || btnImagesClear.hidden) return null;
   return btnImagesClear || null;
 }
 
 function syncStatsSavedImagesState(){
   if (!btnStatsSavedImagesToggle || !statsSavedImagesList) return;
+  if (btnStatsSavedImagesToggle.hidden){
+    statsSavedImagesList.hidden = true;
+    statsSavedImagesList.setAttribute("aria-hidden", "true");
+    return;
+  }
   const isOpen = btnStatsSavedImagesToggle.getAttribute("aria-expanded") === "true";
   statsSavedImagesList.hidden = !isOpen;
+  statsSavedImagesList.setAttribute("aria-hidden", isOpen ? "false" : "true");
   if (isOpen) renderSavedImages();
 }
 
 function toggleStatsSavedImages(){
-  if (!btnStatsSavedImagesToggle || !statsSavedImagesList) return false;
+  if (!btnStatsSavedImagesToggle || !statsSavedImagesList || btnStatsSavedImagesToggle.hidden) return false;
   const nextOpen = btnStatsSavedImagesToggle.getAttribute("aria-expanded") !== "true";
   btnStatsSavedImagesToggle.setAttribute("aria-expanded", nextOpen ? "true" : "false");
   syncStatsSavedImagesState();
   focusControllerElement(btnStatsSavedImagesToggle);
   return true;
+}
+
+async function handleStatsSavedImagesButtonClick(){
+  if (!btnStatsSavedImagesToggle || btnStatsSavedImagesToggle.hidden) return false;
+  const currentNickname = getSavedImageProfileName();
+  if (!currentNickname) return false;
+  if (!savedImagesDirectoryName){
+    if (!window.tektiteShooterSavedImageStorage){
+      showSavedImageStatus("Folder saving is not supported in this browser.", false);
+      return false;
+    }
+    const result = await window.tektiteShooterSavedImageStorage.chooseSavedImagesDirectory({ nickname: currentNickname });
+    if (!result.ok){
+      if (!result.cancelled) showSavedImageStatus(String(result.message || "Could not choose a folder for saved images."), false);
+      return false;
+    }
+    savedImagesDirectoryName = String(result.directoryName || "").trim();
+    syncSavedImagesButtonLabel(savedImagesCurrentCount, savedImagesDirectoryName);
+    btnStatsSavedImagesToggle.setAttribute("aria-expanded", "true");
+    await renderSavedImages();
+    syncStatsSavedImagesState();
+    showSavedImageStatus("Saved image folder selected.", true);
+    return true;
+  }
+  return toggleStatsSavedImages();
 }
 
 function syncStatsLockedSummaryState(){
@@ -5560,7 +6161,7 @@ function resetStatsNicknameEntry(){
   }
   if (btnStatsEnterNickname){
     const statsProfileName = getLifetimeStatsProfileName();
-    btnStatsEnterNickname.textContent = statsProfileName ? `${statsProfileName}'s Stats` : "Enter Nickname to Track Stats";
+    btnStatsEnterNickname.textContent = statsProfileName ? `${statsProfileName}'s Stats` : "Enter Nickname to Create Profile";
     btnStatsEnterNickname.classList.toggle("statsNicknameProfileLabel", !!statsProfileName);
     btnStatsEnterNickname.hidden = false;
     btnStatsEnterNickname.setAttribute("aria-hidden", "false");
@@ -5584,6 +6185,7 @@ function showStatsNicknameInput(){
   statsNicknameInput.disabled = false;
   // Keep the label on the button only. Once it becomes a real input, a centered placeholder puts the caret inside the words.
   statsNicknameInput.placeholder = "";
+  renderLifetimeStats();
   const items = getStatsControllerTargets();
   const inputIndex = items.indexOf(statsNicknameInput);
   if (inputIndex >= 0) statsFocusIndex = inputIndex;
@@ -6277,20 +6879,56 @@ function moveStatsControllerFocusDirectional(direction){
   if (!items.length) return false;
   statsFocusIndex = Math.max(0, Math.min(statsFocusIndex, items.length - 1));
   const current = items[statsFocusIndex];
-  const backIndex = items.indexOf(btnStatsClose);
-  const resetIndex = items.indexOf(btnStatsReset);
+  const savedProfileTiles = getStatsSavedProfileTileTargets();
+  const bottomButtons = [btnStatsClose, btnStatsImport, btnStatsReset, btnStatsExport].filter((button) => button && items.includes(button));
   let nextIndex = statsFocusIndex;
+
+  const savedProfileTileIndex = savedProfileTiles.indexOf(current);
+  if (savedProfileTileIndex !== -1){
+    const tileCount = savedProfileTiles.length;
+    if (direction === "left"){
+      if (savedProfileTileIndex > 0) nextIndex = items.indexOf(savedProfileTiles[savedProfileTileIndex - 1]);
+      else return false;
+    } else if (direction === "right"){
+      if (savedProfileTileIndex + 1 < tileCount) nextIndex = items.indexOf(savedProfileTiles[savedProfileTileIndex + 1]);
+      else return false;
+    } else if (direction === "up"){
+      if (savedProfileTileIndex - SAVED_PROFILE_TILE_COLUMNS >= 0){
+        nextIndex = items.indexOf(savedProfileTiles[savedProfileTileIndex - SAVED_PROFILE_TILE_COLUMNS]);
+      } else {
+        const nicknamePrompt = getStatsNicknamePromptTarget();
+        nextIndex = nicknamePrompt ? items.indexOf(nicknamePrompt) : statsFocusIndex;
+      }
+    } else if (direction === "down"){
+      if (savedProfileTileIndex + SAVED_PROFILE_TILE_COLUMNS < tileCount){
+        nextIndex = items.indexOf(savedProfileTiles[savedProfileTileIndex + SAVED_PROFILE_TILE_COLUMNS]);
+      } else {
+        const afterTilesIndex = savedProfileTiles.length ? items.indexOf(savedProfileTiles[savedProfileTiles.length - 1]) + 1 : -1;
+        nextIndex = afterTilesIndex >= 0 && afterTilesIndex < items.length ? afterTilesIndex : statsFocusIndex;
+      }
+    }
+    if (nextIndex === statsFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
+    statsFocusIndex = nextIndex;
+    syncStatsControllerFocus();
+    return true;
+  }
 
   if (direction === "up"){
     nextIndex = (statsFocusIndex - 1 + items.length) % items.length;
   } else if (direction === "down"){
     nextIndex = (statsFocusIndex + 1 + items.length) % items.length;
   } else if (direction === "left"){
-    if (current === btnStatsReset && backIndex !== -1) nextIndex = backIndex;
-    else nextIndex = (statsFocusIndex - 1 + items.length) % items.length;
+    const bottomIndex = bottomButtons.indexOf(current);
+    if (bottomIndex !== -1){
+      const prevButton = bottomButtons[(bottomIndex - 1 + bottomButtons.length) % bottomButtons.length];
+      nextIndex = items.indexOf(prevButton);
+    } else nextIndex = (statsFocusIndex - 1 + items.length) % items.length;
   } else if (direction === "right"){
-    if (current === btnStatsClose && resetIndex !== -1) nextIndex = resetIndex;
-    else nextIndex = (statsFocusIndex + 1 + items.length) % items.length;
+    const bottomIndex = bottomButtons.indexOf(current);
+    if (bottomIndex !== -1){
+      const nextButton = bottomButtons[(bottomIndex + 1) % bottomButtons.length];
+      nextIndex = items.indexOf(nextButton);
+    } else nextIndex = (statsFocusIndex + 1 + items.length) % items.length;
   }
 
   if (nextIndex === statsFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
@@ -7516,6 +8154,7 @@ function saveChatNickname(value){
     if (normalized){
       window.localStorage.setItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY, "true");
       window.localStorage.setItem(CHAT_NICKNAME_STORAGE_KEY, normalized);
+      rememberChatNickname(normalized);
     } else {
       window.localStorage.removeItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY);
       window.localStorage.removeItem(CHAT_NICKNAME_STORAGE_KEY);
@@ -7664,6 +8303,7 @@ function syncStartMenuNicknameButton(savedNickname = getSavedChatNicknameValue()
 
   if (btnEnterNickname){
     const showEnterButton = needsNickname && !inputActive;
+    if (showEnterButton) setStartMenuButtonLabel(btnEnterNickname, "Enter Nickname to Create Profile");
     btnEnterNickname.classList.toggle("needsNickname", showEnterButton);
     btnEnterNickname.style.display = showEnterButton ? "" : "none";
     btnEnterNickname.setAttribute("aria-hidden", showEnterButton ? "false" : "true");
@@ -7774,12 +8414,15 @@ try{ window.addEventListener("resize", fitStatsStartButtonNicknameLabel); }catch
 
 function applyNicknameFromControls(value, announce=false, options={}){
   const normalized = saveChatNickname(value);
+  cancelResetProfileConfirmation();
   if (nicknameInput) nicknameInput.value = normalized;
   syncNicknameInputPreview();
   syncNicknameStatsLabels();
   audioMuted = effectiveAudioMuted();
   applyMuteState();
   if (typeof renderLifetimeStats === "function") renderLifetimeStats();
+  if (typeof renderSavedImages === "function") renderSavedImages();
+  if (typeof syncStatsSavedImagesState === "function") syncStatsSavedImagesState();
   syncNicknameActionButton();
   if (!options || !options.skipTektiteCheatermodeUnlock){
     syncTektiteNicknameCheatermodeUnlock();
@@ -8256,9 +8899,29 @@ if (btnMenuHubClose) btnMenuHubClose.addEventListener("click", closeMenuHub);
 if (btnImagesClose) btnImagesClose.addEventListener("click", closeImagesPanel);
 if (btnImagesClear) btnImagesClear.addEventListener("click", clearSavedImages);
 if (btnStatsClose) btnStatsClose.addEventListener("click", closeStatsPanel);
+if (btnStatsImport){
+  btnStatsImport.addEventListener("click", () => {
+    importProfile();
+  });
+}
 if (btnStatsReset){
   btnStatsReset.addEventListener("click", () => {
-    resetLifetimeStats();
+    handleResetProfileButtonClick();
+  });
+}
+if (btnStatsExport){
+  btnStatsExport.addEventListener("click", () => {
+    exportProfile();
+  });
+}
+if (statsSavedProfilesGrid){
+  statsSavedProfilesGrid.addEventListener("click", (event) => {
+    const tile = event.target && event.target.closest ? event.target.closest(".statsSavedProfileTile") : null;
+    if (!tile) return;
+    const nickname = limitChatNicknameLength(String(tile.dataset.profileNickname || "").trim());
+    if (!nickname) return;
+    applyNicknameFromControls(nickname, false);
+    renderLifetimeStats();
   });
 }
 if (menuHubPanel){
@@ -8312,7 +8975,7 @@ if (btnStatsLockedToggle){
 }
 if (btnStatsSavedImagesToggle){
   btnStatsSavedImagesToggle.addEventListener("click", () => {
-    toggleStatsSavedImages();
+    handleStatsSavedImagesButtonClick();
   });
 }
 

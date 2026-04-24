@@ -448,6 +448,37 @@
       text-decoration: underline;
     }
 
+    .localStorageDownloadLink,
+    .localStorageDownloadLink:visited {
+      color: #00ffff;
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .localStorageDownloadLink:hover,
+    .localStorageDownloadLink:focus {
+      color: #00ffff;
+      text-decoration: underline;
+      outline: none;
+    }
+
+    .localStorageResetLink,
+    .localStorageResetLink:visited {
+      color: #ff4d4d;
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+
+    .localStorageResetLink:hover,
+    .localStorageResetLink:focus {
+      color: #ff4d4d;
+      text-decoration: underline;
+      outline: none;
+    }
+
     .messageDelete {
       display: none;
       flex: 0 0 auto;
@@ -2633,6 +2664,78 @@ const focusSink = document.getElementById('focusSink');
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       return blobUrl;
+    }
+
+    function buildLocalStorageSnapshot() {
+      const snapshot = {};
+      try {
+        const keys = [];
+        for (let index = 0; index < localStorage.length; index += 1) {
+          const key = localStorage.key(index);
+          if (key) keys.push(key);
+        }
+        keys.sort((a, b) => a.localeCompare(b));
+        keys.forEach((key) => {
+          snapshot[key] = localStorage.getItem(key);
+        });
+      } catch (error) {
+        snapshot.__error = 'Unable to read localStorage';
+      }
+      return snapshot;
+    }
+
+    function downloadLocalStorageSnapshot() {
+      const json = JSON.stringify(buildLocalStorageSnapshot(), null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      downloadBlob(blob, 'localstorage.json');
+    }
+
+    function resetBrowserLocalStorage() {
+      try {
+        window.localStorage.clear();
+      } catch (error) {
+        console.error('Unable to clear localStorage', error);
+        addSystemMessage('Unable to clear localStorage');
+        return false;
+      }
+      currentNickname = 'User';
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.location.reload();
+          return true;
+        }
+      } catch (error) {}
+      window.location.reload();
+      return true;
+    }
+
+    function createLocalStorageLogMessageNode(message) {
+      const wrapper = document.createElement('span');
+      const link = document.createElement('a');
+      link.href = '#';
+      link.className = 'localStorageDownloadLink';
+      link.textContent = '[LocalStorage]';
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        try {
+          downloadLocalStorageSnapshot();
+        } catch (error) {
+          console.error('Unable to download localstorage.json', error);
+          addSystemMessage('Unable to download localstorage.json');
+        }
+      });
+      wrapper.appendChild(link);
+      const resetLink = document.createElement('a');
+      resetLink.href = '#';
+      resetLink.className = 'localStorageResetLink';
+      resetLink.textContent = 'Reset LocalStorage';
+      resetLink.addEventListener('click', (event) => {
+        event.preventDefault();
+        resetBrowserLocalStorage();
+      });
+      wrapper.appendChild(resetLink);
+      wrapper.appendChild(document.createTextNode(` ${String(message || '').trim()}`));
+      return wrapper;
     }
 
 
@@ -7052,7 +7155,11 @@ function createHomepageCustomizeMessageNode(result = {}) {
             upsertNamedPanelMessage('homepageCustomize', () => createHomepageCustomizeMessageNode(event.data));
           }
         } else if (event.data.announce !== false) {
-          addSystemMessage(message);
+          if (String(event.data.command || '').trim().toLowerCase() === '/log') {
+            addMessage(createLocalStorageLogMessageNode(message), 'system');
+          } else {
+            addSystemMessage(message);
+          }
         }
         pendingPageCommand = null;
       }

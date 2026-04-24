@@ -552,10 +552,14 @@ const btnPauseOpenChat = document.getElementById("btnPauseOpenChat");
 const pauseCommand = null;
 const pauseCmdSuggest = null;
 const CHAT_NICKNAME_STORAGE_KEY = "tektiteChatNickname";
+const CHAT_NICKNAME_EXPLICIT_STORAGE_KEY = "tektiteChatNicknameExplicit";
 function getSavedChatNicknameValue(){
   try{
     const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
-    return savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
+    const normalized = savedNickname && savedNickname.trim() ? savedNickname.trim() : "";
+    const isExplicit = window.localStorage.getItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY) === "true";
+    if (normalized === "User" && !isExplicit) return "";
+    return Array.from(normalized).slice(0, 8).join("");
   }catch(error){
     return "";
   }
@@ -1969,6 +1973,14 @@ const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
 const SAVED_IMAGES_KEY = "tektiteShooterSavedImages";
 const SAVED_IMAGES_MAX = 10;
 
+function getSavedImageProfileName(){
+  return getSavedChatNicknameValue();
+}
+
+function getSavedImageWaveNumber(value = wave){
+  return Math.max(1, parseInt(value, 10) || 1);
+}
+
 function readSavedImages(){
   try{
     const parsed = JSON.parse(localStorage.getItem(SAVED_IMAGES_KEY) || "[]");
@@ -2117,6 +2129,16 @@ function drawCaptureHud(ctx, scaleX, scaleY){
 
 async function saveCurrentGameImage(levelLabel="Level 2"){
   if (!canvas || !canvas.width || !canvas.height) return false;
+  const nickname = getSavedImageProfileName();
+  if (!nickname){
+    if (typeof assetStatus !== "undefined" && assetStatus){
+      assetStatus.style.display = "block";
+      assetStatus.textContent = "Please set a nickname to save images.";
+      window.clearTimeout(saveCurrentGameImage._statusTimer);
+      saveCurrentGameImage._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, 2400);
+    }
+    return false;
+  }
   try{
     let dataUrl = "";
     if (typeof window.tektiteCreateLevelScreenshotDataUrl === "function"){
@@ -2147,27 +2169,36 @@ async function saveCurrentGameImage(levelLabel="Level 2"){
       dataUrl = captureCanvas.toDataURL("image/jpeg", 0.86);
     }
 
-    const images = readSavedImages();
-    images.unshift({
-      id: `shot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      createdAt: new Date().toISOString(),
-      level: levelLabel,
-      dataUrl
-    });
-    const saved = writeSavedImages(images);
-    if (saved && typeof renderSavedImages === "function") renderSavedImages();
+    const blob = await fetch(dataUrl).then((response) => response.blob());
+    const savedResult = window.tektiteShooterSavedImageStorage
+      ? await window.tektiteShooterSavedImageStorage.saveImageBlobToFolder({
+          blob,
+          nickname,
+          wave: getSavedImageWaveNumber()
+        })
+      : { ok: false, message: "Folder saving is not supported in this browser." };
+    if (savedResult.ok && typeof renderSavedImages === "function") renderSavedImages();
     if (typeof assetStatus !== "undefined" && assetStatus){
       assetStatus.style.display = "block";
-      assetStatus.textContent = saved ? "Image saved to Images." : "Could not save image. Local storage is full.";
+      assetStatus.textContent = savedResult.ok ? "Image saved to chosen folder." : String(savedResult.message || "Could not save image.");
       window.clearTimeout(saveCurrentGameImage._statusTimer);
-      saveCurrentGameImage._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, 1800);
+      saveCurrentGameImage._statusTimer = window.setTimeout(() => { if (assetStatus) assetStatus.style.display = "none"; }, savedResult.ok ? 1800 : 2400);
     }
-    return saved;
+    return !!savedResult.ok;
   }catch(error){
     console.error("In-game screenshot save failed:", error);
     return false;
   }
 }
+
+function getSavedImageMetadata(){
+  return {
+    nickname: getSavedImageProfileName(),
+    wave: getSavedImageWaveNumber()
+  };
+}
+
+window.tektiteGetSavedImageMetadata = getSavedImageMetadata;
 
 function showSavedImageStatus(message, ok = true){
   if (typeof assetStatus === "undefined" || !assetStatus) return;
@@ -2180,9 +2211,11 @@ function showSavedImageStatus(message, ok = true){
 function requestParentPageScreenshot(levelLabel="Level 2"){
   if (!window.parent || window.parent === window) return false;
   try{
+    const metadata = getSavedImageMetadata();
     window.parent.postMessage({
       type: "tektite:request-page-screenshot",
-      level: levelLabel
+      nickname: metadata.nickname,
+      wave: metadata.wave
     }, "*");
     showSavedImageStatus("Saving screenshot...");
     return true;

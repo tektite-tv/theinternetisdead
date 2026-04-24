@@ -2704,15 +2704,42 @@ body.invert-colors {
     margin:0;
   }
   #btnStatsEnterNickname[hidden],
-  #statsNicknameInput[hidden]{
+  #statsNicknameInput[hidden],
+  #statsSavedProfilesGrid[hidden]{
     display:none !important;
   }
   #statsNicknameInput{
     box-sizing:border-box;
     text-align:center;
   }
+  #statsSavedProfilesGrid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:8px;
+    margin:8px 0 14px;
+  }
+  .statsSavedProfileTile{
+    min-width:0 !important;
+    min-height:86px;
+    aspect-ratio:1 / 1;
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    line-height:1.12;
+    padding:10px 8px !important;
+    font-size:13px;
+    font-weight:900;
+  }
+  .statsSavedProfileTilePin{
+    display:inline-block;
+    margin-right:4px;
+  }
   body.controller-active #btnStatsEnterNickname.controllerFocus,
-  body.controller-active #statsNicknameInput.controllerFocus{
+  body.controller-active #statsNicknameInput.controllerFocus,
+  body.controller-active .statsSavedProfileTile.controllerFocus{
     outline:2px solid #00ff66;
     box-shadow:0 0 16px rgba(0,255,102,0.55);
   }
@@ -2746,6 +2773,11 @@ body.invert-colors {
     display:block;
     width:100%;
     margin:0;
+  }
+  #statsSavedImagesDetails[hidden],
+  #btnStatsSavedImagesToggle[hidden],
+  #btnImagesClear[hidden]{
+    display:none !important;
   }
   #statsSavedImagesList{
     padding-top:10px;
@@ -3722,7 +3754,8 @@ body.invert-colors {
   /* v2.21: controller focus can enter Images/Stats hub content from the top tab row. */
   body.controller-active #menuHubPanel .savedImageCard.controllerFocus,
   body.controller-active #menuHubPanel .statsRow.controllerFocus,
-  body.controller-active #menuHubPanel .statsSelectableRow.controllerFocus{
+  body.controller-active #menuHubPanel .statsSelectableRow.controllerFocus,
+  body.controller-active #menuHubPanel .statsSavedProfileTile.controllerFocus{
     outline:2px solid #00ff66 !important;
     border-color:rgba(0,255,102,0.9) !important;
     box-shadow:0 0 14px rgba(0,255,102,0.45) !important;
@@ -6556,7 +6589,7 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
       <button id="btnMenu" class="smallBtn" type="button"><span class="startMenuButtonText">Menu Hub</span></button>
     </div>
     <div id="startNicknameRow" class="startMenuNicknameRow">
-      <button id="btnEnterNickname" class="smallBtn" type="button"><span class="startMenuButtonText">Enter Nickname</span></button>
+<button id="btnEnterNickname" class="smallBtn" type="button"><span class="startMenuButtonText">Enter Nickname to Create Profile</span></button>
       <input id="startNicknameInput" class="smallBtn" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname" />
       <div id="startWelcomeNickname" class="startMenuWelcomeNickname" aria-live="polite"></div>
     </div>
@@ -6579,8 +6612,9 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
       <div id="statsScroll" class="menuMiddleScroll">
         <!-- v2.XX: Keep both Stats nickname states directly under the Stats hub tab/button,
              above lifetime stat rows, instead of burying them after the list. -->
-        <button id="btnStatsEnterNickname" class="smallBtn statsToggleBtn statsNicknamePromptBtn" type="button" hidden>Enter Nickname to Track Stats</button>
+        <button id="btnStatsEnterNickname" class="smallBtn statsToggleBtn statsNicknamePromptBtn" type="button" hidden>Enter Nickname to Create Profile</button>
         <input id="statsNicknameInput" class="smallBtn statsToggleBtn statsNicknamePromptInput" type="text" placeholder="Enter Nickname" maxlength="24" spellcheck="false" autocomplete="off" aria-label="Enter nickname to track stats" hidden />
+        <div id="statsSavedProfilesGrid" hidden></div>
         <div id="statsList">
           <div class="statsRow" data-stat-row="lifetimeScoreEarned"><span>Lifetime Score</span><span id="statLifetimeScore" class="statsValue">0</span></div>
           <div class="statsRow" data-stat-row="lifetimeEnemiesKilled"><span>Lifetime Enemies Killed</span><span id="statLifetimeEnemies" class="statsValue">0</span></div>
@@ -6606,7 +6640,9 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
       </div>
       <div id="statsPanelButtons" class="btnRow menuBottomRow">
         <button id="btnStatsClose" class="smallBtn" type="button">Back</button>
-        <button id="btnStatsReset" class="smallBtn" type="button">Reset Stats</button>
+        <button id="btnStatsImport" class="smallBtn" type="button" hidden>Import Profile</button>
+        <button id="btnStatsReset" class="smallBtn" type="button">Reset Profile</button>
+        <button id="btnStatsExport" class="smallBtn" type="button">Export Profile</button>
       </div>
     </div>
   </div>
@@ -6913,6 +6949,7 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
 <script src="/games/shooter-game/assets/scripts/level-controls-formatters.js"></script>
 <script src="/games/shooter-game/assets/scripts/level-file-timestamp.js"></script>
 <script src="/games/shooter-game/assets/scripts/level-screenshot.js"></script>
+<script src="/games/shooter-game/assets/scripts/saved-images-storage.js"></script>
 <script src="/games/shooter-game/assets/scripts/level1-runtime.js"></script>
 <script src="/games/shooter-game/assets/scripts/time-easter-egg.js"></script>
 <script src="/games/shooter-game/assets/scripts/level1-win-fallbacks.js"></script>

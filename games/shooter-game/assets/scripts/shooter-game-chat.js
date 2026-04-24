@@ -126,8 +126,43 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
     }
 
 
-    const SHOOTER_SAVED_IMAGES_KEY = 'tektiteShooterSavedImages';
-    const SHOOTER_SAVED_IMAGES_MAX = 10;
+    const CHAT_NICKNAME_STORAGE_KEY = 'tektiteChatNickname';
+    const CHAT_NICKNAME_EXPLICIT_STORAGE_KEY = 'tektiteChatNicknameExplicit';
+
+    function getSavedShooterNicknameValue() {
+      try {
+        const savedNickname = window.localStorage.getItem(CHAT_NICKNAME_STORAGE_KEY);
+        const normalized = savedNickname && savedNickname.trim() ? savedNickname.trim() : '';
+        const isExplicit = window.localStorage.getItem(CHAT_NICKNAME_EXPLICIT_STORAGE_KEY) === 'true';
+        if (normalized === 'User' && !isExplicit) return '';
+        return Array.from(normalized).slice(0, 8).join('');
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function getShooterLevelSavedImageMetadata() {
+      try {
+        const frameWindow = tektiteFrame && tektiteFrame.contentWindow ? tektiteFrame.contentWindow : null;
+        if (frameWindow && typeof frameWindow.tektiteGetSavedImageMetadata === 'function') {
+          const metadata = frameWindow.tektiteGetSavedImageMetadata();
+          return metadata && typeof metadata === 'object' ? metadata : null;
+        }
+      } catch (error) {}
+      return null;
+    }
+
+    function getShooterSavedImageMetadata(options = {}) {
+      const metadata = getShooterLevelSavedImageMetadata();
+      const nickname = String(
+        options.nickname ||
+        (metadata && metadata.nickname) ||
+        getSavedShooterNicknameValue() ||
+        ''
+      ).trim();
+      const wave = Math.max(1, parseInt(options.wave != null ? options.wave : (metadata && metadata.wave), 10) || 1);
+      return { nickname, wave };
+    }
 
     async function loadHtml2CanvasInto(doc, win) {
       if (!doc || !win) throw new Error('Screenshot target is not ready.');
@@ -264,43 +299,31 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       } catch (error) {}
     }
 
-    function saveShooterPageScreenshotToStorage(dataUrl, label) {
-      if (!dataUrl) return false;
-      const entry = {
-        id: `shot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        createdAt: new Date().toISOString(),
-        level: label || (hasSwitchedToLevel2 ? 'Level 2' : 'Level 1'),
-        dataUrl
-      };
-      let images = [];
-      try {
-        const parsed = JSON.parse(localStorage.getItem(SHOOTER_SAVED_IMAGES_KEY) || '[]');
-        images = Array.isArray(parsed) ? parsed.filter((item) => item && item.dataUrl) : [];
-      } catch (error) {
-        images = [];
+    async function saveShooterPageScreenshotToStorage(dataUrl, options = {}) {
+      if (!dataUrl) return { ok: false, message: 'Unable to save screenshot.' };
+      const metadata = getShooterSavedImageMetadata(options);
+      if (!metadata.nickname) {
+        notifyLevelSavedImagesUpdated({ ok: false, message: 'Please set a nickname to save images.' });
+        return { ok: false, message: 'Please set a nickname to save images.' };
       }
-      images.unshift(entry);
-      try {
-        localStorage.setItem(SHOOTER_SAVED_IMAGES_KEY, JSON.stringify(images.slice(0, SHOOTER_SAVED_IMAGES_MAX)));
-        notifyLevelSavedImagesUpdated({ ok: true, message: 'Screenshot saved to Profile > Saved Images.' });
-        return true;
-      } catch (error) {
-        try {
-          localStorage.setItem(SHOOTER_SAVED_IMAGES_KEY, JSON.stringify(images.slice(0, Math.max(1, Math.floor(SHOOTER_SAVED_IMAGES_MAX / 2)))));
-          notifyLevelSavedImagesUpdated({ ok: true, message: 'Screenshot saved to Profile > Saved Images.' });
-          return true;
-        } catch (secondError) {
-          notifyLevelSavedImagesUpdated({ ok: false, message: 'Could not save screenshot. Local storage is full.' });
-          return false;
-        }
+      if (!window.tektiteShooterSavedImageStorage) {
+        notifyLevelSavedImagesUpdated({ ok: false, message: 'Folder saving is not supported in this browser.' });
+        return { ok: false, message: 'Folder saving is not supported in this browser.' };
       }
+      const blob = await fetch(dataUrl).then((response) => response.blob());
+      const result = await window.tektiteShooterSavedImageStorage.saveImageBlobToFolder({
+        blob,
+        nickname: metadata.nickname,
+        wave: metadata.wave
+      });
+      notifyLevelSavedImagesUpdated({ ok: result.ok, message: result.ok ? 'Screenshot saved to chosen folder.' : String(result.message || 'Could not save screenshot.') });
+      return { ok: !!result.ok, message: result.ok ? 'Screenshot saved to chosen folder.' : String(result.message || 'Could not save screenshot.') };
     }
 
     async function saveShooterPageScreenshot(options = {}) {
       try {
         const dataUrl = await createShooterPageScreenshotDataUrl();
-        const saved = saveShooterPageScreenshotToStorage(dataUrl, options.level || (hasSwitchedToLevel2 ? 'Level 2' : 'Level 1'));
-        return { ok: saved, message: saved ? 'Screenshot saved to Profile > Saved Images.' : 'Could not save screenshot. Local storage is full.' };
+        return await saveShooterPageScreenshotToStorage(dataUrl, options);
       } catch (error) {
         console.error('Shooter page screenshot failed:', error);
         notifyLevelSavedImagesUpdated({ ok: false, message: 'Unable to save screenshot.' });
@@ -1078,7 +1101,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
             return;
           }
           if (commandName === '/screenshot') {
-            const result = await saveShooterPageScreenshot({ level: hasSwitchedToLevel2 ? 'Level 2' : 'Level 1' });
+            const result = await saveShooterPageScreenshot();
             postToChatSandbox({
               type: 'pageChatResult',
               command: '/screenshot',
@@ -1109,8 +1132,10 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       }
 
       if (data.type === 'tektite:request-page-screenshot') {
-        const label = String(data.level || (hasSwitchedToLevel2 ? 'Level 2' : 'Level 1')).trim() || 'Shooter Game';
-        saveShooterPageScreenshot({ level: label });
+        saveShooterPageScreenshot({
+          nickname: data.nickname,
+          wave: data.wave
+        });
         return;
       }
 
