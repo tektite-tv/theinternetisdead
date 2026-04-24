@@ -2078,23 +2078,20 @@ function moveImagesControllerFocus(delta){
 function moveImagesControllerFocusDirectional(direction){
   const items = getImagesControllerTargets();
   if (!items.length) return false;
-  const current = items[imagesFocusIndex];
   const closeIndex = items.indexOf(btnImagesClose);
   const clearIndex = items.indexOf(btnImagesClear);
   let nextIndex = imagesFocusIndex;
 
   if (direction === "down"){
-    if (current === btnImagesClose || current === btnImagesClear) return false;
-    nextIndex = Math.min(items.length - 1, imagesFocusIndex + 1);
+    nextIndex = (imagesFocusIndex + 1 + items.length) % items.length;
   } else if (direction === "up"){
-    if (imagesFocusIndex <= 0) return false;
-    nextIndex = imagesFocusIndex - 1;
+    nextIndex = (imagesFocusIndex - 1 + items.length) % items.length;
   } else if (direction === "left"){
-    if (current === btnImagesClear && closeIndex !== -1) nextIndex = closeIndex;
-    else if (imagesFocusIndex > 0) nextIndex = imagesFocusIndex - 1;
+    if (items[imagesFocusIndex] === btnImagesClear && closeIndex !== -1) nextIndex = closeIndex;
+    else nextIndex = (imagesFocusIndex - 1 + items.length) % items.length;
   } else if (direction === "right"){
-    if (current === btnImagesClose && clearIndex !== -1) nextIndex = clearIndex;
-    else if (imagesFocusIndex < items.length - 1) nextIndex = imagesFocusIndex + 1;
+    if (items[imagesFocusIndex] === btnImagesClose && clearIndex !== -1) nextIndex = clearIndex;
+    else nextIndex = (imagesFocusIndex + 1 + items.length) % items.length;
   }
 
   if (nextIndex === imagesFocusIndex || nextIndex < 0 || nextIndex >= items.length) return false;
@@ -8957,60 +8954,45 @@ function pollGamepad(dt){
       // so the old order routed controller input back into the hidden Pause menu.
       if (menuHubActiveTab === "images" && menuHubImagesContentFocused){
         const imageItems = getImagesControllerTargets();
-        const imageTarget = imageItems[imagesFocusIndex];
         if (pressListTop) returnMenuHubImagesFocusToTab();
         if (pressListBottom){ imagesFocusIndex = Math.max(0, imageItems.indexOf(btnImagesClose)); syncImagesControllerFocus(); }
-        if (navUp){
-          if (imagesFocusIndex <= 0) returnMenuHubImagesFocusToTab();
-          else moveImagesControllerFocusDirectional("up");
-        }
-        if (navDown){
-          if (imageTarget === btnImagesClose || imageTarget === btnImagesClear) returnMenuHubImagesFocusToTab();
-          else moveImagesControllerFocusDirectional("down");
-        }
+        if (navUp) moveImagesControllerFocusDirectional("up");
+        if (navDown) moveImagesControllerFocusDirectional("down");
         if (navLeft || rNavLeft) moveImagesControllerFocusDirectional("left");
         if (navRight || rNavRight) moveImagesControllerFocusDirectional("right");
+        if (rNavUp && imagesList) imagesList.scrollBy({ top:-72, behavior:"smooth" });
+        if (rNavDown && imagesList) imagesList.scrollBy({ top:72, behavior:"smooth" });
         if (pressMenuSelect) activateControllerTarget(getImagesControllerTargets()[imagesFocusIndex]);
         if (pressMenuBack) returnMenuHubImagesFocusToTab();
       } else if (menuHubActiveTab === "stats" && menuHubStatsContentFocused){
         const statsItems = getStatsControllerTargets();
-        const statsTarget = statsItems[statsFocusIndex];
         if (pressListTop) returnMenuHubStatsFocusToTab();
         if (pressListBottom){ statsFocusIndex = Math.max(0, statsItems.indexOf(btnStatsClose)); syncStatsControllerFocus(); }
-        if (navUp){
-          if (statsFocusIndex <= 0) returnMenuHubStatsFocusToTab();
-          else { statsFocusIndex = Math.max(0, statsFocusIndex - 1); syncStatsControllerFocus(); }
-        }
-        if (navDown){
-          if (statsTarget === btnStatsClose || statsTarget === btnStatsReset) returnMenuHubStatsFocusToTab();
-          else { statsFocusIndex = Math.min(getStatsControllerTargets().length - 1, statsFocusIndex + 1); syncStatsControllerFocus(); }
-        }
+        if (navUp) moveStatsControllerFocus(-1);
+        if (navDown) moveStatsControllerFocus(1);
         if (navLeft) moveStatsControllerFocusDirectional("left");
         if (navRight) moveStatsControllerFocusDirectional("right");
-        if (rNavUp) scrollStatsPanelBy(-32);
-        if (rNavDown) scrollStatsPanelBy(32);
+        if (rNavUp) scrollStatsPanelBy(-72);
+        if (rNavDown) scrollStatsPanelBy(72);
         if (pressMenuSelect) activateControllerTarget(getStatsControllerTargets()[statsFocusIndex]);
         if (pressMenuBack) returnMenuHubStatsFocusToTab();
       } else if (menuHubActiveTab === "options" && menuHubOptionsContentFocused){
         if (pressListTop) returnMenuHubOptionsFocusToTab();
         if (pressListBottom) jumpControllerFocusToListEdge(getOptionsControllerTargets(), optionsFocusIndex, (index) => { optionsFocusIndex = index; }, syncOptionsControllerFocus, 1);
-        if (navUp){
-          if (optionsFocusIndex <= 0) returnMenuHubOptionsFocusToTab();
-          else moveOptionsControllerFocus(-1);
-        }
+        if (navUp) moveOptionsControllerFocus(-1);
         if (navDown){
           if (!wrapOptionsBottomButtonsToTop()) moveOptionsControllerFocus(1);
         }
         if (typeof isStartingStatFocused === "function" && isStartingStatFocused()){
           if (navLeft) moveStartingStatFocus(-1);
           if (navRight) moveStartingStatFocus(1);
-          if (rNavUp) adjustControllerOption(1);
-          if (rNavDown) adjustControllerOption(-1);
+          if (rNavUp) scrollOptionsPanelBy(-72);
+          if (rNavDown) scrollOptionsPanelBy(72);
         } else {
           if (navLeft && !moveOptionsBottomButtonsHorizontally(-1)) adjustControllerOption(-1);
           if (navRight && !moveOptionsBottomButtonsHorizontally(1)) adjustControllerOption(1);
-          if (rNavUp) adjustControllerOption(1);
-          if (rNavDown) adjustControllerOption(-1);
+          if (rNavUp) scrollOptionsPanelBy(-72);
+          if (rNavDown) scrollOptionsPanelBy(72);
         }
         if (pressMenuSelect) activateControllerTarget(getOptionsControllerTargets()[optionsFocusIndex]);
         if (pressMenuBack) returnMenuHubOptionsFocusToTab();
