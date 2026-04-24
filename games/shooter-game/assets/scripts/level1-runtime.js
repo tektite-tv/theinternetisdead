@@ -2632,7 +2632,11 @@ function openSavedImagePanelViewer(indexOrCard){
   ensureSavedImagePanelViewer();
   if (!syncSavedImagePanelViewerImage()) return false;
   savedImagePanelViewerActive = true;
+  savedImagePanelViewerBrowserSize = false;
+  document.body.classList.remove("savedImageBrowserViewMode");
   if (menuHubPanel) menuHubPanel.classList.add("savedImageViewerMode");
+  if (menuHubPanel) menuHubPanel.classList.remove("savedImageBrowserViewMode");
+  if (btnSavedImagePanelFullscreen) btnSavedImagePanelFullscreen.textContent = "Fullscreen";
   if (savedImagePanelViewer) savedImagePanelViewer.setAttribute("aria-hidden", "false");
   savedImagePanelViewerFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncSavedImagePanelViewerControllerFocus();
@@ -2643,8 +2647,11 @@ function openSavedImagePanelViewer(indexOrCard){
 function closeSavedImagePanelViewer(){
   if (!savedImagePanelViewerActive) return false;
   savedImagePanelViewerActive = false;
-  if (menuHubPanel) menuHubPanel.classList.remove("savedImageViewerMode");
+  savedImagePanelViewerBrowserSize = false;
+  document.body.classList.remove("savedImageBrowserViewMode");
+  if (menuHubPanel) menuHubPanel.classList.remove("savedImageViewerMode", "savedImageBrowserViewMode");
   if (savedImagePanelViewer) savedImagePanelViewer.setAttribute("aria-hidden", "true");
+  if (btnSavedImagePanelFullscreen) btnSavedImagePanelFullscreen.textContent = "Fullscreen";
   if (savedImagePanelViewerReturnFocus){
     const focusIndex = getStatsControllerTargets().indexOf(savedImagePanelViewerReturnFocus);
     if (focusIndex >= 0) statsFocusIndex = focusIndex;
@@ -2663,9 +2670,15 @@ function moveSavedImagePanelViewer(delta){
 }
 
 function requestSavedImagePanelFullscreen(){
-  const target = savedImagePanelViewerImage || savedImagePanelViewer || menuHubPanelInner;
-  if (!target || !target.requestFullscreen) return false;
-  try{ target.requestFullscreen(); return true; }catch(_){ return false; }
+  if (!savedImagePanelViewerActive) return false;
+  savedImagePanelViewerBrowserSize = !savedImagePanelViewerBrowserSize;
+  document.body.classList.toggle("savedImageBrowserViewMode", savedImagePanelViewerBrowserSize);
+  if (menuHubPanel) menuHubPanel.classList.toggle("savedImageBrowserViewMode", savedImagePanelViewerBrowserSize);
+  if (btnSavedImagePanelFullscreen){
+    btnSavedImagePanelFullscreen.textContent = savedImagePanelViewerBrowserSize ? "Panel Size" : "Fullscreen";
+  }
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncSavedImagePanelViewerControllerFocus();
+  return true;
 }
 
 function prepareSavedImageCard(card, index){
@@ -4656,6 +4669,7 @@ let savedImagePanelViewerActive = false;
 let savedImagePanelViewerIndex = 0;
 let savedImagePanelViewerReturnFocus = null;
 let savedImagePanelViewerFocusIndex = 0;
+let savedImagePanelViewerBrowserSize = false;
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
