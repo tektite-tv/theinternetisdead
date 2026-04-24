@@ -2288,6 +2288,13 @@ function syncStartMenuHudLayerMode(){
   }catch(_){ }
 }
 
+function hasLoadedEnemyPreviewSprites(){
+  // v13.04: Never let the pregame preview spawn enemies before the real enemy
+  // image pool is loaded. The old fallback was playerImg, which made refresh
+  // briefly turn every enemy into Bananarama. Adorable, cursed, wrong.
+  return !!(assetsReady && enemyImages && enemyImages.length);
+}
+
 function setupStartMenuEnemyPreview(){
   // v13.02: The start menu gets a live Wave 9 movement preview behind the panel.
   // It is still decoration: no player damage, no enemy bullets, no score, no wave progression.
@@ -2299,6 +2306,16 @@ function setupStartMenuEnemyPreview(){
   ufo = null;
   waveBanner.t = 0;
   waveBanner.text = "";
+
+  if (!hasLoadedEnemyPreviewSprites()){
+    // Refresh/load state: draw nothing until enemy sprites are real.
+    // No Bananarama cosplay squad in the background.
+    enemies = [];
+    firstBossSpawned = false;
+    wave = START_MENU_PREVIEW_WAVE;
+    return;
+  }
+
   firstBossSpawned = false;
   wave = START_MENU_PREVIEW_WAVE;
   resetFormation();
@@ -2308,6 +2325,16 @@ function setupStartMenuEnemyPreview(){
 
 function updateStartMenuEnemyPreview(dt){
   if (!isStartMenuEnemyPreviewActive()) return;
+  if (!hasLoadedEnemyPreviewSprites()){
+    bullets.length = 0;
+    enemyBullets.length = 0;
+    enemies = [];
+    bomb = null;
+    ufo = null;
+    waveBanner.t = 0;
+    waveBanner.text = "";
+    return;
+  }
   if (!enemies || !enemies.length || wave !== START_MENU_PREVIEW_WAVE){
     setupStartMenuEnemyPreview();
   }
