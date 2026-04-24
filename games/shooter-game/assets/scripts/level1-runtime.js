@@ -1193,18 +1193,12 @@ function execPauseCommand(cmd){
     return { ok:true, suppressChatResult:true };
   }
 
-  // Hidden instant cheatermode aliases. Not listed in /help, because secrets need doors.
+  // Hidden nickname aliases. Not listed in /help, because secrets need doors.
   const lowerRaw = raw.toLowerCase();
   if (lowerRaw === "/jinclops" || lowerRaw === "/tektite"){
     const secretNickname = lowerRaw === "/jinclops" ? "Jinclops" : "Tektite";
-    applyNicknameFromControls(secretNickname, true);
-    unlockCheatermode("chat-instant");
-    applyGlobalInfiniteMode(true);
-    shootCheatMode = "big_bullets";
-    glitchBackgroundPulse = 0;
-    lockScoreTrackingState();
-    syncCheatsMenuState();
-    return { ok:true, message:`Nickname set to ${secretNickname}. Cheat commands unlocked, Infinite Mode enabled, and /shoot big_bullets applied` };
+    applyNicknameFromControls(secretNickname, true, { skipTektiteCheatermodeUnlock: true });
+    return { ok:true, message:`Nickname set to ${secretNickname}` };
   }
 
   if (raw.startsWith("/cheatermode")){
@@ -7691,7 +7685,7 @@ function syncNicknameStatsLabels(){
 
 try{ window.addEventListener("resize", fitStatsStartButtonNicknameLabel); }catch(_){}
 
-function applyNicknameFromControls(value, announce=false){
+function applyNicknameFromControls(value, announce=false, options={}){
   const normalized = saveChatNickname(value);
   if (nicknameInput) nicknameInput.value = normalized;
   syncNicknameInputPreview();
@@ -7700,7 +7694,9 @@ function applyNicknameFromControls(value, announce=false){
   applyMuteState();
   if (typeof renderLifetimeStats === "function") renderLifetimeStats();
   syncNicknameActionButton();
-  syncTektiteNicknameCheatermodeUnlock();
+  if (!options || !options.skipTektiteCheatermodeUnlock){
+    syncTektiteNicknameCheatermodeUnlock();
+  }
   try{
     if (window.parent && window.parent !== window){
       window.parent.postMessage({
