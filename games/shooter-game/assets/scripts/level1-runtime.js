@@ -2263,21 +2263,36 @@ function showWaveBanner(n){
 const STATE = { MENU:"menu", HUB:"hub", OPTIONS:"options", CHEATS:"cheats", CONTROLS:"controls", PLAYING:"playing", WIN:"win" };
 let gameState = STATE.MENU;
 
-function syncStartMenuHudLayerMode(){
-  try{
-    document.body.classList.toggle("start-menu-hud-over-gameplay", gameState === STATE.MENU);
-  }catch(_){ }
+function isPregameMenuEnemyPreviewState(){
+  // v13.03: Keep the Wave 9 preview alive across the Start Menu, Menu Hub,
+  // and the Hub's nested panels. Pause-origin hubs stay excluded so live gameplay
+  // does not get replaced by decorative menu goblins. Because that would be rude.
+  return (
+    gameState === STATE.MENU ||
+    gameState === STATE.HUB ||
+    gameState === STATE.OPTIONS ||
+    gameState === STATE.CHEATS ||
+    gameState === STATE.CONTROLS
+  );
 }
 
 function isStartMenuEnemyPreviewActive(){
-  return gameState === STATE.MENU && !isPaused;
+  if (gameState === STATE.HUB && menuHubOpenedFromPause && isPaused) return false;
+  if (optionsOpenedFromPause || cheatsOpenedFromPause || pauseControlsOpen) return false;
+  return isPregameMenuEnemyPreviewState() && !isPaused;
+}
+
+function syncStartMenuHudLayerMode(){
+  try{
+    document.body.classList.toggle("start-menu-hud-over-gameplay", isStartMenuEnemyPreviewActive());
+  }catch(_){ }
 }
 
 function setupStartMenuEnemyPreview(){
   // v13.02: The start menu gets a live Wave 9 movement preview behind the panel.
   // It is still decoration: no player damage, no enemy bullets, no score, no wave progression.
   // Starting the game still uses the normal START_WAVE path, which defaults to Wave 1.
-  if (gameState !== STATE.MENU) return;
+  if (!isStartMenuEnemyPreviewActive()) return;
   bullets.length = 0;
   enemyBullets.length = 0;
   bomb = null;
