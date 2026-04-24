@@ -1024,6 +1024,17 @@ function readStartHudPreviewOption(inputEl, savedValue, savedInfinite, minValue)
   return { infinite:false, value:Math.max(minValue, Number.isFinite(parsed) ? parsed : minValue) };
 }
 function renderMenuHudPreview(){
+  const gameplayHudActiveForMenuPreview = (typeof isPausedGameplayMenuBackdropState === "function")
+    ? isPausedGameplayMenuBackdropState()
+    : (typeof gameState !== "undefined" && typeof STATE !== "undefined" && gameState === STATE.PLAYING);
+  if (gameplayHudActiveForMenuPreview){
+    if (typeof updateAccuracyScoreHUD === "function") updateAccuracyScoreHUD();
+    if (typeof updateTimerHUD === "function") updateTimerHUD();
+    if (livesSlot) livesSlot.style.display = (typeof playerSpectatorMode !== "undefined" && playerSpectatorMode) ? "none" : "flex";
+    if (livesText) livesText.textContent = livesInfiniteActive ? "x∞" : ("x" + lives);
+    if (typeof _syncBombHud === "function") _syncBombHud();
+    return;
+  }
   const heartsHud = getHeartsHudEl();
   const livesPreview = readStartHudPreviewOption(livesSlider, START_LIVES, START_LIVES_INFINITE, 0);
   const heartsPreview = readStartHudPreviewOption(heartsSlider, START_HEARTS, START_HEARTS_INFINITE, 1);
@@ -1063,9 +1074,24 @@ function renderMenuHudPreview(){
   }
   if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
   if (timerHud){
-    timerHud.style.display = "block";
+    timerHud.style.display = "none";
     timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div class="timerHudValue">0.0s</div>';
   }
+
+  // v24: Start/menu preview shows only Hearts/Shields.
+  // Score, Time, Lives, and Bombs stay hidden until Start Game is pressed.
+  if (scoreStoreHud){
+    scoreStoreHud.style.display = "none";
+    scoreStoreHud.classList.remove("storeReady");
+    scoreStoreHud.disabled = true;
+    scoreStoreHud.tabIndex = -1;
+    scoreStoreHud.setAttribute("aria-disabled", "true");
+  }
+  if (accuracyScoreEl) accuracyScoreEl.style.display = "none";
+  if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
+  if (livesSlot) livesSlot.style.display = "none";
+  if (powerupSlot) powerupSlot.style.display = "none";
+
   if (!heartsHud) return;
 
   let out = "";

@@ -44,8 +44,12 @@ function _resetStartResourceDefaults(){
 }
 
 function _syncBombHud(){
+  const gameplayHudActive = (typeof isPausedGameplayMenuBackdropState === "function")
+    ? isPausedGameplayMenuBackdropState()
+    : (typeof gameState !== "undefined" && typeof STATE !== "undefined" && gameState === STATE.PLAYING);
   if (powerupSlot){
-    powerupSlot.style.display = (bombsCount > 0 || infiniteModeActive || bombsInfiniteActive) ? "flex" : "none";
+    const hasBombs = !!(bombsCount > 0 || infiniteModeActive || bombsInfiniteActive);
+    powerupSlot.style.display = (gameplayHudActive && hasBombs) ? "flex" : "none";
   }
   if (powerupHint){
     if (infiniteModeActive || bombsInfiniteActive) powerupHint.textContent = "Q \u221e";
