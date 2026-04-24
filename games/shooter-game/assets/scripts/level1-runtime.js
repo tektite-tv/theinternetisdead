@@ -480,6 +480,51 @@ const livesText = document.getElementById("livesText");
 const powerupSlot = document.getElementById("powerupSlot");
 const powerupHint = document.getElementById("powerupHint");
 ;
+// Player proximity HUD fade:
+// Lives and Bombs counters fade out as the player sprite approaches them.
+// The player stays fully visible; only the corner counters become less opaque.
+const PLAYER_COUNTER_FADE_RADIUS_PX = 190;
+const PLAYER_COUNTER_MIN_OPACITY = 0.12;
+
+function setHudCounterOpacity(el, opacity){
+  if (!el) return;
+  const clamped = Math.max(PLAYER_COUNTER_MIN_OPACITY, Math.min(1, opacity));
+  el.style.opacity = String(clamped);
+}
+
+function resetPlayerProximityHudFade(){
+  if (livesSlot) livesSlot.style.opacity = "";
+  if (powerupSlot) powerupSlot.style.opacity = "";
+}
+
+function syncPlayerProximityHudFade(){
+  if (gameState !== STATE.PLAYING || (typeof hasActivePlayer === "function" && !hasActivePlayer())){
+    resetPlayerProximityHudFade();
+    return;
+  }
+  const canvasRect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / Math.max(1, canvasRect.width);
+  const scaleY = canvas.height / Math.max(1, canvasRect.height);
+  const playerScreenX = canvasRect.left + (player.x / scaleX);
+  const playerScreenY = canvasRect.top + (player.y / scaleY);
+
+  const fadeCounter = (el) => {
+    if (!el || el.style.display === "none") return;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const distance = Math.hypot(playerScreenX - cx, playerScreenY - cy);
+    const radius = PLAYER_COUNTER_FADE_RADIUS_PX;
+    const opacity = distance >= radius
+      ? 1
+      : PLAYER_COUNTER_MIN_OPACITY + (1 - PLAYER_COUNTER_MIN_OPACITY) * (distance / radius);
+    setHudCounterOpacity(el, opacity);
+  };
+
+  fadeCounter(livesSlot);
+  fadeCounter(powerupSlot);
+}
+
 const deathOverlay = document.getElementById("deathOverlay");
 const btnRestart = document.getElementById("btnRestart");
 const btnDeathQuitToMenu = document.getElementById("btnDeathQuitToMenu");
@@ -10857,6 +10902,7 @@ function drawShieldRing(){
 
 function draw(){
   syncStartMenuHudLayerMode();
+  syncPlayerProximityHudFade();
   drawStarfield();
 
   // v1.96+: draw player death particles
