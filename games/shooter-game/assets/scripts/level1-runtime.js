@@ -1064,7 +1064,7 @@ function renderMenuHudPreview(){
   if (storeUnlockedHudEl) storeUnlockedHudEl.style.display = "none";
   if (timerHud){
     timerHud.style.display = "block";
-    timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div>0.0s</div>';
+    timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div class="timerHudValue">0.0s</div>';
   }
   if (!heartsHud) return;
 
@@ -2552,7 +2552,20 @@ function updateAccuracyScoreHUD(){
 }
 
 function formatRunTime(seconds){
-  return (Math.max(0, seconds || 0)).toFixed(1) + "s";
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  const units = [
+    { suffix:"y", seconds:365 * 24 * 60 * 60 },
+    { suffix:"d", seconds:24 * 60 * 60 },
+    { suffix:"h", seconds:60 * 60 },
+    { suffix:"m", seconds:60 },
+    { suffix:"s", seconds:1 }
+  ];
+  for (const unit of units){
+    if (safeSeconds >= unit.seconds){
+      return (safeSeconds / unit.seconds).toFixed(1) + unit.suffix;
+    }
+  }
+  return "0.0s";
 }
 
 function clamp01(n){
@@ -2633,7 +2646,7 @@ function updateTimerHUD(){
     return;
   }
   timerHud.style.display = "block";
-  timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div>' + runTimer.toFixed(1) + 's</div>';
+  timerHud.innerHTML = '<div class="timerHudLabel">Time</div><div class="timerHudValue">' + formatRunTime(runTimer) + '</div>';
 }
 
 function isDragonEnemy(e){
@@ -7156,7 +7169,7 @@ window.TektiteLevel1SpeedZero = {
       document.body.classList.add("speedZeroTimeTravel");
       if (timerHud){
         timerHud.style.display = "block";
-        timerHud.innerHTML = '<div class="timerHudLabel">Time Travel</div><div>-' + value.toFixed(1) + 's</div>';
+        timerHud.innerHTML = '<div class="timerHudLabel">Time Travel</div><div class="timerHudValue">-' + formatRunTime(value) + '</div>';
       }
     }catch(e){}
   },

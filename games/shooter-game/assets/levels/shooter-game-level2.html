@@ -1278,7 +1278,7 @@ body.invert-colors {
   <div id="accuracyScore" class="hudBoxValue">0pts</div>
   <div id="storeUnlockedHud">Store Unlocked</div>
 </button>
-<div id="timerHud">0.0s</div>
+<div id="timerHud"><div class="timerHudLabel">Time</div><div class="timerHudValue">0.0s</div></div>
 
 
 <div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
@@ -1798,6 +1798,33 @@ line-height:1;
     font-weight:900 !important;
     opacity:1 !important;
     text-shadow:0 0 6px rgba(0,0,0,0.92), 0 1px 2px rgba(0,0,0,0.85) !important;
+  }
+</style>
+
+<style id="hudTimerWhiteTextValuePatch">
+  /* v23: Keep the live 0.0s timer value bold white after runtime rewrites. */
+  html body #timerHud,
+  html body #timerHud *,
+  html body #timerHud .timerHudLabel,
+  html body #timerHud .timerHudValue,
+  html body #timerHud > div,
+  html body.speedZeroTimeTravel #timerHud,
+  html body.speedZeroTimeTravel #timerHud *{
+    color:#ffffff !important;
+    -webkit-text-fill-color:#ffffff !important;
+    font-family:"Courier New", monospace !important;
+    font-weight:900 !important;
+    opacity:1 !important;
+    text-shadow:0 0 6px rgba(0,0,0,0.92), 0 1px 2px rgba(0,0,0,0.85) !important;
+  }
+  html body #timerHud .timerHudValue,
+  html body #timerHud > div:last-child{
+    display:block !important;
+    width:100% !important;
+    font-size:15px !important;
+    line-height:1.08 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
   }
 </style>
 
