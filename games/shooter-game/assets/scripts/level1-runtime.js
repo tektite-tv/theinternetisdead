@@ -2230,7 +2230,7 @@ const deathButtons = [];
 
 
 let wave = 1;
-const START_MENU_PREVIEW_WAVE = 9; // v13.01: Start screen enemy tableau, because apparently menus now need stage directions.
+const START_MENU_PREVIEW_WAVE = 9; // v13.02: Start screen enemy preview sim, because apparently menus now need unpaid actors.
 let firstBossSpawned = false; // track first boss size
 
 
@@ -2274,9 +2274,9 @@ function isStartMenuEnemyPreviewActive(){
 }
 
 function setupStartMenuEnemyPreview(){
-  // v13.01: The start menu gets a frozen Wave 9 enemy preview behind the panel.
-  // It is only decoration. Starting the game still uses the normal START_WAVE path,
-  // which defaults to Wave 1 unless cheatermode deliberately overrides it. Humanity survives.
+  // v13.02: The start menu gets a live Wave 9 movement preview behind the panel.
+  // It is still decoration: no player damage, no enemy bullets, no score, no wave progression.
+  // Starting the game still uses the normal START_WAVE path, which defaults to Wave 1.
   if (gameState !== STATE.MENU) return;
   bullets.length = 0;
   enemyBullets.length = 0;
@@ -2288,7 +2288,122 @@ function setupStartMenuEnemyPreview(){
   wave = START_MENU_PREVIEW_WAVE;
   resetFormation();
   spawnEnemies();
-  positionFrozenStaringContestEnemies();
+  positionStartMenuPreviewEnemies();
+}
+
+function updateStartMenuEnemyPreview(dt){
+  if (!isStartMenuEnemyPreviewActive()) return;
+  if (!enemies || !enemies.length || wave !== START_MENU_PREVIEW_WAVE){
+    setupStartMenuEnemyPreview();
+  }
+
+  // Keep the preview sandboxed. The enemies can move and swoop, but they cannot
+  // shoot, hurt the player, clear waves, spawn powerups, or otherwise touch the real run.
+  bullets.length = 0;
+  enemyBullets.length = 0;
+  bomb = null;
+  ufo = null;
+  waveBanner.t = 0;
+  waveBanner.text = "";
+
+  // Fake target: enemies behave as if a player exists behind the Start Menu,
+  // without drawing a player or enabling any collision damage. Very dignified puppet theatre.
+  player.x = canvas.width / 2 + Math.sin(time * 0.75) * Math.max(90, canvas.width * 0.30);
+  player.y = getPlayerAlignedY();
+
+  const breath = Math.sin(time * 2) * 0.5 + 0.5;
+  const spacingX = getSpacingX() * (1 + breath * 0.25);
+  const spacingY = getSpacingY() * (1 + breath * 0.15);
+  const formationWidth = (formationCols - 1) * spacingX;
+  const formationHeight = (formationRows - 1) * spacingY;
+
+  const nextXOffset = formation.xOffset + (formation.dir * formation.speed);
+  const leftEdgeNext  = canvas.width / 2 - formationWidth / 2 + nextXOffset;
+  const rightEdgeNext = canvas.width / 2 + formationWidth / 2 + nextXOffset;
+
+  if (leftEdgeNext < formation.boundsPad){
+    formation.dir = 1;
+    formation.xOffset += 2;
+    formation.yOffset += formation.stepDown;
+  } else if (rightEdgeNext > canvas.width - formation.boundsPad){
+    formation.dir = -1;
+    formation.xOffset -= 2;
+    formation.yOffset += formation.stepDown;
+  } else {
+    formation.xOffset = nextXOffset;
+  }
+
+  formation.yOffset += formation.descentSpeed * dt;
+
+  const startX = canvas.width / 2 - formationWidth / 2 + formation.xOffset;
+  const TOP_SAFE_MARGIN = 60;
+  const ENEMY_ZONE_MAX_Y = canvas.height * 0.48;
+  let baseY = 80 + formation.yOffset;
+
+  if (baseY < TOP_SAFE_MARGIN){
+    formation.yOffset += (TOP_SAFE_MARGIN - baseY);
+    baseY = TOP_SAFE_MARGIN;
+  }
+
+  const maxBaseY = ENEMY_ZONE_MAX_Y - formationHeight;
+  if (baseY > maxBaseY){
+    formation.yOffset -= (baseY - maxBaseY);
+    baseY = Math.max(TOP_SAFE_MARGIN, maxBaseY);
+  }
+
+  if (wave !== 11) tryStartSwoop(dt);
+
+  for (const e of enemies){
+    if (!e) continue;
+    if (assetsReady && enemyImages.length && e.img === playerImg) e.img = randEnemyImg();
+
+    const scale = 1 + breath * 0.18;
+    const size = e.size * scale;
+    const wobbleAmpX = 6 + Math.min(14, wave * 1.2);
+    const wobbleAmpY = 3 + Math.min(10, wave * 0.7);
+    const wobbleX = Math.sin(time * (0.9 + wave * 0.03) + e.row * 0.7) * wobbleAmpX;
+    const wobbleY = Math.cos(time * (1.1 + wave * 0.02) + e.col * 0.6) * wobbleAmpY;
+
+    e.fx = startX + e.col * spacingX + wobbleX;
+    e.fy = baseY + e.row * spacingY + wobbleY;
+
+    if (!e.swoop){
+      e.x = e.fx;
+      e.y = e.fy;
+    } else {
+      e.swoop.t += dt;
+      const u = Math.min(1, e.swoop.t / e.swoop.dur);
+      if (e.swoop.phase === "down"){
+        e.x = quadBezier(u, e.swoop.sx, e.swoop.c1x, e.swoop.ex);
+        e.y = quadBezier(u, e.swoop.sy, e.swoop.c1y, e.swoop.ey);
+        if (u >= 1){
+          e.swoop.phase = "up";
+          e.swoop.t = 0;
+          e.swoop.dur = Math.max(0.75, e.swoop.dur * 0.85);
+          e.swoop.sx = e.x;
+          e.swoop.sy = e.y;
+          e.swoop.ex = e.fx;
+          e.swoop.ey = e.fy;
+          e.swoop.c1x = e.x + rand(-200, 200);
+          e.swoop.c1y = Math.max(60, e.y - rand(160, 260));
+        }
+      } else {
+        e.x = quadBezier(u, e.swoop.sx, e.swoop.c1x, e.swoop.ex);
+        e.y = quadBezier(u, e.swoop.sy, e.swoop.c1y, e.swoop.ey);
+        if (u >= 1){
+          e.swoop = null;
+          e.x = e.fx;
+          e.y = e.fy;
+        }
+      }
+    }
+
+    e.w = size;
+    e.h = size;
+    e.hitFlash = 0;
+    e.dying = false;
+    e.fade = 1;
+  }
 }
 
 let gameWon = false;
@@ -7572,7 +7687,7 @@ function startGame(){
 
   if (frozenStaringContest){
     // Position the Wave 1 enemy immediately so speed 0 makes the cut on the first drawn frame.
-    positionFrozenStaringContestEnemies();
+    positionStartMenuPreviewEnemies();
 
     // Keep the scene absolutely inert: one Wave 1 enemy, optional frozen UFO, no music start trigger.
     // Force-spawn the UFO so speed 0 can become a static staring contest bonus tableau.
@@ -9188,7 +9303,7 @@ function spawnBossWave11(additive=false){
 }
 
 
-function positionFrozenStaringContestEnemies(){
+function positionStartMenuPreviewEnemies(){
   if (!enemies || !enemies.length) return;
 
   const breath = 0.5;
@@ -9872,6 +9987,11 @@ function update(dt){
 
   // PAUSE_GUARD_v1_51: freeze gameplay updates while paused
   if (gameState === STATE.PLAYING && isPaused) return;
+
+  if (isStartMenuEnemyPreviewActive()){
+    updateStartMenuEnemyPreview(dt);
+    return;
+  }
 
   if (gameState !== STATE.PLAYING) return;
 
