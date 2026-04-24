@@ -6370,7 +6370,7 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
 
 <div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px;">
   <span class="livesLabel hudBoxLabel">Lives</span>
-  <img src="/games/shooter-game/assets/bananarama.webp" alt="lives"/>
+  <img src="/games/shooter-game/assets/bananarama.gif" alt="lives"/>
   <div id="livesText" class="subtxt hudBoxValue">x1</div>
 </div>
 
@@ -7131,6 +7131,84 @@ line-height:1;
 
 
 
+
+<style id="hudSquareIconsTintPatch">
+  /* v20: Restore the lives/player icon and bomb emoji inside the compact square HUD.
+     Every box keeps the same square footprint, but now the tinted backgrounds match
+     their outlines at 50% opacity instead of doing generic black-box cosplay. */
+  html body #scoreStoreHud{
+    border-color:rgba(255,232,102,0.92) !important;
+    background:rgba(255,232,102,0.50) !important;
+    box-shadow:0 0 18px rgba(255,232,102,0.20) !important;
+  }
+  html body #timerHud{
+    border-color:rgba(255,255,255,0.92) !important;
+    background:rgba(255,255,255,0.50) !important;
+    box-shadow:0 0 18px rgba(255,255,255,0.18) !important;
+    color:#050505 !important;
+    text-shadow:0 0 5px rgba(255,255,255,0.65) !important;
+  }
+  html body #livesSlot.cornerSlot,
+  html body #livesSlot.livesButton{
+    border-color:rgba(0,255,102,0.92) !important;
+    background:rgba(0,255,102,0.50) !important;
+    box-shadow:0 0 18px rgba(0,255,102,0.20) !important;
+  }
+  html body #powerupSlot.cornerSlot{
+    border-color:rgba(0,149,255,0.95) !important;
+    background:rgba(0,149,255,0.50) !important;
+    box-shadow:0 0 18px rgba(0,149,255,0.24) !important;
+  }
+  html body #scoreStoreHud .hudBoxLabel,
+  html body #scoreStoreHud .hudBoxValue,
+  html body #timerHud .timerHudLabel,
+  html body #timerHud > div:last-child,
+  html body #livesSlot .livesLabel,
+  html body #livesSlot #livesText{
+    color:#050505 !important;
+    opacity:1 !important;
+    text-shadow:0 0 5px rgba(255,255,255,0.70), 0 1px 1px rgba(255,255,255,0.35) !important;
+  }
+  html body #powerupSlot .powerupLabel,
+  html body #powerupSlot #powerupHint{
+    color:#ffffff !important;
+    opacity:1 !important;
+    text-shadow:0 0 6px rgba(0,0,0,0.88), 0 1px 1px rgba(0,0,0,0.75) !important;
+  }
+  html body #livesSlot img{
+    display:block !important;
+    width:22px !important;
+    height:22px !important;
+    object-fit:contain !important;
+    image-rendering:pixelated !important;
+    filter:drop-shadow(0 0 5px rgba(0,0,0,0.45)) !important;
+    flex:0 0 auto !important;
+  }
+  html body #powerupSlot #powerupEmoji{
+    display:block !important;
+    font-size:20px !important;
+    line-height:0.92 !important;
+    height:20px !important;
+    filter:drop-shadow(0 0 4px rgba(0,0,0,0.55)) !important;
+  }
+  html body #scoreStoreHud,
+  html body #timerHud,
+  html body #livesSlot,
+  html body #powerupSlot{
+    gap:2px !important;
+    overflow:hidden !important;
+  }
+  html body #livesSlot #livesText,
+  html body #powerupSlot #powerupHint{
+    font-size:13px !important;
+    line-height:1 !important;
+  }
+  html body #livesSlot .livesLabel,
+  html body #powerupSlot .powerupLabel{
+    font-size:9px !important;
+    line-height:1 !important;
+  }
+</style>
 
 <style id="youDiedHalfSize16x9FinalPatch">
   /* v18: You Died panel is now a 16:9 card at half the Start Menu footprint.
