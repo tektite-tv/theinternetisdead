@@ -1596,34 +1596,18 @@ function getSavedImageWaveNumber(value = wave){
 }
 
 function getCurrentSavedImages(){
-  const nickname = getSavedImageProfileName();
-  if (!nickname) return [];
-  return readSavedImages().filter((item) => String(item && item.nickname || "").trim() === nickname);
+  // Images are file-system backed now. localStorage is reserved for nickname/profile state.
+  return [];
 }
 
 function readSavedImages(){
-  try{
-    const parsed = JSON.parse(localStorage.getItem(SAVED_IMAGES_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed.filter(item => item && item.dataUrl) : [];
-  }catch(e){
-    return [];
-  }
+  // Legacy no-op: do not persist screenshots in localStorage anymore.
+  return [];
 }
 
-function writeSavedImages(images){
-  const safeImages = Array.isArray(images) ? images.filter(item => item && item.dataUrl).slice(0, SAVED_IMAGES_MAX) : [];
-  try{
-    localStorage.setItem(SAVED_IMAGES_KEY, JSON.stringify(safeImages));
-    return true;
-  }catch(e){
-    try{
-      const trimmed = safeImages.slice(0, Math.max(1, Math.floor(safeImages.length / 2)));
-      localStorage.setItem(SAVED_IMAGES_KEY, JSON.stringify(trimmed));
-      return true;
-    }catch(_){
-      return false;
-    }
-  }
+function writeSavedImages(){
+  // Legacy no-op: screenshots must be saved to the user-selected folder.
+  return false;
 }
 
 
@@ -2003,10 +1987,8 @@ function readDefaultLifetimeStats(){
   }
 }
 
-function writeDefaultLifetimeStats(stats){
-  try{
-    localStorage.setItem(LIFETIME_STATS_KEY, JSON.stringify(normalizeLifetimeStatsRecord(stats || {})));
-  }catch(e){}
+function writeDefaultLifetimeStats(){
+  // No global/default lifetime stats writes. Profiles are nickname-specific only.
 }
 
 function readLifetimeStats(){
@@ -2237,6 +2219,8 @@ function openStatsPanel(){
 }
 
 function closeStatsPanel(){
+  if (savedImageViewerOpen) closeStatsSavedImageViewer();
+  document.body.classList.remove("statsSavedImageBrowserView");
   cancelResetProfileConfirmation();
   if (closeMenuHubHostedPanelToStart(statsPanelInner)) return;
   if (statsPanel){
@@ -2372,7 +2356,6 @@ function clearNicknameProfileData(nickname){
     delete profiles[profileId];
     writeLifetimeStatsProfiles(profiles);
   }
-  try{ localStorage.removeItem(SAVED_IMAGES_KEY); }catch(_){}
 }
 
 function handleResetProfileButtonClick(){
@@ -2407,18 +2390,13 @@ function buildExportProfilePayload(){
   const lifetimeStats = profileId ? normalizeLifetimeStatsRecord(profiles[profileId] || {}) : getDefaultLifetimeStats();
   return {
     type: "tektite-shooter-profile",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     profile: {
       nickname,
       nicknameExplicit: true,
       profileId,
       lifetimeStats
-    },
-    localStorage: {
-      tektiteChatNickname: nickname,
-      tektiteChatNicknameExplicit: "true",
-      tektiteShooterLevel1LifetimeStatsByNickname: profileId ? { [profileId]: lifetimeStats } : {}
     }
   };
 }
@@ -2505,15 +2483,23 @@ function applyImportedProfilePayload(payload){
   const nickname = limitChatNicknameLength(String(payload.profile.nickname || "").trim());
   if (!nickname) throw new Error("Profile file is missing a nickname.");
   const profileId = `name:${nickname.toLowerCase()}`;
+
+  // v2 exports keep the profile self-contained. v1 imports are still accepted,
+  // but image data and random localStorage leaks are intentionally ignored.
+  let importedProfileStats = payload.profile && payload.profile.lifetimeStats ? payload.profile.lifetimeStats : null;
   const importedLocalStorage = payload.localStorage && typeof payload.localStorage === "object" ? payload.localStorage : {};
   const importedProfiles = importedLocalStorage[LIFETIME_STATS_PROFILES_KEY];
-  const importedProfileStats = importedProfiles && typeof importedProfiles === "object" && !Array.isArray(importedProfiles)
-    ? importedProfiles[profileId]
-    : null;
+  if ((!importedProfileStats || typeof importedProfileStats !== "object") && importedProfiles && typeof importedProfiles === "object" && !Array.isArray(importedProfiles)){
+    importedProfileStats = importedProfiles[profileId] || null;
+  }
+
   const profiles = readLifetimeStatsProfiles();
-  profiles[profileId] = normalizeLifetimeStatsRecord(importedProfileStats || payload.profile.lifetimeStats || {});
+  profiles[profileId] = normalizeLifetimeStatsRecord(importedProfileStats || {});
   writeLifetimeStatsProfiles(profiles);
+  rememberChatNickname(nickname);
   applyNicknameFromControls(nickname, false);
+  if (btnStatsSavedImagesToggle) btnStatsSavedImagesToggle.setAttribute("aria-expanded", "false");
+  syncStatsSavedImagesState();
   renderLifetimeStats();
 }
 
@@ -2545,161 +2531,6 @@ function formatSavedImageTime(iso){
   }
 }
 
-function ensureSavedImagePanelViewer(){
-  if (savedImagePanelViewer || !menuHubPanelInner) return savedImagePanelViewer;
-  savedImagePanelViewer = document.createElement("div");
-  savedImagePanelViewer.id = "savedImagePanelViewer";
-  savedImagePanelViewer.setAttribute("aria-hidden", "true");
-
-  savedImagePanelViewerImage = document.createElement("img");
-  savedImagePanelViewerImage.id = "savedImagePanelViewerImage";
-  savedImagePanelViewerImage.alt = "Saved screenshot";
-
-  const controls = document.createElement("div");
-  controls.id = "savedImagePanelViewerControls";
-
-  btnSavedImagePanelBack = document.createElement("button");
-  btnSavedImagePanelBack.id = "btnSavedImagePanelBack";
-  btnSavedImagePanelBack.className = "smallBtn";
-  btnSavedImagePanelBack.type = "button";
-  btnSavedImagePanelBack.textContent = "Back";
-
-  btnSavedImagePanelFullscreen = document.createElement("button");
-  btnSavedImagePanelFullscreen.id = "btnSavedImagePanelFullscreen";
-  btnSavedImagePanelFullscreen.className = "smallBtn";
-  btnSavedImagePanelFullscreen.type = "button";
-  btnSavedImagePanelFullscreen.textContent = "Fullscreen";
-
-  controls.appendChild(btnSavedImagePanelBack);
-  controls.appendChild(btnSavedImagePanelFullscreen);
-  savedImagePanelViewer.appendChild(savedImagePanelViewerImage);
-  savedImagePanelViewer.appendChild(controls);
-  menuHubPanelInner.appendChild(savedImagePanelViewer);
-
-  btnSavedImagePanelBack.addEventListener("click", closeSavedImagePanelViewer);
-  btnSavedImagePanelFullscreen.addEventListener("click", requestSavedImagePanelFullscreen);
-  return savedImagePanelViewer;
-}
-
-function getSavedImagePanelViewerCards(){
-  if (!statsSavedImagesList || statsSavedImagesList.hidden || !imagesList) return [];
-  return Array.from(imagesList.querySelectorAll(".savedImageCard")).filter(card => {
-    const img = card && card.querySelector && card.querySelector("img");
-    return !!(img && img.src);
-  });
-}
-
-function getSavedImagePanelViewerControllerTargets(){
-  return [btnSavedImagePanelBack, btnSavedImagePanelFullscreen].filter(Boolean);
-}
-
-function syncSavedImagePanelViewerControllerFocus(){
-  if (!savedImagePanelViewerActive || activeInputMode !== INPUT_MODE_CONTROLLER) return false;
-  const items = getSavedImagePanelViewerControllerTargets();
-  if (!items.length) return false;
-  savedImagePanelViewerFocusIndex = Math.max(0, Math.min(savedImagePanelViewerFocusIndex, items.length - 1));
-  focusControllerElement(items[savedImagePanelViewerFocusIndex]);
-  return true;
-}
-
-function moveSavedImagePanelViewerControllerFocus(delta){
-  if (!savedImagePanelViewerActive) return false;
-  const items = getSavedImagePanelViewerControllerTargets();
-  if (!items.length) return false;
-  savedImagePanelViewerFocusIndex = (savedImagePanelViewerFocusIndex + delta + items.length) % items.length;
-  return syncSavedImagePanelViewerControllerFocus();
-}
-
-function syncSavedImagePanelViewerImage(){
-  const cards = getSavedImagePanelViewerCards();
-  if (!cards.length || !savedImagePanelViewerImage) return false;
-  savedImagePanelViewerIndex = Math.max(0, Math.min(savedImagePanelViewerIndex, cards.length - 1));
-  const card = cards[savedImagePanelViewerIndex];
-  const img = card.querySelector("img");
-  savedImagePanelViewerImage.src = img.src;
-  savedImagePanelViewerImage.alt = img.alt || `Saved screenshot ${savedImagePanelViewerIndex + 1}`;
-  savedImagePanelViewerImage.dataset.sourceIndex = String(savedImagePanelViewerIndex);
-  return true;
-}
-
-function openSavedImagePanelViewer(indexOrCard){
-  const cards = getSavedImagePanelViewerCards();
-  if (!cards.length) return false;
-  let index = typeof indexOrCard === "number" ? indexOrCard : cards.indexOf(indexOrCard);
-  if (index < 0) index = 0;
-  savedImagePanelViewerIndex = Math.max(0, Math.min(index, cards.length - 1));
-  savedImagePanelViewerReturnFocus = cards[savedImagePanelViewerIndex] || null;
-  ensureSavedImagePanelViewer();
-  if (!syncSavedImagePanelViewerImage()) return false;
-  savedImagePanelViewerActive = true;
-  savedImagePanelViewerBrowserSize = false;
-  document.body.classList.remove("savedImageBrowserViewMode");
-  if (menuHubPanel) menuHubPanel.classList.add("savedImageViewerMode");
-  if (menuHubPanel) menuHubPanel.classList.remove("savedImageBrowserViewMode");
-  if (btnSavedImagePanelFullscreen) btnSavedImagePanelFullscreen.textContent = "Fullscreen";
-  if (savedImagePanelViewer) savedImagePanelViewer.setAttribute("aria-hidden", "false");
-  savedImagePanelViewerFocusIndex = 0;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncSavedImagePanelViewerControllerFocus();
-  else clearControllerFocus();
-  return true;
-}
-
-function closeSavedImagePanelViewer(){
-  if (!savedImagePanelViewerActive) return false;
-  savedImagePanelViewerActive = false;
-  savedImagePanelViewerBrowserSize = false;
-  document.body.classList.remove("savedImageBrowserViewMode");
-  if (menuHubPanel) menuHubPanel.classList.remove("savedImageViewerMode", "savedImageBrowserViewMode");
-  if (savedImagePanelViewer) savedImagePanelViewer.setAttribute("aria-hidden", "true");
-  if (btnSavedImagePanelFullscreen) btnSavedImagePanelFullscreen.textContent = "Fullscreen";
-  if (savedImagePanelViewerReturnFocus){
-    const focusIndex = getStatsControllerTargets().indexOf(savedImagePanelViewerReturnFocus);
-    if (focusIndex >= 0) statsFocusIndex = focusIndex;
-  }
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
-  return true;
-}
-
-function moveSavedImagePanelViewer(delta){
-  if (!savedImagePanelViewerActive) return false;
-  const cards = getSavedImagePanelViewerCards();
-  if (!cards.length) return false;
-  savedImagePanelViewerIndex = (savedImagePanelViewerIndex + delta + cards.length) % cards.length;
-  savedImagePanelViewerReturnFocus = cards[savedImagePanelViewerIndex] || savedImagePanelViewerReturnFocus;
-  return syncSavedImagePanelViewerImage();
-}
-
-function requestSavedImagePanelFullscreen(){
-  if (!savedImagePanelViewerActive) return false;
-  savedImagePanelViewerBrowserSize = !savedImagePanelViewerBrowserSize;
-  document.body.classList.toggle("savedImageBrowserViewMode", savedImagePanelViewerBrowserSize);
-  if (menuHubPanel) menuHubPanel.classList.toggle("savedImageBrowserViewMode", savedImagePanelViewerBrowserSize);
-  if (btnSavedImagePanelFullscreen){
-    btnSavedImagePanelFullscreen.textContent = savedImagePanelViewerBrowserSize ? "Panel Size" : "Fullscreen";
-  }
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncSavedImagePanelViewerControllerFocus();
-  return true;
-}
-
-function prepareSavedImageCard(card, index){
-  if (!card) return card;
-  card.dataset.savedImageIndex = String(index);
-  card.dataset.controllerTarget = "saved-image-card";
-  card.tabIndex = 0;
-  card.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    openSavedImagePanelViewer(card);
-  });
-  card.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    event.stopPropagation();
-    openSavedImagePanelViewer(card);
-  });
-  return card;
-}
-
 function renderSavedImages(){
   if (!imagesList) return;
   const currentNickname = getSavedImageProfileName();
@@ -2722,7 +2553,7 @@ function renderSavedImages(){
   images.forEach((item, index) => {
     const card = document.createElement("div");
     card.className = "savedImageCard";
-    card.tabIndex = 0;
+    card.tabIndex = -1;
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", `Saved image ${index + 1}`);
     const img = document.createElement("img");
@@ -2735,7 +2566,6 @@ function renderSavedImages(){
     meta.textContent = `${currentNickname} \u2022 Wave ${getSavedImageWaveNumber(item && item.wave)} \u2022 ${formatSavedImageTime(item.createdAt)}`;
     card.appendChild(img);
     card.appendChild(meta);
-    prepareSavedImageCard(card, index);
     imagesList.appendChild(card);
   });
 }
@@ -2744,6 +2574,14 @@ let savedImageRenderToken = 0;
 let savedImagePreviewUrls = [];
 let savedImagesCurrentCount = 0;
 let savedImagesDirectoryName = "";
+let savedImageViewerItems = [];
+let savedImageViewerIndex = 0;
+let savedImageViewerOpen = false;
+let savedImageViewerFocusIndex = 0;
+let statsSavedImageViewerEl = null;
+let statsSavedImageViewerImageEl = null;
+let btnStatsSavedImageViewerBack = null;
+let btnStatsSavedImageViewerBrowserSize = null;
 
 function clearSavedImagePreviewUrls(){
   for (const url of savedImagePreviewUrls){
@@ -2775,6 +2613,8 @@ async function renderSavedImagesFromFolder(){
   const renderToken = ++savedImageRenderToken;
   const currentNickname = getSavedImageProfileName();
   clearSavedImagePreviewUrls();
+  savedImageViewerItems = [];
+  if (savedImageViewerOpen) closeStatsSavedImageViewer();
   imagesList.innerHTML = "";
   savedImagesCurrentCount = 0;
   savedImagesDirectoryName = "";
@@ -2826,13 +2666,16 @@ async function renderSavedImagesFromFolder(){
     imagesList.appendChild(empty);
     return;
   }
+  savedImageViewerItems = items.slice();
   items.forEach((item, index) => {
     if (item && item.objectUrl) savedImagePreviewUrls.push(item.objectUrl);
     const card = document.createElement("div");
     card.className = "savedImageCard";
     card.tabIndex = 0;
+    card.dataset.savedImageIndex = String(index);
     card.setAttribute("role", "button");
     card.setAttribute("aria-label", `Saved image ${index + 1}`);
+    card.addEventListener("click", () => openStatsSavedImageViewer(index));
     const img = document.createElement("img");
     img.src = item.objectUrl;
     img.alt = `${currentNickname} wave ${getSavedImageWaveNumber(item && item.wave)} saved image ${index + 1}`;
@@ -2841,12 +2684,128 @@ async function renderSavedImagesFromFolder(){
     meta.textContent = `${currentNickname} \u2022 Wave ${getSavedImageWaveNumber(item && item.wave)} \u2022 ${formatSavedImageTime(item.createdAt)}`;
     card.appendChild(img);
     card.appendChild(meta);
-    prepareSavedImageCard(card, index);
     imagesList.appendChild(card);
   });
 }
 
 renderSavedImages = renderSavedImagesFromFolder;
+
+function ensureStatsSavedImageViewer(){
+  if (statsSavedImageViewerEl) return statsSavedImageViewerEl;
+  const host = document.getElementById("statsPanelInner");
+  if (!host) return null;
+  const viewer = document.createElement("div");
+  viewer.id = "statsSavedImageViewer";
+  viewer.setAttribute("aria-hidden", "true");
+
+  const img = document.createElement("img");
+  img.id = "statsSavedImageViewerImage";
+  img.alt = "Saved screenshot";
+
+  const controls = document.createElement("div");
+  controls.id = "statsSavedImageViewerControls";
+  controls.className = "btnRow menuBottomRow";
+
+  const back = document.createElement("button");
+  back.id = "btnStatsSavedImageViewerBack";
+  back.className = "smallBtn";
+  back.type = "button";
+  back.textContent = "Back";
+  back.addEventListener("click", closeStatsSavedImageViewer);
+
+  const browserSize = document.createElement("button");
+  browserSize.id = "btnStatsSavedImageViewerBrowserSize";
+  browserSize.className = "smallBtn";
+  browserSize.type = "button";
+  browserSize.textContent = "Fullscreen";
+  browserSize.addEventListener("click", toggleStatsSavedImageBrowserSize);
+
+  controls.appendChild(back);
+  controls.appendChild(browserSize);
+  viewer.appendChild(img);
+  viewer.appendChild(controls);
+  host.appendChild(viewer);
+
+  statsSavedImageViewerEl = viewer;
+  statsSavedImageViewerImageEl = img;
+  btnStatsSavedImageViewerBack = back;
+  btnStatsSavedImageViewerBrowserSize = browserSize;
+  return viewer;
+}
+
+function getStatsSavedImageViewerTargets(){
+  return [btnStatsSavedImageViewerBack, btnStatsSavedImageViewerBrowserSize].filter(Boolean);
+}
+
+function syncStatsSavedImageViewerFocus(){
+  clearControllerFocus();
+  const items = getStatsSavedImageViewerTargets();
+  if (!items.length) return;
+  savedImageViewerFocusIndex = Math.max(0, Math.min(savedImageViewerFocusIndex, items.length - 1));
+  focusControllerElement(items[savedImageViewerFocusIndex]);
+}
+
+function moveStatsSavedImageViewerButtonFocus(delta){
+  const items = getStatsSavedImageViewerTargets();
+  if (!items.length) return false;
+  savedImageViewerFocusIndex = (savedImageViewerFocusIndex + delta + items.length) % items.length;
+  syncStatsSavedImageViewerFocus();
+  return true;
+}
+
+function showStatsSavedImageAt(index){
+  if (!savedImageViewerItems.length || !statsSavedImageViewerImageEl) return false;
+  savedImageViewerIndex = (index + savedImageViewerItems.length) % savedImageViewerItems.length;
+  const item = savedImageViewerItems[savedImageViewerIndex] || {};
+  statsSavedImageViewerImageEl.src = item.objectUrl || item.dataUrl || "";
+  statsSavedImageViewerImageEl.alt = item.fileName || `Saved image ${savedImageViewerIndex + 1}`;
+  return true;
+}
+
+function moveStatsSavedImageViewerImage(delta){
+  if (!savedImageViewerOpen || savedImageViewerItems.length <= 1) return false;
+  return showStatsSavedImageAt(savedImageViewerIndex + delta);
+}
+
+function openStatsSavedImageViewer(index){
+  const viewer = ensureStatsSavedImageViewer();
+  if (!viewer || !savedImageViewerItems.length) return false;
+  const host = document.getElementById("statsPanelInner");
+  savedImageViewerOpen = true;
+  savedImageViewerFocusIndex = 0;
+  viewer.setAttribute("aria-hidden", "false");
+  if (host) host.classList.add("statsImageViewerOpen");
+  document.body.classList.remove("statsSavedImageBrowserView");
+  if (btnStatsSavedImageViewerBrowserSize) btnStatsSavedImageViewerBrowserSize.textContent = "Fullscreen";
+  showStatsSavedImageAt(index || 0);
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsSavedImageViewerFocus();
+  else clearControllerFocus();
+  return true;
+}
+
+function closeStatsSavedImageViewer(){
+  if (!savedImageViewerOpen && !statsSavedImageViewerEl) return false;
+  const host = document.getElementById("statsPanelInner");
+  savedImageViewerOpen = false;
+  document.body.classList.remove("statsSavedImageBrowserView");
+  if (btnStatsSavedImageViewerBrowserSize) btnStatsSavedImageViewerBrowserSize.textContent = "Fullscreen";
+  if (statsSavedImageViewerEl) statsSavedImageViewerEl.setAttribute("aria-hidden", "true");
+  if (host) host.classList.remove("statsImageViewerOpen");
+  const cards = getStatsSavedImageCardTargets();
+  statsFocusIndex = cards[savedImageViewerIndex] ? getStatsControllerTargets().indexOf(cards[savedImageViewerIndex]) : statsFocusIndex;
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
+  else clearControllerFocus();
+  return true;
+}
+
+function toggleStatsSavedImageBrowserSize(){
+  if (!savedImageViewerOpen) return false;
+  const next = !document.body.classList.contains("statsSavedImageBrowserView");
+  document.body.classList.toggle("statsSavedImageBrowserView", next);
+  if (btnStatsSavedImageViewerBrowserSize) btnStatsSavedImageViewerBrowserSize.textContent = next ? "Panel Size" : "Fullscreen";
+  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsSavedImageViewerFocus();
+  return true;
+}
 
 function fitImagesPanelToStartMenu(){
   if (!imagesPanelInner) return;
@@ -4661,15 +4620,6 @@ const statLifetimeWins = document.getElementById("statLifetimeWins");
 const statLifetimeDeaths = document.getElementById("statLifetimeDeaths");
 const statLifetimeBullets = document.getElementById("statLifetimeBullets");
 const statLifetimeBombKills = document.getElementById("statLifetimeBombKills");
-let savedImagePanelViewer = null;
-let savedImagePanelViewerImage = null;
-let btnSavedImagePanelBack = null;
-let btnSavedImagePanelFullscreen = null;
-let savedImagePanelViewerActive = false;
-let savedImagePanelViewerIndex = 0;
-let savedImagePanelViewerReturnFocus = null;
-let savedImagePanelViewerFocusIndex = 0;
-let savedImagePanelViewerBrowserSize = false;
 const controlsMenu = document.getElementById("controlsMenu");
 const controlsMenuTitle = document.getElementById("controlsMenuTitle");
 const controlsBindList = document.getElementById("controlsBindList");
@@ -5454,7 +5404,7 @@ function loadSavedBindings(){
     controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
   }
 }
-function saveBindings(){ try{ localStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
+function saveBindings(){ try{ sessionStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
 function resetDraftBindingsFromActive(){
   draftKeyboardBindings = { ...keyboardBindings };
   draftControllerBindings = { ...controllerBindings };
@@ -5897,7 +5847,6 @@ function syncMenuHubTabButtons(){
 }
 
 function selectMenuHubTab(tab, focusTab=false){
-  if (savedImagePanelViewerActive) closeSavedImagePanelViewer();
   if (!MENU_HUB_TABS.includes(tab)) tab = "images";
   const targetInner = getMenuHubInnerForTab(tab);
   if (!menuHubContent || !targetInner) return;
@@ -6241,23 +6190,11 @@ function isStatsSavedImagesExpanded(){
 
 function getStatsSavedImageCardTargets(){
   if (!statsSavedImagesList || statsSavedImagesList.hidden || !imagesList) return [];
-  return Array.from(imagesList.querySelectorAll(".savedImageCard")).filter(card => {
-    if (!card || !card.isConnected || card.hidden) return false;
-    const style = window.getComputedStyle(card);
-    if (style.display === "none" || style.visibility === "hidden") return false;
-    return !(card.getClientRects && card.getClientRects().length === 0);
+  return Array.from(imagesList.querySelectorAll(".savedImageCard")).filter((card) => {
+    if (!card) return false;
+    const rect = card.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
   });
-}
-
-function focusFirstStatsSavedImageCard(){
-  const cards = getStatsSavedImageCardTargets();
-  if (!cards.length) return false;
-  const items = getStatsControllerTargets();
-  const firstCardIndex = items.indexOf(cards[0]);
-  if (firstCardIndex < 0) return false;
-  statsFocusIndex = firstCardIndex;
-  if (activeInputMode === INPUT_MODE_CONTROLLER) syncStatsControllerFocus();
-  return true;
 }
 
 function getStatsSavedImagesClearTarget(){
@@ -6307,14 +6244,9 @@ async function handleStatsSavedImagesButtonClick(){
     await renderSavedImages();
     syncStatsSavedImagesState();
     showSavedImageStatus("Saved image folder selected.", true);
-    if (activeInputMode === INPUT_MODE_CONTROLLER) focusFirstStatsSavedImageCard();
     return true;
   }
-  const opened = toggleStatsSavedImages();
-  if (opened && activeInputMode === INPUT_MODE_CONTROLLER){
-    setTimeout(() => { focusFirstStatsSavedImageCard(); }, 0);
-  }
-  return opened;
+  return toggleStatsSavedImages();
 }
 
 function syncStatsLockedSummaryState(){
@@ -6776,9 +6708,8 @@ function syncControlsPreviewBackLabel(lStick=false, rStick=false){
 }
 
 function setControlsPreviewFrameOwnership(ownsController){
-  try{
-    window.localStorage.setItem('tektite-controller-preview-owns', ownsController ? '1' : '0');
-  }catch(_){}
+  try{ window.localStorage.removeItem('tektite-controller-preview-owns'); }catch(_){}
+  try{ window.sessionStorage.setItem('tektite-controller-preview-owns', ownsController ? '1' : '0'); }catch(_){}
   try{
     if (controlsPreviewFrame && controlsPreviewFrame.contentWindow){
       controlsPreviewFrame.contentWindow.postMessage({
@@ -7283,10 +7214,6 @@ function activateControllerTarget(el){
     if (action && typeof action.click === 'function') action.click();
     return true;
   }
-  if (el.classList && el.classList.contains('savedImageCard')){
-    openSavedImagePanelViewer(el);
-    return true;
-  }
   if (el.tagName === "A"){
     el.click();
     return true;
@@ -7476,7 +7403,6 @@ function openMenuHub(options = null){
   updateHearts();
 }
 function closeMenuHub(){
-  if (savedImagePanelViewerActive) closeSavedImagePanelViewer();
   const returnToPause = !!(menuHubOpenedFromPause && isPaused);
   menuHubOpenedFromPause = false;
   restoreMenuHubActiveInner();
@@ -9912,6 +9838,16 @@ function pollGamepad(dt){
   }
 
   if (isStatsPanelOpen()){
+    if (savedImageViewerOpen){
+      if (navLeft || navUp) moveStatsSavedImageViewerButtonFocus(-1);
+      if (navRight || navDown) moveStatsSavedImageViewerButtonFocus(1);
+      if (rNavLeft) moveStatsSavedImageViewerImage(-1);
+      if (rNavRight) moveStatsSavedImageViewerImage(1);
+      if (pressMenuSelect) activateControllerTarget(getStatsSavedImageViewerTargets()[savedImageViewerFocusIndex]);
+      if (pressMenuBack || pressPause) closeStatsSavedImageViewer();
+      syncGpPrevButtons(gp);
+      return;
+    }
     if (pressListTop) jumpControllerFocusToListEdge(getStatsControllerTargets(), statsFocusIndex, (index) => { statsFocusIndex = index; }, syncStatsControllerFocus, -1);
     if (pressListBottom) jumpControllerFocusToListEdge(getStatsControllerTargets(), statsFocusIndex, (index) => { statsFocusIndex = index; }, syncStatsControllerFocus, 1);
     if (navUp) moveStatsControllerFocusDirectional("up");
@@ -10018,20 +9954,6 @@ function pollGamepad(dt){
       if (pressMenuBack) handleOptionsControllerBackButton();
       if (pressPause) activateControllerTarget(btnBack);
     } else if (gameState === STATE.HUB){
-      if (savedImagePanelViewerActive){
-        // In the full-panel image view, controller focus belongs to the two
-        // visible buttons. A activates the focused button; right stick still
-        // flips through saved images without stealing that focus.
-        if (rNavLeft) moveSavedImagePanelViewer(-1);
-        if (rNavRight) moveSavedImagePanelViewer(1);
-        if (navLeft || navUp) moveSavedImagePanelViewerControllerFocus(-1);
-        if (navRight || navDown) moveSavedImagePanelViewerControllerFocus(1);
-        if (pressListTop) { savedImagePanelViewerFocusIndex = 0; syncSavedImagePanelViewerControllerFocus(); }
-        if (pressListBottom) { savedImagePanelViewerFocusIndex = getSavedImagePanelViewerControllerTargets().length - 1; syncSavedImagePanelViewerControllerFocus(); }
-        if (pressMenuSelect) activateControllerTarget(getSavedImagePanelViewerControllerTargets()[savedImagePanelViewerFocusIndex]);
-        if (pressMenuBack || pressPause) closeSavedImagePanelViewer();
-        return;
-      }
       // v2.XX: Handle Menu Hub before the generic paused branch.
       // When the Hub is opened from Pause, isPaused stays true by design,
       // so the old order routed controller input back into the hidden Pause menu.
@@ -11093,7 +11015,14 @@ window.addEventListener("keydown", (e) => {
 
   if (isStatsPanelOpen() && (e.code === "ArrowUp" || e.code === "ArrowDown" || e.code === "ArrowLeft" || e.code === "ArrowRight" || e.code === "Enter" || e.code === "Space" || e.code === "Escape" || e.code === "Tab")){
     setActiveInputMode(INPUT_MODE_KEYBOARD);
-    if (e.code === "ArrowUp" || (e.code === "Tab" && e.shiftKey)) moveStatsControllerFocusDirectional("up");
+    if (savedImageViewerOpen){
+      if (e.code === "ArrowLeft") moveStatsSavedImageViewerImage(-1);
+      else if (e.code === "ArrowRight") moveStatsSavedImageViewerImage(1);
+      else if (e.code === "ArrowUp" || (e.code === "Tab" && e.shiftKey)) moveStatsSavedImageViewerButtonFocus(-1);
+      else if (e.code === "ArrowDown" || e.code === "Tab") moveStatsSavedImageViewerButtonFocus(1);
+      else if (e.code === "Enter" || e.code === "Space") activateControllerTarget(getStatsSavedImageViewerTargets()[savedImageViewerFocusIndex]);
+      else if (e.code === "Escape") closeStatsSavedImageViewer();
+    } else if (e.code === "ArrowUp" || (e.code === "Tab" && e.shiftKey)) moveStatsControllerFocusDirectional("up");
     else if (e.code === "ArrowDown" || e.code === "Tab") moveStatsControllerFocusDirectional("down");
     else if (e.code === "ArrowLeft") moveStatsControllerFocusDirectional("left");
     else if (e.code === "ArrowRight") moveStatsControllerFocusDirectional("right");

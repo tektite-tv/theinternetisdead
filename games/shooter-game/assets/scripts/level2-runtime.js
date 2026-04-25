@@ -1969,7 +1969,8 @@ function breakBonusArmor(){
 }
 
 const UFO_KILL_SCORE_POINTS = 100;
-const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
+const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats"; // legacy read-only; do not write global stats here
+const LIFETIME_STATS_PROFILES_KEY = "tektiteShooterLevel1LifetimeStatsByNickname";
 const SAVED_IMAGES_KEY = "tektiteShooterSavedImages";
 const SAVED_IMAGES_MAX = 10;
 
@@ -1982,28 +1983,13 @@ function getSavedImageWaveNumber(value = wave){
 }
 
 function readSavedImages(){
-  try{
-    const parsed = JSON.parse(localStorage.getItem(SAVED_IMAGES_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed.filter(item => item && item.dataUrl) : [];
-  }catch(e){
-    return [];
-  }
+  // Legacy no-op: do not persist screenshots in localStorage anymore.
+  return [];
 }
 
-function writeSavedImages(images){
-  const safeImages = Array.isArray(images) ? images.filter(item => item && item.dataUrl).slice(0, SAVED_IMAGES_MAX) : [];
-  try{
-    localStorage.setItem(SAVED_IMAGES_KEY, JSON.stringify(safeImages));
-    return true;
-  }catch(e){
-    try{
-      const trimmed = safeImages.slice(0, Math.max(1, Math.floor(safeImages.length / 2)));
-      localStorage.setItem(SAVED_IMAGES_KEY, JSON.stringify(trimmed));
-      return true;
-    }catch(_){
-      return false;
-    }
-  }
+function writeSavedImages(){
+  // Legacy no-op: screenshots must be saved to the user-selected folder.
+  return false;
 }
 
 
@@ -2239,10 +2225,15 @@ function getDefaultLifetimeStats(){
 
 function incrementLifetimeStat(key, amount=1){
   try{
-    const parsed = JSON.parse(localStorage.getItem(LIFETIME_STATS_KEY) || "null");
-    const stats = Object.assign(getDefaultLifetimeStats(), parsed || {});
+    const nickname = getSavedChatNicknameValue();
+    if (!nickname) return;
+    const profileId = `name:${String(nickname).trim().toLowerCase()}`;
+    const parsedProfiles = JSON.parse(localStorage.getItem(LIFETIME_STATS_PROFILES_KEY) || "{}");
+    const profiles = parsedProfiles && typeof parsedProfiles === "object" && !Array.isArray(parsedProfiles) ? parsedProfiles : {};
+    const stats = Object.assign(getDefaultLifetimeStats(), profiles[profileId] || {});
     stats[key] = Math.max(0, Number(stats[key] || 0) + Math.max(0, Number(amount) || 0));
-    localStorage.setItem(LIFETIME_STATS_KEY, JSON.stringify(stats));
+    profiles[profileId] = stats;
+    localStorage.setItem(LIFETIME_STATS_PROFILES_KEY, JSON.stringify(profiles));
   }catch(e){}
 }
 
@@ -3203,7 +3194,7 @@ function loadSavedBindings(){
     controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
   }
 }
-function saveBindings(){ try{ localStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
+function saveBindings(){ try{ sessionStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
 function resetDraftBindingsFromActive(){
   draftKeyboardBindings = { ...keyboardBindings };
   draftControllerBindings = { ...controllerBindings };
