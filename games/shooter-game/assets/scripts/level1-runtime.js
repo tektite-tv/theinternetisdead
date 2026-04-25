@@ -2080,6 +2080,10 @@ function getSavedProfileNicknames(){
   return combined;
 }
 
+function getAlphabetizedSavedProfileNicknames(){
+  return getSavedProfileNicknames().slice().sort((a, b) => a.localeCompare(b, undefined, { sensitivity:"base" }));
+}
+
 function getLifetimeStatsProfileName(){
   try{
     const savedNickname = window.localStorage.getItem("tektiteChatNickname");
@@ -4619,6 +4623,225 @@ let mobileMoveY = 0;
 let mobileAimStickX = 0;
 let mobileAimStickY = 0;
 let mobileAimStickActive = false;
+const nicknameSuggestionState = {
+  input: null,
+  popup: null,
+  items: [],
+  index: -1,
+  cyclePrefix: "",
+  hideTimer: 0
+};
+
+function isNicknameSuggestionEligibleInput(input){
+  return !!(input && (input === startNicknameInput || input === statsNicknameInput));
+}
+
+function clearNicknameSuggestionHideTimer(){
+  if (!nicknameSuggestionState.hideTimer) return;
+  try{ window.clearTimeout(nicknameSuggestionState.hideTimer); }catch(_){}
+  nicknameSuggestionState.hideTimer = 0;
+}
+
+function syncNicknameSuggestionInputState(input){
+  if (input === startNicknameInput){
+    syncStartNicknameInputHueShift();
+    return;
+  }
+  if (input === statsNicknameInput){
+    syncStatsNicknameInputDraftState();
+  }
+}
+
+function getNicknameSuggestionMatches(prefixValue=""){
+  const savedNicknames = getAlphabetizedSavedProfileNicknames();
+  if (!savedNicknames.length) return [];
+  const normalizedPrefix = limitChatNicknameLength(String(prefixValue || "").trim()).toLowerCase();
+  if (!normalizedPrefix) return savedNicknames.slice();
+  const startsWithMatches = savedNicknames.filter((nickname) => nickname.toLowerCase().startsWith(normalizedPrefix));
+  if (startsWithMatches.length) return startsWithMatches;
+  return savedNicknames.filter((nickname) => nickname.toLowerCase().includes(normalizedPrefix));
+}
+
+function ensureNicknameSuggestionPopup(){
+  if (nicknameSuggestionState.popup && nicknameSuggestionState.popup.isConnected) return nicknameSuggestionState.popup;
+  const popup = document.createElement("div");
+  popup.id = "nicknameSuggestionPopup";
+  popup.hidden = true;
+  popup.setAttribute("aria-hidden", "true");
+  popup.style.position = "fixed";
+  popup.style.left = "0";
+  popup.style.top = "0";
+  popup.style.display = "none";
+  popup.style.minWidth = "160px";
+  popup.style.maxHeight = "188px";
+  popup.style.overflowY = "auto";
+  popup.style.padding = "6px";
+  popup.style.background = "rgba(0,0,0,0.94)";
+  popup.style.border = "2px solid rgba(0,255,102,0.72)";
+  popup.style.borderRadius = "12px";
+  popup.style.boxShadow = "0 0 18px rgba(0,255,102,0.24)";
+  popup.style.zIndex = "99999";
+  popup.style.backdropFilter = "blur(3px)";
+  popup.addEventListener("mousedown", (event) => {
+    const button = event.target && event.target.closest ? event.target.closest("[data-nickname-suggestion]") : null;
+    if (!button || !nicknameSuggestionState.input) return;
+    event.preventDefault();
+    const nickname = limitChatNicknameLength(String(button.getAttribute("data-nickname-suggestion") || "").trim());
+    if (!nickname) return;
+    nicknameSuggestionState.index = Math.max(0, Number(button.getAttribute("data-nickname-index")) || 0);
+    nicknameSuggestionState.input.value = nickname;
+    syncNicknameSuggestionInputState(nicknameSuggestionState.input);
+    try{
+      nicknameSuggestionState.input.focus({ preventScroll:true });
+    }catch(_){
+      try{ nicknameSuggestionState.input.focus(); }catch(__){}
+    }
+    try{
+      const end = nicknameSuggestionState.input.value.length;
+      nicknameSuggestionState.input.setSelectionRange(end, end);
+    }catch(_){}
+    hideNicknameSuggestionPopup();
+  });
+  document.body.appendChild(popup);
+  nicknameSuggestionState.popup = popup;
+  return popup;
+}
+
+function positionNicknameSuggestionPopup(){
+  const popup = nicknameSuggestionState.popup;
+  const input = nicknameSuggestionState.input;
+  if (!popup || !input || !input.isConnected) return false;
+  const rect = input.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0){
+    hideNicknameSuggestionPopup();
+    return false;
+  }
+  const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0, 1);
+  const popupWidth = Math.max(160, Math.round(rect.width));
+  const left = Math.max(8, Math.min(Math.round(rect.left), viewportWidth - popupWidth - 8));
+  popup.style.left = `${left}px`;
+  popup.style.top = `${Math.round(rect.bottom + 6)}px`;
+  popup.style.width = `${popupWidth}px`;
+  return true;
+}
+
+function renderNicknameSuggestionPopup(){
+  const popup = ensureNicknameSuggestionPopup();
+  if (!nicknameSuggestionState.input || !nicknameSuggestionState.items.length){
+    popup.hidden = true;
+    popup.setAttribute("aria-hidden", "true");
+    popup.style.display = "none";
+    popup.innerHTML = "";
+    return false;
+  }
+  popup.innerHTML = "";
+  nicknameSuggestionState.items.forEach((nickname, index) => {
+    const button = document.createElement("button");
+    const active = index === nicknameSuggestionState.index;
+    button.type = "button";
+    button.tabIndex = -1;
+    button.setAttribute("data-nickname-suggestion", nickname);
+    button.setAttribute("data-nickname-index", String(index));
+    button.textContent = nickname;
+    button.style.display = "block";
+    button.style.width = "100%";
+    button.style.margin = index ? "6px 0 0" : "0";
+    button.style.padding = "8px 10px";
+    button.style.borderRadius = "8px";
+    button.style.border = active ? "1px solid rgba(0,255,255,0.78)" : "1px solid rgba(0,255,102,0.18)";
+    button.style.background = active ? "rgba(0,255,255,0.18)" : "rgba(0,255,102,0.08)";
+    button.style.color = active ? "#00ffff" : "#d9fff0";
+    button.style.cursor = "pointer";
+    button.style.fontFamily = "\"Courier New\", monospace";
+    button.style.fontSize = "14px";
+    button.style.fontWeight = "900";
+    button.style.letterSpacing = "0.05em";
+    button.style.textAlign = "left";
+    popup.appendChild(button);
+  });
+  if (!positionNicknameSuggestionPopup()) return false;
+  popup.hidden = false;
+  popup.setAttribute("aria-hidden", "false");
+  popup.style.display = "block";
+  return true;
+}
+
+function hideNicknameSuggestionPopup(){
+  clearNicknameSuggestionHideTimer();
+  if (nicknameSuggestionState.popup){
+    nicknameSuggestionState.popup.hidden = true;
+    nicknameSuggestionState.popup.setAttribute("aria-hidden", "true");
+    nicknameSuggestionState.popup.style.display = "none";
+    nicknameSuggestionState.popup.innerHTML = "";
+  }
+  nicknameSuggestionState.input = null;
+  nicknameSuggestionState.items = [];
+  nicknameSuggestionState.index = -1;
+  nicknameSuggestionState.cyclePrefix = "";
+}
+
+function openNicknameSuggestionPopup(input){
+  if (!isNicknameSuggestionEligibleInput(input)){
+    hideNicknameSuggestionPopup();
+    return false;
+  }
+  clearNicknameSuggestionHideTimer();
+  nicknameSuggestionState.input = input;
+  nicknameSuggestionState.cyclePrefix = limitChatNicknameLength(String(input.value || "").trim()).toLowerCase();
+  nicknameSuggestionState.items = getNicknameSuggestionMatches(nicknameSuggestionState.cyclePrefix);
+  if (!nicknameSuggestionState.items.length){
+    hideNicknameSuggestionPopup();
+    return false;
+  }
+  const exactIndex = nicknameSuggestionState.items.findIndex((nickname) => nickname.toLowerCase() === limitChatNicknameLength(String(input.value || "").trim()).toLowerCase());
+  nicknameSuggestionState.index = exactIndex >= 0 ? exactIndex : 0;
+  return renderNicknameSuggestionPopup();
+}
+
+function cycleNicknameSuggestionChoice(input, direction=1){
+  if (!isNicknameSuggestionEligibleInput(input)) return false;
+  clearNicknameSuggestionHideTimer();
+  if (nicknameSuggestionState.input !== input){
+    nicknameSuggestionState.input = input;
+    nicknameSuggestionState.cyclePrefix = limitChatNicknameLength(String(input.value || "").trim()).toLowerCase();
+    nicknameSuggestionState.index = -1;
+  }
+  nicknameSuggestionState.items = getNicknameSuggestionMatches(nicknameSuggestionState.cyclePrefix);
+  if (!nicknameSuggestionState.items.length){
+    hideNicknameSuggestionPopup();
+    return false;
+  }
+  if (nicknameSuggestionState.index === -1 || nicknameSuggestionState.index >= nicknameSuggestionState.items.length){
+    const exactIndex = nicknameSuggestionState.items.findIndex((nickname) => nickname.toLowerCase() === limitChatNicknameLength(String(input.value || "").trim()).toLowerCase());
+    if (exactIndex >= 0){
+      nicknameSuggestionState.index = (exactIndex + direction + nicknameSuggestionState.items.length) % nicknameSuggestionState.items.length;
+    } else {
+      nicknameSuggestionState.index = direction >= 0 ? 0 : nicknameSuggestionState.items.length - 1;
+    }
+  } else {
+    nicknameSuggestionState.index = (nicknameSuggestionState.index + direction + nicknameSuggestionState.items.length) % nicknameSuggestionState.items.length;
+  }
+  input.value = nicknameSuggestionState.items[nicknameSuggestionState.index];
+  syncNicknameSuggestionInputState(input);
+  try{
+    input.focus({ preventScroll:true });
+  }catch(_){
+    try{ input.focus(); }catch(__){}
+  }
+  try{
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+  }catch(_){}
+  return renderNicknameSuggestionPopup();
+}
+
+function scheduleNicknameSuggestionPopupHide(input){
+  if (!isNicknameSuggestionEligibleInput(input)) return;
+  clearNicknameSuggestionHideTimer();
+  nicknameSuggestionState.hideTimer = window.setTimeout(() => {
+    if (nicknameSuggestionState.input === input) hideNicknameSuggestionPopup();
+  }, 120);
+}
 
 function isCoarsePointerDevice(){
   try{
@@ -6635,6 +6858,7 @@ function syncStatsNicknameInputDraftState(){
 }
 
 function resetStatsNicknameEntry(){
+  hideNicknameSuggestionPopup();
   if (statsNicknameInput){
     statsNicknameInput.hidden = true;
     statsNicknameInput.setAttribute("aria-hidden", "true");
@@ -6656,6 +6880,7 @@ function resetStatsNicknameEntry(){
 
 function showStatsNicknameInput(){
   if (!statsNicknameInput || !btnStatsEnterNickname || hasLifetimeStatsProfile()) return false;
+  hideNicknameSuggestionPopup();
   btnStatsEnterNickname.hidden = true;
   btnStatsEnterNickname.setAttribute("aria-hidden", "true");
   btnStatsEnterNickname.tabIndex = -1;
@@ -8823,6 +9048,7 @@ function syncStartNicknameInputHueShift(){
 }
 
 function resetStartNicknameEntry(){
+  hideNicknameSuggestionPopup();
   if (startNicknameInput){
     startNicknameInput.classList.remove("nicknameEntryActive");
     startNicknameInput.classList.remove("nicknameHasDraft");
@@ -8834,6 +9060,7 @@ function resetStartNicknameEntry(){
 
 function showStartNicknameInput(){
   if (!startNicknameInput || !btnEnterNickname) return false;
+  hideNicknameSuggestionPopup();
   clearStartNicknamePrepaintState();
   btnEnterNickname.classList.remove("needsNickname");
   btnEnterNickname.style.display = "none";
@@ -8898,6 +9125,7 @@ try{ window.addEventListener("resize", fitStatsStartButtonNicknameLabel); }catch
 
 function applyNicknameFromControls(value, announce=false, options={}){
   const normalized = saveChatNickname(value);
+  hideNicknameSuggestionPopup();
   cancelResetProfileConfirmation();
   if (nicknameInput) nicknameInput.value = normalized;
   syncNicknameInputPreview();
@@ -9357,13 +9585,21 @@ if (startNicknameInput){
   startNicknameInput.addEventListener("click", (event) => {
     event.stopPropagation();
     setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+    openNicknameSuggestionPopup(startNicknameInput);
+  });
+  startNicknameInput.addEventListener("focus", () => {
+    openNicknameSuggestionPopup(startNicknameInput);
   });
   startNicknameInput.addEventListener("input", () => {
     syncStartNicknameInputHueShift();
+    openNicknameSuggestionPopup(startNicknameInput);
   });
   startNicknameInput.addEventListener("keydown", (event) => {
     event.stopPropagation();
-    if (event.key === "Enter"){
+    if (event.key === "Tab" || event.key === "ArrowDown" || event.key === "ArrowUp"){
+      event.preventDefault();
+      cycleNicknameSuggestionChoice(startNicknameInput, event.key === "ArrowUp" || event.shiftKey ? -1 : 1);
+    } else if (event.key === "Enter"){
       event.preventDefault();
       commitStartNicknameInput();
     } else if (event.key === "Escape"){
@@ -9373,6 +9609,7 @@ if (startNicknameInput){
     }
   });
   startNicknameInput.addEventListener("blur", () => {
+    scheduleNicknameSuggestionPopupHide(startNicknameInput);
     if (!String(startNicknameInput.value || "").trim()) resetStartNicknameEntry();
   });
 }
@@ -9433,13 +9670,21 @@ if (statsNicknameInput){
   statsNicknameInput.addEventListener("click", (event) => {
     event.stopPropagation();
     setActiveInputMode(INPUT_MODE_KEYBOARD, { force:true });
+    openNicknameSuggestionPopup(statsNicknameInput);
+  });
+  statsNicknameInput.addEventListener("focus", () => {
+    openNicknameSuggestionPopup(statsNicknameInput);
   });
   statsNicknameInput.addEventListener("input", () => {
     syncStatsNicknameInputDraftState();
+    openNicknameSuggestionPopup(statsNicknameInput);
   });
   statsNicknameInput.addEventListener("keydown", (event) => {
     event.stopPropagation();
-    if (event.key === "Enter"){
+    if (event.key === "Tab" || event.key === "ArrowDown" || event.key === "ArrowUp"){
+      event.preventDefault();
+      cycleNicknameSuggestionChoice(statsNicknameInput, event.key === "ArrowUp" || event.shiftKey ? -1 : 1);
+    } else if (event.key === "Enter"){
       event.preventDefault();
       commitStatsNicknameInput();
     } else if (event.key === "Escape"){
@@ -9449,9 +9694,23 @@ if (statsNicknameInput){
     }
   });
   statsNicknameInput.addEventListener("blur", () => {
+    scheduleNicknameSuggestionPopupHide(statsNicknameInput);
     if (!String(statsNicknameInput.value || "").trim()) resetStatsNicknameEntry();
   });
 }
+window.addEventListener("resize", () => {
+  if (nicknameSuggestionState.input) renderNicknameSuggestionPopup();
+});
+document.addEventListener("scroll", () => {
+  if (nicknameSuggestionState.input) renderNicknameSuggestionPopup();
+}, true);
+document.addEventListener("mousedown", (event) => {
+  if (!nicknameSuggestionState.input || !nicknameSuggestionState.popup) return;
+  const target = event.target;
+  if (target === nicknameSuggestionState.input) return;
+  if (nicknameSuggestionState.popup.contains(target)) return;
+  hideNicknameSuggestionPopup();
+});
 if (btnStatsLockedToggle){
   btnStatsLockedToggle.addEventListener("click", () => {
     toggleStatsLockedSummary();

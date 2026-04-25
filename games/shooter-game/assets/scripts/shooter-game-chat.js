@@ -129,6 +129,69 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
 
     const CHAT_NICKNAME_STORAGE_KEY = 'tektiteChatNickname';
     const CHAT_NICKNAME_EXPLICIT_STORAGE_KEY = 'tektiteChatNicknameExplicit';
+    const CHAT_NICKNAME_HISTORY_STORAGE_KEY = 'tektiteShooterNicknameHistory';
+    const LIFETIME_STATS_PROFILES_STORAGE_KEY = 'tektiteShooterLevel1LifetimeStatsByNickname';
+    const SHOOTER_CHAT_NICKNAME_MAX_LENGTH = 8;
+    const SHOOTER_NICKNAME_SUGGESTION_MAX = 9;
+
+    function limitShooterNicknameLength(value) {
+      return Array.from(String(value || '')).slice(0, SHOOTER_CHAT_NICKNAME_MAX_LENGTH).join('');
+    }
+
+    function getShooterNicknameDedupKey(nickname) {
+      return limitShooterNicknameLength(String(nickname || '').trim()).toLowerCase();
+    }
+
+    function pushUniqueShooterNickname(target, seenKeys, nickname) {
+      const normalized = limitShooterNicknameLength(String(nickname || '').trim());
+      const key = getShooterNicknameDedupKey(normalized);
+      if (!normalized || !key || seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      target.push(normalized);
+      return true;
+    }
+
+    function readShooterNicknameHistory() {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(CHAT_NICKNAME_HISTORY_STORAGE_KEY) || '[]');
+        if (!Array.isArray(parsed)) return [];
+        const unique = [];
+        const seenKeys = new Set();
+        for (const value of parsed) {
+          pushUniqueShooterNickname(unique, seenKeys, value);
+          if (unique.length >= SHOOTER_NICKNAME_SUGGESTION_MAX) break;
+        }
+        return unique;
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function readShooterLifetimeStatsProfiles() {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(LIFETIME_STATS_PROFILES_STORAGE_KEY) || '{}');
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function getSavedShooterNicknameSuggestions() {
+      const combined = [];
+      const seenKeys = new Set();
+      const history = readShooterNicknameHistory();
+      const profileNames = Object.keys(readShooterLifetimeStatsProfiles())
+        .map((key) => {
+          const match = /^name:(.+)$/i.exec(String(key || ''));
+          return match ? limitShooterNicknameLength(match[1]) : '';
+        })
+        .filter(Boolean);
+      for (const nickname of [...history, ...profileNames]) {
+        pushUniqueShooterNickname(combined, seenKeys, nickname);
+        if (combined.length >= SHOOTER_NICKNAME_SUGGESTION_MAX) break;
+      }
+      return combined.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    }
 
     function getSavedShooterNicknameValue() {
       try {
@@ -876,7 +939,12 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           if (shooterCheatsUnlocked) return command.unlockOnly !== true;
           return command.cheatOnly !== true;
         })
-        .map((command) => ({ ...command }));
+        .map((command) => ({
+          ...command,
+          suggestions: command.name === '/nickname'
+            ? getSavedShooterNicknameSuggestions()
+            : (Array.isArray(command.suggestions) ? command.suggestions.slice() : [])
+        }));
     }
 
     function registerPageCommands() {
@@ -1209,6 +1277,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
               nickname: nextNickname || '',
               announce: true
             });
+            window.setTimeout(() => registerPageCommands(), 0);
             return;
           }
           if (tektiteFrame && tektiteFrame.contentWindow) {
@@ -1273,6 +1342,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
           nickname: nextNickname,
           announce: data.announce === true
         });
+        window.setTimeout(() => registerPageCommands(), 0);
         return;
       }
       if (data.type === 'tektite:command-result') {
