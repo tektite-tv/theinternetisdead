@@ -10093,6 +10093,27 @@ const player = {
   invuln: 0
 };
 
+const ENEMY_PERSPECTIVE_FAR_SCALE = 0.86;
+const ENEMY_PERSPECTIVE_NEAR_SCALE = 1.7;
+const ENEMY_PERSPECTIVE_TOP_PAD = 72;
+const ENEMY_PERSPECTIVE_PLAYER_BUFFER = 34;
+
+function getEnemyPerspectiveScale(enemy){
+  if (!enemy || gameState !== STATE.PLAYING || playerSpectatorMode) return 1;
+  const enemyY = Number(enemy.y);
+  const playerY = Number(player.y);
+  if (!Number.isFinite(enemyY) || !Number.isFinite(playerY)) return 1;
+
+  const topY = Math.max(0, ENEMY_PERSPECTIVE_TOP_PAD);
+  const nearY = Math.max(
+    topY + 1,
+    playerY - Math.max(ENEMY_PERSPECTIVE_PLAYER_BUFFER, (player.h || PLAYER_SIZE) * 0.55)
+  );
+  const depthT = Math.max(0, Math.min(1, (enemyY - topY) / Math.max(1, nearY - topY)));
+  const easedDepth = depthT * depthT * (3 - 2 * depthT);
+  return ENEMY_PERSPECTIVE_FAR_SCALE + (ENEMY_PERSPECTIVE_NEAR_SCALE - ENEMY_PERSPECTIVE_FAR_SCALE) * easedDepth;
+}
+
 // v2.07: Level 1 player turn + ghost trail.
 // Level 1 only moves left/right, so this intentionally ignores vertical movement.
 let playerFacing = -1; // -1 = facing left/default, 1 = facing right
@@ -12565,10 +12586,14 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
   // enemies
   const pauseEnemyDimActive = !!(isPaused && (isPausedGameplayMenuBackdropState()));
   for (const e of enemies){
+    const perspectiveScale = getEnemyPerspectiveScale(e);
+    const visualEnemyW = e.w * perspectiveScale;
+    const visualEnemyH = e.h * perspectiveScale;
+
     // v1.96: frog enemies get a pulsing green aura ring
     if (e.isFrog){
       const pulse = 1 + 0.12 * Math.sin(time * 6.0);
-      const r = Math.max(e.w, e.h) * 0.70 * pulse;
+      const r = Math.max(visualEnemyW, visualEnemyH) * 0.70 * pulse;
       ctx.save();
       ctx.globalAlpha = pauseEnemyDimActive ? 0.32 : 0.85;
       ctx.fillStyle = "rgba(0,255,0,0.10)";
@@ -12585,8 +12610,8 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
     const deathProgress = e.dying ? (1 - alpha) : 0;
     // Visual-only death explosion. Keep e.x/e.y/e.w/e.h untouched so bullet and contact hitboxes stay rectangular and unchanged.
     const deathGrow = e.dying ? (1 + deathProgress * ENEMY_DEATH_GROW_SCALE) : 1;
-    const drawW = e.w * deathGrow;
-    const drawH = e.h * deathGrow;
+    const drawW = visualEnemyW * deathGrow;
+    const drawH = visualEnemyH * deathGrow;
     const ex = e.x - drawW/2, ey = e.y - drawH/2;
     const freezeEnemyImage = isGameSpeedFrozen() || isStartMenuEnemyPreviewActive();
     const enemySource = freezeEnemyImage ? (getStaticFrameForImage(e.img) || e.img) : e.img;
@@ -12629,7 +12654,7 @@ if (hasActivePlayer() && !document.body.classList.contains("speedZeroMeltHideCan
 
 // Dragon marker: upside-down red equilateral triangle (because dragons deserve drama)
 if (isDragonEnemy(e)){
-  const r = Math.max(e.w, e.h) * 0.78;
+  const r = Math.max(visualEnemyW, visualEnemyH) * 0.78;
   ctx.save();
   ctx.strokeStyle = "rgba(255,0,0,0.85)";
   ctx.lineWidth = 3;

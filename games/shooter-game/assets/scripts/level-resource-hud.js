@@ -44,6 +44,9 @@ function _resetStartResourceDefaults(){
 }
 
 function _syncBombHud(){
+  try{
+    _syncTopRowCounterHudLayout();
+  }catch(e){}
   const gameplayHudActive = (typeof isPausedGameplayMenuBackdropState === "function")
     ? isPausedGameplayMenuBackdropState()
     : (typeof gameState !== "undefined" && typeof STATE !== "undefined" && gameState === STATE.PLAYING);
@@ -56,3 +59,47 @@ function _syncBombHud(){
     else powerupHint.textContent = "Q x" + Math.max(1, bombsCount);
   }
 }
+
+function _syncTopRowCounterHudLayout(){
+  const scoreStoreHud = document.getElementById("scoreStoreHud");
+  const timerHud = document.getElementById("timerHud");
+  const livesSlot = document.getElementById("livesSlot");
+  const powerupSlot = document.getElementById("powerupSlot");
+  if (!livesSlot && !powerupSlot) return;
+
+  const EDGE_PAD = 14;
+  const TOP_PAD = 10;
+  const HUD_GAP = 8;
+  const fallbackWidth = 72;
+
+  const scoreWidth = scoreStoreHud ? Math.max(fallbackWidth, Math.round(scoreStoreHud.getBoundingClientRect().width || 0)) : fallbackWidth;
+  const timerWidth = timerHud ? Math.max(fallbackWidth, Math.round(timerHud.getBoundingClientRect().width || 0)) : fallbackWidth;
+  const livesWidth = livesSlot ? Math.max(fallbackWidth, Math.round(livesSlot.getBoundingClientRect().width || 0)) : fallbackWidth;
+  const bombsWidth = powerupSlot ? Math.max(fallbackWidth, Math.round(powerupSlot.getBoundingClientRect().width || 0)) : fallbackWidth;
+
+  if (livesSlot){
+    livesSlot.style.position = "absolute";
+    livesSlot.style.top = TOP_PAD + "px";
+    livesSlot.style.left = (EDGE_PAD + scoreWidth + HUD_GAP) + "px";
+    livesSlot.style.right = "auto";
+    livesSlot.style.bottom = "auto";
+  }
+
+  if (powerupSlot){
+    powerupSlot.style.position = "absolute";
+    powerupSlot.style.top = TOP_PAD + "px";
+    powerupSlot.style.right = (EDGE_PAD + timerWidth + HUD_GAP) + "px";
+    powerupSlot.style.left = "auto";
+    powerupSlot.style.bottom = "auto";
+  }
+}
+
+try{
+  window.addEventListener("resize", _syncTopRowCounterHudLayout);
+  window.addEventListener("orientationchange", _syncTopRowCounterHudLayout);
+  if (document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", _syncTopRowCounterHudLayout, { once:true });
+  } else {
+    _syncTopRowCounterHudLayout();
+  }
+}catch(e){}

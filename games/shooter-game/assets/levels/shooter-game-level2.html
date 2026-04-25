@@ -1360,13 +1360,13 @@ body.invert-colors {
 <div id="timerHud" style="display:none;"><div class="timerHudLabel">Time</div><div class="timerHudValue">0.0s</div></div>
 
 
-<div id="livesSlot" class="cornerSlot livesButton" style="left:14px; bottom:14px; display:none;">
+<div id="livesSlot" class="cornerSlot livesButton" style="top:10px; left:94px; bottom:auto; right:auto; display:none;">
   <span class="livesLabel">LIVES:</span>
 <img src="/games/shooter-game/assets/bananarama.gif" alt="lives"/>
   <div id="livesText" class="subtxt">x3</div>
 </div>
 
-<div id="powerupSlot" class="cornerSlot" style="right:14px; bottom:14px; display:none;">
+<div id="powerupSlot" class="cornerSlot" style="top:10px; right:94px; bottom:auto; left:auto; display:none;">
   <div class="powerupLabel hudBoxLabel">Bombs</div>
   <div id="powerupEmoji" style="font-size:34px; line-height:1;">💥</div>
   <div id="powerupHint" class="subtxt hudBoxValue">Q x1</div>
@@ -1865,6 +1865,38 @@ line-height:1;
     border-radius: 10px !important;
     font-size: clamp(13px, 2vw, 16px) !important;
     line-height: 1.1 !important;
+  }
+</style>
+
+<style id="hudCounterTopRowPlacementPatch">
+  /* Keep Lives beside Score and Bombs beside Time.
+     This lives at the end of the file so the earlier HUD patch pile cannot
+     quietly drag them back to the corners. */
+  html body #livesSlot{
+    top:10px !important;
+    left:94px !important;
+    right:auto !important;
+    bottom:auto !important;
+  }
+  html body #powerupSlot{
+    top:10px !important;
+    right:94px !important;
+    left:auto !important;
+    bottom:auto !important;
+  }
+  @media (pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-height: 600px){
+    html body.mobileTouchControls #livesSlot{
+      top:10px !important;
+      left:94px !important;
+      right:auto !important;
+      bottom:auto !important;
+    }
+    html body.mobileTouchControls #powerupSlot{
+      top:10px !important;
+      right:94px !important;
+      left:auto !important;
+      bottom:auto !important;
+    }
   }
 </style>
 
