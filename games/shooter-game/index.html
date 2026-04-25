@@ -54,6 +54,52 @@ body::-webkit-scrollbar{
     background:#000;
 }
 
+#rotate-screen-panel{
+    position:absolute;
+    inset:0;
+    z-index:1002;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:
+        radial-gradient(circle at top, rgba(0,255,102,0.12), transparent 48%),
+        linear-gradient(180deg, rgba(8,8,8,0.98), rgba(0,0,0,1));
+}
+
+#rotate-screen-message{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:min(78vw, 420px);
+    min-height:min(48vw, 220px);
+    padding:28px 24px;
+    border:3px solid rgba(0,255,102,0.82);
+    border-radius:18px;
+    background:rgba(0,0,0,0.86);
+    color:#00ff66;
+    font-size:clamp(28px, 9vw, 46px);
+    font-weight:700;
+    letter-spacing:0.12em;
+    text-align:center;
+    text-transform:uppercase;
+    text-shadow:0 0 10px rgba(0,255,102,0.45);
+    box-shadow:0 0 24px rgba(0,255,102,0.22), inset 0 0 18px rgba(0,255,102,0.08);
+}
+
+body.mobile-portrait-only #overlay-container,
+body.mobile-portrait-only #shooter-game-frame{
+    display:none;
+}
+
+body.mobile-phone-layout #overlay-container{
+    display:none;
+}
+
+body.mobile-portrait-only #rotate-screen-panel{
+    display:flex;
+}
+
 @media (max-width: 700px){
     body{
         overscroll-behavior-y:none;
@@ -91,9 +137,21 @@ body::-webkit-scrollbar{
 <div id="app-shell">
     <div id="overlay-container"></div>
     <iframe id="shooter-game-frame" src="/games/shooter-game/shooter-game.html"></iframe>
+    <div id="rotate-screen-panel" aria-live="polite" aria-hidden="true">
+        <div id="rotate-screen-message">Rotate Screen</div>
+    </div>
 </div>
 
 <script>
+function isPhoneLayout(){
+    const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    const isPhoneWidth = window.matchMedia("(max-width: 900px)").matches;
+    return isCoarsePointer && isPhoneWidth;
+}
+
+let overlayLoaded = false;
+let overlayLoadPromise = null;
+
 async function loadOverlay(){
     try{
         const res = await fetch("/pages/overlay.html", { cache: "no-store" });
@@ -126,15 +184,49 @@ async function loadOverlay(){
             container.appendChild(newScript);
         });
 
+        overlayLoaded = true;
         syncLayout();
     }catch(error){
         console.error("Error loading overlay:", error);
+    }finally{
+        overlayLoadPromise = null;
+    }
+}
+
+function syncOverlayVisibility(){
+    const container = document.getElementById("overlay-container");
+    if (!container) return;
+
+    if (isPhoneLayout()){
+        container.innerHTML = "";
+        overlayLoaded = false;
+        return;
+    }
+
+    if (!overlayLoaded && !overlayLoadPromise){
+        overlayLoadPromise = loadOverlay();
     }
 }
 
 const frame = document.getElementById("shooter-game-frame");
+const rotateScreenPanel = document.getElementById("rotate-screen-panel");
+
+function isPhonePortraitBlockActive(){
+    const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+    return isPhoneLayout() && isPortrait;
+}
+
+function syncMobileOrientationGate(){
+    const isPhone = isPhoneLayout();
+    const shouldBlockPortrait = isPhonePortraitBlockActive();
+    document.body.classList.toggle("mobile-phone-layout", isPhone);
+    document.body.classList.toggle("mobile-portrait-only", shouldBlockPortrait);
+    rotateScreenPanel.setAttribute("aria-hidden", shouldBlockPortrait ? "false" : "true");
+}
 
 function syncLayout(){
+    syncMobileOrientationGate();
+    syncOverlayVisibility();
     const overlayContainer = document.getElementById("overlay-container");
     const overlayHeight = overlayContainer ? overlayContainer.offsetHeight : 0;
     frame.style.top = overlayHeight + "px";
@@ -143,11 +235,16 @@ function syncLayout(){
 
 window.syncOverlayLayout = syncLayout;
 
-loadOverlay();
+syncLayout();
 
 window.addEventListener("resize", syncLayout);
 window.addEventListener("orientationchange", syncLayout);
 window.addEventListener("load", syncLayout);
+window.visualViewport?.addEventListener("resize", syncLayout);
+
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) syncLayout();
+});
 
 const resizeObserver = new ResizeObserver(syncLayout);
 resizeObserver.observe(document.getElementById("overlay-container"));
