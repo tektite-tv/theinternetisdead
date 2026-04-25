@@ -8600,6 +8600,7 @@ function applyTektiteNicknameLoadoutOnce(options={}){
   // the nickname sync immediately turning them back on like a needy debug ghost.
   applyGlobalInfiniteMode(true);
   shootCheatMode = "glitch";
+  setVideoFxEnabled(true);
   bigBulletBuffEndTime = 0;
   glitchBackgroundPulse = Math.max(glitchBackgroundPulse || 0, 0.85);
   tektiteNicknameLoadoutApplied = true;
