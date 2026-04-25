@@ -56,6 +56,7 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       { name: '/start', desc: 'Testing: reload Level 1 normally after /stop', usage: '/start', cheatOnly: true, hidden: true },
       { name: '/mute', desc: 'Toggle all shooter audio on or off', usage: '/mute' },
       { name: '/nickname', desc: 'Set the displayed username used by system messages', usage: '/nickname ', suggestions: ['Tektite', 'Guest', 'User'] },
+      { name: '/reset', desc: 'Hidden: wipe browser site data and sever saved-image folder links', usage: '/reset', hidden: true },
       { name: '/shields', desc: 'Set shields to 0-99, or 100/INFINITE', usage: '/shields [0-99|100|INFINITE]', suggestions: ['0', '1', '3', '99', '100', 'INFINITE'], cheatOnly: true },
       { name: '/shoot', desc: 'Set player bullet mode', usage: '/shoot [normal|big_bullets|glitch]', suggestions: ['normal', 'big_bullets', 'glitch'], cheatOnly: true },
       { name: '/screenshot', desc: 'Save a browser-matched screenshot to Profile > Saved Images', usage: '/screenshot' },
@@ -892,6 +893,85 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
       });
     }
 
+
+    function deleteIndexedDatabaseByName(name) {
+      return new Promise((resolve) => {
+        try {
+          if (!window.indexedDB || !name) return resolve(false);
+          const request = window.indexedDB.deleteDatabase(name);
+          request.onsuccess = () => resolve(true);
+          request.onerror = () => resolve(false);
+          request.onblocked = () => resolve(false);
+        } catch (error) {
+          resolve(false);
+        }
+      });
+    }
+
+    async function clearAllShooterSiteDataForFirstVisit() {
+      // Hidden /reset: wipe browser-side site state while only severing saved-image folder links.
+      // Do not delete actual files from the chosen folder.
+      try {
+        if (window.tektiteShooterSavedImageStorage && typeof window.tektiteShooterSavedImageStorage.forgetSavedImageFolderConnections === 'function') {
+          await window.tektiteShooterSavedImageStorage.forgetSavedImageFolderConnections();
+        }
+      } catch (error) {}
+
+      try { window.localStorage.clear(); } catch (error) {}
+      try { window.sessionStorage.clear(); } catch (error) {}
+
+      try {
+        if (window.indexedDB && typeof window.indexedDB.databases === 'function') {
+          const databases = await window.indexedDB.databases();
+          await Promise.all((databases || [])
+            .map((db) => db && db.name)
+            .filter(Boolean)
+            .map(deleteIndexedDatabaseByName));
+        } else {
+          await deleteIndexedDatabaseByName('tektiteShooterSavedImagesFS');
+        }
+      } catch (error) {
+        try { await deleteIndexedDatabaseByName('tektiteShooterSavedImagesFS'); } catch (_) {}
+      }
+
+      try {
+        if (window.caches && typeof window.caches.keys === 'function') {
+          const keys = await window.caches.keys();
+          await Promise.all((keys || []).map((key) => window.caches.delete(key)));
+        }
+      } catch (error) {}
+
+      try {
+        document.cookie.split(';').forEach((cookie) => {
+          const eq = cookie.indexOf('=');
+          const name = (eq > -1 ? cookie.slice(0, eq) : cookie).trim();
+          if (!name) return;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        });
+      } catch (error) {}
+
+      try {
+        if (navigator.serviceWorker && typeof navigator.serviceWorker.getRegistrations === 'function') {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all((registrations || []).map((registration) => registration.unregister()));
+        }
+      } catch (error) {}
+    }
+
+    function runHiddenResetCommandFromHost() {
+      clearAllShooterSiteDataForFirstVisit().finally(() => {
+        window.setTimeout(() => {
+          try {
+            const cleanUrl = String(window.location.href || '').split('#')[0];
+            window.location.replace(cleanUrl);
+          } catch (error) {
+            try { window.location.reload(); } catch (_) {}
+          }
+        }, 250);
+      });
+      return '/reset wiped browser site data and severed saved-image folder connections. Reloading as a first visit.';
+    }
+
     async function setIframeFullscreen(shouldEnter) {
       const fullscreenTarget = document.documentElement || document.body || tektiteFrame;
       if (!fullscreenTarget) return;
@@ -1052,6 +1132,16 @@ const LEVEL2_SRC = '/games/shooter-game/assets/levels/shooter-game-level2.html?a
         if (data.type === 'pageChatExecute') {
           const rawCommand = String(data.raw || data.command || '').trim();
           const commandName = String(data.command || '').trim().toLowerCase();
+          if (commandName === '/reset') {
+            const message = runHiddenResetCommandFromHost();
+            postToChatSandbox({
+              type: 'pageChatResult',
+              command: '/reset',
+              message,
+              announce: true
+            });
+            return;
+          }
           if (commandName === '/debug') {
             const enabled = toggleShooterDebugMode();
             postToChatSandbox({
