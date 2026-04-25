@@ -4128,6 +4128,7 @@ function updateStarfield(dt, keys, playerSpeed){
   if (gameState === STATE.PLAYING){
     if (isKeyboardActionHeld("moveLeft")) vxIntent -= 1;
     if (isKeyboardActionHeld("moveRight")) vxIntent += 1;
+    vxIntent += mobileTiltMoveX || 0;
     // Xbox/Gamepad: use left-stick/D-pad horizontal intent too
     vxIntent += (typeof gpMoveX !== "undefined" ? (gpMoveX || 0) : 0);
     vxIntent = Math.max(-1, Math.min(1, vxIntent));
@@ -5417,6 +5418,8 @@ function syncStartOptionsLabels(){
 
 const INPUT_MODE_KEYBOARD = "keyboardMouse";
 const INPUT_MODE_CONTROLLER = "controller";
+const MOBILE_TILT_MOVE_DEADZONE_DEG = 2.5;
+const MOBILE_TILT_MOVE_FULL_SPEED_DEG = 18;
 const BINDINGS_STORAGE_KEY = "tektiteShooterBindings_v1";
 const DEFAULT_KEYBOARD_BINDINGS = {
   moveLeft: "KeyA",
@@ -5445,6 +5448,136 @@ const DEFAULT_CONTROLLER_BINDINGS = {
   menuBack: 1,
   fullscreen: 11
 };
+let mobileMotionPermissionKnown = false;
+let mobileMotionPermissionGranted = false;
+let mobileDeviceOrientationBound = false;
+let mobileTiltMoveX = 0;
+let mobileTiltAngle = 0;
+let mobileTiltBaseline = 0;
+let mobileTiltBaselineReady = false;
+
+function isCoarsePointerDevice(){
+  try{
+    return !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches) || (navigator.maxTouchPoints || 0) > 0;
+  }catch(_){
+    return (navigator.maxTouchPoints || 0) > 0;
+  }
+}
+
+function isMobileLandscapeGameplay(){
+  try{
+    return isCoarsePointerDevice() && !!(window.matchMedia && window.matchMedia("(orientation: landscape)").matches);
+  }catch(_){
+    return isCoarsePointerDevice() && window.innerWidth > window.innerHeight;
+  }
+}
+
+function getScreenOrientationAngle(){
+  const raw = (screen.orientation && typeof screen.orientation.angle === "number")
+    ? screen.orientation.angle
+    : (typeof window.orientation === "number" ? window.orientation : 0);
+  if (raw === -90) return -90;
+  const normalized = ((raw % 360) + 360) % 360;
+  return normalized === 270 ? -90 : normalized;
+}
+
+function getLandscapeTiltDegrees(event){
+  const beta = Number.isFinite(event && event.beta) ? Math.max(-90, Math.min(90, event.beta)) : null;
+  const gamma = Number.isFinite(event && event.gamma) ? Math.max(-90, Math.min(90, event.gamma)) : null;
+  const screenAngle = getScreenOrientationAngle();
+  if (screenAngle === 90) return beta;
+  if (screenAngle === -90) return Number.isFinite(beta) ? -beta : null;
+  if (screenAngle === 180) return Number.isFinite(gamma) ? -gamma : null;
+  return gamma;
+}
+
+function getNormalizedMobileTiltMove(tiltDeg){
+  const relativeTilt = tiltDeg - mobileTiltBaseline;
+  const absTilt = Math.abs(relativeTilt);
+  if (absTilt <= MOBILE_TILT_MOVE_DEADZONE_DEG) return 0;
+  const range = Math.max(1, MOBILE_TILT_MOVE_FULL_SPEED_DEG - MOBILE_TILT_MOVE_DEADZONE_DEG);
+  const scaled = Math.min(1, (absTilt - MOBILE_TILT_MOVE_DEADZONE_DEG) / range);
+  return relativeTilt < 0 ? -scaled : scaled;
+}
+
+function recalibrateMobileTiltBaseline(){
+  if (!Number.isFinite(mobileTiltAngle)) return;
+  mobileTiltBaseline = mobileTiltAngle;
+  mobileTiltBaselineReady = true;
+  mobileTiltMoveX = 0;
+}
+
+function handleMobileDeviceOrientation(event){
+  if (!isMobileLandscapeGameplay()){
+    mobileTiltMoveX = 0;
+    mobileTiltBaselineReady = false;
+    return;
+  }
+  const tiltDeg = getLandscapeTiltDegrees(event);
+  if (!Number.isFinite(tiltDeg)) return;
+  mobileMotionPermissionGranted = true;
+  mobileTiltAngle = tiltDeg;
+  if (!mobileTiltBaselineReady) recalibrateMobileTiltBaseline();
+  mobileTiltMoveX = getNormalizedMobileTiltMove(tiltDeg);
+}
+
+function bindMobileDeviceOrientation(){
+  if (mobileDeviceOrientationBound || !("DeviceOrientationEvent" in window)) return false;
+  window.addEventListener("deviceorientation", handleMobileDeviceOrientation);
+  mobileDeviceOrientationBound = true;
+  return true;
+}
+
+async function ensureMobileMotionInputReady(){
+  if (!isCoarsePointerDevice() || !("DeviceOrientationEvent" in window)) return false;
+
+  if (typeof DeviceOrientationEvent.requestPermission === "function"){
+    if (!mobileMotionPermissionKnown){
+      mobileMotionPermissionKnown = true;
+      try{
+        const result = await DeviceOrientationEvent.requestPermission();
+        mobileMotionPermissionGranted = result === "granted";
+      }catch(_){
+        mobileMotionPermissionGranted = false;
+      }
+      if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function"){
+        try{ await DeviceMotionEvent.requestPermission(); }catch(_){}
+      }
+    }
+    if (!mobileMotionPermissionGranted) return false;
+  } else {
+    mobileMotionPermissionKnown = true;
+    mobileMotionPermissionGranted = true;
+  }
+
+  bindMobileDeviceOrientation();
+  if (isMobileLandscapeGameplay()) recalibrateMobileTiltBaseline();
+  return mobileMotionPermissionGranted;
+}
+
+function syncMobileMotionOrientationState(){
+  if (!isMobileLandscapeGameplay()){
+    mobileTiltMoveX = 0;
+    mobileTiltBaselineReady = false;
+    return;
+  }
+  if (mobileMotionPermissionGranted) recalibrateMobileTiltBaseline();
+}
+
+if ("DeviceOrientationEvent" in window && typeof DeviceOrientationEvent.requestPermission !== "function"){
+  mobileMotionPermissionKnown = true;
+  mobileMotionPermissionGranted = true;
+  bindMobileDeviceOrientation();
+}
+
+window.addEventListener("orientationchange", () => {
+  window.setTimeout(syncMobileMotionOrientationState, 60);
+});
+window.addEventListener("resize", syncMobileMotionOrientationState);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) syncMobileMotionOrientationState();
+});
+
 const KEYBOARD_BIND_ACTIONS = [
   { key: "moveLeft", label: "Move Left", hint: "Gameplay movement" },
   { key: "moveRight", label: "Move Right", hint: "Gameplay movement" },
@@ -10338,11 +10471,16 @@ let aimY = 0;
 let aimAngle = -Math.PI/2;
 let aimAngleSmoothed = -Math.PI/2;
 
-function setAimFromClient(clientX, clientY){
+function setAimFromClient(clientX, clientY, options = null){
   const r = canvas.getBoundingClientRect();
   aimX = clientX - r.left;
   aimY = clientY - r.top;
   aimAngle = Math.atan2(aimY - player.y, aimX - player.x);
+  if (options && options.immediate) aimAngleSmoothed = aimAngle;
+}
+
+function isTouchPointerEvent(event){
+  return !!(event && event.pointerType === "touch");
 }
 
 /* =======================
@@ -11209,7 +11347,7 @@ window.addEventListener("mousedown", (e) => {
 canvas.addEventListener("pointermove", (e) => {
   setActiveInputMode(INPUT_MODE_KEYBOARD);
   // v1.96: aim follows pointer (mouse or touch)
-  setAimFromClient(e.clientX, e.clientY);
+  setAimFromClient(e.clientX, e.clientY, { immediate:isTouchPointerEvent(e) });
 });
 
 canvas.addEventListener("pointerdown", (e) => {
@@ -11219,7 +11357,8 @@ canvas.addEventListener("pointerdown", (e) => {
   } else {
     setActiveInputMode(INPUT_MODE_KEYBOARD);
   }
-  setAimFromClient(e.clientX, e.clientY);
+  if (isTouchPointerEvent(e)) void ensureMobileMotionInputReady();
+  setAimFromClient(e.clientX, e.clientY, { immediate:isTouchPointerEvent(e) });
   if (e.button === 2 && keyboardBindings.shield === 'Mouse2'){
     e.preventDefault();
     mouseShieldHolding = true;
@@ -11358,6 +11497,7 @@ function update(dt){
   let moveX = 0;
   if (isKeyboardActionHeld("moveLeft")) moveX -= 1;
   if (isKeyboardActionHeld("moveRight")) moveX += 1;
+  moveX += mobileTiltMoveX || 0;
   // add analog movement from Xbox pad
   moveX += gpMoveX || 0;
   moveX = Math.max(-1, Math.min(1, moveX));
