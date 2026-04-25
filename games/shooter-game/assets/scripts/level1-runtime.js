@@ -551,7 +551,18 @@ const btnRestart = document.getElementById("btnRestart");
 const btnDeathQuitToMenu = document.getElementById("btnDeathQuitToMenu");
 const winOverlay = document.getElementById("winOverlay");
 const winPanel = document.getElementById("winPanel");
+const winStatsScrollArea = document.getElementById("winStatsScrollArea");
+const winStatsMarqueeTrack = document.getElementById("winStatsMarqueeTrack");
+const winStatsMarqueeContent = document.getElementById("winStatsMarqueeContent");
+const winStatsMarqueeClone = document.getElementById("winStatsMarqueeClone");
 const btnContinue = document.getElementById("btnContinue");
+
+const WIN_STATS_MARQUEE_PIXELS_PER_SECOND = 22;
+let winStatsMarqueeRafId = 0;
+let winStatsMarqueeLastTimestamp = 0;
+let winStatsMarqueeSyncRafId = 0;
+let winStatsMarqueeLoopDistance = 0;
+let winStatsMarqueeOffset = 0;
 
 let hudVisible = false;
 
@@ -3548,6 +3559,124 @@ function refreshWinStats(){
   if (winStatBonusEl) winStatBonusEl.style.display = hasBombBonus ? "block" : "none";
   if (winStatBonusDragonsEl) winStatBonusDragonsEl.textContent = "Dragons Bombed: +" + bombDragonKills;
   if (winStatBonusFrogsEl) winStatBonusFrogsEl.textContent = "Frogs Bombed: +" + bombFrogKills;
+  queueWinStatsMarqueeSync();
+}
+
+function stopWinStatsMarquee(options = {}){
+  if (winStatsMarqueeRafId){
+    try{ cancelAnimationFrame(winStatsMarqueeRafId); }catch(_){}
+    winStatsMarqueeRafId = 0;
+  }
+  if (winStatsMarqueeSyncRafId){
+    try{ cancelAnimationFrame(winStatsMarqueeSyncRafId); }catch(_){}
+    winStatsMarqueeSyncRafId = 0;
+  }
+  winStatsMarqueeLastTimestamp = 0;
+  winStatsMarqueeLoopDistance = 0;
+  winStatsMarqueeOffset = 0;
+  applyWinStatsMarqueeTransform();
+  if (options.clearClone !== false && winStatsMarqueeClone){
+    winStatsMarqueeClone.hidden = true;
+    winStatsMarqueeClone.textContent = "";
+  }
+}
+
+function applyWinStatsMarqueeTransform(){
+  if (!winStatsMarqueeTrack) return;
+  winStatsMarqueeTrack.style.transform = "translateY(" + (-winStatsMarqueeOffset) + "px)";
+}
+
+function normalizeWinStatsMarqueeOffset(offset){
+  const loopDistance = winStatsMarqueeLoopDistance || 0;
+  if (loopDistance <= 0) return 0;
+  let next = Number(offset) || 0;
+  while (next < 0) next += loopDistance;
+  while (next >= loopDistance) next -= loopDistance;
+  return next;
+}
+
+function setWinStatsMarqueeOffset(offset){
+  winStatsMarqueeOffset = normalizeWinStatsMarqueeOffset(offset);
+  applyWinStatsMarqueeTransform();
+}
+
+function buildWinStatsMarqueeLoopDistance(){
+  if (!winStatsScrollArea || !winStatsMarqueeTrack || !winStatsMarqueeContent || !winStatsMarqueeClone) return 0;
+  winStatsMarqueeClone.textContent = "";
+
+  const contentHeight = Math.ceil(winStatsMarqueeContent.scrollHeight || 0);
+  const containerHeight = Math.ceil(winStatsScrollArea.clientHeight || 0);
+  if (contentHeight <= 0 || containerHeight <= 0){
+    winStatsMarqueeClone.hidden = true;
+    return 0;
+  }
+
+  const cloneBlock = winStatsMarqueeContent.cloneNode(true);
+  cloneBlock.removeAttribute("id");
+  cloneBlock.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
+  cloneBlock.querySelectorAll(".winControllerTarget").forEach((el) => el.classList.remove("winControllerTarget"));
+  cloneBlock.querySelectorAll("[tabindex]").forEach((el) => el.removeAttribute("tabindex"));
+  winStatsMarqueeClone.appendChild(cloneBlock);
+  winStatsMarqueeClone.hidden = false;
+
+  const loopDistance = Math.round(winStatsMarqueeClone.offsetTop - winStatsMarqueeContent.offsetTop);
+  return loopDistance > 0 ? loopDistance : 0;
+}
+
+function syncWinStatsMarquee(){
+  stopWinStatsMarquee({ clearClone:false });
+  if (!winOverlay || !winStatsScrollArea || !winStatsMarqueeTrack || !winStatsMarqueeContent || !winStatsMarqueeClone){
+    stopWinStatsMarquee();
+    return;
+  }
+  if (typeof STATE === "undefined" || gameState !== STATE.WIN || winOverlay.style.display !== "flex"){
+    stopWinStatsMarquee();
+    return;
+  }
+
+  const loopDistance = buildWinStatsMarqueeLoopDistance();
+  winStatsMarqueeLoopDistance = loopDistance;
+  if (loopDistance <= 0){
+    setWinStatsMarqueeOffset(0);
+    return;
+  }
+
+  const step = (timestamp) => {
+    if (!winOverlay || !winStatsScrollArea || !winStatsMarqueeTrack || !winStatsMarqueeContent || !winStatsMarqueeClone){
+      stopWinStatsMarquee();
+      return;
+    }
+    if (typeof STATE === "undefined" || gameState !== STATE.WIN || winOverlay.style.display !== "flex"){
+      stopWinStatsMarquee();
+      return;
+    }
+
+    if (!winStatsMarqueeLastTimestamp){
+      winStatsMarqueeLastTimestamp = timestamp;
+      winStatsMarqueeRafId = requestAnimationFrame(step);
+      return;
+    }
+
+    const deltaSeconds = Math.min(0.05, Math.max(0, (timestamp - winStatsMarqueeLastTimestamp) / 1000));
+    winStatsMarqueeLastTimestamp = timestamp;
+
+    setWinStatsMarqueeOffset(winStatsMarqueeOffset + (deltaSeconds * WIN_STATS_MARQUEE_PIXELS_PER_SECOND));
+    winStatsMarqueeRafId = requestAnimationFrame(step);
+  };
+
+  winStatsMarqueeLastTimestamp = 0;
+  setWinStatsMarqueeOffset(0);
+  winStatsMarqueeRafId = requestAnimationFrame(step);
+}
+
+function queueWinStatsMarqueeSync(){
+  if (winStatsMarqueeSyncRafId){
+    try{ cancelAnimationFrame(winStatsMarqueeSyncRafId); }catch(_){}
+  }
+  winStatsMarqueeSyncRafId = requestAnimationFrame(() => {
+    winStatsMarqueeSyncRafId = 0;
+    syncWinStatsMarquee();
+  });
 }
 
 function updateTimerHUD(){
@@ -7095,7 +7224,9 @@ function syncWinControllerFocus(){
   const items = getWinControllerTargets();
   if (!items.length) return;
   winFocusIndex = Math.max(0, Math.min(winFocusIndex, items.length - 1));
-  focusControllerElement(items[winFocusIndex]);
+  const target = items[winFocusIndex];
+  focusControllerElement(target);
+  keepWinControllerTargetFullyVisible(target);
 }
 
 function moveWinControllerFocus(delta){
@@ -7114,11 +7245,39 @@ function jumpWinControllerFocusToBottom(){
   return true;
 }
 
+function getWinScrollTargetElement(el){
+  if (!el) return null;
+  return el.closest('#winStatsTitle, .winStatRow, .winStatBreakdownTitle, .winStatBreakdownLine, .winStatBonusTitle, .winStatBonusLine') || el;
+}
+
+function keepWinControllerTargetFullyVisible(el){
+  if (!winStatsScrollArea || !el || !winStatsScrollArea.contains(el)) return;
+  const target = getWinScrollTargetElement(el);
+  if (!target) return;
+
+  const adjust = () => {
+    if (!winStatsScrollArea || !target.isConnected) return;
+    const containerRect = winStatsScrollArea.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const marginTop = 10;
+    const marginBottom = 12;
+
+    if (targetRect.top < containerRect.top + marginTop){
+      setWinStatsMarqueeOffset(winStatsMarqueeOffset - ((containerRect.top + marginTop) - targetRect.top));
+    } else if (targetRect.bottom > containerRect.bottom - marginBottom){
+      setWinStatsMarqueeOffset(winStatsMarqueeOffset + (targetRect.bottom - (containerRect.bottom - marginBottom)));
+    }
+  };
+
+  try{ adjust(); }catch(_){}
+  try{ requestAnimationFrame(adjust); }catch(_){ setTimeout(adjust, 0); }
+}
+
 function scrollWinPanelBy(delta){
-  if (!winPanel || !delta) return false;
-  const previous = winPanel.scrollTop;
-  winPanel.scrollTop = Math.max(0, previous + delta);
-  return winPanel.scrollTop !== previous;
+  if (!delta || winStatsMarqueeLoopDistance <= 0) return false;
+  const previous = winStatsMarqueeOffset;
+  setWinStatsMarqueeOffset(winStatsMarqueeOffset + delta);
+  return winStatsMarqueeOffset !== previous;
 }
 
 function syncWinFocusIndexFromElement(target){
@@ -7911,6 +8070,7 @@ function showMenu(){
   deathOverlay.style.display = "none";
   clearDeathControllerFocus();
   if (winOverlay) winOverlay.style.display = "none";
+  stopWinStatsMarquee({ resetScroll:true });
 
   document.body.classList.remove("menu-hub-open");
   if (startMenu){
@@ -8222,6 +8382,8 @@ function showWinOverlay(){
   { const heartsHud = getHeartsHudEl(); if (heartsHud) heartsHud.style.display = "none"; }
   stopMusic();
   if (winPanel) winPanel.scrollTop = 0;
+  if (winStatsScrollArea) winStatsScrollArea.scrollTop = 0;
+  queueWinStatsMarqueeSync();
   winFocusIndex = 0;
   if (activeInputMode === INPUT_MODE_CONTROLLER) syncWinControllerFocus();
   else clearControllerFocus();
@@ -9277,6 +9439,7 @@ function startGame(){
   deathOverlay.style.display = "none";
   clearDeathControllerFocus();
   if (winOverlay) winOverlay.style.display = "none";
+  stopWinStatsMarquee({ resetScroll:true });
 
   // v1.96: show HUD only in-game
   livesSlot.style.display = "flex";
@@ -9854,6 +10017,7 @@ if (btnContinue){
     }
 
     if (winOverlay) winOverlay.style.display = "none";
+    stopWinStatsMarquee({ resetScroll:true });
   });
 }
 
@@ -10836,8 +11000,12 @@ function pollGamepad(dt){
       if (navDown || navRight) moveWinControllerFocus(1);
       if (rNavUp) scrollWinPanelBy(-72);
       if (rNavDown) scrollWinPanelBy(72);
-      if (pressPause) jumpWinControllerFocusToBottom();
-      if (pressMenuSelect) activateControllerTarget(getWinControllerTargets()[winFocusIndex]);
+      const winTarget = getWinControllerTargets()[winFocusIndex];
+      if (pressPause){
+        if (winTarget === btnContinue) activateControllerTarget(btnContinue);
+        else jumpWinControllerFocusToBottom();
+      }
+      if (pressMenuSelect) activateControllerTarget(winTarget);
       if (pressMenuBack) activateControllerTarget(btnContinue || getWinControllerTargets()[winFocusIndex]);
     } else if (deathOverlay && deathOverlay.style.display === "flex"){
       if (pressMenuSelect) restartRun();

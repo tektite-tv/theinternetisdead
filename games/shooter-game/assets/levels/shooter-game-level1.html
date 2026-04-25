@@ -6599,22 +6599,29 @@ body.controller-active #startMenu #btnEnterNickname.needsNickname.controllerFocu
 <div id="winOverlay" hidden aria-hidden="true">
   <div id="winPanel">
     <div id="winTitle" class="winControllerTarget" tabindex="-1">You Win!</div>
-    <div id="winStatsTitle" class="winControllerTarget" tabindex="-1">Level 1 Completion Stats</div>
-    <div id="winStatsList">
-      <div id="winStatTime" class="winStatRow winControllerTarget" tabindex="-1">Time: 0.0s</div>
-      <div id="winStatScore" class="winStatRow winControllerTarget" tabindex="-1">Score: 0</div>
-      <div id="winStatKills" class="winStatRow winControllerTarget" tabindex="-1">Enemies Killed: 0 / 0</div>
-      <div id="winStatBullets" class="winStatRow winControllerTarget" tabindex="-1">Bullets Shot: 0</div>
-      <div id="winStatAccuracy" class="winStatRow winControllerTarget" tabindex="-1">Accuracy: 0%</div>
-      <div id="winStatBombKills" class="winStatRow winControllerTarget" tabindex="-1">Bomb Kills: 0</div>
-      <div id="winStatKillBreakdown" class="winStatRow">
-        <div class="winStatBreakdownTitle winControllerTarget" tabindex="-1">Kills By Enemy</div>
-        <div id="winStatKillBreakdownList"></div>
-      </div>
-      <div id="winStatBonus" class="winStatRow">
-        <div class="winStatBonusTitle winControllerTarget" tabindex="-1">BONUS POINTS</div>
-        <div id="winStatBonusDragons" class="winStatBonusLine winControllerTarget" tabindex="-1">Dragons Bombed: +0</div>
-        <div id="winStatBonusFrogs" class="winStatBonusLine winControllerTarget" tabindex="-1">Frogs Bombed: +0</div>
+    <div id="winStatsScrollArea">
+      <div id="winStatsMarqueeTrack">
+        <div id="winStatsMarqueeContent" class="winStatsMarqueeBlock">
+          <div id="winStatsTitle" class="winControllerTarget" tabindex="-1">Level 1 Completion Stats</div>
+          <div id="winStatsList">
+            <div id="winStatTime" class="winStatRow winControllerTarget" tabindex="-1">Time: 0.0s</div>
+            <div id="winStatScore" class="winStatRow winControllerTarget" tabindex="-1">Score: 0</div>
+            <div id="winStatKills" class="winStatRow winControllerTarget" tabindex="-1">Enemies Killed: 0 / 0</div>
+            <div id="winStatBullets" class="winStatRow winControllerTarget" tabindex="-1">Bullets Shot: 0</div>
+            <div id="winStatAccuracy" class="winStatRow winControllerTarget" tabindex="-1">Accuracy: 0%</div>
+            <div id="winStatBombKills" class="winStatRow winControllerTarget" tabindex="-1">Bomb Kills: 0</div>
+            <div id="winStatKillBreakdown" class="winStatRow">
+              <div class="winStatBreakdownTitle winControllerTarget" tabindex="-1">Kills By Enemy</div>
+              <div id="winStatKillBreakdownList"></div>
+            </div>
+            <div id="winStatBonus" class="winStatRow">
+              <div class="winStatBonusTitle winControllerTarget" tabindex="-1">BONUS POINTS</div>
+              <div id="winStatBonusDragons" class="winStatBonusLine winControllerTarget" tabindex="-1">Dragons Bombed: +0</div>
+              <div id="winStatBonusFrogs" class="winStatBonusLine winControllerTarget" tabindex="-1">Frogs Bombed: +0</div>
+            </div>
+          </div>
+        </div>
+        <div id="winStatsMarqueeClone" class="winStatsMarqueeBlock winStatsMarqueeClone" aria-hidden="true" hidden></div>
       </div>
     </div>
     <div class="level2-win-action-stack">
@@ -7608,6 +7615,149 @@ line-height:1;
       left:auto !important;
       bottom:auto !important;
     }
+  }
+</style>
+
+<style id="winMenuMatchStartMenuFootprintPatch">
+  /* Final authority: the Level 1 win screen uses the exact same 16:9 shell as the Start Menu. */
+  html body #winOverlay #winPanel{
+    width:var(--shooter-start-hub-frame-width, calc(var(--shooter-start-hub-frame-height, min(405px, 51.75vw, calc(100vh - 96px))) * 16 / 9)) !important;
+    min-width:var(--shooter-start-hub-frame-width, calc(var(--shooter-start-hub-frame-height, min(405px, 51.75vw, calc(100vh - 96px))) * 16 / 9)) !important;
+    max-width:var(--shooter-start-hub-frame-width, calc(var(--shooter-start-hub-frame-height, min(405px, 51.75vw, calc(100vh - 96px))) * 16 / 9)) !important;
+    height:var(--shooter-start-hub-frame-height, min(405px, 51.75vw, calc(100vh - 96px))) !important;
+    min-height:var(--shooter-start-hub-frame-height, min(405px, 51.75vw, calc(100vh - 96px))) !important;
+    max-height:var(--shooter-start-hub-frame-height, min(405px, 51.75vw, calc(100vh - 96px))) !important;
+    aspect-ratio:16 / 9 !important;
+    box-sizing:border-box !important;
+    padding:10px !important;
+    border:var(--shooter-start-hub-frame-border, 2px solid rgba(0,255,102,0.65)) !important;
+    border-width:2px !important;
+    border-radius:var(--shooter-start-hub-frame-radius, 16px) !important;
+    background:var(--shooter-start-hub-frame-bg, rgba(75,0,118,0.50)) !important;
+    box-shadow:var(--shooter-start-hub-frame-shadow, 0 0 28px rgba(0,255,102,0.20)) !important;
+    transform:none !important;
+    transform-origin:center center !important;
+    margin:0 !important;
+    overflow:hidden !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    gap:8px !important;
+    text-align:center !important;
+  }
+
+  html body #winOverlay #winTitle,
+  html body #winOverlay .level2-win-action-stack{
+    flex:0 0 auto !important;
+    margin:0 !important;
+  }
+
+  html body #winOverlay #winTitle{
+    font-size:clamp(30px, 4.2vw, 40px) !important;
+    line-height:1.04 !important;
+  }
+
+  html body #winOverlay #winStatsTitle{
+    flex:0 0 auto !important;
+    margin:0 !important;
+    font-size:clamp(14px, 1.85vw, 18px) !important;
+    line-height:1.08 !important;
+  }
+
+  html body #winOverlay #winStatsScrollArea{
+    width:100% !important;
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 4px 2px !important;
+    display:block !important;
+    overflow:hidden !important;
+    scrollbar-width:none !important;
+    -ms-overflow-style:none !important;
+    position:relative !important;
+  }
+  html body #winOverlay #winStatsScrollArea::-webkit-scrollbar{
+    width:0 !important;
+    height:0 !important;
+    display:none !important;
+  }
+
+  html body #winOverlay #winStatsMarqueeTrack{
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    transform:translateY(0) !important;
+    will-change:transform !important;
+  }
+
+  html body #winOverlay .winStatsMarqueeBlock{
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    gap:6px !important;
+    flex:0 0 auto !important;
+    margin:0 !important;
+  }
+
+  html body #winOverlay .winStatsMarqueeClone{
+    padding-top:14px !important;
+    pointer-events:none !important;
+  }
+
+  html body #winOverlay .winStatsMarqueeClone *{
+    pointer-events:none !important;
+  }
+
+  html body #winOverlay #winStatsList{
+    width:100% !important;
+    max-width:none !important;
+    flex:0 0 auto !important;
+    min-height:min-content !important;
+    margin:0 !important;
+    padding:0 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    overflow:visible !important;
+  }
+
+  html body #winOverlay .winStatRow{
+    font-size:clamp(13px, 1.45vw, 17px) !important;
+    line-height:1.16 !important;
+  }
+
+  html body #winOverlay #winStatKillBreakdown{
+    font-size:clamp(12px, 1.3vw, 15px) !important;
+  }
+
+  html body #winOverlay #winStatKillBreakdownList{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:2px !important;
+  }
+
+  html body #winOverlay .level2-win-action-stack{
+    width:100% !important;
+    gap:8px !important;
+    margin-top:auto !important;
+    padding-top:2px !important;
+    align-items:center !important;
+  }
+
+  html body #winOverlay .level2-win-action-stack .bananarama-level2-link{
+    width:min(15vw, 62px) !important;
+    height:min(15vw, 62px) !important;
+  }
+
+  html body #winOverlay .level2-win-action-stack button{
+    width:min(100%, 320px) !important;
+    max-width:100% !important;
+    margin:0 auto !important;
   }
 </style>
 </body>
