@@ -1003,6 +1003,66 @@ body.controller-active #scoreStoreHud.storeReady.controllerFocus{
 #accuracyScore{
   color:#ffd400;
 }
+
+#mobileTwinStickOverlay{
+  position:fixed;
+  inset:0;
+  z-index:85;
+  display:none;
+  pointer-events:none;
+}
+.mobileStickZone{
+  position:absolute;
+  bottom:18px;
+  width:132px;
+  height:132px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:auto;
+  touch-action:none;
+  user-select:none;
+  background:radial-gradient(circle, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.08) 58%, rgba(0,0,0,0) 72%);
+}
+.mobileStickZoneLeft{ left:14px; }
+.mobileStickZoneRight{ right:14px; }
+.mobileStickImage{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:88px;
+  height:88px;
+  object-fit:contain;
+  opacity:0.88;
+  pointer-events:none;
+  user-select:none;
+  filter:drop-shadow(0 0 10px rgba(0,0,0,0.35));
+  transform:translate(-50%, -50%);
+  transition:transform 70ms linear, opacity 90ms ease;
+}
+
+@media (pointer: coarse) and (max-width: 600px), (pointer: coarse) and (max-height: 600px){
+  body.mobileTouchControls #livesSlot{
+    top:10px !important;
+    bottom:auto !important;
+    left:94px !important;
+    right:auto !important;
+  }
+  body.mobileTouchControls #powerupSlot{
+    top:10px !important;
+    bottom:auto !important;
+    right:94px !important;
+    left:auto !important;
+  }
+  body.mobileTouchControls #mobileTwinStickOverlay{
+    display:block;
+  }
+  body.mobileTouchControls:not(.mobileTouchControlsActive) .mobileStickZone{
+    pointer-events:none;
+    opacity:0.72;
+  }
+}
 #storeUnlockedHud{
   font-size:7px !important;
   line-height:1 !important;
@@ -1411,7 +1471,7 @@ body.invert-colors {
   <div id="startMenu" class="panel" style="background: rgba(75,0,118,0.72); border-width: 3px; display:none;">
     <div class="title">Tektite's Bananaman Shooter Game</div>
     <div class="titleSubWrap">
-      <div class="titleSub"><span class="titleSubDefault">(Maze Mode)</span><span class="titleSubHover" data-file-last-updated>(Last updated: April 24, 2026 11:00 PM)</span></div>
+      <div class="titleSub"><span class="titleSubDefault">(Maze Mode)</span><span class="titleSubHover" data-file-last-updated>(Last updated: April 24, 2026 11:02 PM)</span></div>
     </div>
 <img class="subimg" src="/games/shooter-game/assets/bananarama.webp" alt="bananarama" />
     <div class="menuBlurb">Navigate the maze, paint the floor, avoid hazards, and reach the glowing exit to advance. This menu is mainly for testing because Level 2 normally boots straight into gameplay.</div>
