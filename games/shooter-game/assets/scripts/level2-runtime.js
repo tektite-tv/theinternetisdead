@@ -1865,8 +1865,13 @@ const ENEMY_DEATH_FLASH_SECS = 0.34; // keep fresh kills visibly red into the fa
 const ENEMY_DEATH_GROW_SCALE = 1.35; // visual-only corpse explosion swell; hitboxes stay unchanged
 const ENEMY_DEATH_BULGE_GRID = 9;    // grid distortion resolution for the fisheye death bulge
 const ENEMY_DEATH_BULGE_STRENGTH = 0.415; // outward center bulge strength during death fade (33% smaller)
-const UFO_SIZE_SCALE = 1.33;          // UFO is 33% larger than the old tiny saucer
+const UFO_SIZE_SCALE = 1.33;          // Desktop UFO scale
+const MOBILE_UFO_SIZE_SCALE = 0.96;   // Phones keep the UFO closer to desktop on-screen size
 const UFO_DEATH_RED_ALPHA = 0.72;     // red death overlay strength while UFO fades
+
+function getUfoSizeScale(){
+  return isMobilePhoneViewport() ? MOBILE_UFO_SIZE_SCALE : UFO_SIZE_SCALE;
+}
 
 
 const enemyHitFlashTintCanvas = document.createElement("canvas");
@@ -2430,7 +2435,7 @@ function trySpawnUFO(force=false){
     roamTurnTimer: rand(0.35, 1.1),
     seenPlayerLag: 0,
     seesPlayer: false,
-    r: 10 * UFO_SIZE_SCALE,
+    r: 10 * getUfoSizeScale(),
     hits: 0,
     stage: 0, // 0 none, 1 red, 2 green, 3 blue
     _killAwarded: false,
@@ -2551,7 +2556,7 @@ function drawUFO(){
 
   // Base UFO is now 33% bigger. During death fade, it visually blooms outward
   // like enemy death sprites while keeping the stored ufo.r collision radius stable.
-  const baseScale = UFO_SIZE_SCALE;
+  const baseScale = getUfoSizeScale();
   const deathScale = 1 + fadeProgress * ENEMY_DEATH_GROW_SCALE;
   const bulge = fadeProgress * ENEMY_DEATH_BULGE_STRENGTH;
   const coreRx = 14 * baseScale * deathScale * (1 + bulge * 0.62);
@@ -2899,9 +2904,23 @@ function drawStarfield(){
 /* =======================
    Resize
 ======================= */
+const MOBILE_GAMEPLAY_MIN_HEIGHT = 540;
+const MOBILE_GAMEPLAY_MIN_TIME_SCALE = 0.72;
+
+function getMobileGameplayTimeScale(){
+  if (!isMobilePhoneViewport()) return 1;
+  const viewportHeight = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || canvas.height || 360));
+  const relativeScale = Math.min(1, viewportHeight / MOBILE_GAMEPLAY_MIN_HEIGHT);
+  return Math.max(MOBILE_GAMEPLAY_MIN_TIME_SCALE, relativeScale);
+}
+
 function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const viewportWidth = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || canvas.width || 640));
+  const viewportHeight = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || canvas.height || 360));
+  canvas.width = viewportWidth;
+  canvas.height = viewportHeight;
+  canvas.style.width = `${viewportWidth}px`;
+  canvas.style.height = `${viewportHeight}px`;
 
   // v1.96+: only bottom-anchor in menus; gameplay keeps spawn position
   if (gameState !== STATE.PLAYING){
@@ -7336,7 +7355,7 @@ function loop(t){
   // v1.96: Game speed knob. We cap raw dt to prevent big frame hitch jumps,
   // then multiply by GAME_SPEED_MULT (5 = 1.0x, 1 = 0.2x, 10 = 2.0x).
   const rawDt = Math.min(0.033, (t - lastT) / 1000);
-  const dt = rawDt * (GAME_SPEED_MULT || 1.0);
+  const dt = rawDt * (GAME_SPEED_MULT || 1.0) * getMobileGameplayTimeScale();
   window._dt = dt;
   lastT = t;
   update(dt);

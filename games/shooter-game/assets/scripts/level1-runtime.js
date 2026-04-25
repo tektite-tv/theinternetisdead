@@ -123,6 +123,7 @@ sfxDeath.volume = 0.10;
 // Global mute toggle (M key)
 let audioMuted = false;
 let manualAudioMuted = false;
+const audioRetryTokens = new WeakMap();
 
 function isMuteNicknameActive(){
   try{ return String(getSavedChatNicknameValue ? getSavedChatNicknameValue() : "").trim().toLowerCase() === "_mute"; }catch(_){ return false; }
@@ -139,13 +140,14 @@ function setAudioElementTrack(audioEl, filename, restart=true){
   if (!audioEl || !src) return false;
   const wasPlaying = !audioEl.paused;
   try{ audioEl.pause(); }catch(_){ }
+  const retryToken = beginAudioRetrySession(audioEl);
   try{
     if (!String(audioEl.src || "").endsWith(src)) audioEl.src = src;
     if (restart) audioEl.currentTime = 0;
     audioEl.loop = true;
     audioEl.load();
   }catch(_){ }
-  if (wasPlaying && !audioMuted) tryPlayWithRetry(audioEl, 30, 80);
+  if (wasPlaying && !audioMuted) tryPlayWithRetry(audioEl, 30, 80, retryToken);
   return true;
 }
 function getActiveMusicAudioElement(){
@@ -200,8 +202,21 @@ function setMuteOptionEnabled(shouldEnable){
   syncCheatsMenuState();
 }
 
-function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
+function beginAudioRetrySession(audioEl){
+  const nextToken = (audioRetryTokens.get(audioEl) || 0) + 1;
+  audioRetryTokens.set(audioEl, nextToken);
+  return nextToken;
+}
+
+function cancelAudioRetrySession(audioEl){
+  if (!audioEl) return;
+  beginAudioRetrySession(audioEl);
+}
+
+function tryPlayWithRetry(audioEl, retries=20, delayMs=80, retryToken=null){
   if (!audioEl || audioMuted) return;
+  const activeToken = retryToken ?? beginAudioRetrySession(audioEl);
+  if (audioRetryTokens.get(audioEl) !== activeToken) return;
   try{
     audioEl.muted = !!audioMuted;
   }catch(e){}
@@ -209,16 +224,18 @@ function tryPlayWithRetry(audioEl, retries=20, delayMs=80){
     const p = audioEl.play();
     if (p && typeof p.catch === "function"){
       p.catch(() => {
+        if (audioRetryTokens.get(audioEl) !== activeToken) return;
         // Some browsers reject play() briefly even when audio is "unlocked".
         // We retry a handful of times so the sound lands as soon as it's allowed.
         if (retries > 0){
-          setTimeout(() => tryPlayWithRetry(audioEl, retries - 1, delayMs), delayMs);
+          setTimeout(() => tryPlayWithRetry(audioEl, retries - 1, delayMs, activeToken), delayMs);
         }
       });
     }
   }catch(e){
+    if (audioRetryTokens.get(audioEl) !== activeToken) return;
     if (retries > 0){
-      setTimeout(() => tryPlayWithRetry(audioEl, retries - 1, delayMs), delayMs);
+      setTimeout(() => tryPlayWithRetry(audioEl, retries - 1, delayMs, activeToken), delayMs);
     }
   }
 }
@@ -237,6 +254,7 @@ function isPreGameplayMenuAudioState(){
 
 function ensureMenuMusicPlaying(restart=false){
   // Start/resume looping Wii Shop-style menu music while the player is still in pre-game menus.
+  const retryToken = beginAudioRetrySession(menuMusicBg);
   try{
     if (restart) menuMusicBg.currentTime = 0;
     menuMusicBg.loop = true;
@@ -247,11 +265,12 @@ function ensureMenuMusicPlaying(restart=false){
   }catch(e){}
   try{
     if (!restart && !menuMusicBg.paused) return;
-    tryPlayWithRetry(menuMusicBg, 30, 80);
+    tryPlayWithRetry(menuMusicBg, 30, 80, retryToken);
   }catch(e){}
 }
 
 function stopMenuMusic(reset=false){
+  cancelAudioRetrySession(menuMusicBg);
   try{
     menuMusicBg.pause();
     if (reset) menuMusicBg.currentTime = 0;
@@ -260,6 +279,7 @@ function stopMenuMusic(reset=false){
 
 function ensureMusicPlaying(restart=false){
   stopMenuMusic(true);
+  const retryToken = beginAudioRetrySession(musicBg);
   // Start/resume looping background music immediately when gameplay begins.
   // "restart=true" forces it back to the beginning.
   try{
@@ -272,11 +292,12 @@ function ensureMusicPlaying(restart=false){
   try{
     // If already playing and not restarting, leave it alone.
     if (!restart && !musicBg.paused) return;
-    tryPlayWithRetry(musicBg, 30, 80);
+    tryPlayWithRetry(musicBg, 30, 80, retryToken);
   }catch(e){}
 }
 
 function stopMusic(){
+  cancelAudioRetrySession(musicBg);
   try{
     musicBg.pause();
     musicBg.currentTime = 0;
@@ -3553,8 +3574,13 @@ const ENEMY_DEATH_FLASH_SECS = 0.34; // keep fresh kills visibly red into the fa
 const ENEMY_DEATH_GROW_SCALE = 1.35; // visual-only corpse explosion swell; hitboxes stay unchanged
 const ENEMY_DEATH_BULGE_GRID = 9;    // grid distortion resolution for the fisheye death bulge
 const ENEMY_DEATH_BULGE_STRENGTH = 0.415; // outward center bulge strength during death fade (33% smaller)
-const UFO_SIZE_SCALE = 1.33;          // UFO is 33% larger than the old tiny saucer
+const UFO_SIZE_SCALE = 1.33;          // Desktop UFO scale
+const MOBILE_UFO_SIZE_SCALE = 0.96;   // Phones keep the UFO closer to desktop on-screen size
 const UFO_DEATH_RED_ALPHA = 0.72;     // red death overlay strength while UFO fades
+
+function getUfoSizeScale(){
+  return isMobilePhoneViewport() ? MOBILE_UFO_SIZE_SCALE : UFO_SIZE_SCALE;
+}
 
 
 const enemyHitFlashTintCanvas = document.createElement("canvas");
@@ -3790,7 +3816,7 @@ function trySpawnUFO(force=false){
     y: rand(40, 110),
     vx: rand(-420, 420) / 60, // px/frame-ish
     vy: rand(260, 520) / 60,
-    r: 10 * UFO_SIZE_SCALE,
+    r: 10 * getUfoSizeScale(),
     hits: 0,
     stage: 0, // 0 none, 1 red, 2 green, 3 blue
     _killAwarded: false,
@@ -3854,7 +3880,7 @@ function drawUFO(){
 
   // Base UFO is now 33% bigger. During death fade, it visually blooms outward
   // like enemy death sprites while keeping the stored ufo.r collision radius stable.
-  const baseScale = UFO_SIZE_SCALE;
+  const baseScale = getUfoSizeScale();
   const deathScale = 1 + fadeProgress * ENEMY_DEATH_GROW_SCALE;
   const bulge = fadeProgress * ENEMY_DEATH_BULGE_STRENGTH;
   const coreRx = 14 * baseScale * deathScale * (1 + bulge * 0.62);
@@ -4207,9 +4233,23 @@ function drawStarfield(){
 /* =======================
    Resize
 ======================= */
+const MOBILE_GAMEPLAY_MIN_HEIGHT = 540;
+const MOBILE_GAMEPLAY_MIN_TIME_SCALE = 0.72;
+
+function getMobileGameplayTimeScale(){
+  if (!isMobilePhoneViewport()) return 1;
+  const viewportHeight = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || canvas.height || 360));
+  const relativeScale = Math.min(1, viewportHeight / MOBILE_GAMEPLAY_MIN_HEIGHT);
+  return Math.max(MOBILE_GAMEPLAY_MIN_TIME_SCALE, relativeScale);
+}
+
 function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const viewportWidth = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || canvas.width || 640));
+  const viewportHeight = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || canvas.height || 360));
+  canvas.width = viewportWidth;
+  canvas.height = viewportHeight;
+  canvas.style.width = `${viewportWidth}px`;
+  canvas.style.height = `${viewportHeight}px`;
 
   // v1.96+: only bottom-anchor in menus; gameplay keeps spawn position
   if (gameState !== STATE.PLAYING){
@@ -12571,7 +12611,7 @@ function loop(t){
   // then multiply by GAME_SPEED_MULT (5 = 1.0x, 1 = 0.2x, 10 = 2.0x).
   const rawDt = Math.min(0.033, (t - lastT) / 1000);
   const speedMult = Number.isFinite(GAME_SPEED_MULT) ? GAME_SPEED_MULT : 1.0;
-  const dt = rawDt * speedMult;
+  const dt = rawDt * speedMult * getMobileGameplayTimeScale();
   window._dt = dt;
   lastT = t;
   update(dt);
