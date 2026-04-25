@@ -1566,11 +1566,10 @@ let runTimer = 0; // seconds since Start Game
 let bigBulletBuffEndTime = 0;
 let shootCheatMode = "normal";
 let glitchBackgroundPulse = 0;
-// IMPORTANT: Do not rename this localStorage key or change the stored stat property names casually.
-// Players' lifetime stats depend on this exact schema surviving future updates.
-// If the schema ever changes, migrate old values forward instead of resetting them.
-// Yes, even for a joke browser game. People get attached to numbers. Humanity is weird like that.
-const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats";
+// LocalStorage is intentionally reserved for nickname/profile data only.
+// Active profile stats live under this nickname-keyed object. Runtime state, images,
+// controls, and controller-preview ownership must not be persisted here.
+const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats"; // deprecated global stats key; removed on load
 const LIFETIME_STATS_PROFILES_KEY = "tektiteShooterLevel1LifetimeStatsByNickname";
 const CHAT_NICKNAME_HISTORY_KEY = "tektiteShooterNicknameHistory";
 const LIFETIME_STATS_STAT_KEYS = [
@@ -1586,6 +1585,20 @@ const SAVED_IMAGES_KEY = "tektiteShooterSavedImages";
 const SAVED_IMAGES_MAX = 10;
 const SAVED_PROFILE_TILE_MAX = 9;
 const SAVED_PROFILE_TILE_COLUMNS = 3;
+
+function cleanupDeprecatedShooterLocalStorage(){
+  // Keep only current nickname/profile keys in localStorage. Browser storage, the miracle junk drawer.
+  const deprecatedKeys = [
+    LIFETIME_STATS_KEY,
+    SAVED_IMAGES_KEY,
+    "tektiteShooterBindings_v1",
+    "tektite-controller-preview-owns"
+  ];
+  try{
+    for (const key of deprecatedKeys) window.localStorage.removeItem(key);
+  }catch(_){}
+}
+cleanupDeprecatedShooterLocalStorage();
 
 function getSavedImageProfileName(){
   return getSavedChatNicknameValue();
@@ -1979,12 +1992,8 @@ function writeLifetimeStatsProfiles(profiles){
 }
 
 function readDefaultLifetimeStats(){
-  try{
-    const parsed = JSON.parse(localStorage.getItem(LIFETIME_STATS_KEY) || "null");
-    return normalizeLifetimeStatsRecord(parsed || {});
-  }catch(e){
-    return getDefaultLifetimeStats();
-  }
+  // Deprecated global stats are deliberately ignored. Stats are nickname-scoped only now.
+  return getDefaultLifetimeStats();
 }
 
 function writeDefaultLifetimeStats(){
@@ -5393,8 +5402,9 @@ let draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
 let draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
 
 function loadSavedBindings(){
+  try{ window.localStorage.removeItem(BINDINGS_STORAGE_KEY); }catch(_){}
   try{
-    const raw = localStorage.getItem(BINDINGS_STORAGE_KEY);
+    const raw = sessionStorage.getItem(BINDINGS_STORAGE_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw);
     if (parsed && parsed.keyboard && typeof parsed.keyboard === 'object') keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS, ...parsed.keyboard };
@@ -5404,7 +5414,10 @@ function loadSavedBindings(){
     controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
   }
 }
-function saveBindings(){ try{ sessionStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
+function saveBindings(){
+  try{ window.localStorage.removeItem(BINDINGS_STORAGE_KEY); }catch(_){}
+  try{ sessionStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){}
+}
 function resetDraftBindingsFromActive(){
   draftKeyboardBindings = { ...keyboardBindings };
   draftControllerBindings = { ...controllerBindings };

@@ -1969,10 +1969,23 @@ function breakBonusArmor(){
 }
 
 const UFO_KILL_SCORE_POINTS = 100;
-const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats"; // legacy read-only; do not write global stats here
+const LIFETIME_STATS_KEY = "tektiteShooterLevel1LifetimeStats"; // deprecated global stats key; removed on load
 const LIFETIME_STATS_PROFILES_KEY = "tektiteShooterLevel1LifetimeStatsByNickname";
 const SAVED_IMAGES_KEY = "tektiteShooterSavedImages";
 const SAVED_IMAGES_MAX = 10;
+
+function cleanupDeprecatedShooterLocalStorage(){
+  const deprecatedKeys = [
+    LIFETIME_STATS_KEY,
+    SAVED_IMAGES_KEY,
+    "tektiteShooterBindings_v1",
+    "tektite-controller-preview-owns"
+  ];
+  try{
+    for (const key of deprecatedKeys) window.localStorage.removeItem(key);
+  }catch(_){}
+}
+cleanupDeprecatedShooterLocalStorage();
 
 function getSavedImageProfileName(){
   return getSavedChatNicknameValue();
@@ -3183,8 +3196,9 @@ let draftKeyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS };
 let draftControllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
 
 function loadSavedBindings(){
+  try{ window.localStorage.removeItem(BINDINGS_STORAGE_KEY); }catch(_){}
   try{
-    const raw = localStorage.getItem(BINDINGS_STORAGE_KEY);
+    const raw = sessionStorage.getItem(BINDINGS_STORAGE_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw);
     if (parsed && parsed.keyboard && typeof parsed.keyboard === 'object') keyboardBindings = { ...DEFAULT_KEYBOARD_BINDINGS, ...parsed.keyboard };
@@ -3194,7 +3208,10 @@ function loadSavedBindings(){
     controllerBindings = { ...DEFAULT_CONTROLLER_BINDINGS };
   }
 }
-function saveBindings(){ try{ sessionStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){} }
+function saveBindings(){
+  try{ window.localStorage.removeItem(BINDINGS_STORAGE_KEY); }catch(_){}
+  try{ sessionStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify({ keyboard: keyboardBindings, controller: controllerBindings })); }catch(_){}
+}
 function resetDraftBindingsFromActive(){
   draftKeyboardBindings = { ...keyboardBindings };
   draftControllerBindings = { ...controllerBindings };
