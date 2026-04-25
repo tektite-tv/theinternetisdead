@@ -1167,6 +1167,91 @@ let bgSuggestOpen = false;
 let bgSuggestIndex = 0;
 let bgSuggestList = [];
 
+function deleteIndexedDatabaseByName(name){
+  return new Promise((resolve) => {
+    try{
+      if (!window.indexedDB || !name) return resolve(false);
+      const request = window.indexedDB.deleteDatabase(name);
+      request.onsuccess = () => resolve(true);
+      request.onerror = () => resolve(false);
+      request.onblocked = () => resolve(false);
+    }catch(error){
+      resolve(false);
+    }
+  });
+}
+
+async function clearAllShooterSiteDataForFirstVisit(){
+  // Hidden /reset: wipe browser-side site state while only severing folder links.
+  // It intentionally does not call deleteSavedImages(), because the actual image files
+  // in the user-selected folder are not ours to vaporize. Shocking restraint, I know.
+  try{ window.localStorage.clear(); }catch(error){}
+  try{ window.sessionStorage.clear(); }catch(error){}
+
+  try{
+    if (window.tektiteShooterSavedImageStorage && typeof window.tektiteShooterSavedImageStorage.forgetSavedImageFolderConnections === "function"){
+      await window.tektiteShooterSavedImageStorage.forgetSavedImageFolderConnections();
+    }
+  }catch(error){}
+
+  try{
+    if (window.indexedDB && typeof window.indexedDB.databases === "function"){
+      const databases = await window.indexedDB.databases();
+      await Promise.all((databases || [])
+        .map(db => db && db.name)
+        .filter(Boolean)
+        .map(deleteIndexedDatabaseByName));
+    }else{
+      await deleteIndexedDatabaseByName("tektiteShooterSavedImagesFS");
+    }
+  }catch(error){
+    try{ await deleteIndexedDatabaseByName("tektiteShooterSavedImagesFS"); }catch(_){}
+  }
+
+  try{
+    if (window.caches && typeof window.caches.keys === "function"){
+      const keys = await window.caches.keys();
+      await Promise.all((keys || []).map(key => window.caches.delete(key)));
+    }
+  }catch(error){}
+
+  try{
+    document.cookie.split(";").forEach(cookie => {
+      const eq = cookie.indexOf("=");
+      const name = (eq > -1 ? cookie.slice(0, eq) : cookie).trim();
+      if (!name) return;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+    });
+  }catch(error){}
+
+  try{
+    if (navigator.serviceWorker && typeof navigator.serviceWorker.getRegistrations === "function"){
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all((registrations || []).map(reg => reg.unregister()));
+    }
+  }catch(error){}
+}
+
+function runHiddenResetCommand(){
+  clearAllShooterSiteDataForFirstVisit().finally(() => {
+    try{
+      if (window.parent && window.parent !== window){
+        window.parent.postMessage({ type: "tektite:site-data-reset" }, "*");
+      }
+    }catch(error){}
+    window.setTimeout(() => {
+      try{
+        const targetWindow = (window.top && window.top !== window) ? window.top : window;
+        const cleanUrl = String(targetWindow.location.href || window.location.href).split("#")[0];
+        targetWindow.location.replace(cleanUrl);
+      }catch(error){
+        try{ window.location.reload(); }catch(_){}
+      }
+    }, 250);
+  });
+  return { ok:true, message:"/reset wiped browser site data and severed saved-image folder connections. Reloading as a first visit." };
+}
+
 function execPauseCommand(cmd){
   const raw = String(cmd||"").trim();
   if (!raw) return { ok:false, message:"No command provided" };
@@ -1175,6 +1260,11 @@ function execPauseCommand(cmd){
   if (raw === "/help"){
     showHelp();
     return { ok:true, suppressChatResult:true };
+  }
+
+  // Hidden hard reset. Not listed in /help, because the big red button does not need a brochure.
+  if (raw.toLowerCase() === "/reset"){
+    return runHiddenResetCommand();
   }
 
   // Hidden nickname aliases. Not listed in /help, because secrets need doors.

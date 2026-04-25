@@ -110,6 +110,19 @@
     });
   }
 
+  async function forgetSavedImageFolderConnections(){
+    // Sever File System Access handles only. Do NOT delete user image files.
+    const db = await openDatabase();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.clear();
+      request.onsuccess = () => resolve(true);
+      request.onerror = () => resolve(false);
+    });
+  }
+
   async function ensurePermission(handle, mode){
     if (!handle) return false;
     const options = { mode: mode || "read" };
@@ -327,6 +340,7 @@
     getSavedImagesDirectoryHandle,
     listSavedImages,
     saveImageBlobToFolder,
-    deleteSavedImages
+    deleteSavedImages,
+    forgetSavedImageFolderConnections
   };
 })();
