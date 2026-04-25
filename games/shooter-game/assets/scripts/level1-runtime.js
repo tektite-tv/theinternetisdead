@@ -1984,15 +1984,27 @@ function normalizeLifetimeStatsRecord(rawStats){
   return normalized;
 }
 
+function getNicknameDedupKey(nickname){
+  return limitChatNicknameLength(String(nickname || "").trim()).toLowerCase();
+}
+
+function pushUniqueNickname(target, seenKeys, nickname){
+  const normalized = limitChatNicknameLength(String(nickname || "").trim());
+  const key = getNicknameDedupKey(normalized);
+  if (!normalized || !key || seenKeys.has(key)) return false;
+  seenKeys.add(key);
+  target.push(normalized);
+  return true;
+}
+
 function readChatNicknameHistory(){
   try{
     const parsed = JSON.parse(localStorage.getItem(CHAT_NICKNAME_HISTORY_KEY) || "[]");
     if (!Array.isArray(parsed)) return [];
     const unique = [];
+    const seenKeys = new Set();
     for (const value of parsed){
-      const nickname = limitChatNicknameLength(String(value || "").trim());
-      if (!nickname || unique.includes(nickname)) continue;
-      unique.push(nickname);
+      pushUniqueNickname(unique, seenKeys, value);
       if (unique.length >= SAVED_PROFILE_TILE_MAX) break;
     }
     return unique;
@@ -2002,13 +2014,14 @@ function readChatNicknameHistory(){
 }
 
 function writeChatNicknameHistory(history){
-  const safeHistory = Array.isArray(history)
-    ? history
-        .map((value) => limitChatNicknameLength(String(value || "").trim()))
-        .filter(Boolean)
-        .filter((value, index, list) => list.indexOf(value) === index)
-        .slice(0, SAVED_PROFILE_TILE_MAX)
-    : [];
+  const safeHistory = [];
+  const seenKeys = new Set();
+  if (Array.isArray(history)){
+    for (const value of history){
+      pushUniqueNickname(safeHistory, seenKeys, value);
+      if (safeHistory.length >= SAVED_PROFILE_TILE_MAX) break;
+    }
+  }
   try{
     localStorage.setItem(CHAT_NICKNAME_HISTORY_KEY, JSON.stringify(safeHistory));
   }catch(_){}
@@ -2017,29 +2030,30 @@ function writeChatNicknameHistory(history){
 
 function rememberChatNickname(nickname){
   const normalized = limitChatNicknameLength(String(nickname || "").trim());
-  if (!normalized) return readChatNicknameHistory();
-  const nextHistory = [normalized, ...readChatNicknameHistory().filter((value) => value !== normalized)];
+  const normalizedKey = getNicknameDedupKey(normalized);
+  if (!normalized || !normalizedKey) return readChatNicknameHistory();
+  const nextHistory = [normalized, ...readChatNicknameHistory().filter((value) => getNicknameDedupKey(value) !== normalizedKey)];
   return writeChatNicknameHistory(nextHistory);
 }
 
 function forgetChatNickname(nickname){
-  const normalized = limitChatNicknameLength(String(nickname || "").trim());
-  if (!normalized) return readChatNicknameHistory();
-  return writeChatNicknameHistory(readChatNicknameHistory().filter((value) => value !== normalized));
+  const normalizedKey = getNicknameDedupKey(nickname);
+  if (!normalizedKey) return readChatNicknameHistory();
+  return writeChatNicknameHistory(readChatNicknameHistory().filter((value) => getNicknameDedupKey(value) !== normalizedKey));
 }
 
 function getSavedProfileNicknames(){
   const history = readChatNicknameHistory();
   const profileNames = Object.keys(readLifetimeStatsProfiles())
     .map((key) => {
-      const match = /^name:(.+)$/.exec(String(key || ""));
+      const match = /^name:(.+)$/i.exec(String(key || ""));
       return match ? limitChatNicknameLength(match[1]) : "";
     })
     .filter(Boolean);
   const combined = [];
+  const seenKeys = new Set();
   for (const nickname of [...history, ...profileNames]){
-    if (!nickname || combined.includes(nickname)) continue;
-    combined.push(nickname);
+    pushUniqueNickname(combined, seenKeys, nickname);
     if (combined.length >= SAVED_PROFILE_TILE_MAX) break;
   }
   return combined;
