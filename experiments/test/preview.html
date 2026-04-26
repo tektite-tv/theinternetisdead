@@ -18,6 +18,42 @@
       font-family: "Courier New", Courier, monospace;
     }
 
+    .empty-state {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      min-height: 100vh;
+      margin: 0;
+      color: white;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.4;
+      white-space: nowrap;
+      border: 0;
+      padding: 24px;
+      background: transparent;
+      cursor: pointer;
+      pointer-events: auto;
+      box-sizing: border-box;
+    }
+
+    body.no-bookmarks .empty-state {
+      display: flex;
+    }
+
+    body.dragging-bookmark .empty-state {
+      background: rgb(59 0 102 / 35%);
+      outline: 1px solid lime;
+    }
+
+    body.no-bookmarks .empty-state:hover {
+      background: rgb(0 0 0 / 15%);
+    }
+
     .bottom-bar {
       position: fixed;
       left: 0;
@@ -30,6 +66,10 @@
       display: flex;
       align-items: center;
       justify-content: flex-start;
+    }
+
+    body.bar-hidden .bottom-bar {
+      display: none;
     }
 
     body.top-bar .bottom-bar {
@@ -58,6 +98,54 @@
       box-sizing: border-box;
     }
 
+    .bar-hide-toggle {
+      border: 0;
+      padding: 0;
+      width: 24px;
+      height: 50px;
+      background: black;
+      color: #8200e0;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      box-sizing: border-box;
+    }
+
+    body.bar-hidden .floating-bar-toggle {
+      display: flex;
+    }
+
+    .floating-bar-toggle {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      z-index: 3;
+      display: none;
+      border: 0;
+      padding: 0;
+      width: 24px;
+      height: 50px;
+      background: transparent;
+      color: hsl(146 50% 67%);
+      cursor: pointer;
+      font-size: 24px;
+      line-height: 1;
+      box-sizing: border-box;
+
+      align-items: center;
+      justify-content: center;
+      padding-top: 6px;
+    }
+
+    .floating-bar-toggle:hover {
+      color: #e04343;
+    }
+
+    body.top-bar .floating-bar-toggle {
+      top: 0;
+      bottom: auto;
+    }
+
     .clock-caret::before {
       content: "^";
       display: inline-block;
@@ -75,7 +163,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      margin-right: 1ch;
+      margin-right: 0.25ch;
     }
 
     .clock-time {
@@ -111,6 +199,10 @@
 
       font: 16px/1 "Courier New", Courier, monospace;
       box-sizing: border-box;
+    }
+
+    body.no-bookmarks .bookmark-button {
+      width: max-content;
     }
 
     .bookmark-button .emoji-label {
@@ -187,6 +279,15 @@
       top: 50px;
       bottom: auto;
       justify-content: flex-start;
+    }
+
+    body.bar-hidden .emoji-popup {
+      bottom: 0;
+    }
+
+    body.top-bar.bar-hidden .emoji-popup {
+      top: 0;
+      bottom: auto;
     }
 
     .emoji-popup[hidden],
@@ -448,6 +549,7 @@
 </head>
 
 <body>
+  <button class="empty-state" id="empty-state" type="button">Add Bookmarks with the + button or drag and drop a bookmarks file here.</button>
   <div class="emoji-popup" id="bookmark-popup" hidden></div>
   <div class="bottom-bar">
     <button class="bookmark-button" id="bookmark-button" type="button" aria-expanded="false" aria-controls="bookmark-popup">
@@ -467,17 +569,22 @@
         <span class="clock-date" id="clock-date"></span>
       </span>
     </button>
+    <button class="bar-hide-toggle" id="bar-hide-toggle" type="button" title="Hide bar">&#10060;</button>
   </div>
+  <button class="floating-bar-toggle" id="floating-bar-toggle" type="button" title="Show bar">^</button>
 
   <script>
     const bookmarkButton = document.getElementById("bookmark-button");
     const bookmarkButtonLabel = document.getElementById("bookmark-button-label");
+    const emptyState = document.getElementById("empty-state");
     const bookmarkFile = document.getElementById("bookmark-file");
     const bookmarkPopup = document.getElementById("bookmark-popup");
     const addToggle = document.getElementById("add-toggle");
     const actionToggle = document.getElementById("action-toggle");
     const clearToggle = document.getElementById("clear-toggle");
     const barPositionToggle = document.getElementById("bar-position-toggle");
+    const barHideToggle = document.getElementById("bar-hide-toggle");
+    const floatingBarToggle = document.getElementById("floating-bar-toggle");
     const clockTime = document.getElementById("clock-time");
     const clockDate = document.getElementById("clock-date");
     const storageKey = "preview-bookmarks";
@@ -486,6 +593,7 @@
     let actionsVisible = false;
     let addRowVisible = false;
     let addRowHover = false;
+    let addRowEditing = false;
     let hasUnsavedOrder = false;
     let editingField = null;
 
@@ -508,7 +616,8 @@
       const hasBookmarks = hasImportedBookmarks();
 
       bookmarkButtonLabel.textContent = hasBookmarks ? "Bookmarks" : "Add Bookmarks";
-      addToggle.hidden = !hasBookmarks;
+      document.body.classList.toggle("no-bookmarks", !hasBookmarks);
+      addToggle.hidden = false;
       actionToggle.hidden = !hasBookmarks;
       clearToggle.hidden = !hasBookmarks;
       document.body.classList.toggle("actions-hidden", !actionsVisible);
@@ -885,6 +994,7 @@
 
       addRowVisible = false;
       addRowHover = false;
+      addRowEditing = false;
       hasUnsavedOrder = false;
       saveBookmarks();
       renderBookmarks();
@@ -903,6 +1013,7 @@
       input.className = "new-bookmark-input";
       input.type = "text";
       input.placeholder = "Add URL";
+      input.readOnly = !addRowEditing;
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -921,7 +1032,10 @@
 
       form.append(icon, input);
 
-      requestAnimationFrame(() => input.focus());
+      if (addRowEditing) {
+        requestAnimationFrame(() => input.focus());
+      }
+
       return form;
     };
 
@@ -936,7 +1050,7 @@
 
       bookmarkPopup.replaceChildren(...rows);
       updateBottomControls();
-      setPopupOpen(hasImportedBookmarks());
+      setPopupOpen(hasImportedBookmarks() || shouldShowAddRow);
       requestAnimationFrame(() => {
         syncBottomWidth();
       });
@@ -1042,14 +1156,62 @@
       }
     };
 
+    const importBookmarkText = (text) => {
+      bookmarkItems = parseBookmarks(text);
+      addRowVisible = false;
+      addRowHover = false;
+      addRowEditing = false;
+      hasUnsavedOrder = false;
+      saveBookmarks();
+      renderBookmarks();
+    };
+
+    const importBookmarkFile = (file) => {
+      const reader = new FileReader();
+
+      reader.addEventListener("load", () => {
+        importBookmarkText(String(reader.result));
+        bookmarkFile.value = "";
+      });
+
+      reader.readAsText(file);
+    };
+
     bookmarkButton.addEventListener("click", () => {
       if (!hasImportedBookmarks()) {
-        bookmarkFile.click();
+        addRowVisible = true;
+        addRowHover = false;
+        addRowEditing = true;
+        renderBookmarks();
         return;
       }
 
       setPopupOpen(bookmarkPopup.hidden);
       requestAnimationFrame(syncBottomWidth);
+    });
+
+    emptyState.addEventListener("click", () => {
+      bookmarkFile.click();
+    });
+
+    bookmarkButton.addEventListener("mouseenter", () => {
+      if (hasImportedBookmarks() || addRowVisible) {
+        return;
+      }
+
+      addRowHover = true;
+      addRowEditing = false;
+      renderBookmarks();
+    });
+
+    bookmarkButton.addEventListener("mouseleave", () => {
+      if (!addRowHover || addRowVisible) {
+        return;
+      }
+
+      addRowHover = false;
+      addRowEditing = false;
+      renderBookmarks();
     });
 
     actionToggle.addEventListener("click", () => {
@@ -1076,6 +1238,14 @@
     });
 
     addToggle.addEventListener("click", () => {
+      if (!hasImportedBookmarks()) {
+        addRowVisible = true;
+        addRowHover = false;
+        addRowEditing = true;
+        renderBookmarks();
+        return;
+      }
+
       if (hasUnsavedOrder) {
         saveBookmarks();
         hasUnsavedOrder = false;
@@ -1084,6 +1254,7 @@
       }
 
       addRowVisible = !addRowVisible;
+      addRowEditing = addRowVisible;
       renderBookmarks();
     });
 
@@ -1093,6 +1264,7 @@
       }
 
       addRowHover = true;
+      addRowEditing = false;
       renderBookmarks();
     });
 
@@ -1102,6 +1274,7 @@
       }
 
       addRowHover = false;
+      addRowEditing = addRowVisible;
       renderBookmarks();
     });
 
@@ -1134,13 +1307,38 @@
       requestAnimationFrame(syncBottomWidth);
     });
 
+    barHideToggle.addEventListener("click", () => {
+      document.body.classList.add("bar-hidden");
+    });
+
+    floatingBarToggle.addEventListener("click", () => {
+      document.body.classList.remove("bar-hidden");
+    });
+
     document.addEventListener("dragover", (event) => {
-      if ([...event.dataTransfer.types].some((type) => type === "text/uri-list" || type === "text/plain")) {
+      if ([...event.dataTransfer.types].some((type) => type === "Files" || type === "text/uri-list" || type === "text/plain")) {
         event.preventDefault();
+        document.body.classList.add("dragging-bookmark");
       }
     });
 
+    document.addEventListener("dragleave", (event) => {
+      if (event.relatedTarget) {
+        return;
+      }
+
+      document.body.classList.remove("dragging-bookmark");
+    });
+
     document.addEventListener("drop", (event) => {
+      document.body.classList.remove("dragging-bookmark");
+
+      if (event.dataTransfer.files.length) {
+        event.preventDefault();
+        importBookmarkFile(event.dataTransfer.files[0]);
+        return;
+      }
+
       const droppedText = event.dataTransfer.getData("text/uri-list") || event.dataTransfer.getData("text/plain");
       const firstUrl = droppedText
         .split(/\s+/)
@@ -1161,17 +1359,7 @@
         return;
       }
 
-      const reader = new FileReader();
-
-      reader.addEventListener("load", () => {
-        bookmarkItems = parseBookmarks(String(reader.result));
-        hasUnsavedOrder = false;
-        saveBookmarks();
-        renderBookmarks();
-        bookmarkFile.value = "";
-      });
-
-      reader.readAsText(file);
+      importBookmarkFile(file);
     });
 
     try {
