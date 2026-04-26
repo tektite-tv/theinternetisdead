@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bottom Bookmark Bar</title>
+
+  <style>
+    html {
+      height: 100%;
+      background: #fff;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: hsl(146 50% 67%);
+    }
+
+    .bottom-bar {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      z-index: 2;
+      width: 100%;
+      height: 50px;
+      background: black;
+
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .bookmark-button {
+      border: 0;
+      border-top: 1px solid rgb(22 7 7 / 70%);
+      padding: 0;
+      width: 304px;
+      height: 50px;
+      background: transparent;
+      color: white;
+      cursor: pointer;
+
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+
+      font: 16px/1 Arial, sans-serif;
+      box-sizing: border-box;
+    }
+
+    .bookmark-button .emoji-label {
+      text-align: left;
+    }
+
+    .action-toggle {
+      border: 0;
+      border-top: 1px solid rgb(22 7 7 / 70%);
+      padding: 0;
+      width: 48px;
+      height: 50px;
+      background: transparent;
+      color: white;
+      cursor: pointer;
+      font-size: 20px;
+      line-height: 1;
+      box-sizing: border-box;
+    }
+
+    .action-toggle[hidden] {
+      display: none;
+    }
+
+    .add-toggle {
+      color: #40d85a;
+    }
+
+    .action-toggle.edit-toggle {
+      color: #40d85a;
+    }
+
+    .action-toggle.edit-toggle.is-enabled {
+      color: #e04343;
+    }
+
+    .action-toggle.edit-toggle.has-unsaved {
+      color: #f2c94c;
+    }
+
+    .add-toggle.is-save {
+      color: #f2c94c;
+    }
+
+    .emoji-popup {
+      position: fixed;
+      left: 0;
+      bottom: 50px;
+      z-index: 1;
+      width: 400px;
+      height: 600px;
+      background: rgb(22 7 7 / 50%);
+      overflow: visible;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: stretch;
+    }
+
+    .emoji-popup[hidden],
+    .file-input {
+      display: none;
+    }
+
+    .bookmark-folder {
+      position: relative;
+      flex: 0 0 50px;
+      height: 50px;
+    }
+
+    .emoji-tile {
+      flex: 0 0 50px;
+      width: 100%;
+      height: 50px;
+      background: transparent;
+      color: white;
+      text-decoration: none;
+      outline: 1px solid #3f2424;
+      border-top: 1px solid rgb(255 255 255 / 20%);
+
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+
+      font: 16px/1 Arial, sans-serif;
+      box-sizing: border-box;
+    }
+
+    .bookmark-folder > .emoji-tile {
+      cursor: default;
+    }
+
+    .emoji-tile[data-url] {
+      cursor: pointer;
+    }
+
+    .emoji-tile[draggable="true"] {
+      cursor: grab;
+    }
+
+    .emoji-tile.is-drag-over {
+      outline: 2px solid #f2c94c;
+      outline-offset: -2px;
+    }
+
+    .emoji-tile:first-child {
+      border-top: 0;
+    }
+
+    .emoji-tile:last-child {
+      border-bottom: 1px solid rgb(255 255 255 / 20%);
+    }
+
+    .emoji-icon {
+      flex: 0 0 50px;
+      width: 50px;
+      height: 50px;
+      background: white;
+      color: black;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 24px;
+      line-height: 1;
+      box-sizing: border-box;
+    }
+
+    .emoji-tile + .emoji-tile .emoji-icon,
+    .bookmark-folder + .bookmark-folder .emoji-icon,
+    .bookmark-folder + .emoji-tile .emoji-icon,
+    .emoji-tile + .bookmark-folder .emoji-icon {
+      border-top: 1px solid rgb(22 7 7 / 70%);
+    }
+
+    .emoji-tile:last-child .emoji-icon,
+    .bookmark-button .emoji-icon {
+      border-bottom: 1px solid rgb(22 7 7 / 70%);
+    }
+
+    .emoji-label {
+      min-width: 0;
+      flex: 1 1 auto;
+      padding: 0 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .row-actions {
+      flex: 0 0 48px;
+      display: flex;
+      height: 50px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    body.actions-hidden .row-actions {
+      display: none;
+    }
+
+    .row-action {
+      border: 0;
+      padding: 0;
+      width: 24px;
+      height: 50px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .new-bookmark-form {
+      flex: 0 0 50px;
+      width: 100%;
+      height: 50px;
+      background: transparent;
+      outline: 1px solid #3f2424;
+      border-top: 1px solid rgb(255 255 255 / 20%);
+
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+
+      box-sizing: border-box;
+    }
+
+    .new-bookmark-input {
+      min-width: 0;
+      flex: 1 1 auto;
+      height: 50px;
+      border: 0;
+      padding: 0 10px;
+      background: transparent;
+      color: white;
+      font: 16px/1 Arial, sans-serif;
+      outline: 0;
+      box-sizing: border-box;
+    }
+
+    .new-bookmark-input::placeholder {
+      color: rgb(255 255 255 / 65%);
+    }
+
+    .favicon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .folder-popout {
+      position: absolute;
+      left: 400px;
+      bottom: 0;
+      width: 400px;
+      min-height: 50px;
+      max-height: 600px;
+      background: rgb(22 7 7 / 50%);
+      display: none;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: stretch;
+    }
+
+    .bookmark-folder:hover > .folder-popout,
+    .bookmark-folder:focus-within > .folder-popout {
+      display: flex;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="emoji-popup" id="bookmark-popup" hidden></div>
+
+  <div class="bottom-bar">
+    <button class="bookmark-button" id="bookmark-button" type="button" aria-expanded="false" aria-controls="bookmark-popup">
+      <span class="emoji-icon">&#11088;</span>
+      <span class="emoji-label" id="bookmark-button-label">Add Bookmarks</span>
+    </button>
+    <button class="action-toggle add-toggle" id="add-toggle" type="button" title="Add bookmark" hidden>&#10133;</button>
+    <button class="action-toggle edit-toggle" id="action-toggle" type="button" title="Toggle edit controls" hidden>&#9851;</button>
+    <input class="file-input" id="bookmark-file" type="file" accept=".html,.htm,.json,.txt,.url,text/html,application/json,text/plain" />
+  </div>
+
+  <script>
+    const bookmarkButton = document.getElementById("bookmark-button");
+    const bookmarkButtonLabel = document.getElementById("bookmark-button-label");
+    const bookmarkFile = document.getElementById("bookmark-file");
+    const bookmarkPopup = document.getElementById("bookmark-popup");
+    const addToggle = document.getElementById("add-toggle");
+    const actionToggle = document.getElementById("action-toggle");
+    const storageKey = "preview-bookmarks";
+
+    let bookmarkItems = [];
+    let actionsVisible = false;
+    let addRowVisible = false;
+    let hasUnsavedOrder = false;
+
+    const hasImportedBookmarks = () => bookmarkItems.length > 0;
+
+    const setPopupOpen = (isOpen) => {
+      bookmarkPopup.hidden = !isOpen;
+      bookmarkButton.setAttribute("aria-expanded", String(isOpen));
+    };
+
+    const updateBottomControls = () => {
+      const hasBookmarks = hasImportedBookmarks();
+
+      bookmarkButtonLabel.textContent = hasBookmarks ? "Bookmarks" : "Add Bookmarks";
+      addToggle.hidden = !hasBookmarks;
+      actionToggle.hidden = !hasBookmarks;
+      document.body.classList.toggle("actions-hidden", !actionsVisible);
+      actionToggle.classList.toggle("is-enabled", actionsVisible);
+      actionToggle.classList.toggle("has-unsaved", hasUnsavedOrder);
+      addToggle.classList.toggle("is-save", hasUnsavedOrder);
+      addToggle.textContent = hasUnsavedOrder ? "\uD83D\uDCBE" : "\u2795";
+      addToggle.title = hasUnsavedOrder ? "Save bookmark order" : "Add bookmark";
+    };
+
+    const saveBookmarks = () => {
+      localStorage.setItem(storageKey, JSON.stringify(bookmarkItems));
+    };
+
+    const getItemListByPath = (path) => {
+      let list = bookmarkItems;
+
+      for (let depth = 0; depth < path.length - 1; depth += 1) {
+        list = list[path[depth]].children;
+      }
+
+      return list;
+    };
+
+    const getItemByPath = (path) => getItemListByPath(path)[path[path.length - 1]];
+
+    const pathsShareParent = (firstPath, secondPath) => (
+      firstPath.length === secondPath.length
+      && firstPath.slice(0, -1).every((part, index) => part === secondPath[index])
+    );
+
+    const moveItemAtPath = (fromPath, toPath) => {
+      if (!pathsShareParent(fromPath, toPath)) {
+        return;
+      }
+
+      const list = getItemListByPath(fromPath);
+      const fromIndex = fromPath[fromPath.length - 1];
+      const toIndex = toPath[toPath.length - 1];
+
+      if (fromIndex === toIndex) {
+        return;
+      }
+
+      const [item] = list.splice(fromIndex, 1);
+      list.splice(toIndex, 0, item);
+      hasUnsavedOrder = true;
+      renderBookmarks();
+    };
+
+    const deleteItemAtPath = (path) => {
+      getItemListByPath(path).splice(path[path.length - 1], 1);
+      hasUnsavedOrder = false;
+      saveBookmarks();
+      renderBookmarks();
+    };
+
+    const editItemAtPath = (path) => {
+      const item = getItemByPath(path);
+      const title = prompt("Bookmark title", item.title);
+
+      if (title === null) {
+        return;
+      }
+
+      item.title = title.trim() || item.title;
+
+      if (item.type === "bookmark") {
+        const url = prompt("Bookmark URL", item.url);
+
+        if (url === null) {
+          return;
+        }
+
+        item.url = url.trim() || item.url;
+      }
+
+      hasUnsavedOrder = false;
+      saveBookmarks();
+      renderBookmarks();
+    };
+
+    const createActions = (path) => {
+      const actions = document.createElement("span");
+      actions.className = "row-actions";
+
+      const editButton = document.createElement("button");
+      editButton.className = "row-action";
+      editButton.type = "button";
+      editButton.title = "Edit entry";
+      editButton.textContent = "\uD83D\uDCCC";
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "row-action";
+      deleteButton.type = "button";
+      deleteButton.title = "Delete entry";
+      deleteButton.textContent = "\u274C";
+
+      editButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        editItemAtPath(path);
+      });
+
+      deleteButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteItemAtPath(path);
+      });
+
+      actions.append(editButton, deleteButton);
+      return actions;
+    };
+
+    const createBookmarkTile = (item, path) => {
+      const tile = document.createElement("div");
+      tile.className = "emoji-tile";
+      tile.draggable = actionsVisible;
+
+      tile.addEventListener("dragstart", (event) => {
+        if (!actionsVisible) {
+          event.preventDefault();
+          return;
+        }
+
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("application/json", JSON.stringify(path));
+      });
+
+      tile.addEventListener("dragover", (event) => {
+        if (!actionsVisible) {
+          return;
+        }
+
+        event.preventDefault();
+        tile.classList.add("is-drag-over");
+      });
+
+      tile.addEventListener("dragleave", () => {
+        tile.classList.remove("is-drag-over");
+      });
+
+      tile.addEventListener("drop", (event) => {
+        if (!actionsVisible) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        tile.classList.remove("is-drag-over");
+
+        try {
+          moveItemAtPath(JSON.parse(event.dataTransfer.getData("application/json")), path);
+        } catch {
+          return;
+        }
+      });
+
+      if (item.type === "bookmark") {
+        tile.dataset.url = item.url;
+        tile.tabIndex = 0;
+        tile.addEventListener("click", (event) => {
+          if (actionsVisible || event.defaultPrevented) {
+            return;
+          }
+
+          window.open(item.url, "_blank", "noreferrer");
+        });
+        tile.addEventListener("keydown", (event) => {
+          if (actionsVisible) {
+            return;
+          }
+
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            window.open(item.url, "_blank", "noreferrer");
+          }
+        });
+      }
+
+      const icon = document.createElement("span");
+      icon.className = "emoji-icon";
+
+      if (item.type === "folder") {
+        icon.textContent = "\uD83D\uDCC1";
+      } else {
+        const favicon = document.createElement("img");
+        favicon.className = "favicon";
+        favicon.alt = "";
+        favicon.src = `https://www.google.com/s2/favicons?domain=${new URL(item.url).hostname}&sz=32`;
+        icon.append(favicon);
+      }
+
+      const label = document.createElement("span");
+      label.className = "emoji-label";
+      label.textContent = item.title;
+
+      tile.append(icon, label, createActions(path));
+      return tile;
+    };
+
+    const createBookmarkItem = (item, index, parentPath = []) => {
+      const path = [...parentPath, index];
+
+      if (item.type !== "folder") {
+        return createBookmarkTile(item, path);
+      }
+
+      const folder = document.createElement("div");
+      folder.className = "bookmark-folder";
+      folder.append(createBookmarkTile(item, path));
+
+      if (item.children && item.children.length) {
+        const popout = document.createElement("div");
+        popout.className = "folder-popout";
+        popout.append(...item.children.slice(0, 12).map((child, childIndex) => createBookmarkItem(child, childIndex, path)));
+        folder.append(popout);
+      }
+
+      return folder;
+    };
+
+    const normalizeUrl = (value) => {
+      const trimmed = value.trim();
+
+      if (!trimmed) {
+        return "";
+      }
+
+      return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    };
+
+    const createNewBookmarkForm = () => {
+      const form = document.createElement("form");
+      form.className = "new-bookmark-form";
+
+      const icon = document.createElement("span");
+      icon.className = "emoji-icon";
+      icon.textContent = "?";
+
+      const input = document.createElement("input");
+      input.className = "new-bookmark-input";
+      input.type = "text";
+      input.placeholder = "Add URL";
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const url = normalizeUrl(input.value);
+
+        if (!url) {
+          return;
+        }
+
+        try {
+          bookmarkItems.push({ type: "bookmark", title: new URL(url).hostname, url });
+        } catch {
+          input.focus();
+          return;
+        }
+
+        addRowVisible = false;
+        hasUnsavedOrder = false;
+        saveBookmarks();
+        renderBookmarks();
+      });
+
+      form.append(icon, input);
+
+      requestAnimationFrame(() => input.focus());
+      return form;
+    };
+
+    const renderBookmarks = () => {
+      const visibleItems = addRowVisible ? bookmarkItems.slice(0, 11) : bookmarkItems.slice(0, 12);
+      const rows = visibleItems.map((item, index) => createBookmarkItem(item, index));
+
+      if (addRowVisible) {
+        rows.push(createNewBookmarkForm());
+      }
+
+      bookmarkPopup.replaceChildren(...rows);
+      updateBottomControls();
+      setPopupOpen(hasImportedBookmarks());
+    };
+
+    const parseJsonNode = (node) => {
+      if (!node || typeof node !== "object") {
+        return [];
+      }
+
+      if (node.url) {
+        return [{ type: "bookmark", title: node.name || node.title || node.url, url: node.url }];
+      }
+
+      if (Array.isArray(node.children)) {
+        return [{
+          type: "folder",
+          title: node.name || node.title || "Folder",
+          children: node.children.flatMap(parseJsonNode)
+        }];
+      }
+
+      return Object.values(node).flatMap(parseJsonNode);
+    };
+
+    const parseBookmarkJson = (text) => {
+      const data = JSON.parse(text);
+      return parseJsonNode(data.roots || data);
+    };
+
+    const parseBookmarkHtml = (text) => {
+      const documentFragment = new DOMParser().parseFromString(text, "text/html");
+      const parseContainer = (container) => {
+        const items = [];
+        let node = container.firstElementChild;
+
+        while (node) {
+          if (node.tagName.toLowerCase() === "dt") {
+            const children = Array.from(node.children);
+            const folderTitle = children.find((child) => child.tagName.toLowerCase() === "h3");
+            const bookmarkLink = children.find((child) => child.tagName.toLowerCase() === "a" && child.href);
+            const childList = children.find((child) => child.tagName.toLowerCase() === "dl");
+            const siblingList = node.nextElementSibling && node.nextElementSibling.tagName.toLowerCase() === "dl"
+              ? node.nextElementSibling
+              : null;
+
+            if (folderTitle) {
+              items.push({
+                type: "folder",
+                title: folderTitle.textContent.trim() || "Folder",
+                children: parseContainer(childList || siblingList || document.createElement("dl"))
+              });
+
+              if (siblingList) {
+                node = siblingList.nextElementSibling;
+                continue;
+              }
+            } else if (bookmarkLink) {
+              items.push({
+                type: "bookmark",
+                title: bookmarkLink.textContent.trim() || bookmarkLink.href,
+                url: bookmarkLink.href
+              });
+            }
+          } else if (node.tagName.toLowerCase() === "a" && node.href) {
+            items.push({
+              type: "bookmark",
+              title: node.textContent.trim() || node.href,
+              url: node.href
+            });
+          } else if (node.tagName.toLowerCase() === "dl") {
+            items.push(...parseContainer(node));
+          }
+
+          node = node.nextElementSibling;
+        }
+
+        return items;
+      };
+
+      return parseContainer(documentFragment.querySelector("dl") || documentFragment.body);
+    };
+
+    const parsePlainUrls = (text) => text
+      .split(/\s+/)
+      .filter((part) => /^https?:\/\//i.test(part))
+      .map((url) => ({ type: "bookmark", title: new URL(url).hostname, url }));
+
+    const unwrapBookmarksBar = (items) => {
+      const bookmarksBar = items.find((item) => item.type === "folder" && item.title.toLowerCase() === "bookmarks bar");
+
+      return bookmarksBar && bookmarksBar.children && bookmarksBar.children.length
+        ? bookmarksBar.children
+        : items;
+    };
+
+    const parseBookmarks = (text) => {
+      try {
+        return unwrapBookmarksBar(parseBookmarkJson(text));
+      } catch {
+        const htmlItems = parseBookmarkHtml(text);
+        return unwrapBookmarksBar(htmlItems.length ? htmlItems : parsePlainUrls(text));
+      }
+    };
+
+    bookmarkButton.addEventListener("click", () => {
+      if (!hasImportedBookmarks()) {
+        bookmarkFile.click();
+        return;
+      }
+
+      setPopupOpen(bookmarkPopup.hidden);
+    });
+
+    actionToggle.addEventListener("click", () => {
+      actionsVisible = !actionsVisible;
+      document.body.classList.toggle("actions-hidden", !actionsVisible);
+      actionToggle.classList.toggle("is-enabled", actionsVisible);
+      renderBookmarks();
+    });
+
+    addToggle.addEventListener("click", () => {
+      if (hasUnsavedOrder) {
+        saveBookmarks();
+        hasUnsavedOrder = false;
+        renderBookmarks();
+        return;
+      }
+
+      addRowVisible = !addRowVisible;
+      renderBookmarks();
+    });
+
+    bookmarkFile.addEventListener("change", () => {
+      const [file] = bookmarkFile.files;
+
+      if (!file) {
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.addEventListener("load", () => {
+        bookmarkItems = parseBookmarks(String(reader.result));
+        hasUnsavedOrder = false;
+        saveBookmarks();
+        renderBookmarks();
+        bookmarkFile.value = "";
+      });
+
+      reader.readAsText(file);
+    });
+
+    try {
+      bookmarkItems = JSON.parse(localStorage.getItem(storageKey)) || [];
+    } catch {
+      bookmarkItems = [];
+    }
+
+    if (hasImportedBookmarks()) {
+      renderBookmarks();
+    } else {
+      updateBottomControls();
+    }
+  </script>
+</body>
+</html>
