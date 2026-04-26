@@ -3559,7 +3559,6 @@ function refreshWinStats(){
   if (winStatBonusEl) winStatBonusEl.style.display = hasBombBonus ? "block" : "none";
   if (winStatBonusDragonsEl) winStatBonusDragonsEl.textContent = "Dragons Bombed: +" + bombDragonKills;
   if (winStatBonusFrogsEl) winStatBonusFrogsEl.textContent = "Frogs Bombed: +" + bombFrogKills;
-  queueWinStatsMarqueeSync();
 }
 
 function stopWinStatsMarquee(options = {}){
@@ -3575,6 +3574,9 @@ function stopWinStatsMarquee(options = {}){
   winStatsMarqueeLoopDistance = 0;
   winStatsMarqueeOffset = 0;
   applyWinStatsMarqueeTransform();
+  if (options.resetScroll && winStatsScrollArea){
+    winStatsScrollArea.scrollTop = 0;
+  }
   if (options.clearClone !== false && winStatsMarqueeClone){
     winStatsMarqueeClone.hidden = true;
     winStatsMarqueeClone.textContent = "";
@@ -3583,7 +3585,7 @@ function stopWinStatsMarquee(options = {}){
 
 function applyWinStatsMarqueeTransform(){
   if (!winStatsMarqueeTrack) return;
-  winStatsMarqueeTrack.style.transform = "translateY(" + (-winStatsMarqueeOffset) + "px)";
+  winStatsMarqueeTrack.style.transform = "";
 }
 
 function normalizeWinStatsMarqueeOffset(offset){
@@ -3601,82 +3603,15 @@ function setWinStatsMarqueeOffset(offset){
 }
 
 function buildWinStatsMarqueeLoopDistance(){
-  if (!winStatsScrollArea || !winStatsMarqueeTrack || !winStatsMarqueeContent || !winStatsMarqueeClone) return 0;
-  winStatsMarqueeClone.textContent = "";
-
-  const contentHeight = Math.ceil(winStatsMarqueeContent.scrollHeight || 0);
-  const containerHeight = Math.ceil(winStatsScrollArea.clientHeight || 0);
-  if (contentHeight <= 0 || containerHeight <= 0){
-    winStatsMarqueeClone.hidden = true;
-    return 0;
-  }
-
-  const cloneBlock = winStatsMarqueeContent.cloneNode(true);
-  cloneBlock.removeAttribute("id");
-  cloneBlock.querySelectorAll("[id]").forEach((el) => el.removeAttribute("id"));
-  cloneBlock.querySelectorAll(".winControllerTarget").forEach((el) => el.classList.remove("winControllerTarget"));
-  cloneBlock.querySelectorAll("[tabindex]").forEach((el) => el.removeAttribute("tabindex"));
-  winStatsMarqueeClone.appendChild(cloneBlock);
-  winStatsMarqueeClone.hidden = false;
-
-  const loopDistance = Math.round(winStatsMarqueeClone.offsetTop - winStatsMarqueeContent.offsetTop);
-  return loopDistance > 0 ? loopDistance : 0;
+  return 0;
 }
 
 function syncWinStatsMarquee(){
   stopWinStatsMarquee({ clearClone:false });
-  if (!winOverlay || !winStatsScrollArea || !winStatsMarqueeTrack || !winStatsMarqueeContent || !winStatsMarqueeClone){
-    stopWinStatsMarquee();
-    return;
-  }
-  if (typeof STATE === "undefined" || gameState !== STATE.WIN || winOverlay.style.display !== "flex"){
-    stopWinStatsMarquee();
-    return;
-  }
-
-  const loopDistance = buildWinStatsMarqueeLoopDistance();
-  winStatsMarqueeLoopDistance = loopDistance;
-  if (loopDistance <= 0){
-    setWinStatsMarqueeOffset(0);
-    return;
-  }
-
-  const step = (timestamp) => {
-    if (!winOverlay || !winStatsScrollArea || !winStatsMarqueeTrack || !winStatsMarqueeContent || !winStatsMarqueeClone){
-      stopWinStatsMarquee();
-      return;
-    }
-    if (typeof STATE === "undefined" || gameState !== STATE.WIN || winOverlay.style.display !== "flex"){
-      stopWinStatsMarquee();
-      return;
-    }
-
-    if (!winStatsMarqueeLastTimestamp){
-      winStatsMarqueeLastTimestamp = timestamp;
-      winStatsMarqueeRafId = requestAnimationFrame(step);
-      return;
-    }
-
-    const deltaSeconds = Math.min(0.05, Math.max(0, (timestamp - winStatsMarqueeLastTimestamp) / 1000));
-    winStatsMarqueeLastTimestamp = timestamp;
-
-    setWinStatsMarqueeOffset(winStatsMarqueeOffset + (deltaSeconds * WIN_STATS_MARQUEE_PIXELS_PER_SECOND));
-    winStatsMarqueeRafId = requestAnimationFrame(step);
-  };
-
-  winStatsMarqueeLastTimestamp = 0;
-  setWinStatsMarqueeOffset(0);
-  winStatsMarqueeRafId = requestAnimationFrame(step);
 }
 
 function queueWinStatsMarqueeSync(){
-  if (winStatsMarqueeSyncRafId){
-    try{ cancelAnimationFrame(winStatsMarqueeSyncRafId); }catch(_){}
-  }
-  winStatsMarqueeSyncRafId = requestAnimationFrame(() => {
-    winStatsMarqueeSyncRafId = 0;
-    syncWinStatsMarquee();
-  });
+  return;
 }
 
 function updateTimerHUD(){
@@ -7263,9 +7198,9 @@ function keepWinControllerTargetFullyVisible(el){
     const marginBottom = 12;
 
     if (targetRect.top < containerRect.top + marginTop){
-      setWinStatsMarqueeOffset(winStatsMarqueeOffset - ((containerRect.top + marginTop) - targetRect.top));
+      winStatsScrollArea.scrollTop = Math.max(0, winStatsScrollArea.scrollTop - ((containerRect.top + marginTop) - targetRect.top));
     } else if (targetRect.bottom > containerRect.bottom - marginBottom){
-      setWinStatsMarqueeOffset(winStatsMarqueeOffset + (targetRect.bottom - (containerRect.bottom - marginBottom)));
+      winStatsScrollArea.scrollTop += targetRect.bottom - (containerRect.bottom - marginBottom);
     }
   };
 
@@ -7274,10 +7209,7 @@ function keepWinControllerTargetFullyVisible(el){
 }
 
 function scrollWinPanelBy(delta){
-  if (!delta || winStatsMarqueeLoopDistance <= 0) return false;
-  const previous = winStatsMarqueeOffset;
-  setWinStatsMarqueeOffset(winStatsMarqueeOffset + delta);
-  return winStatsMarqueeOffset !== previous;
+  return scrollElementByPixels(winStatsScrollArea, delta);
 }
 
 function syncWinFocusIndexFromElement(target){

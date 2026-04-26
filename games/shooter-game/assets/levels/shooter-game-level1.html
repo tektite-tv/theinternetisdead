@@ -7672,25 +7672,33 @@ line-height:1;
     margin:0 !important;
     padding:0 4px 2px !important;
     display:block !important;
-    overflow:hidden !important;
-    scrollbar-width:none !important;
-    -ms-overflow-style:none !important;
+    overflow:auto !important;
+    scrollbar-width:thin !important;
+    scrollbar-color:#00ff66 rgba(0,0,0,0.22) !important;
     position:relative !important;
   }
   html body #winOverlay #winStatsScrollArea::-webkit-scrollbar{
-    width:0 !important;
-    height:0 !important;
-    display:none !important;
+    width:6px !important;
+    height:6px !important;
+  }
+  html body #winOverlay #winStatsScrollArea::-webkit-scrollbar-track{
+    background:rgba(0,0,0,0.22) !important;
+    border-radius:999px !important;
+  }
+  html body #winOverlay #winStatsScrollArea::-webkit-scrollbar-thumb{
+    background:#00ff66 !important;
+    border-radius:999px !important;
+    box-shadow:0 0 8px rgba(0,255,102,0.35) !important;
+  }
+  html body #winOverlay #winStatsScrollArea::-webkit-scrollbar-thumb:hover{
+    background:#7dff7d !important;
   }
 
   html body #winOverlay #winStatsMarqueeTrack{
     width:100% !important;
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:stretch !important;
-    justify-content:flex-start !important;
-    transform:translateY(0) !important;
-    will-change:transform !important;
+    display:block !important;
+    transform:none !important;
+    will-change:auto !important;
   }
 
   html body #winOverlay .winStatsMarqueeBlock{
@@ -7705,12 +7713,7 @@ line-height:1;
   }
 
   html body #winOverlay .winStatsMarqueeClone{
-    padding-top:14px !important;
-    pointer-events:none !important;
-  }
-
-  html body #winOverlay .winStatsMarqueeClone *{
-    pointer-events:none !important;
+    display:none !important;
   }
 
   html body #winOverlay #winStatsList{
