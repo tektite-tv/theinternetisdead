@@ -9950,6 +9950,7 @@ if (btnContinue){
 
     if (winOverlay) winOverlay.style.display = "none";
     stopWinStatsMarquee({ resetScroll:true });
+    window.location.href = "/games/shooter-game/assets/levels/shooter-game-level2.html?autostart=1&startWave=1";
   });
 }
 

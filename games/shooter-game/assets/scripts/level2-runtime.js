@@ -108,8 +108,8 @@ const MUSIC_TRACKS = {
   "spaceinvaders.mp3": AUDIO_LEVEL1_MUSIC,
   "do-that-there.mp3": AUDIO_BG_MUSIC
 };
-let hudMusicSelection = "Muted";
-let initialAudioGateMuted = true;
+let hudMusicSelection = "Game Music";
+let initialAudioGateMuted = false;
 let initialAudioGateReleasedAt = 0;
 
 // Background music (loops). We start it on the first user interaction (autoplay rules).
@@ -122,9 +122,13 @@ musicBg.volume = 0.5;
 const sfxDeath = new Audio(AUDIO_DEATH_YELL);
 sfxDeath.preload = "auto";
 sfxDeath.volume = 0.10;
+let sfxHit = null;
+let sfxOof = null;
+let sfxUiHover = null;
+let sfxUiSelect = null;
 
-// Global mute toggle (M key). Starts gated/muted until the first real user gesture.
-let audioMuted = true;
+// Global mute toggle (M key).
+let audioMuted = false;
 let manualAudioMuted = false;
 
 function isMuteNicknameActive(){
@@ -226,12 +230,12 @@ function updateMusicHud(labelText){
 function applyMuteState(){
   audioMuted = effectiveAudioMuted();
   const m = !!audioMuted;
-  musicBg.muted = m;
-  sfxDeath.muted = m;
-  sfxHit.muted = m;
-  sfxOof.muted = m;
-  sfxUiHover.muted = m;
-  sfxUiSelect.muted = m;
+  if (musicBg) musicBg.muted = m;
+  if (sfxDeath) sfxDeath.muted = m;
+  if (sfxHit) sfxHit.muted = m;
+  if (sfxOof) sfxOof.muted = m;
+  if (sfxUiHover) sfxUiHover.muted = m;
+  if (sfxUiSelect) sfxUiSelect.muted = m;
   updateMusicHud();
 }
 
@@ -1744,6 +1748,21 @@ function hasScoreDisqualifyingSettings(){
   );
 }
 
+function isGameSpeedFrozen(){
+  return Math.round(Number(START_GAME_SPEED) || 0) === 0 || GAME_SPEED_MULT === 0;
+}
+
+function getStaticFrameForImage(img){
+  return img || null;
+}
+
+function syncAnimatedGifSprite(){
+  return false;
+}
+
+function hideAnimatedGifSprite(){
+}
+
 function syncScoreTrackingState(){
   const nextDisabled = !!(scoreTrackingLocked || isTektiteNicknameCheatermodeUnlock() || hasScoreDisqualifyingSettings());
   scoreTrackingDisabled = nextDisabled;
@@ -3000,10 +3019,10 @@ function getPlayerAlignedY(gapPx = 6){
 /* =======================
    Audio
 ======================= */
-const sfxHit = new Audio(AUDIO_HIT);
-const sfxOof = new Audio(AUDIO_OOF);
-const sfxUiHover = new Audio(AUDIO_UI_HOVER);
-const sfxUiSelect = new Audio(AUDIO_UI_SELECT);
+sfxHit = new Audio(AUDIO_HIT);
+sfxOof = new Audio(AUDIO_OOF);
+sfxUiHover = new Audio(AUDIO_UI_HOVER);
+sfxUiSelect = new Audio(AUDIO_UI_SELECT);
 sfxHit.preload = "auto";
 sfxOof.preload = "auto";
 sfxUiHover.preload = "auto";
@@ -4419,13 +4438,26 @@ spawnEnemies();
   window.focus();
 }
 
-if (AUTO_START_LEVEL){
-  window.addEventListener("load", () => {
-    requestAnimationFrame(() => startGame());
-  }, { once: true });
+let initialLevel2BootApplied = false;
+function beginLevel2Session(){
+  initialLevel2BootApplied = true;
+  startGame();
+}
+function applyInitialLevel2BootState(){
+  if (initialLevel2BootApplied) return;
+  initialLevel2BootApplied = true;
+  if (AUTO_START_LEVEL){
+    startMenu.style.display = "none";
+    optionsMenu.style.display = "none";
+    uiRoot.style.display = "none";
+    powerupSlot.style.display = "none";
+    startGame();
+  } else {
+    showMenu();
+  }
 }
 
-btnStart.addEventListener("click", startGame);
+btnStart.addEventListener("click", beginLevel2Session);
 btnOptions.addEventListener("click", () => showOptions(false));
 if (btnPauseOptions) btnPauseOptions.addEventListener("click", () => showOptions(true));
 if (btnControls) btnControls.addEventListener("click", showControlsMenu);
@@ -7378,10 +7410,12 @@ aimAngleSmoothed = -Math.PI/2;
 
 resetStarfield();
 resize(); // also resets starfield + anchors player
-startMenu.style.display = "none";
-optionsMenu.style.display = "none";
-uiRoot.style.display = "none";
-powerupSlot.style.display = "none";
-startGame();
+if (document.readyState === "complete"){
+  requestAnimationFrame(() => applyInitialLevel2BootState());
+} else {
+  window.addEventListener("load", () => {
+    requestAnimationFrame(() => applyInitialLevel2BootState());
+  }, { once: true });
+}
 
 requestAnimationFrame(loop);

@@ -211,8 +211,39 @@
 
   <script>
     (function(){
+      const LEVEL1_SRC = "/games/shooter-game/assets/levels/shooter-game-level1.html";
+      const LEVEL2_SRC = "/games/shooter-game/assets/levels/shooter-game-level2.html";
+      const levelFrame = document.getElementById("tektite-frame");
+
+      function buildLevelSrc(basePath, params){
+        const url = new URL(basePath, window.location.origin);
+        const entries = params && typeof params === "object" ? Object.entries(params) : [];
+        for (const [key, value] of entries){
+          if (value === undefined || value === null) continue;
+          url.searchParams.set(key, String(value));
+        }
+        url.searchParams.set("reload", String(Date.now()));
+        return url.pathname + url.search;
+      }
+
+      function navigateToLevel(basePath, params){
+        if (!levelFrame) return;
+        if (typeof window.__tektiteResetGameLoopWatch === "function"){
+          window.__tektiteResetGameLoopWatch({ clearForced: true });
+        }
+        levelFrame.src = buildLevelSrc(basePath, params);
+      }
+
       window.addEventListener('message', (event) => {
         const data = event && event.data ? event.data : null;
+        if (data && data.type === 'tektite:continue-to-level2'){
+          navigateToLevel(LEVEL2_SRC, { autostart: 1, startWave: 1 });
+          return;
+        }
+        if (data && data.type === 'tektite:return-to-level1'){
+          navigateToLevel(LEVEL1_SRC);
+          return;
+        }
         if (!data || data.type !== 'tektite:save-screenshot') return;
 
         if (window.parent && window.parent !== window){
