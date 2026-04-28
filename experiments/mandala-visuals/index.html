@@ -100,7 +100,7 @@
       <span id="background-title">Loading mandala visuals...</span>
       <span id="counter"></span>
     </div>
-    <div id="hint">Click anywhere to switch visuals.</div>
+    <div id="hint">Click / → / Space: next · ←: previous</div>
   </aside>
 
   <main id="empty-state" class="hidden">
@@ -118,6 +118,20 @@
       const counter = document.getElementById('counter');
       const emptyState = document.getElementById('empty-state');
       const infoPanel = document.getElementById('info-panel');
+
+      const cheekyTitles = [
+        '01 — OVERDENSE SILICON MANDALA SOUP',
+        '02 — THE VORTEX ATE THE PERFORMANCE BUDGET',
+        '03 — OVER-CORRECTED INTO EMPTY SPACE',
+        '04 — FINALLY VISIBLE, STILL SUSPICIOUS',
+        '05 — RGB WASHING MACHINE MODE ENGAGED',
+        '06 — THREE.JS OBJECT SOUP DETONATION',
+        '07 — SPACIOUS, BUT NOW A BLACK-HOLE DONUT',
+        '08 — BALANCED CORE, STILL CONSIDERING VIOLENCE',
+        '09 — 4D NON-EUCLIDEAN DEPTH CRIME',
+        '10 — STABLE TUNNEL, STILL LAG GOBLIN BAIT',
+        'PERFECTION!'
+      ];
 
       let backgrounds = [];
       let currentIndex = 0;
@@ -144,7 +158,7 @@
         const background = backgrounds[currentIndex];
 
         frame.src = background.path;
-        title.textContent = background.title || background.path;
+        title.textContent = cheekyTitles[currentIndex] || background.title || background.path;
         counter.textContent = `${currentIndex + 1} / ${backgrounds.length}`;
       }
 
