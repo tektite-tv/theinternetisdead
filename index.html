@@ -204,10 +204,39 @@
     let chatSandboxReady = false;
     let pendingChatOpenOptions = null;
 
-    // ADDED: Hidden homepage-only shortcut. It registers for autocomplete and execution,
-    // but chat-sandbox.html hides commands marked hidden from /help.
+    window.indexGotoSuggestions = ['/'];
+
+    function normalizeIndexGotoSuggestions(values) {
+      const folders = Array.isArray(values) ? values : [];
+      return Array.from(new Set(['/', ...folders
+        .map((value) => String(value || '').trim())
+        .filter((value) => value.startsWith('/'))
+        .map((value) => value === '/' ? '/' : `${value.replace(/\/+$/, '')}/`)]))
+        .sort((a, b) => {
+          if (a === '/') return -1;
+          if (b === '/') return 1;
+          return a.localeCompare(b);
+        });
+    }
+
+    function loadIndexGotoSuggestions() {
+      fetch('/pages/repo-index.json', { cache: 'no-store' })
+        .then((response) => response.ok ? response.json() : null)
+        .then((repoIndex) => {
+          const folders = repoIndex && Array.isArray(repoIndex.folders) ? repoIndex.folders : [];
+          window.indexGotoSuggestions = normalizeIndexGotoSuggestions(folders);
+          registerPageCommands();
+        })
+        .catch(() => {
+          window.indexGotoSuggestions = normalizeIndexGotoSuggestions(window.indexGotoSuggestions);
+        });
+    }
+
+    // ADDED: Homepage navigation shortcut. It registers for autocomplete and execution.
     window.TektiteIndexChatController = {
       getRegistrationPayload() {
+        const gotoSuggestions = normalizeIndexGotoSuggestions(window.indexGotoSuggestions);
+        window.indexGotoSuggestions = gotoSuggestions;
         return {
           type: 'pageChatRegister',
           pageOnly: false,
@@ -216,11 +245,11 @@
           sourceKey: 'tektite-index',
           commands: [
             {
-              name: '/games/shooter-game',
-              usage: '/games/shooter-game',
-              desc: 'open the shooter game',
-              execute: true,
-              hidden: true,
+              name: '/goto',
+              usage: '/goto /',
+              desc: 'go to a folder on the site',
+              execute: false,
+              suggestions: gotoSuggestions,
               replaceBuiltIn: true
             }
           ]
@@ -228,13 +257,29 @@
       },
       handlePageChatExecute(eventData = {}) {
         const commandName = String(eventData.command || '').trim().toLowerCase();
-        if (commandName !== '/games/shooter-game') {
+        if (commandName !== '/goto') {
           return false;
         }
-        window.location.href = '/games/shooter-game/';
+        const rawCommand = typeof eventData.raw === 'string' ? eventData.raw.trim() : '';
+        const commandValue = rawCommand ? rawCommand.slice(commandName.length).trim() : '';
+        const gotoSuggestions = normalizeIndexGotoSuggestions(window.indexGotoSuggestions);
+        if (!commandValue) {
+          postToChatSandbox({
+            type: 'pageChatResult',
+            panel: 'gotoFolders',
+            command: '/goto',
+            message: '/goto executed',
+            folders: gotoSuggestions,
+            announce: true
+          });
+          return true;
+        }
+        const target = gotoSuggestions.includes(commandValue) ? commandValue : '/';
+        window.location.href = target === '/' ? '/index.html' : target;
         return true;
       }
     };
+    loadIndexGotoSuggestions();
 
     const defaultClockZone = 'America/Toronto';
     const supportedClockZones = (typeof Intl.supportedValuesOf === 'function'

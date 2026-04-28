@@ -1,6 +1,16 @@
 (function () {
+  function getIndexChatGotoSuggestions() {
+    if (typeof window.normalizeIndexGotoSuggestions === 'function') {
+      return window.normalizeIndexGotoSuggestions(window.indexGotoSuggestions);
+    }
+    return Array.isArray(window.indexGotoSuggestions) && window.indexGotoSuggestions.length
+      ? window.indexGotoSuggestions
+      : ['/'];
+  }
+
   const controller = {
     getRegistrationPayload() {
+      const gotoSuggestions = getIndexChatGotoSuggestions();
       return {
         type: 'pageChatRegister',
         pageOnly: false,
@@ -50,23 +60,12 @@
             execute: true
           },
           {
-            name: '/games',
-            usage: '/games',
-            desc: 'open the games page',
-            execute: true
-          },
-          {
-            name: '/games/shooter-game',
-            usage: '/games/shooter-game',
-            desc: 'open the shooter game',
-            execute: true,
-            hidden: true
-          },
-          {
-            name: '/experiments',
-            usage: '/experiments',
-            desc: 'open the experiments page',
-            execute: true
+            name: '/goto',
+            usage: '/goto /',
+            desc: 'go to a folder on the site',
+            execute: false,
+            suggestions: gotoSuggestions,
+            replaceBuiltIn: true
           }
         ]
       };
@@ -154,29 +153,25 @@
         return true;
       }
 
-      if (commandName === '/games') {
-        try {
-          window.location.href = '/games/';
-        } catch (error) {
-          window.location.assign('/games/');
+      if (commandName === '/goto') {
+        const gotoSuggestions = getIndexChatGotoSuggestions();
+        if (!commandValue) {
+          window.postToChatSandbox({
+            type: 'pageChatResult',
+            panel: 'gotoFolders',
+            command: '/goto',
+            message: '/goto executed',
+            folders: gotoSuggestions,
+            announce: true
+          });
+          return true;
         }
-        return true;
-      }
-
-      if (commandName === '/games/shooter-game') {
+        const target = gotoSuggestions.includes(commandValue) ? commandValue : '/';
+        const href = target === '/' ? '/index.html' : target;
         try {
-          window.location.href = '/games/shooter-game/';
+          window.location.href = href;
         } catch (error) {
-          window.location.assign('/games/shooter-game/');
-        }
-        return true;
-      }
-
-      if (commandName === '/experiments') {
-        try {
-          window.location.href = '/experiments/';
-        } catch (error) {
-          window.location.assign('/experiments/');
+          window.location.assign(href);
         }
         return true;
       }

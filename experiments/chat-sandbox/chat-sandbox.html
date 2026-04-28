@@ -5216,6 +5216,46 @@ function createHomepageCustomizeMessageNode(result = {}) {
       });
     }
 
+    function createGotoFolderListMessageNode(folders = []) {
+      const wrapper = document.createElement('div');
+      wrapper.dataset.commandPanelType = 'gotoFolders';
+
+      const title = document.createElement('div');
+      const titleStrong = document.createElement('strong');
+      titleStrong.textContent = 'Go to folder...';
+      title.appendChild(titleStrong);
+      wrapper.appendChild(title);
+
+      const helpList = document.createElement('div');
+      helpList.className = 'helpList';
+
+      Array.from(new Set((Array.isArray(folders) ? folders : [])
+        .map((folder) => String(folder || '').trim())
+        .filter(Boolean)))
+        .forEach((folder) => {
+          const item = document.createElement('a');
+          item.className = 'helpItem';
+          item.href = folder === '/' ? '/index.html' : folder;
+          item.dataset.gotoFolder = folder;
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'helpCommandName';
+          nameSpan.textContent = folder;
+
+          item.appendChild(nameSpan);
+          item.addEventListener('click', (event) => {
+            event.preventDefault();
+            closeActiveCommandPicker();
+            dispatchPageCommand('/goto', `/goto ${folder}`, [folder]);
+          });
+
+          helpList.appendChild(item);
+        });
+
+      wrapper.appendChild(helpList);
+      return wrapper;
+    }
+
     function refreshVisibleHelpMessages() {
       const helpMessages = Array.from(messages.querySelectorAll('.message[data-role="system"][data-command-panel-type="help"]'));
 
@@ -7302,6 +7342,9 @@ function createHomepageCustomizeMessageNode(result = {}) {
           if (homepageCustomizePanelVisible) {
             upsertNamedPanelMessage('homepageCustomize', () => createHomepageCustomizeMessageNode(event.data));
           }
+        } else if (event.data.panel === 'gotoFolders') {
+          addSystemMessage(formatCommandExecutionMessage(event.data.command || '/goto'));
+          addMessage(createGotoFolderListMessageNode(event.data.folders), 'system');
         } else if (event.data.announce !== false) {
           if (String(event.data.command || '').trim().toLowerCase() === '/log') {
             addMessage(createLocalStorageLogMessageNode(message), 'system');
