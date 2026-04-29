@@ -389,8 +389,14 @@ html, body {
 
 /* MODIFIED: the sidebar clock should not appear on desktop/tablet widths.
    Mobile re-enables this exact clock inside the slide-out sidebar below. */
+#overlay-root #sidebar .sidebar-clock,
+#overlay-root #sidebar .sidebar-clock .clock-box,
+#overlay-root #sidebar .sidebar-clock .clock-text {
+  display: none !important;
+}
+
 #overlay-root .sidebar > .topbar > .clock {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 768px) {
@@ -498,8 +504,20 @@ html, body {
     justify-content: center;
   }
 
+  #overlay-root #sidebar .sidebar-clock {
+    display: flex !important;
+  }
+
+  #overlay-root #sidebar .sidebar-clock .clock-box {
+    display: flex !important;
+  }
+
+  #overlay-root #sidebar .sidebar-clock .clock-text {
+    display: inline-flex !important;
+  }
+
   #overlay-root .sidebar .clock {
-    display: flex;
+    display: flex !important;
     flex: 0 0 100%;
     justify-content: center;
     min-width: 0;
@@ -575,7 +593,7 @@ html, body {
         </a>
       </div>
 
-      <div class="clock">
+      <div class="clock sidebar-clock">
         <div class="clock-box">
           <div class="clock-text" aria-label="Toronto time">
             <span class="clock-time">11:42:47</span><span class="clock-period">pm</span>
