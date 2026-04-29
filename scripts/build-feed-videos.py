@@ -8,9 +8,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CHANNELS_PATH = ROOT / "pages" / "feeds" / "channels.json"
-OUTPUT_PATH = ROOT / "pages" / "feeds" / "feed-videos.json"
-LEGACY_FALLBACK_PATH = ROOT / "pages" / "youtube-list-grid" / "videos.json"
+CHANNELS_PATH = ROOT / "dead" / "pages" / "feeds" / "channels.json"
+OUTPUT_PATH = ROOT / "dead" / "pages" / "feeds" / "feed-videos.json"
+LEGACY_FALLBACK_PATH = ROOT / "dead" / "pages" / "youtube-list-grid" / "videos.json"
 LOCAL_COOKIES_PATH = ROOT / "cookies.txt"
 
 

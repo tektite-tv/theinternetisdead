@@ -29,19 +29,19 @@ jobs:
       - name: Refresh videos.json from YouTube
         shell: bash
         run: |
-          mkdir -p pages/youtube-list-grid
-          yt-dlp -J "https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ/videos" > pages/youtube-list-grid/videos.json
+          mkdir -p dead/pages/youtube-list-grid
+          yt-dlp -J "https://www.youtube.com/channel/UCn3WLZT7k8nO24XimlJVJVQ/videos" > dead/pages/youtube-list-grid/videos.json
 
       - name: Commit updated videos.json
         shell: bash
         run: |
-          if git diff --quiet -- pages/youtube-list-grid/videos.json; then
+          if git diff --quiet -- dead/pages/youtube-list-grid/videos.json; then
             echo "videos.json is already up to date."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pages/youtube-list-grid/videos.json
+          git add dead/pages/youtube-list-grid/videos.json
           git commit -m "Update videos.json"
           git push

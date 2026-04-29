@@ -1,5 +1,5 @@
 (function () {
-  const TARGET_PATHS = new Set(['/', '/index.html', '/experiments/chat-sandbox/index.html']);
+  const TARGET_PATHS = new Set(['/', '/index.html', '/dead/experiments/chat-sandbox/index.html']);
   if (!TARGET_PATHS.has(window.location.pathname)) return;
 
   const TARGET_TIMES = new Set(['04:20', '07:10', '16:20', '19:10']);

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" type="image/png" href="/media/images/pngs/dead-favicon.png" />
+  <link rel="icon" type="image/png" href="/dead/media/images/pngs/dead-favicon.png" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>/404.html</title>
@@ -153,7 +153,10 @@ body::-webkit-scrollbar{
 function redirectKnownWatchRoutes(){
     const redirects = {
         "/watch": "/watch/",
-        "/pages/youtube-list-grid/watch": "/pages/youtube-list-grid/watch/"
+        "/pages/feeds/watch": "/dead/pages/feeds/watch/",
+        "/pages/youtube-list-grid/watch": "/dead/pages/youtube-list-grid/watch/",
+        "/dead/pages/feeds/watch": "/dead/pages/feeds/watch/",
+        "/dead/pages/youtube-list-grid/watch": "/dead/pages/youtube-list-grid/watch/"
     };
 
     const nextPath = redirects[window.location.pathname];
@@ -172,8 +175,8 @@ function renderMissingPath(){
 
 async function loadOverlay(){
     try{
-        const res = await fetch("/pages/overlay.html", { cache: "no-store" });
-        if(!res.ok) throw new Error("Failed to load /pages/overlay.html");
+        const res = await fetch("/dead/pages/overlay.html", { cache: "no-store" });
+        if(!res.ok) throw new Error("Failed to load /dead/pages/overlay.html");
         const html = await res.text();
         const container = document.getElementById("overlay-container");
         const temp = document.createElement("div");

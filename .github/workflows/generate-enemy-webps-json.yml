@@ -3,7 +3,7 @@ name: Generate enemy-webps.json
 on:
   push:
     paths:
-      - "games/shooter-game/assets/enemy-webps/**"
+      - "dead/games/shooter-game/assets/enemy-webps/**"
       - ".github/workflows/generate-enemy-webps-json.yml"
   workflow_dispatch:
 
@@ -21,22 +21,22 @@ jobs:
       - name: Generate enemy-webps.json
         shell: bash
         run: |
-          mkdir -p games/shooter-game/assets
+          mkdir -p dead/games/shooter-game/assets
 
-          find games/shooter-game/assets/enemy-webps \
+          find dead/games/shooter-game/assets/enemy-webps \
             -maxdepth 1 \
             -type f \
             \( -iname "*.webp" \) \
             -printf '%f\n' \
             | sort \
             | jq -R -s 'split("\n") | map(select(length > 0))' \
-            > games/shooter-game/assets/enemy-webps.json
+            > dead/games/shooter-game/assets/enemy-webps.json
 
-          echo "Generated games/shooter-game/assets/enemy-webps.json:"
-          cat games/shooter-game/assets/enemy-webps.json
+          echo "Generated dead/games/shooter-game/assets/enemy-webps.json:"
+          cat dead/games/shooter-game/assets/enemy-webps.json
 
       - name: Commit generated JSON
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Generate enemy-webps.json"
-          file_pattern: games/shooter-game/assets/enemy-webps.json
+          file_pattern: dead/games/shooter-game/assets/enemy-webps.json

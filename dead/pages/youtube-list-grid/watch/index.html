@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="/dead/media/images/pngs/dead-favicon.png" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>/dead/pages/youtube-list-grid/watch/</title>
+<script>
+(function redirectToYoutubeGrid(){
+    const params = new URLSearchParams(window.location.search);
+    const videoId = params.get("v");
+    const target = videoId
+        ? `/dead/pages/youtube-list-grid/?v=${encodeURIComponent(videoId)}${window.location.hash || ""}`
+        : `/dead/pages/youtube-list-grid/${window.location.hash || ""}`;
+    window.location.replace(target);
+})();
+</script>
+</head>
+<body></body>
+</html>

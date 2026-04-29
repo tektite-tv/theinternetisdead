@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="/dead/media/images/pngs/dead-favicon.png" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>/dead/games/shooter-game/</title>
+
+<style>
+html,
+body{
+    margin:0;
+    width:100%;
+    height:100%;
+    background:#111;
+    font-family:"Courier New", monospace;
+    overflow:hidden;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar{
+    display:none;
+}
+
+#app-shell{
+    position:relative;
+    width:100%;
+    height:100dvh;
+    min-height:100svh;
+    overflow:hidden;
+    background:#000;
+}
+
+#overlay-container{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:1000;
+    width:100%;
+}
+
+#shooter-game-frame{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    border:none;
+    display:block;
+    z-index:1;
+    background:#000;
+}
+
+#mobile-warning-panel{
+    position:fixed;
+    inset:0;
+    z-index:1002;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+    background:
+        radial-gradient(circle at top, rgba(0,255,102,0.18), transparent 36%),
+        radial-gradient(circle at bottom, rgba(255,213,0,0.12), transparent 34%),
+        linear-gradient(180deg, rgba(6,9,8,0.98), rgba(0,0,0,1));
+}
+
+#mobile-warning-card{
+    position:relative;
+    width:min(100%, 560px);
+    padding:24px 20px 22px;
+    border:2px solid rgba(0,255,102,0.78);
+    border-radius:20px;
+    background:
+        linear-gradient(180deg, rgba(3,14,8,0.97), rgba(0,0,0,0.96)),
+        rgba(0,0,0,0.92);
+    color:#d5ffe6;
+    box-shadow:
+        0 0 0 1px rgba(255,213,0,0.12) inset,
+        0 0 28px rgba(0,255,102,0.18),
+        0 0 58px rgba(0,0,0,0.55);
+    overflow:hidden;
+}
+
+#mobile-warning-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+        repeating-linear-gradient(180deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 3px),
+        linear-gradient(135deg, rgba(0,255,102,0.08), transparent 42%, rgba(255,213,0,0.08));
+    pointer-events:none;
+    mix-blend-mode:screen;
+}
+
+#mobile-warning-kicker{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+    padding:6px 10px;
+    border:1px solid rgba(255,213,0,0.42);
+    border-radius:999px;
+    color:#ffd500;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.24em;
+    text-transform:uppercase;
+    background:rgba(255,213,0,0.08);
+}
+
+#mobile-warning-title{
+    position:relative;
+    margin:0 0 14px;
+    color:#00ff66;
+    font-size:clamp(30px, 8vw, 48px);
+    line-height:0.92;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    text-shadow:0 0 14px rgba(0,255,102,0.34);
+}
+
+#mobile-warning-copy{
+    position:relative;
+    margin:0;
+    color:#d9ffe4;
+    font-size:clamp(14px, 3.9vw, 18px);
+    line-height:1.56;
+}
+
+#mobile-warning-copy strong{
+    color:#ffd500;
+    font-weight:700;
+}
+
+#mobile-warning-button{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    margin-top:20px;
+    min-width:180px;
+    padding:14px 20px;
+    border:2px solid rgba(0,255,102,0.82);
+    border-radius:999px;
+    background:linear-gradient(180deg, rgba(0,255,102,0.18), rgba(0,90,38,0.22));
+    color:#00ff66;
+    font:700 clamp(16px, 4.6vw, 20px) "Courier New", monospace;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+    pointer-events:auto;
+    transition:transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+#mobile-warning-button:active{
+    transform:translateY(1px) scale(0.99);
+}
+
+#mobile-warning-button:hover,
+#mobile-warning-button:focus-visible{
+    background:linear-gradient(180deg, rgba(255,213,0,0.2), rgba(0,255,102,0.24));
+    box-shadow:0 0 18px rgba(0,255,102,0.24), 0 0 28px rgba(255,213,0,0.12);
+}
+
+body.mobile-phone-layout #overlay-container{
+    display:none;
+}
+
+body.mobile-warning-active #mobile-warning-panel{
+    display:flex;
+}
+
+body.mobile-warning-active #shooter-game-frame,
+body.mobile-warning-active #overlay-container{
+    visibility:hidden;
+    pointer-events:none;
+}
+
+@media (max-width: 700px){
+    body{
+        overscroll-behavior-y:none;
+    }
+
+    #app-shell{
+        height:100dvh;
+        min-height:100dvh;
+    }
+}
+
+@media (pointer: coarse) and (orientation: portrait){
+    #mobile-warning-card{
+        width:min(100%, 620px);
+        min-height:min(82dvh, 760px);
+        padding:30px 24px 28px;
+        border-width:3px;
+        border-radius:24px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+    }
+
+    #mobile-warning-kicker{
+        margin-bottom:18px;
+        padding:8px 12px;
+        font-size:12px;
+        letter-spacing:0.26em;
+    }
+
+    #mobile-warning-title{
+        margin-bottom:18px;
+        font-size:clamp(40px, 12vw, 62px);
+    }
+
+    #mobile-warning-copy{
+        font-size:clamp(18px, 5.2vw, 24px);
+        line-height:1.68;
+    }
+
+    #mobile-warning-button{
+        margin-top:26px;
+        min-width:210px;
+        padding:16px 24px;
+        font-size:clamp(19px, 5.4vw, 26px);
+    }
+}
+
+  /* Kill browser click-flash / focus indicator artifacts */
+  html, body, canvas, button, select, input, textarea, label, div, iframe {
+    -webkit-tap-highlight-color: transparent;
+  }
+  *:focus,
+  *:focus-visible,
+  *:active{
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  body{
+    caret-color: transparent;
+  }
+  canvas, .panel, button, select, label, #main-content, #app-shell, #overlay-container, #shooter-game-frame, #tektite-frame{
+    user-select:none;
+    -webkit-user-select:none;
+  }
+</style>
+
+</head>
+
+<body>
+
+<div id="app-shell">
+    <div id="overlay-container"></div>
+    <iframe id="shooter-game-frame" data-game-src="/dead/games/shooter-game/shooter-game.html" title="Shooter Game"></iframe>
+    <div id="mobile-warning-panel" aria-live="polite" aria-hidden="true">
+        <div id="mobile-warning-card">
+            <div id="mobile-warning-kicker">Mobile Warning</div>
+            <h1 id="mobile-warning-title">WARNING:</h1>
+            <p id="mobile-warning-copy">I am not a dev. I am an artist who vibecoded this video game over months of painstaking wrestling with CSS and I can't be asked to make this the right way. If you want to play on phone I suggest you use keyboard/mouse or controller in <strong>"Desktop Mode"</strong> YOU HAVE BEEN WARNED!!!</p>
+            <button id="mobile-warning-button" type="button">Whatever...</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function isPhoneLayout(){
+    const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    const isPhoneWidth = window.matchMedia("(max-width: 900px)").matches;
+    return isCoarsePointer && isPhoneWidth;
+}
+
+let overlayLoaded = false;
+let overlayLoadPromise = null;
+let mobileWarningAcknowledged = false;
+
+async function loadOverlay(){
+    try{
+        const res = await fetch("/dead/pages/overlay.html", { cache: "no-store" });
+        if(!res.ok) throw new Error("Failed to load /dead/pages/overlay.html");
+        const html = await res.text();
+        const container = document.getElementById("overlay-container");
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+
+        const fragment = document.createDocumentFragment();
+        const scripts = [];
+
+        Array.from(temp.childNodes).forEach((node) => {
+            if (node.nodeName && node.nodeName.toLowerCase() === "script") {
+                scripts.push(node);
+            } else {
+                fragment.appendChild(node.cloneNode(true));
+            }
+        });
+
+        container.innerHTML = "";
+        container.appendChild(fragment);
+
+        scripts.forEach((oldScript) => {
+            const newScript = document.createElement("script");
+            Array.from(oldScript.attributes).forEach((attr) => {
+                newScript.setAttribute(attr.name, attr.value);
+            });
+            newScript.textContent = oldScript.textContent;
+            container.appendChild(newScript);
+        });
+
+        overlayLoaded = true;
+        syncLayout();
+    }catch(error){
+        console.error("Error loading overlay:", error);
+    }finally{
+        overlayLoadPromise = null;
+    }
+}
+
+function syncOverlayVisibility(){
+    const container = document.getElementById("overlay-container");
+    if (!container) return;
+
+    if (isPhoneLayout() || shouldShowMobileWarning()){
+        container.innerHTML = "";
+        overlayLoaded = false;
+        return;
+    }
+
+    if (!overlayLoaded && !overlayLoadPromise){
+        overlayLoadPromise = loadOverlay();
+    }
+}
+
+const frame = document.getElementById("shooter-game-frame");
+const mobileWarningPanel = document.getElementById("mobile-warning-panel");
+const mobileWarningButton = document.getElementById("mobile-warning-button");
+
+function shouldShowMobileWarning(){
+    return isPhoneLayout() && !mobileWarningAcknowledged;
+}
+
+function ensureGameFrameLoaded(){
+    if (!frame || frame.dataset.loaded === "true") return;
+    const gameSrc = frame.dataset.gameSrc;
+    if (!gameSrc) return;
+    frame.src = gameSrc;
+    frame.dataset.loaded = "true";
+}
+
+function syncMobileWarningGate(){
+    const warningActive = shouldShowMobileWarning();
+    document.body.classList.toggle("mobile-warning-active", warningActive);
+    if (mobileWarningPanel){
+        mobileWarningPanel.setAttribute("aria-hidden", warningActive ? "false" : "true");
+    }
+    if (!warningActive){
+        ensureGameFrameLoaded();
+    }
+}
+
+function syncMobileOrientationGate(){
+    const isPhone = isPhoneLayout();
+    document.body.classList.toggle("mobile-phone-layout", isPhone);
+}
+
+function syncLayout(){
+    syncMobileWarningGate();
+    syncMobileOrientationGate();
+    syncOverlayVisibility();
+    const overlayContainer = document.getElementById("overlay-container");
+    const overlayHeight = overlayContainer ? overlayContainer.offsetHeight : 0;
+    frame.style.top = overlayHeight + "px";
+    frame.style.height = "calc(100dvh - " + overlayHeight + "px)";
+}
+
+window.syncOverlayLayout = syncLayout;
+
+syncLayout();
+
+if (mobileWarningButton){
+    mobileWarningButton.addEventListener("click", () => {
+        mobileWarningAcknowledged = true;
+        syncLayout();
+        try{ frame.focus(); }catch(_){}
+    });
+}
+
+window.addEventListener("resize", syncLayout);
+window.addEventListener("orientationchange", syncLayout);
+window.addEventListener("load", syncLayout);
+window.visualViewport?.addEventListener("resize", syncLayout);
+
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) syncLayout();
+});
+
+const resizeObserver = new ResizeObserver(syncLayout);
+resizeObserver.observe(document.getElementById("overlay-container"));
+</script>
+
+  <script src="/dead/games/shooter-game/assets/scripts/screenshot-shortcut.js"></script>
+  <script src="/scripts/hide-overlay.js"></script>
+</body>
+</html>

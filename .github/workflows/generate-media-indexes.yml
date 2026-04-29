@@ -3,7 +3,7 @@ name: Generate ugly oldschool media indexes
 on:
   push:
     paths:
-      - 'media/**'
+      - 'dead/media/**'
       - '.github/workflows/generate-media-indexes.yml'
   workflow_dispatch:
 
@@ -176,7 +176,7 @@ jobs:
           }
 
           # --------------------------------------------------
-          # /media/index.html
+          # /dead/media/index.html
           # --------------------------------------------------
           media_rows = []
           media_rows.append('<tr class="header-row"><th align="left">Name</th></tr>')
@@ -186,7 +186,7 @@ jobs:
               folder_path = media_dir / folder_name
               if folder_path.is_dir():
                   href = html.escape(folder_name) + "/"
-                  name = "/media/" + html.escape(folder_name) + "/"
+                  name = "/dead/media/" + html.escape(folder_name) + "/"
                   media_rows.append(f'<tr class="item-row"><td><a href="{href}">{name}</a></td></tr>')
                   found_media_rows += 1
 
@@ -199,14 +199,14 @@ jobs:
           write_text_file(
               media_dir / "index.html",
               oldschool_page(
-                  "Index of /media",
+                  "Index of /dead/media",
                   media_body,
                   note_html="<p>Don&apos;t judge my folder structure.</p>"
               )
           )
 
           # --------------------------------------------------
-          # /media/audio/index.html
+          # /dead/media/audio/index.html
           # --------------------------------------------------
           if audio_dir.is_dir():
               audio_files = sorted(
@@ -224,7 +224,7 @@ jobs:
 
               for f in audio_files:
                   href = html.escape(f.name)
-                  name = "/media/audio/" + html.escape(f.name)
+                  name = "/dead/media/audio/" + html.escape(f.name)
                   size = kb_size(f)
                   mime = mime_map.get(f.suffix.lower(), "audio/mpeg")
 
@@ -251,14 +251,14 @@ jobs:
               write_text_file(
                   audio_dir / "index.html",
                   oldschool_page(
-                      "Index of /media/audio",
+                      "Index of /dead/media/audio",
                       audio_body,
                       note_html="<p>This website is a transformative art exhibit. All audio is used as part of a non-profit transformative work.</p>"
                   )
               )
 
           # --------------------------------------------------
-          # /media/images/index.html
+          # /dead/media/images/index.html
           # lists subfolders only
           # --------------------------------------------------
           image_subfolders = []
@@ -276,7 +276,7 @@ jobs:
 
               for folder in image_subfolders:
                   href = html.escape(folder.name) + "/"
-                  name = "/media/images/" + html.escape(folder.name) + "/"
+                  name = "/dead/media/images/" + html.escape(folder.name) + "/"
                   images_rows.append(f'<tr class="item-row"><td><a href="{href}">{name}</a></td></tr>')
 
               if not image_subfolders:
@@ -288,14 +288,14 @@ jobs:
               write_text_file(
                   images_dir / "index.html",
                   oldschool_page(
-                      "Index of /media/images",
+                      "Index of /dead/media/images",
                       images_body,
                       note_html="<p>Don&apos;t judge my folder structure.</p>"
                   )
               )
 
           # --------------------------------------------------
-          # /media/images/<subfolder>/index.html
+          # /dead/media/images/<subfolder>/index.html
           # lists actual image files with hover preview
           # --------------------------------------------------
           preview_script = """
@@ -399,6 +399,6 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add media/index.html media/audio/index.html media/images/index.html media/images/*/index.html
+          git add dead/media/index.html dead/media/audio/index.html dead/media/images/index.html dead/media/images/*/index.html
           git commit -m "Auto-generate styled media index pages with custom footer notes"
           git push

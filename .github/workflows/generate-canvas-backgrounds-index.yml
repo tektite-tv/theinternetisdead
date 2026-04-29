@@ -3,7 +3,7 @@ name: Generate Canvas Backgrounds Index
 on:
   push:
     paths:
-      - 'experiments/canvas-backgrounds/**.html'
+      - 'dead/experiments/canvas-backgrounds/**.html'
       - '.github/workflows/generate-canvas-backgrounds-index.yml'
   workflow_dispatch:
 
@@ -18,14 +18,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate experiments/canvas-backgrounds/index.json
+      - name: Generate dead/experiments/canvas-backgrounds/index.json
         shell: bash
         run: |
           python3 <<'PY'
           import json
           from pathlib import Path
 
-          folder = Path('experiments/canvas-backgrounds')
+          folder = Path('dead/experiments/canvas-backgrounds')
           folder.mkdir(parents=True, exist_ok=True)
 
           files = sorted(
@@ -51,4 +51,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'Generate canvas backgrounds index.json'
-          file_pattern: experiments/canvas-backgrounds/index.json
+          file_pattern: dead/experiments/canvas-backgrounds/index.json

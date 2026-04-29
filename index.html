@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" type="image/png" href="/media/images/pngs/dead-favicon.png" />
+  <link rel="icon" type="image/png" href="/dead/media/images/pngs/dead-favicon.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>theinternetisdead.org</title>
@@ -174,7 +174,7 @@
     <div id="main-content">
       <iframe
         id="tektite-frame"
-        src="/pages/feeds/feeds.html"
+        src="/dead/pages/feeds/feeds.html"
         title="Tektite Index"
         loading="eager"
         allowfullscreen
@@ -184,7 +184,7 @@
 
   <iframe
     id="chat-sandbox-frame"
-    src="/experiments/chat-sandbox/chat-sandbox.html"
+    src="/dead/experiments/chat-sandbox/chat-sandbox.html"
     title="Chat Sandbox Overlay"
     loading="eager"
     allow="clipboard-read; clipboard-write"
@@ -220,7 +220,7 @@
     }
 
     function loadIndexGotoSuggestions() {
-      fetch('/pages/repo-index.json', { cache: 'no-store' })
+      fetch('/dead/pages/repo-index.json', { cache: 'no-store' })
         .then((response) => response.ok ? response.json() : null)
         .then((repoIndex) => {
           const folders = repoIndex && Array.isArray(repoIndex.folders) ? repoIndex.folders : [];
@@ -614,8 +614,8 @@
 
     async function loadOverlay() {
       try {
-        const response = await fetch('/pages/overlay.html', { cache: 'no-store' });
-        if (!response.ok) throw new Error('Failed to load /pages/overlay.html');
+        const response = await fetch('/dead/pages/overlay.html', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to load /dead/pages/overlay.html');
         const html = await response.text();
         const temp = document.createElement('div');
         temp.innerHTML = html;
@@ -641,7 +641,7 @@
         syncOverlayClockState();
       } catch (error) {
         console.error(error);
-        overlayContainer.innerHTML = '<div class="overlay-error">Error loading /pages/overlay.html</div>';
+        overlayContainer.innerHTML = '<div class="overlay-error">Error loading /dead/pages/overlay.html</div>';
       }
     }
 
@@ -1063,7 +1063,7 @@
           createdAt: new Date().toISOString(),
           frameCount,
           frameDelayMs: frameDelay,
-          source: '/pages/overlay.html + /pages/feeds/feeds.html composite'
+          source: '/dead/pages/overlay.html + /dead/pages/feeds/feeds.html composite'
         };
         const manifestBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
         entries.push(await createZipEntryFromBlob('screenshot-animation/manifest.json', manifestBlob));
@@ -1443,7 +1443,7 @@
     function updateOverlayLogoAssets() {
       const overlayRoot = overlayContainer.querySelector('#overlay-root') || overlayContainer;
       if (!overlayRoot) return;
-      const logoSrc = customOverlayLogoUrl || '/media/images/pngs/deadlogo-green.png';
+      const logoSrc = customOverlayLogoUrl || '/dead/media/images/pngs/deadlogo-green.png';
       overlayRoot.querySelectorAll('.logo img').forEach((img) => {
         img.src = logoSrc;
       });
@@ -1533,8 +1533,8 @@
     function updateTektiteLogoAssets(doc) {
       if (!doc) return;
       const tektiteWindow = doc.defaultView || (tektiteFrame && tektiteFrame.contentWindow) || null;
-      const logoUrls = customTektiteLogoUrls.length ? customTektiteLogoUrls.slice() : ['/media/images/pngs/oldtube.png', '/media/images/pngs/oldtube-alt-1.png', '/media/images/pngs/oldtube-alt-2.png'];
-      const logoSrc = logoUrls[0] || '/media/images/pngs/oldtube.png';
+      const logoUrls = customTektiteLogoUrls.length ? customTektiteLogoUrls.slice() : ['/dead/media/images/pngs/oldtube.png', '/dead/media/images/pngs/oldtube-alt-1.png', '/dead/media/images/pngs/oldtube-alt-2.png'];
+      const logoSrc = logoUrls[0] || '/dead/media/images/pngs/oldtube.png';
 
       clearManagedTektiteLogoHoverState(doc);
 
@@ -1591,7 +1591,7 @@
 
     function applyOverlayVars(target) {
       if (!target) return;
-    // Keep Page Background scoped to /pages/feeds/feeds.html itself, not the outer index/overlay shell.
+    // Keep Page Background scoped to /dead/pages/feeds/feeds.html itself, not the outer index/overlay shell.
       target.style.setProperty('--page-bg', 'transparent');
       target.style.setProperty('--overlay-text', hexToRgba(pageCustomizeState.colors.pageText.hex, pageCustomizeState.colors.pageText.alpha));
       target.style.setProperty('--overlay-bg', hexToRgba(pageCustomizeState.colors.overlayTopBarBg.hex, pageCustomizeState.colors.overlayTopBarBg.alpha));

@@ -32,13 +32,13 @@ jobs:
       - name: Commit updated feed-videos.json
         shell: bash
         run: |
-          if git diff --quiet -- pages/feeds/feed-videos.json; then
+          if git diff --quiet -- dead/pages/feeds/feed-videos.json; then
             echo "feed-videos.json is already up to date."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pages/feeds/feed-videos.json
+          git add dead/pages/feeds/feed-videos.json
           git commit -m "Update feed-videos.json"
           git push

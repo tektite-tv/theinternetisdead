@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="/dead/media/images/pngs/dead-favicon.png" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>/dead/experiments/experiments.html</title>
+<style>
+:root{
+  --page-bg:#000;
+  --panel-bg:#4b0076;
+  --text:#00ff00;
+  --accent:#00ff00;
+  --hover-bg:#001a00;
+  --font:"Courier New", monospace;
+}
+
+*{box-sizing:border-box;}
+html,body{
+  margin:0;
+  background:var(--page-bg);
+  color:var(--text);
+  font-family:var(--font);
+}
+
+body{
+  padding:20px;
+}
+
+.header{
+  margin-bottom:20px;
+}
+
+.title{
+  font-size:28px;
+  font-weight:bold;
+  margin:0 0 8px 0;
+}
+
+.subtitle{
+  margin:0;
+  opacity:.8;
+}
+
+.controls{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:18px 0 24px;
+}
+
+#searchInput{
+  width:260px;
+  max-width:100%;
+  height:40px;
+  padding:0 12px;
+  border:2px solid var(--accent);
+  background:var(--panel-bg);
+  color:var(--text);
+  font-family:var(--font);
+}
+
+#searchInput::placeholder{
+  color:var(--text);
+  opacity:1;
+}
+
+button{
+  height:40px;
+  padding:0 16px;
+  border:2px solid var(--accent);
+  background:var(--panel-bg);
+  color:var(--text);
+  font-family:var(--font);
+  cursor:pointer;
+}
+
+button:hover,
+a.post:hover{
+  background:var(--hover-bg);
+}
+
+#links{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:20px;
+}
+
+#links.list-view{
+  display:block;
+}
+
+a.post{
+  display:block;
+  color:var(--text);
+  text-decoration:none;
+  border:2px solid var(--accent);
+  background:var(--panel-bg);
+  padding:10px;
+}
+
+.grid-view .post .thumb{
+  aspect-ratio:16/9;
+  margin-bottom:10px;
+}
+
+.list-view .post{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:16px;
+}
+
+.list-view .post .thumb{
+  width:160px;
+  flex:0 0 160px;
+}
+
+.thumb{
+  border:2px solid var(--accent);
+  overflow:hidden;
+  background:var(--panel-bg);
+}
+
+.thumb img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+}
+
+.post-title{
+  font-size:16px;
+  font-weight:bold;
+  margin-bottom:6px;
+}
+
+.post-desc{
+  font-size:13px;
+  opacity:.8;
+  line-height:1.35;
+}
+
+.edit-note{
+  margin-top:28px;
+  border:2px solid var(--accent);
+  background:var(--panel-bg);
+  padding:14px;
+  font-size:14px;
+  line-height:1.45;
+}
+
+code{
+  color:var(--text);
+}
+
+@media (max-width: 768px){
+  body{padding:12px;}
+  .title{font-size:22px;}
+  #links,
+  #links.grid-view{
+    grid-template-columns:1fr;
+  }
+  .list-view .post{
+    display:block;
+  }
+  .list-view .post .thumb{
+    width:100%;
+    margin-bottom:10px;
+  }
+  #searchInput{
+    width:100%;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 class="title">Web Experiments by @Honestly_Thomas (Tektite)</h1>
+  <p class="subtitle">Weird ideas I vibe-coded into reality with ChatGPT.</p>
+</div>
+
+<div class="controls">
+  <input id="searchInput" type="text" placeholder="Search links...">
+  <button id="gridBtn" type="button">GRID</button>
+  <button id="listBtn" type="button">LIST</button>
+</div>
+
+<div id="links" class="grid-view"></div>
+
+<div class="edit-note">
+  All experiments painstakingly hand vibe-coded in ChatGPT by Thomas Harrison aka @Honestly_Thomas (Tektite) / Copyright 2026 / theinternetisdead.org
+</div>
+
+<script>
+const linksData = [
+  {
+    title: "Chat Sandbox",
+    description: "A Minecraft-esque chat/command messaging system for interacting with my site.",
+    url: "/dead/experiments/chat-sandbox",
+    image: "/dead/media/images/link-thumbnails/chat-sandbox.png"
+  },
+  {
+    title: "God's Eye Art",
+    description: "I made this recursive art in photoshop when I was 20 years old and I named it gods-eye.png and apparently turned it into a website using math.",
+    url: "/dead/experiments/gods-eye",
+    image: "/dead/media/images/link-thumbnails/gods-eye-art.png"
+  },
+  {
+    title: "Multimedia Editor",
+    description: "Edit images with my weird tool or use the camera if you dare!",
+    url: "/dead/experiments/multimedia-editor",
+    image: "/dead/media/images/link-thumbnails/multimedia-editor.png"
+  },
+  {
+    title: "Music Player",
+    description: "Who needs iTunes, VLC, or WinAMP, when we have HTML/CSS and Javascript and AI to vibecode any design you want?",
+    url: "/dead/experiments/music-player",
+    image: "/dead/media/images/link-thumbnails/music-player.png"
+  },
+  {
+    title: "Photosphere Planet View",
+    description: "Wrap an image around the planet/skybox to create some really trippy effects man.",
+    url: "/dead/experiments/photosphere",
+    image: "/dead/media/images/link-thumbnails/photosphere.png"
+  },
+  {
+    title: "Sound Machine",
+    description: "Make crazy sounding noises with a cool waveform visualizer I made just for you!",
+    url: "/dead/experiments/sound-machine",
+    image: "/dead/media/images/link-thumbnails/sound-machine.png"
+  },
+  {
+    title: "Rainbow Test Background",
+    description: "A trippy rainbow background I made to look like a Mario 2 SNES waterfall.",
+    url: "/dead/experiments/test",
+    image: "/dead/media/images/link-thumbnails/rainbow-test.png"
+  }
+];
+
+const linksEl = document.getElementById('links');
+const searchInput = document.getElementById('searchInput');
+const gridBtn = document.getElementById('gridBtn');
+const listBtn = document.getElementById('listBtn');
+
+let currentView = 'grid';
+let filteredLinks = [...linksData];
+
+function renderLinks(){
+  linksEl.className = currentView === 'grid' ? 'grid-view' : 'list-view';
+  linksEl.innerHTML = filteredLinks.map(link => `
+    <a class="post" href="${link.url}" target="_blank" rel="noopener noreferrer">
+      <div class="thumb"><img src="${link.image}" alt="${link.title}"></div>
+      <div class="post-copy">
+        <div class="post-title">${link.title}</div>
+        <div class="post-desc">${link.description || ''}</div>
+      </div>
+    </a>
+  `).join('');
+}
+
+function applySearch(){
+  const q = searchInput.value.trim().toLowerCase();
+  filteredLinks = !q
+    ? [...linksData]
+    : linksData.filter(link =>
+        `${link.title} ${link.description} ${link.url}`.toLowerCase().includes(q)
+      );
+  renderLinks();
+}
+
+gridBtn.addEventListener('click', () => {
+  currentView = 'grid';
+  renderLinks();
+});
+
+listBtn.addEventListener('click', () => {
+  currentView = 'list';
+  renderLinks();
+});
+
+searchInput.addEventListener('input', applySearch);
+
+renderLinks();
+</script>
+
+</body>
+</html>
