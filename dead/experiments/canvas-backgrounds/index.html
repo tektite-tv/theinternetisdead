@@ -39,6 +39,10 @@
       pointer-events: none;
     }
 
+    #background-frame.is-interactive {
+      pointer-events: auto;
+    }
+
     #info-panel {
       position: fixed;
       left: 1rem;
@@ -116,6 +120,7 @@
       const frame = document.getElementById('background-frame');
       const title = document.getElementById('background-title');
       const counter = document.getElementById('counter');
+      const hint = document.getElementById('hint');
       const emptyState = document.getElementById('empty-state');
       const infoPanel = document.getElementById('info-panel');
 
@@ -133,7 +138,8 @@
         const file = entry.file || entry.path || '';
         return {
           title: entry.title || file.replace(/^\.\//, '').replace(/\.html$/i, '').replace(/[-_]/g, ' '),
-          path: entry.path || `./${file}`
+          path: entry.path || `./${file}`,
+          interactive: Boolean(entry.interactive)
         };
       }
 
@@ -144,8 +150,12 @@
         const background = backgrounds[currentIndex];
 
         frame.src = background.path;
+        frame.classList.toggle('is-interactive', Boolean(background.interactive));
         title.textContent = background.title || background.path;
         counter.textContent = `${currentIndex + 1} / ${backgrounds.length}`;
+        hint.textContent = background.interactive
+          ? 'Move/click to interact. Click this panel or use arrow keys to switch.'
+          : 'Click anywhere to switch backgrounds.';
       }
 
       function nextBackground() {
