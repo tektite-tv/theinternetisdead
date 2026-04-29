@@ -451,6 +451,19 @@ html, body {
     font-size: calc(20px * var(--overlay-font-scale, 1)) !important;
   }
 
+  /* MODIFIED: on mobile, keep the clock only inside the slide-out sidebar.
+     The main overlay topbar should show hamburger + logo only. */
+  #overlay-root > .topbar > .clock {
+    display: none;
+  }
+
+  /* MODIFIED: remove the now-hidden clock row from the main mobile topbar.
+     Sidebar keeps its taller topbar below through the existing sidebar-specific rule. */
+  #overlay-root > .topbar {
+    height: 76px;
+    align-content: center;
+  }
+
   #overlay-root .sidebar {
     left: -100vw;
     width: 100vw;
@@ -935,7 +948,7 @@ html, body {
 
   window.addEventListener('resize', () => {
     refreshOverlayLogoHoverTint();
-    updateTorontoClock();
+    updateOverlayClock();
     syncTopLinkVisibility();
   });
 
