@@ -387,6 +387,12 @@ html, body {
   padding: 0 20px 20px;
 }
 
+/* MODIFIED: the sidebar clock should not appear on desktop/tablet widths.
+   Mobile re-enables this exact clock inside the slide-out sidebar below. */
+#overlay-root .sidebar > .topbar > .clock {
+  display: none;
+}
+
 @media (max-width: 768px) {
   #overlay-root .topbar {
     height: 112px;
@@ -493,6 +499,7 @@ html, body {
   }
 
   #overlay-root .sidebar .clock {
+    display: flex;
     flex: 0 0 100%;
     justify-content: center;
     min-width: 0;
