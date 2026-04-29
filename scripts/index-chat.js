@@ -66,6 +66,18 @@
             execute: false,
             suggestions: gotoSuggestions,
             replaceBuiltIn: true
+          },
+          {
+            name: '/games',
+            usage: '/games',
+            desc: 'go to the games page',
+            execute: true
+          },
+          {
+            name: '/experiments',
+            usage: '/experiments',
+            desc: 'go to the experiments page',
+            execute: true
           }
         ]
       };
@@ -150,6 +162,16 @@
           message: enabled ? '/color_element click mode enabled' : '/color_element click mode disabled',
           announce: false
         });
+        return true;
+      }
+
+      if (commandName === '/games') {
+        window.location.href = '/dead/games/';
+        return true;
+      }
+
+      if (commandName === '/experiments') {
+        window.location.href = '/dead/experiments/';
         return true;
       }
 
