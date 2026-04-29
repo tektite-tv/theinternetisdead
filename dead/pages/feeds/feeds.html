@@ -21,6 +21,9 @@
 --thumbnail-filter: rgba(0, 255, 0, 0);
 --page-font-family:"Courier New", monospace;
 --page-font-scale:1;
+--feed-grid-gap:20px;
+--feed-posts-x:20px;
+--feed-control-button-size:var(--header-control-height);
 }
 html,body{
 overflow-x:hidden;
@@ -41,15 +44,22 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;}
 
 header{
 display:flex;
-align-items:center;
+align-items:stretch;
 justify-content:space-between;
+gap:var(--feed-grid-gap);
 padding:13px 20px 16px;
 background:var(--header-bg);
 position:relative;
 z-index:20;
 }
 
-.channelHeader{display:flex;align-items:center;gap:18px;}
+.channelHeader{
+display:flex;
+align-items:stretch;
+gap:6px;
+width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+min-width:0;
+}
 .channelHeader a{
 display:flex;
 align-items:center;
@@ -64,11 +74,31 @@ justify-content:center;
 isolation:isolate;
 background:#000;
 border:1px solid var(--accent-color);
-height:var(--header-control-height);
+min-height:var(--header-control-height);
 box-sizing:border-box;
 padding:4px 8px;
+flex:1 1 112px;
+min-width:82px;
+gap:0;
 }
-.channelLogo{height:100%;width:auto;display:block;}
+.channelLogoPrompt{
+font-size:clamp(12px, calc(0.86vw * var(--page-font-scale)), 20px);
+font-weight:bold;
+line-height:1;
+white-space:nowrap;
+flex:0 0 auto;
+}
+.channelLogoImageWrap{
+position:relative;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+height:auto;
+max-width:100%;
+flex:0.82 1 auto;
+min-width:0;
+}
+.channelLogo{height:auto;width:100%;max-width:100%;display:block;object-fit:contain;}
 .channelLogoTintLayer,
 .thumbTintLayer{
 position:absolute;
@@ -94,41 +124,60 @@ background:var(--thumbnail-filter);
 mask-size:cover;
 }
 .channelTitle{
-font-size:calc(21px * var(--page-font-scale));
+font-size:calc(11px * var(--page-font-scale));
 font-weight:bold;
 display:flex;
-align-items:center;
-gap:12px;
-flex-wrap:wrap;
+align-items:stretch;
+gap:6px;
+flex-wrap:nowrap;
+min-width:0;
+flex:0 0 auto;
 }
 .channelHandleLink{
 display:inline-flex !important;
 align-items:center;
-gap:8px;
+gap:5px;
+justify-content:flex-end;
 color:inherit;
 text-decoration:none;
 line-height:1;
 background:#000;
 border:1px solid var(--accent-color);
-height:var(--header-control-height);
+min-height:var(--header-control-height);
 box-sizing:border-box;
-padding:0 10px;
+padding:0 6px;
+min-width:0;
+flex:0 0 auto;
+overflow:visible;
+}
+.channelHandleLink span{
+min-width:0;
+flex:0 0 auto;
+overflow:visible;
+text-overflow:clip;
+white-space:nowrap;
+text-align:right;
 }
 .channelHandleAvatar{
-width:28px;
-height:28px;
+width:20px;
+height:20px;
 border-radius:50%;
 object-fit:cover;
 display:block;
 border:1px solid var(--accent-color);
-}
-.channelHandleSeparator{
-display:inline-flex;
-align-items:center;
-line-height:1;
+flex:0 0 20px;
 }
 
-.controls{display:flex;align-items:center;gap:12px;position:relative;z-index:21;}
+.controls{
+display:flex;
+align-items:stretch;
+align-self:stretch;
+gap:6px;
+position:relative;
+z-index:21;
+width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+min-width:0;
+}
 
 @keyframes overlay-ui-hueshift {
 from { filter: hue-rotate(0deg); }
@@ -151,13 +200,19 @@ padding:6px 10px;
 }
 
 #videoSearch{
-width:220px;height:var(--header-control-height);
+width:auto;
+height:auto;
+min-height:var(--header-control-height);
 border:1px solid var(--accent-color);
 background:#000;
 color:var(--page-text);
-padding:0 12px;
+padding:0 8px;
 font-family:var(--page-font-family);
 font-weight:700;
+font-size:calc(14px * var(--page-font-scale));
+box-sizing:border-box;
+min-width:0;
+flex:1 1 0;
 }
 
 #videoSearch::placeholder{
@@ -172,18 +227,37 @@ outline:none;
 }
 
 button{
-height:var(--header-control-height);padding:0 16px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+align-self:stretch;
+height:auto;
+min-height:var(--header-control-height);
+padding:0;
 border:1px solid var(--accent-color);
 background:#000;color:var(--page-text);
 cursor:pointer;
 font-family:var(--page-font-family);
 font-weight:700;
+font-size:calc(12px * var(--page-font-scale));
+box-sizing:border-box;
+min-width:0;
+flex:0 0 auto;
+width:var(--feed-control-button-size);
+aspect-ratio:1;
 }
 
 button:hover,
 button:focus-visible{
 animation: overlay-ui-hueshift 1.8s linear infinite;
 outline:none;
+}
+
+#gridBtn,
+#modeBtn{
+aspect-ratio:auto;
+padding:0 10px;
+width:var(--feed-wide-control-button-size, auto);
 }
 
 #gridMenu{
@@ -258,6 +332,18 @@ isolation:isolate;
 
 .post-title{font-size:calc(17px * var(--page-font-scale));font-weight:700;line-height:1.25;}
 .post-date{font-size:calc(13px * var(--page-font-scale));font-weight:700;opacity:.82;line-height:1.3;}
+
+.post-link{
+display:block;
+color:inherit;
+text-decoration:none;
+}
+
+.post-link:hover,
+.post-link:focus-visible{
+animation: overlay-ui-hueshift 1.8s linear infinite;
+outline:none;
+}
 
 #loadMore{
 display:block;
@@ -396,6 +482,11 @@ cursor:pointer;
 
 
 @media (max-width: 768px){
+:root{
+--feed-grid-gap:14px;
+--feed-posts-x:8px;
+}
+
 header{
 padding:16px 12px 15px;
 flex-direction:column;
@@ -407,7 +498,7 @@ gap:10px;
 display:flex;
 gap:10px;
 flex-wrap:nowrap;
-align-items:center;
+align-items:stretch;
 width:100%;
 min-width:0;
 }
@@ -417,69 +508,64 @@ min-width:0;
 }
 
 .channelHeader .logoLink{
-height:var(--header-control-height);
-padding:4px 10px;
-flex:0 0 auto;
+padding:4px 6px;
+flex:1 1 112px;
 align-self:stretch;
-aspect-ratio:267 / 100;
 width:auto;
+min-width:82px;
 }
 
 .channelLogo{
-height:100%;
-width:auto;
-max-height:100%;
-max-width:none;
+height:auto;
+width:100%;
+max-width:100%;
 object-fit:contain;
-flex:0 0 auto;
+flex:0 1 auto;
 }
 
 .channelTitle{
-font-size:calc(15px * var(--page-font-scale));
+font-size:calc(11px * var(--page-font-scale));
 line-height:1;
 white-space:nowrap;
-overflow:hidden;
+overflow:visible;
 text-overflow:clip;
 text-align:left;
 min-width:0;
-flex:1 1 auto;
-gap:8px;
+flex:0 0 auto;
+gap:6px;
 flex-wrap:nowrap;
+align-items:stretch;
 }
 
 .channelHandleLink{
 min-width:0;
-flex:1 1 0;
-padding:0 8px;
-font-size:calc(12px * var(--page-font-scale));
-justify-content:center;
-text-align:center;
+flex:0 0 auto;
+padding:0 6px;
+font-size:calc(11px * var(--page-font-scale));
+justify-content:flex-end;
+text-align:right;
 }
 
 .channelHandleLink span{
 min-width:0;
-overflow:hidden;
-text-overflow:ellipsis;
+overflow:visible;
+text-overflow:clip;
 white-space:nowrap;
-text-align:center;
+text-align:right;
 }
 
 .channelHandleAvatar{
-width:24px;
-height:24px;
-flex:0 0 24px;
-}
-
-.channelHandleSeparator{
-flex:0 0 auto;
-font-size:calc(16px * var(--page-font-scale));
+width:20px;
+height:20px;
+flex:0 0 20px;
 }
 
 .controls{
 width:100%;
 display:flex;
-align-items:center;
-gap:8px;
+align-items:stretch;
+align-self:stretch;
+gap:6px;
 flex-wrap:nowrap;
 }
 
@@ -487,22 +573,32 @@ flex-wrap:nowrap;
 width:auto;
 flex:1 1 auto;
 min-width:0;
-height:46px;
+height:auto;
+min-height:46px;
 box-sizing:border-box;
-font-size:calc(16px * var(--page-font-scale));
+font-size:calc(14px * var(--page-font-scale));
 }
 
-#listBtn,
 #gridBtn,
 #modeBtn{
 display:inline-flex !important;
 align-items:center;
 justify-content:center;
-height:46px;
-padding:0 10px;
+height:auto;
+min-height:46px;
+padding:0;
 font-size:calc(12px * var(--page-font-scale));
 white-space:nowrap;
 flex:0 0 auto;
+width:var(--feed-control-button-size);
+aspect-ratio:1;
+}
+
+#gridBtn,
+#modeBtn{
+aspect-ratio:auto;
+padding:0 10px;
+width:var(--feed-wide-control-button-size, auto);
 }
 
 #gridMenu{
@@ -558,15 +654,17 @@ width:92vw;
 
 <div class="channelHeader">
 <a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="logoLink" id="channelHomeLink">
+<span class="channelLogoPrompt">Sub to me on&nbsp;</span>
+<span class="channelLogoImageWrap">
 <img src="/dead/media/images/pngs/oldtube.png" class="channelLogo" alt="Channel feed logo">
 <span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/dead/media/images/pngs/oldtube.png');"></span>
+</span>
 </a>
-<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/media/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><span class="channelHandleSeparator">+</span><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/media/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
+<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/media/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/media/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
 </div>
 
 <div class="controls">
 <input id="videoSearch" placeholder="Search Feed...">
-<button id="listBtn">LIST</button>
 <button id="gridBtn">GRID</button>
 <button id="modeBtn" disabled>VIEWS ↓</button>
 
@@ -634,6 +732,7 @@ const searchInput=document.getElementById("videoSearch");
 const loadBtn=document.getElementById("loadMore");
 const gridMenu=document.getElementById("gridMenu");
 const gridBtn=document.getElementById("gridBtn");
+const controlsEl=document.querySelector(".controls");
 const channelHomeLink=document.getElementById("channelHomeLink");
 const channelTitleEl=document.getElementById("channelTitle");
 
@@ -667,15 +766,17 @@ const img = link.querySelector('.channelLogo');
 const layer = link.querySelector('.channelLogoTintLayer');
 if(img){
 img.src = logoSrc;
-img.style.objectFit = 'fill';
+img.style.objectFit = 'contain';
+img.addEventListener('load', syncControlButtonSize, { once: true });
 }
 if(layer){
 const safeUrl = String(logoSrc).replace(/'/g, "\'");
 layer.style.setProperty('--tint-mask', `url('${safeUrl}')`);
-layer.style.webkitMaskSize = '100% 100%';
-layer.style.maskSize = '100% 100%';
+layer.style.webkitMaskSize = 'contain';
+layer.style.maskSize = 'contain';
 }
 });
+syncControlButtonSize();
 }
 
 function stopChannelLogoHoverCycle(resetToPrimary = true){
@@ -1003,10 +1104,43 @@ modeBtn.textContent = "VIEWS \u2191";
 modeBtn.title = "Sorting lowest views to highest";
 }
 modeBtn.setAttribute("aria-label", modeBtn.title);
+syncWideControlButtonSize();
+}
+
+function updateViewButton(){
+gridBtn.textContent = view === "grid" ? "GRID" : "LIST";
+gridBtn.title = view === "grid" ? "Current view: grid" : "Current view: list";
+gridBtn.setAttribute("aria-label", gridBtn.title);
+syncWideControlButtonSize();
 }
 
 function applyFeedMetadata(data){
-channelTitleEl.innerHTML = `<a href="${HONESTLY_THOMAS_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${HONESTLY_THOMAS_AVATAR}" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><span class="channelHandleSeparator">+</span><a href="${CRYPTID_MEMES_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${CRYPTID_MEMES_AVATAR}" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a>`;
+channelTitleEl.innerHTML = `<a href="${HONESTLY_THOMAS_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${HONESTLY_THOMAS_AVATAR}" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="${CRYPTID_MEMES_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${CRYPTID_MEMES_AVATAR}" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a>`;
+syncControlButtonSize();
+}
+
+function syncControlButtonSize(){
+if(!controlsEl) return;
+window.requestAnimationFrame(()=>{
+const height = Math.round(controlsEl.getBoundingClientRect().height);
+if(height > 0){
+document.documentElement.style.setProperty("--feed-control-button-size", `${height}px`);
+}
+syncWideControlButtonSize();
+});
+}
+
+function syncWideControlButtonSize(){
+if(!gridBtn || !modeBtn) return;
+window.requestAnimationFrame(()=>{
+const previousWidth = modeBtn.style.width;
+modeBtn.style.width = "auto";
+const width = Math.ceil(modeBtn.getBoundingClientRect().width);
+modeBtn.style.width = previousWidth;
+if(width > 0){
+document.documentElement.style.setProperty("--feed-wide-control-button-size", `${width}px`);
+}
+});
 }
 
 async function fetchJson(path){
@@ -1192,6 +1326,7 @@ document.getElementById("closeVideo").onclick = closeVideo;
 
 function render(){
 updateTintFilters();
+updateViewButton();
 postsEl.className=view;
 postsEl.style.gridTemplateColumns=isMobile() ? "1fr" : "repeat("+gridSize+",1fr)";
 
@@ -1206,30 +1341,40 @@ el.className="post";
 
 if(view==="grid"){
 el.innerHTML=`
+<a class="post-link" href="https://youtube.com/watch?v=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer">
 <div class="thumb-grid">
 <img alt="${escapeHtml(p.title)} thumbnail">
 <span class="thumbTintLayer" aria-hidden="true"></span>
 </div>
 <div class="post-title">${escapeHtml(p.title)}</div>
-<div class="post-date">${escapeHtml(buildPostMeta(p))}</div>`;
+<div class="post-date">${escapeHtml(buildPostMeta(p))}</div>
+</a>`;
 
-el.onclick=()=>openVideo(p);
+el.querySelector(".post-link").onclick=(event)=>{
+event.preventDefault();
+openVideo(p);
+};
 }
 else{
 el.innerHTML=`
+<a class="post-link" href="https://youtube.com/watch?v=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer">
 <div class="thumb-list">
 <img alt="${escapeHtml(p.title)} thumbnail">
 <span class="thumbTintLayer" aria-hidden="true"></span>
 </div>
+</a>
 <div>
-<div class="post-title">${escapeHtml(p.title)}</div>
-<div class="post-date">${escapeHtml(buildPostMeta(p))}</div>
+<a class="post-link post-title" href="https://youtube.com/watch?v=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer">${escapeHtml(p.title)}</a>
+<a class="post-link post-date" href="https://youtube.com/watch?v=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer">${escapeHtml(buildPostMeta(p))}</a>
 
 </div>`;
 
-el.querySelector("img").onclick=()=>openVideo(p);
-el.querySelector(".post-title").onclick=()=>openVideo(p);
-el.querySelector(".post-date").onclick=()=>openVideo(p);
+el.querySelectorAll(".post-link").forEach((link)=>{
+link.onclick=(event)=>{
+event.preventDefault();
+openVideo(p);
+};
+});
 }
 
 attachThumbnailFallback(p, el);
@@ -1241,23 +1386,17 @@ if(visible>=filtered.length) loadBtn.style.display="none";
 else loadBtn.style.display="block";
 }
 
-document.getElementById("listBtn").onclick=()=>{
+gridBtn.onclick=()=>{
+gridMenu.style.display="none";
+if(view==="grid"){
 view="list";
 visible=3;
-gridMenu.style.display="none";
-render();
-}
-
-gridBtn.onclick=()=>{
-if(view!=="grid"){
+}else{
 view="grid";
 gridPageCount=1;
 syncGridPaging();
-render();
-}else{
-gridMenu.style.display =
-gridMenu.style.display==="block" ? "none" : "block";
 }
+render();
 }
 
 loadBtn.onclick=()=>{
@@ -1454,6 +1593,7 @@ window.addEventListener("resize",()=>{
 if(view==="grid"){
 syncGridPaging();
 }
+syncControlButtonSize();
 render();
 });
 
@@ -1513,6 +1653,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   applyChannelLogoAsset(getPrimaryChannelLogoUrl());
   bindChannelLogoHoverCycle();
   updateTintFilters();
+  syncControlButtonSize();
   loadPosts().then(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedId = params.get("v");
