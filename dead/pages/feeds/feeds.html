@@ -22,6 +22,7 @@
 --page-font-family:"Courier New", monospace;
 --page-font-scale:1;
 --feed-grid-gap:20px;
+--feed-header-row-gap:var(--feed-grid-gap);
 --feed-posts-x:20px;
 --feed-control-button-size:var(--header-control-height);
 }
@@ -45,9 +46,9 @@ html::-webkit-scrollbar,body::-webkit-scrollbar{display:none;}
 header{
 display:flex;
 align-items:stretch;
-justify-content:space-between;
-gap:var(--feed-grid-gap);
-padding:13px 20px 16px;
+justify-content:center;
+gap:var(--feed-header-row-gap) var(--feed-grid-gap);
+padding:13px 20px var(--feed-header-row-gap);
 background:var(--header-bg);
 position:relative;
 z-index:20;
@@ -179,6 +180,24 @@ width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3)
 min-width:0;
 }
 
+.sortStatePanel{
+display:flex;
+align-items:center;
+justify-content:center;
+width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+min-width:0;
+min-height:var(--header-control-height);
+box-sizing:border-box;
+padding:0 10px;
+background:#000;
+border:1px solid var(--accent-color);
+color:var(--page-text);
+font-size:calc(21px * var(--page-font-scale));
+font-weight:700;
+line-height:1.15;
+text-align:center;
+}
+
 @keyframes overlay-ui-hueshift {
 from { filter: hue-rotate(0deg); }
 to { filter: hue-rotate(360deg); }
@@ -257,7 +276,7 @@ outline:none;
 #modeBtn{
 aspect-ratio:auto;
 padding:0 10px;
-width:var(--feed-wide-control-button-size, auto);
+width:calc((var(--feed-sort-buttons-width, calc((2 * var(--feed-control-button-size)) + 6px)) - 6px) / 2);
 }
 
 #gridMenu{
@@ -294,7 +313,66 @@ padding:0 12px;
 font-family:var(--page-font-family);
 }
 
-#posts{padding:20px;}
+#posts{
+padding:var(--feed-header-row-gap) 20px 20px;
+position:relative;
+isolation:isolate;
+}
+
+#posts.feed-sort-transition{
+animation: feed-sort-rgb-fade 1s steps(12,end);
+}
+
+#posts.feed-sort-transition::before,
+#posts.feed-sort-transition::after{
+content:"";
+position:absolute;
+inset:20px;
+pointer-events:none;
+z-index:5;
+opacity:0;
+mix-blend-mode:screen;
+}
+
+#posts.feed-sort-transition::before{
+background:
+linear-gradient(rgba(255,0,80,.24), rgba(255,0,80,.24)),
+repeating-linear-gradient(0deg, rgba(255,255,255,.2) 0 1px, transparent 1px 5px);
+animation: feed-sort-rgb-red 1s steps(10,end);
+}
+
+#posts.feed-sort-transition::after{
+background:
+linear-gradient(rgba(0,170,255,.24), rgba(0,170,255,.24)),
+repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,255,90,.18) 2px 4px);
+animation: feed-sort-rgb-cyan 1s steps(10,end);
+}
+
+@keyframes feed-sort-rgb-fade{
+0%{opacity:1;filter:none;transform:translate(0,0);}
+18%{opacity:.82;filter:contrast(1.35) saturate(1.8);transform:translate(-2px,1px);}
+36%{opacity:.45;filter:contrast(1.8) saturate(2.6) hue-rotate(12deg);transform:translate(3px,-1px);}
+50%{opacity:.14;filter:contrast(2.1) saturate(3);transform:translate(-4px,0);}
+66%{opacity:.5;filter:contrast(1.7) saturate(2.3) hue-rotate(-10deg);transform:translate(2px,1px);}
+84%{opacity:.9;filter:contrast(1.2) saturate(1.4);transform:translate(-1px,0);}
+100%{opacity:1;filter:none;transform:translate(0,0);}
+}
+
+@keyframes feed-sort-rgb-red{
+0%,100%{opacity:0;transform:translateX(0);}
+12%{opacity:.55;transform:translateX(-6px);}
+34%{opacity:.75;transform:translateX(8px);}
+52%{opacity:.9;transform:translateX(-10px);}
+74%{opacity:.45;transform:translateX(5px);}
+}
+
+@keyframes feed-sort-rgb-cyan{
+0%,100%{opacity:0;transform:translateX(0);}
+10%{opacity:.45;transform:translateX(7px);}
+30%{opacity:.7;transform:translateX(-9px);}
+50%{opacity:.9;transform:translateX(10px);}
+76%{opacity:.5;transform:translateX(-4px);}
+}
 
 .grid{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);gap:20px;}
 
@@ -484,14 +562,15 @@ cursor:pointer;
 @media (max-width: 768px){
 :root{
 --feed-grid-gap:14px;
+--feed-header-row-gap:10px;
 --feed-posts-x:8px;
 }
 
 header{
-padding:16px 12px 15px;
+padding:16px 12px var(--feed-header-row-gap);
 flex-direction:column;
 align-items:stretch;
-gap:10px;
+gap:var(--feed-header-row-gap);
 }
 
 .channelHeader{
@@ -569,6 +648,13 @@ gap:6px;
 flex-wrap:nowrap;
 }
 
+.sortStatePanel{
+width:100%;
+min-height:46px;
+font-size:calc(19.5px * var(--page-font-scale));
+padding:0 8px;
+}
+
 #videoSearch{
 width:auto;
 flex:1 1 auto;
@@ -598,7 +684,7 @@ aspect-ratio:1;
 #modeBtn{
 aspect-ratio:auto;
 padding:0 10px;
-width:var(--feed-wide-control-button-size, auto);
+width:calc((var(--feed-sort-buttons-width, calc((2 * var(--feed-control-button-size)) + 6px)) - 6px) / 2);
 }
 
 #gridMenu{
@@ -606,7 +692,7 @@ display:none !important;
 }
 
 #posts{
-padding:12px 8px 20px;
+padding:var(--feed-header-row-gap) 8px 20px;
 }
 
 .grid{
@@ -663,10 +749,12 @@ width:92vw;
 <div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
 </div>
 
+<div class="sortStatePanel" id="sortStatePanel">Watch My Most Viewed Videos</div>
+
 <div class="controls">
 <input id="videoSearch" placeholder="Search Feed...">
-<button id="gridBtn">GRID</button>
-<button id="modeBtn" disabled>VIEWS ↓</button>
+<button id="gridBtn">View</button>
+<button id="modeBtn" disabled>Sort</button>
 
 <div id="gridMenu">
 
@@ -717,10 +805,17 @@ let filtered=[];
 let view="grid";
 const sortModes=["newest","oldest","most-viewed","least-viewed"];
 let sortModeIndex=2;
+let sortCycleIntervalId=null;
+let sortTransitionTimeoutId=null;
+let sortTransitionRenderTimeoutId=null;
+let sortIdleTimeoutId=null;
 
 let gridSize=3;
 let gridPageCount=1;
 let visible=9;
+const SORT_CYCLE_INTERVAL_MS=5000;
+const SORT_TRANSITION_MS=1000;
+const SORT_IDLE_RESUME_MS=10000;
 
 function isMobile(){
 return window.matchMedia("(max-width: 768px)").matches;
@@ -735,6 +830,7 @@ const gridBtn=document.getElementById("gridBtn");
 const controlsEl=document.querySelector(".controls");
 const channelHomeLink=document.getElementById("channelHomeLink");
 const channelTitleEl=document.getElementById("channelTitle");
+const sortStatePanel=document.getElementById("sortStatePanel");
 
 const gridPageSelect=document.getElementById("gridPageSelect");
 
@@ -1091,27 +1187,28 @@ filtered = getFilteredPosts(searchInput.value);
 function updateSortButton(){
 const sortMode = sortModes[sortModeIndex];
 if(sortMode === "newest"){
-modeBtn.textContent = "NEWEST \u2193";
 modeBtn.title = "Sorting newest to oldest";
+sortStatePanel.textContent = "Watch My Newest Videos";
 }else if(sortMode === "oldest"){
-modeBtn.textContent = "OLDEST \u2191";
 modeBtn.title = "Sorting oldest to newest";
+sortStatePanel.textContent = "Watch My Oldest Videos";
 }else if(sortMode === "most-viewed"){
-modeBtn.textContent = "VIEWS \u2193";
 modeBtn.title = "Sorting highest views to lowest";
+sortStatePanel.textContent = "Watch My Most Viewed Videos";
 }else{
-modeBtn.textContent = "VIEWS \u2191";
 modeBtn.title = "Sorting lowest views to highest";
+sortStatePanel.textContent = "Watch My Least Viewed Videos";
 }
+modeBtn.textContent = "Sort";
 modeBtn.setAttribute("aria-label", modeBtn.title);
-syncWideControlButtonSize();
+syncSortButtonGroupWidth();
 }
 
 function updateViewButton(){
-gridBtn.textContent = view === "grid" ? "GRID" : "LIST";
+gridBtn.textContent = "View";
 gridBtn.title = view === "grid" ? "Current view: grid" : "Current view: list";
 gridBtn.setAttribute("aria-label", gridBtn.title);
-syncWideControlButtonSize();
+syncSortButtonGroupWidth();
 }
 
 function applyFeedMetadata(data){
@@ -1126,19 +1223,17 @@ const height = Math.round(controlsEl.getBoundingClientRect().height);
 if(height > 0){
 document.documentElement.style.setProperty("--feed-control-button-size", `${height}px`);
 }
-syncWideControlButtonSize();
+syncSortButtonGroupWidth();
 });
 }
 
-function syncWideControlButtonSize(){
+function syncSortButtonGroupWidth(){
 if(!gridBtn || !modeBtn) return;
 window.requestAnimationFrame(()=>{
-const previousWidth = modeBtn.style.width;
-modeBtn.style.width = "auto";
-const width = Math.ceil(modeBtn.getBoundingClientRect().width);
-modeBtn.style.width = previousWidth;
+const cryptidLink = channelTitleEl.querySelector(".channelHandleLink:last-child");
+const width = cryptidLink ? Math.ceil(cryptidLink.getBoundingClientRect().width) : 0;
 if(width > 0){
-document.documentElement.style.setProperty("--feed-wide-control-button-size", `${width}px`);
+document.documentElement.style.setProperty("--feed-sort-buttons-width", `${width}px`);
 }
 });
 }
@@ -1254,6 +1349,7 @@ modeBtn.disabled=false;
 updateSortButton();
 syncGridPaging();
 render();
+startSortCycle();
 
 }catch(e){
 
@@ -1328,6 +1424,9 @@ function render(){
 updateTintFilters();
 updateViewButton();
 postsEl.className=view;
+if(postsEl.dataset.sortTransition === "true"){
+postsEl.classList.add("feed-sort-transition");
+}
 postsEl.style.gridTemplateColumns=isMobile() ? "1fr" : "repeat("+gridSize+",1fr)";
 
 postsEl.innerHTML="";
@@ -1432,14 +1531,78 @@ return a;
 }
 
 modeBtn.onclick=()=>{
+pauseSortCycleForUser();
+cycleSortMode(true);
+}
 
-if(!posts.length) return;
+function stopSortCycle(){
+if(sortCycleIntervalId !== null){
+window.clearInterval(sortCycleIntervalId);
+sortCycleIntervalId=null;
+}
+}
 
+function pauseSortCycleForUser(){
+stopSortCycle();
+if(sortIdleTimeoutId !== null){
+window.clearTimeout(sortIdleTimeoutId);
+}
+sortIdleTimeoutId=window.setTimeout(()=>{
+sortIdleTimeoutId=null;
+startSortCycle();
+}, SORT_IDLE_RESUME_MS);
+}
+
+function clearSortTransitionTimers(){
+if(sortTransitionTimeoutId !== null){
+window.clearTimeout(sortTransitionTimeoutId);
+sortTransitionTimeoutId=null;
+}
+if(sortTransitionRenderTimeoutId !== null){
+window.clearTimeout(sortTransitionRenderTimeoutId);
+sortTransitionRenderTimeoutId=null;
+}
+}
+
+function applyNextSortMode(){
 sortModeIndex = (sortModeIndex + 1) % sortModes.length;
 updateSortButton();
 refreshFilteredPosts();
 render();
+}
 
+function cycleSortMode(animated=false){
+if(!posts.length || modeBtn.disabled) return;
+
+clearSortTransitionTimers();
+
+if(!animated){
+applyNextSortMode();
+return;
+}
+
+postsEl.dataset.sortTransition = "true";
+postsEl.classList.remove("feed-sort-transition");
+void postsEl.offsetWidth;
+postsEl.classList.add("feed-sort-transition");
+
+sortTransitionRenderTimeoutId=window.setTimeout(()=>{
+applyNextSortMode();
+}, SORT_TRANSITION_MS / 2);
+
+sortTransitionTimeoutId=window.setTimeout(()=>{
+postsEl.classList.remove("feed-sort-transition");
+delete postsEl.dataset.sortTransition;
+sortTransitionTimeoutId=null;
+sortTransitionRenderTimeoutId=null;
+}, SORT_TRANSITION_MS);
+}
+
+function startSortCycle(){
+stopSortCycle();
+sortCycleIntervalId=window.setInterval(()=>{
+cycleSortMode(true);
+}, SORT_CYCLE_INTERVAL_MS);
 }
 
 function buildCube(){
