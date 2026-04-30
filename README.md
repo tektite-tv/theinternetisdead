@@ -1,11 +1,11 @@
-# Repository Root
+# The Internet Is Dead
 
-This is the published static site root for The Internet Is Dead. It keeps the landing pages, custom domain file, the GitHub automation folder, and the main `dead/` content tree.
+This repository root is the public entry point for the static site. The root-level HTML files serve the homepage and fallback page, `CNAME` configures the custom domain, and the `dead/` folder holds the site sections, media, generated data, and supporting scripts.
 
 ## Subfolders
 
-- `.github/`
-- `dead/`
+- `.github/` - repository automation and workflow configuration
+- `dead/` - site content, generated indexes, media, experiments, games, and pages
 
 ## Files
 
@@ -15,4 +15,4 @@ This is the published static site root for The Internet Is Dead. It keeps the la
 
 ## Notes
 
-Keep root-level pages and domain files here; put content-specific assets under `dead/`.
+Keep root-level files limited to site entry points, domain configuration, and repository-level documentation. Put content-specific assets, generated indexes, and feature pages under `dead/`.
