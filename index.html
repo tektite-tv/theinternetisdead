@@ -2305,7 +2305,7 @@
       const videoId = params.get('v');
       if (!videoId) return;
 
-      const canonicalPath = '/watch/';
+      const canonicalPath = '/dead/videos/';
       if (window.location.pathname === canonicalPath) return;
 
       window.history.replaceState(
@@ -2317,7 +2317,7 @@
 
     function updateRootVideoRoute(action, videoId) {
       const nextUrl = action === 'open' && videoId
-        ? `/watch/?v=${encodeURIComponent(videoId)}`
+        ? `/dead/videos/?v=${encodeURIComponent(videoId)}`
         : initialRootPath;
       window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
     }
