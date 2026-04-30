@@ -14,6 +14,9 @@
     --header-bg:rgba(75,0,118,.7);
     --accent:var(--page-text);
     --shadow:0 0 0 2px rgba(0,255,0,.5), 0 0 28px rgba(0,255,0,.18);
+    --feed-grid-gap:20px;
+    --feed-posts-x:20px;
+    --not-found-panel-width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
 }
 
 html,
@@ -60,7 +63,7 @@ body::-webkit-scrollbar{
 
 #not-found{
     position:relative;
-    width:min(760px, calc(100% - 32px));
+    width:var(--not-found-panel-width);
     margin:0 auto;
     padding:120px 0 40px;
 }
@@ -84,6 +87,10 @@ body::-webkit-scrollbar{
 
 .panel{
     position:relative;
+    display:flex;
+    flex-direction:column;
+    width:100%;
+    aspect-ratio:1;
     border:2px solid var(--accent);
     background:var(--panel-bg);
     box-shadow:var(--shadow);
@@ -100,6 +107,10 @@ body::-webkit-scrollbar{
 }
 
 .panel-body{
+    display:flex;
+    flex:1;
+    flex-direction:column;
+    justify-content:center;
     padding:24px 22px;
 }
 
@@ -117,13 +128,42 @@ body::-webkit-scrollbar{
     line-height:1.15;
 }
 
+.revive-link{
+    display:inline-block;
+    margin-top:14px;
+    color:var(--page-text);
+    font:inherit;
+    font-size:clamp(22px, 3.4vw, 34px);
+    line-height:1.15;
+    text-decoration:underline;
+    text-decoration-thickness:2px;
+    text-underline-offset:.12em;
+    text-shadow:0 0 12px rgba(0,255,0,.5);
+    animation:reviveHueShift 2.4s linear infinite;
+}
+
+.revive-link:hover,
+.revive-link:focus-visible{
+    color:#fff;
+}
+
+@keyframes reviveHueShift{
+    from { filter:hue-rotate(0deg); }
+    to { filter:hue-rotate(360deg); }
+}
+
 #missing-path {
     color: #ff0000;
 }
 
-@media (max-width: 560px){
+@media (max-width: 768px){
+    :root{
+        --feed-grid-gap:14px;
+        --feed-posts-x:8px;
+        --not-found-panel-width:calc(100vw - (2 * var(--feed-posts-x)));
+    }
+
     #not-found{
-        width:min(100% - 20px, 760px);
         padding-top:92px;
     }
 
@@ -144,6 +184,7 @@ body::-webkit-scrollbar{
             <div class="panel-body">
                 <h1 class="code-404">RIP</h1>
                 <h2 class="headline" id="missing-page-title"><span id="missing-path">/404</span> is a dead link <br>you killed it <span id="missing-path">X_X</span></h2>
+                <a class="revive-link" href="/index.html">Revive The Site</a>
             </div>
         </article>
     </main>
