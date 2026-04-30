@@ -2300,31 +2300,44 @@
 
     const initialRootPath = '/';
 
+    function getRootVideoIdFromRoute() {
+      const pathMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
+      if (pathMatch) return decodeURIComponent(pathMatch[1]);
+
+      const pendingVideoId = window.sessionStorage.getItem('deadVideoId') || '';
+      if (pendingVideoId) {
+        window.sessionStorage.removeItem('deadVideoId');
+      }
+      return pendingVideoId;
+    }
+
+    function getRootVideoUrl(videoId) {
+      return `/dead/videos/${encodeURIComponent(videoId)}`;
+    }
+
     function normalizeInitialRootVideoRoute() {
-      const params = new URLSearchParams(window.location.search);
-      const videoId = params.get('v');
+      const videoId = getRootVideoIdFromRoute();
       if (!videoId) return;
 
-      const canonicalPath = '/dead/videos/';
-      if (window.location.pathname === canonicalPath) return;
+      const canonicalUrl = getRootVideoUrl(videoId);
+      if (window.location.pathname === canonicalUrl && !window.location.search) return;
 
       window.history.replaceState(
         { videoId },
         '',
-        `${canonicalPath}?v=${encodeURIComponent(videoId)}`
+        canonicalUrl + (window.location.hash || '')
       );
     }
 
     function updateRootVideoRoute(action, videoId) {
       const nextUrl = action === 'open' && videoId
-        ? `/dead/videos/?v=${encodeURIComponent(videoId)}`
+        ? getRootVideoUrl(videoId)
         : initialRootPath;
       window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
     }
 
     function sendInitialRootVideoToFrame() {
-      const params = new URLSearchParams(window.location.search);
-      const videoId = params.get('v');
+      const videoId = getRootVideoIdFromRoute();
       if (!videoId || !tektiteFrame.contentWindow) return;
       tektiteFrame.contentWindow.postMessage({ type: 'feedGridOpenVideo', videoId }, '*');
     }

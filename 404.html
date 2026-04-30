@@ -151,6 +151,13 @@ body::-webkit-scrollbar{
 
 <script>
 function redirectKnownWatchRoutes(){
+    const cleanVideoMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
+    if(cleanVideoMatch){
+        window.sessionStorage.setItem("deadVideoId", decodeURIComponent(cleanVideoMatch[1]));
+        window.location.replace("/" + (window.location.hash || ""));
+        return true;
+    }
+
     const redirects = {
         "/watch": "/dead/videos/",
         "/watch/": "/dead/videos/",

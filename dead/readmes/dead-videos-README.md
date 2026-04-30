@@ -1,6 +1,6 @@
 # videos
 
-This folder is reserved for video index pages and video-related static content.
+This folder contains the clean video route shim for YouTube video IDs.
 
 ## Subfolders
 
@@ -12,4 +12,4 @@ This folder is reserved for video index pages and video-related static content.
 
 ## Notes
 
-Add new assets here only when pages or manifests reference them by this path.
+Use `/dead/videos/<youtube-video-id>` for shared video links. The page redirects into the root app without using `?v=` query URLs.
