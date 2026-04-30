@@ -4,14 +4,14 @@
   <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>/dead/pages/youtube-list-grid/watch/</title>
+<title>/dead/stuff/stuff-for-index/feeds/videos/</title>
 <script>
-(function redirectToYoutubeGrid(){
+(function redirectToFeedGrid(){
     const params = new URLSearchParams(window.location.search);
     const videoId = params.get("v");
     const target = videoId
-        ? `/dead/pages/youtube-list-grid/?v=${encodeURIComponent(videoId)}${window.location.hash || ""}`
-        : `/dead/pages/youtube-list-grid/${window.location.hash || ""}`;
+        ? `/dead/stuff/stuff-for-index/feeds/?v=${encodeURIComponent(videoId)}${window.location.hash || ""}`
+        : `/dead/stuff/stuff-for-index/feeds/${window.location.hash || ""}`;
     window.location.replace(target);
 })();
 </script>

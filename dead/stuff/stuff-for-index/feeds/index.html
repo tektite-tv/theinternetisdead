@@ -4,7 +4,7 @@
   <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>/dead/pages/youtube-list-grid/</title>
+<title>/dead/stuff/stuff-for-index/feeds/</title>
 
 <style>
 html,
@@ -42,7 +42,7 @@ body::-webkit-scrollbar{
     width:100%;
 }
 
-#youtube-list-grid-frame{
+#feeds-frame{
     position:absolute;
     top:0;
     left:0;
@@ -72,14 +72,14 @@ body::-webkit-scrollbar{
 
 <div id="app-shell">
     <div id="overlay-container"></div>
-    <iframe id="youtube-list-grid-frame" src="/dead/pages/youtube-list-grid/youtube-list-grid.html"></iframe>
+    <iframe id="feeds-frame" src="/dead/stuff/stuff-for-index/feeds/feeds.html"></iframe>
 </div>
 
 <script>
 async function loadOverlay(){
     try{
-        const res = await fetch("/dead/pages/overlay.html", { cache: "no-store" });
-        if(!res.ok) throw new Error("Failed to load /dead/pages/overlay.html");
+        const res = await fetch("/dead/stuff/nav/nav.html", { cache: "no-store" });
+        if(!res.ok) throw new Error("Failed to load /dead/stuff/nav/nav.html");
         const html = await res.text();
         const container = document.getElementById("overlay-container");
         const temp = document.createElement("div");
@@ -114,7 +114,7 @@ async function loadOverlay(){
     }
 }
 
-const frame = document.getElementById("youtube-list-grid-frame");
+const frame = document.getElementById("feeds-frame");
 
 function syncLayout(){
     const overlayContainer = document.getElementById("overlay-container");
@@ -137,14 +137,14 @@ resizeObserver.observe(document.getElementById("overlay-container"));
 
   <script src="/dead/scripts/screenshot-shortcut.js"></script>
   <script>
-const wrapperHomePath = "/dead/pages/youtube-list-grid/";
+const wrapperHomePath = "/dead/stuff/stuff-for-index/feeds/";
 
 function normalizeInitialWrapperVideoRoute() {
     const params = new URLSearchParams(window.location.search);
     const videoId = params.get("v");
     if (!videoId) return;
 
-    const canonicalPath = "/dead/pages/youtube-list-grid/watch/";
+    const canonicalPath = "/dead/stuff/stuff-for-index/feeds/videos/";
     if (window.location.pathname === canonicalPath) return;
 
     window.history.replaceState(
@@ -156,7 +156,7 @@ function normalizeInitialWrapperVideoRoute() {
 
 function updateWrapperVideoRoute(action, videoId) {
     const nextUrl = action === "open" && videoId
-        ? `/dead/pages/youtube-list-grid/watch/?v=${encodeURIComponent(videoId)}`
+        ? `/dead/stuff/stuff-for-index/feeds/videos/?v=${encodeURIComponent(videoId)}`
         : wrapperHomePath;
     window.history.replaceState({ videoId: videoId || null }, "", nextUrl);
 }
@@ -165,12 +165,12 @@ function sendInitialWrapperVideoToFrame() {
     const params = new URLSearchParams(window.location.search);
     const videoId = params.get("v");
     if (!videoId || !frame.contentWindow) return;
-    frame.contentWindow.postMessage({ type: "youtubeGridOpenVideo", videoId }, "*");
+    frame.contentWindow.postMessage({ type: "feedGridOpenVideo", videoId }, "*");
 }
 
 window.addEventListener("message", (event) => {
     const data = event.data || {};
-    if (event.source !== frame.contentWindow || data.type !== "youtubeGridVideoState") return;
+    if (event.source !== frame.contentWindow || data.type !== "feedGridVideoState") return;
     updateWrapperVideoRoute(data.action, String(data.videoId || ""));
 });
 

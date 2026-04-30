@@ -203,10 +203,10 @@ function redirectKnownWatchRoutes(){
         "/watch": "/dead/videos/",
         "/watch/": "/dead/videos/",
         "/dead/videos": "/dead/videos/",
-        "/pages/feeds/videos": "/dead/pages/feeds/videos/",
-        "/pages/youtube-list-grid/watch": "/dead/pages/youtube-list-grid/watch/",
-        "/dead/pages/feeds/videos": "/dead/pages/feeds/videos/",
-        "/dead/pages/youtube-list-grid/watch": "/dead/pages/youtube-list-grid/watch/"
+        "/stuff/stuff-for-index/feeds/videos": "/dead/stuff/stuff-for-index/feeds/videos/",
+        "/stuff/stuff-for-index/youtube-list-grid/watch": "/dead/stuff/stuff-for-index/youtube-list-grid/watch/",
+        "/dead/stuff/stuff-for-index/feeds/videos": "/dead/stuff/stuff-for-index/feeds/videos/",
+        "/dead/stuff/stuff-for-index/youtube-list-grid/watch": "/dead/stuff/stuff-for-index/youtube-list-grid/watch/"
     };
 
     const nextPath = redirects[window.location.pathname];
@@ -225,8 +225,8 @@ function renderMissingPath(){
 
 async function loadOverlay(){
     try{
-        const res = await fetch("/dead/pages/overlay.html", { cache: "no-store" });
-        if(!res.ok) throw new Error("Failed to load /dead/pages/overlay.html");
+        const res = await fetch("/dead/stuff/nav/nav.html", { cache: "no-store" });
+        if(!res.ok) throw new Error("Failed to load /dead/stuff/nav/nav.html");
         const html = await res.text();
         const container = document.getElementById("overlay-container");
         const temp = document.createElement("div");

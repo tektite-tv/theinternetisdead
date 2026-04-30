@@ -174,7 +174,7 @@
     <div id="main-content">
       <iframe
         id="tektite-frame"
-        src="/dead/pages/feeds/feeds.html"
+        src="/dead/stuff/stuff-for-index/feeds/feeds.html"
         title="Tektite Index"
         loading="eager"
         allowfullscreen
@@ -614,8 +614,8 @@
 
     async function loadOverlay() {
       try {
-        const response = await fetch('/dead/pages/overlay.html', { cache: 'no-store' });
-        if (!response.ok) throw new Error('Failed to load /dead/pages/overlay.html');
+        const response = await fetch('/dead/stuff/nav/nav.html', { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to load /dead/stuff/nav/nav.html');
         const html = await response.text();
         const temp = document.createElement('div');
         temp.innerHTML = html;
@@ -641,7 +641,7 @@
         syncOverlayClockState();
       } catch (error) {
         console.error(error);
-        overlayContainer.innerHTML = '<div class="overlay-error">Error loading /dead/pages/overlay.html</div>';
+        overlayContainer.innerHTML = '<div class="overlay-error">Error loading /dead/stuff/nav/nav.html</div>';
       }
     }
 
@@ -1063,7 +1063,7 @@
           createdAt: new Date().toISOString(),
           frameCount,
           frameDelayMs: frameDelay,
-          source: '/dead/pages/overlay.html + /dead/pages/feeds/feeds.html composite'
+          source: '/dead/stuff/nav/nav.html + /dead/stuff/stuff-for-index/feeds/feeds.html composite'
         };
         const manifestBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
         entries.push(await createZipEntryFromBlob('screenshot-animation/manifest.json', manifestBlob));
@@ -1591,7 +1591,7 @@
 
     function applyOverlayVars(target) {
       if (!target) return;
-    // Keep Page Background scoped to /dead/pages/feeds/feeds.html itself, not the outer index/overlay shell.
+    // Keep Page Background scoped to /dead/stuff/stuff-for-index/feeds/feeds.html itself, not the outer index/overlay shell.
       target.style.setProperty('--page-bg', 'transparent');
       target.style.setProperty('--overlay-text', hexToRgba(pageCustomizeState.colors.pageText.hex, pageCustomizeState.colors.pageText.alpha));
       target.style.setProperty('--overlay-bg', hexToRgba(pageCustomizeState.colors.overlayTopBarBg.hex, pageCustomizeState.colors.overlayTopBarBg.alpha));
