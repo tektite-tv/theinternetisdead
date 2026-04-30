@@ -13,6 +13,7 @@ This folder stores generated JSON indexes, feeds, themes, and media manifests co
 - `feeds-channels.json`
 - `inner-space-theme.json`
 - `mandala-visuals-index.json`
+- `readmes.json`
 - `repo-index.json`
 - `videos.json`
 - `zentangle-theme.json`

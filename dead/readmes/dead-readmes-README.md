@@ -26,6 +26,7 @@ This folder is populated by GitHub Actions with copied README snapshots from eve
 - `dead-experiments-stacks-README.md`
 - `dead-experiments-test-habisky-mofo-README.md`
 - `dead-experiments-test-README.md`
+- `index.html`
 - Plus 26 more files.
 
 ## Notes

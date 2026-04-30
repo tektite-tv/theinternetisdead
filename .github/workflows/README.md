@@ -13,6 +13,7 @@ This folder contains GitHub Actions workflows that rebuild generated indexes, me
 - `generate-enemy-gifs-json.yml`
 - `generate-enemy-webps-json.yml`
 - `generate-media-indexes.yml`
+- `generate-readmes-json.yml`
 - `generate-repo-index.yml`
 - `update-feed-videos-json.yml`
 - `update-videos-json.yml`
