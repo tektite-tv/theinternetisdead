@@ -144,7 +144,7 @@ function normalizeInitialWrapperVideoRoute() {
     const videoId = params.get("v");
     if (!videoId) return;
 
-    const canonicalPath = "/dead/pages/feeds/watch/";
+    const canonicalPath = "/dead/pages/feeds/videos/";
     if (window.location.pathname === canonicalPath) return;
 
     window.history.replaceState(
@@ -156,7 +156,7 @@ function normalizeInitialWrapperVideoRoute() {
 
 function updateWrapperVideoRoute(action, videoId) {
     const nextUrl = action === "open" && videoId
-        ? `/dead/pages/feeds/watch/?v=${encodeURIComponent(videoId)}`
+        ? `/dead/pages/feeds/videos/?v=${encodeURIComponent(videoId)}`
         : wrapperHomePath;
     window.history.replaceState({ videoId: videoId || null }, "", nextUrl);
 }
