@@ -106,13 +106,13 @@
   <main id="empty-state" class="hidden">
     <div>
       <strong>No mandala visuals found.</strong><br />
-      Add HTML files to this folder and regenerate index.json.
+      Add HTML files to this folder and regenerate /dead/JSON/mandala-visuals-index.json.
     </div>
   </main>
 
   <script>
     (() => {
-      const INDEX_URL = './index.json';
+      const INDEX_URL = '/dead/JSON/mandala-visuals-index.json';
       const frame = document.getElementById('background-frame');
       const title = document.getElementById('background-title');
       const counter = document.getElementById('counter');
@@ -182,7 +182,7 @@
 
           showBackground(0);
         } catch (error) {
-          title.textContent = 'index.json failed to load';
+          title.textContent = 'mandala-visuals-index.json failed to load';
           counter.textContent = '';
           console.error(error);
         }

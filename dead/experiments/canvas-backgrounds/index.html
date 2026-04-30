@@ -106,13 +106,13 @@
   <main id="empty-state" class="hidden">
     <div>
       <strong>No canvas backgrounds found.</strong><br />
-      Add HTML files to this folder and let the workflow regenerate index.json.
+      Add HTML files to this folder and let the workflow regenerate /dead/JSON/canvas-backgrounds-index.json.
     </div>
   </main>
 
   <script>
     (() => {
-      const INDEX_URL = './index.json';
+      const INDEX_URL = '/dead/JSON/canvas-backgrounds-index.json';
       const frame = document.getElementById('background-frame');
       const title = document.getElementById('background-title');
       const counter = document.getElementById('counter');
@@ -170,7 +170,7 @@
 
           showBackground(0);
         } catch (error) {
-          title.textContent = 'index.json failed to load';
+          title.textContent = 'canvas-backgrounds-index.json failed to load';
           counter.textContent = '';
           console.error(error);
         }

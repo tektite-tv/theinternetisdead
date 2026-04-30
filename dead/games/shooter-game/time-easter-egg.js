@@ -86,7 +86,7 @@
    Paths (EDIT IF NEEDED)
 ======================= */
 const ENEMY_WEBP_BASE = "/dead/games/shooter-game/assets/enemy-webps/";
-const ENEMY_WEBP_INDEX_URL = "/dead/games/shooter-game/assets/enemy-webps.json";
+const ENEMY_WEBP_INDEX_URL = "/dead/games/shooter-game/assets/JSON/enemy-webps.json";
 const PLAYER_IMG_URL = "/dead/games/shooter-game/assets/bananarama.webp";
 const BOSS_IMG_URL = ENEMY_WEBP_BASE + "180px-NO_U_cycle.webp";
 const ENEMY_ASSET_BASE = ENEMY_WEBP_BASE; // kept for legacy enemy-path code

@@ -24,11 +24,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Generate dead/pages/repo-index.json
+      - name: Generate dead/JSON/repo-index.json
         run: node dead/scripts/build-repo-index.js
 
       - name: Commit generated repo index
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: Generate repo-index.json
-          file_pattern: dead/pages/repo-index.json
+          file_pattern: dead/JSON/repo-index.json

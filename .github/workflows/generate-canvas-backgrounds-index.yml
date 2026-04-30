@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Generate dead/experiments/canvas-backgrounds/index.json
+      - name: Generate dead/JSON/canvas-backgrounds-index.json
         shell: bash
         run: |
           python3 <<'PY'
@@ -42,7 +42,8 @@ jobs:
                   'path': f'./{p.name}'
               })
 
-          output = folder / 'index.json'
+          output = Path('dead/JSON/canvas-backgrounds-index.json')
+          output.parent.mkdir(parents=True, exist_ok=True)
           output.write_text(json.dumps(entries, indent=2) + '\n', encoding='utf-8')
           print(f'Wrote {output} with {len(entries)} HTML backgrounds.')
           PY
@@ -51,4 +52,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'Generate canvas backgrounds index.json'
-          file_pattern: dead/experiments/canvas-backgrounds/index.json
+          file_pattern: dead/JSON/canvas-backgrounds-index.json

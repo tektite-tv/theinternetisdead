@@ -825,8 +825,8 @@ function applyTheme(themeName){
   const loader = new THREE.TextureLoader();
   loader.setCrossOrigin("anonymous");
 
-  // Try theme.json first; fallback to default filenames if missing.
-  fetch(`./dead/experiments/photosphere/themes/${themeName}/theme.json`)
+  // Try the centralized theme JSON first; fallback to default filenames if missing.
+  fetch(`/dead/JSON/${themeName}-theme.json`)
     .then(res => {
       if(!res.ok) throw new Error("no theme.json");
       return res.json();

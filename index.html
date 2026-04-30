@@ -220,7 +220,7 @@
     }
 
     function loadIndexGotoSuggestions() {
-      fetch('/dead/pages/repo-index.json', { cache: 'no-store' })
+      fetch('/dead/JSON/repo-index.json', { cache: 'no-store' })
         .then((response) => response.ok ? response.json() : null)
         .then((repoIndex) => {
           const folders = repoIndex && Array.isArray(repoIndex.folders) ? repoIndex.folders : [];
