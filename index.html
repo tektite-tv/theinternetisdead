@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" type="image/png" href="/dead/media/images/pngs/dead-favicon.png" />
+  <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>theinternetisdead.org</title>
@@ -1443,7 +1443,7 @@
     function updateOverlayLogoAssets() {
       const overlayRoot = overlayContainer.querySelector('#overlay-root') || overlayContainer;
       if (!overlayRoot) return;
-      const logoSrc = customOverlayLogoUrl || '/dead/media/images/pngs/deadlogo-green.png';
+      const logoSrc = customOverlayLogoUrl || '/dead/images/pngs/deadlogo-green.png';
       overlayRoot.querySelectorAll('.logo img').forEach((img) => {
         img.src = logoSrc;
       });
@@ -1533,8 +1533,8 @@
     function updateTektiteLogoAssets(doc) {
       if (!doc) return;
       const tektiteWindow = doc.defaultView || (tektiteFrame && tektiteFrame.contentWindow) || null;
-      const logoUrls = customTektiteLogoUrls.length ? customTektiteLogoUrls.slice() : ['/dead/media/images/pngs/oldtube.png', '/dead/media/images/pngs/oldtube-alt-1.png', '/dead/media/images/pngs/oldtube-alt-2.png'];
-      const logoSrc = logoUrls[0] || '/dead/media/images/pngs/oldtube.png';
+      const logoUrls = customTektiteLogoUrls.length ? customTektiteLogoUrls.slice() : ['/dead/images/pngs/oldtube.png', '/dead/images/pngs/oldtube-alt-1.png', '/dead/images/pngs/oldtube-alt-2.png'];
+      const logoSrc = logoUrls[0] || '/dead/images/pngs/oldtube.png';
 
       clearManagedTektiteLogoHoverState(doc);
 

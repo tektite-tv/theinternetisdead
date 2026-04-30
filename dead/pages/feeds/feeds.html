@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="icon" type="image/png" href="/dead/media/images/pngs/dead-favicon.png" />
+  <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>/dead/pages/feeds/feeds.html</title>
@@ -656,11 +656,11 @@ width:92vw;
 <a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="logoLink" id="channelHomeLink">
 <span class="channelLogoPrompt">Sub to me on&nbsp;</span>
 <span class="channelLogoImageWrap">
-<img src="/dead/media/images/pngs/oldtube.png" class="channelLogo" alt="Channel feed logo">
-<span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/dead/media/images/pngs/oldtube.png');"></span>
+<img src="/dead/images/pngs/oldtube.png" class="channelLogo" alt="Channel feed logo">
+<span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/dead/images/pngs/oldtube.png');"></span>
 </span>
 </a>
-<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/media/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/media/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
+<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
 </div>
 
 <div class="controls">
@@ -702,8 +702,8 @@ const FEED_DATA_PATH="/dead/pages/feeds/feed-videos.json";
 const FALLBACK_FEED_DATA_PATH="/dead/pages/youtube-list-grid/videos.json";
 const HONESTLY_THOMAS_URL="https://www.youtube.com/@Honestly_Thomas";
 const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
-const HONESTLY_THOMAS_AVATAR="/dead/media/images/pngs/honestly-thomas.png";
-const CRYPTID_MEMES_AVATAR="/dead/media/images/pngs/cryptid-memes.png";
+const HONESTLY_THOMAS_AVATAR="/dead/images/pngs/honestly-thomas.png";
+const CRYPTID_MEMES_AVATAR="/dead/images/pngs/cryptid-memes.png";
 
 function updateTintFilters(){
   // Tints are handled by mask-based overlay layers, matching overlay.html.
@@ -743,9 +743,9 @@ const frame=document.getElementById("lightboxFrame");
 const modeBtn=document.getElementById("modeBtn");
 const channelLogoLinks = Array.from(document.querySelectorAll('.logoLink'));
 const defaultChannelLogoUrls = [
-"/dead/media/images/pngs/oldtube.png",
-"/dead/media/images/pngs/oldtube-alt-1.png",
-"/dead/media/images/pngs/oldtube-alt-2.png"
+"/dead/images/pngs/oldtube.png",
+"/dead/images/pngs/oldtube-alt-1.png",
+"/dead/images/pngs/oldtube-alt-2.png"
 ];
 let customChannelLogoUrls = [];
 let channelLogoHoverIntervalId = null;
@@ -757,7 +757,7 @@ return customChannelLogoUrls.length ? [...customChannelLogoUrls] : [...defaultCh
 }
 
 function getPrimaryChannelLogoUrl(){
-return customChannelLogoUrls.length ? customChannelLogoUrls[0] : "/dead/media/images/pngs/oldtube.png";
+return customChannelLogoUrls.length ? customChannelLogoUrls[0] : "/dead/images/pngs/oldtube.png";
 }
 
 function applyChannelLogoAsset(logoSrc){
