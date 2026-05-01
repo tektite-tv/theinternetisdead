@@ -11,13 +11,23 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      background: #000;
+      background-color: #000;
       overflow: hidden;
+    }
+
+    #site-shell,
+    #main-content,
+    #tektite-header-frame,
+    #tektite-frame {
+      background-color: #000;
     }
 
     body {
       position: relative;
       --overlay-height: 76px;
+      --tektite-header-height: 0px;
+      --tektite-header-collapsed-height: 0px;
+      --site-scale: 0.75;
     }
 
     /* ADDED: scale the actual site layer to 75% so the page appears zoomed out by 25%
@@ -26,9 +36,9 @@
       position: fixed;
       left: 0;
       top: var(--overlay-height, 76px);
-      width: 133.333333%;
-      height: calc((100vh - var(--overlay-height, 76px)) / 0.75);
-      transform: scale(0.75);
+      width: calc(100% / var(--site-scale));
+      height: calc((100vh - var(--overlay-height, 76px)) / var(--site-scale));
+      transform: scale(var(--site-scale));
       transform-origin: top left;
       display: flex;
       flex-direction: column;
@@ -61,7 +71,6 @@
       height: 0;
       border: none;
       display: block;
-      background: #000;
       overflow: hidden;
       z-index: 30;
       pointer-events: none;
@@ -79,7 +88,6 @@
       height: 100%;
       border: none;
       display: block;
-      background: #000;
     }
 
     #mobile-feed-header-hit-target {
@@ -87,16 +95,27 @@
     }
 
     @media (max-width: 768px) {
-      #tektite-header-frame {
-        position: fixed;
+      #site-shell {
         top: var(--overlay-height, 76px);
-        left: 0;
-        right: 0;
+        height: calc((100vh - var(--overlay-height, 76px)) / var(--site-scale));
+      }
+
+      #tektite-header-frame {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
         width: 100%;
+        flex: 0 0 auto;
         pointer-events: auto;
         transform: none;
         transition: none;
         z-index: 1100;
+      }
+
+      #main-content {
+        flex: 0 0 auto;
+        height: calc(100% - var(--tektite-header-collapsed-height, 0px));
       }
 
       #mobile-feed-header-hit-target {
@@ -105,7 +124,7 @@
         left: 0;
         right: 0;
         display: block;
-        height: 140px;
+        height: 60px;
         z-index: 1200;
         background: transparent;
         pointer-events: auto;
@@ -267,6 +286,7 @@
     const overlayLogoUploadInput = document.getElementById('overlay-logo-upload-input');
     const tektiteLogoUploadInput = document.getElementById('tektite-logo-upload-input');
     let tektiteHeaderHeight = 0;
+    let tektiteHeaderCollapsedHeight = 0;
     let overlayHovering = false;
     let feedHeaderHovering = false;
     let mobileFeedHeaderDragging = false;
@@ -467,6 +487,16 @@
       if (nextHeight === tektiteHeaderHeight) return;
       tektiteHeaderHeight = nextHeight;
       tektiteHeaderFrame.style.height = `${tektiteHeaderHeight}px`;
+      document.body.style.setProperty('--tektite-header-height', `${tektiteHeaderHeight}px`);
+      if (isMobileFeedHeaderLayout()) {
+        if (!tektiteHeaderCollapsedHeight || nextHeight < tektiteHeaderCollapsedHeight) {
+          tektiteHeaderCollapsedHeight = nextHeight;
+          document.body.style.setProperty('--tektite-header-collapsed-height', `${tektiteHeaderCollapsedHeight}px`);
+        }
+      } else {
+        tektiteHeaderCollapsedHeight = nextHeight;
+        document.body.style.setProperty('--tektite-header-collapsed-height', `${tektiteHeaderCollapsedHeight}px`);
+      }
     }
 
     function measureTektiteHeader() {

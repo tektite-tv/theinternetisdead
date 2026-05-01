@@ -31,7 +31,7 @@ html,
 body{
 margin:0;
 overflow:hidden;
-background:#000;
+background:transparent;
 color:var(--page-text);
 font-family:var(--page-font-family);
 font-size:calc(16px * var(--page-font-scale));
@@ -48,7 +48,7 @@ align-items:stretch;
 justify-content:center;
 gap:var(--feed-header-row-gap) var(--feed-grid-gap);
 padding:var(--feed-header-row-gap) 20px;
-background:#000 !important;
+background:transparent !important;
 position:relative;
 z-index:20;
 box-sizing:border-box;
@@ -203,9 +203,19 @@ font-size:calc(21px * var(--page-font-scale));
 font-weight:700;
 line-height:1.15;
 text-align:center;
+animation: state-indicator-hueshift 3.2s linear infinite;
+text-shadow:
+0 0 4px rgba(255,255,255,.95),
+0 0 10px rgba(255,255,255,.75),
+0 0 18px rgba(255,255,255,.45);
 }
 
 @keyframes overlay-ui-hueshift {
+from { filter: hue-rotate(0deg); }
+to { filter: hue-rotate(360deg); }
+}
+
+@keyframes state-indicator-hueshift {
 from { filter: hue-rotate(0deg); }
 to { filter: hue-rotate(360deg); }
 }
@@ -332,6 +342,10 @@ font-family:var(--page-font-family);
 display:none;
 }
 
+.mobileHeaderHandle{
+display:none;
+}
+
 @media (max-width: 1024px){
 :root{
 --feed-grid-gap:14px;
@@ -343,18 +357,6 @@ body{
 overflow:hidden;
 }
 
-.mobileSortDock{
-position:fixed;
-top:0;
-left:0;
-right:0;
-z-index:50;
-display:flex;
-flex-direction:column;
-align-items:center;
-pointer-events:none;
-}
-
 #mobileSortStatePanel{
 display:flex;
 align-items:center;
@@ -362,14 +364,17 @@ justify-content:center;
 width:100%;
 min-height:36px;
 box-sizing:border-box;
-padding:0 10px;
-background:#000;
-border:1px solid var(--accent-color);
+padding:0;
 color:var(--page-text);
 font-size:calc(16px * var(--page-font-scale));
 font-weight:700;
 line-height:1.1;
 text-align:center;
+animation: state-indicator-hueshift 3.2s linear infinite;
+text-shadow:
+0 0 4px rgba(255,255,255,.95),
+0 0 10px rgba(255,255,255,.75),
+0 0 18px rgba(255,255,255,.45);
 }
 
 .mobileHeaderHandle{
@@ -377,8 +382,8 @@ display:flex;
 align-items:center;
 justify-content:center;
 width:100%;
-height:24px;
-margin-top:-1px;
+min-height:60px;
+padding:10px;
 background:#000;
 border:1px solid var(--accent-color);
 color:var(--page-text);
@@ -388,20 +393,28 @@ line-height:1;
 pointer-events:auto;
 touch-action:pan-y;
 cursor:grab;
+box-sizing:border-box;
+flex-direction:column;
+gap:4px;
 }
 
 .mobileHeaderHandle::before{
-content:"^";
+content:"";
+}
+
+.mobileHeaderHandle::after{
+content:"v";
 display:block;
-transform:rotate(180deg);
+font-size:18px;
+line-height:1;
 }
 
 header{
 position:absolute;
-top:var(--feed-mobile-dock-height);
+top:0;
 left:0;
 right:0;
-padding:var(--feed-header-row-gap) 12px;
+padding:var(--feed-header-row-gap) var(--feed-posts-x);
 flex-direction:column;
 align-items:stretch;
 gap:var(--feed-header-row-gap);
@@ -410,8 +423,9 @@ width:100%;
 min-width:0;
 min-height:0;
 box-sizing:border-box;
-transform:translateY(-100%);
-visibility:hidden;
+transform:translateY(0);
+visibility:visible;
+will-change:transform;
 }
 
 .channelHeader,
@@ -514,10 +528,6 @@ display:none !important;
 </head>
 
 <body>
-<div class="mobileSortDock" aria-hidden="true">
-<div id="mobileSortStatePanel">Watch My Most Viewed Videos</div>
-<div class="mobileHeaderHandle" title="Drag header down"></div>
-</div>
 <header>
 <div class="channelHeader">
 <a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="logoLink" id="channelHomeLink">
@@ -545,13 +555,15 @@ display:none !important;
 </div>
 </div>
 </div>
+<div class="mobileHeaderHandle" title="Drag header down">
+<div id="mobileSortStatePanel">Watch My Most Viewed Videos</div>
+</div>
 </header>
 
 <script>
 const HONESTLY_THOMAS_URL="https://www.youtube.com/@Honestly_Thomas";
 const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
 const headerEl=document.querySelector("header");
-const mobileSortDock=document.querySelector(".mobileSortDock");
 const mobileHeaderHandle=document.querySelector(".mobileHeaderHandle");
 const channelHomeLink=document.getElementById("channelHomeLink");
 const channelLogoLinks=Array.from(document.querySelectorAll(".logoLink"));
@@ -579,6 +591,11 @@ let mobileDrawerDragging=false;
 let mobileDrawerStartY=0;
 let mobileDrawerStartProgress=0;
 let mobileDrawerMoved=false;
+let mobileDrawerLastY=0;
+let mobileDrawerLastTime=0;
+let mobileDrawerVelocity=0;
+let mobileDrawerHideTimeoutId=null;
+const mobileDrawerSnapTransition="transform 360ms cubic-bezier(.16, 1, .3, 1)";
 
 function isMobileHeaderLayout(){
 return window.matchMedia("(max-width: 1024px)").matches;
@@ -602,22 +619,49 @@ function postSize(){
 window.requestAnimationFrame(()=>{
 let height=Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || headerEl.offsetHeight || 0);
 if(isMobileHeaderLayout()){
-const dockHeight=Math.ceil(mobileSortDock.getBoundingClientRect().height || 0);
-const drawerHeight=Math.ceil(headerEl.getBoundingClientRect().height || headerEl.scrollHeight || 0);
-height=dockHeight + Math.ceil(drawerHeight * mobileDrawerProgress);
+const drawerMetrics=getMobileDrawerMetrics();
+applyMobileDrawerTransform(drawerMetrics);
+height=drawerMetrics.visibleHeight + Math.ceil(drawerMetrics.travel * mobileDrawerProgress);
 }
 postToParent({ type:"feedGridHeaderSize", height });
 });
 }
 
+function getMobileDrawerMetrics(){
+const totalHeight=Math.ceil(headerEl.scrollHeight || headerEl.offsetHeight || headerEl.getBoundingClientRect().height || 0);
+const rowGap=Math.ceil(parseFloat(getComputedStyle(headerEl).rowGap) || 0);
+const travel=Math.max(0, Math.ceil(mobileHeaderHandle.offsetTop || 0) - rowGap);
+return {
+totalHeight,
+travel,
+visibleHeight:Math.max(1, totalHeight - travel),
+rowGap
+};
+}
+
+function applyMobileDrawerTransform(drawerMetrics=getMobileDrawerMetrics()){
+headerEl.style.transform=`translate3d(0, ${-Math.ceil(drawerMetrics.travel * (1 - mobileDrawerProgress))}px, 0)`;
+}
+
 function setMobileDrawerProgress(progress, animated=false){
 mobileDrawerProgress=Math.max(0, Math.min(1, Number(progress) || 0));
 if(isMobileHeaderLayout()){
-headerEl.style.transition=animated ? "transform 180ms ease" : "none";
-headerEl.style.transform=`translateY(${(-100 + (mobileDrawerProgress * 100)).toFixed(3)}%)`;
-headerEl.style.visibility=mobileDrawerProgress > 0.001 ? "visible" : "hidden";
+if(mobileDrawerHideTimeoutId !== null){
+window.clearTimeout(mobileDrawerHideTimeoutId);
+mobileDrawerHideTimeoutId=null;
+}
+headerEl.style.transition=animated ? mobileDrawerSnapTransition : "none";
+const drawerMetrics=getMobileDrawerMetrics();
+applyMobileDrawerTransform(drawerMetrics);
+headerEl.style.visibility="visible";
 headerEl.style.pointerEvents=mobileDrawerProgress > 0.05 ? "auto" : "none";
 document.body.classList.toggle("mobile-drawer-open", mobileDrawerProgress > 0.98);
+postToParent({ type:"feedGridHeaderSize", height:drawerMetrics.visibleHeight + Math.ceil(drawerMetrics.travel * mobileDrawerProgress) });
+if(animated && mobileDrawerProgress <= 0.001){
+mobileDrawerHideTimeoutId=window.setTimeout(()=>{
+mobileDrawerHideTimeoutId=null;
+}, 380);
+}
 }else{
 headerEl.style.transition="";
 headerEl.style.transform="";
@@ -629,7 +673,9 @@ postSize();
 }
 
 function finishMobileDrawerDrag(){
-setMobileDrawerProgress(mobileDrawerProgress >= 0.35 ? 1 : 0, true);
+const drawerHeight=Math.max(1, getMobileDrawerMetrics().travel);
+const projectedProgress=mobileDrawerProgress + ((mobileDrawerVelocity * 180) / drawerHeight);
+setMobileDrawerProgress(projectedProgress >= 0.35 ? 1 : 0, true);
 }
 
 function updateTintFilters(){
@@ -820,15 +866,24 @@ mobileDrawerDragging=true;
 mobileDrawerMoved=false;
 mobileDrawerStartY=event.clientY;
 mobileDrawerStartProgress=mobileDrawerProgress;
+mobileDrawerLastY=event.clientY;
+mobileDrawerLastTime=performance.now();
+mobileDrawerVelocity=0;
 mobileHeaderHandle.setPointerCapture(event.pointerId);
 mobileHeaderHandle.style.cursor="grabbing";
 });
 
 mobileHeaderHandle.addEventListener("pointermove", (event)=>{
 if(!mobileDrawerDragging || !isMobileHeaderLayout()) return;
-const drawerHeight=Math.max(1, headerEl.getBoundingClientRect().height || headerEl.scrollHeight || 1);
+const drawerHeight=Math.max(1, getMobileDrawerMetrics().travel);
 const delta=event.clientY - mobileDrawerStartY;
 if(Math.abs(delta) > 4) mobileDrawerMoved=true;
+const now=performance.now();
+const elapsed=Math.max(1, now - mobileDrawerLastTime);
+const instantVelocity=(event.clientY - mobileDrawerLastY) / elapsed;
+mobileDrawerVelocity=(mobileDrawerVelocity * 0.65) + (instantVelocity * 0.35);
+mobileDrawerLastY=event.clientY;
+mobileDrawerLastTime=now;
 setMobileDrawerProgress(mobileDrawerStartProgress + (delta / drawerHeight), false);
 event.preventDefault();
 });
