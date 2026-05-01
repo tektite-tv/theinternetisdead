@@ -25,6 +25,7 @@
 --feed-header-row-gap:var(--feed-grid-gap);
 --feed-posts-x:20px;
 --feed-control-button-size:var(--header-control-height);
+--feed-bg-pattern-duration:8s;
 }
 html,body{
 overflow-x:hidden;
@@ -317,6 +318,15 @@ font-family:var(--page-font-family);
 padding:var(--feed-header-row-gap) 20px 20px;
 position:relative;
 isolation:isolate;
+background-color:#26003b;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='88' viewBox='0 0 88 88'%3E%3Cg stroke='red' stroke-width='3' stroke-linecap='butt'%3E%3Cpath d='M-88 88 L88 -88 M-77 99 L99 -77 M-66 110 L110 -66 M-55 121 L121 -55 M-44 132 L132 -44 M-33 143 L143 -33 M-22 154 L154 -22 M-11 165 L165 -11 M0 176 L176 0'/%3E%3C/g%3E%3Cg stroke='blue' stroke-width='1' stroke-linecap='butt' stroke-dasharray='5 5'%3E%3Cpath d='M-82.5 93.5 L93.5 -82.5 M-71.5 104.5 L104.5 -71.5 M-60.5 115.5 L115.5 -60.5 M-49.5 126.5 L126.5 -49.5 M-38.5 137.5 L137.5 -38.5 M-27.5 148.5 L148.5 -27.5 M-16.5 159.5 L159.5 -16.5 M-5.5 170.5 L170.5 -5.5 M5.5 181.5 L181.5 5.5'/%3E%3C/g%3E%3C/svg%3E");
+background-size:88px 88px;
+animation:feed-bg-pattern-slide var(--feed-bg-pattern-duration) linear infinite;
+}
+
+@keyframes feed-bg-pattern-slide{
+from{background-position:0 0;}
+to{background-position:88px 88px;}
 }
 
 #posts.feed-sort-transition{
@@ -424,10 +434,18 @@ outline:none;
 }
 
 #loadMore{
-display:block;
+display:flex;
+align-items:center;
+justify-content:center;
 margin:40px auto 60px auto;
-padding:12px 30px;
+padding:12px;
+width:96px;
+aspect-ratio:1;
+box-sizing:border-box;
 font-size:calc(18px * var(--page-font-scale));
+line-height:1.1;
+text-align:center;
+white-space:normal;
 border:2px solid var(--accent-color);
 background:var(--panel-background);
 color:var(--page-text);
@@ -721,7 +739,8 @@ line-height:1.3;
 #loadMore{
 margin:28px auto 40px;
 font-size:calc(16px * var(--page-font-scale));
-padding:10px 22px;
+padding:10px;
+width:88px;
 }
 
 #lightbox iframe{
@@ -735,40 +754,6 @@ width:92vw;
 
 <body>
 
-
-<header>
-
-<div class="channelHeader">
-<a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="logoLink" id="channelHomeLink">
-<span class="channelLogoPrompt">Sub to me on&nbsp;</span>
-<span class="channelLogoImageWrap">
-<img src="/dead/images/pngs/oldtube.png" class="channelLogo" alt="Channel feed logo">
-<span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/dead/images/pngs/oldtube.png');"></span>
-</span>
-</a>
-<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
-</div>
-
-<div class="sortStatePanel" id="sortStatePanel">Watch My Most Viewed Videos</div>
-
-<div class="controls">
-<input id="videoSearch" placeholder="Search Feed...">
-<button id="gridBtn">View</button>
-<button id="modeBtn" disabled>Sort</button>
-
-<div id="gridMenu">
-
-<div id="gridControl">
-<label for="gridPageSelect" class="gridMenuLabel">Grid Pages</label>
-<select id="gridPageSelect"></select>
-
-</div>
-
-</div>
-
-</div>
-
-</header>
 
 <div id="posts" class="grid"></div>
 <div id="cubeContainer" style="display:none;width:100%;height:70vh;position:relative;"></div>
@@ -838,6 +823,11 @@ const lightbox=document.getElementById("lightbox");
 const frame=document.getElementById("lightboxFrame");
 const modeBtn=document.getElementById("modeBtn");
 const channelLogoLinks = Array.from(document.querySelectorAll('.logoLink'));
+let headerSearchQuery="";
+let currentSortPanelText="Watch My Most Viewed Videos";
+let currentSortButtonTitle="Sorting highest views to lowest";
+let feedBgPatternSpeed=1;
+const FEED_BG_PATTERN_BASE_DURATION_MS=8000;
 const defaultChannelLogoUrls = [
 "/dead/images/pngs/oldtube.png",
 "/dead/images/pngs/oldtube-alt-1.png",
@@ -948,6 +938,7 @@ return Math.max(1, Math.ceil(Math.max(filtered.length - baseVisible, 0) / gridSi
 function updateGridPageOptions(){
 const maxPages = getMaxGridPages();
 gridPageCount = Math.max(1, Math.min(gridPageCount, maxPages));
+if(!gridPageSelect) return;
 gridPageSelect.innerHTML = "";
 
 for(let page=1; page<=maxPages; page++){
@@ -965,6 +956,7 @@ updateGridPageOptions();
 visible = view==="list" ? 3 : getGridVisibleCount();
 }
 
+if(gridPageSelect){
 gridPageSelect.addEventListener("change",()=>{
 gridPageCount=Math.max(1, parseInt(gridPageSelect.value, 10) || 1);
 if(view==="grid"){
@@ -972,6 +964,7 @@ visible=getGridVisibleCount();
 render();
 }
 });
+}
 
 function escapeHtml(value){
 return String(value ?? "")
@@ -1181,37 +1174,50 @@ return a.sourceIndex - b.sourceIndex;
 }
 
 function refreshFilteredPosts(){
-filtered = getFilteredPosts(searchInput.value);
+filtered = getFilteredPosts(searchInput ? searchInput.value : headerSearchQuery);
 }
 
 function updateSortButton(){
 const sortMode = sortModes[sortModeIndex];
 if(sortMode === "newest"){
-modeBtn.title = "Sorting newest to oldest";
-sortStatePanel.textContent = "Watch My Newest Videos";
+currentSortButtonTitle = "Sorting newest to oldest";
+currentSortPanelText = "Watch My Newest Videos";
 }else if(sortMode === "oldest"){
-modeBtn.title = "Sorting oldest to newest";
-sortStatePanel.textContent = "Watch My Oldest Videos";
+currentSortButtonTitle = "Sorting oldest to newest";
+currentSortPanelText = "Watch My Oldest Videos";
 }else if(sortMode === "most-viewed"){
-modeBtn.title = "Sorting highest views to lowest";
-sortStatePanel.textContent = "Watch My Most Viewed Videos";
+currentSortButtonTitle = "Sorting highest views to lowest";
+currentSortPanelText = "Watch My Most Viewed Videos";
 }else{
-modeBtn.title = "Sorting lowest views to highest";
-sortStatePanel.textContent = "Watch My Least Viewed Videos";
+currentSortButtonTitle = "Sorting lowest views to highest";
+currentSortPanelText = "Watch My Least Viewed Videos";
 }
+if(modeBtn){
+modeBtn.title = currentSortButtonTitle;
 modeBtn.textContent = "Sort";
 modeBtn.setAttribute("aria-label", modeBtn.title);
+}
+if(sortStatePanel){
+sortStatePanel.textContent = currentSortPanelText;
+}
 syncSortButtonGroupWidth();
+postHeaderState();
 }
 
 function updateViewButton(){
+if(!gridBtn){
+postHeaderState();
+return;
+}
 gridBtn.textContent = "View";
 gridBtn.title = view === "grid" ? "Current view: grid" : "Current view: list";
 gridBtn.setAttribute("aria-label", gridBtn.title);
 syncSortButtonGroupWidth();
+postHeaderState();
 }
 
 function applyFeedMetadata(data){
+if(!channelTitleEl) return;
 channelTitleEl.innerHTML = `<a href="${HONESTLY_THOMAS_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${HONESTLY_THOMAS_AVATAR}" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="${CRYPTID_MEMES_URL}" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="${CRYPTID_MEMES_AVATAR}" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a>`;
 syncControlButtonSize();
 }
@@ -1230,12 +1236,41 @@ syncSortButtonGroupWidth();
 function syncSortButtonGroupWidth(){
 if(!gridBtn || !modeBtn) return;
 window.requestAnimationFrame(()=>{
+if(!channelTitleEl) return;
 const cryptidLink = channelTitleEl.querySelector(".channelHandleLink:last-child");
 const width = cryptidLink ? Math.ceil(cryptidLink.getBoundingClientRect().width) : 0;
 if(width > 0){
 document.documentElement.style.setProperty("--feed-sort-buttons-width", `${width}px`);
 }
 });
+}
+
+function postHeaderState(){
+try{
+if(!window.parent || window.parent === window) return;
+window.parent.postMessage({
+type:"feedGridHeaderState",
+view,
+query: searchInput ? searchInput.value : headerSearchQuery,
+sortMode: sortModes[sortModeIndex],
+sortPanelText: currentSortPanelText,
+sortButtonTitle: currentSortButtonTitle,
+sortDisabled: !posts.length,
+gridPageCount,
+maxGridPages: getMaxGridPages(),
+patternSpeed: feedBgPatternSpeed
+}, "*");
+}catch(error){
+console.warn("Unable to notify parent about feed header state", error);
+}
+}
+
+function setFeedBgPatternSpeed(speed){
+const nextSpeed = Math.max(0.1, Math.min(5, Number(speed) || 1));
+feedBgPatternSpeed = nextSpeed;
+const durationMs = FEED_BG_PATTERN_BASE_DURATION_MS / feedBgPatternSpeed;
+document.documentElement.style.setProperty("--feed-bg-pattern-duration", `${durationMs}ms`);
+postHeaderState();
 }
 
 async function fetchJson(path){
@@ -1337,14 +1372,14 @@ refreshFilteredPosts();
 if(!posts.length){
 statusEl.textContent="NO FEED ITEMS FOUND";
 statusEl.style.display="block";
-modeBtn.disabled=true;
+if(modeBtn) modeBtn.disabled=true;
 loadBtn.style.display="none";
 render();
 return;
 }
 
 statusEl.style.display="none";
-modeBtn.disabled=false;
+if(modeBtn) modeBtn.disabled=false;
 
 updateSortButton();
 syncGridPaging();
@@ -1482,9 +1517,10 @@ postsEl.appendChild(el);
 });
 
 if(visible>=filtered.length) loadBtn.style.display="none";
-else loadBtn.style.display="block";
+else loadBtn.style.display="flex";
 }
 
+if(gridBtn){
 gridBtn.onclick=()=>{
 gridMenu.style.display="none";
 if(view==="grid"){
@@ -1496,6 +1532,7 @@ gridPageCount=1;
 syncGridPaging();
 }
 render();
+}
 }
 
 loadBtn.onclick=()=>{
@@ -1512,11 +1549,13 @@ visible=getGridVisibleCount();
 render();
 }
 
+if(searchInput){
 searchInput.addEventListener("input",()=>{
 refreshFilteredPosts();
 syncGridPaging();
 render();
 });
+}
 
 
 const cubeContainer=document.getElementById("cubeContainer");
@@ -1530,9 +1569,11 @@ let j=Math.floor(Math.random()*(i+1));
 return a;
 }
 
+if(modeBtn){
 modeBtn.onclick=()=>{
 pauseSortCycleForUser();
 cycleSortMode(true);
+}
 }
 
 function stopSortCycle(){
@@ -1572,7 +1613,7 @@ render();
 }
 
 function cycleSortMode(animated=false){
-if(!posts.length || modeBtn.disabled) return;
+if(!posts.length || (modeBtn && modeBtn.disabled)) return;
 
 clearSortTransitionTimers();
 
@@ -1762,6 +1803,41 @@ render();
 
 window.addEventListener("message", (event) => {
 const data = event.data || {};
+if (data.type === "feedGridHeaderCommand") {
+const action = String(data.action || "");
+if(action === "search"){
+headerSearchQuery = String(data.query || "");
+if(searchInput) searchInput.value = headerSearchQuery;
+refreshFilteredPosts();
+syncGridPaging();
+render();
+return;
+}
+if(action === "toggleView"){
+window.tektiteChatApi.setView(view === "grid" ? "list" : "grid");
+return;
+}
+if(action === "setView"){
+window.tektiteChatApi.setView(data.view);
+return;
+}
+if(action === "toggleSort"){
+window.tektiteChatApi.toggleSort();
+return;
+}
+if(action === "setGridPage"){
+window.tektiteChatApi.setGridPage(data.page);
+return;
+}
+if(action === "setPatternSpeed"){
+setFeedBgPatternSpeed(data.speed);
+return;
+}
+if(action === "requestState"){
+postHeaderState();
+return;
+}
+}
 if (data.type !== "feedGridOpenVideo") return;
 const requestedId = String(data.videoId || "").trim();
 if (!requestedId) return;
@@ -1775,7 +1851,7 @@ window.tektiteChatApi = {
     view = nextView === 'list' ? 'list' : 'grid';
     if (view === 'list') {
       visible = 3;
-      gridMenu.style.display = 'none';
+      if(gridMenu) gridMenu.style.display = 'none';
     } else {
       syncGridPaging();
     }
@@ -1793,15 +1869,17 @@ window.tektiteChatApi = {
   },
   search(term){
     const query = String(term || '').trim().toLowerCase();
-    searchInput.value = term || '';
+    headerSearchQuery = term || '';
+    if(searchInput) searchInput.value = headerSearchQuery;
     refreshFilteredPosts();
     syncGridPaging();
     render();
     return query ? `Showing ${filtered.length} result(s) for "${term}"` : 'Search cleared';
   },
   toggleSort(){
-    modeBtn.click();
-    return `Sort is now ${modeBtn.title.toLowerCase()}`;
+    pauseSortCycleForUser();
+    cycleSortMode(true);
+    return `Sort is now ${currentSortButtonTitle.toLowerCase()}`;
   },
   toggleMode(){
     return this.toggleSort();
@@ -1810,9 +1888,11 @@ window.tektiteChatApi = {
 
 
 document.addEventListener("DOMContentLoaded",()=>{
+  if(channelHomeLink){
   channelHomeLink.addEventListener("click", ()=>{
     channelHomeLink.href = getRandomChannelUrl();
   });
+  }
   applyChannelLogoAsset(getPrimaryChannelLogoUrl());
   bindChannelLogoHoverCycle();
   updateTintFilters();

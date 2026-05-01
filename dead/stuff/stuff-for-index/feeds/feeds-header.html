@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>/dead/stuff/stuff-for-index/feeds/feeds-header.html</title>
+
+<style>
+:root{
+--page-bg:black;
+--page-background:var(--page-bg);
+--panel-bg:#4b0076;
+--panel-background:var(--panel-bg);
+--page-text:#00ff00;
+--accent-color:var(--page-text);
+--header-bg:#000;
+--header-control-height:40px;
+--tektite-logo-filter: rgba(0, 255, 0, 0);
+--page-font-family:"Courier New", monospace;
+--page-font-scale:1;
+--feed-grid-gap:20px;
+--feed-header-row-gap:var(--feed-grid-gap);
+--feed-posts-x:20px;
+--feed-control-button-size:var(--header-control-height);
+--feed-mobile-header-height:60px;
+--feed-mobile-dock-height:56px;
+}
+
+html,
+body{
+margin:0;
+overflow:hidden;
+background:#000;
+color:var(--page-text);
+font-family:var(--page-font-family);
+font-size:calc(16px * var(--page-font-scale));
+scrollbar-width:none;
+-ms-overflow-style:none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar{display:none;}
+
+header{
+display:flex;
+align-items:stretch;
+justify-content:center;
+gap:var(--feed-header-row-gap) var(--feed-grid-gap);
+padding:var(--feed-header-row-gap) 20px;
+background:#000 !important;
+position:relative;
+z-index:20;
+box-sizing:border-box;
+}
+
+.channelHeader{
+display:flex;
+align-items:stretch;
+gap:6px;
+width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+min-width:0;
+}
+
+.channelHeader a{
+display:flex;
+align-items:center;
+text-decoration:none;
+color:inherit;
+}
+
+.channelHeader .logoLink{
+position:relative;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+isolation:isolate;
+background:#000;
+border:1px solid var(--accent-color);
+min-height:var(--header-control-height);
+box-sizing:border-box;
+padding:4px 8px;
+flex:1 1 112px;
+min-width:82px;
+gap:0;
+}
+
+.channelLogoPrompt{
+font-size:clamp(12px, calc(0.86vw * var(--page-font-scale)), 20px);
+font-weight:bold;
+line-height:1;
+white-space:nowrap;
+flex:0 0 auto;
+}
+
+.channelLogoImageWrap{
+position:relative;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+height:auto;
+max-width:100%;
+flex:0.82 1 auto;
+min-width:0;
+}
+
+.channelLogo{
+height:auto;
+width:100%;
+max-width:100%;
+display:block;
+object-fit:contain;
+}
+
+.channelLogoTintLayer{
+position:absolute;
+inset:0;
+pointer-events:none;
+mix-blend-mode:color;
+background:var(--tektite-logo-filter);
+-webkit-mask-image:var(--tint-mask);
+mask-image:var(--tint-mask);
+-webkit-mask-repeat:no-repeat;
+mask-repeat:no-repeat;
+-webkit-mask-position:center;
+mask-position:center;
+-webkit-mask-size:contain;
+mask-size:contain;
+}
+
+.channelTitle{
+font-size:calc(11px * var(--page-font-scale));
+font-weight:bold;
+display:flex;
+align-items:stretch;
+gap:6px;
+flex-wrap:nowrap;
+min-width:0;
+flex:0 0 auto;
+}
+
+.channelHandleLink{
+display:inline-flex !important;
+align-items:center;
+gap:5px;
+justify-content:flex-end;
+color:inherit;
+text-decoration:none;
+line-height:1;
+background:#000;
+border:1px solid var(--accent-color);
+min-height:var(--header-control-height);
+box-sizing:border-box;
+padding:0 6px;
+min-width:0;
+flex:0 0 auto;
+overflow:visible;
+}
+
+.channelHandleLink span{
+min-width:0;
+flex:0 0 auto;
+overflow:visible;
+text-overflow:clip;
+white-space:nowrap;
+text-align:right;
+}
+
+.channelHandleAvatar{
+width:20px;
+height:20px;
+border-radius:50%;
+object-fit:cover;
+display:block;
+border:1px solid var(--accent-color);
+flex:0 0 20px;
+}
+
+.controls{
+display:flex;
+align-items:stretch;
+align-self:stretch;
+gap:6px;
+position:relative;
+z-index:21;
+width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+min-width:0;
+}
+
+.sortStatePanel{
+display:flex;
+align-items:center;
+justify-content:center;
+width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+min-width:0;
+min-height:var(--header-control-height);
+box-sizing:border-box;
+padding:0 10px;
+background:#000;
+border:1px solid var(--accent-color);
+color:var(--page-text);
+font-size:calc(21px * var(--page-font-scale));
+font-weight:700;
+line-height:1.15;
+text-align:center;
+}
+
+@keyframes overlay-ui-hueshift {
+from { filter: hue-rotate(0deg); }
+to { filter: hue-rotate(360deg); }
+}
+
+a:hover,
+a:focus-visible,
+button:hover,
+button:focus-visible,
+#videoSearch:hover,
+#videoSearch:focus-visible{
+animation: overlay-ui-hueshift 1.8s linear infinite;
+outline:none;
+}
+
+#videoSearch{
+width:auto;
+height:auto;
+min-height:var(--header-control-height);
+border:1px solid var(--accent-color);
+background:#000;
+color:var(--page-text);
+padding:0 8px;
+font-family:var(--page-font-family);
+font-weight:700;
+font-size:calc(14px * var(--page-font-scale));
+box-sizing:border-box;
+min-width:0;
+flex:1 1 0;
+}
+
+#videoSearch::placeholder{
+color:var(--page-text);
+opacity:1;
+}
+
+#patternSpeed{
+display:none;
+align-self:stretch;
+width:86px;
+min-width:72px;
+accent-color:var(--accent-color);
+background:#000;
+border:1px solid var(--accent-color);
+box-sizing:border-box;
+padding:0 6px;
+cursor:pointer;
+}
+
+#patternSpeed:hover,
+#patternSpeed:focus-visible{
+animation: overlay-ui-hueshift 1.8s linear infinite;
+outline:none;
+}
+
+button{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+align-self:stretch;
+height:auto;
+min-height:var(--header-control-height);
+padding:0;
+border:1px solid var(--accent-color);
+background:#000;
+color:var(--page-text);
+cursor:pointer;
+font-family:var(--page-font-family);
+font-weight:700;
+font-size:calc(12px * var(--page-font-scale));
+box-sizing:border-box;
+min-width:0;
+flex:0 0 auto;
+width:var(--feed-control-button-size);
+aspect-ratio:1;
+}
+
+button:disabled{
+cursor:default;
+opacity:.65;
+}
+
+#gridBtn,
+#modeBtn{
+aspect-ratio:auto;
+padding:0 10px;
+width:calc((var(--feed-sort-buttons-width, calc((2 * var(--feed-control-button-size)) + 6px)) - 6px) / 2);
+}
+
+#gridMenu{
+position:absolute;
+top:50px;
+right:0;
+background:var(--panel-background);
+border:2px solid var(--accent-color);
+padding:25px;
+display:none;
+z-index:999;
+}
+
+#gridControl{
+width:220px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:12px;
+}
+
+.gridMenuLabel{
+font-size:calc(14px * var(--page-font-scale));
+white-space:nowrap;
+}
+
+#gridPageSelect{
+height:40px;
+min-width:108px;
+border:2px solid var(--accent-color);
+background:var(--panel-background);
+color:var(--page-text);
+padding:0 12px;
+font-family:var(--page-font-family);
+}
+
+.mobileSortDock{
+display:none;
+}
+
+@media (max-width: 1024px){
+:root{
+--feed-grid-gap:14px;
+--feed-header-row-gap:10px;
+--feed-posts-x:8px;
+}
+
+body{
+overflow:hidden;
+}
+
+.mobileSortDock{
+position:fixed;
+top:0;
+left:0;
+right:0;
+z-index:50;
+display:flex;
+flex-direction:column;
+align-items:center;
+pointer-events:none;
+}
+
+#mobileSortStatePanel{
+display:flex;
+align-items:center;
+justify-content:center;
+width:100%;
+min-height:36px;
+box-sizing:border-box;
+padding:0 10px;
+background:#000;
+border:1px solid var(--accent-color);
+color:var(--page-text);
+font-size:calc(16px * var(--page-font-scale));
+font-weight:700;
+line-height:1.1;
+text-align:center;
+}
+
+.mobileHeaderHandle{
+display:flex;
+align-items:center;
+justify-content:center;
+width:100%;
+height:24px;
+margin-top:-1px;
+background:#000;
+border:1px solid var(--accent-color);
+color:var(--page-text);
+font-size:20px;
+font-weight:700;
+line-height:1;
+pointer-events:auto;
+touch-action:pan-y;
+cursor:grab;
+}
+
+.mobileHeaderHandle::before{
+content:"^";
+display:block;
+transform:rotate(180deg);
+}
+
+header{
+position:absolute;
+top:var(--feed-mobile-dock-height);
+left:0;
+right:0;
+padding:var(--feed-header-row-gap) 12px;
+flex-direction:column;
+align-items:stretch;
+gap:var(--feed-header-row-gap);
+justify-content:flex-start;
+width:100%;
+min-width:0;
+min-height:0;
+box-sizing:border-box;
+transform:translateY(-100%);
+visibility:hidden;
+}
+
+.channelHeader,
+.controls,
+.sortStatePanel{
+width:100%;
+flex:0 0 auto;
+}
+
+.channelHeader{
+gap:6px;
+flex-wrap:nowrap;
+align-self:stretch;
+min-width:0;
+}
+
+.channelHeader .logoLink{
+padding:4px 6px;
+flex:1 1 38%;
+align-self:stretch;
+width:auto;
+min-width:96px;
+}
+
+.channelTitle{
+font-size:calc(10px * var(--page-font-scale));
+line-height:1;
+white-space:nowrap;
+overflow:visible;
+text-overflow:clip;
+text-align:left;
+min-width:0;
+flex:0 0 auto;
+gap:6px;
+flex-wrap:nowrap;
+align-items:stretch;
+}
+
+.channelHandleLink{
+min-width:64px;
+flex:0 0 auto;
+padding:0 6px;
+font-size:calc(10px * var(--page-font-scale));
+justify-content:flex-end;
+text-align:right;
+}
+
+.controls{
+display:flex;
+align-items:stretch;
+align-self:stretch;
+gap:6px;
+flex-wrap:nowrap;
+width:100%;
+}
+
+.sortStatePanel{
+display:none;
+width:230px;
+min-height:40px;
+font-size:calc(17px * var(--page-font-scale));
+padding:0 8px;
+}
+
+#videoSearch{
+width:auto;
+flex:1 1 auto;
+min-width:0;
+height:auto;
+min-height:40px;
+box-sizing:border-box;
+font-size:calc(14px * var(--page-font-scale));
+}
+
+#patternSpeed{
+display:none;
+}
+
+#gridBtn,
+#modeBtn{
+display:inline-flex !important;
+align-items:center;
+justify-content:center;
+height:auto;
+min-height:40px;
+font-size:calc(12px * var(--page-font-scale));
+white-space:nowrap;
+flex:0 0 auto;
+aspect-ratio:auto;
+padding:0 10px;
+width:calc((var(--feed-sort-buttons-width, calc((2 * var(--feed-control-button-size)) + 6px)) - 6px) / 2);
+}
+
+#gridMenu{
+display:none !important;
+}
+
+}
+</style>
+</head>
+
+<body>
+<div class="mobileSortDock" aria-hidden="true">
+<div id="mobileSortStatePanel">Watch My Most Viewed Videos</div>
+<div class="mobileHeaderHandle" title="Drag header down"></div>
+</div>
+<header>
+<div class="channelHeader">
+<a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="logoLink" id="channelHomeLink">
+<span class="channelLogoPrompt">Sub to me on&nbsp;</span>
+<span class="channelLogoImageWrap">
+<img src="/dead/images/pngs/oldtube.png" class="channelLogo" alt="Channel feed logo">
+<span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/dead/images/pngs/oldtube.png');"></span>
+</span>
+</a>
+<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
+</div>
+
+<div class="sortStatePanel" id="sortStatePanel">Watch My Most Viewed Videos</div>
+
+<div class="controls">
+<input id="videoSearch" placeholder="Search Feed...">
+<input id="patternSpeed" type="range" min="0.1" max="5" step="0.1" value="1" title="Pattern speed">
+<button id="gridBtn">View</button>
+<button id="modeBtn" disabled>Sort</button>
+
+<div id="gridMenu">
+<div id="gridControl">
+<label for="gridPageSelect" class="gridMenuLabel">Grid Pages</label>
+<select id="gridPageSelect"></select>
+</div>
+</div>
+</div>
+</header>
+
+<script>
+const HONESTLY_THOMAS_URL="https://www.youtube.com/@Honestly_Thomas";
+const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
+const headerEl=document.querySelector("header");
+const mobileSortDock=document.querySelector(".mobileSortDock");
+const mobileHeaderHandle=document.querySelector(".mobileHeaderHandle");
+const channelHomeLink=document.getElementById("channelHomeLink");
+const channelLogoLinks=Array.from(document.querySelectorAll(".logoLink"));
+const controlsEl=document.querySelector(".controls");
+const channelTitleEl=document.getElementById("channelTitle");
+const sortStatePanel=document.getElementById("sortStatePanel");
+const mobileSortStatePanel=document.getElementById("mobileSortStatePanel");
+const searchInput=document.getElementById("videoSearch");
+const patternSpeedInput=document.getElementById("patternSpeed");
+const gridBtn=document.getElementById("gridBtn");
+const modeBtn=document.getElementById("modeBtn");
+const gridMenu=document.getElementById("gridMenu");
+const gridPageSelect=document.getElementById("gridPageSelect");
+const defaultChannelLogoUrls=[
+"/dead/images/pngs/oldtube.png",
+"/dead/images/pngs/oldtube-alt-1.png",
+"/dead/images/pngs/oldtube-alt-2.png"
+];
+let customChannelLogoUrls=[];
+let channelLogoHoverIntervalId=null;
+let channelLogoHoverIndex=0;
+const channelLogoHoverIntervalMs=2000;
+let mobileDrawerProgress=0;
+let mobileDrawerDragging=false;
+let mobileDrawerStartY=0;
+let mobileDrawerStartProgress=0;
+let mobileDrawerMoved=false;
+
+function isMobileHeaderLayout(){
+return window.matchMedia("(max-width: 768px)").matches;
+}
+
+function postToParent(message){
+try{
+if(window.parent && window.parent !== window){
+window.parent.postMessage(message, "*");
+}
+}catch(error){
+console.warn("Unable to post feed header message", error);
+}
+}
+
+function postCommand(action, extra={}){
+postToParent({ type:"feedGridHeaderCommand", action, ...extra });
+}
+
+function postSize(){
+window.requestAnimationFrame(()=>{
+let height=Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || headerEl.offsetHeight || 0);
+if(isMobileHeaderLayout()){
+const dockHeight=Math.ceil(mobileSortDock.getBoundingClientRect().height || 0);
+const drawerHeight=Math.ceil(headerEl.getBoundingClientRect().height || headerEl.scrollHeight || 0);
+height=dockHeight + Math.ceil(drawerHeight * mobileDrawerProgress);
+}
+postToParent({ type:"feedGridHeaderSize", height });
+});
+}
+
+function setMobileDrawerProgress(progress, animated=false){
+mobileDrawerProgress=Math.max(0, Math.min(1, Number(progress) || 0));
+if(isMobileHeaderLayout()){
+headerEl.style.transition=animated ? "transform 180ms ease" : "none";
+headerEl.style.transform=`translateY(${(-100 + (mobileDrawerProgress * 100)).toFixed(3)}%)`;
+headerEl.style.visibility=mobileDrawerProgress > 0.001 ? "visible" : "hidden";
+headerEl.style.pointerEvents=mobileDrawerProgress > 0.05 ? "auto" : "none";
+document.body.classList.toggle("mobile-drawer-open", mobileDrawerProgress > 0.98);
+}else{
+headerEl.style.transition="";
+headerEl.style.transform="";
+headerEl.style.visibility="";
+headerEl.style.pointerEvents="";
+document.body.classList.remove("mobile-drawer-open");
+}
+postSize();
+}
+
+function finishMobileDrawerDrag(){
+setMobileDrawerProgress(mobileDrawerProgress >= 0.35 ? 1 : 0, true);
+}
+
+function updateTintFilters(){
+return true;
+}
+
+function getActiveChannelLogoUrls(){
+return customChannelLogoUrls.length ? [...customChannelLogoUrls] : [...defaultChannelLogoUrls];
+}
+
+function getPrimaryChannelLogoUrl(){
+return customChannelLogoUrls.length ? customChannelLogoUrls[0] : "/dead/images/pngs/oldtube.png";
+}
+
+function applyChannelLogoAsset(logoSrc){
+channelLogoLinks.forEach((link)=>{
+const img=link.querySelector(".channelLogo");
+const layer=link.querySelector(".channelLogoTintLayer");
+if(img){
+img.src=logoSrc;
+img.style.objectFit="contain";
+img.addEventListener("load", ()=>{
+syncControlButtonSize();
+postSize();
+}, { once:true });
+}
+if(layer){
+const safeUrl=String(logoSrc).replace(/'/g, "\\'");
+layer.style.setProperty("--tint-mask", `url('${safeUrl}')`);
+layer.style.webkitMaskSize="contain";
+layer.style.maskSize="contain";
+}
+});
+syncControlButtonSize();
+postSize();
+}
+
+function stopChannelLogoHoverCycle(resetToPrimary=true){
+if(channelLogoHoverIntervalId !== null){
+window.clearInterval(channelLogoHoverIntervalId);
+channelLogoHoverIntervalId=null;
+}
+channelLogoHoverIndex=0;
+if(resetToPrimary){
+applyChannelLogoAsset(getPrimaryChannelLogoUrl());
+}
+}
+
+function startChannelLogoHoverCycle(){
+const urls=getActiveChannelLogoUrls();
+if(urls.length <= 1) return;
+stopChannelLogoHoverCycle(false);
+channelLogoHoverIndex=1 % urls.length;
+applyChannelLogoAsset(urls[channelLogoHoverIndex]);
+channelLogoHoverIntervalId=window.setInterval(()=>{
+channelLogoHoverIndex=(channelLogoHoverIndex + 1) % urls.length;
+applyChannelLogoAsset(urls[channelLogoHoverIndex]);
+}, channelLogoHoverIntervalMs);
+}
+
+function bindChannelLogoHoverCycle(){
+channelLogoLinks.forEach((link)=>{
+if(link.dataset.hoverCycleBound === "true") return;
+link.addEventListener("mouseenter", ()=>{
+if(getActiveChannelLogoUrls().length > 1){
+startChannelLogoHoverCycle();
+}
+});
+link.addEventListener("mouseleave", ()=>{
+stopChannelLogoHoverCycle(true);
+});
+link.dataset.hoverCycleBound="true";
+});
+}
+
+window.setTektiteLogoUrls = function setTektiteLogoUrls(urls){
+customChannelLogoUrls = Array.isArray(urls)
+? urls.map((url)=>String(url || "").trim()).filter(Boolean)
+: [];
+stopChannelLogoHoverCycle(false);
+applyChannelLogoAsset(getPrimaryChannelLogoUrl());
+updateTintFilters();
+return true;
+};
+
+window.resetTektiteLogoUrls = function resetTektiteLogoUrls(){
+customChannelLogoUrls = [];
+stopChannelLogoHoverCycle(false);
+applyChannelLogoAsset(getPrimaryChannelLogoUrl());
+updateTintFilters();
+return true;
+};
+
+function getRandomChannelUrl(){
+return Math.random() < 0.5 ? HONESTLY_THOMAS_URL : CRYPTID_MEMES_URL;
+}
+
+function syncControlButtonSize(){
+if(!controlsEl) return;
+window.requestAnimationFrame(()=>{
+const height=Math.round(controlsEl.getBoundingClientRect().height);
+if(height > 0){
+document.documentElement.style.setProperty("--feed-control-button-size", `${height}px`);
+}
+syncSortButtonGroupWidth();
+postSize();
+});
+}
+
+function syncSortButtonGroupWidth(){
+window.requestAnimationFrame(()=>{
+const cryptidLink=channelTitleEl.querySelector(".channelHandleLink:last-child");
+const width=cryptidLink ? Math.ceil(cryptidLink.getBoundingClientRect().width) : 0;
+if(width > 0){
+document.documentElement.style.setProperty("--feed-sort-buttons-width", `${width}px`);
+}
+postSize();
+});
+}
+
+function updateGridPageOptions(pageCount, currentPage){
+const maxPages=Math.max(1, parseInt(pageCount, 10) || 1);
+const selected=Math.max(1, Math.min(maxPages, parseInt(currentPage, 10) || 1));
+gridPageSelect.innerHTML="";
+for(let page=1; page<=maxPages; page++){
+const option=document.createElement("option");
+option.value=String(page);
+option.textContent=`Page ${page}`;
+gridPageSelect.appendChild(option);
+}
+gridPageSelect.value=String(selected);
+postSize();
+}
+
+function applyState(state){
+if(typeof state.query === "string" && searchInput.value !== state.query){
+searchInput.value=state.query;
+}
+if(state.sortPanelText){
+sortStatePanel.textContent=state.sortPanelText;
+mobileSortStatePanel.textContent=state.sortPanelText;
+}
+if(state.sortButtonTitle){
+modeBtn.title=state.sortButtonTitle;
+modeBtn.setAttribute("aria-label", state.sortButtonTitle);
+}
+if(Number.isFinite(Number(state.patternSpeed))){
+patternSpeedInput.value=String(state.patternSpeed);
+patternSpeedInput.title=`Pattern speed: ${state.patternSpeed}x`;
+}
+modeBtn.disabled=Boolean(state.sortDisabled);
+gridBtn.title=state.view === "list" ? "Current view: list" : "Current view: grid";
+gridBtn.setAttribute("aria-label", gridBtn.title);
+updateGridPageOptions(state.maxGridPages, state.gridPageCount);
+syncControlButtonSize();
+}
+
+searchInput.addEventListener("input", ()=>{
+postCommand("search", { query:searchInput.value });
+});
+
+patternSpeedInput.addEventListener("input", ()=>{
+const speed=Number(patternSpeedInput.value) || 1;
+patternSpeedInput.title=`Pattern speed: ${speed}x`;
+postCommand("setPatternSpeed", { speed });
+});
+
+gridBtn.addEventListener("click", ()=>{
+gridMenu.style.display="none";
+postCommand("toggleView");
+});
+
+modeBtn.addEventListener("click", ()=>{
+postCommand("toggleSort");
+});
+
+gridPageSelect.addEventListener("change", ()=>{
+postCommand("setGridPage", { page:gridPageSelect.value });
+});
+
+channelHomeLink.addEventListener("click", ()=>{
+channelHomeLink.href=getRandomChannelUrl();
+});
+
+mobileHeaderHandle.addEventListener("pointerdown", (event)=>{
+if(!isMobileHeaderLayout()) return;
+mobileDrawerDragging=true;
+mobileDrawerMoved=false;
+mobileDrawerStartY=event.clientY;
+mobileDrawerStartProgress=mobileDrawerProgress;
+mobileHeaderHandle.setPointerCapture(event.pointerId);
+mobileHeaderHandle.style.cursor="grabbing";
+});
+
+mobileHeaderHandle.addEventListener("pointermove", (event)=>{
+if(!mobileDrawerDragging || !isMobileHeaderLayout()) return;
+const drawerHeight=Math.max(1, headerEl.getBoundingClientRect().height || headerEl.scrollHeight || 1);
+const delta=event.clientY - mobileDrawerStartY;
+if(Math.abs(delta) > 4) mobileDrawerMoved=true;
+setMobileDrawerProgress(mobileDrawerStartProgress + (delta / drawerHeight), false);
+event.preventDefault();
+});
+
+function endMobileDrawerPointer(event){
+if(!mobileDrawerDragging) return;
+mobileDrawerDragging=false;
+mobileHeaderHandle.style.cursor="";
+try{
+mobileHeaderHandle.releasePointerCapture(event.pointerId);
+}catch(error){}
+finishMobileDrawerDrag();
+}
+
+mobileHeaderHandle.addEventListener("pointerup", endMobileDrawerPointer);
+mobileHeaderHandle.addEventListener("pointercancel", endMobileDrawerPointer);
+mobileHeaderHandle.addEventListener("click", ()=>{
+if(!isMobileHeaderLayout() || mobileDrawerMoved) return;
+setMobileDrawerProgress(mobileDrawerProgress > 0.5 ? 0 : 1, true);
+});
+
+window.addEventListener("message", (event)=>{
+const data=event.data || {};
+if(data.type === "feedHeaderMobileDrawerProgress"){
+setMobileDrawerProgress(data.progress, Boolean(data.animated));
+return;
+}
+if(data.type === "feedGridHeaderState"){
+applyState(data);
+}
+});
+
+window.addEventListener("resize", ()=>{
+syncControlButtonSize();
+if(!isMobileHeaderLayout()){
+setMobileDrawerProgress(0, false);
+}
+postSize();
+});
+
+const resizeObserver=new ResizeObserver(postSize);
+resizeObserver.observe(document.documentElement);
+resizeObserver.observe(document.body);
+
+document.addEventListener("DOMContentLoaded", ()=>{
+applyChannelLogoAsset(getPrimaryChannelLogoUrl());
+bindChannelLogoHoverCycle();
+updateTintFilters();
+syncControlButtonSize();
+setMobileDrawerProgress(0, false);
+postCommand("requestState");
+postSize();
+});
+</script>
+</body>
+</html>

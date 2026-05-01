@@ -53,12 +53,69 @@
       z-index: 1;
     }
 
+    #tektite-header-frame {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 0;
+      border: none;
+      display: block;
+      background: #000;
+      overflow: hidden;
+      z-index: 30;
+      pointer-events: none;
+      transform: translateY(-100%);
+      transition: transform 240ms ease;
+    }
+
+    body.feed-header-open #tektite-header-frame {
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
     #tektite-frame {
       width: 100%;
       height: 100%;
       border: none;
       display: block;
       background: #000;
+    }
+
+    #mobile-feed-header-hit-target {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      #tektite-header-frame {
+        position: fixed;
+        top: var(--overlay-height, 76px);
+        left: 0;
+        right: 0;
+        width: 100%;
+        pointer-events: auto;
+        transform: none;
+        transition: none;
+        z-index: 1100;
+      }
+
+      #mobile-feed-header-hit-target {
+        position: fixed;
+        top: var(--overlay-height, 76px);
+        left: 0;
+        right: 0;
+        display: block;
+        height: 140px;
+        z-index: 1200;
+        background: transparent;
+        pointer-events: auto;
+        touch-action: pan-y;
+        cursor: grab;
+      }
+
+      body.feed-header-open #tektite-header-frame {
+        transform: none;
+      }
     }
 
     #chat-sandbox-frame {
@@ -171,6 +228,13 @@
   <div id="overlay-container"></div>
 
   <div id="site-shell">
+    <iframe
+      id="tektite-header-frame"
+      src="/dead/stuff/stuff-for-index/feeds/feeds-header.html"
+      title="Tektite Feed Header"
+      loading="eager"
+      scrolling="no"
+    ></iframe>
     <div id="main-content">
       <iframe
         id="tektite-frame"
@@ -189,6 +253,7 @@
     loading="eager"
     allow="clipboard-read; clipboard-write"
   ></iframe>
+  <div id="mobile-feed-header-hit-target" aria-hidden="true"></div>
 
   <input id="overlay-logo-upload-input" type="file" accept="image/*" hidden />
   <input id="tektite-logo-upload-input" type="file" accept="image/*" multiple hidden />
@@ -196,9 +261,19 @@
   <script>
     const overlayContainer = document.getElementById('overlay-container');
     const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
+    const tektiteHeaderFrame = document.getElementById('tektite-header-frame');
     const tektiteFrame = document.getElementById('tektite-frame');
+    const mobileFeedHeaderHitTarget = document.getElementById('mobile-feed-header-hit-target');
     const overlayLogoUploadInput = document.getElementById('overlay-logo-upload-input');
     const tektiteLogoUploadInput = document.getElementById('tektite-logo-upload-input');
+    let tektiteHeaderHeight = 0;
+    let overlayHovering = false;
+    let feedHeaderHovering = false;
+    let mobileFeedHeaderDragging = false;
+    let mobileFeedHeaderMoved = false;
+    let mobileFeedHeaderStartY = 0;
+    let mobileFeedHeaderStartProgress = 0;
+    let mobileFeedHeaderProgress = 0;
     let chatSandboxVisible = false;
     let chatSandboxDvdActive = false;
     let chatSandboxReady = false;
@@ -387,6 +462,44 @@
       return chatSandboxFrame && chatSandboxFrame.contentWindow ? chatSandboxFrame.contentWindow : null;
     }
 
+    function setTektiteHeaderHeight(height) {
+      const nextHeight = Math.max(0, parseInt(height, 10) || 0);
+      if (nextHeight === tektiteHeaderHeight) return;
+      tektiteHeaderHeight = nextHeight;
+      tektiteHeaderFrame.style.height = `${tektiteHeaderHeight}px`;
+    }
+
+    function measureTektiteHeader() {
+      try {
+        const doc = tektiteHeaderFrame.contentDocument || (tektiteHeaderFrame.contentWindow && tektiteHeaderFrame.contentWindow.document);
+        if (!doc) return;
+        const measured = Math.ceil(doc.documentElement.scrollHeight || doc.body.scrollHeight || 0);
+        if (measured > 0) {
+          setTektiteHeaderHeight(measured);
+        }
+      } catch (error) {
+        console.warn('Unable to measure tektite header iframe', error);
+      }
+    }
+
+    function isMobileFeedHeaderLayout() {
+      return window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function syncFeedHeaderVisibility() {
+      document.body.classList.toggle('feed-header-open', isMobileFeedHeaderLayout() || overlayHovering || feedHeaderHovering);
+    }
+
+    function setMobileFeedHeaderProgress(progress, animated = false) {
+      mobileFeedHeaderProgress = Math.max(0, Math.min(1, Number(progress) || 0));
+      if (tektiteHeaderFrame.contentWindow) {
+        tektiteHeaderFrame.contentWindow.postMessage({
+          type: 'feedHeaderMobileDrawerProgress',
+          progress: mobileFeedHeaderProgress,
+          animated
+        }, '*');
+      }
+    }
 
     function sanitizeClockZone(zone) {
       const safeZone = typeof zone === 'string' ? zone.trim() : '';
@@ -1561,6 +1674,12 @@
       } catch (error) {
         console.warn('Unable to apply custom logos to tektite iframe', error);
       }
+      try {
+        const doc = tektiteHeaderFrame.contentDocument || (tektiteHeaderFrame.contentWindow && tektiteHeaderFrame.contentWindow.document);
+        updateTektiteLogoAssets(doc);
+      } catch (error) {
+        console.warn('Unable to apply custom logos to tektite header iframe', error);
+      }
     }
 
     function replaceCustomLogo(target, files) {
@@ -1635,6 +1754,17 @@
         }
       } catch (error) {
         console.warn('Unable to apply page customization to tektite iframe', error);
+      }
+      try {
+        const doc = tektiteHeaderFrame.contentDocument || (tektiteHeaderFrame.contentWindow && tektiteHeaderFrame.contentWindow.document);
+        applyTektiteVars(doc);
+        updateTektiteLogoAssets(doc);
+        if (doc.defaultView && typeof doc.defaultView.updateTintFilters === "function") {
+          doc.defaultView.updateTintFilters();
+        }
+        measureTektiteHeader();
+      } catch (error) {
+        console.warn('Unable to apply page customization to tektite header iframe', error);
       }
     }
 
@@ -2288,8 +2418,70 @@
     });
 
     window.addEventListener('keydown', handleChatShortcutKeydown, true);
-    window.addEventListener('resize', () => { if (colorElementModeEnabled) refreshColorElementHotspots(); });
+    window.addEventListener('resize', () => {
+      syncFeedHeaderVisibility();
+      measureTektiteHeader();
+      if (colorElementModeEnabled) refreshColorElementHotspots();
+    });
     window.addEventListener('scroll', () => { if (colorElementModeEnabled) refreshColorElementHotspots(); }, true);
+
+    overlayContainer.addEventListener('mouseenter', () => {
+      overlayHovering = true;
+      syncFeedHeaderVisibility();
+    });
+
+    overlayContainer.addEventListener('mouseleave', () => {
+      overlayHovering = false;
+      syncFeedHeaderVisibility();
+    });
+
+    tektiteHeaderFrame.addEventListener('mouseenter', () => {
+      feedHeaderHovering = true;
+      syncFeedHeaderVisibility();
+    });
+
+    tektiteHeaderFrame.addEventListener('mouseleave', () => {
+      feedHeaderHovering = false;
+      syncFeedHeaderVisibility();
+    });
+
+    mobileFeedHeaderHitTarget.addEventListener('pointerdown', (event) => {
+      if (!isMobileFeedHeaderLayout()) return;
+      mobileFeedHeaderDragging = true;
+      mobileFeedHeaderMoved = false;
+      mobileFeedHeaderStartY = event.clientY;
+      mobileFeedHeaderStartProgress = mobileFeedHeaderProgress;
+      mobileFeedHeaderHitTarget.setPointerCapture(event.pointerId);
+      mobileFeedHeaderHitTarget.style.cursor = 'grabbing';
+    });
+
+    mobileFeedHeaderHitTarget.addEventListener('pointermove', (event) => {
+      if (!mobileFeedHeaderDragging || !isMobileFeedHeaderLayout()) return;
+      const delta = event.clientY - mobileFeedHeaderStartY;
+      if (Math.abs(delta) > 4) mobileFeedHeaderMoved = true;
+      setMobileFeedHeaderProgress(mobileFeedHeaderStartProgress + (delta / 120), false);
+      event.preventDefault();
+    });
+
+    function endMobileFeedHeaderDrag(event) {
+      if (!mobileFeedHeaderDragging) return;
+      mobileFeedHeaderDragging = false;
+      mobileFeedHeaderHitTarget.style.cursor = '';
+      try {
+        mobileFeedHeaderHitTarget.releasePointerCapture(event.pointerId);
+      } catch (error) {}
+      if (!mobileFeedHeaderMoved) {
+        setMobileFeedHeaderProgress(mobileFeedHeaderStartProgress > 0.5 ? 0 : 1, true);
+        return;
+      }
+      setMobileFeedHeaderProgress(mobileFeedHeaderProgress >= 0.35 ? 1 : 0, true);
+    }
+
+    mobileFeedHeaderHitTarget.addEventListener('pointerup', endMobileFeedHeaderDrag);
+    mobileFeedHeaderHitTarget.addEventListener('pointercancel', endMobileFeedHeaderDrag);
+    mobileFeedHeaderHitTarget.addEventListener('click', () => {
+      if (!isMobileFeedHeaderLayout() || mobileFeedHeaderMoved) return;
+    });
 
     chatSandboxFrame.addEventListener('load', () => {
       chatSandboxReady = true;
@@ -2342,8 +2534,33 @@
       tektiteFrame.contentWindow.postMessage({ type: 'feedGridOpenVideo', videoId }, '*');
     }
 
+    function requestFeedHeaderState() {
+      if (tektiteFrame.contentWindow) {
+        tektiteFrame.contentWindow.postMessage({ type: 'feedGridHeaderCommand', action: 'requestState' }, '*');
+      }
+    }
+
     window.addEventListener('message', (event) => {
       const data = event.data || {};
+      if (event.source === tektiteHeaderFrame.contentWindow && data.type === 'feedGridHeaderSize') {
+        setTektiteHeaderHeight(data.height);
+        return;
+      }
+
+      if (event.source === tektiteHeaderFrame.contentWindow && data.type === 'feedGridHeaderCommand') {
+        if (tektiteFrame.contentWindow) {
+          tektiteFrame.contentWindow.postMessage(data, '*');
+        }
+        return;
+      }
+
+      if (event.source === tektiteFrame.contentWindow && data.type === 'feedGridHeaderState') {
+        if (tektiteHeaderFrame.contentWindow) {
+          tektiteHeaderFrame.contentWindow.postMessage(data, '*');
+        }
+        return;
+      }
+
       if (event.source === tektiteFrame.contentWindow && data.type === 'feedGridVideoState') {
         updateRootVideoRoute(data.action, String(data.videoId || ''));
       }
@@ -2351,16 +2568,26 @@
 
     normalizeInitialRootVideoRoute();
 
+    tektiteHeaderFrame.addEventListener('load', () => {
+      measureTektiteHeader();
+      applyPageCustomizeState();
+      bindChatShortcutToFrame(tektiteHeaderFrame);
+      requestFeedHeaderState();
+      syncFeedHeaderVisibility();
+    });
+
     tektiteFrame.addEventListener('load', () => {
       applyPageCustomizeState();
       bindChatShortcutToFrame(tektiteFrame);
       sendInitialRootVideoToFrame();
+      requestFeedHeaderState();
       if (colorElementModeEnabled) {
         window.setTimeout(refreshColorElementHotspots, 150);
       }
     });
 
     loadOverlay();
+    syncFeedHeaderVisibility();
     ensureColorElementUi();
   </script>
   <script src="/dead/scripts/screenshot-shortcut.js"></script>
