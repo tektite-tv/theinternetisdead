@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>/dead/videos/</title>
+  <script>
+    (function redirectToHomeWatchState() {
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      const videoId = parts.length >= 3 ? decodeURIComponent(parts[2]) : '';
+      if (videoId) {
+        window.sessionStorage.setItem('deadVideoId', videoId);
+      }
+      window.location.replace('/');
+    })();
+  </script>
+</head>
+<body></body>
+</html>

@@ -14,12 +14,21 @@
 --panel-background:var(--panel-bg);
 --page-text:#00ff00;
 --accent-color:var(--page-text);
---header-bg:#000;
+--header-bg:rgba(75,0,118,.5);
 --header-control-height:40px;
 --tektite-logo-filter: rgba(0, 255, 0, 0);
 --page-font-family:"Courier New", monospace;
 --page-font-scale:1;
 --feed-grid-gap:20px;
+--feed-card-padding:10px;
+--feed-visible-grid-rows:1;
+--feed-fit-gap-count:3;
+--feed-load-more-visible-height:var(--header-control-height);
+--feed-load-more-height:var(--header-control-height);
+--feed-grid-card-size:min(
+calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3),
+calc((100dvh - (var(--feed-fit-gap-count) * var(--feed-grid-gap)) - var(--feed-load-more-height)) / var(--feed-visible-grid-rows))
+);
 --feed-header-row-gap:var(--feed-grid-gap);
 --feed-posts-x:20px;
 --feed-control-button-size:var(--header-control-height);
@@ -48,18 +57,27 @@ align-items:stretch;
 justify-content:center;
 gap:var(--feed-header-row-gap) var(--feed-grid-gap);
 padding:var(--feed-header-row-gap) 20px;
-background:transparent !important;
+background:var(--header-bg) !important;
+border-bottom:3px solid lime;
 position:relative;
 z-index:20;
 box-sizing:border-box;
 }
 
 .channelHeader{
-display:flex;
+display:grid;
+grid-template-columns:minmax(0,.9fr) 3px minmax(0,1.05fr) 3px minmax(0,1.05fr);
 align-items:stretch;
-gap:6px;
-width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+gap:0;
+width:var(--feed-grid-card-size);
 min-width:0;
+height:var(--header-control-height);
+min-height:0;
+max-height:var(--header-control-height);
+box-sizing:border-box;
+background:#000;
+border:3px solid var(--accent-color);
+overflow:hidden;
 }
 
 .channelHeader a{
@@ -67,6 +85,8 @@ display:flex;
 align-items:center;
 text-decoration:none;
 color:inherit;
+min-width:0;
+overflow:hidden;
 }
 
 .channelHeader .logoLink{
@@ -75,14 +95,16 @@ display:inline-flex;
 align-items:center;
 justify-content:center;
 isolation:isolate;
-background:#000;
-border:1px solid var(--accent-color);
-min-height:var(--header-control-height);
+background:transparent;
+border:none;
+height:100%;
+min-height:0;
 box-sizing:border-box;
 padding:4px 8px;
-flex:1 1 112px;
-min-width:82px;
+flex:initial;
+min-width:0;
 gap:0;
+overflow:hidden;
 }
 
 .channelLogoPrompt{
@@ -90,18 +112,22 @@ font-size:clamp(12px, calc(0.86vw * var(--page-font-scale)), 20px);
 font-weight:bold;
 line-height:1;
 white-space:nowrap;
-flex:0 0 auto;
+flex:0 1 auto;
+min-width:0;
+overflow:hidden;
+text-overflow:ellipsis;
 }
 
 .channelLogoImageWrap{
 position:relative;
-display:inline-flex;
+display:none;
 align-items:center;
 justify-content:center;
 height:auto;
 max-width:100%;
-flex:0.82 1 auto;
+flex:1 1 0;
 min-width:0;
+overflow:hidden;
 }
 
 .channelLogo{
@@ -110,6 +136,16 @@ width:100%;
 max-width:100%;
 display:block;
 object-fit:contain;
+}
+
+.channelHeader:hover .channelLogoPrompt,
+.channelHeader:focus-within .channelLogoPrompt{
+display:none;
+}
+
+.channelHeader:hover .channelLogoImageWrap,
+.channelHeader:focus-within .channelLogoImageWrap{
+display:inline-flex;
 }
 
 .channelLogoTintLayer{
@@ -131,39 +167,63 @@ mask-size:contain;
 .channelTitle{
 font-size:calc(11px * var(--page-font-scale));
 font-weight:bold;
-display:flex;
+display:contents;
 align-items:stretch;
-gap:6px;
+gap:0;
 flex-wrap:nowrap;
 min-width:0;
-flex:0 0 auto;
+flex:initial;
+position:relative;
+overflow:hidden;
 }
 
 .channelHandleLink{
 display:inline-flex !important;
 align-items:center;
 gap:5px;
-justify-content:flex-end;
+justify-content:center;
 color:inherit;
 text-decoration:none;
 line-height:1;
-background:#000;
-border:1px solid var(--accent-color);
-min-height:var(--header-control-height);
+background:transparent;
+border:none;
+height:100%;
+min-height:0;
 box-sizing:border-box;
 padding:0 6px;
 min-width:0;
-flex:0 0 auto;
-overflow:visible;
+flex:initial;
+overflow:hidden;
+position:relative;
+}
+
+.channelDivider,
+.controlDivider{
+display:block;
+align-self:stretch;
+flex:0 0 1px;
+flex-basis:3px;
+width:3px;
+min-width:3px;
+background:var(--accent-color);
+pointer-events:none;
+}
+
+.channelHeader:focus-within,
+.channelHeader:hover,
+.controls:focus-within,
+.controls:hover{
+animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
 .channelHandleLink span{
 min-width:0;
-flex:0 0 auto;
-overflow:visible;
-text-overflow:clip;
+flex:1 1 auto;
+overflow:hidden;
+text-overflow:ellipsis;
 white-space:nowrap;
-text-align:right;
+text-align:center;
+display:none;
 }
 
 .channelHandleAvatar{
@@ -174,40 +234,100 @@ object-fit:cover;
 display:block;
 border:1px solid var(--accent-color);
 flex:0 0 20px;
+min-width:14px;
+}
+
+.channelHeader:hover .channelHandleAvatar,
+.channelHeader:focus-within .channelHandleAvatar{
+display:none;
+}
+
+.channelHeader:hover .channelHandleLink span,
+.channelHeader:focus-within .channelHandleLink span{
+display:block;
 }
 
 .controls{
 display:flex;
 align-items:stretch;
 align-self:stretch;
-gap:6px;
+gap:0;
 position:relative;
 z-index:21;
-width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+width:var(--feed-grid-card-size);
 min-width:0;
+height:var(--header-control-height);
+min-height:0;
+max-height:var(--header-control-height);
+box-sizing:border-box;
+background:#000;
+border:3px solid var(--accent-color);
+overflow:hidden;
+}
+
+.controls > *{
+min-width:0;
+overflow:hidden;
 }
 
 .sortStatePanel{
-display:flex;
+display:none;
 align-items:center;
 justify-content:center;
-width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+width:var(--feed-grid-card-size);
 min-width:0;
-min-height:var(--header-control-height);
+height:var(--header-control-height);
+min-height:0;
+max-height:var(--header-control-height);
+align-self:flex-start;
 box-sizing:border-box;
 padding:0 10px;
 background:#000;
-border:1px solid var(--accent-color);
+border:3px solid var(--accent-color);
 color:var(--page-text);
 font-size:calc(21px * var(--page-font-scale));
 font-weight:700;
 line-height:1.15;
 text-align:center;
-animation: state-indicator-hueshift 3.2s linear infinite;
-text-shadow:
-0 0 4px rgba(255,255,255,.95),
-0 0 10px rgba(255,255,255,.75),
-0 0 18px rgba(255,255,255,.45);
+text-decoration:none;
+cursor:pointer;
+overflow:hidden;
+user-select:none;
+-webkit-tap-highlight-color:transparent;
+}
+
+.sortStatePanel:hover,
+.sortStatePanel:focus-visible{
+animation: overlay-ui-hueshift 1.8s linear infinite;
+outline:none;
+}
+
+.sortStatePanel.is-disabled{
+cursor:default;
+opacity:.72;
+}
+
+.headerStateSpacer{
+width:var(--feed-grid-card-size);
+min-width:0;
+height:var(--header-control-height);
+min-height:0;
+max-height:var(--header-control-height);
+align-self:flex-start;
+box-sizing:border-box;
+flex:0 0 auto;
+visibility:hidden;
+pointer-events:none;
+}
+
+.stateIndicatorText{
+display:block;
+max-width:100%;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+font-size:var(--state-indicator-font-size, 21px);
+line-height:1;
 }
 
 @keyframes overlay-ui-hueshift {
@@ -230,20 +350,35 @@ animation: overlay-ui-hueshift 1.8s linear infinite;
 outline:none;
 }
 
+.sortStatePanel:hover,
+.sortStatePanel:focus-visible{
+outline:none;
+}
+
+.channelHeader a:hover,
+.channelHeader a:focus-visible,
+.controls button:hover,
+.controls button:focus-visible,
+.controls input:hover,
+.controls input:focus-visible{
+animation:none !important;
+}
+
 #videoSearch{
 width:auto;
-height:auto;
-min-height:var(--header-control-height);
-border:1px solid var(--accent-color);
-background:#000;
+height:100%;
+min-height:0;
+border:none;
+background:transparent;
 color:var(--page-text);
 padding:0 8px;
 font-family:var(--page-font-family);
 font-weight:700;
-font-size:calc(14px * var(--page-font-scale));
+font-size:var(--controls-text-font-size, calc(14px * var(--page-font-scale)));
 box-sizing:border-box;
 min-width:0;
 flex:1 1 0;
+text-overflow:ellipsis;
 }
 
 #videoSearch::placeholder{
@@ -258,7 +393,7 @@ width:86px;
 min-width:72px;
 accent-color:var(--accent-color);
 background:#000;
-border:1px solid var(--accent-color);
+border:none;
 box-sizing:border-box;
 padding:0 6px;
 cursor:pointer;
@@ -266,7 +401,7 @@ cursor:pointer;
 
 #patternSpeed:hover,
 #patternSpeed:focus-visible{
-animation: overlay-ui-hueshift 1.8s linear infinite;
+animation:none !important;
 outline:none;
 }
 
@@ -275,19 +410,19 @@ display:inline-flex;
 align-items:center;
 justify-content:center;
 align-self:stretch;
-height:auto;
-min-height:var(--header-control-height);
+height:100%;
+min-height:0;
 padding:0;
-border:1px solid var(--accent-color);
-background:#000;
+border:none;
+background:transparent;
 color:var(--page-text);
 cursor:pointer;
 font-family:var(--page-font-family);
 font-weight:700;
-font-size:calc(12px * var(--page-font-scale));
+font-size:var(--controls-button-font-size, calc(12px * var(--page-font-scale)));
 box-sizing:border-box;
 min-width:0;
-flex:0 0 auto;
+flex:0 1 var(--feed-control-button-size);
 width:var(--feed-control-button-size);
 aspect-ratio:1;
 }
@@ -299,9 +434,18 @@ opacity:.65;
 
 #gridBtn,
 #modeBtn{
-aspect-ratio:auto;
-padding:0 10px;
-width:calc((var(--feed-sort-buttons-width, calc((2 * var(--feed-control-button-size)) + 6px)) - 6px) / 2);
+aspect-ratio:1;
+padding:0;
+width:var(--feed-control-button-size);
+height:var(--feed-control-button-size);
+flex:0 1 var(--feed-control-button-size);
+min-width:0;
+min-height:var(--feed-control-button-size);
+line-height:1;
+text-align:center;
+white-space:normal;
+overflow:hidden;
+overflow-wrap:anywhere;
 }
 
 #gridMenu{
@@ -346,10 +490,16 @@ display:none;
 display:none;
 }
 
-@media (max-width: 1024px){
+@media (max-width: 768px){
 :root{
---feed-grid-gap:14px;
---feed-header-row-gap:10px;
+--feed-card-padding:8px;
+--feed-grid-gap:calc(2 * var(--feed-card-padding));
+--feed-load-more-visible-height:46px;
+--feed-grid-card-size:min(
+calc(100vw - (2 * var(--feed-posts-x))),
+calc((100dvh - (var(--feed-fit-gap-count) * var(--feed-grid-gap)) - var(--feed-load-more-height)) / var(--feed-visible-grid-rows))
+);
+--feed-header-row-gap:5px;
 --feed-posts-x:8px;
 }
 
@@ -357,35 +507,15 @@ body{
 overflow:hidden;
 }
 
-#mobileSortStatePanel{
-display:flex;
-align-items:center;
-justify-content:center;
-width:100%;
-min-height:36px;
-box-sizing:border-box;
-padding:0;
-color:var(--page-text);
-font-size:calc(16px * var(--page-font-scale));
-font-weight:700;
-line-height:1.1;
-text-align:center;
-animation: state-indicator-hueshift 3.2s linear infinite;
-text-shadow:
-0 0 4px rgba(255,255,255,.95),
-0 0 10px rgba(255,255,255,.75),
-0 0 18px rgba(255,255,255,.45);
-}
-
 .mobileHeaderHandle{
-display:flex;
+display:none;
 align-items:center;
 justify-content:center;
 width:100%;
-min-height:60px;
-padding:10px;
-background:#000;
-border:1px solid var(--accent-color);
+min-height:0;
+padding:0;
+background:transparent;
+border:none;
 color:var(--page-text);
 font-size:20px;
 font-weight:700;
@@ -403,10 +533,8 @@ content:"";
 }
 
 .mobileHeaderHandle::after{
-content:"v";
-display:block;
-font-size:18px;
-line-height:1;
+content:"";
+display:none;
 }
 
 header{
@@ -415,6 +543,7 @@ top:0;
 left:0;
 right:0;
 padding:var(--feed-header-row-gap) var(--feed-posts-x);
+background:var(--header-bg) !important;
 flex-direction:column;
 align-items:stretch;
 gap:var(--feed-header-row-gap);
@@ -430,24 +559,44 @@ will-change:transform;
 
 .channelHeader,
 .controls,
-.sortStatePanel{
+.sortStatePanel,
+.headerStateSpacer{
 width:100%;
 flex:0 0 auto;
+height:var(--header-control-height);
+min-height:var(--header-control-height);
+max-height:var(--header-control-height);
 }
 
 .channelHeader{
-gap:6px;
+gap:0;
+display:grid;
+grid-template-columns:1fr 1fr;
 flex-wrap:nowrap;
 align-self:stretch;
 min-width:0;
+height:var(--header-control-height);
+max-height:var(--header-control-height);
 }
 
 .channelHeader .logoLink{
 padding:4px 6px;
-flex:1 1 38%;
+flex:initial;
 align-self:stretch;
 width:auto;
-min-width:96px;
+min-width:0;
+gap:5px;
+}
+
+.channelHeader .channelLogoPrompt{
+display:inline-block;
+font-size:calc(10px * var(--page-font-scale));
+}
+
+.channelHeader .channelLogoImageWrap{
+display:inline-flex;
+flex:0 1 52px;
+max-width:52px;
 }
 
 .channelTitle{
@@ -458,26 +607,72 @@ overflow:visible;
 text-overflow:clip;
 text-align:left;
 min-width:0;
-flex:0 0 auto;
-gap:6px;
+flex:initial;
+gap:0;
+display:contents;
 flex-wrap:nowrap;
 align-items:stretch;
 }
 
 .channelHandleLink{
-min-width:64px;
-flex:0 0 auto;
+min-width:0;
+flex:initial;
 padding:0 6px;
 font-size:calc(10px * var(--page-font-scale));
-justify-content:flex-end;
-text-align:right;
+justify-content:center;
+text-align:center;
+overflow:hidden;
+}
+
+.channelDivider{
+display:none;
+}
+
+.channelHeader .logoLink,
+.channelHeader .channelHandleLink{
+display:none !important;
+width:100%;
+height:100%;
+}
+
+.channelHeader.mobile-channel-sub-state .logoLink{
+display:flex !important;
+grid-column:1 / -1;
+}
+
+.channelHeader.mobile-channel-links-state .channelHandleLink{
+display:flex !important;
+grid-column:auto;
+}
+
+.channelHandleAvatar{
+display:block;
+width:20px;
+height:20px;
+flex:0 0 20px;
+}
+
+.channelHandleLink span{
+display:block;
+}
+
+.channelHeader.mobile-channel-sub-state .logoLink .channelLogoPrompt,
+.channelHeader.mobile-channel-sub-state .logoLink .channelLogoImageWrap{
+display:inline-flex;
+}
+
+.channelHeader:hover .channelLogoPrompt,
+.channelHeader:focus-within .channelLogoPrompt,
+.channelHeader:hover .channelLogoImageWrap,
+.channelHeader:focus-within .channelLogoImageWrap{
+display:inline-flex;
 }
 
 .controls{
 display:flex;
 align-items:stretch;
 align-self:stretch;
-gap:6px;
+gap:0;
 flex-wrap:nowrap;
 width:100%;
 }
@@ -488,6 +683,10 @@ width:230px;
 min-height:40px;
 font-size:calc(17px * var(--page-font-scale));
 padding:0 8px;
+}
+
+.headerStateSpacer{
+display:none;
 }
 
 #videoSearch{
@@ -513,10 +712,18 @@ height:auto;
 min-height:40px;
 font-size:calc(12px * var(--page-font-scale));
 white-space:nowrap;
-flex:0 0 auto;
-aspect-ratio:auto;
-padding:0 10px;
-width:calc((var(--feed-sort-buttons-width, calc((2 * var(--feed-control-button-size)) + 6px)) - 6px) / 2);
+flex:0 0 var(--feed-control-button-size);
+aspect-ratio:1;
+padding:0;
+width:var(--feed-control-button-size);
+height:var(--feed-control-button-size);
+min-width:var(--feed-control-button-size);
+min-height:var(--feed-control-button-size);
+line-height:1;
+text-align:center;
+white-space:normal;
+overflow:hidden;
+overflow-wrap:anywhere;
 }
 
 #gridMenu{
@@ -531,21 +738,23 @@ display:none !important;
 <header>
 <div class="channelHeader">
 <a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="logoLink" id="channelHomeLink">
-<span class="channelLogoPrompt">Sub to me on&nbsp;</span>
+<span class="channelLogoPrompt">Sub to me on...</span>
 <span class="channelLogoImageWrap">
 <img src="/dead/images/pngs/oldtube.png" class="channelLogo" alt="Channel feed logo">
 <span class="channelLogoTintLayer" aria-hidden="true" style="--tint-mask: url('/dead/images/pngs/oldtube.png');"></span>
 </span>
 </a>
-<div class="channelTitle" id="channelTitle"><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
+<div class="channelTitle" id="channelTitle"><span class="channelDivider" aria-hidden="true"></span><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><span class="channelDivider" aria-hidden="true"></span><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
 </div>
 
-<div class="sortStatePanel" id="sortStatePanel">Watch My Most Viewed Videos</div>
+<div class="headerStateSpacer" aria-hidden="true"></div>
 
 <div class="controls">
 <input id="videoSearch" placeholder="Search Feed...">
 <input id="patternSpeed" type="range" min="0.1" max="5" step="0.1" value="1" title="Pattern speed">
+<span class="controlDivider" aria-hidden="true"></span>
 <button id="gridBtn">View</button>
+<span class="controlDivider" aria-hidden="true"></span>
 <button id="modeBtn" disabled>Sort</button>
 
 <div id="gridMenu">
@@ -556,7 +765,6 @@ display:none !important;
 </div>
 </div>
 <div class="mobileHeaderHandle" title="Drag header down">
-<div id="mobileSortStatePanel">Watch My Most Viewed Videos</div>
 </div>
 </header>
 
@@ -585,7 +793,10 @@ const defaultChannelLogoUrls=[
 let customChannelLogoUrls=[];
 let channelLogoHoverIntervalId=null;
 let channelLogoHoverIndex=0;
-const channelLogoHoverIntervalMs=2000;
+const SORT_CYCLE_INTERVAL_MS=15000;
+const channelLogoHoverIntervalMs=SORT_CYCLE_INTERVAL_MS;
+let mobileChannelCycleIntervalId=null;
+let mobileChannelCycleLinksState=false;
 let mobileDrawerProgress=0;
 let mobileDrawerDragging=false;
 let mobileDrawerStartY=0;
@@ -598,7 +809,7 @@ let mobileDrawerHideTimeoutId=null;
 const mobileDrawerSnapTransition="transform 360ms cubic-bezier(.16, 1, .3, 1)";
 
 function isMobileHeaderLayout(){
-return window.matchMedia("(max-width: 1024px)").matches;
+return window.matchMedia("(max-width: 768px)").matches;
 }
 
 function postToParent(message){
@@ -615,6 +826,15 @@ function postCommand(action, extra={}){
 postToParent({ type:"feedGridHeaderCommand", action, ...extra });
 }
 
+function bindContentOnlyLinks(){
+document.querySelectorAll(".channelHeader a").forEach((link)=>{
+link.addEventListener("click", (event)=>{
+if(event.target !== link) return;
+event.preventDefault();
+});
+});
+}
+
 function postSize(){
 window.requestAnimationFrame(()=>{
 let height=Math.ceil(document.documentElement.scrollHeight || document.body.scrollHeight || headerEl.offsetHeight || 0);
@@ -629,13 +849,11 @@ postToParent({ type:"feedGridHeaderSize", height });
 
 function getMobileDrawerMetrics(){
 const totalHeight=Math.ceil(headerEl.scrollHeight || headerEl.offsetHeight || headerEl.getBoundingClientRect().height || 0);
-const rowGap=Math.ceil(parseFloat(getComputedStyle(headerEl).rowGap) || 0);
-const travel=Math.max(0, Math.ceil(mobileHeaderHandle.offsetTop || 0) - rowGap);
 return {
 totalHeight,
-travel,
-visibleHeight:Math.max(1, totalHeight - travel),
-rowGap
+travel:totalHeight,
+visibleHeight:0,
+rowGap:0
 };
 }
 
@@ -737,18 +955,58 @@ applyChannelLogoAsset(urls[channelLogoHoverIndex]);
 }
 
 function bindChannelLogoHoverCycle(){
-channelLogoLinks.forEach((link)=>{
-if(link.dataset.hoverCycleBound === "true") return;
-link.addEventListener("mouseenter", ()=>{
+const channelHeader=document.querySelector(".channelHeader");
+if(!channelHeader || channelHeader.dataset.hoverCycleBound === "true") return;
+channelHeader.addEventListener("mouseenter", ()=>{
+if(isMobileHeaderLayout()) return;
 if(getActiveChannelLogoUrls().length > 1){
 startChannelLogoHoverCycle();
 }
 });
-link.addEventListener("mouseleave", ()=>{
+channelHeader.addEventListener("mouseleave", ()=>{
+if(isMobileHeaderLayout()) return;
 stopChannelLogoHoverCycle(true);
 });
-link.dataset.hoverCycleBound="true";
-});
+channelHeader.dataset.hoverCycleBound="true";
+}
+
+function syncMobileChannelCycleClass(){
+const channelHeader=document.querySelector(".channelHeader");
+if(!channelHeader) return;
+const mobile=isMobileHeaderLayout();
+channelHeader.classList.toggle("mobile-channel-sub-state", mobile && !mobileChannelCycleLinksState);
+channelHeader.classList.toggle("mobile-channel-links-state", mobile && mobileChannelCycleLinksState);
+}
+
+function stopMobileChannelCycle(){
+if(mobileChannelCycleIntervalId !== null){
+window.clearInterval(mobileChannelCycleIntervalId);
+mobileChannelCycleIntervalId=null;
+}
+mobileChannelCycleLinksState=false;
+syncMobileChannelCycleClass();
+}
+
+function startMobileChannelCycle(){
+if(!isMobileHeaderLayout()){
+stopMobileChannelCycle();
+return;
+}
+syncMobileChannelCycleClass();
+if(mobileChannelCycleIntervalId !== null) return;
+mobileChannelCycleIntervalId=window.setInterval(()=>{
+mobileChannelCycleLinksState=!mobileChannelCycleLinksState;
+syncMobileChannelCycleClass();
+fitHeaderRectangleChildren();
+}, SORT_CYCLE_INTERVAL_MS);
+}
+
+function syncMobileChannelCycle(){
+if(isMobileHeaderLayout()){
+startMobileChannelCycle();
+}else{
+stopMobileChannelCycle();
+}
 }
 
 window.setTektiteLogoUrls = function setTektiteLogoUrls(urls){
@@ -776,24 +1034,17 @@ return Math.random() < 0.5 ? HONESTLY_THOMAS_URL : CRYPTID_MEMES_URL;
 function syncControlButtonSize(){
 if(!controlsEl) return;
 window.requestAnimationFrame(()=>{
-const height=Math.round(controlsEl.getBoundingClientRect().height);
-if(height > 0){
-document.documentElement.style.setProperty("--feed-control-button-size", `${height}px`);
-}
-syncSortButtonGroupWidth();
+const rect=controlsEl.getBoundingClientRect();
+const style=window.getComputedStyle(controlsEl);
+const borderY=(parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0);
+const innerHeight=Math.max(1, Math.round(rect.height - borderY));
+document.documentElement.style.setProperty("--feed-control-button-size", `${innerHeight}px`);
 postSize();
 });
 }
 
 function syncSortButtonGroupWidth(){
-window.requestAnimationFrame(()=>{
-const cryptidLink=channelTitleEl.querySelector(".channelHandleLink:last-child");
-const width=cryptidLink ? Math.ceil(cryptidLink.getBoundingClientRect().width) : 0;
-if(width > 0){
-document.documentElement.style.setProperty("--feed-sort-buttons-width", `${width}px`);
-}
 postSize();
-});
 }
 
 function updateGridPageOptions(pageCount, currentPage){
@@ -810,14 +1061,147 @@ gridPageSelect.value=String(selected);
 postSize();
 }
 
+function setStateIndicatorText(text){
+const label=String(text || "");
+[sortStatePanel, mobileSortStatePanel].forEach((link)=>{
+if(!link) return;
+const textEl=link.querySelector(".stateIndicatorText");
+if(textEl){
+textEl.textContent=label;
+}else{
+link.textContent=label;
+}
+});
+fitStateIndicatorText();
+}
+
+function fitTextInsideLink(link, maxSize, minSize){
+const textEl=link && link.querySelector(".stateIndicatorText");
+if(!link || !textEl) return;
+textEl.style.fontSize=`${maxSize}px`;
+const availableWidth=Math.max(1, link.clientWidth - 20);
+const availableHeight=Math.max(1, link.clientHeight - 6);
+let size=maxSize;
+while(size > minSize && (textEl.scrollWidth > availableWidth || textEl.scrollHeight > availableHeight)){
+size-=1;
+textEl.style.fontSize=`${size}px`;
+}
+}
+
+function fitStateIndicatorText(){
+window.requestAnimationFrame(()=>{
+if(sortStatePanel && window.getComputedStyle(sortStatePanel).display !== "none"){
+fitTextInsideLink(sortStatePanel, 21, 9);
+}
+if(mobileSortStatePanel && window.getComputedStyle(mobileSortStatePanel).display !== "none"){
+fitTextInsideLink(mobileSortStatePanel, 17, 9);
+}
+postSize();
+});
+}
+
+function setFontSizeForAll(elements, size){
+elements.forEach((element)=>{
+if(element) element.style.fontSize=`${size}px`;
+});
+}
+
+function fitChannelHeaderChildren(){
+const channelHeader=document.querySelector(".channelHeader");
+if(!channelHeader || window.getComputedStyle(channelHeader).display === "none") return;
+const logoPrompt=channelHeader.querySelector(".channelLogoPrompt");
+const handleTextEls=Array.from(channelHeader.querySelectorAll(".channelHandleLink span"));
+const textEls=[logoPrompt, ...handleTextEls].filter(Boolean);
+let size=11;
+setFontSizeForAll(textEls, size);
+while(size > 7 && channelHeader.scrollWidth > channelHeader.clientWidth){
+size-=1;
+setFontSizeForAll(textEls, size);
+}
+handleTextEls.forEach((textEl)=>{
+const link=textEl.closest(".channelHandleLink");
+if(!link) return;
+let handleSize=11;
+textEl.style.display="block";
+textEl.style.fontSize=`${handleSize}px`;
+while(handleSize > 7 && textEl.scrollWidth > Math.max(1, link.clientWidth - 8)){
+handleSize-=1;
+textEl.style.fontSize=`${handleSize}px`;
+}
+textEl.style.display="";
+});
+}
+
+function fitControlsChildren(){
+if(!controlsEl || window.getComputedStyle(controlsEl).display === "none") return;
+let inputSize=14;
+let buttonSize=12;
+document.documentElement.style.setProperty("--controls-text-font-size", `${inputSize}px`);
+document.documentElement.style.setProperty("--controls-button-font-size", `${buttonSize}px`);
+while(inputSize > 8 && controlsEl.scrollWidth > controlsEl.clientWidth){
+inputSize-=1;
+buttonSize=Math.max(8, buttonSize - 1);
+document.documentElement.style.setProperty("--controls-text-font-size", `${inputSize}px`);
+document.documentElement.style.setProperty("--controls-button-font-size", `${buttonSize}px`);
+}
+}
+
+function fitHeaderRectangleChildren(){
+window.requestAnimationFrame(()=>{
+fitChannelHeaderChildren();
+fitStateIndicatorText();
+fitControlsChildren();
+postSize();
+});
+}
+
+function syncStateIndicatorLinks(state={}){
+const videoId=String(state.firstVideoId || "").trim();
+const videoTitle=String(state.firstVideoTitle || "").trim();
+const href=videoId ? `/dead/videos/${encodeURIComponent(videoId)}` : "/";
+const title=videoId
+? `Open first visible video${videoTitle ? `: ${videoTitle}` : ""}`
+: "No visible video";
+[sortStatePanel, mobileSortStatePanel].forEach((link)=>{
+if(!link) return;
+link.href=href;
+link.dataset.videoId=videoId;
+link.title=title;
+link.setAttribute("aria-label", title);
+link.classList.toggle("is-disabled", !videoId);
+});
+}
+
+function applyGridSizingState(state={}){
+const root=document.documentElement;
+const gridCardSize=String(state.gridCardSize || "").trim();
+const gridVisibleRows=String(state.gridVisibleRows || "").trim();
+const gridFitGapCount=String(state.gridFitGapCount || "").trim();
+const gridLoadMoreHeight=String(state.gridLoadMoreHeight || "").trim();
+if(gridCardSize){
+root.style.setProperty("--feed-grid-card-size", gridCardSize);
+}
+if(gridVisibleRows){
+root.style.setProperty("--feed-visible-grid-rows", gridVisibleRows);
+}
+if(gridFitGapCount){
+root.style.setProperty("--feed-fit-gap-count", gridFitGapCount);
+}
+if(gridLoadMoreHeight){
+root.style.setProperty("--feed-load-more-height", gridLoadMoreHeight);
+}
+fitHeaderRectangleChildren();
+}
+
 function applyState(state){
+applyGridSizingState(state);
 if(typeof state.query === "string" && searchInput.value !== state.query){
 searchInput.value=state.query;
 }
 if(state.sortPanelText){
-sortStatePanel.textContent=state.sortPanelText;
-mobileSortStatePanel.textContent=state.sortPanelText;
+setStateIndicatorText(state.sortPanelText);
 }
+syncStateIndicatorLinks(state);
 if(state.sortButtonTitle){
 modeBtn.title=state.sortButtonTitle;
 modeBtn.setAttribute("aria-label", state.sortButtonTitle);
@@ -831,6 +1215,16 @@ gridBtn.title=state.view === "list" ? "Current view: list" : "Current view: grid
 gridBtn.setAttribute("aria-label", gridBtn.title);
 updateGridPageOptions(state.maxGridPages, state.gridPageCount);
 syncControlButtonSize();
+fitHeaderRectangleChildren();
+}
+
+function handleStateIndicatorClick(event){
+const link=event.currentTarget;
+const videoId=String(link && link.dataset.videoId || "").trim();
+if(!videoId) return;
+event.preventDefault();
+event.stopPropagation();
+postCommand("openVideo", { videoId });
 }
 
 searchInput.addEventListener("input", ()=>{
@@ -851,6 +1245,13 @@ postCommand("toggleView");
 modeBtn.addEventListener("click", ()=>{
 postCommand("toggleSort");
 });
+
+if(sortStatePanel){
+sortStatePanel.addEventListener("click", handleStateIndicatorClick);
+}
+if(mobileSortStatePanel){
+mobileSortStatePanel.addEventListener("click", handleStateIndicatorClick);
+}
 
 gridPageSelect.addEventListener("change", ()=>{
 postCommand("setGridPage", { page:gridPageSelect.value });
@@ -918,6 +1319,8 @@ applyState(data);
 
 window.addEventListener("resize", ()=>{
 syncControlButtonSize();
+fitHeaderRectangleChildren();
+syncMobileChannelCycle();
 if(!isMobileHeaderLayout()){
 setMobileDrawerProgress(0, false);
 }
@@ -931,8 +1334,11 @@ resizeObserver.observe(document.body);
 document.addEventListener("DOMContentLoaded", ()=>{
 applyChannelLogoAsset(getPrimaryChannelLogoUrl());
 bindChannelLogoHoverCycle();
+syncMobileChannelCycle();
+bindContentOnlyLinks();
 updateTintFilters();
 syncControlButtonSize();
+fitHeaderRectangleChildren();
 setMobileDrawerProgress(0, false);
 postCommand("requestState");
 postSize();
