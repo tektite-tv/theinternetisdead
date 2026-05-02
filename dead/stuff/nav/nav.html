@@ -355,12 +355,16 @@ html, body {
   overflow: hidden;
   background: var(--overlay-bg);
   border: 2px solid var(--border-color);
+  animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
-#overlay-root .sidebar-item > a {
+#overlay-root .sidebar-section-toggle {
   display: block;
+  width: 100%;
+  border: 0;
   background: transparent;
   color: var(--overlay-text);
+  font: inherit;
   text-decoration: none;
   font-weight: bold;
   text-align: center;
@@ -371,20 +375,16 @@ html, body {
   scrollbar-width: none;
   -ms-overflow-style: none;
   transition: filter .18s ease, box-shadow .18s ease;
+  cursor: pointer;
 }
 
-#overlay-root .sidebar-item > a::-webkit-scrollbar {
+#overlay-root .sidebar-section-toggle::-webkit-scrollbar {
   display: none;
 }
 
 
-#overlay-root .sidebar-item:hover,
-#overlay-root .sidebar-item:focus-within {
-  animation: overlay-ui-hueshift 1.8s linear infinite;
-}
-
-#overlay-root .sidebar-item > a:hover,
-#overlay-root .sidebar-item > a:focus-visible {
+#overlay-root .sidebar-section-toggle:hover,
+#overlay-root .sidebar-section-toggle:focus-visible {
   outline: none;
 }
 
@@ -429,14 +429,57 @@ html, body {
   outline: none;
 }
 
-#overlay-root .sidebar-item:hover .sidebar-preview,
-#overlay-root .sidebar-item:focus-within .sidebar-preview {
-  max-height: 320px;
+#overlay-root .sidebar-item.is-expanded .sidebar-preview {
+  max-height: 720px;
   opacity: 1;
 }
 
 #overlay-root .sidebar-bottom {
-  padding: 0 20px 20px;
+  margin-top: auto;
+  padding: 16px 14px;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  text-align: center;
+  line-height: 1.35;
+}
+
+#overlay-root .privacy-link {
+  display: block;
+  color: lime;
+  font-family: "Courier New", monospace;
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+
+#overlay-root .privacy-link:hover {
+  text-decoration: underline;
+  opacity: 1;
+}
+
+#overlay-root .privacy-note {
+  display: block;
+  color: #ccc;
+  font-family: "Courier New", monospace;
+  white-space: nowrap;
+}
+
+#overlay-root .copyright-note {
+  display: block;
+  color: #ccc;
+  font-family: "Courier New", monospace;
+}
+
+#overlay-root .copyright-note a {
+  color: lime;
+}
+
+#overlay-root .copyright-name {
+  display: none;
+}
+
+#overlay-root .copyright-note:hover .copyright-name,
+#overlay-root .copyright-note:focus-within .copyright-name {
+  display: block;
 }
 
 /* MODIFIED: the sidebar clock should not appear on desktop/tablet widths.
@@ -618,7 +661,8 @@ html, body {
     padding: 16px;
   }
 
-  #overlay-root .sidebar-item a {
+  #overlay-root .sidebar-item a,
+  #overlay-root .sidebar-section-toggle {
     font-size: 18px;
     padding: 14px 10px;
   }
@@ -627,9 +671,13 @@ html, body {
     animation: overlay-ui-hueshift 1.8s linear infinite;
   }
 
-  #overlay-root .sidebar-preview,
-  #overlay-root .sidebar-item:hover .sidebar-preview {
-    max-height: none;
+  #overlay-root .sidebar-preview {
+    max-height: 0;
+    opacity: 0;
+  }
+
+  #overlay-root .sidebar-item.is-expanded .sidebar-preview {
+    max-height: 720px;
     opacity: 1;
   }
 }
@@ -686,18 +734,18 @@ html, body {
 
     <div class="sidebar-menu">
       <div class="sidebar-item">
-        <a href="/dead/games">Tektite's Browser Games</a>
+        <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Browser Games</button>
         <div class="sidebar-preview">
           <div class="sidebar-preview-links">
+            <a href="/dead/games/">* All My Games *</a>
             <a href="/dead/games/shooter-game/">+ Shooter Game</a>
-            <a href="/">+ Empty</a>
             <a href="/">+ Empty</a>
           </div>
         </div>
       </div>
 
       <div class="sidebar-item">
-        <a href="/dead/experiments">Tektite's Web Experiments</a>
+        <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Web Experiments</button>
         <div class="sidebar-preview">
           <div class="sidebar-preview-links">
             <a href="/dead/experiments/chat-sandbox">+ Chat Sandbox</a>
@@ -712,7 +760,11 @@ html, body {
       </div>
     </div>
 
-    <div class="sidebar-bottom"></div>
+    <div class="sidebar-bottom">
+      <a href="/privacy.html" class="privacy-link">Privacy</a>
+      <span class="privacy-note">No accounts. No server saves.<br>Your browser hoards the cursed data.</span>
+      <span class="copyright-note"><span class="copyright-name">Thomas Harrison "Honestly Thomas" Tektite/Jinclops</span>Copyright - 2025 <a href="/">theinternetisdead.org</a></span>
+    </div>
   </div>
 </div>
 
@@ -986,6 +1038,7 @@ html, body {
   const sidebar = overlayRoot.querySelector('#sidebar');
   const backdrop = overlayRoot.querySelector('#sidebar-backdrop');
   const toggles = overlayRoot.querySelectorAll('[data-action="toggle-sidebar"]');
+  const sidebarSectionToggles = overlayRoot.querySelectorAll('#sidebar .sidebar-section-toggle');
   const logoLinks = overlayRoot.querySelectorAll('.logo-link');
   const navStatePanel = overlayRoot.querySelector('#nav-state-panel');
   const sidebarContextLink = overlayRoot.querySelector('#sidebar-context-link');
@@ -1110,6 +1163,20 @@ html, body {
     if (event.key === 'Escape') {
       closeSidebar();
     }
+  });
+
+  sidebarSectionToggles.forEach((button) => {
+    button.addEventListener('click', (event) => {
+      const item = button.closest('.sidebar-item');
+      if (!item || !item.querySelector('.sidebar-preview')) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const shouldExpand = !item.classList.contains('is-expanded');
+      item.classList.toggle('is-expanded', shouldExpand);
+      button.setAttribute('aria-expanded', shouldExpand ? 'true' : 'false');
+    });
   });
 
   window.addEventListener('resize', () => {
