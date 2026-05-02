@@ -24,7 +24,7 @@ This folder contains the shooter game page, runtime scripts, level helpers, and 
 - `level2-runtime.js`
 - `screenshot-shortcut.js`
 - `shooter-game-chat.js`
-- `shooter-game.html`
+- `index.html`
 - `time-easter-egg.js`
 
 ## Notes

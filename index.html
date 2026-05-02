@@ -68,12 +68,17 @@
     const DEFAULT_IFRAME_PATH = '/dead/stuff/stuff-for-index/feeds/feeds-bridge.html';
     const REPO_INDEX_PATH = '/dead/JSON/repo-index.json';
     const NAV_PATH = '/dead/stuff/nav/nav.html';
+    const ROOT_SHELL_FRAME_KEY = 'deadRootShellFramePath';
 
     const overlayContainer = document.getElementById('overlay-container');
     const contentFrame = document.getElementById('content-frame');
     let iframeLinks = [DEFAULT_IFRAME_PATH];
     let currentFramePath = DEFAULT_IFRAME_PATH;
     let navHovering = false;
+    const pendingFramePath = window.sessionStorage.getItem(ROOT_SHELL_FRAME_KEY) || '';
+    if (pendingFramePath) {
+      window.sessionStorage.removeItem(ROOT_SHELL_FRAME_KEY);
+    }
     const videoPathMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
     let pendingVideoId = videoPathMatch
       ? decodeURIComponent(videoPathMatch[1])
@@ -96,10 +101,21 @@
       }
     }
 
-    function setFrameSource(value, replaceHistory = false) {
+    function setFrameSource(value, options = {}) {
+      const historyMode = options === true ? 'replace' : options && options.historyMode;
       const nextPath = normalizeIframePath(value);
       contentFrame.src = nextPath;
       currentFramePath = nextPath;
+
+      if (historyMode === 'push' || historyMode === 'replace') {
+        const historyUrl = nextPath === DEFAULT_IFRAME_PATH ? '/' : nextPath;
+        const historyState = { framePath: nextPath };
+        if (historyMode === 'replace') {
+          window.history.replaceState(historyState, '', historyUrl);
+        } else if (window.location.pathname !== historyUrl) {
+          window.history.pushState(historyState, '', historyUrl);
+        }
+      }
 
       window.dispatchEvent(new CustomEvent('indexFrameChange', {
         detail: { src: nextPath, links: iframeLinks.slice() }
@@ -185,8 +201,8 @@
       getLinks() {
         return iframeLinks.slice();
       },
-      setSource(value) {
-        setFrameSource(value);
+      setSource(value, options = {}) {
+        setFrameSource(value, options);
       }
     };
 
@@ -276,7 +292,7 @@
     loadNav();
     loadRepoLinks();
 
-    setFrameSource(DEFAULT_IFRAME_PATH, true);
+    setFrameSource(pendingFramePath || DEFAULT_IFRAME_PATH, pendingFramePath ? { historyMode: 'replace' } : true);
   </script>
 </body>
 </html>
