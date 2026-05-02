@@ -86,6 +86,8 @@ Do not push unless explicitly asked.
 
 If push is rejected because remote has new commits, stop and explain that the user needs to pull/rebase before pushing.
 
+Do not run GitHub workflows or generated-index scripts automatically after every edit, commit, or push. Run the repo-index generation workflow/script only when required, such as after folder structure changes, when the user asks for it, or when `dead/JSON/repo-index.json` is known to be stale.
+
 ## User preference rules
 
 The user prefers:
