@@ -1,6 +1,6 @@
 # shooter-game
 
-This folder contains the shooter game page, runtime scripts, level helpers, and asset folders.
+This folder contains the shooter game page and asset folders.
 
 ## Subfolders
 
@@ -9,23 +9,6 @@ This folder contains the shooter game page, runtime scripts, level helpers, and 
 ## Files
 
 - `index.html`
-- `level-bg-suggest.js`
-- `level-controls-formatters.js`
-- `level-frame-bridge.js`
-- `level-layout.js`
-- `level-math.js`
-- `level-resource-hud.js`
-- `level-screenshot.js`
-- `level-shared-commands.js`
-- `level-stage.js`
-- `level-ufo.js`
-- `level1-runtime.js`
-- `level1-win-fallbacks.js`
-- `level2-runtime.js`
-- `screenshot-shortcut.js`
-- `shooter-game-chat.js`
-- `index.html`
-- `time-easter-egg.js`
 
 ## Notes
 
