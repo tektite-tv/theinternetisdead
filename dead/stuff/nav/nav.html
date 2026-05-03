@@ -750,7 +750,7 @@ html, body {
         <div class="sidebar-preview">
           <div class="sidebar-preview-links">
             <a href="/dead/games/" data-index-frame-src="/dead/games/">* All My Games *</a>
-            <a href="/dead/games/shooter-game/">+ Shooter Game</a>
+            <a href="/dead/games/shooter-game/" data-index-frame-src="/dead/games/shooter-game/">+ Shooter Game</a>
             <a href="/">+ Empty</a>
           </div>
         </div>
@@ -760,13 +760,13 @@ html, body {
         <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Web Experiments</button>
         <div class="sidebar-preview">
           <div class="sidebar-preview-links">
-            <a href="/dead/experiments/chat-sandbox">+ Chat Sandbox</a>
-            <a href="/dead/experiments/gods-eye">+ God's Eye Art</a>
-            <a href="/dead/experiments/multimedia-editor">+ Multimedia Editor</a>
-            <a href="/dead/experiments/music-player">+ Music Player</a>
-            <a href="/dead/experiments/photosphere">+ Photosphere</a>
-            <a href="/dead/experiments/sound-machine">+ Sound Machine</a>
-            <a href="/dead/experiments/test">+ Canvas Background Tests</a>
+            <a href="/dead/experiments/chat-sandbox/" data-index-frame-src="/dead/experiments/chat-sandbox/">+ Chat Sandbox</a>
+            <a href="/dead/experiments/gods-eye/" data-index-frame-src="/dead/experiments/gods-eye/">+ God's Eye Art</a>
+            <a href="/dead/experiments/multimedia-editor/" data-index-frame-src="/dead/experiments/multimedia-editor/">+ Multimedia Editor</a>
+            <a href="/dead/experiments/music-player/" data-index-frame-src="/dead/experiments/music-player/">+ Music Player</a>
+            <a href="/dead/experiments/photosphere/" data-index-frame-src="/dead/experiments/photosphere/">+ Photosphere</a>
+            <a href="/dead/experiments/sound-machine/" data-index-frame-src="/dead/experiments/sound-machine/">+ Sound Machine</a>
+            <a href="/dead/experiments/test/" data-index-frame-src="/dead/experiments/test/">+ Canvas Background Tests</a>
           </div>
         </div>
       </div>
@@ -936,25 +936,54 @@ html, body {
     ? window.indexFrameController.getCurrentSource()
     : '';
 
-  function isGamesIndexFrame(path) {
+  function getNavFrameInfo(path) {
     const framePath = String(path || '').split(/[?#]/)[0].replace(/\/{2,}/g, '/');
-    return framePath === '/dead/games/' || framePath === '/dead/games/index.html';
+
+    if (framePath === '/dead/games/' || framePath === '/dead/games/index.html') {
+      return {
+        label: 'My Games',
+        href: '/dead/games/',
+        title: 'My Games'
+      };
+    }
+
+    const experimentsIndexMatch = framePath.match(/^\/dead\/experiments\/?(?:index\.html)?$/);
+    if (experimentsIndexMatch) {
+      return {
+        label: '/experiments/',
+        href: '/dead/experiments/',
+        title: '/experiments/'
+      };
+    }
+
+    const experimentFolderMatch = framePath.match(/^\/dead\/experiments\/([^/]+)\/?(?:index\.html)?$/);
+    if (experimentFolderMatch) {
+      const folderName = decodeURIComponent(experimentFolderMatch[1]);
+      return {
+        label: `/${folderName}/`,
+        href: `/dead/experiments/${experimentFolderMatch[1]}/`,
+        title: `/${folderName}/`
+      };
+    }
+
+    return null;
   }
 
   function updateNavFrameState(framePath = currentIndexFramePath) {
     currentIndexFramePath = String(framePath || '');
+    const frameInfo = getNavFrameInfo(currentIndexFramePath);
 
-    if (!isGamesIndexFrame(currentIndexFramePath)) return false;
+    if (!frameInfo) return false;
 
     const panel = overlayRoot.querySelector('#nav-state-panel');
     const text = panel && panel.querySelector('.nav-state-text');
     if (!panel || !text) return true;
 
-    text.textContent = 'My Games';
-    panel.href = '/dead/games/';
+    text.textContent = frameInfo.label;
+    panel.href = frameInfo.href;
     panel.dataset.videoId = '';
-    panel.title = 'My Games';
-    panel.setAttribute('aria-label', 'My Games');
+    panel.title = frameInfo.title;
+    panel.setAttribute('aria-label', frameInfo.title);
     panel.classList.remove('is-disabled');
     window.requestAnimationFrame(fitNavStateText);
     return true;
