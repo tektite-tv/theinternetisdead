@@ -236,6 +236,10 @@
     const initialRootPath = '/dead/stuff/stuff-for-index/feeds/feeds-bridge.html';
 
     function getRootVideoIdFromRoute() {
+      const params = new URLSearchParams(window.location.search);
+      const queryVideoId = params.get('vid') || params.get('id') || '';
+      if (queryVideoId.trim()) return queryVideoId.trim();
+
       const pathMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
       if (pathMatch) return decodeURIComponent(pathMatch[1]);
 
@@ -247,7 +251,7 @@
     }
 
     function getRootVideoUrl(videoId) {
-      return `/dead/videos/${encodeURIComponent(videoId)}`;
+      return `/dead/videos/?vid=${encodeURIComponent(videoId)}`;
     }
 
     function normalizeInitialRootVideoRoute() {

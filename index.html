@@ -80,10 +80,20 @@
     if (pendingFramePath) {
       window.sessionStorage.removeItem(ROOT_SHELL_FRAME_KEY);
     }
-    const videoPathMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
-    let pendingVideoId = videoPathMatch
-      ? decodeURIComponent(videoPathMatch[1])
-      : window.sessionStorage.getItem('deadVideoId') || '';
+    function getVideoIdFromCurrentUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const queryVideoId = params.get('vid') || params.get('id') || '';
+      if (queryVideoId.trim()) return queryVideoId.trim();
+
+      const videoPathMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
+      return videoPathMatch ? decodeURIComponent(videoPathMatch[1]) : '';
+    }
+
+    function getVideoRouteUrl(videoId) {
+      return `/dead/videos/?vid=${encodeURIComponent(videoId)}`;
+    }
+
+    let pendingVideoId = getVideoIdFromCurrentUrl() || window.sessionStorage.getItem('deadVideoId') || '';
     if (pendingVideoId) {
       window.sessionStorage.removeItem('deadVideoId');
     }
@@ -273,7 +283,7 @@
 
       const videoId = String(data.videoId || '').trim();
       const nextUrl = data.action === 'open' && videoId
-        ? `/dead/videos/${encodeURIComponent(videoId)}`
+        ? getVideoRouteUrl(videoId)
         : '/';
       window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
     });

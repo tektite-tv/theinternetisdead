@@ -2,18 +2,24 @@
 <html lang="en">
 <head>
   <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>/dead/videos/</title>
-<script>
-(function redirectToHomeWatchState(){
-    const pathMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
-    if(pathMatch){
-        window.sessionStorage.setItem("deadVideoId", decodeURIComponent(pathMatch[1]));
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>/dead/videos/</title>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const videoId = (params.get('vid') || params.get('id') || '').trim();
+
+    if (videoId) {
+      window.sessionStorage.setItem('deadVideoId', videoId);
+      window.sessionStorage.setItem('deadRootShellFramePath', '/dead/stuff/stuff-for-index/feeds/feeds-bridge.html');
     }
-    window.location.replace(`/${window.location.hash || ""}`);
-})();
-</script>
+
+    window.location.replace('/');
+  </script>
 </head>
-<body></body>
+<body>
+  <noscript>
+    <p>This video route needs JavaScript. Open the main site, then use <code>/dead/videos/?vid=VIDEO_ID</code>.</p>
+  </noscript>
+</body>
 </html>
