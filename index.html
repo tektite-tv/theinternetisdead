@@ -67,7 +67,6 @@
 
   <script>
     const DEFAULT_IFRAME_PATH = '/dead/stuff/stuff-for-index/feeds/feeds-bridge.html';
-    const VIDEO_IFRAME_PATH = '/dead/videos/index.html';
     const REPO_INDEX_PATH = '/dead/JSON/repo-index.json';
     const NAV_PATH = '/dead/stuff/nav/nav.html';
     const ROOT_SHELL_FRAME_KEY = 'deadRootShellFramePath';
@@ -94,9 +93,6 @@
       return `/dead/videos/?vid=${encodeURIComponent(videoId)}`;
     }
 
-    function getVideoIframeUrl(videoId) {
-      return `${VIDEO_IFRAME_PATH}?vid=${encodeURIComponent(videoId)}`;
-    }
 
     let pendingVideoId = getVideoIdFromCurrentUrl() || window.sessionStorage.getItem('deadVideoId') || '';
     if (pendingVideoId) {
@@ -288,15 +284,14 @@
 
       const videoId = String(data.videoId || '').trim();
       const isVideoOpen = data.action === 'open' && videoId;
-      const nextUrl = data.action === 'open' && videoId
-        ? getVideoRouteUrl(videoId)
-        : '/';
-      const nextFramePath = isVideoOpen
-        ? getVideoIframeUrl(videoId)
-        : DEFAULT_IFRAME_PATH;
-      if (normalizeIframePath(currentFramePath) !== normalizeIframePath(nextFramePath)) {
-        setFrameSource(nextFramePath);
+      const nextUrl = isVideoOpen ? getVideoRouteUrl(videoId) : '/';
+
+      // Keep root index.html as the only public shell. Video URLs are URL state only;
+      // the content iframe stays on the feed bridge so nav/header iframes do not duplicate.
+      if (normalizeIframePath(currentFramePath) !== normalizeIframePath(DEFAULT_IFRAME_PATH)) {
+        setFrameSource(DEFAULT_IFRAME_PATH);
       }
+
       window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
       if (typeof window.updateNavVideoRouteState === 'function') {
         window.updateNavVideoRouteState({
@@ -329,7 +324,10 @@
     if (pendingFramePath) {
       setFrameSource(pendingFramePath, { historyMode: 'replace' });
     } else if (pendingVideoId) {
-      setFrameSource(getVideoIframeUrl(pendingVideoId));
+      window.history.replaceState({ videoId: pendingVideoId }, '', getVideoRouteUrl(pendingVideoId));
+      window.dispatchEvent(new CustomEvent('indexFrameChange', {
+        detail: { src: currentFramePath, links: iframeLinks.slice() }
+      }));
     } else {
       window.dispatchEvent(new CustomEvent('indexFrameChange', {
         detail: { src: currentFramePath, links: iframeLinks.slice() }
