@@ -22,7 +22,19 @@ html, body {
   --overlay-logo-filter: rgba(0,255,0,0);
   --overlay-logo-filter-hover: rgba(0,255,0,1);
   --overlay-clock-filter: var(--overlay-text);
-  --feed-state-panel-width: min(36vw, 520px);
+  --topbar-height: 76px;
+  --header-control-height: 40px;
+  --feed-grid-gap: 20px;
+  --feed-posts-x: 20px;
+  --feed-load-more-height: var(--header-control-height);
+  --feed-visible-grid-rows: 1;
+  --feed-fit-gap-count: 3;
+  --feed-viewport-height: calc(100dvh - var(--topbar-height));
+  --feed-grid-card-size: min(
+    calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3),
+    calc((var(--feed-viewport-height) - (var(--feed-fit-gap-count) * var(--feed-grid-gap)) - var(--feed-load-more-height)) / var(--feed-visible-grid-rows))
+  );
+  --feed-state-panel-width: var(--feed-grid-card-size);
 
   position: relative;
   width: 100%;
@@ -48,7 +60,7 @@ html, body {
 
 #overlay-root .topbar {
   position: relative;
-  height: 76px;
+  height: var(--topbar-height);
   background: var(--overlay-bg);
   opacity: 1;
   display: flex;
@@ -199,7 +211,7 @@ html, body {
   justify-content: center;
   width: var(--feed-state-panel-width);
   min-width: 220px;
-  height: 44px;
+  height: var(--header-control-height);
   padding: 0 12px;
   overflow: hidden;
   background: #000;
@@ -966,7 +978,11 @@ html, body {
     const gridCardSize = String(state.gridCardSize || '').trim();
     if (gridCardSize) {
       overlayRoot.style.setProperty('--mobile-feed-column-width', gridCardSize);
-      overlayRoot.style.setProperty('--feed-state-panel-width', gridCardSize);
+      if (isMobileOverlayView()) {
+        overlayRoot.style.setProperty('--feed-state-panel-width', gridCardSize);
+      } else {
+        overlayRoot.style.removeProperty('--feed-state-panel-width');
+      }
     }
     panel.title = title;
     panel.setAttribute('aria-label', title);
@@ -1042,6 +1058,59 @@ html, body {
       fitClockTextToContainer(el);
     });
   }
+
+  function getOverlayClockSnapshot() {
+    const state = getOverlayClockState();
+    const currentNow = typeof window.__getSiteNow === 'function' ? window.__getSiteNow() : new Date();
+    const dateParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: state.zone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(currentNow);
+    const dateMap = Object.fromEntries(dateParts.map((part) => [part.type, part.value]));
+    const dateKey = `${dateMap.year || '0000'}-${dateMap.month || '00'}-${dateMap.day || '00'}`;
+
+    if (state.manualTime && typeof window.__getSiteNow !== 'function') {
+      const manualMatch = state.manualTime.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i);
+      if (manualMatch) {
+        let hours = Number(manualMatch[1]);
+        const minutes = Number(manualMatch[2]);
+        const seconds = manualMatch[3] === undefined ? 0 : Number(manualMatch[3]);
+        const period = (manualMatch[4] || '').toLowerCase();
+        if (period === 'pm' && hours < 12) hours += 12;
+        if (period === 'am' && hours === 12) hours = 0;
+        return { zone: state.zone, dateKey, hours, minutes, seconds };
+      }
+    }
+
+    const timeParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: state.zone,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).formatToParts(currentNow);
+    const timeMap = Object.fromEntries(timeParts.map((part) => [part.type, part.value]));
+    return {
+      zone: state.zone,
+      dateKey,
+      hours: Number(timeMap.hour) || 0,
+      minutes: Number(timeMap.minute) || 0,
+      seconds: Number(timeMap.second) || 0
+    };
+  }
+
+  window.addEventListener('message', (event) => {
+    const data = event.data || {};
+    if (data.type !== 'overlayClockTimeRequest') return;
+    if (!event.source || typeof event.source.postMessage !== 'function') return;
+    event.source.postMessage({
+      type: 'overlayClockTimeState',
+      requestId: data.requestId || '',
+      clock: getOverlayClockSnapshot()
+    }, '*');
+  });
 
   function toggleOverlayClockMode(event) {
     if (event) {

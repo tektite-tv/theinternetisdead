@@ -59,6 +59,7 @@
 
   <iframe
     id="content-frame"
+    src="/dead/stuff/stuff-for-index/feeds/feeds-bridge.html"
     title="TheInternetIsDead page"
     loading="eager"
     allowfullscreen
@@ -292,7 +293,13 @@
     loadNav();
     loadRepoLinks();
 
-    setFrameSource(pendingFramePath || DEFAULT_IFRAME_PATH, pendingFramePath ? { historyMode: 'replace' } : true);
+    if (pendingFramePath) {
+      setFrameSource(pendingFramePath, { historyMode: 'replace' });
+    } else {
+      window.dispatchEvent(new CustomEvent('indexFrameChange', {
+        detail: { src: currentFramePath, links: iframeLinks.slice() }
+      }));
+    }
   </script>
 </body>
 </html>

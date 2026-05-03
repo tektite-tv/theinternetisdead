@@ -4,6 +4,7 @@
   <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="preload" as="image" href="/dead/images/pngs/static.gif">
 <title>/dead/stuff/stuff-for-index/feeds/feeds.html</title>
 
 <style>
@@ -454,18 +455,42 @@ aspect-ratio:auto;
 overflow:hidden;
 border:2px solid var(--accent-color);
 margin-bottom:10px;
-background:var(--panel-background);
+background:var(--panel-background) url("/dead/images/pngs/static.gif") center / 100% 100% no-repeat;
 position:relative;
 isolation:isolate;
 }
 
-.thumb-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+.thumb-grid img{width:100%;height:100%;object-fit:cover;display:block;background:#000;opacity:0;transition:opacity 1200ms ease;}
+.thumb-grid img.is-loaded{opacity:1;}
 
-.thumb-list{width:160px;border:2px solid var(--accent-color);background:var(--panel-background);position:relative;overflow:hidden;isolation:isolate;}
-.thumb-list img{width:100%;display:block;}
+.thumb-list{width:160px;border:2px solid var(--accent-color);background:var(--panel-background) url("/dead/images/pngs/static.gif") center / 100% 100% no-repeat;position:relative;overflow:hidden;isolation:isolate;}
+.thumb-list img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#000;opacity:0;transition:opacity 1200ms ease;}
+.thumb-list img.is-loaded{opacity:1;}
 
-.post-title{font-size:calc(17px * var(--page-font-scale));font-weight:700;line-height:1.25;}
-.post-date{font-size:calc(13px * var(--page-font-scale));font-weight:700;opacity:.82;line-height:1.3;}
+.post-title{font-size:calc(17px * var(--page-font-scale));font-weight:700;line-height:1.25;opacity:1;transition:opacity 180ms ease;}
+.post-date{font-size:calc(13px * var(--page-font-scale));font-weight:700;opacity:.82;line-height:1.3;transition:opacity 180ms ease;}
+
+.post.thumbnail-pending .post-title,
+.post.thumbnail-pending .post-date{
+opacity:0;
+}
+
+.post.thumbnail-pending .thumb-grid::after,
+.post.thumbnail-pending .thumb-list::after{
+content:"Loading image...";
+position:absolute;
+inset:0;
+display:flex;
+align-items:center;
+justify-content:center;
+color:lime;
+font-family:"Courier New", monospace;
+font-size:12px;
+line-height:1;
+text-align:center;
+pointer-events:none;
+z-index:2;
+}
 
 .grid .post-title{
 height:3.75em;
@@ -937,6 +962,8 @@ const HONESTLY_THOMAS_URL="https://www.youtube.com/@Honestly_Thomas";
 const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
 const HONESTLY_THOMAS_AVATAR="/dead/images/pngs/honestly-thomas.png";
 const CRYPTID_MEMES_AVATAR="/dead/images/pngs/cryptid-memes.png";
+const THUMBNAIL_FALLBACK="/dead/images/pngs/static.gif";
+const thumbnailSourceCache = new Map();
 
 function updateTintFilters(){
   // Tints are handled by mask-based overlay layers, matching nav.html.
@@ -1251,40 +1278,124 @@ function pickThumbnailUrl(video){
 return buildThumbnailCandidates(video)[0] || `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
 }
 
-function applyThumbnailSource(img, layer, url){
-img.src = url;
+function applyThumbnailSource(thumb, layer, url, altText){
+let img = thumb.querySelector("img");
+if(!img){
+img = document.createElement("img");
+img.alt = altText || "Video thumbnail";
+thumb.insertBefore(img, layer || null);
+}
 if(layer){
 const safeUrl = String(url).replace(/'/g, "\\'");
 layer.style.setProperty("--tint-mask", `url('${safeUrl}')`);
 }
+if(img.dataset.thumbnailSrc === url) return;
+img.dataset.thumbnailSrc = url;
+img.src = url;
+img.classList.add("is-loaded");
 }
 
-function attachThumbnailFallback(post, card){
-const img = card.querySelector("img");
-const layer = card.querySelector(".thumbTintLayer");
-const candidates = Array.isArray(post.thumbCandidates) && post.thumbCandidates.length
+function markThumbnailReady(card){
+if(!card) return;
+card.classList.remove("thumbnail-pending");
+card.classList.add("thumbnail-ready");
+}
+
+function getThumbnailCacheKey(post){
+return String(post && (post.id || post.thumb || post.title) || "");
+}
+
+function getThumbnailCandidates(post){
+return Array.isArray(post.thumbCandidates) && post.thumbCandidates.length
 ? post.thumbCandidates
 : [post.thumb].filter(Boolean);
+}
 
-if(!img || !candidates.length) return;
+function prepareThumbnailCard(post, card){
+const thumb = card.querySelector(".thumb-grid, .thumb-list");
+const layer = card.querySelector(".thumbTintLayer");
+
+if(!thumb) return null;
+const img = thumb.querySelector("img");
+const altText = thumb.dataset.thumbnailAlt || `${post.title || "Video"} thumbnail`;
+card.classList.add("thumbnail-pending");
+card.classList.remove("thumbnail-ready");
+if(img){
+img.classList.remove("is-loaded");
+}
+if(layer){
+layer.style.removeProperty("--tint-mask");
+}
+return { post, card, thumb, layer, altText };
+}
+
+function resolveThumbnailSource(post){
+const cacheKey = getThumbnailCacheKey(post);
+if(cacheKey && thumbnailSourceCache.has(cacheKey)){
+return Promise.resolve(thumbnailSourceCache.get(cacheKey));
+}
+
+const candidates = getThumbnailCandidates(post);
+if(!candidates.length){
+if(cacheKey) thumbnailSourceCache.set(cacheKey, THUMBNAIL_FALLBACK);
+return Promise.resolve(THUMBNAIL_FALLBACK);
+}
+
+return new Promise((resolve)=>{
+function finish(url){
+const resolvedUrl = url || THUMBNAIL_FALLBACK;
+if(cacheKey) thumbnailSourceCache.set(cacheKey, resolvedUrl);
+resolve(resolvedUrl);
+}
 
 function tryCandidate(index){
-if(index >= candidates.length) return;
+if(index >= candidates.length){
+finish(THUMBNAIL_FALLBACK);
+return;
+}
 
 const probe = new Image();
 probe.onload = ()=>{
 const isTinyPlaceholder = probe.naturalWidth <= 120 && probe.naturalHeight <= 90;
-if(isTinyPlaceholder && index < candidates.length - 1){
+if(isTinyPlaceholder){
 tryCandidate(index + 1);
 return;
 }
-applyThumbnailSource(img, layer, candidates[index]);
+finish(candidates[index]);
 };
 probe.onerror = ()=>tryCandidate(index + 1);
 probe.src = candidates[index];
 }
 
 tryCandidate(0);
+});
+}
+
+function attachThumbnailFallback(post, card){
+const target = prepareThumbnailCard(post, card);
+if(!target) return Promise.resolve();
+return resolveThumbnailSource(post).then((url)=>{
+if(!card.isConnected) return;
+applyThumbnailSource(target.thumb, target.layer, url, target.altText);
+markThumbnailReady(card);
+});
+}
+
+function loadThumbnailBatchInSequence(targets){
+let sequence = Promise.resolve();
+targets.forEach((target)=>{
+sequence = sequence.then(()=>resolveThumbnailSource(target.post).then((url)=>{
+target.resolvedUrl = url;
+}));
+});
+return sequence.then(()=>{
+targets.forEach((target)=>{
+if(!target.card.isConnected) return;
+applyThumbnailSource(target.thumb, target.layer, target.resolvedUrl, target.altText);
+markThumbnailReady(target.card);
+});
+window.requestAnimationFrame(postHeaderState);
+});
 }
 
 function getRandomChannelUrl(){
@@ -1746,6 +1857,8 @@ postsEl.style.setProperty("--feed-visible-grid-rows", String(visibleGridRows));
 postsEl.style.setProperty("--feed-fit-gap-count", String(hasMoreItems ? visibleGridRows + 2 : visibleGridRows + 1));
 postsEl.style.setProperty("--feed-load-more-height", hasMoreItems ? "var(--feed-load-more-visible-height)" : "0px");
 
+const thumbnailTargets = [];
+
 data.forEach(p=>{
 
 const el=document.createElement("div");
@@ -1754,8 +1867,7 @@ el.className="post";
 if(view==="grid"){
 el.innerHTML=`
 <a class="post-link" href="https://youtube.com/watch?v=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer">
-<div class="thumb-grid">
-<img alt="${escapeHtml(p.title)} thumbnail">
+<div class="thumb-grid" data-thumbnail-alt="${escapeHtml(p.title)} thumbnail">
 <span class="thumbTintLayer" aria-hidden="true"></span>
 </div>
 <div class="post-title">${escapeHtml(p.title)}</div>
@@ -1770,8 +1882,7 @@ openVideo(p);
 else{
 el.innerHTML=`
 <a class="post-link" href="https://youtube.com/watch?v=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer">
-<div class="thumb-list">
-<img alt="${escapeHtml(p.title)} thumbnail">
+<div class="thumb-list" data-thumbnail-alt="${escapeHtml(p.title)} thumbnail">
 <span class="thumbTintLayer" aria-hidden="true"></span>
 </div>
 </a>
@@ -1789,11 +1900,15 @@ openVideo(p);
 });
 }
 
-attachThumbnailFallback(p, el);
+const thumbnailTarget = prepareThumbnailCard(p, el);
+if(thumbnailTarget){
+thumbnailTargets.push(thumbnailTarget);
+}
 postsEl.appendChild(el);
 
 });
 
+loadThumbnailBatchInSequence(thumbnailTargets);
 postsEl.appendChild(loadBtn);
 if(!hasMoreItems) loadBtn.style.display="none";
 else loadBtn.style.display="flex";
