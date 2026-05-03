@@ -766,7 +766,6 @@ html, body {
             <a href="/dead/experiments/music-player/" data-index-frame-src="/dead/experiments/music-player/">+ Music Player</a>
             <a href="/dead/experiments/photosphere/" data-index-frame-src="/dead/experiments/photosphere/">+ Photosphere</a>
             <a href="/dead/experiments/sound-machine/" data-index-frame-src="/dead/experiments/sound-machine/">+ Sound Machine</a>
-            <a href="/dead/experiments/test/" data-index-frame-src="/dead/experiments/test/">+ Canvas Background Tests</a>
           </div>
         </div>
       </div>
@@ -989,7 +988,10 @@ html, body {
     return true;
   }
 
+  let latestNavFeedState = null;
+
   function updateNavFeedState(state = {}) {
+    latestNavFeedState = state;
     if (updateNavFrameState()) return;
 
     const panel = overlayRoot.querySelector('#nav-state-panel');
@@ -997,7 +999,7 @@ html, body {
     if (!panel || !text) return;
     if (panel.dataset.stateMode === 'video') return;
     const videoId = String(state.firstVideoId || '').trim();
-    const label = String(state.sortPanelText || text.textContent || 'Watch My Most Viewed Videos');
+    const label = String(state.sortPanelText || 'Watch My Most Viewed Videos');
     text.textContent = label;
     panel.href = videoId ? `/dead/videos/?vid=${encodeURIComponent(videoId)}` : '/';
     panel.dataset.videoId = videoId;
@@ -1034,6 +1036,7 @@ html, body {
     if (action !== 'open' || !videoId) {
       panel.dataset.videoId = '';
       panel.dataset.stateMode = '';
+      updateNavFeedState(latestNavFeedState || {});
       return;
     }
 

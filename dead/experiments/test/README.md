@@ -1,6 +1,6 @@
 # test
 
-This folder contains test and preview pages for experimental work.
+This folder contains test and preview subfolders for experimental work.
 
 ## Subfolders
 
@@ -8,8 +8,7 @@ This folder contains test and preview pages for experimental work.
 
 ## Files
 
-- `index.html`
-- `preview.html`
+- None
 
 ## Notes
 

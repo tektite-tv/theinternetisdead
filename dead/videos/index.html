@@ -5,21 +5,112 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>/dead/videos/</title>
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const videoId = (params.get('vid') || params.get('id') || '').trim();
-
-    if (videoId) {
-      window.sessionStorage.setItem('deadVideoId', videoId);
-      window.sessionStorage.setItem('deadRootShellFramePath', '/dead/stuff/stuff-for-index/feeds/feeds-bridge.html');
+  <style>
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
     }
 
-    window.location.replace('/');
-  </script>
+    #video-feed-frame {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      border: 0;
+      background: #000;
+    }
+  </style>
 </head>
 <body>
-  <noscript>
-    <p>This video route needs JavaScript. Open the main site, then use <code>/dead/videos/?vid=VIDEO_ID</code>.</p>
-  </noscript>
+  <iframe
+    id="video-feed-frame"
+    title="TheInternetIsDead video"
+    loading="eager"
+    allowfullscreen
+  ></iframe>
+
+  <script>
+    const FEED_PATH = '/dead/stuff/stuff-for-index/feeds/feeds.html';
+    const frame = document.getElementById('video-feed-frame');
+
+    function getVideoIdFromRoute() {
+      const params = new URLSearchParams(window.location.search);
+      const queryVideoId = params.get('vid') || params.get('id') || params.get('v') || '';
+      if (queryVideoId.trim()) return queryVideoId.trim();
+
+      const pathMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
+      return pathMatch ? decodeURIComponent(pathMatch[1]) : '';
+    }
+
+    function getVideoRouteUrl(videoId) {
+      return `/dead/videos/?vid=${encodeURIComponent(videoId)}`;
+    }
+
+    function getFeedUrl(videoId) {
+      return videoId
+        ? `${FEED_PATH}?v=${encodeURIComponent(videoId)}`
+        : FEED_PATH;
+    }
+
+    function updateRoute(action, videoId, videoTitle = '') {
+      const isOpen = action === 'open' && videoId;
+      const nextUrl = isOpen ? getVideoRouteUrl(videoId) : '/';
+
+      if (window.top && window.top !== window) {
+        window.top.postMessage({
+          type: 'indexFrameVideoRoute',
+          action,
+          videoId: videoId || '',
+          videoTitle: videoTitle || '',
+          url: nextUrl
+        }, '*');
+        return;
+      }
+
+      window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
+      if (!isOpen) {
+        window.location.replace('/');
+      }
+    }
+
+    const initialVideoId = getVideoIdFromRoute();
+    frame.src = getFeedUrl(initialVideoId);
+
+    window.addEventListener('message', (event) => {
+      const data = event.data || {};
+
+      if (event.source === window.parent && data.type === 'feedGridOpenVideo') {
+        const requestedId = String(data.videoId || '').trim();
+        if (requestedId) {
+          frame.src = getFeedUrl(requestedId);
+        }
+        return;
+      }
+
+      if (event.source === window.parent && data.type === 'feedGridHeaderCommand') {
+        if (frame.contentWindow) {
+          frame.contentWindow.postMessage(data, '*');
+        }
+        return;
+      }
+
+      if (event.source !== frame.contentWindow) return;
+
+      if (data.type === 'feedGridHeaderState') {
+        if (window.top && window.top !== window) {
+          window.top.postMessage(data, '*');
+        }
+        return;
+      }
+
+      if (data.type === 'feedGridVideoState') {
+        updateRoute(data.action, String(data.videoId || ''), String(data.videoTitle || ''));
+      }
+    });
+  </script>
 </body>
 </html>
