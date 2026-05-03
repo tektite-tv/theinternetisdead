@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'dead/messages/**'
-      - 'dead/scripts/build-message-list.js'
+      - 'dead/scripts/build/build-message-list.js'
       - '.github/workflows/generate-message-list.yml'
   workflow_dispatch:
 
@@ -29,7 +29,7 @@ jobs:
           node-version: '20'
 
       - name: Generate dead/JSON/message-list.json
-        run: node dead/scripts/build-message-list.js
+        run: node dead/scripts/build/build-message-list.js
 
       - name: Commit generated message list
         uses: stefanzweifel/git-auto-commit-action@v5

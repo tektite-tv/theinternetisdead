@@ -258,7 +258,7 @@
   window.TektiteIndexChatController = controller;
 
   // Re-register after this external controller loads. index.html can register once
-  // before /dead/scripts/index-chat.js finishes loading, because apparently web pages
+  // before /dead/scripts/chat/index-chat.js finishes loading, because apparently web pages
   // are built out of timing goblins and duct tape.
   if (typeof window.registerPageCommands === 'function') {
     window.registerPageCommands();

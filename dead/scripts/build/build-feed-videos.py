@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 CHANNELS_PATH = ROOT / "dead" / "JSON" / "feeds-channels.json"
 OUTPUT_PATH = ROOT / "dead" / "JSON" / "feed-videos.json"
 LEGACY_FALLBACK_PATH = ROOT / "dead" / "JSON" / "videos.json"

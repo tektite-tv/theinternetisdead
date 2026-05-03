@@ -561,6 +561,24 @@ box-sizing:border-box;
 padding:clamp(8px,1.4vh,16px);
 background:#000;
 overflow:hidden;
+isolation:isolate;
+}
+
+#videoCanvasBackground{
+position:absolute;
+inset:0;
+width:100%;
+height:100%;
+border:0;
+display:block;
+z-index:0;
+background:#000;
+pointer-events:none;
+}
+
+#videoViewport > :not(#videoCanvasBackground){
+position:relative;
+z-index:1;
 }
 
 #videoTitle{
@@ -600,7 +618,7 @@ display:block;
 border:1px solid var(--accent-color);
 }
 
-#videoViewport iframe{
+#videoFrame{
 width:min(100%,960px,calc(52dvh * 16 / 9));
 aspect-ratio:16/9;
 height:auto;
@@ -881,7 +899,7 @@ min-height:46px;
 height:46px;
 }
 
-#videoViewport iframe{
+#videoFrame{
 width:min(100%,calc(42dvh * 16 / 9));
 max-height:42dvh;
 }
@@ -924,6 +942,7 @@ font-size:calc(16px * var(--page-font-scale));
 <button id="loadMore">Load More</button>
 
 <div id="videoViewport">
+<iframe id="videoCanvasBackground" src="/dead/experiments/canvas-backgrounds/starfield-background.html" title="Video starfield background" aria-hidden="true" tabindex="-1"></iframe>
 <div id="videoTitle"></div>
 <iframe id="videoFrame" src="" allowfullscreen></iframe>
 <div id="videoMeta"></div>

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
+const repoRoot = path.resolve(__dirname, '..', '..', '..');
 const outputPath = path.join(repoRoot, 'dead', 'JSON', 'repo-index.json');
 const ignoredDirectoryNames = new Set([
   '.git',
