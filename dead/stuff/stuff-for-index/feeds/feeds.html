@@ -1773,13 +1773,14 @@ statusEl.textContent="FAILED TO LOAD FEED DATA";
 
 const initialStandalonePath = window.location.pathname;
 
-function notifyVideoRouteChange(action,id){
+function notifyVideoRouteChange(action,id,videoTitle=""){
 try{
 if(window.parent && window.parent !== window){
 window.parent.postMessage({
  type:"feedGridVideoState",
  action,
- videoId:id || ""
+ videoId:id || "",
+ videoTitle:videoTitle || ""
 }, "*");
 return;
 }
@@ -1811,7 +1812,7 @@ const title = post.title || "";
 const description = post.description || "";
 
 frame.src="https://www.youtube.com/embed/"+id;
-notifyVideoRouteChange("open",id);
+notifyVideoRouteChange("open",id,title);
 
 document.getElementById("videoTitle").innerHTML =
 `<a href="https://youtube.com/watch?v=${id}" target="_blank" style="color:var(--page-text);text-decoration:none;">${title}</a>`;

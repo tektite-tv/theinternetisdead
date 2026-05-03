@@ -995,10 +995,11 @@ html, body {
     const panel = overlayRoot.querySelector('#nav-state-panel');
     const text = panel && panel.querySelector('.nav-state-text');
     if (!panel || !text) return;
+    if (panel.dataset.stateMode === 'video') return;
     const videoId = String(state.firstVideoId || '').trim();
     const label = String(state.sortPanelText || text.textContent || 'Watch My Most Viewed Videos');
     text.textContent = label;
-    panel.href = videoId ? `/dead/videos/${encodeURIComponent(videoId)}` : '/';
+    panel.href = videoId ? `/dead/videos/?vid=${encodeURIComponent(videoId)}` : '/';
     panel.dataset.videoId = videoId;
     const videoTitle = String(state.firstVideoTitle || '').trim();
     const title = videoId
@@ -1018,6 +1019,36 @@ html, body {
     panel.classList.toggle('is-disabled', !videoId);
     window.requestAnimationFrame(fitNavStateText);
   }
+
+
+
+  function updateNavVideoRouteState(state = {}) {
+    const panel = overlayRoot.querySelector('#nav-state-panel');
+    const text = panel && panel.querySelector('.nav-state-text');
+    if (!panel || !text) return;
+
+    const action = String(state.action || '').trim();
+    const videoId = String(state.videoId || '').trim();
+    const videoTitle = String(state.videoTitle || '').trim();
+
+    if (action !== 'open' || !videoId) {
+      panel.dataset.videoId = '';
+      panel.dataset.stateMode = '';
+      return;
+    }
+
+    const label = videoTitle || `?vid=${videoId}`;
+    text.textContent = label;
+    panel.href = `/dead/videos/?vid=${encodeURIComponent(videoId)}`;
+    panel.dataset.videoId = videoId;
+    panel.dataset.stateMode = 'video';
+    panel.title = `Open video: ${label}`;
+    panel.setAttribute('aria-label', `Open video: ${label}`);
+    panel.classList.remove('is-disabled');
+    window.requestAnimationFrame(fitNavStateText);
+  }
+
+  window.updateNavVideoRouteState = updateNavVideoRouteState;
 
   window.updateNavFeedState = updateNavFeedState;
   window.addEventListener('indexFrameChange', (event) => {

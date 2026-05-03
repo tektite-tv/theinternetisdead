@@ -312,7 +312,7 @@
       );
     }
 
-    function updateRootVideoRoute(action, videoId) {
+    function updateRootVideoRoute(action, videoId, videoTitle = '') {
       const nextUrl = action === 'open' && videoId
         ? getRootVideoUrl(videoId)
         : initialRootPath;
@@ -408,7 +408,7 @@
       }
 
       if (event.source === tektiteFrame.contentWindow && data.type === 'feedGridVideoState') {
-        updateRootVideoRoute(data.action, String(data.videoId || ''));
+        updateRootVideoRoute(data.action, String(data.videoId || ''), String(data.videoTitle || ''));
       }
     });
 

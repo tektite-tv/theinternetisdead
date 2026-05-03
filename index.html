@@ -286,6 +286,14 @@
         ? getVideoRouteUrl(videoId)
         : '/';
       window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
+      if (typeof window.updateNavVideoRouteState === 'function') {
+        window.updateNavVideoRouteState({
+          action: data.action,
+          videoId,
+          videoTitle: String(data.videoTitle || '').trim(),
+          url: nextUrl
+        });
+      }
     });
 
     window.addEventListener('resize', syncOverlayHeight);
