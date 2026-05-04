@@ -4,6 +4,15 @@
   <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
 <meta charset="UTF-8">
 <title>/dead/experiments/gods-eye/gods-eye.html</title>
+<script>
+const standaloneParams = new URLSearchParams(window.location.search);
+const allowStandalone = standaloneParams.get('standalone') === 'true';
+
+if (window.top === window.self && !allowStandalone) {
+  window.sessionStorage.setItem('deadRootShellFramePath', '/dead/experiments/gods-eye/' + window.location.search + window.location.hash);
+  window.location.replace('/');
+}
+</script>
 <style>
     body {
         margin: 0;

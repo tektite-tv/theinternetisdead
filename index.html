@@ -28,7 +28,7 @@
       top: 0;
       left: 0;
       right: 0;
-      z-index: 1000;
+      z-index: 1200;
       background: transparent;
     }
 
@@ -42,6 +42,25 @@
       border: none;
       display: block;
       background: #000;
+      z-index: 900;
+    }
+
+    #chat-sandbox-frame {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: var(--overlay-height);
+      width: 100%;
+      height: calc(100dvh - var(--overlay-height));
+      border: none;
+      display: block;
+      background: transparent;
+      pointer-events: none;
+      z-index: 1100;
+    }
+
+    #chat-sandbox-frame.chat-overlay-active {
+      pointer-events: auto;
     }
 
     .overlay-error {
@@ -65,17 +84,53 @@
     allowfullscreen
   ></iframe>
 
+  <iframe
+    id="chat-sandbox-frame"
+    src="/dead/experiments/chat-sandbox/"
+    title="Chat sandbox overlay"
+    loading="eager"
+    allowfullscreen
+    aria-hidden="true"
+  ></iframe>
+
   <script>
     const DEFAULT_IFRAME_PATH = '/dead/stuff/stuff-for-index/feeds/feeds-bridge.html';
     const REPO_INDEX_PATH = '/dead/JSON/repo-index.json';
     const NAV_PATH = '/dead/stuff/nav/nav.html';
     const ROOT_SHELL_FRAME_KEY = 'deadRootShellFramePath';
+    const EXPERIMENT_SHORT_PATHS = new Set([
+      'bookmark-manager',
+      'canvas-backgrounds',
+      'chat-sandbox',
+      'gods-eye',
+      'mandala-visuals',
+      'multimedia-editor',
+      'music-player',
+      'pdf-viewer',
+      'photosphere',
+      'sound-machine',
+      'stacks',
+      'test'
+    ]);
+    const EXPERIMENT_SHORT_PATH_ALIASES = {
+      'bookmarks-manager': 'bookmark-manager'
+    };
+    const ROOT_SHORT_PATH_REDIRECTS = {
+      '/games': '/dead/games/',
+      '/games/': '/dead/games/',
+      '/experiments': '/dead/experiments/',
+      '/experiments/': '/dead/experiments/'
+    };
 
     const overlayContainer = document.getElementById('overlay-container');
     const contentFrame = document.getElementById('content-frame');
+    const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
     let iframeLinks = [DEFAULT_IFRAME_PATH];
     let currentFramePath = DEFAULT_IFRAME_PATH;
     let navHovering = false;
+    let chatSandboxVisible = false;
+    let chatSandboxDvdActive = false;
+    let chatSandboxReady = false;
     const pendingFramePath = window.sessionStorage.getItem(ROOT_SHELL_FRAME_KEY) || '';
     if (pendingFramePath) {
       window.sessionStorage.removeItem(ROOT_SHELL_FRAME_KEY);
@@ -99,6 +154,42 @@
       window.sessionStorage.removeItem('deadVideoId');
     }
 
+    function getExperimentShortPathRedirect(pathname) {
+      const normalizedPath = String(pathname || '').replace(/\/{2,}/g, '/');
+      const shortPathMatch = normalizedPath.match(/^\/([^/]+)(?:\/(?:index\.html)?)?$/);
+      if (!shortPathMatch) return '';
+
+      const requestedFolderName = decodeURIComponent(shortPathMatch[1]);
+      const folderName = EXPERIMENT_SHORT_PATH_ALIASES[requestedFolderName] || requestedFolderName;
+      return EXPERIMENT_SHORT_PATHS.has(folderName)
+        ? `/dead/experiments/${encodeURIComponent(folderName)}/`
+        : '';
+    }
+
+    function getShortPathRedirect(pathname) {
+      const normalizedPath = String(pathname || '').replace(/\/{2,}/g, '/');
+      return ROOT_SHORT_PATH_REDIRECTS[normalizedPath] || getExperimentShortPathRedirect(normalizedPath);
+    }
+
+    function getStartupFramePathFromUrl() {
+      const path = (window.location.pathname || '').replace(/\/{2,}/g, '/');
+      const shortPathRedirect = getShortPathRedirect(path);
+      if (shortPathRedirect) {
+        return `${shortPathRedirect}${window.location.search || ''}${window.location.hash || ''}`;
+      }
+
+      if (
+        /^\/dead\/games\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path) ||
+        /^\/dead\/experiments\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path)
+      ) {
+        return `${path}${window.location.search || ''}${window.location.hash || ''}`;
+      }
+
+      return '';
+    }
+
+    const startupFramePath = getStartupFramePathFromUrl();
+
     function normalizeIframePath(value) {
       const rawValue = String(value || '').trim();
       if (!rawValue) return DEFAULT_IFRAME_PATH;
@@ -106,10 +197,12 @@
       try {
         const url = new URL(rawValue, window.location.origin);
         if (url.origin !== window.location.origin) return DEFAULT_IFRAME_PATH;
-        return `${url.pathname}${url.search}${url.hash}`;
+        const shortPathRedirect = getShortPathRedirect(url.pathname);
+        return `${shortPathRedirect || url.pathname}${url.search}${url.hash}`;
       } catch (error) {
         const withLeadingSlash = rawValue.startsWith('/') ? rawValue : `/${rawValue}`;
-        return withLeadingSlash.replace(/\/{2,}/g, '/');
+        const normalizedPath = withLeadingSlash.replace(/\/{2,}/g, '/');
+        return getShortPathRedirect(normalizedPath) || normalizedPath;
       }
     }
 
@@ -191,11 +284,7 @@
         const folders = Array.isArray(repoIndex.folders) ? repoIndex.folders : [];
         iframeLinks = Array.from(new Set([DEFAULT_IFRAME_PATH, ...folders]))
           .map(normalizeIframePath)
-          .sort((a, b) => {
-            if (a === DEFAULT_IFRAME_PATH) return -1;
-            if (b === DEFAULT_IFRAME_PATH) return 1;
-            return a.localeCompare(b);
-          });
+          .sort((a, b) => a.localeCompare(b));
 
         window.dispatchEvent(new CustomEvent('indexFrameLinksReady', {
           detail: { src: currentFramePath, links: iframeLinks.slice() }
@@ -217,6 +306,71 @@
         setFrameSource(value, options);
       }
     };
+
+    function postToChatSandbox(message) {
+      if (!chatSandboxFrame || !chatSandboxFrame.contentWindow) return;
+      chatSandboxFrame.contentWindow.postMessage(message, '*');
+    }
+
+    function syncChatSandboxOverlayState() {
+      const isActive = chatSandboxVisible || chatSandboxDvdActive;
+      chatSandboxFrame.classList.toggle('chat-overlay-active', isActive);
+      chatSandboxFrame.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    }
+
+    window.__indexOpenChatOverlay = function openIndexChatOverlay(options = {}) {
+      chatSandboxVisible = true;
+      syncChatSandboxOverlayState();
+      postToChatSandbox({
+        type: 'chatSandboxOpen',
+        focus: options.focus !== false,
+        seedSlash: !!options.seedSlash
+      });
+    };
+
+    function registerIndexChatCommands() {
+      postToChatSandbox({
+        type: 'pageChatRegister',
+        pageOnly: false,
+        pageId: 'index-shell',
+        title: 'The Internet Is Dead',
+        sourceKey: 'index-shell',
+        commands: [
+          { name: '/home', usage: '/home', desc: 'return the main iframe to the front feed', execute: true },
+          { name: '/goto', usage: '/goto ', desc: 'load a site path in the main iframe', execute: false, suggestions: iframeLinks.slice() }
+        ]
+      });
+    }
+
+    function handleIndexChatCommand(data) {
+      const commandName = String(data.command || '').trim().toLowerCase();
+      const rawCommand = typeof data.raw === 'string' ? data.raw.trim() : '';
+      const commandValue = rawCommand ? rawCommand.slice(commandName.length).trim() : '';
+
+      if (commandName === '/home') {
+        setFrameSource(DEFAULT_IFRAME_PATH, { historyMode: 'push' });
+        postToChatSandbox({ type: 'pageChatResult', command: '/home', message: '/home executed: loaded the front feed', announce: true });
+        return true;
+      }
+
+      if (commandName === '/goto') {
+        if (!commandValue) {
+          postToChatSandbox({ type: 'pageChatResult', command: '/goto', message: 'Usage: /goto [site path]', announce: true });
+          return true;
+        }
+        const nextPath = normalizeIframePath(commandValue);
+        const nextUrl = new URL(nextPath, window.location.origin);
+        if (nextUrl.searchParams.get('standalone') === 'true') {
+          window.location.href = nextUrl.href;
+          return true;
+        }
+        setFrameSource(nextPath, { historyMode: 'push' });
+        postToChatSandbox({ type: 'pageChatResult', command: '/goto', message: `/goto executed: ${nextPath}`, announce: true });
+        return true;
+      }
+
+      return false;
+    }
 
     function postNavHoverState() {
       if (!contentFrame.contentWindow) return;
@@ -251,6 +405,83 @@
       }, '*');
     }
 
+    function patchContentFrameShellLinks() {
+      let frameDocument;
+      try {
+        frameDocument = contentFrame.contentDocument;
+      } catch (error) {
+        return;
+      }
+      if (!frameDocument) return;
+
+      frameDocument.querySelectorAll('a[href*="/dead/games/shooter-game/"]').forEach((link) => {
+        link.setAttribute('href', '/dead/games/shooter-game/');
+        link.setAttribute('data-index-frame-src', '/dead/games/shooter-game/');
+        link.removeAttribute('target');
+      });
+
+      if (frameDocument.documentElement.dataset.indexFrameLinkPatch === 'true') return;
+      frameDocument.documentElement.dataset.indexFrameLinkPatch = 'true';
+
+      frameDocument.addEventListener('click', (event) => {
+        const link = event.target && event.target.closest
+          ? event.target.closest('[data-index-frame-src]')
+          : null;
+        if (!link) return;
+
+        const frameSrc = link.getAttribute('data-index-frame-src');
+        if (!frameSrc) return;
+
+        event.preventDefault();
+        if (event.shiftKey) {
+          const standaloneUrl = new URL(frameSrc, window.location.origin);
+          standaloneUrl.pathname = standaloneUrl.pathname.replace(/\/?$/, '/index.html');
+          standaloneUrl.searchParams.set('standalone', 'true');
+          window.location.href = standaloneUrl.href;
+          return;
+        }
+
+        setFrameSource(frameSrc, { historyMode: 'push' });
+      }, true);
+
+      frameDocument.addEventListener('keydown', handleShellSlashKeydown, true);
+    }
+
+    function isTextEntryTarget(target) {
+      if (!target) return false;
+      const tagName = String(target.tagName || '').toLowerCase();
+      return target.isContentEditable ||
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select';
+    }
+
+    function handleShellSlashKeydown(event) {
+      const fromChatSandboxFrame = event.target && event.target.ownerDocument === chatSandboxFrame.contentDocument;
+      const shouldRespectTextEntry = isTextEntryTarget(event.target) && (chatSandboxVisible || !fromChatSandboxFrame);
+      if (event.key !== '/' || event.altKey || event.ctrlKey || event.metaKey || shouldRespectTextEntry) {
+        return;
+      }
+
+      event.preventDefault();
+      window.__indexOpenChatOverlay({ focus: true, seedSlash: true });
+    }
+
+    function patchChatSandboxSlashKey() {
+      let frameDocument;
+      try {
+        frameDocument = chatSandboxFrame.contentDocument;
+      } catch (error) {
+        return;
+      }
+      if (!frameDocument || frameDocument.documentElement.dataset.indexShellSlashPatch === 'true') return;
+
+      frameDocument.documentElement.dataset.indexShellSlashPatch = 'true';
+      frameDocument.addEventListener('keydown', handleShellSlashKeydown, true);
+    }
+
+    window.addEventListener('keydown', handleShellSlashKeydown, true);
+
     overlayContainer.addEventListener('mouseenter', () => {
       navHovering = true;
       postNavHoverState();
@@ -262,6 +493,7 @@
     });
 
     contentFrame.addEventListener('load', () => {
+      patchContentFrameShellLinks();
       postNavHoverState();
       requestFeedHeaderState();
       if (!pendingVideoId || !contentFrame.contentWindow) return;
@@ -269,8 +501,47 @@
       pendingVideoId = '';
     });
 
+    chatSandboxFrame.addEventListener('load', () => {
+      chatSandboxReady = true;
+      registerIndexChatCommands();
+      syncChatSandboxOverlayState();
+      patchChatSandboxSlashKey();
+    });
+
     window.addEventListener('message', (event) => {
       const data = event.data || {};
+      if (event.source === chatSandboxFrame.contentWindow) {
+        if (data.type === 'chatSandboxState') {
+          chatSandboxVisible = !!data.visible || !!data.valuePickerActive;
+          syncChatSandboxOverlayState();
+          if (chatSandboxReady) {
+            registerIndexChatCommands();
+          }
+          return;
+        }
+
+        if (data.type === 'chatSandboxDvdState') {
+          chatSandboxDvdActive = !!data.active;
+          syncChatSandboxOverlayState();
+          if (chatSandboxReady) {
+            registerIndexChatCommands();
+          }
+          return;
+        }
+
+        if (data.type === 'pageChatExecute') {
+          handleIndexChatCommand(data);
+          return;
+        }
+
+        return;
+      }
+
+      if (data.type === 'openChatFromChild') {
+        window.__indexOpenChatOverlay({ focus: true, seedSlash: !!data.seedSlash });
+        return;
+      }
+
       if (event.source !== contentFrame.contentWindow) return;
 
       if (data.type === 'feedGridHeaderState') {
@@ -323,6 +594,8 @@
 
     if (pendingFramePath) {
       setFrameSource(pendingFramePath, { historyMode: 'replace' });
+    } else if (startupFramePath) {
+      setFrameSource(startupFramePath, { historyMode: 'replace' });
     } else if (pendingVideoId) {
       window.history.replaceState({ videoId: pendingVideoId }, '', getVideoRouteUrl(pendingVideoId));
       window.dispatchEvent(new CustomEvent('indexFrameChange', {

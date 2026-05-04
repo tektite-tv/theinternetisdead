@@ -199,7 +199,47 @@ function redirectKnownWatchRoutes(){
         return true;
     }
 
+    const experimentShortPaths = new Set([
+        "bookmark-manager",
+        "canvas-backgrounds",
+        "chat-sandbox",
+        "gods-eye",
+        "mandala-visuals",
+        "multimedia-editor",
+        "music-player",
+        "pdf-viewer",
+        "photosphere",
+        "sound-machine",
+        "stacks",
+        "test"
+    ]);
+    const experimentShortPathAliases = {
+        "bookmarks-manager": "bookmark-manager"
+    };
+    const shortExperimentMatch = window.location.pathname
+        .replace(/\/{2,}/g, "/")
+        .match(/^\/([^/]+)(?:\/(?:index\.html)?)?$/);
+
+    if(shortExperimentMatch){
+        const requestedFolderName = decodeURIComponent(shortExperimentMatch[1]);
+        const folderName = experimentShortPathAliases[requestedFolderName] || requestedFolderName;
+        if(experimentShortPaths.has(folderName)){
+            window.sessionStorage.setItem(
+                "deadRootShellFramePath",
+                "/dead/experiments/" + encodeURIComponent(folderName) + "/" +
+                    (window.location.search || "") +
+                    (window.location.hash || "")
+            );
+            window.location.replace("/");
+            return true;
+        }
+    }
+
     const redirects = {
+        "/games": "/dead/games/",
+        "/games/": "/dead/games/",
+        "/experiments": "/dead/experiments/",
+        "/experiments/": "/dead/experiments/",
         "/watch": "/dead/videos/",
         "/watch/": "/dead/videos/",
         "/dead/videos": "/dead/videos/",

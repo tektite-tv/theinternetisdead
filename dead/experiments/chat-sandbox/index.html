@@ -5,6 +5,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>/dead/experiments/chat-sandbox/chat-sandbox.html</title>
+<script>
+const standaloneParams = new URLSearchParams(window.location.search);
+const allowStandalone = standaloneParams.get('standalone') === 'true';
+
+if (window.top === window.self && !allowStandalone) {
+  window.sessionStorage.setItem('deadRootShellFramePath', '/dead/experiments/chat-sandbox/' + window.location.search + window.location.hash);
+  window.location.replace('/');
+}
+</script>
   <style>
     * {
       box-sizing: border-box;
@@ -5812,6 +5821,21 @@ function createHomepageCustomizeMessageNode(result = {}) {
 
       const argumentText = value.slice(firstSpaceAfterSlash + 1, caret);
       const suffix = value.slice(caret);
+      const standaloneSuffixInfo = getGotoStandaloneSuffixInfo(commandToken, argumentText);
+      if (standaloneSuffixInfo) {
+        return {
+          value,
+          caret,
+          commandToken,
+          argumentStart: firstSpaceAfterSlash + 1,
+          argumentEnd: caret,
+          argumentText: '',
+          suffix,
+          suggestions: ['index.html?standalone=true'],
+          completionBase: standaloneSuffixInfo.basePath
+        };
+      }
+
       return {
         value,
         caret,
@@ -5822,6 +5846,45 @@ function createHomepageCustomizeMessageNode(result = {}) {
         suffix,
         suggestions
       };
+    }
+
+    function getGotoStandaloneSuffixInfo(commandToken, argumentText) {
+      if (commandToken !== '/goto') return null;
+      if (!/\s$/.test(argumentText)) return null;
+
+      const basePath = argumentText.trim();
+      if (!isStandaloneCapableGotoPath(basePath)) return null;
+
+      return { basePath };
+    }
+
+    function isStandaloneCapableGotoPath(path) {
+      const normalizedPath = String(path || '').trim().split(/[?#]/)[0].replace(/\/{2,}/g, '/');
+      return new Set([
+        '/dead/games/',
+        '/dead/games/shooter-game/',
+        '/dead/experiments/',
+        '/dead/experiments/bookmark-manager/',
+        '/dead/experiments/canvas-backgrounds/',
+        '/dead/experiments/chat-sandbox/',
+        '/dead/experiments/gods-eye/',
+        '/dead/experiments/mandala-visuals/',
+        '/dead/experiments/multimedia-editor/',
+        '/dead/experiments/music-player/',
+        '/dead/experiments/pdf-viewer/',
+        '/dead/experiments/photosphere/',
+        '/dead/experiments/sound-machine/',
+        '/dead/experiments/stacks/'
+      ]).has(normalizedPath);
+    }
+
+    function getCommandArgumentCompletionValue(info, suggestion) {
+      const nextValue = String(suggestion || '').trim();
+      if (!info || !nextValue) return '';
+      const completedArgument = info.completionBase
+        ? `${String(info.completionBase).replace(/\s+$/, '')}${nextValue}`
+        : nextValue;
+      return `${info.value.slice(0, info.argumentStart)}${completedArgument}${info.suffix}`;
     }
 
     function cycleCommandArgumentSuggestion(direction = 1) {
@@ -5865,7 +5928,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       }
 
       const selected = matches[commandCycleIndex];
-      chatBar.value = `${info.value.slice(0, info.argumentStart)}${selected}${info.suffix}`;
+      chatBar.value = getCommandArgumentCompletionValue(info, selected);
       moveCursorToEnd();
       return true;
     }
@@ -5940,7 +6003,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (!info || !nextValue) {
         return false;
       }
-      chatBar.value = `${info.value.slice(0, info.argumentStart)}${nextValue}${info.suffix}`;
+      chatBar.value = getCommandArgumentCompletionValue(info, nextValue);
       moveCursorToEnd();
       updateChatBarVisualState();
       renderInlineSuggestion();
@@ -5959,6 +6022,14 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (argumentInfo) {
         const suggestion = getFirstMatchingArgumentSuggestion(argumentInfo);
         if (suggestion && suggestion.toLowerCase() !== argumentInfo.argumentText.trim().toLowerCase()) {
+          if (argumentInfo.completionBase) {
+            return {
+              fullSuggestion: getCommandArgumentCompletionValue(argumentInfo, suggestion),
+              typedText: argumentInfo.value,
+              remainder: suggestion
+            };
+          }
+
           const typedArgument = argumentInfo.value.slice(0, argumentInfo.argumentStart) + argumentInfo.argumentText;
           const completionRemainder = suggestion.slice(argumentInfo.argumentText.trim().length);
           return {

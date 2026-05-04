@@ -5,6 +5,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>/dead/experiments/experiments.html</title>
+<script>
+const standaloneParams = new URLSearchParams(window.location.search);
+const allowStandalone = standaloneParams.get('standalone') === 'true';
+
+if (window.top === window.self && !allowStandalone) {
+  window.sessionStorage.setItem('deadRootShellFramePath', '/dead/experiments/' + window.location.search + window.location.hash);
+  window.location.replace('/');
+}
+</script>
 <style>
 :root{
   --page-bg:#000;
@@ -283,11 +292,24 @@ listBtn.addEventListener('click', () => {
 
 searchInput.addEventListener('input', applySearch);
 
+function getStandaloneUrl(frameSrc){
+  const url = new URL(frameSrc, window.location.origin);
+  url.pathname = url.pathname.replace(/\/?$/, '/index.html');
+  url.searchParams.set('standalone', 'true');
+  return url.href;
+}
+
 function openLinkInRootFrame(event){
   const link = event.target.closest('a[data-index-frame-src]');
   if (!link) return;
 
   const frameSrc = link.getAttribute('data-index-frame-src');
+  if (event.shiftKey && frameSrc) {
+    event.preventDefault();
+    window.location.href = getStandaloneUrl(frameSrc);
+    return;
+  }
+
   const parentController = window.parent && window.parent !== window
     ? window.parent.indexFrameController
     : null;

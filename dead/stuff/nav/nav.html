@@ -751,7 +751,7 @@ html, body {
           <div class="sidebar-preview-links">
             <a href="/dead/games/" data-index-frame-src="/dead/games/">* All My Games *</a>
             <a href="/dead/games/shooter-game/" data-index-frame-src="/dead/games/shooter-game/">+ Shooter Game</a>
-            <a href="/">+ Empty</a>
+            <a href="/dead/games/" data-index-frame-src="/dead/games/">+ Empty</a>
           </div>
         </div>
       </div>
@@ -772,7 +772,7 @@ html, body {
     </div>
 
     <div class="sidebar-bottom">
-      <a href="/privacy.html" class="privacy-link">Privacy</a>
+      <a href="/privacy.html" class="privacy-link" data-index-frame-src="/privacy.html">Privacy</a>
       <span class="privacy-note">No accounts. No server saves.<br>Your browser hoards the cursed data.</span>
       <span class="copyright-note"><span class="copyright-name">Thomas Harrison "Honestly Thomas" Tektite/Jinclops</span>Copyright - 2025 <a href="/">theinternetisdead.org</a></span>
     </div>
@@ -940,18 +940,36 @@ html, body {
 
     if (framePath === '/dead/games/' || framePath === '/dead/games/index.html') {
       return {
-        label: 'My Games',
+        label: '/dead/games/',
         href: '/dead/games/',
-        title: 'My Games'
+        title: '/dead/games/'
+      };
+    }
+
+    const gameFolderMatch = framePath.match(/^\/dead\/games\/([^/]+)\/?(?:index\.html)?$/);
+    if (gameFolderMatch) {
+      const href = `/dead/games/${gameFolderMatch[1]}/`;
+      return {
+        label: href,
+        href,
+        title: href
       };
     }
 
     const experimentsIndexMatch = framePath.match(/^\/dead\/experiments\/?(?:index\.html)?$/);
     if (experimentsIndexMatch) {
       return {
-        label: '/experiments/',
+        label: '/dead/experiments/',
         href: '/dead/experiments/',
-        title: '/experiments/'
+        title: '/dead/experiments/'
+      };
+    }
+
+    if (framePath === '/privacy.html' || framePath === '/privacy/') {
+      return {
+        label: '/privacy.html/',
+        href: '/privacy.html',
+        title: '/privacy.html/'
       };
     }
 
@@ -1213,8 +1231,36 @@ html, body {
 
   if (!sidebar || !backdrop) return;
 
+  function getStandaloneNavStateUrl(link) {
+    if (!link) return '';
+    const href = String(link.getAttribute('href') || '').trim();
+    if (!href) return '';
+
+    const url = new URL(href, window.location.origin);
+    const path = url.pathname.replace(/\/{2,}/g, '/');
+    const isStandalonePage =
+      /^\/dead\/games\/(?:[^/]+\/?)?(?:index\.html)?$/.test(path) ||
+      /^\/dead\/experiments\/(?:[^/]+\/?)?(?:index\.html)?$/.test(path);
+
+    if (!isStandalonePage) return '';
+    if (/^\/dead\/games\/[^/]+\/?$/.test(path)) {
+      url.pathname = path.replace(/\/?$/, '/index.html');
+    }
+    url.searchParams.set('standalone', 'true');
+    return url.href;
+  }
+
   if (navStatePanel) {
     navStatePanel.addEventListener('click', (event) => {
+      if (event.shiftKey) {
+        const standaloneUrl = getStandaloneNavStateUrl(navStatePanel);
+        if (standaloneUrl) {
+          event.preventDefault();
+          window.location.href = standaloneUrl;
+          return;
+        }
+      }
+
       event.preventDefault();
       if (isMobileOverlayView()) {
         if (typeof window.toggleIndexMobileFeedHeader === 'function') {
@@ -1257,12 +1303,17 @@ html, body {
     const frame = document.getElementById('chat-sandbox-frame');
     if (frame && frame.tagName === 'IFRAME') {
       const src = (frame.getAttribute('src') || '').trim();
-      if (src.includes('/dead/experiments/chat-sandbox/chat-sandbox.html')) {
+      if (
+        src.includes('/dead/experiments/chat-sandbox/chat-sandbox.html') ||
+        src.includes('/dead/experiments/chat-sandbox/')
+      ) {
         return true;
       }
     }
 
-    const sandboxIframe = document.querySelector('iframe[src*="/dead/experiments/chat-sandbox/chat-sandbox.html"]');
+    const sandboxIframe = document.querySelector(
+      'iframe[src*="/dead/experiments/chat-sandbox/chat-sandbox.html"], iframe[src*="/dead/experiments/chat-sandbox/"]'
+    );
     return !!sandboxIframe;
   }
 
