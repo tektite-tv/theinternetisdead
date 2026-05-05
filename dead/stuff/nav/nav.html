@@ -633,9 +633,10 @@ html, body {
   }
 
   #overlay-root .sidebar .topbar {
-    height: 112px;
-    min-height: 112px;
+    height: auto;
+    min-height: 160px;
     padding: 10px 14px 8px;
+    row-gap: 4px;
   }
 
   #overlay-root .sidebar .topbar > .hamburger {
@@ -672,15 +673,17 @@ html, body {
     padding-left: 0;
   }
 
+
   #overlay-root .sidebar-command-panel {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 var(--feed-state-panel-width);
     width: var(--feed-state-panel-width);
     min-width: 0;
-    max-width: calc(100% - 16px);
+    max-width: 100%;
     height: 44px;
-    margin: 8px auto 0;
+    margin: 0 auto;
     padding: 0 12px;
     overflow: hidden;
     background: #000;
@@ -693,6 +696,7 @@ html, body {
     text-align: center;
     text-decoration: none;
     white-space: nowrap;
+    order: 4;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -706,7 +710,7 @@ html, body {
     animation: overlay-ui-hueshift 1.8s linear infinite;
   }
 
-  #overlay-root .sidebar-command-text {
+  #overlay-root .sidebar-command-panel-text {
     display: block;
     max-width: 100%;
     overflow: hidden;
@@ -797,11 +801,11 @@ html, body {
           </div>
         </div>
       </div>
-    </div>
 
-    <a class="sidebar-command-panel" id="sidebar-mobile-command-panel" href="#" aria-label="Open chat">
-      <span class="sidebar-command-text">Enter command...</span>
-    </a>
+      <a class="sidebar-command-panel" id="sidebar-command-panel" href="#" aria-label="Open chat">
+        <span class="sidebar-command-panel-text">Enter command...</span>
+      </a>
+    </div>
 
     <div class="sidebar-menu">
       <div class="sidebar-item">
@@ -1302,8 +1306,8 @@ html, body {
   const navStatePanel = overlayRoot.querySelector('#nav-state-panel');
   const sidebarContextLink = overlayRoot.querySelector('#sidebar-context-link');
   const sidebarCommandLink = overlayRoot.querySelector('#sidebar-command-link');
+  const sidebarCommandPanel = overlayRoot.querySelector('#sidebar-command-panel');
   const sidebarLogoLink = overlayRoot.querySelector('#sidebar-logo-link');
-  const sidebarMobileCommandPanel = overlayRoot.querySelector('#sidebar-mobile-command-panel');
 
   if (!sidebar || !backdrop) return;
 
@@ -1647,20 +1651,49 @@ html, body {
     });
   }
 
-  function syncSidebarLogoChatTarget(link) {
-    if (!link) return;
-    if (shouldUseIndexChatBehavior()) {
-      link.setAttribute('href', '#');
-      link.setAttribute('aria-label', 'Open chat');
-    } else {
-      link.setAttribute('href', '/');
-      link.setAttribute('aria-label', 'Go to the main page');
+  if (sidebarCommandPanel) {
+    function syncSidebarCommandPanelBehavior() {
+      if (shouldUseIndexChatBehavior()) {
+        sidebarCommandPanel.setAttribute('href', '#');
+        sidebarCommandPanel.setAttribute('aria-label', 'Open chat');
+      } else {
+        sidebarCommandPanel.setAttribute('href', '/');
+        sidebarCommandPanel.setAttribute('aria-label', 'Go to the main page');
+      }
     }
+
+    syncSidebarCommandPanelBehavior();
+
+    sidebarCommandPanel.addEventListener('click', (event) => {
+      if (shouldUseIndexChatBehavior()) {
+        handleChatActivate(event);
+        return;
+      }
+      closeSidebar();
+    });
+
+    sidebarCommandPanel.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (shouldUseIndexChatBehavior()) {
+        handleChatActivate(event);
+        return;
+      }
+      closeSidebar();
+    });
+
+    window.addEventListener('resize', syncSidebarCommandPanelBehavior);
+    window.addEventListener('pageshow', syncSidebarCommandPanelBehavior);
   }
 
   if (sidebarLogoLink) {
     function syncSidebarLogoBehavior() {
-      syncSidebarLogoChatTarget(sidebarLogoLink);
+      if (shouldUseIndexChatBehavior()) {
+        sidebarLogoLink.setAttribute('href', '#');
+        sidebarLogoLink.setAttribute('aria-label', 'Open chat');
+      } else {
+        sidebarLogoLink.setAttribute('href', '/');
+        sidebarLogoLink.setAttribute('aria-label', 'Go to the main page');
+      }
     }
 
     syncSidebarLogoBehavior();
@@ -1684,34 +1717,6 @@ html, body {
 
     window.addEventListener('resize', syncSidebarLogoBehavior);
     window.addEventListener('pageshow', syncSidebarLogoBehavior);
-  }
-
-  if (sidebarMobileCommandPanel) {
-    function syncSidebarMobileCommandBehavior() {
-      syncSidebarLogoChatTarget(sidebarMobileCommandPanel);
-    }
-
-    syncSidebarMobileCommandBehavior();
-
-    sidebarMobileCommandPanel.addEventListener('click', (event) => {
-      if (shouldUseIndexChatBehavior()) {
-        handleChatActivate(event);
-        return;
-      }
-      closeSidebar();
-    });
-
-    sidebarMobileCommandPanel.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      if (shouldUseIndexChatBehavior()) {
-        handleChatActivate(event);
-        return;
-      }
-      closeSidebar();
-    });
-
-    window.addEventListener('resize', syncSidebarMobileCommandBehavior);
-    window.addEventListener('pageshow', syncSidebarMobileCommandBehavior);
   }
 
   logoLinks.forEach((link) => {
