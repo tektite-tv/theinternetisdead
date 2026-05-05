@@ -1437,7 +1437,8 @@ if (window.top === window.self && !allowStandalone) {
     /* ADDED: mobile chat sizing so messages and input actually fit instead of pretending phones are desktops. */
     @media (max-width: 700px) {
       body.chat-open #messagesWrap {
-        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+        /* UPDATED: match the mobile input wrapper height so messages sit flush above the chat bar instead of leaving an 8px dead-air gap. */
+        padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
       }
 
       #messages {
