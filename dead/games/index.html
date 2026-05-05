@@ -20,19 +20,22 @@ if (window.top === window.self && !allowStandalone) {
   --panel-bg:#4b0076;
   --text:#00ff00;
   --accent:#00ff00;
-  --hover-bg:#001a00;
+  --hover-bg:#2a0042;
   --font:"Courier New", monospace;
 }
 
 *{box-sizing:border-box;}
 html,body{
   margin:0;
-  background:var(--page-bg);
   color:var(--text);
   font-family:var(--font);
   overflow:auto;
   scrollbar-width:none;
   -ms-overflow-style:none;
+}
+
+html{
+  background:transparent !important;
 }
 html::-webkit-scrollbar,
 body::-webkit-scrollbar{
@@ -42,6 +45,18 @@ body::-webkit-scrollbar{
 
 body{
   padding:20px;
+  position:relative;
+  min-height:100vh;
+  min-height:100dvh;
+  background:transparent !important;
+  isolation:isolate;
+}
+
+.header,
+#links,
+.edit-note{
+  position:relative;
+  z-index:1;
 }
 
 .header{
@@ -105,8 +120,10 @@ button{
 }
 
 button:hover,
-a.post:hover{
+a.post:hover,
+a.post:hover .post-copy{
   background:var(--hover-bg);
+  background-color:var(--hover-bg);
 }
 
 #links{
@@ -119,18 +136,18 @@ a.post:hover{
   display:block;
 }
 
-a.post,
-button.post{
+a.post{
   display:block;
-  width:100%;
   color:var(--text);
   text-decoration:none;
   border:2px solid var(--accent);
   background:var(--panel-bg);
+  background-color:var(--panel-bg);
   padding:10px;
-  font:inherit;
-  text-align:left;
-  cursor:pointer;
+}
+
+.post-copy{
+  background:var(--panel-bg);
 }
 
 .grid-view .post .thumb{
@@ -232,13 +249,13 @@ code{
 </div>
 
 <div id="links" class="grid-view">
-  <button class="post" type="button" data-index-frame-src="/dead/games/shooter-game/">
+  <a class="post" href="/dead/games/shooter-game/" data-index-frame-src="/dead/games/shooter-game/">
     <div class="thumb"><img src="/dead/images/link-thumbnails/shooter-game.png" alt="Tektite's Shooter Game"></div>
     <div class="post-copy">
       <div class="post-title">Tektite's Shooter Game</div>
       <div class="post-desc">I had a bunch of random images I turned into a decent and fun Galaga clone with lots of secrets!</div>
     </div>
-  </button>
+  </a>
 
   <a class="post" href="#">
     <div class="thumb"><img src="https://placehold.co/1280x720/140014/00ff00?text=Placeholder+2" alt="Placeholder Link 2"></div>

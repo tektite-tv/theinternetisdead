@@ -12,7 +12,7 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      background: #fff;
+      background: #000;
       color: #00ff00;
       font-family: "Courier New", Courier, monospace;
       overflow: hidden;
@@ -32,6 +32,19 @@
       background: transparent;
     }
 
+    #shell-background-canvas {
+      position: fixed;
+      left: 0;
+      right: 0;
+      top: var(--overlay-height);
+      width: 100%;
+      height: calc(100vh - var(--overlay-height));
+      display: block;
+      background: #000;
+      pointer-events: none;
+      z-index: 800;
+    }
+
     #content-frame {
       position: fixed;
       left: 0;
@@ -41,7 +54,7 @@
       height: calc(100vh - var(--overlay-height));
       border: none;
       display: block;
-      background: #000;
+      background: transparent;
       z-index: 900;
     }
 
@@ -76,11 +89,14 @@
 <body>
   <div id="overlay-container"></div>
 
+  <canvas id="shell-background-canvas" aria-hidden="true"></canvas>
+
   <iframe
     id="content-frame"
     src="/dead/stuff/stuff-for-index/feeds/feeds-bridge.html"
     title="TheInternetIsDead page"
     loading="eager"
+    allowtransparency="true"
     allowfullscreen
   ></iframe>
 
@@ -123,6 +139,7 @@
     };
 
     const overlayContainer = document.getElementById('overlay-container');
+    const shellBackgroundCanvas = document.getElementById('shell-background-canvas');
     const contentFrame = document.getElementById('content-frame');
     const chatSandboxFrame = document.getElementById('chat-sandbox-frame');
     let iframeLinks = [DEFAULT_IFRAME_PATH];
@@ -131,6 +148,17 @@
     let chatSandboxVisible = false;
     let chatSandboxDvdActive = false;
     let chatSandboxReady = false;
+    let shellBackgroundStars = [];
+    let shellBackgroundReady = false;
+    let shellBackgroundLastFrame = performance.now();
+    let shellBackgroundTime = 0;
+    let shellBackgroundVx = 0;
+
+    const shellBackgroundLayers = [
+      { count: 180, baseSpeedY: 40, parallaxX: 0.35, sizeMin: 1, sizeMax: 2 },
+      { count: 120, baseSpeedY: 80, parallaxX: 0.60, sizeMin: 1, sizeMax: 3 },
+      { count: 70, baseSpeedY: 140, parallaxX: 0.90, sizeMin: 2, sizeMax: 4 }
+    ];
     const pendingFramePath = window.sessionStorage.getItem(ROOT_SHELL_FRAME_KEY) || '';
     if (pendingFramePath) {
       window.sessionStorage.removeItem(ROOT_SHELL_FRAME_KEY);
@@ -189,6 +217,75 @@
     }
 
     const startupFramePath = getStartupFramePathFromUrl();
+
+    function randomBetween(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function resetShellBackground() {
+      shellBackgroundStars = shellBackgroundLayers.map(layer => {
+        const stars = [];
+        for (let i = 0; i < layer.count; i++) {
+          stars.push({
+            x: Math.random() * shellBackgroundCanvas.width,
+            y: Math.random() * shellBackgroundCanvas.height,
+            s: randomBetween(layer.sizeMin, layer.sizeMax),
+            vyMul: randomBetween(0.7, 1.3)
+          });
+        }
+        return stars;
+      });
+      shellBackgroundReady = true;
+    }
+
+    function resizeShellBackground() {
+      const rect = shellBackgroundCanvas.getBoundingClientRect();
+      const nextWidth = Math.max(1, Math.floor(rect.width));
+      const nextHeight = Math.max(1, Math.floor(rect.height));
+      if (shellBackgroundCanvas.width === nextWidth && shellBackgroundCanvas.height === nextHeight) return;
+      shellBackgroundCanvas.width = nextWidth;
+      shellBackgroundCanvas.height = nextHeight;
+      resetShellBackground();
+    }
+
+    function drawShellBackground(now) {
+      const ctx = shellBackgroundCanvas.getContext('2d');
+      const dt = Math.min(0.05, Math.max(0, (now - shellBackgroundLastFrame) / 1000));
+      shellBackgroundLastFrame = now;
+      shellBackgroundTime += dt;
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, shellBackgroundCanvas.width, shellBackgroundCanvas.height);
+
+      if (shellBackgroundReady) {
+        const vxIntent = 0.15 * Math.sin(shellBackgroundTime * 0.6);
+        const targetVx = vxIntent * 7 * 55;
+        shellBackgroundVx += (targetVx - shellBackgroundVx) * Math.min(1, dt * 8);
+
+        for (let li = 0; li < shellBackgroundLayers.length; li++) {
+          const layer = shellBackgroundLayers[li];
+          const stars = shellBackgroundStars[li];
+          const driftX = -shellBackgroundVx * layer.parallaxX;
+          const driftY = layer.baseSpeedY;
+          const alpha = li === 0 ? 0.35 : (li === 1 ? 0.55 : 0.85);
+
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+
+          for (const star of stars) {
+            star.x += driftX * dt;
+            star.y += driftY * star.vyMul * dt;
+
+            if (star.y > shellBackgroundCanvas.height + 10) star.y = -10;
+            if (star.x < -10) star.x = shellBackgroundCanvas.width + 10;
+            if (star.x > shellBackgroundCanvas.width + 10) star.x = -10;
+
+            ctx.fillRect(star.x, star.y, star.s, star.s);
+          }
+        }
+      }
+
+      requestAnimationFrame(drawShellBackground);
+    }
 
     function normalizeIframePath(value) {
       const rawValue = String(value || '').trim();
@@ -274,6 +371,7 @@
         ? Math.ceil(overlayRoot.getBoundingClientRect().height)
         : Math.ceil(overlayContainer.getBoundingClientRect().height);
       document.body.style.setProperty('--overlay-height', `${Math.max(overlayHeight, 1)}px`);
+      resizeShellBackground();
     }
 
     async function loadRepoLinks() {
@@ -588,6 +686,9 @@
         console.warn('Unable to register service worker', error);
       });
     }
+
+    resizeShellBackground();
+    requestAnimationFrame(drawShellBackground);
 
     loadNav();
     loadRepoLinks();

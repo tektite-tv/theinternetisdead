@@ -17,7 +17,7 @@
 --accent-color:var(--page-text);
 --header-bg:rgba(75,0,118,.5);
 --header-control-height:40px;
---button-hover-bg:#001a00;
+--button-hover-bg:#2a0042;
 --tektite-logo-filter: rgba(0, 255, 0, 0);
 --thumbnail-filter: rgba(0, 255, 0, 0);
 --page-font-family:"Courier New", monospace;
@@ -212,6 +212,13 @@ text-align:center;
 @keyframes overlay-ui-hueshift {
 from { filter: hue-rotate(0deg); }
 to { filter: hue-rotate(360deg); }
+}
+
+@keyframes overlay-ui-color-hueshift {
+0%{color:#00ff00;border-color:#00ff00;}
+33%{color:#00ffff;border-color:#00ffff;}
+66%{color:#ff00ff;border-color:#ff00ff;}
+100%{color:#00ff00;border-color:#00ff00;}
 }
 
 a:hover,
@@ -441,6 +448,12 @@ position:relative;
 z-index:1;
 }
 
+.grid .post:hover,
+.grid .post:focus-within{
+background:var(--button-hover-bg);
+background-color:var(--button-hover-bg);
+}
+
 .grid .post-link{
 height:100%;
 display:flex;
@@ -458,6 +471,11 @@ margin-bottom:10px;
 background:var(--panel-background) url("/dead/images/pngs/static.gif") center / 100% 100% no-repeat;
 position:relative;
 isolation:isolate;
+}
+
+.grid .post:hover .thumb-grid,
+.grid .post:focus-within .thumb-grid{
+background-color:var(--button-hover-bg);
 }
 
 .thumb-grid img{width:100%;height:100%;object-fit:cover;display:block;background:#000;opacity:0;transition:opacity 1200ms ease;}
@@ -543,6 +561,14 @@ border:2px solid var(--accent-color);
 background:var(--panel-background);
 color:var(--page-text);
 cursor:pointer;
+}
+
+#loadMore:hover,
+#loadMore:focus-visible{
+animation: overlay-ui-color-hueshift 1.8s linear infinite;
+background:var(--button-hover-bg);
+background-color:var(--button-hover-bg);
+outline:none;
 }
 
 #videoViewport{
