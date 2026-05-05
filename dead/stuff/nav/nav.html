@@ -546,8 +546,8 @@ html, body {
     font-size: calc(34px * var(--overlay-font-scale, 1));
   }
 
-  /* MODIFIED: mobile logo must center to the full topbar, matching the button below,
-     instead of centering in the leftover space beside the absolute hamburger. */
+  /* MODIFIED: keep the logo centered on the same page axis as the button below,
+     regardless of the absolutely-positioned hamburger. */
   #overlay-root > .topbar > .logo {
     margin-left: 0;
     padding-left: 0;
@@ -582,7 +582,8 @@ html, body {
     font-size: calc(17px * var(--overlay-font-scale, 1));
   }
 
-  /* MODIFIED: keep the mobile clock centered on the same axis as the logo and nav button. */
+  /* MODIFIED: align the clock with the nav-state button centerline,
+     not with the leftover space beside the hamburger. */
   #overlay-root .clock {
     flex: 0 0 100%;
     justify-content: center;
@@ -643,7 +644,7 @@ html, body {
     left: 14px;
   }
 
-  /* MODIFIED: match sidebar mobile header centering with the main mobile header. */
+  /* MODIFIED: sidebar mobile header uses the same true center axis as its clock. */
   #overlay-root .sidebar .logo {
     margin-left: 0;
     padding-left: 0;
