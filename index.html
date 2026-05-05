@@ -20,6 +20,12 @@
 
     body {
       --overlay-height: 76px;
+      --root-shell-bg: rgba(0, 0, 0, 1);
+      --root-main-frame-bg: rgba(0, 0, 0, 0);
+      --root-nav-layer-bg: rgba(0, 0, 0, 0);
+      --root-shell-font-scale: 100%;
+      background: var(--root-shell-bg);
+      font-size: var(--root-shell-font-scale);
     }
 
     #overlay-container {
@@ -29,7 +35,7 @@
       left: 0;
       right: 0;
       z-index: 1200;
-      background: transparent;
+      background: var(--root-nav-layer-bg);
     }
 
     #shell-background-canvas {
@@ -54,7 +60,7 @@
       height: calc(100vh - var(--overlay-height));
       border: none;
       display: block;
-      background: transparent;
+      background: var(--root-main-frame-bg);
       z-index: 900;
     }
 
@@ -148,6 +154,23 @@
     let chatSandboxVisible = false;
     let chatSandboxDvdActive = false;
     let chatSandboxReady = false;
+    let rootHueShiftEnabled = false;
+    let rootColorInvertEnabled = false;
+    let rootHueShiftDegrees = 0;
+    let rootHueShiftAnimationId = null;
+    let rootCustomizeAutoShuffleId = null;
+    let rootColorElementMode = false;
+
+    const ROOT_CUSTOMIZE_DEFAULTS = {
+      shellBackground: { hex: '#000000', alpha: 1 },
+      mainFrameBackdrop: { hex: '#000000', alpha: 0 },
+      navLayerTint: { hex: '#000000', alpha: 0 },
+      fontFamily: '"Courier New", Courier, monospace',
+      fontScalePercent: 100
+    };
+
+    const rootCustomizeState = JSON.parse(JSON.stringify(ROOT_CUSTOMIZE_DEFAULTS));
+
     let shellBackgroundStars = [];
     let shellBackgroundReady = false;
     let shellBackgroundLastFrame = performance.now();
@@ -416,6 +439,177 @@
       chatSandboxFrame.setAttribute('aria-hidden', isActive ? 'false' : 'true');
     }
 
+    function postPageChatResult(command, message, options = {}) {
+      postToChatSandbox({
+        type: 'pageChatResult',
+        command,
+        message,
+        announce: options.announce !== false,
+        ...options
+      });
+    }
+
+    function clampNumber(value, min, max, fallback) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return fallback;
+      return Math.min(max, Math.max(min, number));
+    }
+
+    function normalizeHexColor(value, fallback = '#000000') {
+      const raw = String(value || '').trim();
+      return /^#?[0-9a-fA-F]{6}$/.test(raw) ? (raw.startsWith('#') ? raw : `#${raw}`) : fallback;
+    }
+
+    function hexToRgba(hex, alpha = 1) {
+      const safeHex = normalizeHexColor(hex).slice(1);
+      const red = parseInt(safeHex.slice(0, 2), 16);
+      const green = parseInt(safeHex.slice(2, 4), 16);
+      const blue = parseInt(safeHex.slice(4, 6), 16);
+      const safeAlpha = clampNumber(alpha, 0, 1, 1);
+      return `rgba(${red}, ${green}, ${blue}, ${safeAlpha})`;
+    }
+
+    function randomHexColor() {
+      return `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+    }
+
+    function applyRootCustomizeState() {
+      document.body.style.setProperty('--root-shell-bg', hexToRgba(rootCustomizeState.shellBackground.hex, rootCustomizeState.shellBackground.alpha));
+      document.body.style.setProperty('--root-main-frame-bg', hexToRgba(rootCustomizeState.mainFrameBackdrop.hex, rootCustomizeState.mainFrameBackdrop.alpha));
+      document.body.style.setProperty('--root-nav-layer-bg', hexToRgba(rootCustomizeState.navLayerTint.hex, rootCustomizeState.navLayerTint.alpha));
+      document.body.style.setProperty('--root-shell-font-scale', `${clampNumber(rootCustomizeState.fontScalePercent, 10, 500, 100)}%`);
+      document.body.style.fontFamily = rootCustomizeState.fontFamily || ROOT_CUSTOMIZE_DEFAULTS.fontFamily;
+    }
+
+    function getRootCustomizePayload(options = {}) {
+      return {
+        type: 'pageChatResult',
+        panel: 'homepageCustomize',
+        command: '/customize',
+        message: '/customize executed',
+        includeBaseCustomize: options.includeBaseCustomize !== false,
+        announce: options.announce !== false,
+        state: JSON.parse(JSON.stringify(rootCustomizeState)),
+        fontOptions: [
+          '"Courier New", Courier, monospace',
+          'Arial, Helvetica, sans-serif',
+          'Verdana, Geneva, sans-serif',
+          'Georgia, serif',
+          '"Times New Roman", Times, serif',
+          '"Lucida Console", Monaco, monospace'
+        ],
+        controls: [
+          { key: 'shellBackground', label: 'Shell Background' },
+          { key: 'mainFrameBackdrop', label: 'Main Iframe Backdrop' },
+          { key: 'navLayerTint', label: 'Nav Layer Tint' }
+        ]
+      };
+    }
+
+    function sendPageCustomizePanel(options = {}) {
+      postToChatSandbox(getRootCustomizePayload(options));
+    }
+
+    window.sendPageCustomizePanel = sendPageCustomizePanel;
+
+    function setRootCustomizeColor(key, value = {}) {
+      if (!Object.prototype.hasOwnProperty.call(rootCustomizeState, key)) return false;
+      const fallback = rootCustomizeState[key] || ROOT_CUSTOMIZE_DEFAULTS[key];
+      rootCustomizeState[key] = {
+        hex: normalizeHexColor(value.hex, fallback.hex),
+        alpha: clampNumber(value.alpha, 0, 1, fallback.alpha)
+      };
+      applyRootCustomizeState();
+      return true;
+    }
+
+    function randomizeRootCustomizeColors() {
+      ['shellBackground', 'mainFrameBackdrop', 'navLayerTint'].forEach((key) => {
+        rootCustomizeState[key] = {
+          hex: randomHexColor(),
+          alpha: key === 'shellBackground' ? 1 : Math.random()
+        };
+      });
+      applyRootCustomizeState();
+      sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+    }
+
+    function setRootCustomizeAutoShuffle(enabled) {
+      const shouldEnable = !!enabled;
+      if (rootCustomizeAutoShuffleId !== null) {
+        clearInterval(rootCustomizeAutoShuffleId);
+        rootCustomizeAutoShuffleId = null;
+      }
+      if (shouldEnable) {
+        randomizeRootCustomizeColors();
+        rootCustomizeAutoShuffleId = window.setInterval(randomizeRootCustomizeColors, 1000);
+      }
+    }
+
+    function resetRootCustomizeState() {
+      Object.assign(rootCustomizeState, JSON.parse(JSON.stringify(ROOT_CUSTOMIZE_DEFAULTS)));
+      setRootCustomizeAutoShuffle(false);
+      applyRootCustomizeState();
+      sendPageCustomizePanel({ includeBaseCustomize: false, announce: false });
+    }
+
+    function applyRootGlobalEffects() {
+      const filterParts = [];
+      if (rootColorInvertEnabled) filterParts.push('invert(1)');
+      if (rootHueShiftEnabled) filterParts.push(`hue-rotate(${rootHueShiftDegrees}deg)`);
+      const filterValue = filterParts.length ? filterParts.join(' ') : '';
+      [overlayContainer, shellBackgroundCanvas, contentFrame].forEach((element) => {
+        element.style.filter = filterValue;
+      });
+    }
+
+    function updateRootHueShiftLoop() {
+      if (rootHueShiftAnimationId !== null) {
+        cancelAnimationFrame(rootHueShiftAnimationId);
+        rootHueShiftAnimationId = null;
+      }
+      if (!rootHueShiftEnabled) {
+        rootHueShiftDegrees = 0;
+        applyRootGlobalEffects();
+        return;
+      }
+      const spin = () => {
+        rootHueShiftDegrees = (rootHueShiftDegrees + 1.25) % 360;
+        applyRootGlobalEffects();
+        rootHueShiftAnimationId = requestAnimationFrame(spin);
+      };
+      rootHueShiftAnimationId = requestAnimationFrame(spin);
+    }
+
+    function setRootHueShift(enabled) {
+      rootHueShiftEnabled = !!enabled;
+      updateRootHueShiftLoop();
+    }
+
+    function setRootColorInvert(enabled) {
+      rootColorInvertEnabled = !!enabled;
+      applyRootGlobalEffects();
+    }
+
+    function resetRootGlobalEffects() {
+      setRootHueShift(false);
+      setRootColorInvert(false);
+      resetRootCustomizeState();
+    }
+
+    function setOverlayClockPatch(nextState) {
+      if (typeof window.setOverlayClockState !== 'function') return null;
+      return window.setOverlayClockState(nextState);
+    }
+
+    function normalizeClockZone(value) {
+      const requested = String(value || '').trim();
+      const zones = typeof window.getOverlaySupportedTimeZones === 'function'
+        ? window.getOverlaySupportedTimeZones()
+        : ['America/Toronto', 'UTC'];
+      return zones.includes(requested) ? requested : '';
+    }
+
     window.__indexOpenChatOverlay = function openIndexChatOverlay(options = {}) {
       chatSandboxVisible = true;
       syncChatSandboxOverlayState();
@@ -435,7 +629,15 @@
         sourceKey: 'index-shell',
         commands: [
           { name: '/home', usage: '/home', desc: 'return the main iframe to the front feed', execute: true },
-          { name: '/goto', usage: '/goto ', desc: 'load a site path in the main iframe', execute: false, suggestions: iframeLinks.slice() }
+          { name: '/goto', usage: '/goto ', desc: 'load a site path in the main iframe', execute: false, suggestions: iframeLinks.slice() },
+          { name: '/games', usage: '/games', desc: 'load the games index in the main iframe', execute: true },
+          { name: '/experiments', usage: '/experiments', desc: 'load the experiments index in the main iframe', execute: true },
+          { name: '/customize', usage: '/customize', desc: 'open shell/page customize controls', execute: true, replaceBuiltIn: true, passthroughBuiltIn: false },
+          { name: '/color_element', usage: '/color_element', desc: 'toggle shell click-to-pick color mode placeholder', execute: true },
+          { name: '/clock_time', usage: '/clock_time 4:20pm', desc: 'set the nav clock to a manual time string', execute: false, suggestions: ['4:20pm', '07:10am', '23:59:59'] },
+          { name: '/clock_date', usage: '/clock_date Saturday / March 28 / 2026', desc: 'set the nav clock to a manual date string', execute: false, suggestions: ['Saturday / March 28 / 2026', 'Thursday / April 9 / 2026'] },
+          { name: '/clock_zone', usage: '/clock_zone America/Toronto', desc: 'sync the nav clock to a named timezone', execute: false, suggestions: typeof window.getOverlaySupportedTimeZones === 'function' ? window.getOverlaySupportedTimeZones() : ['America/Toronto', 'UTC'] },
+          { name: '/clock_reset', usage: '/clock_reset', desc: 'reset the nav clock to live Toronto time', execute: true }
         ]
       });
     }
@@ -447,13 +649,87 @@
 
       if (commandName === '/home') {
         setFrameSource(DEFAULT_IFRAME_PATH, { historyMode: 'push' });
-        postToChatSandbox({ type: 'pageChatResult', command: '/home', message: '/home executed: loaded the front feed', announce: true });
+        postPageChatResult('/home', '/home executed: loaded the front feed');
+        return true;
+      }
+
+      if (commandName === '/games') {
+        setFrameSource('/dead/games/', { historyMode: 'push' });
+        postPageChatResult('/games', '/games executed: loaded /dead/games/');
+        return true;
+      }
+
+      if (commandName === '/experiments') {
+        setFrameSource('/dead/experiments/', { historyMode: 'push' });
+        postPageChatResult('/experiments', '/experiments executed: loaded /dead/experiments/');
+        return true;
+      }
+
+      if (commandName === '/customize') {
+        sendPageCustomizePanel({ includeBaseCustomize: true, announce: true });
+        return true;
+      }
+
+      if (commandName === '/color_element') {
+        rootColorElementMode = !rootColorElementMode;
+        document.body.style.cursor = rootColorElementMode ? 'crosshair' : '';
+        postPageChatResult('/color_element', rootColorElementMode
+          ? '/color_element enabled: shell picker placeholder active'
+          : '/color_element disabled', { announce: true });
+        return true;
+      }
+
+      if (commandName === '/clock_time') {
+        if (!commandValue) {
+          postPageChatResult('/clock_time', 'Usage: /clock_time [time]');
+          return true;
+        }
+        setOverlayClockPatch({ mode: 'time', manualTime: commandValue, manualDate: '' });
+        postPageChatResult('/clock_time', `/clock_time executed: ${commandValue}`);
+        return true;
+      }
+
+      if (commandName === '/clock_date') {
+        if (!commandValue) {
+          postPageChatResult('/clock_date', 'Usage: /clock_date [date]');
+          return true;
+        }
+        setOverlayClockPatch({ mode: 'date', manualDate: commandValue, manualTime: '' });
+        postPageChatResult('/clock_date', `/clock_date executed: ${commandValue}`);
+        return true;
+      }
+
+      if (commandName === '/clock_zone') {
+        if (!commandValue) {
+          postPageChatResult('/clock_zone', 'Usage: /clock_zone [timezone]');
+          return true;
+        }
+        const nextZone = normalizeClockZone(commandValue);
+        if (!nextZone) {
+          postPageChatResult('/clock_zone', `Unknown timezone: ${commandValue}`);
+          return true;
+        }
+        setOverlayClockPatch({ mode: 'time', zone: nextZone, manualTime: '', manualDate: '' });
+        postPageChatResult('/clock_zone', `/clock_zone executed: synced to ${nextZone}`);
+        return true;
+      }
+
+      if (commandName === '/clock_reset') {
+        setOverlayClockPatch({ mode: 'time', zone: 'America/Toronto', manualTime: '', manualDate: '' });
+        postPageChatResult('/clock_reset', '/clock_reset executed: synced to America/Toronto');
         return true;
       }
 
       if (commandName === '/goto') {
         if (!commandValue) {
-          postToChatSandbox({ type: 'pageChatResult', command: '/goto', message: 'Usage: /goto [site path]', announce: true });
+          postToChatSandbox({
+            type: 'pageChatResult',
+            panel: 'gotoFolders',
+            command: '/goto',
+            message: '/goto executed',
+            folders: iframeLinks.slice(),
+            announce: true
+          });
           return true;
         }
         const nextPath = normalizeIframePath(commandValue);
@@ -463,7 +739,7 @@
           return true;
         }
         setFrameSource(nextPath, { historyMode: 'push' });
-        postToChatSandbox({ type: 'pageChatResult', command: '/goto', message: `/goto executed: ${nextPath}`, announce: true });
+        postPageChatResult('/goto', `/goto executed: ${nextPath}`);
         return true;
       }
 
@@ -632,6 +908,88 @@
           return;
         }
 
+        if (data.type === 'pageGlobalHueShiftToggle') {
+          setRootHueShift(!rootHueShiftEnabled);
+          return;
+        }
+
+        if (data.type === 'pageGlobalHueShiftSet') {
+          setRootHueShift(!!data.enabled);
+          return;
+        }
+
+        if (data.type === 'pageGlobalColorInvertToggle') {
+          setRootColorInvert(!rootColorInvertEnabled);
+          return;
+        }
+
+        if (data.type === 'pageGlobalColorInvertSet') {
+          setRootColorInvert(!!data.enabled);
+          return;
+        }
+
+        if (data.type === 'pageGlobalEffectsReset') {
+          resetRootGlobalEffects();
+          return;
+        }
+
+        if (data.type === 'pageCustomizeSet') {
+          setRootCustomizeColor(data.key, data.value);
+          return;
+        }
+
+        if (data.type === 'pageCustomizeFontFamily') {
+          rootCustomizeState.fontFamily = String(data.value || ROOT_CUSTOMIZE_DEFAULTS.fontFamily);
+          applyRootCustomizeState();
+          return;
+        }
+
+        if (data.type === 'pageCustomizeFontScale') {
+          rootCustomizeState.fontScalePercent = clampNumber(data.value, 10, 500, 100);
+          applyRootCustomizeState();
+          return;
+        }
+
+        if (data.type === 'pageCustomizeReset') {
+          resetRootCustomizeState();
+          return;
+        }
+
+        if (data.type === 'pageCustomizeAction') {
+          if (data.action === 'reset') resetRootCustomizeState();
+          return;
+        }
+
+        if (data.type === 'pageCustomizeSetRandomizeTintOpacities') {
+          randomizeRootCustomizeColors();
+          return;
+        }
+
+        if (data.type === 'pageCustomizeAutoShuffleSet') {
+          setRootCustomizeAutoShuffle(!!data.enabled);
+          return;
+        }
+
+        if (data.type === 'refreshParentPage') {
+          window.location.reload();
+          return;
+        }
+
+        if (data.type === 'pageScreenshotCapture') {
+          postToChatSandbox({ type: 'pageScreenshotStatus', ok: false, message: 'Root shell screenshot capture is not wired yet.' });
+          return;
+        }
+
+        if (data.type === 'pageScreenshotAnimationCapture') {
+          postToChatSandbox({ type: 'pageScreenshotAnimationStatus', ok: false, message: 'Root shell animation capture is not wired yet.' });
+          return;
+        }
+
+        if (data.type === 'pageExit') {
+          document.documentElement.innerHTML = '<head><title>System Exit</title></head><body style="margin:0;min-height:100vh;background:#000;color:#00ff00;font-family:Courier New,monospace;display:grid;place-items:center;text-align:center;"><div><div style="font-size:72px;">☠</div><div>System exited.</div><div style="margin-top:12px;font-size:12px;opacity:.7;">Refresh to resurrect the iframe crypt.</div></div></body>';
+          return;
+        }
+
         return;
       }
 
@@ -687,6 +1045,7 @@
       });
     }
 
+    applyRootCustomizeState();
     resizeShellBackground();
     requestAnimationFrame(drawShellBackground);
 
