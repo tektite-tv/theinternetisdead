@@ -514,6 +514,10 @@ html, body {
   display: none !important;
 }
 
+#overlay-root .sidebar-command-panel {
+  display: none;
+}
+
 @media (max-width: 768px) {
   #overlay-root {
     --mobile-nav-state-gap: 4px;
@@ -546,8 +550,6 @@ html, body {
     font-size: calc(34px * var(--overlay-font-scale, 1));
   }
 
-  /* MODIFIED: keep the logo centered on the same page axis as the button below,
-     regardless of the absolutely-positioned hamburger. */
   #overlay-root > .topbar > .logo {
     margin-left: 0;
     padding-left: 0;
@@ -582,8 +584,6 @@ html, body {
     font-size: calc(17px * var(--overlay-font-scale, 1));
   }
 
-  /* MODIFIED: align the clock with the nav-state button centerline,
-     not with the leftover space beside the hamburger. */
   #overlay-root .clock {
     flex: 0 0 100%;
     justify-content: center;
@@ -644,7 +644,6 @@ html, body {
     left: 14px;
   }
 
-  /* MODIFIED: sidebar mobile header uses the same true center axis as its clock. */
   #overlay-root .sidebar .logo {
     margin-left: 0;
     padding-left: 0;
@@ -671,6 +670,47 @@ html, body {
     min-width: 0;
     margin-top: 2px;
     padding-left: 0;
+  }
+
+  #overlay-root .sidebar-command-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--feed-state-panel-width);
+    min-width: 0;
+    max-width: calc(100% - 16px);
+    height: 44px;
+    margin: 8px auto 0;
+    padding: 0 12px;
+    overflow: hidden;
+    background: #000;
+    border: 3px solid var(--overlay-text);
+    color: var(--overlay-text);
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: calc(17px * var(--overlay-font-scale, 1));
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #overlay-root .sidebar-command-panel:visited {
+    color: var(--overlay-text);
+  }
+
+  #overlay-root .sidebar-command-panel:hover,
+  #overlay-root .sidebar-command-panel:focus-visible {
+    outline: none;
+    animation: overlay-ui-hueshift 1.8s linear infinite;
+  }
+
+  #overlay-root .sidebar-command-text {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   #overlay-root .sidebar-header-link {
@@ -758,6 +798,10 @@ html, body {
         </div>
       </div>
     </div>
+
+    <a class="sidebar-command-panel" id="sidebar-mobile-command-panel" href="#" aria-label="Open chat">
+      <span class="sidebar-command-text">Enter command...</span>
+    </a>
 
     <div class="sidebar-menu">
       <div class="sidebar-item">
@@ -1259,6 +1303,7 @@ html, body {
   const sidebarContextLink = overlayRoot.querySelector('#sidebar-context-link');
   const sidebarCommandLink = overlayRoot.querySelector('#sidebar-command-link');
   const sidebarLogoLink = overlayRoot.querySelector('#sidebar-logo-link');
+  const sidebarMobileCommandPanel = overlayRoot.querySelector('#sidebar-mobile-command-panel');
 
   if (!sidebar || !backdrop) return;
 
@@ -1602,15 +1647,20 @@ html, body {
     });
   }
 
+  function syncSidebarLogoChatTarget(link) {
+    if (!link) return;
+    if (shouldUseIndexChatBehavior()) {
+      link.setAttribute('href', '#');
+      link.setAttribute('aria-label', 'Open chat');
+    } else {
+      link.setAttribute('href', '/');
+      link.setAttribute('aria-label', 'Go to the main page');
+    }
+  }
+
   if (sidebarLogoLink) {
     function syncSidebarLogoBehavior() {
-      if (shouldUseIndexChatBehavior()) {
-        sidebarLogoLink.setAttribute('href', '#');
-        sidebarLogoLink.setAttribute('aria-label', 'Open chat');
-      } else {
-        sidebarLogoLink.setAttribute('href', '/');
-        sidebarLogoLink.setAttribute('aria-label', 'Go to the main page');
-      }
+      syncSidebarLogoChatTarget(sidebarLogoLink);
     }
 
     syncSidebarLogoBehavior();
@@ -1634,6 +1684,34 @@ html, body {
 
     window.addEventListener('resize', syncSidebarLogoBehavior);
     window.addEventListener('pageshow', syncSidebarLogoBehavior);
+  }
+
+  if (sidebarMobileCommandPanel) {
+    function syncSidebarMobileCommandBehavior() {
+      syncSidebarLogoChatTarget(sidebarMobileCommandPanel);
+    }
+
+    syncSidebarMobileCommandBehavior();
+
+    sidebarMobileCommandPanel.addEventListener('click', (event) => {
+      if (shouldUseIndexChatBehavior()) {
+        handleChatActivate(event);
+        return;
+      }
+      closeSidebar();
+    });
+
+    sidebarMobileCommandPanel.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      if (shouldUseIndexChatBehavior()) {
+        handleChatActivate(event);
+        return;
+      }
+      closeSidebar();
+    });
+
+    window.addEventListener('resize', syncSidebarMobileCommandBehavior);
+    window.addEventListener('pageshow', syncSidebarMobileCommandBehavior);
   }
 
   logoLinks.forEach((link) => {
