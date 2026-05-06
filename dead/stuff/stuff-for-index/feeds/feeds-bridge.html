@@ -100,6 +100,20 @@
       background: #000;
     }
 
+    /* MODIFIED: Promote gaming-grid.html over the attached feed stack while a video is open. */
+    body.video-route-active #main-content {
+      overflow: hidden;
+    }
+
+    body.video-route-active #gaming-grid-frame {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100vh !important;
+      height: 100dvh !important;
+      z-index: 1000;
+    }
+
     #feed-hover-dim-overlay {
       position: fixed;
       inset: 0;
@@ -404,12 +418,16 @@
 
     function updateRootVideoRoute(action, videoId, videoTitle = '') {
       videoRouteActive = action === 'open' && !!videoId;
+      // MODIFIED: Keep the bridge viewport locked to the gaming lightbox while forwarding route state upward.
+      document.body.classList.toggle('video-route-active', videoRouteActive);
       if (videoRouteActive) {
         overlayHovering = false;
         feedHeaderHovering = false;
         document.body.classList.remove('index-nav-hovering');
-        syncFeedHeaderVisibility();
       }
+      syncFeedHeaderVisibility();
+      resizeAllBridgedFrames();
+
       const nextUrl = action === 'open' && videoId
         ? getRootVideoUrl(videoId)
         : initialRootPath;
@@ -423,13 +441,21 @@
         }, '*');
         return;
       }
-      window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
+      window.history.pushState({ videoId: videoId || null }, '', nextUrl);
     }
 
     function sendInitialRootVideoToFrame() {
       const videoId = getRootVideoIdFromRoute();
-      if (!videoId || !tektiteFrame.contentWindow) return;
-      tektiteFrame.contentWindow.postMessage({ type: 'feedGridOpenVideo', videoId }, '*');
+      if (!videoId) return;
+      videoRouteActive = true;
+      document.body.classList.add('video-route-active');
+      syncFeedHeaderVisibility();
+      if (tektiteFrame.contentWindow) {
+        tektiteFrame.contentWindow.postMessage({ type: 'feedGridOpenVideo', videoId }, '*');
+      }
+      if (gamingGridFrame && gamingGridFrame.contentWindow) {
+        gamingGridFrame.contentWindow.postMessage({ type: 'feedGridOpenVideo', videoId }, '*');
+      }
     }
 
     function requestFeedHeaderState() {

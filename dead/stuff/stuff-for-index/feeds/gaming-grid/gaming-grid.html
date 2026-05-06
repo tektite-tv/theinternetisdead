@@ -687,7 +687,10 @@
         if (!event.target.closest("iframe")) closeVideoLightbox(true);
       });
 
-      els.lightboxClose.addEventListener("click", () => closeVideoLightbox(true));
+      els.lightboxClose.addEventListener("click", event => {
+        event.stopPropagation();
+        closeVideoLightbox(true);
+      });
 
       document.addEventListener("keydown", event => {
         if (event.key === "Escape" && els.lightbox.classList.contains("is-open")) {
@@ -700,6 +703,13 @@
         populateTitleSelect(getEnabledChannelsForSelectedGroup());
         renderFilteredGrid();
         openVideoFromUrl();
+      });
+
+      // MODIFIED: Accept route-open requests forwarded from index.html/feeds-bridge.html.
+      window.addEventListener("message", event => {
+        const data = event.data || {};
+        if (data.type !== "feedGridOpenVideo" || !data.videoId) return;
+        openVideoLightbox(String(data.videoId), false);
       });
     }
 
@@ -1165,6 +1175,28 @@
     }
 
 
+    // MODIFIED: Let parent frames update the root URL and promote this lightbox out of iframe jail.
+    function notifyVideoRouteChange(action, videoId = "", videoTitle = "") {
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: "feedGridVideoState",
+            action,
+            videoId: videoId || "",
+            videoTitle: videoTitle || ""
+          }, "*");
+          return;
+        }
+      } catch (error) {
+        console.warn("Unable to notify parent about gaming grid video route", error);
+      }
+    }
+
+    function getVideoTitleById(videoId) {
+      const item = state.items.find(entry => entry.videoId === videoId);
+      return item ? item.title : "";
+    }
+
     function buildLocalEmbedUrl(videoId) {
       const url = new URL(window.location.href);
       url.searchParams.set("video_embed", videoId);
@@ -1196,6 +1228,7 @@
         const url = new URL(window.location.href);
         url.searchParams.set("video_embed", videoId);
         history.pushState({ video_embed: videoId }, "", url);
+        notifyVideoRouteChange("open", videoId, getVideoTitleById(videoId));
       }
     }
 
@@ -1209,6 +1242,7 @@
         const url = new URL(window.location.href);
         url.searchParams.delete("video_embed");
         history.pushState({}, "", `${url.pathname}${url.search}${url.hash}`);
+        notifyVideoRouteChange("close", "");
       }
 
       scheduleGroupCycleAfterIdle();
