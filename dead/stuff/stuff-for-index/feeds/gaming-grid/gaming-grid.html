@@ -390,6 +390,7 @@
       justify-content:center;
       padding:20px;
       background:rgba(0,0,0,.88);
+      box-sizing:border-box;
     }
 
     .video-lightbox.is-open{
@@ -397,12 +398,14 @@
     }
 
     .video-lightbox-panel{
-      width:min(1100px, calc(100vw - 40px));
+      width:min(1100px, calc(100vw - 40px), calc((100vh - 96px) * 16 / 9));
       aspect-ratio:16 / 9;
+      max-height:calc(100vh - 96px);
       background:#000;
       border:2px solid var(--accent-color);
       box-shadow:0 0 0 6px rgba(75,0,118,.6);
       position:relative;
+      box-sizing:border-box;
     }
 
     .video-lightbox iframe{
@@ -439,7 +442,8 @@
       }
 
       .video-lightbox-panel{
-        width:calc(100vw - 16px);
+        width:min(calc(100vw - 16px), calc((100vh - 76px) * 16 / 9));
+        max-height:calc(100vh - 76px);
       }
 
       .video-lightbox-close{
@@ -703,13 +707,6 @@
         populateTitleSelect(getEnabledChannelsForSelectedGroup());
         renderFilteredGrid();
         openVideoFromUrl();
-      });
-
-      // MODIFIED: Accept route-open requests forwarded from index.html/feeds-bridge.html.
-      window.addEventListener("message", event => {
-        const data = event.data || {};
-        if (data.type !== "feedGridOpenVideo" || !data.videoId) return;
-        openVideoLightbox(String(data.videoId), false);
       });
     }
 
@@ -1175,28 +1172,6 @@
     }
 
 
-    // MODIFIED: Let parent frames update the root URL and promote this lightbox out of iframe jail.
-    function notifyVideoRouteChange(action, videoId = "", videoTitle = "") {
-      try {
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage({
-            type: "feedGridVideoState",
-            action,
-            videoId: videoId || "",
-            videoTitle: videoTitle || ""
-          }, "*");
-          return;
-        }
-      } catch (error) {
-        console.warn("Unable to notify parent about gaming grid video route", error);
-      }
-    }
-
-    function getVideoTitleById(videoId) {
-      const item = state.items.find(entry => entry.videoId === videoId);
-      return item ? item.title : "";
-    }
-
     function buildLocalEmbedUrl(videoId) {
       const url = new URL(window.location.href);
       url.searchParams.set("video_embed", videoId);
@@ -1225,10 +1200,10 @@
       document.body.style.overflow = "hidden";
 
       if (updateUrl) {
+        postVideoStateToBridge("open", videoId);
         const url = new URL(window.location.href);
         url.searchParams.set("video_embed", videoId);
         history.pushState({ video_embed: videoId }, "", url);
-        notifyVideoRouteChange("open", videoId, getVideoTitleById(videoId));
       }
     }
 
@@ -1239,14 +1214,35 @@
       document.body.style.overflow = "";
 
       if (updateUrl) {
+        postVideoStateToBridge("close", "");
         const url = new URL(window.location.href);
         url.searchParams.delete("video_embed");
         history.pushState({}, "", `${url.pathname}${url.search}${url.hash}`);
-        notifyVideoRouteChange("close", "");
       }
 
       scheduleGroupCycleAfterIdle();
     }
+
+    function postVideoStateToBridge(action, videoId) {
+      if (!window.parent || window.parent === window) return;
+
+      window.parent.postMessage({
+        type: "feedGridVideoState",
+        action,
+        videoId: videoId || "",
+        videoTitle: document.title || "Gaming Grid"
+      }, "*");
+    }
+
+    window.addEventListener("message", event => {
+      const data = event.data || {};
+      if (data.type === "feedGridOpenVideo" && data.videoId) {
+        openVideoLightbox(String(data.videoId), false);
+      }
+      if (data.type === "feedGridCloseVideo") {
+        closeVideoLightbox(false);
+      }
+    });
 
     function renderGridMessage(message) {
       els.grid.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;

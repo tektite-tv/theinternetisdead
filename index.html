@@ -64,6 +64,12 @@
       z-index: 900;
     }
 
+    body.video-route-active #content-frame {
+      top: 0;
+      height: 100vh;
+      z-index: 1300;
+    }
+
     #chat-sandbox-frame {
       position: fixed;
       left: 0;
@@ -80,14 +86,6 @@
 
     #chat-sandbox-frame.chat-overlay-active {
       pointer-events: auto;
-    }
-
-    /* MODIFIED: Let nested gaming-grid video lightboxes cover the full root viewport. */
-    body.video-route-active #content-frame {
-      top: 0;
-      height: 100vh;
-      height: 100dvh;
-      z-index: 1300;
     }
 
     .overlay-error {
@@ -198,7 +196,7 @@
     }
     function getVideoIdFromCurrentUrl() {
       const params = new URLSearchParams(window.location.search);
-      const queryVideoId = params.get('vid') || params.get('id') || '';
+      const queryVideoId = params.get('video_embed') || params.get('vid') || params.get('id') || '';
       if (queryVideoId.trim()) return queryVideoId.trim();
 
       const videoPathMatch = window.location.pathname.match(/^\/dead\/videos\/([^/]+)\/?$/);
@@ -206,7 +204,7 @@
     }
 
     function getVideoRouteUrl(videoId) {
-      return `/dead/videos/?vid=${encodeURIComponent(videoId)}`;
+      return `/?video_embed=${encodeURIComponent(videoId)}`;
     }
 
 
@@ -1022,8 +1020,6 @@
       const videoId = String(data.videoId || '').trim();
       const isVideoOpen = data.action === 'open' && videoId;
       const nextUrl = isVideoOpen ? getVideoRouteUrl(videoId) : '/';
-      // MODIFIED: A video opened from gaming-grid.html now promotes the content iframe above the root nav.
-      document.body.classList.toggle('video-route-active', !!isVideoOpen);
 
       // Keep root index.html as the only public shell. Video URLs are URL state only;
       // the content iframe stays on the feed bridge so nav/header iframes do not duplicate.
@@ -1031,7 +1027,8 @@
         setFrameSource(DEFAULT_IFRAME_PATH);
       }
 
-      window.history.pushState({ videoId: videoId || null }, '', nextUrl);
+      document.body.classList.toggle('video-route-active', !!isVideoOpen);
+      window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
       if (typeof window.updateNavVideoRouteState === 'function') {
         window.updateNavVideoRouteState({
           action: data.action,
