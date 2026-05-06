@@ -627,7 +627,9 @@
       loading: false,
       errors: [],
       groupCycleTimer: null,
-      groupCycleDelayMs: 5000
+      groupCycleIdleTimer: null,
+      groupCycleDelayMs: 5000,
+      groupCycleIdleDelayMs: 10000
     };
 
     const els = {
@@ -650,22 +652,24 @@
       await loadEverything();
       applyChannelSortFromUrl();
       openVideoFromUrl();
-      startGroupCycle();
+      scheduleGroupCycleAfterIdle();
     }
 
     function bindEvents() {
+      bindIdleDetectionEvents();
+
       els.search.addEventListener("input", renderFilteredGrid);
       els.sort.addEventListener("change", renderFilteredGrid);
       els.group.addEventListener("change", () => {
         updateChannelSortUrl();
         populateTitleSelect(getEnabledChannelsForSelectedGroup());
         renderFilteredGrid();
-        restartGroupCycle();
+        scheduleGroupCycleAfterIdle();
       });
       els.title.addEventListener("change", renderFilteredGrid);
       els.refresh.addEventListener("click", async () => {
         await loadEverything();
-        startGroupCycle();
+        scheduleGroupCycleAfterIdle();
       });
 
       els.grid.addEventListener("click", event => {
@@ -697,6 +701,20 @@
         renderFilteredGrid();
         openVideoFromUrl();
       });
+    }
+
+
+    function bindIdleDetectionEvents() {
+      ["pointerdown", "keydown", "wheel", "touchstart", "input", "change"].forEach(eventName => {
+        document.addEventListener(eventName, handleUserInteractionForGroupCycle, {
+          passive: true,
+          capture: true
+        });
+      });
+    }
+
+    function handleUserInteractionForGroupCycle() {
+      scheduleGroupCycleAfterIdle();
     }
 
 
@@ -742,11 +760,26 @@
       }
     }
 
-    function restartGroupCycle() {
-      startGroupCycle();
+    function clearGroupCycleIdleTimer() {
+      if (state.groupCycleIdleTimer) {
+        window.clearTimeout(state.groupCycleIdleTimer);
+        state.groupCycleIdleTimer = null;
+      }
+    }
+
+    function scheduleGroupCycleAfterIdle() {
+      stopGroupCycle();
+
+      clearGroupCycleIdleTimer();
+
+      state.groupCycleIdleTimer = window.setTimeout(() => {
+        state.groupCycleIdleTimer = null;
+        startGroupCycle();
+      }, state.groupCycleIdleDelayMs);
     }
 
     function cycleToNextGroup() {
+      if (state.loading || els.lightbox.classList.contains("is-open")) return;
       if (!els.group || els.group.options.length <= 1) return;
 
       const options = [...els.group.options].filter(option => option.value !== "all");
@@ -764,6 +797,7 @@
     async function loadEverything() {
       if (state.loading) return;
       stopGroupCycle();
+      clearGroupCycleIdleTimer();
 
       state.loading = true;
       state.errors = [];
@@ -1150,6 +1184,9 @@
     function openVideoLightbox(videoId, updateUrl) {
       if (!videoId) return;
 
+      stopGroupCycle();
+      clearGroupCycleIdleTimer();
+
       els.lightboxFrame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0`;
       els.lightbox.classList.add("is-open");
       els.lightbox.setAttribute("aria-hidden", "false");
@@ -1173,6 +1210,8 @@
         url.searchParams.delete("video_embed");
         history.pushState({}, "", `${url.pathname}${url.search}${url.hash}`);
       }
+
+      scheduleGroupCycleAfterIdle();
     }
 
     function renderGridMessage(message) {
