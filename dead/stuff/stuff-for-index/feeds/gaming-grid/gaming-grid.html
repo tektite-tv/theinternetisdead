@@ -32,9 +32,6 @@
       --feed-header-row-gap:var(--feed-grid-gap);
       --feed-posts-x:20px;
       --feed-control-button-size:var(--header-control-height);
-      /* UPDATED: mirror feeds.html's exact three-column math so this
-         grid lines up when both pages are stacked inside feeds-bridge.html. */
-      --feed-desktop-column-width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
     }
 
     *{box-sizing:border-box;}
@@ -84,12 +81,15 @@
     }
 
     header{
-      display:flex;
+      /* MODIFIED: Use the same centered 3-column track as the video grid
+         so this iframe lines up with feeds.html when feeds-bridge stacks them. */
+      display:grid;
+      grid-template-columns:repeat(3, var(--feed-grid-card-size));
       align-items:stretch;
       justify-content:center;
-      flex-wrap:nowrap;
-      gap:var(--feed-header-row-gap) var(--feed-grid-gap);
-      padding:13px 20px var(--feed-header-row-gap);
+      column-gap:var(--feed-grid-gap);
+      row-gap:var(--feed-header-row-gap);
+      padding:13px var(--feed-posts-x) var(--feed-header-row-gap);
       background:var(--header-bg);
       position:relative;
       z-index:20;
@@ -98,8 +98,7 @@
     .titlePanel,
     .channelPicker,
     .controls{
-      width:var(--feed-desktop-column-width);
-      flex:0 0 var(--feed-desktop-column-width);
+      width:100%;
       min-width:0;
     }
 
@@ -161,6 +160,7 @@
       gap:6px;
       position:relative;
       z-index:21;
+      overflow:hidden;
     }
 
     button,
@@ -194,10 +194,6 @@
       cursor:pointer;
     }
 
-    #sortSelect{
-      width:104px;
-    }
-
     button{
       display:inline-flex;
       align-items:center;
@@ -209,14 +205,6 @@
       flex:0 0 auto;
       width:auto;
       min-width:var(--feed-control-button-size);
-      white-space:nowrap;
-    }
-
-    #refreshButton{
-      width:112px;
-      padding:0 8px;
-      overflow:hidden;
-      text-overflow:ellipsis;
     }
 
     button:hover,
@@ -260,7 +248,7 @@
 
     .grid{
       display:grid;
-      grid-template-columns:repeat(3, var(--feed-grid-card-size));
+      grid-template-columns:repeat(auto-fit, minmax(min(100%, var(--feed-grid-card-size)), var(--feed-grid-card-size)));
       column-gap:var(--feed-grid-gap);
       row-gap:var(--feed-grid-gap);
       align-items:stretch;
@@ -487,8 +475,8 @@
       }
 
       header{
+        grid-template-columns:1fr;
         padding:16px 12px var(--feed-header-row-gap);
-        flex-direction:column;
         align-items:stretch;
         gap:var(--feed-header-row-gap);
       }
@@ -497,7 +485,6 @@
       .channelPicker,
       .controls{
         width:100%;
-        flex:0 0 auto;
       }
 
       .titlePanel,
@@ -542,11 +529,6 @@
 
       #grid{
         padding:var(--feed-grid-gap) var(--feed-posts-x);
-      }
-
-      #sortSelect,
-      #refreshButton{
-        width:auto;
       }
 
       .grid{
