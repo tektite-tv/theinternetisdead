@@ -84,21 +84,19 @@
     #tektite-frame,
     #gaming-grid-frame {
       width: 100%;
-      height: 100vh;
-      min-height: 100dvh;
+      height: 1px;
+      min-height: 0;
       border: none;
       display: block;
       background: transparent;
+      overflow: hidden;
     }
 
     #tektite-frame {
-      height: 100vh;
-      min-height: 100dvh;
+      background: #000;
     }
 
     #gaming-grid-frame {
-      height: 100vh;
-      min-height: 100dvh;
       background: #000;
     }
 
@@ -177,6 +175,7 @@
         src="/dead/stuff/stuff-for-index/feeds/feeds.html"
         title="Tektite Index"
         loading="eager"
+        scrolling="no"
         allowfullscreen
       ></iframe>
       <iframe
@@ -184,6 +183,7 @@
         src="/dead/stuff/stuff-for-index/feeds/gaming-grid/gaming-grid.html"
         title="Gaming Grid"
         loading="eager"
+        scrolling="no"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowfullscreen
       ></iframe>
@@ -236,6 +236,108 @@
         }
       } catch (error) {
         console.warn('Unable to measure tektite header iframe', error);
+      }
+    }
+
+
+    /* MODIFIED: feeds-bridge owns the single page scroll.
+       The child iframes are resized to their full document height so
+       feeds.html and gaming-grid.html feel attached instead of independently scrollable. */
+    const bridgedFrameHeights = new WeakMap();
+    const bridgedFrameObservers = new WeakMap();
+
+    function getFrameDocument(frame) {
+      try {
+        return frame.contentDocument || (frame.contentWindow && frame.contentWindow.document) || null;
+      } catch (error) {
+        console.warn('Unable to read bridged feed iframe document', error);
+        return null;
+      }
+    }
+
+    function getFrameContentHeight(frame) {
+      const doc = getFrameDocument(frame);
+      if (!doc) return 0;
+      const html = doc.documentElement;
+      const body = doc.body;
+      return Math.ceil(Math.max(
+        html ? html.scrollHeight : 0,
+        html ? html.offsetHeight : 0,
+        html ? html.clientHeight : 0,
+        body ? body.scrollHeight : 0,
+        body ? body.offsetHeight : 0,
+        body ? body.clientHeight : 0
+      ));
+    }
+
+    function resizeBridgedFrame(frame) {
+      if (!frame) return;
+      const nextHeight = Math.max(1, getFrameContentHeight(frame));
+      if (!nextHeight) return;
+      const previousHeight = bridgedFrameHeights.get(frame);
+      if (previousHeight === nextHeight) return;
+      bridgedFrameHeights.set(frame, nextHeight);
+      frame.style.height = `${nextHeight}px`;
+    }
+
+    function resizeAllBridgedFrames() {
+      syncChildFrameViewportVars(tektiteFrame);
+      syncChildFrameViewportVars(gamingGridFrame);
+      resizeBridgedFrame(tektiteFrame);
+      resizeBridgedFrame(gamingGridFrame);
+    }
+
+    function syncChildFrameViewportVars(frame) {
+      const doc = getFrameDocument(frame);
+      if (!doc || !doc.documentElement) return;
+      doc.documentElement.style.setProperty('--feed-bridge-vh', `${Math.max(1, window.innerHeight)}px`);
+      doc.documentElement.style.setProperty(
+        '--feed-grid-card-size',
+        'min(calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3), calc((var(--feed-bridge-vh) - (var(--feed-fit-gap-count) * var(--feed-grid-gap)) - var(--feed-load-more-height)) / var(--feed-visible-grid-rows)))'
+      );
+    }
+
+    function disableChildFrameScrolling(frame) {
+      const doc = getFrameDocument(frame);
+      if (!doc) return;
+      syncChildFrameViewportVars(frame);
+      const styleId = 'feeds-bridge-no-independent-scroll';
+      if (!doc.getElementById(styleId)) {
+        const style = doc.createElement('style');
+        style.id = styleId;
+        style.textContent = 'html,body{overflow:hidden!important;scrollbar-width:none!important;}html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;}';
+        (doc.head || doc.documentElement).appendChild(style);
+      }
+    }
+
+    function watchBridgedFrame(frame) {
+      if (!frame) return;
+      disableChildFrameScrolling(frame);
+      resizeBridgedFrame(frame);
+
+      const doc = getFrameDocument(frame);
+      if (!doc || bridgedFrameObservers.has(frame)) return;
+
+      const resizeObserver = new ResizeObserver(() => resizeBridgedFrame(frame));
+      const mutationObserver = new MutationObserver(() => resizeBridgedFrame(frame));
+
+      if (doc.documentElement) resizeObserver.observe(doc.documentElement);
+      if (doc.body) {
+        resizeObserver.observe(doc.body);
+        mutationObserver.observe(doc.body, { childList: true, subtree: true, attributes: true });
+      }
+
+      bridgedFrameObservers.set(frame, { resizeObserver, mutationObserver });
+
+      Array.from(doc.images || []).forEach((image) => {
+        if (!image.complete) {
+          image.addEventListener('load', () => resizeBridgedFrame(frame), { once: true });
+          image.addEventListener('error', () => resizeBridgedFrame(frame), { once: true });
+        }
+      });
+
+      if (doc.fonts && doc.fonts.ready) {
+        doc.fonts.ready.then(() => resizeBridgedFrame(frame)).catch(() => {});
       }
     }
 
@@ -431,6 +533,7 @@
     window.addEventListener('resize', () => {
       syncFeedHeaderVisibility();
       measureTektiteHeader();
+      resizeAllBridgedFrames();
     });
 
     tektiteHeaderFrame.addEventListener('load', () => {
@@ -440,12 +543,14 @@
     });
 
     tektiteFrame.addEventListener('load', () => {
+      watchBridgedFrame(tektiteFrame);
       sendInitialRootVideoToFrame();
       requestFeedHeaderState();
     });
 
     if (gamingGridFrame) {
       gamingGridFrame.addEventListener('load', () => {
+        watchBridgedFrame(gamingGridFrame);
         sendInitialRootVideoToFrame();
         requestFeedHeaderState();
       });
@@ -453,6 +558,8 @@
 
     normalizeInitialRootVideoRoute();
     syncFeedHeaderVisibility();
+    resizeAllBridgedFrames();
+    window.setInterval(resizeAllBridgedFrames, 1000);
   </script>
 </body>
 </html>
