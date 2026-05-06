@@ -49,6 +49,14 @@
       width: 100%;
       position: relative;
       z-index: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    #main-content::-webkit-scrollbar {
+      display: none;
     }
 
     #tektite-header-frame {
@@ -73,16 +81,29 @@
       transform: translateY(0);
     }
 
-    #tektite-frame {
+    #tektite-frame,
+    #gaming-grid-frame {
       width: 100%;
-      height: 100%;
+      height: 100vh;
+      min-height: 100dvh;
       border: none;
       display: block;
       background: transparent;
     }
 
+    #tektite-frame {
+      height: 100vh;
+      min-height: 100dvh;
+    }
+
+    #gaming-grid-frame {
+      height: 100vh;
+      min-height: 100dvh;
+      background: #000;
+    }
+
     #feed-hover-dim-overlay {
-      position: absolute;
+      position: fixed;
       inset: 0;
       z-index: 20;
       background: rgba(0, 0, 0, 0.5);
@@ -124,6 +145,8 @@
       #main-content {
         flex: 1 1 auto;
         height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
 
       #mobile-feed-header-hit-target {
@@ -151,10 +174,17 @@
     <div id="main-content">
       <iframe
         id="tektite-frame"
-        src="/dead/stuff/stuff-for-index/feeds/gaming-grid/gaming-grid.html"
-        title="Tektite Gaming Grid"
+        src="/dead/stuff/stuff-for-index/feeds/feeds.html"
+        title="Tektite Index"
         loading="eager"
-        allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write; web-share"
+        allowfullscreen
+      ></iframe>
+      <iframe
+        id="gaming-grid-frame"
+        src="/dead/stuff/stuff-for-index/feeds/gaming-grid/gaming-grid.html"
+        title="Gaming Grid"
+        loading="eager"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         allowfullscreen
       ></iframe>
       <div id="feed-hover-dim-overlay" aria-hidden="true"></div>
@@ -166,6 +196,7 @@
   <script>
     const tektiteHeaderFrame = document.getElementById('tektite-header-frame');
     const tektiteFrame = document.getElementById('tektite-frame');
+    const gamingGridFrame = document.getElementById('gaming-grid-frame');
     const mobileFeedHeaderHitTarget = document.getElementById('mobile-feed-header-hit-target');
     let tektiteHeaderHeight = 0;
     let tektiteHeaderCollapsedHeight = 0;
@@ -235,7 +266,6 @@
     }
 
     const initialRootPath = '/dead/stuff/stuff-for-index/feeds/feeds-bridge.html';
-    const activeFeedContentPath = '/dead/stuff/stuff-for-index/feeds/gaming-grid/gaming-grid.html';
 
     function getRootVideoIdFromRoute() {
       const params = new URLSearchParams(window.location.search);
@@ -349,12 +379,18 @@
         if (tektiteFrame.contentWindow) {
           tektiteFrame.contentWindow.postMessage({ type: 'feedGridOpenVideo', videoId: data.videoId }, '*');
         }
+        if (gamingGridFrame && gamingGridFrame.contentWindow) {
+          gamingGridFrame.contentWindow.postMessage({ type: 'feedGridOpenVideo', videoId: data.videoId }, '*');
+        }
         return;
       }
 
       if (event.source === window.parent && data.type === 'feedGridHeaderCommand') {
         if (tektiteFrame.contentWindow) {
           tektiteFrame.contentWindow.postMessage(data, '*');
+        }
+        if (gamingGridFrame && gamingGridFrame.contentWindow) {
+          gamingGridFrame.contentWindow.postMessage(data, '*');
         }
         return;
       }
@@ -367,6 +403,9 @@
       if (event.source === tektiteHeaderFrame.contentWindow && data.type === 'feedGridHeaderCommand') {
         if (tektiteFrame.contentWindow) {
           tektiteFrame.contentWindow.postMessage(data, '*');
+        }
+        if (gamingGridFrame && gamingGridFrame.contentWindow) {
+          gamingGridFrame.contentWindow.postMessage(data, '*');
         }
         return;
       }
@@ -381,7 +420,10 @@
         return;
       }
 
-      if (event.source === tektiteFrame.contentWindow && data.type === 'feedGridVideoState') {
+      if (
+        (event.source === tektiteFrame.contentWindow || (gamingGridFrame && event.source === gamingGridFrame.contentWindow)) &&
+        data.type === 'feedGridVideoState'
+      ) {
         updateRootVideoRoute(data.action, String(data.videoId || ''), String(data.videoTitle || ''));
       }
     });
@@ -401,6 +443,13 @@
       sendInitialRootVideoToFrame();
       requestFeedHeaderState();
     });
+
+    if (gamingGridFrame) {
+      gamingGridFrame.addEventListener('load', () => {
+        sendInitialRootVideoToFrame();
+        requestFeedHeaderState();
+      });
+    }
 
     normalizeInitialRootVideoRoute();
     syncFeedHeaderVisibility();
