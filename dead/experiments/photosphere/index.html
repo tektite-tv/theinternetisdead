@@ -1124,50 +1124,26 @@ document.addEventListener("keydown", e=>{
 
 // ===== ANIMATE =====
 
-// ===== CLICK SCREENSHOT (INNER SPHERE) =====
+// ===== CLICK INNER SPHERE TO OPEN ESC MENU =====
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+let clickStartX = 0;
+let clickStartY = 0;
+
+renderer.domElement.addEventListener("mousedown", (event) => {
+  if(isTouchDevice) return;
+  clickStartX = event.clientX;
+  clickStartY = event.clientY;
+});
 
 renderer.domElement.addEventListener("click", (event) => {
   if(isTouchDevice) return;
 
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  const moveDist = Math.hypot(event.clientX - clickStartX, event.clientY - clickStartY);
+  if(moveDist > 12) return;
 
-  raycaster.setFromCamera(mouse, camera);
-
-  const intersects = raycaster.intersectObject(sphere, true);
-
-  if(intersects.length > 0){
-    const originalDistance = cameraDistance;
-    cameraDistance *= 1.2;
-
-    if(!chaosEnabled && autoOrbitEnabled){
-    } else {
-      camera.position.set(0,0,cameraDistance);
-    }
-    camera.updateProjectionMatrix();
-
-    if(postFXEnabled){
-      renderer.setRenderTarget(renderTarget);
-      renderer.render(scene, camera);
-      renderer.setRenderTarget(null);
-      postMat.uniforms.tDiffuse.value = renderTarget.texture;
-      renderer.render(postScene, postCam);
-    } else {
-      renderer.render(scene, camera);
-    }
-
-    const dataURL = renderer.domElement.toDataURL("image/png");
-
-    cameraDistance = originalDistance;
-
-    const link = document.createElement("a");
-    link.href = dataURL;
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/[:.]/g, "-");
-    link.download = `photosphere_${timestamp}.png`;
-    link.click();
+  if(sphereHitTest(event.clientX, event.clientY)){
+    openMenu();
   }
 });
 
