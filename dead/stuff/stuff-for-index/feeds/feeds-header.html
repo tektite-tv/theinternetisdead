@@ -1443,7 +1443,7 @@ scheduleHeaderMessages([]);
 function syncStateIndicatorLinks(state={}){
 const videoId=String(state.firstVideoId || "").trim();
 const videoTitle=String(state.firstVideoTitle || "").trim();
-const href=videoId ? `/dead/videos/?vid=${encodeURIComponent(videoId)}` : "/";
+const href=videoId ? `/?video_embed=${encodeURIComponent(videoId)}` : "/";
 const title=videoId
 ? `Open first visible video${videoTitle ? `: ${videoTitle}` : ""}`
 : "No visible video";

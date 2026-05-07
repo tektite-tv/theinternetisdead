@@ -1098,7 +1098,7 @@ html, body {
     const videoId = String(state.firstVideoId || '').trim();
     const label = String(state.sortPanelText || 'Watch My Most Viewed Videos');
     text.textContent = label;
-    panel.href = videoId ? `/dead/videos/?vid=${encodeURIComponent(videoId)}` : '/';
+    panel.href = videoId ? `/?video_embed=${encodeURIComponent(videoId)}` : '/';
     panel.dataset.videoId = videoId;
     const videoTitle = String(state.firstVideoTitle || '').trim();
     const title = videoId
@@ -1139,7 +1139,7 @@ html, body {
 
     const label = videoTitle || `?vid=${videoId}`;
     text.textContent = label;
-    panel.href = `/dead/videos/?vid=${encodeURIComponent(videoId)}`;
+    panel.href = `/?video_embed=${encodeURIComponent(videoId)}`;
     panel.dataset.videoId = videoId;
     panel.dataset.stateMode = 'video';
     panel.title = `Open video: ${label}`;
