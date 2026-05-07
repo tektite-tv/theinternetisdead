@@ -291,6 +291,13 @@
       cursor: pointer;
     }
 
+    /* Clean-screen mode: C hides the bottom controls and both corner overlays. */
+    body.clean-screen .player-controls,
+    body.clean-screen .screen::before,
+    body.clean-screen .screen::after {
+      display: none !important;
+    }
+
     body.lyrics-mode .current {
       /* Half-size fullscreen lyric text. Changed from clamp(3rem, 11vw, 12rem). */
       font-size: clamp(1.5rem, 5.5vw, 6rem);
@@ -523,6 +530,7 @@
     let frequencyData = null;
     let bounceY = 0;
     let bounceScale = 1;
+    let cleanScreenEnabled = false;
 
     function setStatus(text) {
       statusEl.textContent = text;
@@ -532,10 +540,27 @@
       document.body.classList.add("lyrics-mode");
     }
 
+    function updateCleanScreenState() {
+      document.body.classList.toggle("clean-screen", cleanScreenEnabled);
+      if (cleanScreenEnabled) playerControls.classList.remove("is-visible");
+    }
 
+    async function togglePageFullscreen() {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        } else {
+          await document.exitFullscreen();
+        }
+      } catch {
+        setStatus("Fullscreen failed. The browser has once again chosen bureaucracy over joy.");
+      }
+    }
 
     function exitLyricsMode() {
       document.body.classList.remove("lyrics-mode");
+      cleanScreenEnabled = false;
+      updateCleanScreenState();
       audio.pause();
       audio.currentTime = 0;
       micEnabled = false;
@@ -1056,6 +1081,21 @@
     });
 
     window.addEventListener("keydown", event => {
+      if (event.target?.matches?.("input, textarea, select, button")) return;
+
+      if (event.code === "KeyF") {
+        event.preventDefault();
+        togglePageFullscreen();
+        return;
+      }
+
+      if (event.code === "KeyC") {
+        event.preventDefault();
+        cleanScreenEnabled = !cleanScreenEnabled;
+        updateCleanScreenState();
+        return;
+      }
+
       if (!document.body.classList.contains("lyrics-mode") || event.code !== "Space") return;
       event.preventDefault();
       if (audio.paused) {
@@ -1069,6 +1109,7 @@
     setCurrentText("KARAOKE READY", 0);
     updatePlayerControls();
     updateVocalCutState();
+    updateCleanScreenState();
     startKaraokeLoop();
   </script>
 </body>
