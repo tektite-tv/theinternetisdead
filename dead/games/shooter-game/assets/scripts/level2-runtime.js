@@ -3,6 +3,10 @@
 ========================================================================
 [REMOVAL LOG]
 
+- 2026-05-06 | v2.08
+  Added: Level 2 maze visited-tile trail. Walked-on floor tiles now stay highlighted at 50% transparent green.
+  Changed: Visited maze tiles are redrawn after the fog/shadow pass so the trail remains visible through darkness.
+
 - 2026-04-03 | v2.00
   Changed: Core loop converted from bottom-row shooter into center-locked procedural maze traversal.
   Kept: Player movement, aiming, shooting, bullet logic, timer, lives, health, and enemy damage systems.
@@ -5133,6 +5137,34 @@ let mazeVisitedTiles = new Set();
 let mazeWalkableTileCount = 0;
 let mazeSummaryActive = false;
 let mazePendingNextWave = null;
+const MAZE_VISITED_TILE_FILL = "rgba(0,255,102,0.50)";
+const MAZE_VISITED_TILE_STROKE = "rgba(180,255,200,0.38)";
+const MAZE_CURRENT_TILE_FILL = "rgba(180,255,200,0.24)";
+
+// v2.08: The walked path is drawn after the fog pass so the shadow layer cannot hide it.
+function drawMazeVisitedTileTrail(camX, camY){
+  if (!maze || !mazeVisitedTiles || !mazeVisitedTiles.size) return;
+  ctx.save();
+  for (const key of mazeVisitedTiles){
+    const comma = key.indexOf(",");
+    if (comma < 0) continue;
+    const c = Number(key.slice(0, comma));
+    const r = Number(key.slice(comma + 1));
+    if (!Number.isFinite(c) || !Number.isFinite(r)) continue;
+    if (!maze.grid[r] || maze.grid[r][c] !== 0) continue;
+
+    const sx = c * maze.cellSize - camX;
+    const sy = r * maze.cellSize - camY;
+    if (sx > canvas.width || sy > canvas.height || sx + maze.cellSize < 0 || sy + maze.cellSize < 0) continue;
+
+    ctx.fillStyle = MAZE_VISITED_TILE_FILL;
+    ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
+    ctx.strokeStyle = MAZE_VISITED_TILE_STROKE;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(sx + 2.5, sy + 2.5, maze.cellSize - 5, maze.cellSize - 5);
+  }
+  ctx.restore();
+}
 
 // v2.07: Maze enemies roam in world-space and only chase within a limited proximity.
 const MAZE_ENEMY_MIN = 5;
@@ -5509,15 +5541,11 @@ function drawMaze(){
       const isWall = maze.grid[r][c] === 1;
 
       if (!isWall){
-        ctx.fillStyle = isCurrentTile ? 'rgba(140,255,170,0.20)' : maze.floorColor;
+        ctx.fillStyle = maze.floorColor;
         ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
-        ctx.strokeStyle = isCurrentTile ? 'rgba(180,255,200,0.42)' : maze.gridLineColor;
+        ctx.strokeStyle = maze.gridLineColor;
         ctx.lineWidth = 1;
         ctx.strokeRect(sx + 0.5, sy + 0.5, maze.cellSize - 1, maze.cellSize - 1);
-        if (isCurrentTile){
-          ctx.fillStyle = 'rgba(180,255,200,0.08)';
-          ctx.fillRect(sx + 4, sy + 4, maze.cellSize - 8, maze.cellSize - 8);
-        }
       } else {
         ctx.fillStyle = maze.wallColor;
         ctx.fillRect(sx, sy, maze.cellSize, maze.cellSize);
@@ -5557,6 +5585,14 @@ function drawMaze(){
   glow.addColorStop(1, 'rgba(255,255,255,0.00)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawMazeVisitedTileTrail(camX, camY);
+
+  // Keep the current tile a touch brighter than the already-walked trail.
+  const currentSx = currentCol * maze.cellSize - camX;
+  const currentSy = currentRow * maze.cellSize - camY;
+  ctx.fillStyle = MAZE_CURRENT_TILE_FILL;
+  ctx.fillRect(currentSx + 4, currentSy + 4, maze.cellSize - 8, maze.cellSize - 8);
 
   ctx.restore();
 }
