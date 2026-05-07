@@ -115,20 +115,24 @@
     const NAV_PATH = '/dead/stuff/nav/nav.html';
     const ROOT_SHELL_FRAME_KEY = 'deadRootShellFramePath';
     const EXPERIMENT_SHORT_PATHS = new Set([
-      'bookmark-manager',
       'canvas-backgrounds',
       'chat-sandbox',
       'gods-eye',
       'mandala-visuals',
-      'multimedia-editor',
-      'music-player',
-      'pdf-viewer',
       'photosphere',
       'sound-machine',
       'stacks',
       'test'
     ]);
-    const EXPERIMENT_SHORT_PATH_ALIASES = {
+    const TOOL_SHORT_PATHS = new Set([
+      'bookmark-manager',
+      'dead-tv',
+      'karaoke-machine',
+      'multimedia-editor',
+      'music-player',
+      'pdf-viewer'
+    ]);
+    const SHORT_PATH_ALIASES = {
       'bookmarks-manager': 'bookmark-manager'
     };
     const ROOT_SHORT_PATH_REDIRECTS = {
@@ -182,21 +186,25 @@
       window.sessionStorage.removeItem('deadVideoId');
     }
 
-    function getExperimentShortPathRedirect(pathname) {
+    function getShortFolderPathRedirect(pathname) {
       const normalizedPath = String(pathname || '').replace(/\/{2,}/g, '/');
       const shortPathMatch = normalizedPath.match(/^\/([^/]+)(?:\/(?:index\.html)?)?$/);
       if (!shortPathMatch) return '';
 
       const requestedFolderName = decodeURIComponent(shortPathMatch[1]);
-      const folderName = EXPERIMENT_SHORT_PATH_ALIASES[requestedFolderName] || requestedFolderName;
-      return EXPERIMENT_SHORT_PATHS.has(folderName)
-        ? `/dead/experiments/${encodeURIComponent(folderName)}/`
-        : '';
+      const folderName = SHORT_PATH_ALIASES[requestedFolderName] || requestedFolderName;
+      if (EXPERIMENT_SHORT_PATHS.has(folderName)) {
+        return `/dead/experiments/${encodeURIComponent(folderName)}/`;
+      }
+      if (TOOL_SHORT_PATHS.has(folderName)) {
+        return `/dead/tools/${encodeURIComponent(folderName)}/`;
+      }
+      return '';
     }
 
     function getShortPathRedirect(pathname) {
       const normalizedPath = String(pathname || '').replace(/\/{2,}/g, '/');
-      return ROOT_SHORT_PATH_REDIRECTS[normalizedPath] || getExperimentShortPathRedirect(normalizedPath);
+      return ROOT_SHORT_PATH_REDIRECTS[normalizedPath] || getShortFolderPathRedirect(normalizedPath);
     }
 
     function getStartupFramePathFromUrl() {
@@ -208,7 +216,8 @@
 
       if (
         /^\/dead\/games\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path) ||
-        /^\/dead\/experiments\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path)
+        /^\/dead\/experiments\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path) ||
+        /^\/dead\/tools\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path)
       ) {
         return `${path}${window.location.search || ''}${window.location.hash || ''}`;
       }

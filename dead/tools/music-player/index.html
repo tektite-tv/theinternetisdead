@@ -4,13 +4,13 @@
   <link rel="icon" type="image/png" href="/dead/images/pngs/dead-favicon.png" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>/dead/experiments/music-player/music-player.html</title>
+  <title>/dead/tools/music-player/music-player.html</title>
 <script>
 const standaloneParams = new URLSearchParams(window.location.search);
 const allowStandalone = standaloneParams.get('standalone') === 'true';
 
 if (window.top === window.self && !allowStandalone) {
-  window.sessionStorage.setItem('deadRootShellFramePath', '/dead/experiments/music-player/' + window.location.search + window.location.hash);
+  window.sessionStorage.setItem('deadRootShellFramePath', '/dead/tools/music-player/' + window.location.search + window.location.hash);
   window.location.replace('/');
 }
 </script>

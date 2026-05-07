@@ -200,20 +200,24 @@ function redirectKnownWatchRoutes(){
     }
 
     const experimentShortPaths = new Set([
-        "bookmark-manager",
         "canvas-backgrounds",
         "chat-sandbox",
         "gods-eye",
         "mandala-visuals",
-        "multimedia-editor",
-        "music-player",
-        "pdf-viewer",
         "photosphere",
         "sound-machine",
         "stacks",
         "test"
     ]);
-    const experimentShortPathAliases = {
+    const toolShortPaths = new Set([
+        "bookmark-manager",
+        "dead-tv",
+        "karaoke-machine",
+        "multimedia-editor",
+        "music-player",
+        "pdf-viewer"
+    ]);
+    const shortPathAliases = {
         "bookmarks-manager": "bookmark-manager"
     };
     const shortExperimentMatch = window.location.pathname
@@ -222,11 +226,14 @@ function redirectKnownWatchRoutes(){
 
     if(shortExperimentMatch){
         const requestedFolderName = decodeURIComponent(shortExperimentMatch[1]);
-        const folderName = experimentShortPathAliases[requestedFolderName] || requestedFolderName;
-        if(experimentShortPaths.has(folderName)){
+        const folderName = shortPathAliases[requestedFolderName] || requestedFolderName;
+        const folderBasePath = experimentShortPaths.has(folderName)
+            ? "/dead/experiments/"
+            : (toolShortPaths.has(folderName) ? "/dead/tools/" : "");
+        if(folderBasePath){
             window.sessionStorage.setItem(
                 "deadRootShellFramePath",
-                "/dead/experiments/" + encodeURIComponent(folderName) + "/" +
+                folderBasePath + encodeURIComponent(folderName) + "/" +
                     (window.location.search || "") +
                     (window.location.hash || "")
             );
@@ -243,9 +250,9 @@ function redirectKnownWatchRoutes(){
         "/watch": "/dead/videos/",
         "/watch/": "/dead/videos/",
         "/dead/videos": "/dead/videos/",
-        "/stuff/stuff-for-index/feeds/videos": "/dead/stuff/stuff-for-index/feeds/videos/",
+        "/stuff/stuff-for-index/feeds/videos": "/dead/stuff/stuff-for-index/feeds/gaming-grid/gaming-grid.html",
         "/stuff/stuff-for-index/youtube-list-grid/watch": "/dead/stuff/stuff-for-index/youtube-list-grid/watch/",
-        "/dead/stuff/stuff-for-index/feeds/videos": "/dead/stuff/stuff-for-index/feeds/videos/",
+        "/dead/stuff/stuff-for-index/feeds/videos": "/dead/stuff/stuff-for-index/feeds/gaming-grid/gaming-grid.html",
         "/dead/stuff/stuff-for-index/youtube-list-grid/watch": "/dead/stuff/stuff-for-index/youtube-list-grid/watch/"
     };
 

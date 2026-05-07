@@ -141,29 +141,29 @@ const wrapperHomePath = "/dead/stuff/stuff-for-index/feeds/";
 
 function normalizeInitialWrapperVideoRoute() {
     const params = new URLSearchParams(window.location.search);
-    const videoId = params.get("v");
+    const videoId = params.get("video_embed") || params.get("v");
     if (!videoId) return;
 
-    const canonicalPath = "/dead/stuff/stuff-for-index/feeds/videos/";
+    const canonicalPath = "/dead/stuff/stuff-for-index/feeds/gaming-grid/gaming-grid.html";
     if (window.location.pathname === canonicalPath) return;
 
     window.history.replaceState(
         { videoId },
         "",
-        `${canonicalPath}?v=${encodeURIComponent(videoId)}`
+        `${canonicalPath}?video_embed=${encodeURIComponent(videoId)}`
     );
 }
 
 function updateWrapperVideoRoute(action, videoId) {
     const nextUrl = action === "open" && videoId
-        ? `/dead/stuff/stuff-for-index/feeds/videos/?v=${encodeURIComponent(videoId)}`
+        ? `/dead/stuff/stuff-for-index/feeds/gaming-grid/gaming-grid.html?video_embed=${encodeURIComponent(videoId)}`
         : wrapperHomePath;
     window.history.replaceState({ videoId: videoId || null }, "", nextUrl);
 }
 
 function sendInitialWrapperVideoToFrame() {
     const params = new URLSearchParams(window.location.search);
-    const videoId = params.get("v");
+    const videoId = params.get("video_embed") || params.get("v");
     if (!videoId || !frame.contentWindow) return;
     frame.contentWindow.postMessage({ type: "feedGridOpenVideo", videoId }, "*");
 }
