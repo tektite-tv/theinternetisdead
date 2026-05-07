@@ -1124,26 +1124,24 @@ document.addEventListener("keydown", e=>{
 
 // ===== ANIMATE =====
 
-// ===== CLICK INNER SPHERE TO OPEN ESC MENU =====
+// ===== DESKTOP SPHERE CLICK OPENS ESC MENU =====
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-let clickStartX = 0;
-let clickStartY = 0;
-
-renderer.domElement.addEventListener("mousedown", (event) => {
-  if(isTouchDevice) return;
-  clickStartX = event.clientX;
-  clickStartY = event.clientY;
-});
 
 renderer.domElement.addEventListener("click", (event) => {
   if(isTouchDevice) return;
 
-  const moveDist = Math.hypot(event.clientX - clickStartX, event.clientY - clickStartY);
-  if(moveDist > 12) return;
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-  if(sphereHitTest(event.clientX, event.clientY)){
-    openMenu();
+  raycaster.setFromCamera(mouse, camera);
+
+  const intersects = raycaster.intersectObject(sphere, true);
+
+  if(intersects.length > 0){
+    event.preventDefault();
+    event.stopPropagation();
+    menu.style.display = "block";
   }
 });
 
