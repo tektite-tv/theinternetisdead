@@ -21,6 +21,7 @@ if (window.top === window.self && !allowStandalone) {
       --panel-border: rgba(180, 255, 90, 0.8);
       --panel-text: #d7ff7a;
       --muted-text: rgba(255, 255, 255, 0.72);
+      --fullscreen-transition: opacity 180ms ease, transform 180ms ease;
     }
 
     * {
@@ -61,6 +62,13 @@ if (window.top === window.self && !allowStandalone) {
       cursor: pointer;
       user-select: none;
       z-index: 2;
+      transition: var(--fullscreen-transition);
+    }
+
+    body.fullscreen-clean #info-panel {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(0.75rem);
     }
 
     #title-row {
@@ -109,7 +117,7 @@ if (window.top === window.self && !allowStandalone) {
       <span id="background-title">Loading backgrounds...</span>
       <span id="counter"></span>
     </div>
-    <div id="hint">Click this panel or use arrow keys to switch backgrounds.</div>
+    <div id="hint">← / → switch backgrounds. F toggles fullscreen.</div>
   </aside>
 
   <main id="empty-state" class="hidden">
@@ -131,6 +139,7 @@ if (window.top === window.self && !allowStandalone) {
 
       let backgrounds = [];
       let currentIndex = 0;
+      let frameKeyHandler = null;
 
       function normalizeEntry(entry) {
         if (typeof entry === 'string') {
@@ -156,11 +165,52 @@ if (window.top === window.self && !allowStandalone) {
         frame.src = background.path;
         title.textContent = background.title || background.path;
         counter.textContent = `${currentIndex + 1} / ${backgrounds.length}`;
-        hint.textContent = 'Click this panel or use arrow keys to switch backgrounds.';
+        hint.textContent = '← / → switch backgrounds. F toggles fullscreen.';
       }
 
       function nextBackground() {
         showBackground(currentIndex + 1);
+      }
+
+      function previousBackground() {
+        showBackground(currentIndex - 1);
+      }
+
+      async function toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (error) {
+          console.warn('Fullscreen toggle failed:', error);
+        }
+      }
+
+      function syncFullscreenChrome() {
+        document.body.classList.toggle('fullscreen-clean', Boolean(document.fullscreenElement));
+      }
+
+      function handleNavigationKey(event) {
+        const key = event.key.toLowerCase();
+
+        if (key === 'arrowright') {
+          event.preventDefault();
+          nextBackground();
+          return;
+        }
+
+        if (key === 'arrowleft') {
+          event.preventDefault();
+          previousBackground();
+          return;
+        }
+
+        if (key === 'f') {
+          event.preventDefault();
+          toggleFullscreen();
+        }
       }
 
       async function loadIndex() {
@@ -186,15 +236,20 @@ if (window.top === window.self && !allowStandalone) {
       }
 
       infoPanel.addEventListener('click', nextBackground);
-      document.addEventListener('keydown', event => {
-        if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'Enter') {
-          event.preventDefault();
-          nextBackground();
-        }
+      document.addEventListener('keydown', handleNavigationKey);
+      document.addEventListener('fullscreenchange', syncFullscreenChrome);
 
-        if (event.key === 'ArrowLeft') {
-          event.preventDefault();
-          showBackground(currentIndex - 1);
+      frame.addEventListener('load', () => {
+        try {
+          if (frameKeyHandler && frame.contentWindow) {
+            frame.contentWindow.removeEventListener('keydown', frameKeyHandler);
+          }
+
+          frameKeyHandler = handleNavigationKey;
+          frame.contentWindow.addEventListener('keydown', frameKeyHandler);
+        } catch (error) {
+          // If a future background becomes cross-origin, parent-level controls still work.
+          console.warn('Could not attach keyboard controls inside background iframe:', error);
         }
       });
 
