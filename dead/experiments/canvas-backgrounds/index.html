@@ -86,8 +86,16 @@ if (window.top === window.self && !allowStandalone) {
       white-space: nowrap;
     }
 
+    #background-description {
+      margin-top: 0.35rem;
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 0.88rem;
+      line-height: 1.35;
+      text-transform: none;
+    }
+
     #hint {
-      margin-top: 0.25rem;
+      margin-top: 0.35rem;
       color: var(--muted-text);
       font-size: 0.85rem;
     }
@@ -117,6 +125,7 @@ if (window.top === window.self && !allowStandalone) {
       <span id="background-title">Loading backgrounds...</span>
       <span id="counter"></span>
     </div>
+    <div id="background-description">Summoning the wallpaper goblins...</div>
     <div id="hint">← / → switch backgrounds. F toggles fullscreen.</div>
   </aside>
 
@@ -134,8 +143,20 @@ if (window.top === window.self && !allowStandalone) {
       const title = document.getElementById('background-title');
       const counter = document.getElementById('counter');
       const hint = document.getElementById('hint');
+      const description = document.getElementById('background-description');
       const emptyState = document.getElementById('empty-state');
       const infoPanel = document.getElementById('info-panel');
+
+      const WALLPAPER_DESCRIPTIONS = {
+        'cursed-background': 'A brooding cursed void with moody digital grime. Very “the computer learned resentment,” which is frankly relatable.',
+        'demon-ascii': 'ASCII demon energy glaring out of the dark like your terminal finally developed opinions. 8/10, unsafe for productivity.',
+        'dot-lavalamp': 'A soft blob-and-dot lava lamp situation, hypnotic enough to make a CPU forget its childhood. Smooth little menace.',
+        'rainbow-background': 'A bright rainbow wash doing emotional jazz hands at the screen. Subtle? No. But subtlety called in sick.',
+        'starfield-background': 'Classic drifting starfield, the tasteful screensaver cousin of pretending your browser is a spaceship. Respectably cosmic.',
+        'starfield-background_reactive': 'A reactive starfield that wiggles when provoked, because even space now needs engagement metrics. Annoyingly cool.',
+        'starfield-background-warp': 'Warp-speed tunnel visuals for when regular stars are too emotionally available. Maximum sci-fi driveway energy.',
+        'starfield-background_warp': 'Warp-speed tunnel visuals for when regular stars are too emotionally available. Maximum sci-fi driveway energy.'
+      };
 
       let backgrounds = [];
       let currentIndex = 0;
@@ -156,6 +177,18 @@ if (window.top === window.self && !allowStandalone) {
         };
       }
 
+      function getBackgroundDescription(background) {
+        const rawName = (background.path || background.title || '')
+          .split('/')
+          .pop()
+          .replace(/\.html$/i, '');
+        const normalizedName = rawName.replace(/_/g, '-');
+
+        return WALLPAPER_DESCRIPTIONS[rawName]
+          || WALLPAPER_DESCRIPTIONS[normalizedName]
+          || 'A mystery wallpaper doing mysterious wallpaper things. The machine refuses to elaborate, naturally.';
+      }
+
       function showBackground(index) {
         if (!backgrounds.length) return;
 
@@ -165,6 +198,7 @@ if (window.top === window.self && !allowStandalone) {
         frame.src = background.path;
         title.textContent = background.title || background.path;
         counter.textContent = `${currentIndex + 1} / ${backgrounds.length}`;
+        description.textContent = getBackgroundDescription(background);
         hint.textContent = '← / → switch backgrounds. F toggles fullscreen.';
       }
 
@@ -231,6 +265,7 @@ if (window.top === window.self && !allowStandalone) {
         } catch (error) {
           title.textContent = 'canvas-backgrounds-index.json failed to load';
           counter.textContent = '';
+          description.textContent = 'The index tripped over itself before the wallpapers could show up. Stunning work from civilization.';
           console.error(error);
         }
       }
