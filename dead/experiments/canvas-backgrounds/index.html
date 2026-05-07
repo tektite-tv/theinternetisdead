@@ -87,8 +87,9 @@ if (window.top === window.self && !allowStandalone) {
     }
 
     #background-description {
-      margin-top: 0.35rem;
-      color: rgba(255, 255, 255, 0.84);
+      display: block;
+      margin-top: 0.45rem;
+      color: rgba(255, 255, 255, 0.88);
       font-size: 0.88rem;
       line-height: 1.35;
       text-transform: none;
@@ -148,14 +149,15 @@ if (window.top === window.self && !allowStandalone) {
       const infoPanel = document.getElementById('info-panel');
 
       const WALLPAPER_DESCRIPTIONS = {
-        'cursed-background': 'A brooding cursed void with moody digital grime. Very “the computer learned resentment,” which is frankly relatable.',
-        'demon-ascii': 'ASCII demon energy glaring out of the dark like your terminal finally developed opinions. 8/10, unsafe for productivity.',
-        'dot-lavalamp': 'A soft blob-and-dot lava lamp situation, hypnotic enough to make a CPU forget its childhood. Smooth little menace.',
-        'rainbow-background': 'A bright rainbow wash doing emotional jazz hands at the screen. Subtle? No. But subtlety called in sick.',
-        'starfield-background': 'Classic drifting starfield, the tasteful screensaver cousin of pretending your browser is a spaceship. Respectably cosmic.',
-        'starfield-background_reactive': 'A reactive starfield that wiggles when provoked, because even space now needs engagement metrics. Annoyingly cool.',
-        'starfield-background-warp': 'Warp-speed tunnel visuals for when regular stars are too emotionally available. Maximum sci-fi driveway energy.',
-        'starfield-background_warp': 'Warp-speed tunnel visuals for when regular stars are too emotionally available. Maximum sci-fi driveway energy.'
+        'cursed-background': 'Jagged purple staircase runes on black. Looks like a haunted carpet pattern achieved sentience. 9/10 cursed, sadly effective.',
+        'demon-ascii': 'An ASCII demon sulking in terminal darkness. Very “your command prompt has unresolved childhood issues.” 8/10 menace.',
+        'dot-lavalamp': 'Soft glowing blobs drifting around like a lava lamp got a math degree. 7/10, dangerously soothing.',
+        'rainbow-background': 'A loud rainbow wash screaming optimism at a web page that did not consent. 8/10 color crime, somehow charming.',
+        'starfield-background': 'Classic drifting stars, tasteful little fake cosmos for people who refuse ordinary black backgrounds. 8/10 space wallpaper behavior.',
+        'starfield-background-reactive': 'A reactive starfield twitching like space just discovered user engagement. 9/10, annoyingly cool.',
+        'starfield-background_reactive': 'A reactive starfield twitching like space just discovered user engagement. 9/10, annoyingly cool.',
+        'starfield-background-warp': 'Warp tunnel stars doing sci-fi speed lines for a browser pretending it has engines. 9/10 ridiculous propulsion.',
+        'starfield-background_warp': 'Warp tunnel stars doing sci-fi speed lines for a browser pretending it has engines. 9/10 ridiculous propulsion.'
       };
 
       let backgrounds = [];
@@ -186,7 +188,7 @@ if (window.top === window.self && !allowStandalone) {
 
         return WALLPAPER_DESCRIPTIONS[rawName]
           || WALLPAPER_DESCRIPTIONS[normalizedName]
-          || 'A mystery wallpaper doing mysterious wallpaper things. The machine refuses to elaborate, naturally.';
+          || 'Mystery wallpaper doing mystery wallpaper things. The machine refuses to explain itself, naturally. 6/10 suspicious.';
       }
 
       function showBackground(index) {
@@ -247,6 +249,22 @@ if (window.top === window.self && !allowStandalone) {
         }
       }
 
+      function attachFrameKeyboardControls() {
+        try {
+          const frameWindow = frame.contentWindow;
+          if (!frameWindow) return;
+
+          if (frameKeyHandler) {
+            frameWindow.removeEventListener('keydown', frameKeyHandler);
+          }
+
+          frameKeyHandler = event => handleNavigationKey(event);
+          frameWindow.addEventListener('keydown', frameKeyHandler);
+        } catch (error) {
+          // Cross-origin frames should not happen here, but iframe focus is a goblin circus.
+        }
+      }
+
       async function loadIndex() {
         try {
           const response = await fetch(`${INDEX_URL}?v=${Date.now()}`);
@@ -265,28 +283,14 @@ if (window.top === window.self && !allowStandalone) {
         } catch (error) {
           title.textContent = 'canvas-backgrounds-index.json failed to load';
           counter.textContent = '';
-          description.textContent = 'The index tripped over itself before the wallpapers could show up. Stunning work from civilization.';
           console.error(error);
         }
       }
 
       infoPanel.addEventListener('click', nextBackground);
+      frame.addEventListener('load', attachFrameKeyboardControls);
       document.addEventListener('keydown', handleNavigationKey);
       document.addEventListener('fullscreenchange', syncFullscreenChrome);
-
-      frame.addEventListener('load', () => {
-        try {
-          if (frameKeyHandler && frame.contentWindow) {
-            frame.contentWindow.removeEventListener('keydown', frameKeyHandler);
-          }
-
-          frameKeyHandler = handleNavigationKey;
-          frame.contentWindow.addEventListener('keydown', frameKeyHandler);
-        } catch (error) {
-          // If a future background becomes cross-origin, parent-level controls still work.
-          console.warn('Could not attach keyboard controls inside background iframe:', error);
-        }
-      });
 
       loadIndex();
     })();
