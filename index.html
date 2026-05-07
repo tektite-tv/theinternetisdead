@@ -115,6 +115,7 @@
     const NAV_PATH = '/dead/stuff/nav/nav.html';
     const ROOT_SHELL_FRAME_KEY = 'deadRootShellFramePath';
     const EXPERIMENT_SHORT_PATHS = new Set([
+      'blotter-visualizer',
       'canvas-backgrounds',
       'chat-sandbox',
       'gods-eye',
@@ -139,7 +140,9 @@
       '/games': '/dead/games/',
       '/games/': '/dead/games/',
       '/experiments': '/dead/experiments/',
-      '/experiments/': '/dead/experiments/'
+      '/experiments/': '/dead/experiments/',
+      '/tools': '/dead/tools/',
+      '/tools/': '/dead/tools/'
     };
 
     const overlayContainer = document.getElementById('overlay-container');
@@ -186,25 +189,28 @@
       window.sessionStorage.removeItem('deadVideoId');
     }
 
-    function getShortFolderPathRedirect(pathname) {
+    function getShortFolderRedirect(pathname) {
       const normalizedPath = String(pathname || '').replace(/\/{2,}/g, '/');
       const shortPathMatch = normalizedPath.match(/^\/([^/]+)(?:\/(?:index\.html)?)?$/);
       if (!shortPathMatch) return '';
 
       const requestedFolderName = decodeURIComponent(shortPathMatch[1]);
       const folderName = SHORT_PATH_ALIASES[requestedFolderName] || requestedFolderName;
+
       if (EXPERIMENT_SHORT_PATHS.has(folderName)) {
         return `/dead/experiments/${encodeURIComponent(folderName)}/`;
       }
+
       if (TOOL_SHORT_PATHS.has(folderName)) {
         return `/dead/tools/${encodeURIComponent(folderName)}/`;
       }
+
       return '';
     }
 
     function getShortPathRedirect(pathname) {
       const normalizedPath = String(pathname || '').replace(/\/{2,}/g, '/');
-      return ROOT_SHORT_PATH_REDIRECTS[normalizedPath] || getShortFolderPathRedirect(normalizedPath);
+      return ROOT_SHORT_PATH_REDIRECTS[normalizedPath] || getShortFolderRedirect(normalizedPath);
     }
 
     function getStartupFramePathFromUrl() {

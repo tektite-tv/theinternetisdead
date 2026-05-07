@@ -823,12 +823,31 @@ html, body {
         <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Web Experiments</button>
         <div class="sidebar-preview">
           <div class="sidebar-preview-links">
+            <a href="/dead/experiments/" data-index-frame-src="/dead/experiments/">* All Web Experiments *</a>
+            <a href="/dead/experiments/blotter-visualizer/" data-index-frame-src="/dead/experiments/blotter-visualizer/">+ Blotter Visualizer</a>
+            <a href="/dead/experiments/canvas-backgrounds/" data-index-frame-src="/dead/experiments/canvas-backgrounds/">+ Canvas Backgrounds</a>
             <a href="/dead/experiments/chat-sandbox/" data-index-frame-src="/dead/experiments/chat-sandbox/">+ Chat Sandbox</a>
             <a href="/dead/experiments/gods-eye/" data-index-frame-src="/dead/experiments/gods-eye/">+ God's Eye Art</a>
-            <a href="/dead/tools/multimedia-editor/" data-index-frame-src="/dead/tools/multimedia-editor/">+ Multimedia Editor</a>
-            <a href="/dead/tools/music-player/" data-index-frame-src="/dead/tools/music-player/">+ Music Player</a>
+            <a href="/dead/experiments/mandala-visuals/" data-index-frame-src="/dead/experiments/mandala-visuals/">+ Mandala Visuals</a>
             <a href="/dead/experiments/photosphere/" data-index-frame-src="/dead/experiments/photosphere/">+ Photosphere</a>
             <a href="/dead/experiments/sound-machine/" data-index-frame-src="/dead/experiments/sound-machine/">+ Sound Machine</a>
+            <a href="/dead/experiments/stacks/" data-index-frame-src="/dead/experiments/stacks/">+ Stacks</a>
+            <a href="/dead/experiments/test/" data-index-frame-src="/dead/experiments/test/">+ Test</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-item">
+        <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Tools</button>
+        <div class="sidebar-preview">
+          <div class="sidebar-preview-links">
+            <a href="/dead/tools/" data-index-frame-src="/dead/tools/">* All Tools *</a>
+            <a href="/dead/tools/bookmark-manager/" data-index-frame-src="/dead/tools/bookmark-manager/">+ Bookmark Manager</a>
+            <a href="/dead/tools/dead-tv/" data-index-frame-src="/dead/tools/dead-tv/">+ Dead TV</a>
+            <a href="/dead/tools/karaoke-machine/" data-index-frame-src="/dead/tools/karaoke-machine/">+ Karaoke Machine</a>
+            <a href="/dead/tools/multimedia-editor/" data-index-frame-src="/dead/tools/multimedia-editor/">+ Multimedia Editor</a>
+            <a href="/dead/tools/music-player/" data-index-frame-src="/dead/tools/music-player/">+ Music Player</a>
+            <a href="/dead/tools/pdf-viewer/" data-index-frame-src="/dead/tools/pdf-viewer/">+ PDF Viewer</a>
           </div>
         </div>
       </div>
@@ -1032,26 +1051,6 @@ html, body {
         label: href,
         href,
         title: href
-      };
-    }
-
-
-    const toolsIndexMatch = framePath.match(/^\/dead\/tools\/?(?:index\.html)?$/);
-    if (toolsIndexMatch) {
-      return {
-        label: '/dead/tools/',
-        href: '/dead/tools/',
-        title: '/dead/tools/'
-      };
-    }
-
-    const toolFolderMatch = framePath.match(/^\/dead\/tools\/([^/]+)\/?(?:index\.html)?$/);
-    if (toolFolderMatch) {
-      const folderName = decodeURIComponent(toolFolderMatch[1]);
-      return {
-        label: `/${folderName}/`,
-        href: `/dead/tools/${toolFolderMatch[1]}/`,
-        title: `/${folderName}/`
       };
     }
 
@@ -1404,7 +1403,7 @@ html, body {
     if (frame && frame.tagName === 'IFRAME') {
       const src = (frame.getAttribute('src') || '').trim();
       if (
-        src.includes('/dead/experiments/chat-sandbox/') ||
+        src.includes('/dead/experiments/chat-sandbox/chat-sandbox.html') ||
         src.includes('/dead/experiments/chat-sandbox/')
       ) {
         return true;
@@ -1412,7 +1411,7 @@ html, body {
     }
 
     const sandboxIframe = document.querySelector(
-      'iframe[src*="/dead/experiments/chat-sandbox/"], iframe[src*="/dead/experiments/chat-sandbox/"]'
+      'iframe[src*="/dead/experiments/chat-sandbox/chat-sandbox.html"], iframe[src*="/dead/experiments/chat-sandbox/"]'
     );
     return !!sandboxIframe;
   }
