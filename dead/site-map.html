@@ -106,12 +106,31 @@
       text-decoration: none;
       overflow-wrap: anywhere;
     }
+    .entry-main {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .entry-size {
+      flex: 0 0 auto;
+      margin-left: auto;
+      white-space: nowrap;
+      color: var(--lime);
+      opacity: .86;
+      text-align: right;
+      font-size: .92em;
+      text-shadow: 0 0 7px rgba(182,255,0,.25);
+    }
+    .file-link {
+      align-items: center;
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+    }
     .folder-link:hover,
     .folder-link:focus {
       text-decoration: underline;
     }
     .file-link {
-      display: block;
       color: var(--text);
       border: 1px solid rgba(182,255,0,.22);
       background: rgba(0,0,0,.32);
@@ -129,7 +148,9 @@
       font-size: .9em;
     }
     .file-link:hover .path,
-    .file-link:focus .path { color: #281044; }
+    .file-link:focus .path,
+    .file-link:hover .entry-size,
+    .file-link:focus .entry-size { color: #281044; }
     .hidden { display: none !important; }
     .error { border-color: #ff4d6d; color: #ffd6df; }
     code { color: var(--lime); }
@@ -138,6 +159,7 @@
       main { padding: 16px; }
       .tree-children { margin-left: 8px; padding-left: 10px; }
       summary { align-items: flex-start; }
+      .entry-size { font-size: .8em; padding-top: 2px; }
     }
   </style>
 </head>
@@ -268,15 +290,17 @@
       return root;
     }
 
-    function countDescendants(node) {
+    function summarizeDirectory(node) {
       let fileCount = node.files.length;
       let folderCount = node.directories.size;
+      let totalSize = node.files.reduce((sum, item) => sum + getItemSize(item), 0);
       node.directories.forEach(child => {
-        const childCounts = countDescendants(child);
-        fileCount += childCounts.files;
-        folderCount += childCounts.folders;
+        const childSummary = summarizeDirectory(child);
+        fileCount += childSummary.files;
+        folderCount += childSummary.folders;
+        totalSize += childSummary.size;
       });
-      return { files: fileCount, folders: folderCount };
+      return { files: fileCount, folders: folderCount, size: totalSize };
     }
 
     function renderDirectory(node, isRoot = false) {
@@ -290,14 +314,14 @@
       if (isRoot) return '<ul class="tree-root">' + childHtml + '</ul>';
 
       const item = node.item || cleanItem({ type: 'directory', path: node.path, name: node.name });
-      const counts = countDescendants(node);
+      const summary = summarizeDirectory(node);
       const href = item.href || '/' + stripSlashes(node.path) + '/';
       const folderLabel = titleize(node.name);
       return '<li class="tree-node" data-path="' + escapeHtml(href.toLowerCase()) + '" data-type="directory">' +
-        '<details class="folder" open>' +
+        '<details class="folder">' +
           '<summary>' +
-            '<a class="folder-link" href="' + escapeHtml(href) + '">📁 ' + escapeHtml(folderLabel) + '</a>' +
-            '<span class="folder-count">' + counts.folders + ' folders / ' + counts.files + ' files</span>' +
+            '<span class="entry-main"><a class="folder-link" href="' + escapeHtml(href) + '">📁 ' + escapeHtml(folderLabel) + '</a><br><span class="folder-count">' + summary.folders + ' folders / ' + summary.files + ' files</span></span>' +
+            '<span class="entry-size">' + formatBytes(summary.size) + '</span>' +
           '</summary>' +
           '<ul class="tree-children">' + childHtml + '</ul>' +
         '</details>' +
@@ -308,7 +332,7 @@
       const displayPath = item.href;
       const name = item.name || displayPath;
       return '<li class="tree-node" data-path="' + escapeHtml(displayPath.toLowerCase()) + '" data-type="file">' +
-        '<a class="file-link" href="' + escapeHtml(item.href) + '">📄 ' + escapeHtml(titleize(name)) + '<br><span class="path">' + escapeHtml(displayPath) + ' • file</span></a>' +
+        '<a class="file-link" href="' + escapeHtml(item.href) + '"><span class="entry-main">📄 ' + escapeHtml(titleize(name)) + '<br><span class="path">' + escapeHtml(displayPath) + ' • file</span></span><span class="entry-size">' + formatBytes(getItemSize(item)) + '</span></a>' +
       '</li>';
     }
 
@@ -385,7 +409,7 @@
           .map(cleanItem)
           .filter(item => item.path && !isHiddenPath(item));
 
-        meta.innerHTML = 'Generated live from <code>' + escapeHtml(url) + '</code>. Showing ' + items.length + ' public-ish entries, now nested like a civilized haunted filing cabinet.';
+        meta.innerHTML = 'Generated live from <code>' + escapeHtml(url) + '</code>. Showing ' + items.length + ' public-ish entries, nested and closed by default like a civilized haunted filing cabinet.';
         render();
       } catch (error) {
         meta.classList.add('error');
