@@ -638,6 +638,11 @@
       loadingScreen.classList.remove("hidden");
     }
 
+    function hideLoadingScreen() {
+      document.body.classList.remove("loading-state");
+      loadingScreen.classList.add("hidden");
+    }
+
     const fullStateStorageKey = "new-3D-game.full-state.v2";
 
     function setLocalStorageStatus(message) {
