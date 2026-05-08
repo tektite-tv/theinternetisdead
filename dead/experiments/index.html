@@ -226,47 +226,56 @@ const linksData = [
   {
     title: "Blotter Visualizer",
     description: "A visual experiment tucked under /dead/experiments/blotter-visualizer/.",
-    url: "/dead/experiments/blotter-visualizer/"
+    url: "/dead/experiments/blotter-visualizer/",
+    image: "/dead/images/link-thumbnails/dead-experiments-blotter-visualizer.png"
   },
   {
     title: "Canvas Backgrounds",
     description: "A collection of animated canvas background experiments.",
-    url: "/dead/experiments/canvas-backgrounds/"
+    url: "/dead/experiments/canvas-backgrounds/",
+    image: "/dead/images/link-thumbnails/dead-experiments-canvas-backgrounds.png"
   },
   {
     title: "Chat Sandbox",
     description: "A Minecraft-esque chat/command messaging system for interacting with my site.",
-    url: "/dead/experiments/chat-sandbox/"
+    url: "/dead/experiments/chat-sandbox/",
+    image: "/dead/images/link-thumbnails/dead-experiments-chat-sandbox.png"
   },
   {
     title: "God's Eye Art",
     description: "I made this recursive art in photoshop when I was 20 years old and I named it gods-eye.png and apparently turned it into a website using math.",
-    url: "/dead/experiments/gods-eye/"
+    url: "/dead/experiments/gods-eye/",
+    image: "/dead/images/link-thumbnails/dead-experiments-gods-eye.png"
   },
   {
     title: "Mandala Visuals",
     description: "A series of mandala visual experiments.",
-    url: "/dead/experiments/mandala-visuals/"
+    url: "/dead/experiments/mandala-visuals/",
+    image: "/dead/images/link-thumbnails/dead-experiments-mandala-visuals.png"
   },
   {
     title: "Photosphere Planet View",
     description: "Wrap an image around the planet/skybox to create some really trippy effects man.",
-    url: "/dead/experiments/photosphere/"
+    url: "/dead/experiments/photosphere/",
+    image: "/dead/images/link-thumbnails/dead-experiments-photosphere.png"
   },
   {
     title: "Sound Machine",
     description: "Make crazy sounding noises with a cool waveform visualizer I made just for you!",
-    url: "/dead/experiments/sound-machine/"
+    url: "/dead/experiments/sound-machine/",
+    image: "/dead/images/link-thumbnails/dead-experiments-sound-machine.png"
   },
   {
     title: "Stacks",
     description: "A stacked-layout visual experiment.",
-    url: "/dead/experiments/stacks/"
+    url: "/dead/experiments/stacks/",
+    image: "/dead/images/link-thumbnails/dead-experiments-stacks.png"
   },
   {
     title: "Test",
     description: "Experimental test pages and sketches.",
-    url: "/dead/experiments/test/"
+    url: "/dead/experiments/test/",
+    image: "/dead/images/link-thumbnails/dead-experiments-test-habisky-mofo.png"
   }
 ];
 
@@ -277,7 +286,7 @@ function renderLinks(){
   linksEl.className = 'list-view';
   linksEl.innerHTML = linksData.map(link => `
     <a class="post" href="${link.url}" data-index-frame-src="${link.url}">
-      <div class="thumb"><img src="${fallbackImage}" alt="${link.title}"></div>
+      <div class="thumb"><img src="${link.image || fallbackImage}" alt="${link.title}"></div>
       <div class="post-copy">
         <div class="post-title">${link.title}</div>
         <div class="post-desc">${link.description || ''}</div>

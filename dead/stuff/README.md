@@ -6,7 +6,6 @@ This folder contains shared site stuff outside the experiments and games section
 
 - `nav/`
 - `stuff-for-index/feeds/`
-- `stuff-for-index/youtube-list-grid/`
 
 ## Files
 

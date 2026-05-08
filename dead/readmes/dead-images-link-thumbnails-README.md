@@ -8,15 +8,7 @@ This folder stores thumbnail images for experiment, game, and page links.
 
 ## Files
 
-- `chat-sandbox.png`
-- `gods-eye-art.png`
-- `index.html`
-- `multimedia-editor.png`
-- `music-player.png`
-- `photosphere.png`
-- `rainbow-test.png`
-- `shooter-game.png`
-- `sound-machine.png`
+See `/dead/JSON/link-thumbnails.json` for the current thumbnail list.
 
 ## Notes
 
