@@ -845,8 +845,8 @@ html, body {
       <div class="sidebar-item">
         <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Browser Games</button>
         <div class="sidebar-preview">
-          <div class="sidebar-preview-links" data-repo-games-list>
-            <a href="/dead/games/" data-index-frame-src="/dead/games/">* All My Games *</a>
+          <div class="sidebar-preview-links" data-site-map-list="games">
+            <a href="/dead/games/" data-index-frame-src="/dead/games/" data-site-map-static="true">* All My Games *</a>
             <a href="/dead/games/shooter-game/" data-index-frame-src="/dead/games/shooter-game/">+ Shooter Game</a>
           </div>
         </div>
@@ -855,8 +855,8 @@ html, body {
       <div class="sidebar-item">
         <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Web Experiments</button>
         <div class="sidebar-preview">
-          <div class="sidebar-preview-links">
-            <a href="/dead/experiments/" data-index-frame-src="/dead/experiments/">* All Web Experiments *</a>
+          <div class="sidebar-preview-links" data-site-map-list="experiments">
+            <a href="/dead/experiments/" data-index-frame-src="/dead/experiments/" data-site-map-static="true">* All Web Experiments *</a>
             <a href="/dead/experiments/blotter-visualizer/" data-index-frame-src="/dead/experiments/blotter-visualizer/">+ Blotter Visualizer</a>
             <a href="/dead/experiments/canvas-backgrounds/" data-index-frame-src="/dead/experiments/canvas-backgrounds/">+ Canvas Backgrounds</a>
             <a href="/dead/experiments/chat-sandbox/" data-index-frame-src="/dead/experiments/chat-sandbox/">+ Chat Sandbox</a>
@@ -865,7 +865,6 @@ html, body {
             <a href="/dead/experiments/photosphere/" data-index-frame-src="/dead/experiments/photosphere/">+ Photosphere</a>
             <a href="/dead/experiments/sound-machine/" data-index-frame-src="/dead/experiments/sound-machine/">+ Sound Machine</a>
             <a href="/dead/experiments/stacks/" data-index-frame-src="/dead/experiments/stacks/">+ Stacks</a>
-            <a href="/dead/experiments/test/" data-index-frame-src="/dead/experiments/test/">+ Test</a>
           </div>
         </div>
       </div>
@@ -873,8 +872,8 @@ html, body {
       <div class="sidebar-item">
         <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Tools</button>
         <div class="sidebar-preview">
-          <div class="sidebar-preview-links">
-            <a href="/dead/tools/" data-index-frame-src="/dead/tools/">* All Tools *</a>
+          <div class="sidebar-preview-links" data-site-map-list="tools">
+            <a href="/dead/tools/" data-index-frame-src="/dead/tools/" data-site-map-static="true">* All Tools *</a>
             <a href="/dead/tools/bookmark-manager/" data-index-frame-src="/dead/tools/bookmark-manager/">+ Bookmark Manager</a>
             <a href="/dead/tools/dead-tv/" data-index-frame-src="/dead/tools/dead-tv/">+ Dead TV</a>
             <a href="/dead/tools/karaoke-machine/" data-index-frame-src="/dead/tools/karaoke-machine/">+ Karaoke Machine</a>
@@ -1360,13 +1359,29 @@ html, body {
   const sidebarCommandLink = overlayRoot.querySelector('#sidebar-command-link');
   const sidebarCommandPanel = overlayRoot.querySelector('#sidebar-command-panel');
   const sidebarLogoLink = overlayRoot.querySelector('#sidebar-logo-link');
-  const sidebarGamesList = overlayRoot.querySelector('[data-repo-games-list]');
+  const sidebarSiteMapLists = {
+    games: overlayRoot.querySelector('[data-site-map-list="games"]'),
+    experiments: overlayRoot.querySelector('[data-site-map-list="experiments"]'),
+    tools: overlayRoot.querySelector('[data-site-map-list="tools"]'),
+  };
 
-  function formatSidebarGameTitle(folderPath) {
-    const slug = String(folderPath || '')
-      .replace(/^\/dead\/games\//, '')
-      .replace(/\/$/, '');
-    if (!slug) return '';
+  const sidebarSiteMapPatterns = {
+    games: /^\/dead\/games\/[^/]+\/$/,
+    experiments: /^\/dead\/experiments\/[^/]+\/$/,
+    tools: /^\/dead\/tools\/[^/]+\/$/,
+  };
+
+  function normalizeSidebarSitePath(path) {
+    try {
+      const url = new URL(String(path || ''), window.location.origin);
+      return url.pathname.replace(/\/{2,}/g, '/').replace(/\/index\.html$/i, '/');
+    } catch (error) {
+      return String(path || '').replace(/^https?:\/\/[^/]+/i, '').replace(/\/{2,}/g, '/').replace(/\/index\.html$/i, '/');
+    }
+  }
+
+  function formatSidebarSiteTitle(folderPath) {
+    const slug = normalizeSidebarSitePath(folderPath).split('/').filter(Boolean).pop() || '';
     return '+ ' + slug
       .split('-')
       .filter(Boolean)
@@ -1374,12 +1389,20 @@ html, body {
       .join(' ');
   }
 
-  function appendSidebarGameLink(folderPath) {
-    if (!sidebarGamesList) return;
-    const href = String(folderPath || '').replace(/\/{2,}/g, '/');
-    if (!/^\/dead\/games\/[^/]+\/$/.test(href)) return;
-    const alreadyExists = Array.from(sidebarGamesList.querySelectorAll('a')).some((link) => {
-      const existing = (link.dataset.indexFrameSrc || link.getAttribute('href') || '').replace(/\/{2,}/g, '/');
+  function getSidebarSiteSection(folderPath) {
+    const href = normalizeSidebarSitePath(folderPath);
+    return Object.keys(sidebarSiteMapPatterns).find((section) => sidebarSiteMapPatterns[section].test(href)) || '';
+  }
+
+  function appendSidebarSiteLink(section, folderPath, title) {
+    const list = sidebarSiteMapLists[section];
+    if (!list) return;
+
+    const href = normalizeSidebarSitePath(folderPath);
+    if (!sidebarSiteMapPatterns[section] || !sidebarSiteMapPatterns[section].test(href)) return;
+
+    const alreadyExists = Array.from(list.querySelectorAll('a')).some((link) => {
+      const existing = normalizeSidebarSitePath(link.dataset.indexFrameSrc || link.getAttribute('href') || '');
       return existing === href;
     });
     if (alreadyExists) return;
@@ -1387,28 +1410,77 @@ html, body {
     const link = document.createElement('a');
     link.href = href;
     link.dataset.indexFrameSrc = href;
-    link.textContent = formatSidebarGameTitle(href);
-    sidebarGamesList.appendChild(link);
+    link.textContent = title || formatSidebarSiteTitle(href);
+    list.appendChild(link);
   }
 
-  function loadSidebarGamesFromRepoIndex() {
-    if (!sidebarGamesList) return;
+  function replaceSidebarSiteMapLinks(items) {
+    Object.values(sidebarSiteMapLists).forEach((list) => {
+      if (!list) return;
+      Array.from(list.querySelectorAll('a:not([data-site-map-static="true"])')).forEach((link) => link.remove());
+    });
 
-    fetch('/dead/JSON/repo-index.json', { cache: 'no-cache' })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        const folders = data && Array.isArray(data.folders) ? data.folders : [];
-        folders
-          .filter((folderPath) => /^\/dead\/games\/[^/]+\/$/.test(String(folderPath || '')))
-          .sort((a, b) => String(a).localeCompare(String(b)))
-          .forEach(appendSidebarGameLink);
-      })
-      .catch(() => {
-        // Static game links still work. Somehow humanity continues.
+    items
+      .map((item) => ({
+        href: normalizeSidebarSitePath(item.href),
+        title: item.title || formatSidebarSiteTitle(item.href),
+      }))
+      .filter((item) => item.href)
+      .sort((a, b) => a.href.localeCompare(b.href))
+      .forEach((item) => {
+        const section = getSidebarSiteSection(item.href);
+        if (section) appendSidebarSiteLink(section, item.href, item.title);
       });
   }
 
-  loadSidebarGamesFromRepoIndex();
+  function parseSidebarSitemapXml(xmlText) {
+    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    if (doc.querySelector('parsererror')) return [];
+    return Array.from(doc.querySelectorAll('url > loc')).map((loc) => {
+      const href = normalizeSidebarSitePath(loc.textContent || '');
+      return { href, title: formatSidebarSiteTitle(href) };
+    });
+  }
+
+  function parseSidebarSiteMapHtml(htmlText) {
+    const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+    return Array.from(doc.querySelectorAll('a[href]')).map((link) => {
+      const href = normalizeSidebarSitePath(link.getAttribute('href') || '');
+      const label = (link.textContent || '').trim();
+      return { href, title: label ? `+ ${label.replace(/^\+\s*/, '')}` : formatSidebarSiteTitle(href) };
+    });
+  }
+
+  function loadSidebarListsFromSiteMap() {
+    if (!Object.values(sidebarSiteMapLists).some(Boolean)) return;
+
+    fetch('/sitemap.xml', { cache: 'no-cache' })
+      .then((response) => {
+        if (!response.ok) throw new Error('sitemap.xml not available');
+        return response.text();
+      })
+      .then((xmlText) => {
+        const items = parseSidebarSitemapXml(xmlText);
+        if (!items.length) throw new Error('sitemap.xml had no usable links');
+        replaceSidebarSiteMapLinks(items);
+      })
+      .catch(() => {
+        fetch('/dead/site-map.html', { cache: 'no-cache' })
+          .then((response) => {
+            if (!response.ok) throw new Error('site-map.html not available');
+            return response.text();
+          })
+          .then((htmlText) => {
+            const items = parseSidebarSiteMapHtml(htmlText);
+            if (items.length) replaceSidebarSiteMapLinks(items);
+          })
+          .catch(() => {
+            // Static sidebar links still work. Civilization limps onward.
+          });
+      });
+  }
+
+  loadSidebarListsFromSiteMap();
 
   const sidebarThumbnailPopup = document.createElement('div');
   sidebarThumbnailPopup.className = 'sidebar-link-thumbnail-popup';
