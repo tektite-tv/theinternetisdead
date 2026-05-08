@@ -1,169 +1,239 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Site Map | theinternetisdead.org</title>
   <style>
+
     :root {
-      --bg: #12001f;
-      --panel: #25003d;
+      --bg: #09000f;
+      --panel: #190029;
       --purple: #4b0076;
       --lime: #b6ff00;
-      --text: #f6e9ff;
-      --muted: #c7a6dc;
-      --shadow: rgba(182, 255, 0, 0.22);
+      --text: #ecddff;
+      --muted: #b88be8;
+      --border: rgba(182,255,0,.8);
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, rgba(182, 255, 0, 0.12), transparent 34rem),
-        radial-gradient(circle at bottom right, rgba(128, 55, 110, 0.4), transparent 32rem),
-        var(--bg);
+      background: radial-gradient(circle at top left, #37116e 0, var(--bg) 42%, #000 100%);
       color: var(--text);
       font-family: "Courier New", Courier, monospace;
-      padding: clamp(1rem, 3vw, 2.5rem);
+      padding: 24px;
     }
-
     main {
-      width: min(100%, 980px);
+      max-width: 1200px;
       margin: 0 auto;
+      border: 2px solid var(--border);
+      background: rgba(10,0,18,.86);
+      box-shadow: 0 0 24px rgba(182,255,0,.22), inset 0 0 40px rgba(75,0,118,.36);
+      padding: 24px;
     }
-
-    header {
-      border: 2px solid var(--lime);
-      background: linear-gradient(135deg, var(--purple), var(--panel));
-      box-shadow: 0 0 24px var(--shadow);
-      padding: clamp(1rem, 3vw, 2rem);
-      margin-bottom: 1rem;
-    }
-
-    h1, h2 {
-      margin: 0;
+    h1, h2 { color: var(--lime); text-shadow: 0 0 10px rgba(182,255,0,.42); }
+    h1 { margin-top: 0; font-size: clamp(2rem, 5vw, 4rem); }
+    .meta { color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; margin: 0 0 22px; }
+    input {
+      flex: 1 1 260px;
+      background: #06000b;
+      border: 1px solid var(--lime);
       color: var(--lime);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      text-shadow: 0 0 8px rgba(182, 255, 0, 0.38);
-    }
-
-    h1 { font-size: clamp(2rem, 7vw, 4rem); }
-
-    p {
-      color: var(--muted);
-      line-height: 1.55;
-      margin: 0.85rem 0 0;
-    }
-
-    .site-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1rem;
-    }
-
-    .site-section {
-      border: 2px solid var(--lime);
-      background: rgba(37, 0, 61, 0.88);
-      box-shadow: 0 0 18px var(--shadow);
-      padding: 1rem;
-      min-height: 100%;
-    }
-
-    .site-section h2 {
-      font-size: 1.2rem;
-      margin-bottom: 0.8rem;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 0.65rem;
-    }
-
-    li {
-      border: 1px solid rgba(182, 255, 0, 0.45);
-      background: rgba(0, 0, 0, 0.35);
-      padding: 0.7rem;
-    }
-
-    a {
-      display: block;
-      color: var(--lime);
-      font-weight: 700;
-      text-decoration: none;
-    }
-
-    a:hover,
-    a:focus-visible {
-      color: #fff;
-      text-shadow: 0 0 10px var(--lime);
+      padding: 12px 14px;
+      font: inherit;
       outline: none;
     }
-
-    span {
-      display: block;
+    .count {
+      border: 1px solid rgba(182,255,0,.45);
+      padding: 12px 14px;
       color: var(--muted);
-      font-size: 0.82rem;
-      margin-top: 0.3rem;
+      background: rgba(75,0,118,.25);
+    }
+    section {
+      margin: 18px 0;
+      padding: 16px;
+      border: 1px solid rgba(182,255,0,.35);
+      background: rgba(75,0,118,.18);
+    }
+    h2 { margin: 0 0 12px; font-size: 1.25rem; }
+    ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+    a {
+      display: block;
+      color: var(--text);
+      text-decoration: none;
+      border: 1px solid rgba(182,255,0,.22);
+      background: rgba(0,0,0,.32);
+      padding: 10px 12px;
       overflow-wrap: anywhere;
     }
-
-    footer {
-      color: var(--muted);
-      font-size: 0.85rem;
-      margin-top: 1rem;
-      text-align: center;
+    a:hover, a:focus {
+      color: #000;
+      background: var(--lime);
+      text-shadow: none;
     }
+    .path { color: var(--muted); font-size: .9em; }
+    a:hover .path, a:focus .path { color: #281044; }
+    .hidden { display: none; }
+  
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1>Site Map</h1>
-      <p>Navigation index for games, experiments, and tools. Generated from one-level folders containing <code>index.html</code>, because apparently even chaos needs a clipboard.</p>
-    </header>
-
-    <div class="site-grid">
-        <section class="site-section" aria-labelledby="games-heading">
-          <h2 id="games-heading">Games</h2>
-          <ul>
-          <li><a href="/dead/games/shooter-game/">Shooter Game</a><span>/dead/games/shooter-game/</span></li>
-          <li><a href="/dead/games/tektite-3D-game/">Tektite 3D Game</a><span>/dead/games/tektite-3D-game/</span></li>
-          </ul>
-        </section>
-        <section class="site-section" aria-labelledby="experiments-heading">
-          <h2 id="experiments-heading">Experiments</h2>
-          <ul>
-          <li><a href="/dead/experiments/blotter-visualizer/">Blotter Visualizer</a><span>/dead/experiments/blotter-visualizer/</span></li>
-          <li><a href="/dead/experiments/canvas-backgrounds/">Canvas Backgrounds</a><span>/dead/experiments/canvas-backgrounds/</span></li>
-          <li><a href="/dead/experiments/chat-sandbox/">Chat Sandbox</a><span>/dead/experiments/chat-sandbox/</span></li>
-          <li><a href="/dead/experiments/gods-eye/">Gods Eye</a><span>/dead/experiments/gods-eye/</span></li>
-          <li><a href="/dead/experiments/mandala-visuals/">Mandala Visuals</a><span>/dead/experiments/mandala-visuals/</span></li>
-          <li><a href="/dead/experiments/photosphere/">Photosphere</a><span>/dead/experiments/photosphere/</span></li>
-          <li><a href="/dead/experiments/sound-machine/">Sound Machine</a><span>/dead/experiments/sound-machine/</span></li>
-          <li><a href="/dead/experiments/stacks/">Stacks</a><span>/dead/experiments/stacks/</span></li>
-          </ul>
-        </section>
-        <section class="site-section" aria-labelledby="tools-heading">
-          <h2 id="tools-heading">Tools</h2>
-          <ul>
-          <li><a href="/dead/tools/bookmark-manager/">Bookmark Manager</a><span>/dead/tools/bookmark-manager/</span></li>
-          <li><a href="/dead/tools/camera-studio/">Camera Studio</a><span>/dead/tools/camera-studio/</span></li>
-          <li><a href="/dead/tools/dead-tv/">Dead TV</a><span>/dead/tools/dead-tv/</span></li>
-          <li><a href="/dead/tools/karaoke-machine/">Karaoke Machine</a><span>/dead/tools/karaoke-machine/</span></li>
-          <li><a href="/dead/tools/multimedia-editor/">Multimedia Editor</a><span>/dead/tools/multimedia-editor/</span></li>
-          <li><a href="/dead/tools/music-player/">Music Player</a><span>/dead/tools/music-player/</span></li>
-          <li><a href="/dead/tools/pdf-viewer/">PDF Viewer</a><span>/dead/tools/pdf-viewer/</span></li>
-          </ul>
-        </section>
-    </div>
-
-    <footer>Last updated: May 8, 2026</footer>
-  </main>
+<main>
+  <h1>Site Map</h1>
+  <p class="meta">Generated from <code>/dead/JSON/repo-index.json</code>. Includes 61 folders, including assets and nested folders, because nothing is hidden yet and chaos has rights.</p>
+  <div class="controls">
+    <input id="filter" type="search" placeholder="Filter paths, like games, experiments, assets..." autocomplete="off">
+    <div class="count"><span id="visible-count">61</span> / 61 visible</div>
+  </div>
+  <section data-section="Root">
+    <h2>Root <span class="path">(1)</span></h2>
+    <ul>
+      <li data-path="/"><a href="/">Home / Root<br><span class="path">/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/">
+    <h2>/dead/ <span class="path">(1)</span></h2>
+    <ul>
+      <li data-path="/dead/"><a href="/dead/">Dead<br><span class="path">/dead/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/JSON/">
+    <h2>/dead/JSON/ <span class="path">(1)</span></h2>
+    <ul>
+      <li data-path="/dead/json/"><a href="/dead/JSON/">Json<br><span class="path">/dead/JSON/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/audio/">
+    <h2>/dead/audio/ <span class="path">(1)</span></h2>
+    <ul>
+      <li data-path="/dead/audio/"><a href="/dead/audio/">Audio<br><span class="path">/dead/audio/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/experiments/">
+    <h2>/dead/experiments/ <span class="path">(14)</span></h2>
+    <ul>
+      <li data-path="/dead/experiments/"><a href="/dead/experiments/">Experiments<br><span class="path">/dead/experiments/</span></a></li>
+      <li data-path="/dead/experiments/blotter-visualizer/"><a href="/dead/experiments/blotter-visualizer/">Blotter Visualizer<br><span class="path">/dead/experiments/blotter-visualizer/</span></a></li>
+      <li data-path="/dead/experiments/canvas-backgrounds/"><a href="/dead/experiments/canvas-backgrounds/">Canvas Backgrounds<br><span class="path">/dead/experiments/canvas-backgrounds/</span></a></li>
+      <li data-path="/dead/experiments/chat-sandbox/"><a href="/dead/experiments/chat-sandbox/">Chat Sandbox<br><span class="path">/dead/experiments/chat-sandbox/</span></a></li>
+      <li data-path="/dead/experiments/gods-eye/"><a href="/dead/experiments/gods-eye/">Gods Eye<br><span class="path">/dead/experiments/gods-eye/</span></a></li>
+      <li data-path="/dead/experiments/mandala-visuals/"><a href="/dead/experiments/mandala-visuals/">Mandala Visuals<br><span class="path">/dead/experiments/mandala-visuals/</span></a></li>
+      <li data-path="/dead/experiments/photosphere/"><a href="/dead/experiments/photosphere/">Photosphere<br><span class="path">/dead/experiments/photosphere/</span></a></li>
+      <li data-path="/dead/experiments/photosphere/themes/"><a href="/dead/experiments/photosphere/themes/">Themes<br><span class="path">/dead/experiments/photosphere/themes/</span></a></li>
+      <li data-path="/dead/experiments/photosphere/themes/inner-space/"><a href="/dead/experiments/photosphere/themes/inner-space/">Inner Space<br><span class="path">/dead/experiments/photosphere/themes/inner-space/</span></a></li>
+      <li data-path="/dead/experiments/photosphere/themes/zentangle/"><a href="/dead/experiments/photosphere/themes/zentangle/">Zentangle<br><span class="path">/dead/experiments/photosphere/themes/zentangle/</span></a></li>
+      <li data-path="/dead/experiments/sound-machine/"><a href="/dead/experiments/sound-machine/">Sound Machine<br><span class="path">/dead/experiments/sound-machine/</span></a></li>
+      <li data-path="/dead/experiments/stacks/"><a href="/dead/experiments/stacks/">Stacks<br><span class="path">/dead/experiments/stacks/</span></a></li>
+      <li data-path="/dead/experiments/test/"><a href="/dead/experiments/test/">Test<br><span class="path">/dead/experiments/test/</span></a></li>
+      <li data-path="/dead/experiments/test/habisky-mofo/"><a href="/dead/experiments/test/habisky-mofo/">Habisky Mofo<br><span class="path">/dead/experiments/test/habisky-mofo/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/games/">
+    <h2>/dead/games/ <span class="path">(14)</span></h2>
+    <ul>
+      <li data-path="/dead/games/"><a href="/dead/games/">Games<br><span class="path">/dead/games/</span></a></li>
+      <li data-path="/dead/games/shooter-game/"><a href="/dead/games/shooter-game/">Shooter Game<br><span class="path">/dead/games/shooter-game/</span></a></li>
+      <li data-path="/dead/games/shooter-game/assets/"><a href="/dead/games/shooter-game/assets/">Assets<br><span class="path">/dead/games/shooter-game/assets/</span></a></li>
+      <li data-path="/dead/games/shooter-game/assets/json/"><a href="/dead/games/shooter-game/assets/JSON/">Json<br><span class="path">/dead/games/shooter-game/assets/JSON/</span></a></li>
+      <li data-path="/dead/games/shooter-game/assets/audio/"><a href="/dead/games/shooter-game/assets/audio/">Audio<br><span class="path">/dead/games/shooter-game/assets/audio/</span></a></li>
+      <li data-path="/dead/games/shooter-game/assets/controller-buttons/"><a href="/dead/games/shooter-game/assets/controller-buttons/">Controller Buttons<br><span class="path">/dead/games/shooter-game/assets/controller-buttons/</span></a></li>
+      <li data-path="/dead/games/shooter-game/assets/enemy-gifs/"><a href="/dead/games/shooter-game/assets/enemy-gifs/">Enemy Gifs<br><span class="path">/dead/games/shooter-game/assets/enemy-gifs/</span></a></li>
+      <li data-path="/dead/games/shooter-game/assets/enemy-webps/"><a href="/dead/games/shooter-game/assets/enemy-webps/">Enemy Webps<br><span class="path">/dead/games/shooter-game/assets/enemy-webps/</span></a></li>
+      <li data-path="/dead/games/shooter-game/assets/levels/"><a href="/dead/games/shooter-game/assets/levels/">Levels<br><span class="path">/dead/games/shooter-game/assets/levels/</span></a></li>
+      <li data-path="/dead/games/shooter-game/assets/scripts/"><a href="/dead/games/shooter-game/assets/scripts/">Scripts<br><span class="path">/dead/games/shooter-game/assets/scripts/</span></a></li>
+      <li data-path="/dead/games/tektite-3d-game/"><a href="/dead/games/tektite-3D-game/">Tektite 3D Game<br><span class="path">/dead/games/tektite-3D-game/</span></a></li>
+      <li data-path="/dead/games/tektite-3d-game/assets/"><a href="/dead/games/tektite-3D-game/assets/">Assets<br><span class="path">/dead/games/tektite-3D-game/assets/</span></a></li>
+      <li data-path="/dead/games/tektite-3d-game/assets/png/"><a href="/dead/games/tektite-3D-game/assets/png/">Png<br><span class="path">/dead/games/tektite-3D-game/assets/png/</span></a></li>
+      <li data-path="/dead/games/tektite-3d-game/assets/webp/"><a href="/dead/games/tektite-3D-game/assets/webp/">Webp<br><span class="path">/dead/games/tektite-3D-game/assets/webp/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/images/">
+    <h2>/dead/images/ <span class="path">(4)</span></h2>
+    <ul>
+      <li data-path="/dead/images/"><a href="/dead/images/">Images<br><span class="path">/dead/images/</span></a></li>
+      <li data-path="/dead/images/link-thumbnails/"><a href="/dead/images/link-thumbnails/">Link Thumbnails<br><span class="path">/dead/images/link-thumbnails/</span></a></li>
+      <li data-path="/dead/images/link-thumbnails/_review/"><a href="/dead/images/link-thumbnails/_review/"> Review<br><span class="path">/dead/images/link-thumbnails/_review/</span></a></li>
+      <li data-path="/dead/images/pngs/"><a href="/dead/images/pngs/">Pngs<br><span class="path">/dead/images/pngs/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/messages/">
+    <h2>/dead/messages/ <span class="path">(4)</span></h2>
+    <ul>
+      <li data-path="/dead/messages/"><a href="/dead/messages/">Messages<br><span class="path">/dead/messages/</span></a></li>
+      <li data-path="/dead/messages/random_messages/"><a href="/dead/messages/random_messages/">Random Messages<br><span class="path">/dead/messages/random_messages/</span></a></li>
+      <li data-path="/dead/messages/standard_messages/"><a href="/dead/messages/standard_messages/">Standard Messages<br><span class="path">/dead/messages/standard_messages/</span></a></li>
+      <li data-path="/dead/messages/timed_messages/"><a href="/dead/messages/timed_messages/">Timed Messages<br><span class="path">/dead/messages/timed_messages/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/readmes/">
+    <h2>/dead/readmes/ <span class="path">(1)</span></h2>
+    <ul>
+      <li data-path="/dead/readmes/"><a href="/dead/readmes/">Readmes<br><span class="path">/dead/readmes/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/scripts/">
+    <h2>/dead/scripts/ <span class="path">(4)</span></h2>
+    <ul>
+      <li data-path="/dead/scripts/"><a href="/dead/scripts/">Scripts<br><span class="path">/dead/scripts/</span></a></li>
+      <li data-path="/dead/scripts/build/"><a href="/dead/scripts/build/">Build<br><span class="path">/dead/scripts/build/</span></a></li>
+      <li data-path="/dead/scripts/chat/"><a href="/dead/scripts/chat/">Chat<br><span class="path">/dead/scripts/chat/</span></a></li>
+      <li data-path="/dead/scripts/page-helpers/"><a href="/dead/scripts/page-helpers/">Page Helpers<br><span class="path">/dead/scripts/page-helpers/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/stuff/">
+    <h2>/dead/stuff/ <span class="path">(6)</span></h2>
+    <ul>
+      <li data-path="/dead/stuff/"><a href="/dead/stuff/">Stuff<br><span class="path">/dead/stuff/</span></a></li>
+      <li data-path="/dead/stuff/nav/"><a href="/dead/stuff/nav/">Nav<br><span class="path">/dead/stuff/nav/</span></a></li>
+      <li data-path="/dead/stuff/stuff-for-index/"><a href="/dead/stuff/stuff-for-index/">Stuff For Index<br><span class="path">/dead/stuff/stuff-for-index/</span></a></li>
+      <li data-path="/dead/stuff/stuff-for-index/feeds/"><a href="/dead/stuff/stuff-for-index/feeds/">Feeds<br><span class="path">/dead/stuff/stuff-for-index/feeds/</span></a></li>
+      <li data-path="/dead/stuff/stuff-for-index/feeds/gaming-grid/"><a href="/dead/stuff/stuff-for-index/feeds/gaming-grid/">Gaming Grid<br><span class="path">/dead/stuff/stuff-for-index/feeds/gaming-grid/</span></a></li>
+      <li data-path="/dead/stuff/wtf/"><a href="/dead/stuff/wtf/">Wtf<br><span class="path">/dead/stuff/wtf/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/tools/">
+    <h2>/dead/tools/ <span class="path">(9)</span></h2>
+    <ul>
+      <li data-path="/dead/tools/"><a href="/dead/tools/">Tools<br><span class="path">/dead/tools/</span></a></li>
+      <li data-path="/dead/tools/bookmark-manager/"><a href="/dead/tools/bookmark-manager/">Bookmark Manager<br><span class="path">/dead/tools/bookmark-manager/</span></a></li>
+      <li data-path="/dead/tools/camera-studio/"><a href="/dead/tools/camera-studio/">Camera Studio<br><span class="path">/dead/tools/camera-studio/</span></a></li>
+      <li data-path="/dead/tools/dead-tv/"><a href="/dead/tools/dead-tv/">Dead Tv<br><span class="path">/dead/tools/dead-tv/</span></a></li>
+      <li data-path="/dead/tools/karaoke-machine/"><a href="/dead/tools/karaoke-machine/">Karaoke Machine<br><span class="path">/dead/tools/karaoke-machine/</span></a></li>
+      <li data-path="/dead/tools/multimedia-editor/"><a href="/dead/tools/multimedia-editor/">Multimedia Editor<br><span class="path">/dead/tools/multimedia-editor/</span></a></li>
+      <li data-path="/dead/tools/music-player/"><a href="/dead/tools/music-player/">Music Player<br><span class="path">/dead/tools/music-player/</span></a></li>
+      <li data-path="/dead/tools/pdf-viewer/"><a href="/dead/tools/pdf-viewer/">Pdf Viewer<br><span class="path">/dead/tools/pdf-viewer/</span></a></li>
+      <li data-path="/dead/tools/pdf-viewer/pdfs/"><a href="/dead/tools/pdf-viewer/pdfs/">Pdfs<br><span class="path">/dead/tools/pdf-viewer/pdfs/</span></a></li>
+    </ul>
+  </section>
+  <section data-section="/dead/videos/">
+    <h2>/dead/videos/ <span class="path">(1)</span></h2>
+    <ul>
+      <li data-path="/dead/videos/"><a href="/dead/videos/">Videos<br><span class="path">/dead/videos/</span></a></li>
+    </ul>
+  </section>
+  <script>
+    const filter = document.getElementById('filter');
+    const visibleCount = document.getElementById('visible-count');
+    const items = [...document.querySelectorAll('li[data-path]')];
+    const sections = [...document.querySelectorAll('section[data-section]')];
+    function applyFilter() {
+      const q = filter.value.trim().toLowerCase();
+      let visible = 0;
+      items.forEach(item => {
+        const show = !q || item.dataset.path.includes(q);
+        item.classList.toggle('hidden', !show);
+        if (show) visible += 1;
+      });
+      sections.forEach(section => {
+        const hasVisible = !!section.querySelector('li:not(.hidden)');
+        section.classList.toggle('hidden', !hasVisible);
+      });
+      visibleCount.textContent = visible;
+    }
+    filter.addEventListener('input', applyFilter);
+  </script>
+</main>
 </body>
 </html>
