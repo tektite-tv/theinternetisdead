@@ -1501,6 +1501,7 @@ html, body {
 
   function showSidebarThumbnail(link) {
     if (!isDesktopThumbnailView()) return;
+    if (link && link.closest('.logo')) return;
     startSidebarThumbnailLoad();
     const thumbnail = getSidebarThumbnailForLink(link);
     if (!thumbnail || !sidebarThumbnailImage) return;
