@@ -845,10 +845,9 @@ html, body {
       <div class="sidebar-item">
         <button type="button" class="sidebar-section-toggle" aria-expanded="false">Tektite's Browser Games</button>
         <div class="sidebar-preview">
-          <div class="sidebar-preview-links">
+          <div class="sidebar-preview-links" data-repo-games-list>
             <a href="/dead/games/" data-index-frame-src="/dead/games/">* All My Games *</a>
             <a href="/dead/games/shooter-game/" data-index-frame-src="/dead/games/shooter-game/">+ Shooter Game</a>
-            <a href="/dead/games/" data-index-frame-src="/dead/games/">+ Empty</a>
           </div>
         </div>
       </div>
@@ -1361,6 +1360,55 @@ html, body {
   const sidebarCommandLink = overlayRoot.querySelector('#sidebar-command-link');
   const sidebarCommandPanel = overlayRoot.querySelector('#sidebar-command-panel');
   const sidebarLogoLink = overlayRoot.querySelector('#sidebar-logo-link');
+  const sidebarGamesList = overlayRoot.querySelector('[data-repo-games-list]');
+
+  function formatSidebarGameTitle(folderPath) {
+    const slug = String(folderPath || '')
+      .replace(/^\/dead\/games\//, '')
+      .replace(/\/$/, '');
+    if (!slug) return '';
+    return '+ ' + slug
+      .split('-')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  function appendSidebarGameLink(folderPath) {
+    if (!sidebarGamesList) return;
+    const href = String(folderPath || '').replace(/\/{2,}/g, '/');
+    if (!/^\/dead\/games\/[^/]+\/$/.test(href)) return;
+    const alreadyExists = Array.from(sidebarGamesList.querySelectorAll('a')).some((link) => {
+      const existing = (link.dataset.indexFrameSrc || link.getAttribute('href') || '').replace(/\/{2,}/g, '/');
+      return existing === href;
+    });
+    if (alreadyExists) return;
+
+    const link = document.createElement('a');
+    link.href = href;
+    link.dataset.indexFrameSrc = href;
+    link.textContent = formatSidebarGameTitle(href);
+    sidebarGamesList.appendChild(link);
+  }
+
+  function loadSidebarGamesFromRepoIndex() {
+    if (!sidebarGamesList) return;
+
+    fetch('/dead/JSON/repo-index.json', { cache: 'no-cache' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        const folders = data && Array.isArray(data.folders) ? data.folders : [];
+        folders
+          .filter((folderPath) => /^\/dead\/games\/[^/]+\/$/.test(String(folderPath || '')))
+          .sort((a, b) => String(a).localeCompare(String(b)))
+          .forEach(appendSidebarGameLink);
+      })
+      .catch(() => {
+        // Static game links still work. Somehow humanity continues.
+      });
+  }
+
+  loadSidebarGamesFromRepoIndex();
 
   const sidebarThumbnailPopup = document.createElement('div');
   sidebarThumbnailPopup.className = 'sidebar-link-thumbnail-popup';
@@ -1465,12 +1513,24 @@ html, body {
     sidebarThumbnailPopup.classList.remove('is-visible');
   }
 
-  overlayRoot.querySelectorAll('#sidebar a').forEach((link) => {
-    link.addEventListener('mouseenter', () => showSidebarThumbnail(link));
-    link.addEventListener('focus', () => showSidebarThumbnail(link));
-    link.addEventListener('mouseleave', hideSidebarThumbnail);
-    link.addEventListener('blur', hideSidebarThumbnail);
+  sidebar.addEventListener('mouseover', (event) => {
+    const link = event.target.closest && event.target.closest('a');
+    if (!link || !sidebar.contains(link)) return;
+    showSidebarThumbnail(link);
   });
+  sidebar.addEventListener('focusin', (event) => {
+    const link = event.target.closest && event.target.closest('a');
+    if (!link || !sidebar.contains(link)) return;
+    showSidebarThumbnail(link);
+  });
+  sidebar.addEventListener('mouseout', (event) => {
+    const link = event.target.closest && event.target.closest('a');
+    if (!link || !sidebar.contains(link)) return;
+    const related = event.relatedTarget;
+    if (related && link.contains(related)) return;
+    hideSidebarThumbnail();
+  });
+  sidebar.addEventListener('focusout', hideSidebarThumbnail);
 
   if (isDesktopThumbnailView()) {
     startSidebarThumbnailLoad();
