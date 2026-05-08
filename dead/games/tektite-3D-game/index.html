@@ -1,0 +1,4163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tektite's New 3D Game</title>
+  <style>
+    /*
+      new-3D-game.html
+      Infinite-ish RCT-inspired terrain:
+      - Start menu before Three.js initializes
+      - Default seed: tektite
+      - Chunked terrain generates around camera as you move
+      - Seeded fractal terrain, no visible finite map edge
+      - Grass square tops
+      - Dirt vertical sides using assets/png/dirt.png
+      - Optional grass texture at assets/png/grass.png
+      - OSRS-ish camera controls
+    */
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #050509;
+      color: #e9ffd0;
+      font-family: "Courier New", monospace;
+      user-select: none;
+    }
+
+    #game {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      cursor: grab;
+      background: #87ceeb;
+    }
+
+    #game.dragging {
+      cursor: grabbing;
+    }
+
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      color: #fff;
+    }
+
+    .loading-screen.hidden {
+      display: none;
+    }
+
+    .loading-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .loading-content h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: #fff;
+    }
+
+    .loading-content img {
+      display: block;
+      max-width: min(280px, 70vw);
+      max-height: min(280px, 50vh);
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .loading-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .loading-button {
+      border: 1px solid rgba(233, 255, 208, 0.8);
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: rgba(0, 0, 0, 0.42);
+      color: #e9ffd0;
+      font: 700 12px/1 "Courier New", monospace;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .loading-button:hover,
+    .loading-button:focus-visible {
+      background: rgba(233, 255, 208, 0.16);
+      outline: none;
+    }
+
+    .loading-note {
+      max-width: min(420px, 86vw);
+      margin: -4px 0 0;
+      color: rgba(233, 255, 208, 0.72);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    body.loading-state #game,
+    body.loading-state .underwater-overlay,
+    body.loading-state .minimap,
+    body.loading-state .esc-menu-button,
+    body.loading-state .hud,
+    body.loading-state .start-menu {
+      visibility: hidden !important;
+    }
+
+    .start-menu {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      background:
+        radial-gradient(circle at top, rgba(135, 206, 235, 0.26), transparent 36%),
+        linear-gradient(180deg, #0d1022 0%, #050509 100%);
+    }
+
+    .start-panel {
+      width: min(680px, calc(100vw - 32px));
+      padding: 28px;
+      border: 2px solid #1b1b1b;
+      border-radius: 18px;
+      background: rgba(18, 12, 8, 0.92);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.58);
+      text-align: center;
+    }
+
+    .start-panel h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 5vw, 48px);
+      line-height: 1;
+      letter-spacing: 0.035em;
+      color: #d2b07b;
+      text-shadow: 0 3px 0 #2d1b11;
+      text-transform: uppercase;
+    }
+
+    .start-panel p {
+      margin: 8px auto 18px;
+      max-width: 580px;
+      color: #e8dac6;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .seed-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .seed-row input,
+    .seed-row select {
+      min-width: 0;
+      padding: 13px 14px;
+      border: 2px solid #6a4b2e;
+      border-radius: 12px;
+      background: #140d08;
+      color: #ffe5bd;
+      font: inherit;
+      outline: none;
+    }
+
+    .seed-row select {
+      cursor: pointer;
+      color-scheme: dark;
+    }
+
+    .seed-row input:focus,
+    .seed-row select:focus {
+      border-color: #d2b07b;
+      box-shadow: 0 0 0 3px rgba(210, 176, 123, 0.2);
+    }
+
+    .seed-row button,
+    .secondary-button {
+      padding: 13px 18px;
+      border: 2px solid #6a4b2e;
+      border-radius: 12px;
+      background: #d2b07b;
+      color: #1b1109;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .seed-row button:hover,
+    .secondary-button:hover {
+      filter: brightness(1.08);
+    }
+
+    .secondary-button {
+      margin-top: 12px;
+      background: transparent;
+      color: #d2b07b;
+    }
+
+    .start-panel .tiny {
+      margin-top: 12px;
+      color: #aa9277;
+      font-size: 12px;
+    }
+
+    .esc-menu-button {
+      position: fixed;
+      left: 16px;
+      top: 16px;
+      z-index: 21;
+      box-sizing: border-box;
+      padding: 10px 14px;
+      border: 2px solid #1b1b1b;
+      border-radius: 10px;
+      background: rgba(210, 176, 123, 0.94);
+      color: #1b1109;
+      font: inherit;
+      font-weight: 700;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.28);
+    }
+
+    .esc-menu-button:hover {
+      filter: brightness(1.08);
+    }
+
+    .hud {
+      position: fixed;
+      left: 16px;
+      top: 68px;
+      z-index: 20;
+      box-sizing: border-box;
+      width: min(500px, calc(100vw - 32px));
+      padding: 14px 16px;
+      border: 2px solid #1b1b1b;
+      border-radius: 12px;
+      background: rgba(14, 10, 7, 0.78);
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .hud.hidden {
+      display: none;
+    }
+
+    .hud h1 {
+      margin: 0 0 8px;
+      color: #d2b07b;
+      font-size: 18px;
+      line-height: 1.1;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hud p {
+      margin: 4px 0;
+      font-size: 13px;
+      line-height: 1.35;
+      color: #f1dfc8;
+    }
+
+    .hud .dim {
+      color: #b9a78e;
+    }
+
+    .hud button,
+    .hud select {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 100%;
+      margin: 6px 0;
+      padding: 9px 10px;
+      border: 1px solid #6a4b2e;
+      border-radius: 8px;
+      background: rgba(20, 13, 8, 0.92);
+      color: #ffe5bd;
+      font: inherit;
+      pointer-events: auto;
+    }
+
+    .hud button {
+      cursor: pointer;
+      color: #1b1109;
+      background: #d2b07b;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .hud .stats-storage-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      pointer-events: auto;
+    }
+
+    .hud .stats-storage-actions button,
+    .hud .stats-storage-actions a {
+      box-sizing: border-box;
+      flex: 1 1 0;
+      min-width: 0;
+      margin: 0;
+      padding: 8px 9px;
+      border: 1px solid #6a4b2e;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 12px;
+      line-height: 1.15;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .hud .stats-storage-actions a {
+      color: #ffb4b4;
+      background: rgba(20, 13, 8, 0.92);
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: 700;
+    }
+
+    .hud select {
+      cursor: pointer;
+      color-scheme: dark;
+    }
+
+    .hud .controls-panel.hidden,
+    .hud .menu-panel.hidden {
+      display: none;
+    }
+
+    .hud .menu-panel {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 100%;
+      margin: 4px 0 10px;
+      padding-top: 2px;
+      overflow: hidden;
+    }
+
+    .hud .menu-panel label,
+    .hud .menu-panel p {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .hud label {
+      display: block;
+      margin: 8px 0 2px;
+      color: #d2b07b;
+      font-size: 13px;
+      pointer-events: auto;
+    }
+
+    .hud .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+      color: #ffe5bd;
+      font-size: 13px;
+      pointer-events: auto;
+    }
+
+    .hud .checkbox-row input {
+      width: auto;
+      accent-color: #d2b07b;
+      cursor: pointer;
+    }
+
+    .hud input[type="range"] {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 100%;
+      margin: 6px 0;
+      cursor: pointer;
+      accent-color: #d2b07b;
+      pointer-events: auto;
+    }
+
+    .hud input[type="range"]::-webkit-slider-thumb {
+      cursor: pointer;
+    }
+
+    .hud input[type="range"]::-moz-range-thumb {
+      cursor: pointer;
+    }
+
+    .underwater-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      background-image:
+        linear-gradient(rgba(18, 85, 180, 0.46), rgba(0, 34, 120, 0.62)),
+        url("assets/png/water.png");
+      background-repeat: no-repeat, repeat;
+      background-size: cover, 220px 220px;
+      background-position: center center, 0 0;
+      mix-blend-mode: normal;
+      transition: opacity 90ms linear;
+    }
+
+    .minimap {
+      position: fixed;
+      right: 16px;
+      top: 16px;
+      z-index: 19;
+      width: 190px;
+      height: 190px;
+      border: 2px solid #1b1b1b;
+      border-radius: 12px;
+      background: rgba(10, 14, 8, 0.82);
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.32);
+      overflow: hidden;
+      pointer-events: auto;
+    }
+
+    .minimap.hidden {
+      display: none;
+    }
+
+    .minimap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    @media (max-width: 560px) {
+      .minimap {
+        width: 132px;
+        height: 132px;
+        right: 10px;
+        top: 10px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .seed-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body class="loading-state">
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-content">
+      <h1>Loading...</h1>
+      <img src="assets/webp/loading.webp" alt="Loading" />
+      <div class="loading-actions" aria-label="Loading screen storage controls">
+        <button class="loading-button" id="loadingClearLocalStorageButton" type="button">Clear LocalStorage</button>
+      </div>
+      <p class="loading-note" id="loadingLocalStorageNote">Use this if the game gets stuck loading from a cursed saved state.</p>
+    </div>
+  </div>
+
+  <div class="start-menu" id="startMenu">
+    <section class="start-panel">
+      <h1>Tektite's New 3D Game</h1>
+      <p>Enter a generation seed. Terrain streams in larger chunks around the camera using seeded fractal noise with regional chances for mountain chains, rolling plains, inland lakes, and occasional rivers. Choose Dev Mode for free camera editing, or Third Person to roll a sphere across the tiles like a tiny physics gremlin.</p>
+
+      <div class="seed-row">
+        <input id="seedInput" type="text" value="tektite" autocomplete="off" spellcheck="false" aria-label="Generation seed" />
+        <select id="cameraModeSelect" aria-label="Camera mode">
+          <option value="dev" selected>Dev Mode</option>
+          <option value="third-person">Third Person</option>
+        </select>
+        <button id="startButton" type="button">Start</button>
+      </div>
+
+      <button class="secondary-button" id="randomSeedButton" type="button">Random Seed</button>
+      <p class="tiny">Textures expected at <code>assets/png/dirt.png</code>, <code>assets/png/grass.png</code>, <code>assets/png/water.png</code>, and <code>assets/png/sand.png</code></p>
+      <p class="tiny">This menu only appears with <code>?menu=start</code>. Shortcut: <strong>Shift + D</strong> starts Dev Sphere mode with seed <code>tektite</code> and <code>lime-magenta_sphere.png</code>.</p>
+    </section>
+  </div>
+
+  <canvas id="game"></canvas>
+  <div id="underwaterOverlay" class="underwater-overlay"></div>
+  <div id="minimap" class="minimap">
+    <canvas id="minimapCanvas" width="190" height="190"></canvas>
+  </div>
+
+  <button id="escMenuButton" class="esc-menu-button" type="button">Esc Menu</button>
+
+  <div class="hud hidden" id="hud">
+    <h1>ESC Menu</h1>
+
+    <button id="controlsToggle" type="button">Controls</button>
+    <div class="controls-panel hidden" id="controlsPanel">
+      <p><strong>Rotate/Tilt:</strong> right/middle drag, Q/E</p>
+      <p><strong>Move:</strong> WASD or Arrow Keys</p>
+      <p><strong>Third Person:</strong> WASD accelerates sphere, Shift sprints on land, Shift+Space launches, Q/E rotates camera. In water, Shift sinks and Space floats up.</p>
+      <p><strong>Zoom:</strong> Mouse wheel</p>
+      <p><strong>Fullscreen:</strong> F</p>
+      <p><strong>Minimap Zoom:</strong> slider in Customization</p>
+      <p><strong>Menu:</strong> Esc or top-left button</p>
+      <p><strong>Reset:</strong> R</p>
+    </div>
+
+    <button id="customizationToggle" type="button">Customization</button>
+    <div class="menu-panel hidden" id="customizationPanel">
+      <label for="liveCameraModeSelect">Camera Mode</label>
+      <select id="liveCameraModeSelect">
+        <option value="dev">Dev Mode</option>
+        <option value="third-person" selected>Third Person</option>
+      </select>
+
+      <label for="sphereTextureSelect">Sphere Texture</label>
+      <select id="sphereTextureSelect">
+        <option value="assets/png/default_sphere.png" selected>default_sphere.png</option>
+      </select>
+      <label class="checkbox-row" for="showGridCheckbox">
+        <input id="showGridCheckbox" type="checkbox" />
+        <span>Show Grid</span>
+      </label>
+      <label class="checkbox-row" for="hideMinimapCheckbox">
+        <input id="hideMinimapCheckbox" type="checkbox" />
+        <span>Hide Minimap</span>
+      </label>
+      <label class="checkbox-row" for="hideTreesCheckbox">
+        <input id="hideTreesCheckbox" type="checkbox" />
+        <span>Hide Trees</span>
+      </label>
+
+      <label for="minimapZoomSlider">Minimap Zoom</label>
+      <input id="minimapZoomSlider" type="range" min="-5" max="5" step="1" value="1" />
+      <p class="dim" id="minimapZoomStatus">Minimap zoom: 1x</p>
+
+      <button id="setSpawnButton" type="button">Set Spawn</button>
+      <p class="dim" id="sphereTextureStatus">Sphere texture: default_sphere.png</p>
+      <p class="dim" id="spawnStatus">Spawn: 0 / 0 / 0</p>
+    </div>
+
+    <button id="statsToggle" type="button">Stats for Nerds</button>
+    <div class="menu-panel hidden" id="statsPanel">
+      <p class="dim" id="modeReadout">Mode: Dev Mode</p>
+      <p class="dim" id="seedReadout">Seed: none</p>
+      <p class="dim" id="sphereCoordsReadout">Sphere XYZ from spawn: 0 / 0 / 0</p>
+      <p class="dim" id="cameraDirectionReadout">Camera facing: North</p>
+      <p class="dim" id="spawnCoordsReadout">Spawn XYZ: 0 / 0 / 0</p>
+      <p class="dim" id="chunkReadout">Detailed chunks: 0</p>
+      <p class="dim" id="distantChunkReadout">Distant LOD chunks: 0</p>
+      <p class="dim" id="worldCacheReadout">World cache: not loaded</p>
+      <p class="dim" id="seaLevelReadout">Sea level: 0</p>
+      <p class="dim" id="localStorageStatus">LocalStorage: ready</p>
+      <div class="stats-storage-actions">
+        <a id="clearLocalStorageLink" href="#">Clear LocalStorage</a>
+        <button id="saveStateButton" type="button">Save State</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js";
+
+    const canvas = document.getElementById("game");
+    const hud = document.getElementById("hud");
+    const loadingScreen = document.getElementById("loadingScreen");
+    const loadingClearLocalStorageButton = document.getElementById("loadingClearLocalStorageButton");
+    const loadingLocalStorageNote = document.getElementById("loadingLocalStorageNote");
+    const escMenuButton = document.getElementById("escMenuButton");
+    const seedReadout = document.getElementById("seedReadout");
+    const chunkReadout = document.getElementById("chunkReadout");
+    const distantChunkReadout = document.getElementById("distantChunkReadout");
+    const worldCacheReadout = document.getElementById("worldCacheReadout");
+    const seaLevelReadout = document.getElementById("seaLevelReadout");
+    const modeReadout = document.getElementById("modeReadout");
+    const controlsToggle = document.getElementById("controlsToggle");
+    const controlsPanel = document.getElementById("controlsPanel");
+    const customizationToggle = document.getElementById("customizationToggle");
+    const customizationPanel = document.getElementById("customizationPanel");
+    const statsToggle = document.getElementById("statsToggle");
+    const statsPanel = document.getElementById("statsPanel");
+    const liveCameraModeSelect = document.getElementById("liveCameraModeSelect");
+    const sphereTextureSelect = document.getElementById("sphereTextureSelect");
+    const sphereTextureStatus = document.getElementById("sphereTextureStatus");
+    const setSpawnButton = document.getElementById("setSpawnButton");
+    const showGridCheckbox = document.getElementById("showGridCheckbox");
+    const hideMinimapCheckbox = document.getElementById("hideMinimapCheckbox");
+    const hideTreesCheckbox = document.getElementById("hideTreesCheckbox");
+    const minimapZoomSlider = document.getElementById("minimapZoomSlider");
+    const minimapZoomStatus = document.getElementById("minimapZoomStatus");
+    const minimap = document.getElementById("minimap");
+    const minimapCanvas = document.getElementById("minimapCanvas");
+    const spawnStatus = document.getElementById("spawnStatus");
+    const sphereCoordsReadout = document.getElementById("sphereCoordsReadout");
+    const cameraDirectionReadout = document.getElementById("cameraDirectionReadout");
+    const spawnCoordsReadout = document.getElementById("spawnCoordsReadout");
+    const localStorageStatus = document.getElementById("localStorageStatus");
+    const clearLocalStorageLink = document.getElementById("clearLocalStorageLink");
+    const saveStateButton = document.getElementById("saveStateButton");
+    const underwaterOverlay = document.getElementById("underwaterOverlay");
+    const startMenu = document.getElementById("startMenu");
+    const seedInput = document.getElementById("seedInput");
+    const cameraModeSelect = document.getElementById("cameraModeSelect");
+    const startButton = document.getElementById("startButton");
+    const randomSeedButton = document.getElementById("randomSeedButton");
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldShowStartMenu = urlParams.get("menu") === "start";
+
+    let gameStarted = false;
+    let pendingSphereTexturePath = null;
+    let activeSpawnPoint = { x: 0, y: 0, z: 0, yaw: Math.PI / 4 };
+    let showGridLines = false;
+    let hideMinimap = false;
+    let hideTrees = false;
+
+    function showLoadingScreen() {
+      document.body.classList.add("loading-state");
+      loadingScreen.classList.remove("hidden");
+    }
+
+    const fullStateStorageKey = "new-3D-game.full-state.v2";
+
+    function setLocalStorageStatus(message) {
+      if (localStorageStatus) {
+        localStorageStatus.textContent = `LocalStorage: ${message}`;
+      }
+    }
+
+    function loadSavedFullStateEnvelope() {
+      try {
+        const raw = localStorage.getItem(fullStateStorageKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return parsed && parsed.version === 1 ? parsed : null;
+      } catch (error) {
+        console.warn("Could not load saved game state:", error);
+        return null;
+      }
+    }
+
+    function autoStartDefaultDevSphereMode() {
+      const savedState = loadSavedFullStateEnvelope();
+      const savedSeed = savedState && typeof savedState.seedText === "string" ? savedState.seedText : "tektite";
+      const savedCameraMode = savedState && savedState.cameraMode === "dev" ? "dev" : "third-person";
+      const savedTexture = savedState && typeof savedState.sphereTexturePath === "string" ? savedState.sphereTexturePath : "assets/png/lime-magenta_sphere.png";
+
+      pendingSphereTexturePath = savedTexture;
+      seedInput.value = savedSeed;
+      cameraModeSelect.value = savedCameraMode;
+      startGame(savedSeed, savedCameraMode);
+    }
+
+    escMenuButton.addEventListener("click", () => {
+      hud.classList.toggle("hidden");
+    });
+
+    controlsToggle.addEventListener("click", () => {
+      controlsPanel.classList.toggle("hidden");
+    });
+
+    customizationToggle.addEventListener("click", () => {
+      customizationPanel.classList.toggle("hidden");
+    });
+
+    statsToggle.addEventListener("click", () => {
+      statsPanel.classList.toggle("hidden");
+    });
+
+    setSpawnButton.addEventListener("click", () => {
+      if (!window.__setSphereSpawnPoint) return;
+      window.__setSphereSpawnPoint();
+    });
+
+    function setShowGridLines(visible) {
+      showGridLines = Boolean(visible);
+      showGridCheckbox.checked = showGridLines;
+
+      if (window.__setTileGridVisibility) {
+        window.__setTileGridVisibility(showGridLines);
+      }
+    }
+
+    showGridCheckbox.addEventListener("change", () => {
+      setShowGridLines(showGridCheckbox.checked);
+    });
+
+    hideMinimapCheckbox.addEventListener("change", () => {
+      hideMinimap = hideMinimapCheckbox.checked;
+      minimap.classList.toggle("hidden", hideMinimap);
+    });
+
+    hideTreesCheckbox.addEventListener("change", () => {
+      hideTrees = hideTreesCheckbox.checked;
+
+      if (window.__setTreeVisibility) {
+        window.__setTreeVisibility(!hideTrees);
+      }
+    });
+
+
+
+
+
+    window.addEventListener("keydown", (event) => {
+      if (event.shiftKey && event.code === "KeyG") {
+        event.preventDefault();
+        setShowGridLines(!showGridLines);
+      }
+
+      if (
+        shouldShowStartMenu &&
+        !gameStarted &&
+        event.shiftKey &&
+        event.code === "KeyD"
+      ) {
+        event.preventDefault();
+        autoStartDefaultDevSphereMode();
+      }
+    });
+
+    randomSeedButton.addEventListener("click", () => {
+      seedInput.value = `seed-${Math.floor(Math.random() * 999999999)}`;
+    });
+
+    startButton.addEventListener("click", () => {
+      startGame(seedInput.value.trim() || "tektite", cameraModeSelect.value);
+    });
+
+    seedInput.addEventListener("keydown", (event) => {
+      if (event.code === "Enter") {
+        startGame(seedInput.value.trim() || "tektite", cameraModeSelect.value);
+      }
+    });
+
+    if (shouldShowStartMenu) {
+      startMenu.style.display = "grid";
+      requestAnimationFrame(() => {
+        hideLoadingScreen();
+      });
+    } else {
+      autoStartDefaultDevSphereMode();
+    }
+
+    function startGame(seedText, cameraMode) {
+      if (gameStarted) return;
+      showLoadingScreen();
+      gameStarted = true;
+      startMenu.style.display = "none";
+
+      try {
+        init(seedText, cameraMode);
+      } catch (error) {
+        console.error("Game failed during startup:", error);
+        setLocalStorageStatus("startup error, clear LocalStorage and reload");
+        hideLoadingScreen();
+        gameStarted = false;
+        startMenu.style.display = "grid";
+      }
+    }
+
+    function hashStringToUint32(text) {
+      let hash = 2166136261;
+      for (let i = 0; i < text.length; i += 1) {
+        hash ^= text.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return hash >>> 0;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function smoothstep(edge0, edge1, x) {
+      const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    function init(seedText, cameraMode) {
+      const savedFullState = loadSavedFullStateEnvelope();
+      const shouldRestoreFullState = savedFullState && savedFullState.seedText === seedText;
+      let currentCameraMode = shouldRestoreFullState && (savedFullState.cameraMode === "third-person" || savedFullState.cameraMode === "dev")
+        ? savedFullState.cameraMode
+        : (cameraMode === "third-person" ? "third-person" : "dev");
+      let isThirdPersonMode = currentCameraMode === "third-person";
+      liveCameraModeSelect.value = currentCameraMode;
+      seedReadout.textContent = `Seed: ${seedText}`;
+      modeReadout.textContent = `Mode: ${isThirdPersonMode ? "Third Person" : "Dev Mode"}`;
+
+      const spawnStorageKey = `new-3D-game.spawn.${seedText}`;
+      const worldCacheStorageKey = `new-3D-game.world-cache.${seedText}`;
+      const worldCacheVersion = 3;
+      const worldCacheSaveIntervalMs = 2500;
+      let worldCacheLoadedChunkCount = 0;
+      let worldCacheLastSaveTime = 0;
+      let worldCacheDirty = false;
+
+      function formatCoord(value) {
+        return Number.isFinite(value) ? value.toFixed(2) : "0.00";
+      }
+
+      function formatXYZ(point) {
+        return `${formatCoord(point.x)} / ${formatCoord(point.y)} / ${formatCoord(point.z)}`;
+      }
+
+      function normalizeAngleRadians(angle) {
+        const fullTurn = Math.PI * 2;
+        return ((angle % fullTurn) + fullTurn) % fullTurn;
+      }
+
+      function getCardinalDirectionFromYaw(yaw) {
+        /*
+          Camera forward vector is based on -sin(yaw), -cos(yaw).
+          0 = North, PI/2 = West, PI = South, 3PI/2 = East.
+          Because coordinate systems enjoy being just annoying enough.
+        */
+        const angle = normalizeAngleRadians(yaw);
+        const eighthTurn = Math.PI / 4;
+
+        if (angle < eighthTurn || angle >= Math.PI * 2 - eighthTurn) return "North";
+        if (angle < Math.PI / 2 + eighthTurn) return "West";
+        if (angle < Math.PI + eighthTurn) return "South";
+        if (angle < Math.PI * 1.5 + eighthTurn) return "East";
+        return "North";
+      }
+
+      function formatYaw(yaw) {
+        return `${getCardinalDirectionFromYaw(yaw)} (${THREE.MathUtils.radToDeg(normalizeAngleRadians(yaw)).toFixed(1)}°)`;
+      }
+
+      function loadSpawnPoint() {
+        try {
+          const saved = localStorage.getItem(spawnStorageKey);
+          if (!saved) return { x: 0, y: 0, z: 0, yaw: Math.PI / 4 };
+
+          const parsed = JSON.parse(saved);
+          return {
+            x: Number(parsed.x) || 0,
+            y: Number(parsed.y) || 0,
+            z: Number(parsed.z) || 0,
+            yaw: Number.isFinite(Number(parsed.yaw)) ? Number(parsed.yaw) : Math.PI / 4
+          };
+        } catch (error) {
+          console.warn("Could not load spawn point:", error);
+          return { x: 0, y: 0, z: 0, yaw: Math.PI / 4 };
+        }
+      }
+
+      function saveSpawnPoint(point) {
+        activeSpawnPoint = {
+          x: point.x,
+          y: point.y,
+          z: point.z,
+          yaw: Number.isFinite(point.yaw) ? point.yaw : state.yaw
+        };
+
+        try {
+          localStorage.setItem(spawnStorageKey, JSON.stringify(activeSpawnPoint));
+        } catch (error) {
+          console.warn("Could not save spawn point:", error);
+        }
+
+        spawnStatus.textContent = `Spawn: ${formatXYZ(activeSpawnPoint)} facing ${formatYaw(activeSpawnPoint.yaw)}`;
+        spawnCoordsReadout.textContent = `Spawn XYZ: ${formatXYZ(activeSpawnPoint)} facing ${formatYaw(activeSpawnPoint.yaw)}`;
+      }
+
+      activeSpawnPoint = shouldRestoreFullState && savedFullState.spawnPoint
+        ? {
+            x: Number(savedFullState.spawnPoint.x) || 0,
+            y: Number(savedFullState.spawnPoint.y) || 0,
+            z: Number(savedFullState.spawnPoint.z) || 0,
+            yaw: Number.isFinite(Number(savedFullState.spawnPoint.yaw)) ? Number(savedFullState.spawnPoint.yaw) : Math.PI / 4
+          }
+        : loadSpawnPoint();
+      spawnStatus.textContent = `Spawn: ${formatXYZ(activeSpawnPoint)} facing ${formatYaw(activeSpawnPoint.yaw)}`;
+      spawnCoordsReadout.textContent = `Spawn XYZ: ${formatXYZ(activeSpawnPoint)} facing ${formatYaw(activeSpawnPoint.yaw)}`;
+
+      const renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: false
+      });
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x87ceeb, 1);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.25;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x87ceeb);
+      scene.fog = new THREE.Fog(0x87ceeb, 2200, 5600);
+
+      const camera = new THREE.PerspectiveCamera(
+        48,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        9000
+      );
+
+      const state = {
+        target: new THREE.Vector3(0, 28, 0),
+        yaw: Math.PI / 4,
+        pitch: THREE.MathUtils.degToRad(54),
+        distance: 360,
+        minDistance: 18,
+        maxDistance: 1200,
+        moveSpeed: 120,
+        rotateSpeed: 0.007,
+        keyRotateSpeed: 1.8,
+        zoomSpeed: 0.0018,
+        dragging: false,
+        lastPointerX: 0,
+        lastPointerY: 0
+      };
+
+      const keys = new Set();
+
+      const hemisphereLight = new THREE.HemisphereLight(0xd9f5ff, 0x4f3928, 1.55);
+      scene.add(hemisphereLight);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.92);
+      scene.add(ambientLight);
+
+      const sunLight = new THREE.DirectionalLight(0xffffff, 2.25);
+      sunLight.position.set(120, 220, 90);
+      scene.add(sunLight);
+
+      const fillLight = new THREE.DirectionalLight(0xc7eaff, 0.78);
+      fillLight.position.set(-120, 80, -160);
+      scene.add(fillLight);
+
+      /*
+        Sky-colored LOD fog curtain.
+        This gently covers the far compressed terrain near the edge of render distance,
+        because distant LOD without haze looks like the world forgot to finish loading itself.
+      */
+      const lodFogCurtain = new THREE.Mesh(
+        new THREE.CylinderGeometry(1, 1, 1, 128, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: 0x87ceeb,
+          transparent: true,
+          opacity: 0.58,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        })
+      );
+      lodFogCurtain.name = "sky-colored-lod-fog-curtain";
+      lodFogCurtain.renderOrder = 2;
+      lodFogCurtain.visible = true;
+      scene.add(lodFogCurtain);
+
+      const horizonHazeDisk = new THREE.Mesh(
+        new THREE.RingGeometry(1, 1.38, 128),
+        new THREE.MeshBasicMaterial({
+          color: 0x87ceeb,
+          transparent: true,
+          opacity: 0.36,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        })
+      );
+      horizonHazeDisk.name = "sky-colored-horizon-haze-disk";
+      horizonHazeDisk.rotation.x = -Math.PI / 2;
+      horizonHazeDisk.renderOrder = 3;
+      scene.add(horizonHazeDisk);
+
+      /*
+        Procedural sky cloud layer:
+        White fluffy cloud sprites are generated from seeded cells and drift across the sky.
+        They follow the player's general area so the sky feels alive instead of emotionally vacant.
+      */
+      const cloudLayer = new THREE.Group();
+      scene.add(cloudLayer);
+
+      function createCloudTexture(variant = 0) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 256;
+        canvas.height = 128;
+
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const puffCount = 7 + variant * 2;
+        for (let i = 0; i < puffCount; i += 1) {
+          const x = 34 + ((i * 29 + variant * 17) % 170) + Math.sin(i * 1.37 + variant) * 12;
+          const y = 50 + Math.cos(i * 1.11 + variant * 0.8) * 14;
+          const radius = 24 + ((i * 11 + variant * 7) % 24);
+
+          const gradient = ctx.createRadialGradient(
+            x, y, radius * 0.18,
+            x, y, radius
+          );
+
+          gradient.addColorStop(0, "rgba(255,255,255,0.96)");
+          gradient.addColorStop(0.45, "rgba(255,255,255,0.90)");
+          gradient.addColorStop(0.8, "rgba(255,255,255,0.48)");
+          gradient.addColorStop(1, "rgba(255,255,255,0.0)");
+
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.needsUpdate = true;
+        return texture;
+      }
+
+      const cloudTextures = [
+        createCloudTexture(0),
+        createCloudTexture(1),
+        createCloudTexture(2)
+      ];
+
+      const cloudState = {
+        cellSize: 540,
+        radius: 7,
+        innerRadius: 1100,
+        outerRadius: 3900,
+        domeBaseHeight: 220,
+        domeHeight: 260,
+        windX: 0,
+        windZ: 0,
+        windSpeedX: 7.5,
+        windSpeedZ: 2.6,
+        cells: new Map()
+      };
+
+      function cloudHash(x, z, salt = 0) {
+        let h = seedNumber ^ Math.imul(x + salt * 131, 374761393) ^ Math.imul(z - salt * 17, 668265263);
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        h ^= h >>> 16;
+        return (h >>> 0) / 4294967295;
+      }
+
+      function disposeCloudGroup(group) {
+        if (!group) return;
+        cloudLayer.remove(group);
+      }
+
+      function buildCloudCell(cellX, cellZ) {
+        const key = `${cellX},${cellZ}`;
+        if (cloudState.cells.has(key)) return;
+
+        const spawnChance = cloudHash(cellX, cellZ);
+        if (spawnChance < 0.38) {
+          cloudState.cells.set(key, null);
+          return;
+        }
+
+        const group = new THREE.Group();
+        group.userData = {
+          cellX,
+          cellZ,
+          domeHeightOffset: cloudHash(cellX, cellZ, 5) * 80,
+          bobPhase: cloudHash(cellX, cellZ, 8) * Math.PI * 2,
+          bobAmount: 4 + cloudHash(cellX, cellZ, 9) * 8
+        };
+
+        const puffCount = 3 + Math.floor(cloudHash(cellX, cellZ, 2) * 3);
+        for (let i = 0; i < puffCount; i += 1) {
+          const textureIndex = Math.floor(cloudHash(cellX, cellZ, 20 + i) * cloudTextures.length);
+          const material = new THREE.SpriteMaterial({
+            map: cloudTextures[textureIndex],
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.62 + cloudHash(cellX, cellZ, 40 + i) * 0.22,
+            depthWrite: false,
+            fog: false
+          });
+
+          const sprite = new THREE.Sprite(material);
+          sprite.position.set(
+            (cloudHash(cellX, cellZ, 60 + i) - 0.5) * 160,
+            (cloudHash(cellX, cellZ, 80 + i) - 0.5) * 26,
+            (cloudHash(cellX, cellZ, 100 + i) - 0.5) * 130
+          );
+
+          const scale = 190 + cloudHash(cellX, cellZ, 120 + i) * 240;
+          sprite.scale.set(scale, scale * 0.48, 1);
+          group.add(sprite);
+        }
+
+        cloudLayer.add(group);
+        cloudState.cells.set(key, group);
+      }
+
+      function updateCloudLayer(deltaSeconds) {
+        cloudState.windX += deltaSeconds * cloudState.windSpeedX;
+        cloudState.windZ += deltaSeconds * cloudState.windSpeedZ;
+
+        const centerCellX = Math.floor((state.target.x - cloudState.windX) / cloudState.cellSize);
+        const centerCellZ = Math.floor((state.target.z - cloudState.windZ) / cloudState.cellSize);
+
+        const needed = new Set();
+
+        for (let z = centerCellZ - cloudState.radius; z <= centerCellZ + cloudState.radius; z += 1) {
+          for (let x = centerCellX - cloudState.radius; x <= centerCellX + cloudState.radius; x += 1) {
+            const key = `${x},${z}`;
+            needed.add(key);
+            buildCloudCell(x, z);
+          }
+        }
+
+        for (const [key, group] of cloudState.cells.entries()) {
+          if (!needed.has(key)) {
+            disposeCloudGroup(group);
+            cloudState.cells.delete(key);
+            continue;
+          }
+
+          if (!group) continue;
+
+          const { cellX, cellZ, domeHeightOffset, bobPhase, bobAmount } = group.userData;
+          const worldX = cellX * cloudState.cellSize + cloudState.windX;
+          const worldZ = cellZ * cloudState.cellSize + cloudState.windZ;
+          const offsetX = worldX - state.target.x;
+          const offsetZ = worldZ - state.target.z;
+          const radialDistance = Math.hypot(offsetX, offsetZ);
+
+          /*
+            Clouds form a dome-like horizon ring around the player:
+            - no clouds very close to the ground/player
+            - cloud height follows a dome curve
+            - clouds stay visible toward the horizon as the world moves
+          */
+          if (radialDistance < cloudState.innerRadius || radialDistance > cloudState.outerRadius) {
+            group.visible = false;
+            continue;
+          }
+
+          group.visible = true;
+          group.position.x = worldX;
+          group.position.z = worldZ;
+
+          const normalizedRadius = THREE.MathUtils.clamp(
+            (radialDistance - cloudState.innerRadius) / (cloudState.outerRadius - cloudState.innerRadius),
+            0,
+            1
+          );
+
+          /*
+            Horizon-biased dome:
+            Clouds stay above the world, but the far clouds sit lower in screen space
+            so third-person view can actually see them along the horizon instead of one sad puff overhead.
+          */
+          const domeCurve = Math.sqrt(Math.max(0, 1 - normalizedRadius * normalizedRadius));
+          const horizonBias = smoothstep(0.35, 1.0, normalizedRadius);
+          const y =
+            cloudState.domeBaseHeight +
+            domeCurve * cloudState.domeHeight * 0.55 +
+            horizonBias * 115 +
+            domeHeightOffset +
+            Math.sin(performance.now() * 0.00015 + bobPhase) * bobAmount;
+
+          group.position.y = Math.max(180, y);
+        }
+      }
+
+      const seedNumber = hashStringToUint32(seedText);
+      let initialFrameRendered = false;
+      let allAssetsLoaded = false;
+
+      let loadingFallbackTimer = window.setTimeout(() => {
+        // Safety valve: if an asset or cached state gets weird, do not trap the player
+        // behind the loading screen forever like a browser-themed purgatory exhibit.
+        allAssetsLoaded = true;
+        initialFrameRendered = true;
+        setLocalStorageStatus("ready (loading fallback)");
+        hideLoadingScreen();
+      }, 6500);
+
+      function maybeFinishLoading() {
+        if (!initialFrameRendered || !allAssetsLoaded) return;
+
+        if (loadingFallbackTimer) {
+          window.clearTimeout(loadingFallbackTimer);
+          loadingFallbackTimer = null;
+        }
+
+        requestAnimationFrame(() => {
+          hideLoadingScreen();
+        });
+      }
+
+      const loadingManager = new THREE.LoadingManager();
+      loadingManager.onLoad = () => {
+        allAssetsLoaded = true;
+        maybeFinishLoading();
+      };
+      loadingManager.onError = (url) => {
+        console.warn(`Asset failed to load: ${url}`);
+        // Keep loading resilient even if a decorative asset has a melodramatic little failure.
+        window.setTimeout(() => {
+          allAssetsLoaded = true;
+          maybeFinishLoading();
+        }, 250);
+      };
+
+      const textureLoader = new THREE.TextureLoader(loadingManager);
+
+      const sphereTextureBasePath = "assets/png/";
+      const defaultSphereTexturePath = `${sphereTextureBasePath}default_sphere.png`;
+      const startupSphereTexturePath = pendingSphereTexturePath || defaultSphereTexturePath;
+      let playerMaterial = null;
+
+      function setupRepeatingTexture(texture) {
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(1, 1);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      }
+
+      function createContrastBoostedTexture(sourceTexture, contrast = 1.55, brightnessOffset = 4) {
+        const image = sourceTexture.image;
+        if (!image || !image.width || !image.height) {
+          return sourceTexture;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = Math.max(0, Math.min(255, (data[i] - 128) * contrast + 128 + brightnessOffset));
+          data[i + 1] = Math.max(0, Math.min(255, (data[i + 1] - 128) * contrast + 128 + brightnessOffset));
+          data[i + 2] = Math.max(0, Math.min(255, (data[i + 2] - 128) * contrast + 128 + brightnessOffset));
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        const boosted = new THREE.CanvasTexture(canvas);
+        boosted.wrapS = THREE.RepeatWrapping;
+        boosted.wrapT = THREE.RepeatWrapping;
+        boosted.repeat.copy(sourceTexture.repeat);
+        boosted.colorSpace = THREE.SRGBColorSpace;
+        boosted.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        boosted.needsUpdate = true;
+        return boosted;
+      }
+
+      function setupSphereTexture(texture) {
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(1, 1);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      }
+
+      function fileNameFromPath(path) {
+        return path.split("/").pop() || path;
+      }
+
+      function applySphereTexture(texturePath) {
+        sphereTextureStatus.textContent = `Sphere texture: ${fileNameFromPath(texturePath)}`;
+
+        textureLoader.load(
+          texturePath,
+          (texture) => {
+            setupSphereTexture(texture);
+
+            if (playerMaterial) {
+              playerMaterial.map = texture;
+              playerMaterial.needsUpdate = true;
+            }
+
+            sphereTextureStatus.textContent = `Sphere texture: ${fileNameFromPath(texturePath)}`;
+          },
+          undefined,
+          () => {
+            sphereTextureStatus.textContent = `Sphere texture missing: ${fileNameFromPath(texturePath)}`;
+          }
+        );
+      }
+
+      function addSphereTextureOption(texturePath) {
+        const existing = Array.from(sphereTextureSelect.options).some((option) => option.value === texturePath);
+        if (existing) return;
+
+        const option = document.createElement("option");
+        option.value = texturePath;
+        option.textContent = fileNameFromPath(texturePath);
+        sphereTextureSelect.appendChild(option);
+      }
+
+      async function discoverSphereTextures() {
+        /*
+          Browsers cannot reliably list static folders on GitHub Pages.
+          This tries local directory listing first, which works with many dev servers
+          such as python -m http.server. If the server refuses, default_sphere.png
+          still works. Humanity survives one more filesystem disappointment.
+        */
+        addSphereTextureOption(defaultSphereTexturePath);
+        addSphereTextureOption(startupSphereTexturePath);
+
+        try {
+          const response = await fetch(sphereTextureBasePath, { cache: "no-store" });
+          if (!response.ok) throw new Error("Directory listing unavailable");
+
+          const htmlText = await response.text();
+          const matches = [...htmlText.matchAll(/href=["']([^"']*_sphere\.png)["']/gi)]
+            .map((match) => match[1])
+            .map((href) => href.startsWith("http") || href.startsWith("/") ? href : `${sphereTextureBasePath}${href.split("/").pop()}`);
+
+          const uniqueMatches = [...new Set(matches)].sort((a, b) => fileNameFromPath(a).localeCompare(fileNameFromPath(b)));
+
+          for (const texturePath of uniqueMatches) {
+            addSphereTextureOption(texturePath);
+          }
+
+          sphereTextureStatus.textContent = uniqueMatches.length
+            ? `Sphere textures found: ${uniqueMatches.length}`
+            : `Sphere texture: ${fileNameFromPath(startupSphereTexturePath)}`;
+        } catch (error) {
+          sphereTextureStatus.textContent = `Sphere texture: ${fileNameFromPath(startupSphereTexturePath)}`;
+        }
+      }
+
+      const dirtTexture = textureLoader.load(
+        "assets/png/dirt.png",
+        setupRepeatingTexture,
+        undefined,
+        () => console.warn("Could not load assets/png/dirt.png. Falling back to brown material.")
+      );
+
+      const grassTexture = textureLoader.load(
+        "assets/png/grass.png",
+        setupRepeatingTexture,
+        undefined,
+        () => console.warn("Could not load assets/png/grass.png. Falling back to green material.")
+      );
+
+      const waterTexture = textureLoader.load(
+        "assets/png/water.png",
+        setupRepeatingTexture,
+        undefined,
+        () => console.warn("Could not load assets/png/water.png. Falling back to blue material.")
+      );
+
+      const waterSurfaceTexture = textureLoader.load(
+        "assets/png/water.png",
+        setupRepeatingTexture,
+        undefined,
+        () => console.warn("Could not load assets/png/water.png for the animated water surface layer.")
+      );
+
+      const sandTexture = textureLoader.load(
+        "assets/png/sand.png",
+        (texture) => {
+          setupRepeatingTexture(texture);
+          const boosted = createContrastBoostedTexture(texture, 1.7, 6);
+          sandMaterial.map = boosted;
+          sandMaterial.needsUpdate = true;
+        },
+        undefined,
+        () => console.warn("Could not load assets/png/sand.png. Falling back to sandy material.")
+      );
+
+      const grassMaterial = new THREE.MeshStandardMaterial({
+        color: 0x78c94b,
+        map: grassTexture,
+        roughness: 0.9,
+        metalness: 0.0,
+        side: THREE.DoubleSide
+      });
+
+      const dirtMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: dirtTexture,
+        roughness: 0.94,
+        metalness: 0.0,
+        side: THREE.DoubleSide
+      });
+
+      const waterMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: waterTexture,
+        roughness: 0.14,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.58,
+        side: THREE.DoubleSide
+      });
+
+      const waterSurfaceMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: waterSurfaceTexture,
+        roughness: 0.06,
+        metalness: 0.02,
+        transparent: true,
+        opacity: 0.20,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+
+      const sandMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf5ecd2,
+        map: sandTexture,
+        roughness: 0.9,
+        metalness: 0.0,
+        side: THREE.DoubleSide
+      });
+
+      const gridMaterial = new THREE.LineBasicMaterial({
+        color: 0x101810,
+        transparent: true,
+        opacity: 0.18
+      });
+
+      const pineTreeTexture = textureLoader.load(
+        "assets/png/pine-tree01.png",
+        (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        },
+        undefined,
+        () => console.warn("Could not load assets/png/pine-tree01.png. Trees will be invisible, because even forests need file paths.")
+      );
+
+      const topdownPineTreeTexture = textureLoader.load(
+        "assets/png/topdown-pine-tree01.png",
+        (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        },
+        undefined,
+        () => console.warn("Could not load assets/png/topdown-pine-tree01.png. Flattened trees will be invisible, which is one way to model deforestation.")
+      );
+
+      const pineTreeMaterial = new THREE.MeshBasicMaterial({
+        map: pineTreeTexture,
+        color: 0xffffff,
+        transparent: true,
+        alphaTest: 0.08,
+        depthWrite: false,
+        depthTest: false,
+        fog: true,
+        side: THREE.DoubleSide
+      });
+
+      const flatPineTreeMaterial = new THREE.MeshBasicMaterial({
+        map: topdownPineTreeTexture,
+        color: 0xffffff,
+        transparent: true,
+        alphaTest: 0.08,
+        depthTest: true,
+        depthWrite: false,
+        fog: true,
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
+      });
+
+      // Tree billboards use a real vertical plane instead of THREE.Sprite.
+      // Sprites auto-copy the full camera tilt, which made the pines lean over like dramatic theater kids.
+      const pineTreePlaneGeometry = new THREE.PlaneGeometry(1, 1);
+      pineTreePlaneGeometry.translate(0, 0.5, 0);
+
+      const flatPineTreePlaneGeometry = new THREE.PlaneGeometry(1, 1);
+
+      // The PNG contains a little transparent padding below the visible tree base.
+      // Nudge the crossed planes down so the visible pixels, not the invisible rectangle, kiss the grass.
+      const treeVisibleBottomTrimRatio = 0.065;
+
+      const treeSprites = new Set();
+      const treeColliders = new Map();
+      const treeHitboxGridObjects = new Set();
+
+      function getTreeColliderKey(globalX, globalZ) {
+        return `${globalX},${globalZ}`;
+      }
+
+      function isTreeColliderActive(collider) {
+        return Boolean(collider && collider.sprite && collider.sprite.parent && collider.sprite.visible);
+      }
+
+      /*
+        Tree colliders are kept only as debug/display hitboxes for Show Grid.
+        They intentionally do not affect player movement; the sphere clips through trees.
+      */
+
+      function setTreeFlattened(collider, flattened) {
+        if (!collider || !collider.sprite) return;
+
+        collider.isFlattened = flattened;
+        collider.restoreTimer = 0;
+
+        if (collider.uprightGroup) {
+          collider.uprightGroup.visible = !flattened;
+        }
+
+        if (collider.flatSprite) {
+          collider.flatSprite.visible = flattened;
+        }
+      }
+
+      function doesPlayerTouchTreeCollider(collider) {
+        if (!player.mesh || !isTreeColliderActive(collider)) return false;
+
+        const x = player.mesh.position.x;
+        const z = player.mesh.position.z;
+        const closestX = THREE.MathUtils.clamp(x, collider.xMin, collider.xMax);
+        const closestZ = THREE.MathUtils.clamp(z, collider.zMin, collider.zMax);
+        const dx = x - closestX;
+        const dz = z - closestZ;
+
+        return dx * dx + dz * dz <= player.radius * player.radius;
+      }
+
+      function updateTreeFlattening(deltaSeconds) {
+        for (const collider of treeColliders.values()) {
+          if (!isTreeColliderActive(collider)) continue;
+
+          if (doesPlayerTouchTreeCollider(collider)) {
+            if (!collider.isFlattened) {
+              setTreeFlattened(collider, true);
+            } else {
+              collider.restoreTimer = 0;
+            }
+            continue;
+          }
+
+          if (collider.isFlattened) {
+            collider.restoreTimer += deltaSeconds;
+            if (collider.restoreTimer >= 5) {
+              setTreeFlattened(collider, false);
+            }
+          }
+        }
+      }
+
+      function buildTreeHitboxGrid(collider) {
+        const yMin = collider.baseY + 0.05;
+        const yMax = collider.topY;
+        const xMin = collider.xMin;
+        const xMax = collider.xMax;
+        const zMin = collider.zMin;
+        const zMax = collider.zMax;
+
+        const positions = [
+          // Bottom tile footprint
+          xMin, yMin, zMin,  xMax, yMin, zMin,
+          xMax, yMin, zMin,  xMax, yMin, zMax,
+          xMax, yMin, zMax,  xMin, yMin, zMax,
+          xMin, yMin, zMax,  xMin, yMin, zMin,
+
+          // Top tree-height footprint
+          xMin, yMax, zMin,  xMax, yMax, zMin,
+          xMax, yMax, zMin,  xMax, yMax, zMax,
+          xMax, yMax, zMax,  xMin, yMax, zMax,
+          xMin, yMax, zMax,  xMin, yMax, zMin,
+
+          // Vertical corners
+          xMin, yMin, zMin,  xMin, yMax, zMin,
+          xMax, yMin, zMin,  xMax, yMax, zMin,
+          xMax, yMin, zMax,  xMax, yMax, zMax,
+          xMin, yMin, zMax,  xMin, yMax, zMax
+        ];
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+
+        const material = new THREE.LineBasicMaterial({
+          color: 0x9cff00,
+          transparent: true,
+          opacity: 0.72,
+          depthWrite: false
+        });
+
+        const hitboxGrid = new THREE.LineSegments(geometry, material);
+        hitboxGrid.visible = showGridLines && !hideTrees;
+        hitboxGrid.renderOrder = 6;
+        hitboxGrid.userData.isTreeHitboxGrid = true;
+        hitboxGrid.userData.treeColliderKey = collider.key;
+
+        treeHitboxGridObjects.add(hitboxGrid);
+        return hitboxGrid;
+      }
+
+      /*
+        Third Person mode:
+        A rollable sphere character with camera follow.
+        It is deliberately simple: movement is tied to the camera yaw, and the sphere visually rolls.
+      */
+      const player = {
+        mesh: null,
+        velocity: new THREE.Vector3(),
+        verticalVelocity: 0,
+        // Doubled from 2.2 so Third Person ball mode uses a visibly 2x larger player sphere.
+        radius: 4.4,
+        acceleration: 185,
+        maxSpeed: 128,
+        sprintMultiplier: 1.85,
+        sprintMaxSpeedMultiplier: 1.65,
+        sprintJumpMultiplier: 1.72,
+        airAcceleration: 72,
+        swimAcceleration: 118,
+        swimMaxSpeed: 86,
+        damping: 0.93,
+        airDamping: 0.985,
+        waterDamping: 0.955,
+        gravity: 185,
+        waterGravity: 26,
+        buoyancySpring: 24,
+        swimDiveForce: 140,
+        sinkForce: 128,
+        waterDepthOffset: 0,
+        maxWaterDepthOffset: 180,
+        waterDepthAdjustSpeed: 42,
+        jumpVelocity: 72,
+        grounded: false,
+        inWater: false,
+        underwater: false,
+        waterSurfaceY: -Infinity,
+        waterBlend: 0,
+        cameraWaterBlend: 0,
+        bounceTimer: 0,
+        bounceDuration: 0.22,
+        bounceAmount: 0.16,
+        launchStretchTimer: 0,
+        launchStretchDuration: 0.34,
+        launchStretchAmount: 0.28,
+        yawOffset: 0
+      };
+
+      sphereTextureSelect.addEventListener("change", () => {
+        applySphereTexture(sphereTextureSelect.value);
+      });
+
+      discoverSphereTextures();
+
+      const playerGeometry = new THREE.SphereGeometry(player.radius, 32, 20);
+      playerMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.42,
+        metalness: 0.05
+      });
+
+      sphereTextureSelect.value = startupSphereTexturePath;
+      applySphereTexture(startupSphereTexturePath);
+      player.mesh = new THREE.Mesh(playerGeometry, playerMaterial);
+      player.mesh.position.set(activeSpawnPoint.x, activeSpawnPoint.y || 80, activeSpawnPoint.z);
+      player.mesh.visible = isThirdPersonMode;
+      scene.add(player.mesh);
+
+      function readVector3(vector) {
+        return { x: vector.x, y: vector.y, z: vector.z };
+      }
+
+      function applyVector3(vector, value) {
+        if (!value) return;
+        const x = Number(value.x);
+        const y = Number(value.y);
+        const z = Number(value.z);
+        if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+          vector.set(x, y, z);
+        }
+      }
+
+      function saveFullGameState() {
+        saveWorldCache(true);
+
+        const fullState = {
+          version: 1,
+          savedAt: Date.now(),
+          seedText,
+          cameraMode: currentCameraMode,
+          sphereTexturePath: sphereTextureSelect.value,
+          spawnPoint: activeSpawnPoint,
+          ui: {
+            showGridLines,
+            hideMinimap,
+            hideTrees,
+            minimapZoomSlider: Number(minimapZoomSlider.value)
+          },
+          camera: {
+            target: readVector3(state.target),
+            yaw: state.yaw,
+            pitch: state.pitch,
+            distance: state.distance
+          },
+          player: player.mesh ? {
+            position: readVector3(player.mesh.position),
+            velocity: readVector3(player.velocity),
+            verticalVelocity: player.verticalVelocity,
+            grounded: player.grounded,
+            inWater: player.inWater,
+            underwater: player.underwater,
+            waterDepthOffset: player.waterDepthOffset,
+            waterBlend: player.waterBlend,
+            cameraWaterBlend: player.cameraWaterBlend,
+            yawOffset: player.yawOffset
+          } : null
+        };
+
+        try {
+          localStorage.setItem(fullStateStorageKey, JSON.stringify(fullState));
+          setLocalStorageStatus(`saved ${new Date(fullState.savedAt).toLocaleTimeString()}`);
+        } catch (error) {
+          console.warn("Could not save full game state:", error);
+          setLocalStorageStatus("save failed");
+        }
+      }
+
+      function clearAllLocalStorage(options = {}) {
+        const { reload = false } = options;
+
+        try {
+          localStorage.clear();
+          setLocalStorageStatus("cleared, refresh to start clean");
+
+          if (loadingLocalStorageNote) {
+            loadingLocalStorageNote.textContent = reload
+              ? "LocalStorage cleared. Reloading clean world state..."
+              : "LocalStorage cleared. Refresh to start clean.";
+          }
+
+          if (reload) {
+            window.setTimeout(() => {
+              window.location.reload();
+            }, 180);
+          }
+        } catch (error) {
+          console.warn("Could not clear localStorage:", error);
+          setLocalStorageStatus("clear failed");
+
+          if (loadingLocalStorageNote) {
+            loadingLocalStorageNote.textContent = "Could not clear LocalStorage. Browser goblin refused the eviction notice.";
+          }
+        }
+      }
+
+      function restoreFullGameState() {
+        if (!shouldRestoreFullState) {
+          setLocalStorageStatus("ready");
+          return;
+        }
+
+        if (savedFullState.sphereTexturePath) {
+          addSphereTextureOption(savedFullState.sphereTexturePath);
+          sphereTextureSelect.value = savedFullState.sphereTexturePath;
+          applySphereTexture(savedFullState.sphereTexturePath);
+        }
+
+        if (savedFullState.camera) {
+          applyVector3(state.target, savedFullState.camera.target);
+          if (Number.isFinite(Number(savedFullState.camera.yaw))) state.yaw = Number(savedFullState.camera.yaw);
+          if (Number.isFinite(Number(savedFullState.camera.pitch))) state.pitch = Number(savedFullState.camera.pitch);
+          if (Number.isFinite(Number(savedFullState.camera.distance))) state.distance = Number(savedFullState.camera.distance);
+        }
+
+        if (savedFullState.player && player.mesh) {
+          applyVector3(player.mesh.position, savedFullState.player.position);
+          applyVector3(player.velocity, savedFullState.player.velocity);
+          player.verticalVelocity = Number(savedFullState.player.verticalVelocity) || 0;
+          player.grounded = Boolean(savedFullState.player.grounded);
+          player.inWater = Boolean(savedFullState.player.inWater);
+          player.underwater = Boolean(savedFullState.player.underwater);
+          player.waterDepthOffset = Number(savedFullState.player.waterDepthOffset) || 0;
+          player.waterBlend = Number(savedFullState.player.waterBlend) || 0;
+          player.cameraWaterBlend = Number(savedFullState.player.cameraWaterBlend) || 0;
+          player.yawOffset = Number(savedFullState.player.yawOffset) || 0;
+          player.mesh.visible = isThirdPersonMode;
+        }
+
+        updateMinimapZoomFromSlider();
+        updateChunks();
+        updateCameraPosition();
+        setLocalStorageStatus(`restored ${new Date(savedFullState.savedAt).toLocaleTimeString()}`);
+      }
+
+      saveStateButton.addEventListener("click", saveFullGameState);
+      clearLocalStorageLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        clearAllLocalStorage();
+      });
+
+      loadingClearLocalStorageButton.addEventListener("click", () => {
+        clearAllLocalStorage({ reload: true });
+      });
+
+      function syncModeReadout() {
+        modeReadout.textContent = `Mode: ${isThirdPersonMode ? "Third Person" : "Dev Mode"}`;
+      }
+
+      function switchCameraMode(nextMode) {
+        currentCameraMode = nextMode === "third-person" ? "third-person" : "dev";
+        isThirdPersonMode = currentCameraMode === "third-person";
+        liveCameraModeSelect.value = currentCameraMode;
+        syncModeReadout();
+
+        if (player.mesh) {
+          player.mesh.visible = isThirdPersonMode;
+        }
+
+        if (isThirdPersonMode && player.mesh) {
+          const surfaceY = getVisibleSurfaceHeightAtWorld(state.target.x, state.target.z) + player.radius;
+          player.mesh.position.set(state.target.x, Math.max(surfaceY, state.target.y), state.target.z);
+          player.velocity.set(0, 0, 0);
+          player.verticalVelocity = 0;
+          player.grounded = false;
+          player.inWater = false;
+          player.underwater = false;
+          player.waterSurfaceY = -Infinity;
+          player.waterBlend = 0;
+          player.cameraWaterBlend = 0;
+          player.waterDepthOffset = 0;
+          player.bounceTimer = 0;
+          player.launchStretchTimer = 0;
+          state.distance = 62;
+          state.pitch = THREE.MathUtils.degToRad(38);
+        } else {
+          state.target.set(
+            player.mesh ? player.mesh.position.x : state.target.x,
+            player.mesh ? player.mesh.position.y + 26 : state.target.y,
+            player.mesh ? player.mesh.position.z : state.target.z
+          );
+          state.distance = 360;
+          state.pitch = THREE.MathUtils.degToRad(54);
+          underwaterOverlay.style.opacity = "0";
+        }
+
+        updateChunks();
+        updateCameraPosition();
+        updateLodFogCurtain();
+      }
+
+      liveCameraModeSelect.addEventListener("change", () => {
+        switchCameraMode(liveCameraModeSelect.value);
+      });
+
+      window.__setSphereSpawnPoint = () => {
+        if (!isThirdPersonMode || !player.mesh) {
+          spawnStatus.textContent = "Spawn: only available in Third Person";
+          return;
+        }
+
+        saveSpawnPoint({
+          x: player.mesh.position.x,
+          y: player.mesh.position.y,
+          z: player.mesh.position.z,
+          yaw: state.yaw
+        });
+      };
+
+      /*
+        Chunked terrain settings.
+        This is not truly infinite, because computers are rude and finite,
+        but chunks generate deterministically forever as you move.
+      */
+      const tileSize = 4.0;
+      const heightStep = 3.0;
+      const chunkTiles = 40;
+      const chunkWorldSize = chunkTiles * tileSize;
+      const chunkRadius = 2; // 5x5 high-detail chunks around camera. Startup must not eat the browser alive.
+      const keepDetailedRadius = chunkRadius + 1;
+      const distantLodRadius = 5;
+      const lodStep = 8; // one distant tile represents 8x8 real terrain tiles.
+      const maxDistantLodChunks = 48;
+      const maxLodBuildsPerFrame = 1;
+      const lodBuildQueue = [];
+      const queuedLodChunkKeys = new Set();
+      const maxHeightLevels = 48;
+      const seaLevel = 8;
+      const loadedChunks = new Map();
+      const distantLodChunks = new Map();
+      const gridLineObjects = new Set();
+      let underwaterOverlayTime = 0;
+      let minimapFrameCounter = 0;
+      let minimapZoom = 1;
+      const minimapBaseTilesAcross = 66;
+      const minimapContext = minimapCanvas.getContext("2d");
+      const minimapTreeIcon = new Image();
+      let minimapTreeIconReady = false;
+      minimapTreeIcon.onload = () => {
+        minimapTreeIconReady = true;
+        if (window.__drawMinimapNow) window.__drawMinimapNow();
+      };
+      minimapTreeIcon.onerror = () => {
+        console.warn("Could not load assets/png/topdown-pine-tree01.png for minimap tree icons. The forest remains emotionally unavailable.");
+      };
+      minimapTreeIcon.src = "assets/png/topdown-pine-tree01.png";
+      seaLevelReadout.textContent = `Sea level: ${seaLevel}`;
+
+      function sliderValueToMinimapZoom(value) {
+        const numericValue = Number(value);
+
+        if (numericValue > 0) return numericValue;
+        if (numericValue < 0) return 1 / Math.abs(numericValue);
+        return 1;
+      }
+
+      function normalizeMinimapSliderValue(value) {
+        const numericValue = Number(value);
+        return numericValue === 0 ? 1 : numericValue;
+      }
+
+      function updateMinimapZoomFromSlider() {
+        const sliderValue = normalizeMinimapSliderValue(minimapZoomSlider.value);
+
+        if (Number(minimapZoomSlider.value) === 0) {
+          minimapZoomSlider.value = "1";
+        }
+
+        minimapZoom = sliderValueToMinimapZoom(sliderValue);
+        minimapZoomStatus.textContent = `Minimap zoom: ${sliderValue}x`;
+
+        if (window.__drawMinimapNow) {
+          window.__drawMinimapNow();
+        }
+      }
+
+      window.__updateMinimapZoomFromSlider = updateMinimapZoomFromSlider;
+
+      minimapZoomSlider.addEventListener("input", updateMinimapZoomFromSlider);
+
+      if (shouldRestoreFullState && savedFullState.ui) {
+        setShowGridLines(Boolean(savedFullState.ui.showGridLines));
+        hideMinimap = Boolean(savedFullState.ui.hideMinimap);
+        hideMinimapCheckbox.checked = hideMinimap;
+        minimap.classList.toggle("hidden", hideMinimap);
+        hideTrees = Boolean(savedFullState.ui.hideTrees);
+        hideTreesCheckbox.checked = hideTrees;
+        if (Number.isFinite(Number(savedFullState.ui.minimapZoomSlider))) {
+          minimapZoomSlider.value = String(savedFullState.ui.minimapZoomSlider);
+        }
+      }
+
+      function hash2D(x, z) {
+        let h = seedNumber ^ Math.imul(x, 374761393) ^ Math.imul(z, 668265263);
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        h ^= h >>> 16;
+        return (h >>> 0) / 4294967295;
+      }
+
+      function lerp(a, b, t) {
+        return a + (b - a) * t;
+      }
+
+      function smoothNoise(x, z, frequency) {
+        const fx = x * frequency;
+        const fz = z * frequency;
+
+        const x0 = Math.floor(fx);
+        const z0 = Math.floor(fz);
+        const x1 = x0 + 1;
+        const z1 = z0 + 1;
+
+        const tx = fx - x0;
+        const tz = fz - z0;
+        const sx = tx * tx * (3 - 2 * tx);
+        const sz = tz * tz * (3 - 2 * tz);
+
+        const a = hash2D(x0, z0);
+        const b = hash2D(x1, z0);
+        const c = hash2D(x0, z1);
+        const d = hash2D(x1, z1);
+
+        const top = lerp(a, b, sx);
+        const bottom = lerp(c, d, sx);
+
+        return lerp(top, bottom, sz) * 2 - 1;
+      }
+
+      function fbm(x, z) {
+        let value = 0;
+        let amplitude = 1;
+        let frequency = 0.0068;
+        let totalAmplitude = 0;
+
+        for (let octave = 0; octave < 7; octave += 1) {
+          value += smoothNoise(x, z, frequency) * amplitude;
+          totalAmplitude += amplitude;
+          amplitude *= 0.58;
+          frequency *= 2.04;
+        }
+
+        return value / totalAmplitude;
+      }
+
+      function ridgedNoise(x, z) {
+        const n = fbm(x * 0.78 + 1400.5, z * 0.78 - 982.25);
+        return 1 - Math.abs(n);
+      }
+
+      function plateauNoise(x, z) {
+        const n = smoothNoise(x + 991.2, z - 307.4, 0.0065);
+        return smoothstep(0.16, 0.62, n);
+      }
+
+      const terrainSampleCache = new Map();
+
+      function getTerrainSampleAtTile(globalX, globalZ) {
+        const key = `${globalX},${globalZ}`;
+        if (terrainSampleCache.has(key)) {
+          return terrainSampleCache.get(key);
+        }
+
+        /*
+          More natural regional shaping:
+          - continent/base relief
+          - mountain region masks with random stronger peak chains
+          - valley/basin masks with random broader sink areas
+          - terraces still quantized so the game keeps its chunky buildable read
+        */
+        const broad = fbm(globalX * 0.42, globalZ * 0.42);
+        const medium = fbm(globalX * 0.95 + 550, globalZ * 0.95 - 240);
+        const detail = fbm(globalX * 1.9 - 1200, globalZ * 1.9 + 700);
+        const ridge = ridgedNoise(globalX, globalZ);
+        const plateau = plateauNoise(globalX, globalZ);
+
+        const continent = smoothNoise(globalX + 10000, globalZ - 4000, 0.00135);
+        const mountainRegionNoise = smoothNoise(globalX - 7800, globalZ + 5300, 0.0019);
+        const valleyRegionNoise = smoothNoise(globalX + 6200, globalZ - 3600, 0.0018);
+        const mountainChance = smoothstep(0.08, 0.78, mountainRegionNoise);
+        const valleyChance = smoothstep(0.14, 0.88, valleyRegionNoise);
+        const megaRidge = 1 - Math.abs(smoothNoise(globalX - 6400, globalZ + 8700, 0.0034));
+        const basinNoise = 1 - Math.abs(smoothNoise(globalX * 0.9 + 1800, globalZ * 0.9 - 2400, 0.0048));
+
+        let height = 10.0;
+        height += broad * 14.5;
+        height += medium * 8.0;
+        height += detail * 2.9;
+        height += smoothstep(-0.52, 0.78, continent) * 7.0;
+
+        // Mountains happen regionally, not everywhere all at once.
+        height += ridge * (7.5 + mountainChance * 20.0);
+        height += megaRidge * (3.5 + mountainChance * 17.0);
+
+        // Valleys carve into the landscape and sometimes widen into basins.
+        height -= valleyChance * (6.5 + basinNoise * 12.5);
+        height -= smoothstep(0.08, 0.78, smoothNoise(globalX - 2200, globalZ + 940, 0.0031)) * 7.5;
+
+        // Keep some broad flatter shelves for buildable-feeling land.
+        height += plateau * 2.25;
+
+        let level = Math.round(height);
+
+        if (level >= 12 && plateau > 0.6) {
+          level = Math.round(level / 2) * 2;
+        }
+
+        level = clamp(level, 0, maxHeightLevels);
+
+        // Sea-level water appears in oceans, inland lakes, and occasional river corridors.
+        // All water still renders at one fixed elevation: seaLevel.
+        let waterLevel = -1;
+
+        const lakeChance = basinNoise * valleyChance;
+        const lowlandMask = smoothstep(0.02, 0.72, 1 - Math.max(0, continent));
+        const enclosedBasinChance = lakeChance * lowlandMask;
+
+        /*
+          Inland lakes:
+          Use multiple regional noise layers so water can appear in scattered pockets
+          throughout the world instead of only behaving like one huge coastline.
+        */
+        const lakeRegionA = smoothNoise(globalX + 4200, globalZ - 8800, 0.0022);
+        const lakeRegionB = smoothNoise(globalX - 7300, globalZ + 1900, 0.0046);
+        const lakeRegionC = fbm(globalX * 0.72 + 1600, globalZ * 0.72 - 5100);
+
+        const inlandLakeMask =
+          smoothstep(0.16, 0.78, lakeRegionA) *
+          smoothstep(-0.28, 0.54, lakeRegionB) *
+          smoothstep(-0.44, 0.58, lakeRegionC);
+
+        /*
+          River corridors:
+          A river is the thin band around a zero-crossing of a noisy line field.
+          The extra masks keep them occasional instead of turning the entire planet into blue spaghetti.
+        */
+        const riverFieldA = smoothNoise(globalX + 9100, globalZ - 3500, 0.0032);
+        const riverFieldB = smoothNoise(globalX * 0.7 - 2500, globalZ * 0.7 + 7400, 0.0054);
+        const riverLine = 1 - smoothstep(0.028, 0.155, Math.abs(riverFieldA + riverFieldB * 0.42));
+        const riverRegion = smoothstep(0.02, 0.68, smoothNoise(globalX - 13000, globalZ + 2900, 0.0017));
+        const riverCarve = riverLine * riverRegion * smoothstep(-0.4, 0.58, valleyRegionNoise);
+
+        const oceanOrOldBasin = enclosedBasinChance > 0.46;
+        const inlandLake = inlandLakeMask > 0.38 && level <= seaLevel + 2;
+        const river = riverCarve > 0.43 && level <= seaLevel + 2;
+
+        if ((oceanOrOldBasin || inlandLake || river) && level < seaLevel) {
+          waterLevel = seaLevel;
+        }
+
+        /*
+          Encourage rivers/lakes to cut through just-above-sea-level land by nudging the
+          rendered land height down where the water mask is strong. This keeps rivers from
+          becoming broken blue Morse code. Yes, the terrain is negotiating with itself now.
+        */
+        if ((inlandLake || river) && level >= seaLevel && level <= seaLevel + 2) {
+          level = seaLevel - 1;
+          waterLevel = seaLevel;
+        }
+
+        const sample = {
+          landLevel: level,
+          waterLevel,
+          mountainChance,
+          valleyChance
+        };
+
+        terrainSampleCache.set(key, sample);
+        return sample;
+      }
+
+      function getHeightLevelAtTile(globalX, globalZ) {
+        return getTerrainSampleAtTile(globalX, globalZ).landLevel;
+      }
+
+      function getWaterLevelAtTile(globalX, globalZ) {
+        return getTerrainSampleAtTile(globalX, globalZ).waterLevel;
+      }
+
+      function serializeDistantLodChunk(group) {
+        if (!group || !group.userData) return null;
+
+        return {
+          x: group.userData.chunkX,
+          z: group.userData.chunkZ
+        };
+      }
+
+      function loadWorldCache() {
+        // Startup cache hydration disabled: re-queuing old distant LOD chunks before the first frame
+        // was causing heavy lag/stalls on localhost. The game will regenerate visible terrain normally.
+        worldCacheReadout.textContent = "World cache: startup load disabled";
+      }
+
+      function saveWorldCache(force = false) {
+        const now = performance.now();
+        if (!force && (!worldCacheDirty || now - worldCacheLastSaveTime < worldCacheSaveIntervalMs)) {
+          return;
+        }
+
+        worldCacheLastSaveTime = now;
+        worldCacheDirty = false;
+
+        try {
+          const distant = [...distantLodChunks.values()]
+            .map(serializeDistantLodChunk)
+            .filter(Boolean);
+
+          const cache = {
+            version: worldCacheVersion,
+            seed: seedText,
+            savedAt: Date.now(),
+            distantLodChunks: distant
+          };
+
+          localStorage.setItem(worldCacheStorageKey, JSON.stringify(cache));
+          worldCacheReadout.textContent = `World cache: saved ${distant.length}`;
+        } catch (error) {
+          console.warn("Could not save world cache:", error);
+          worldCacheReadout.textContent = "World cache: full/failed";
+        }
+      }
+
+      function markWorldCacheDirty() {
+        worldCacheDirty = true;
+      }
+
+      function tileToWorldX(globalX) {
+        return globalX * tileSize;
+      }
+
+      function tileToWorldZ(globalZ) {
+        return globalZ * tileSize;
+      }
+
+      function addQuad(positions, uvs, indices, normalUp, corners) {
+        const start = positions.length / 3;
+
+        for (const corner of corners) {
+          positions.push(corner.x, corner.y, corner.z);
+          uvs.push(corner.u, corner.v);
+        }
+
+        if (normalUp) {
+          indices.push(start, start + 2, start + 1, start, start + 3, start + 2);
+        } else {
+          indices.push(start, start + 1, start + 2, start, start + 2, start + 3);
+        }
+      }
+
+      function getChunkKey(chunkX, chunkZ) {
+        return `${chunkX},${chunkZ}`;
+      }
+
+      function getChunkDistance(chunkX, chunkZ, centerChunkX, centerChunkZ) {
+        return Math.max(Math.abs(chunkX - centerChunkX), Math.abs(chunkZ - centerChunkZ));
+      }
+
+      function buildDistantLodChunk(chunkX, chunkZ) {
+        const chunkKey = getChunkKey(chunkX, chunkZ);
+        queuedLodChunkKeys.delete(chunkKey);
+        if (distantLodChunks.has(chunkKey) || loadedChunks.has(chunkKey)) return;
+
+        /*
+          Distant LOD chunks are compressed terrain memories:
+          one coarse tile represents lodStep x lodStep real tiles. This keeps explored
+          land visible without asking the GPU to render every tiny tile forever like a lunatic.
+        */
+        const group = new THREE.Group();
+        group.name = `terrain-lod-chunk-${chunkKey}`;
+        group.userData.chunkX = chunkX;
+        group.userData.chunkZ = chunkZ;
+        group.userData.isDistantLod = true;
+
+        const grassPositions = [];
+        const grassUvs = [];
+        const grassIndices = [];
+
+        const sandPositions = [];
+        const sandUvs = [];
+        const sandIndices = [];
+
+        const waterPositions = [];
+        const waterUvs = [];
+        const waterIndices = [];
+
+        const startTileX = chunkX * chunkTiles;
+        const startTileZ = chunkZ * chunkTiles;
+        const seaSurfaceY = seaLevel * heightStep + 0.12;
+
+        function isWaterSample(candidate) {
+          return candidate.waterLevel === seaLevel && candidate.landLevel < seaLevel;
+        }
+
+        function pushTop(targetPositions, targetUvs, targetIndices, x0, x1, z0, z1, y, uvScale = 1) {
+          addQuad(targetPositions, targetUvs, targetIndices, true, [
+            { x: x0, y, z: z0, u: 0, v: 0 },
+            { x: x1, y, z: z0, u: uvScale, v: 0 },
+            { x: x1, y, z: z1, u: uvScale, v: uvScale },
+            { x: x0, y, z: z1, u: 0, v: uvScale }
+          ]);
+        }
+
+        for (let localZ = 0; localZ < chunkTiles; localZ += lodStep) {
+          for (let localX = 0; localX < chunkTiles; localX += lodStep) {
+            const gx = startTileX + localX;
+            const gz = startTileZ + localZ;
+
+            let heightSum = 0;
+            let heightCount = 0;
+            let waterCount = 0;
+            let beachCount = 0;
+
+            for (let dz = 0; dz < lodStep; dz += 1) {
+              for (let dx = 0; dx < lodStep; dx += 1) {
+                const sample = getTerrainSampleAtTile(gx + dx, gz + dz);
+                const north = getTerrainSampleAtTile(gx + dx, gz + dz - 1);
+                const south = getTerrainSampleAtTile(gx + dx, gz + dz + 1);
+                const west = getTerrainSampleAtTile(gx + dx - 1, gz + dz);
+                const east = getTerrainSampleAtTile(gx + dx + 1, gz + dz);
+
+                const water = isWaterSample(sample);
+                const adjacentWater = isWaterSample(north) || isWaterSample(south) || isWaterSample(west) || isWaterSample(east);
+                const nearSea =
+                  sample.landLevel <= seaLevel + 2 ||
+                  north.landLevel <= seaLevel + 1 ||
+                  south.landLevel <= seaLevel + 1 ||
+                  west.landLevel <= seaLevel + 1 ||
+                  east.landLevel <= seaLevel + 1;
+
+                heightSum += sample.landLevel;
+                heightCount += 1;
+                if (water) waterCount += 1;
+                if (!water && adjacentWater && nearSea) beachCount += 1;
+              }
+            }
+
+            const avgLevel = Math.round(heightSum / Math.max(1, heightCount));
+            const y = avgLevel * heightStep;
+            const x0 = tileToWorldX(gx);
+            const x1 = tileToWorldX(gx + lodStep);
+            const z0 = tileToWorldZ(gz);
+            const z1 = tileToWorldZ(gz + lodStep);
+
+            if (waterCount >= heightCount * 0.34) {
+              pushTop(waterPositions, waterUvs, waterIndices, x0, x1, z0, z1, seaSurfaceY, lodStep);
+            } else if (beachCount >= heightCount * 0.18 || avgLevel <= seaLevel + 1) {
+              pushTop(sandPositions, sandUvs, sandIndices, x0, x1, z0, z1, y, lodStep);
+            } else {
+              pushTop(grassPositions, grassUvs, grassIndices, x0, x1, z0, z1, y, lodStep);
+            }
+          }
+        }
+
+        function addMeshIfNeeded(positions, uvs, indices, material) {
+          if (positions.length === 0) return;
+
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+          geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+          geometry.setIndex(indices);
+          geometry.computeVertexNormals();
+
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.userData.isDistantLodMesh = true;
+          group.add(mesh);
+        }
+
+        addMeshIfNeeded(grassPositions, grassUvs, grassIndices, grassMaterial);
+        addMeshIfNeeded(sandPositions, sandUvs, sandIndices, sandMaterial);
+        addMeshIfNeeded(waterPositions, waterUvs, waterIndices, waterMaterial);
+
+        scene.add(group);
+        distantLodChunks.set(chunkKey, group);
+        markWorldCacheDirty();
+      }
+
+      function disposeDistantLodChunk(chunkKey) {
+        const group = distantLodChunks.get(chunkKey);
+        if (!group) return;
+
+        group.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+        });
+
+        scene.remove(group);
+        distantLodChunks.delete(chunkKey);
+        markWorldCacheDirty();
+      }
+
+      function promoteDistantLodToDetailed(chunkKey) {
+        if (!distantLodChunks.has(chunkKey)) return;
+        disposeDistantLodChunk(chunkKey);
+      }
+
+      function demoteDetailedChunkToLod(chunkKey, group) {
+        if (!group) return;
+
+        const chunkX = group.userData.chunkX;
+        const chunkZ = group.userData.chunkZ;
+
+        disposeChunk(group);
+        loadedChunks.delete(chunkKey);
+        queueDistantLodChunk(chunkX, chunkZ);
+      }
+
+      function enforceDistantLodBudget(centerChunkX, centerChunkZ) {
+        if (distantLodChunks.size <= maxDistantLodChunks) return;
+
+        const entries = [...distantLodChunks.entries()]
+          .map(([key, group]) => ({
+            key,
+            distance: getChunkDistance(group.userData.chunkX, group.userData.chunkZ, centerChunkX, centerChunkZ)
+          }))
+          .sort((a, b) => b.distance - a.distance);
+
+        while (distantLodChunks.size > maxDistantLodChunks && entries.length > 0) {
+          const entry = entries.shift();
+          disposeDistantLodChunk(entry.key);
+        }
+      }
+
+      function isTreeBaseTileEligible(globalX, globalZ, sample = getTerrainSampleAtTile(globalX, globalZ)) {
+        if (!sample || sample.waterLevel === seaLevel || sample.landLevel <= seaLevel + 1) {
+          return false;
+        }
+
+        const north = getTerrainSampleAtTile(globalX, globalZ - 1);
+        const south = getTerrainSampleAtTile(globalX, globalZ + 1);
+        const west = getTerrainSampleAtTile(globalX - 1, globalZ);
+        const east = getTerrainSampleAtTile(globalX + 1, globalZ);
+
+        const nearWater =
+          (north.waterLevel === seaLevel && north.landLevel < seaLevel) ||
+          (south.waterLevel === seaLevel && south.landLevel < seaLevel) ||
+          (west.waterLevel === seaLevel && west.landLevel < seaLevel) ||
+          (east.waterLevel === seaLevel && east.landLevel < seaLevel);
+
+        if (nearWater) return false;
+
+        const heightSlope = Math.max(
+          Math.abs(sample.landLevel - north.landLevel),
+          Math.abs(sample.landLevel - south.landLevel),
+          Math.abs(sample.landLevel - west.landLevel),
+          Math.abs(sample.landLevel - east.landLevel)
+        );
+
+        // Trees are billboards/flat crossed cards, not real geometry. If they spawn on the edge
+        // of a height change, their straight bottom edge can hang over a lower neighbor and look
+        // like it is floating. Only allow tree anchors on fully level grass patches.
+        return heightSlope === 0;
+      }
+
+      function isTreeClearanceTileEligible(globalX, globalZ, anchorLandLevel) {
+        const sample = getTerrainSampleAtTile(globalX, globalZ);
+        if (!sample || sample.waterLevel === seaLevel || sample.landLevel <= seaLevel + 1) {
+          return false;
+        }
+
+        return sample.landLevel === anchorLandLevel;
+      }
+
+      function hasTreeVisualClearance(globalX, globalZ, footprintSize, visualWidth, anchorLandLevel) {
+        const centerTileX = globalX + footprintSize * 0.5;
+        const centerTileZ = globalZ + footprintSize * 0.5;
+        const halfVisualWidthTiles = (visualWidth * 0.54 * 0.5) / tileSize;
+
+        const minTileX = Math.floor(centerTileX - halfVisualWidthTiles + 0.0001);
+        const maxTileX = Math.ceil(centerTileX + halfVisualWidthTiles - 0.0001) - 1;
+        const minTileZ = Math.floor(centerTileZ - halfVisualWidthTiles + 0.0001);
+        const maxTileZ = Math.ceil(centerTileZ + halfVisualWidthTiles - 0.0001) - 1;
+
+        for (let tileZ = minTileZ; tileZ <= maxTileZ; tileZ += 1) {
+          for (let tileX = minTileX; tileX <= maxTileX; tileX += 1) {
+            if (!isTreeClearanceTileEligible(tileX, tileZ, anchorLandLevel)) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+      }
+
+      function getTreeNeighborhoodSupport(globalX, globalZ, anchorLandLevel, radius = 2) {
+        let total = 0;
+        let eligible = 0;
+
+        for (let dz = -radius; dz <= radius; dz += 1) {
+          for (let dx = -radius; dx <= radius; dx += 1) {
+            total += 1;
+            if (isTreeClearanceTileEligible(globalX + dx, globalZ + dz, anchorLandLevel)) {
+              eligible += 1;
+            }
+          }
+        }
+
+        return total > 0 ? eligible / total : 0;
+      }
+
+      function getTreeDensityAtTile(globalX, globalZ, sample = getTerrainSampleAtTile(globalX, globalZ)) {
+        /*
+          Natural tree placement wants to feel like patches, groves, and occasional openings,
+          not a uniform sprinkle of identical cardboard crimes.
+        */
+        if (!sample) return 0;
+
+        const macroForest =
+          smoothNoise(globalX + 12000, globalZ - 7000, 0.012) * 0.48 +
+          smoothNoise(globalX - 2400, globalZ + 4100, 0.026) * 0.32 +
+          smoothNoise(globalX + 9100, globalZ + 1800, 0.061) * 0.20;
+
+        const clearingNoise =
+          smoothNoise(globalX - 5300, globalZ + 14600, 0.017) * 0.72 +
+          smoothNoise(globalX + 8200, globalZ - 3500, 0.043) * 0.28;
+
+        const patchMask = smoothstep(0.40, 0.72, macroForest);
+        const clearingMask = 1 - smoothstep(0.57, 0.84, clearingNoise);
+        const neighborhoodSupport = getTreeNeighborhoodSupport(globalX, globalZ, sample.landLevel, 2);
+        const supportMask = smoothstep(0.24, 0.88, neighborhoodSupport);
+
+        const heightAboveSea = sample.landLevel - seaLevel;
+        const lowlandBias = smoothstep(1.5, 4.5, heightAboveSea) * (1 - smoothstep(11, 18, heightAboveSea));
+
+        const density = clamp(
+          patchMask * 0.38 +
+          clearingMask * 0.16 +
+          supportMask * 0.18 +
+          lowlandBias * 0.08,
+          0,
+          1
+        );
+
+        const organicJitter = hash2D(globalX * 59 - 21, globalZ * 59 + 17) * 0.12 - 0.06;
+        return clamp(density + organicJitter, 0, 1);
+      }
+
+      function getNaturalTreeVariant(globalX, globalZ) {
+        /*
+          Variant mix is still 25/25/25/25 overall, but it is driven by low-frequency
+          noise plus a small hashed nudge so tree types form natural-looking pockets.
+          Because apparently even PNG forests demand demographics now.
+        */
+        const variantWarpX = Math.floor(globalX / 7 + smoothNoise(globalX + 6100, globalZ - 9300, 0.022) * 3.5);
+        const variantWarpZ = Math.floor(globalZ / 7 + smoothNoise(globalX - 17000, globalZ + 2600, 0.022) * 3.5);
+        const variantRoll = hash2D(variantWarpX * 101 + 7, variantWarpZ * 101 - 11);
+
+        if (variantRoll < 0.25) {
+          return {
+            name: "tall-single",
+            footprintSize: 1,
+            widthMultiplier: 1,
+            heightMultiplier: 1.33
+          };
+        }
+
+        if (variantRoll < 0.5) {
+          return {
+            name: "normal-single",
+            footprintSize: 1,
+            widthMultiplier: 1,
+            heightMultiplier: 1
+          };
+        }
+
+        if (variantRoll < 0.75) {
+          return {
+            name: "large-two-by-two",
+            footprintSize: 2,
+            widthMultiplier: 2,
+            heightMultiplier: 2
+          };
+        }
+
+        return {
+          name: "wide-short-two-by-two",
+          footprintSize: 2,
+          widthMultiplier: 2,
+          heightMultiplier: 2 * 0.67
+        };
+      }
+
+      function isLargeTreeAnchorAt(globalX, globalZ) {
+        const anchorSample = getTerrainSampleAtTile(globalX, globalZ);
+        if (!isTreeBaseTileEligible(globalX, globalZ, anchorSample)) return false;
+
+        const variant = getNaturalTreeVariant(globalX, globalZ);
+        if (variant.footprintSize !== 2) return false;
+
+        for (let dz = 0; dz < 2; dz += 1) {
+          for (let dx = 0; dx < 2; dx += 1) {
+            const cellSample = getTerrainSampleAtTile(globalX + dx, globalZ + dz);
+            if (!isTreeBaseTileEligible(globalX + dx, globalZ + dz, cellSample)) return false;
+            if (cellSample.landLevel !== anchorSample.landLevel) return false;
+          }
+        }
+
+        const baseScale = tileSize * (2.65 + hash2D(globalX * 47 + 23, globalZ * 47 - 29) * 2.15);
+        const visualWidth = baseScale * variant.widthMultiplier;
+        if (!hasTreeVisualClearance(globalX, globalZ, variant.footprintSize, visualWidth, anchorSample.landLevel)) {
+          return false;
+        }
+
+        const treeDensity = getTreeDensityAtTile(globalX, globalZ, anchorSample);
+        const treeRoll = hash2D(globalX * 31 + 101, globalZ * 31 - 53);
+        const rareGroveAnchor = hash2D(globalX * 17 + 13, globalZ * 17 - 19);
+
+        return (treeDensity > 0.28 && treeRoll < treeDensity * 0.22) || (treeDensity > 0.22 && rareGroveAnchor > 0.996);
+      }
+
+      function isCoveredByNeighborLargeTree(globalX, globalZ) {
+        // Prevent a normal tree from spawning inside a 2x2 big-tree footprint.
+        // Only check earlier/top-left anchors so generation stays deterministic and does not recurse.
+        return (
+          isLargeTreeAnchorAt(globalX - 1, globalZ) ||
+          isLargeTreeAnchorAt(globalX, globalZ - 1) ||
+          isLargeTreeAnchorAt(globalX - 1, globalZ - 1)
+        );
+      }
+
+      function getTreeSampleAtTile(globalX, globalZ, sample) {
+        /*
+          Procedural trees:
+          - only eligible on dry grass tiles
+          - macro forest noise creates broad wooded regions
+          - clearing noise punches natural open spaces into those regions
+          - local terrain support encourages groves on wide flat ground instead of a random confetti forest
+          - variants are chosen at generation time so tall, normal, large, and squat-large trees blend naturally
+        */
+        if (!isTreeBaseTileEligible(globalX, globalZ, sample)) {
+          return null;
+        }
+
+        if (isCoveredByNeighborLargeTree(globalX, globalZ)) return null;
+
+        const treeDensity = getTreeDensityAtTile(globalX, globalZ, sample);
+        const treeRoll = hash2D(globalX * 31 + 101, globalZ * 31 - 53);
+        const fringeRoll = hash2D(globalX * 17 + 13, globalZ * 17 - 19);
+
+        const inForestPatch = treeDensity > 0.2 && treeRoll < treeDensity * 0.36;
+        const loneTree = treeDensity > 0.14 && fringeRoll < treeDensity * 0.028;
+
+        if (!inForestPatch && !loneTree) return null;
+
+        const variant = getNaturalTreeVariant(globalX, globalZ);
+
+        if (variant.footprintSize === 2) {
+          for (let dz = 0; dz < 2; dz += 1) {
+            for (let dx = 0; dx < 2; dx += 1) {
+              const cellSample = getTerrainSampleAtTile(globalX + dx, globalZ + dz);
+              if (!isTreeBaseTileEligible(globalX + dx, globalZ + dz, cellSample)) return null;
+              if (cellSample.landLevel !== sample.landLevel) return null;
+            }
+          }
+        }
+
+        const baseScale = tileSize * (2.65 + hash2D(globalX * 47 + 23, globalZ * 47 - 29) * 2.15);
+        const visualWidth = baseScale * variant.widthMultiplier;
+        const visualHeight = baseScale * variant.heightMultiplier;
+        // Anchor the translated tree plane's bottom edge directly to the grass tile surface.
+        // Re-read the exact tile-center sample here instead of trusting a caller's loop variable,
+        // because one stale height is enough to make a pine levitate like it found religion.
+        const anchorSample = getTerrainSampleAtTile(globalX, globalZ);
+        if (!hasTreeVisualClearance(globalX, globalZ, variant.footprintSize, visualWidth, anchorSample.landLevel)) {
+          return null;
+        }
+        const baseY = anchorSample.landLevel * heightStep;
+        const footprintSize = variant.footprintSize;
+
+        const anchorCenterOffset = footprintSize * 0.5;
+
+        return {
+          globalX,
+          globalZ,
+          variantName: variant.name,
+          footprintSize,
+          // Single-tile trees sit at tile center. 2x2 trees sit at the exact center of their 2x2 footprint.
+          // Basic geometry, somehow still a recurring boss fight.
+          x: tileToWorldX(globalX + anchorCenterOffset),
+          y: baseY,
+          z: tileToWorldZ(globalZ + anchorCenterOffset),
+          scale: visualHeight,
+          visualWidth,
+          visualHeight,
+          baseY,
+          topY: baseY + visualHeight,
+          opacity: 0.84 + hash2D(globalX * 53 - 31, globalZ * 53 + 37) * 0.16
+        };
+      }
+
+      function addTreeSprite(group, tree) {
+        if (hideTrees) return;
+
+        const spriteGroup = new THREE.Group();
+        const uprightTreeGroup = new THREE.Group();
+        const northSouthTree = new THREE.Mesh(pineTreePlaneGeometry, pineTreeMaterial.clone());
+        const eastWestTree = new THREE.Mesh(pineTreePlaneGeometry, pineTreeMaterial.clone());
+        const flatTree = new THREE.Mesh(flatPineTreePlaneGeometry, flatPineTreeMaterial.clone());
+        const colliderKey = getTreeColliderKey(tree.globalX, tree.globalZ);
+
+        // Build the normal tree as a static crossed pair of planes instead of a camera-facing billboard.
+        // When the player sphere overlaps the footprint, the crossed planes hide and a top-down tree lies flat.
+        for (const plane of [northSouthTree, eastWestTree]) {
+          plane.scale.set(tree.visualWidth * 0.54, tree.visualHeight, 1);
+          plane.material.opacity = tree.opacity;
+          plane.material.transparent = true;
+          plane.material.alphaTest = 0.28;
+          plane.material.depthTest = true;
+          plane.material.depthWrite = true;
+        }
+
+        northSouthTree.rotation.set(0, 0, 0);
+        northSouthTree.position.z = 0.01;
+        northSouthTree.renderOrder = 4;
+
+        eastWestTree.rotation.set(0, Math.PI * 0.5, 0);
+        eastWestTree.position.x = 0.01;
+        eastWestTree.renderOrder = 4;
+
+        uprightTreeGroup.add(northSouthTree);
+        uprightTreeGroup.add(eastWestTree);
+        uprightTreeGroup.position.y = -tree.visualHeight * treeVisibleBottomTrimRatio;
+
+        flatTree.rotation.set(-Math.PI * 0.5, 0, 0);
+        flatTree.position.y = 0.035;
+        flatTree.scale.set(tileSize * tree.footprintSize * 0.92, tileSize * tree.footprintSize * 0.92, 1);
+        flatTree.material.opacity = Math.min(1, tree.opacity + 0.06);
+        flatTree.visible = false;
+        flatTree.renderOrder = 5;
+
+        spriteGroup.position.set(tree.x, tree.y, tree.z);
+        spriteGroup.userData.isPineTreeSprite = true;
+        spriteGroup.userData.treeColliderKey = colliderKey;
+        spriteGroup.add(uprightTreeGroup);
+        spriteGroup.add(flatTree);
+
+        group.add(spriteGroup);
+        treeSprites.add(spriteGroup);
+
+        const collider = {
+          key: colliderKey,
+          globalX: tree.globalX,
+          globalZ: tree.globalZ,
+          xMin: tileToWorldX(tree.globalX),
+          xMax: tileToWorldX(tree.globalX + tree.footprintSize),
+          zMin: tileToWorldZ(tree.globalZ),
+          zMax: tileToWorldZ(tree.globalZ + tree.footprintSize),
+          baseY: tree.baseY,
+          topY: tree.topY,
+          sprite: spriteGroup,
+          uprightGroup: uprightTreeGroup,
+          flatSprite: flatTree,
+          isFlattened: false,
+          restoreTimer: 0,
+          hitboxGrid: null
+        };
+
+        const hitboxGrid = buildTreeHitboxGrid(collider);
+        collider.hitboxGrid = hitboxGrid;
+        group.add(hitboxGrid);
+
+        treeColliders.set(colliderKey, collider);
+      }
+
+      function updateTreeSpritesFacingCamera() {
+        // Trees are intentionally static crossed planes now.
+        // Keep the function in place so the main update loop stays simple.
+        for (const sprite of treeSprites) {
+          if (!sprite.parent) {
+            treeSprites.delete(sprite);
+          }
+        }
+      }
+
+      function buildChunk(chunkX, chunkZ) {
+        const chunkKey = `${chunkX},${chunkZ}`;
+        if (loadedChunks.has(chunkKey)) return;
+
+        promoteDistantLodToDetailed(chunkKey);
+
+        const group = new THREE.Group();
+        group.name = `terrain-chunk-${chunkKey}`;
+        group.userData.chunkX = chunkX;
+        group.userData.chunkZ = chunkZ;
+        group.userData.isDetailedChunk = true;
+
+        const grassPositions = [];
+        const grassUvs = [];
+        const grassIndices = [];
+
+        const sandPositions = [];
+        const sandUvs = [];
+        const sandIndices = [];
+
+        const dirtPositions = [];
+        const dirtUvs = [];
+        const dirtIndices = [];
+
+        const waterPositions = [];
+        const waterUvs = [];
+        const waterIndices = [];
+
+        const gridPositions = [];
+
+        const startTileX = chunkX * chunkTiles;
+        const startTileZ = chunkZ * chunkTiles;
+        const seaSurfaceY = seaLevel * heightStep + 0.18;
+
+        function getSample(gx, gz) {
+          return getTerrainSampleAtTile(gx, gz);
+        }
+
+        function isWaterSample(sample) {
+          return sample.waterLevel === seaLevel && sample.landLevel < seaLevel;
+        }
+
+        function addQuadTo(positions, uvs, indices, corners) {
+          addQuad(positions, uvs, indices, true, corners);
+        }
+
+        function addWallTo(positions, uvs, indices, x0, z0, x1, z1, yLow, yHigh) {
+          if (yHigh <= yLow + 0.001) return;
+
+          const start = positions.length / 3;
+          positions.push(
+            x0, yHigh, z0,
+            x1, yHigh, z1,
+            x1, yLow, z1,
+            x0, yLow, z0
+          );
+
+          const vHeight = Math.max(1, (yHigh - yLow) / heightStep);
+          uvs.push(
+            0, 0,
+            1, 0,
+            1, vHeight,
+            0, vHeight
+          );
+
+          indices.push(start, start + 1, start + 2, start, start + 2, start + 3);
+        }
+
+        for (let localZ = 0; localZ < chunkTiles; localZ += 1) {
+          for (let localX = 0; localX < chunkTiles; localX += 1) {
+            const globalX = startTileX + localX;
+            const globalZ = startTileZ + localZ;
+
+            const sample = getSample(globalX, globalZ);
+            const northSample = getSample(globalX, globalZ - 1);
+            const southSample = getSample(globalX, globalZ + 1);
+            const westSample = getSample(globalX - 1, globalZ);
+            const eastSample = getSample(globalX + 1, globalZ);
+
+            const hasWater = isWaterSample(sample);
+            const northHasWater = isWaterSample(northSample);
+            const southHasWater = isWaterSample(southSample);
+            const westHasWater = isWaterSample(westSample);
+            const eastHasWater = isWaterSample(eastSample);
+
+            const level = sample.landLevel;
+            const y = level * heightStep;
+
+            const northY = northSample.landLevel * heightStep;
+            const southY = southSample.landLevel * heightStep;
+            const westY = westSample.landLevel * heightStep;
+            const eastY = eastSample.landLevel * heightStep;
+
+            /*
+              Shoreline rule:
+              - any water tile touching non-water becomes a sand "shore block" at sea level
+              - actual water renders only on interior water tiles
+              This guarantees the edge around water is always surrounded by blocks.
+            */
+            const isInteriorWater = hasWater && northHasWater && southHasWater && westHasWater && eastHasWater;
+            const isShorelineWater = hasWater && !isInteriorWater;
+            const adjacentWater = northHasWater || southHasWater || westHasWater || eastHasWater;
+
+            /*
+              Beach layer:
+              If a grass tile is part of the sea-level transition band, render it as sand.png.
+              This prevents green top faces from sitting on top of the sand shoreline layer like
+              someone put turf carpet on a beach, because apparently nature needed a CSS override.
+            */
+            const nearSeaLevel =
+              level <= seaLevel + 2 ||
+              northSample.landLevel <= seaLevel + 1 ||
+              southSample.landLevel <= seaLevel + 1 ||
+              westSample.landLevel <= seaLevel + 1 ||
+              eastSample.landLevel <= seaLevel + 1;
+
+            const touchesBeachWall =
+              !hasWater &&
+              (
+                adjacentWater ||
+                (level <= seaLevel + 3 && (
+                  Math.abs(level - northSample.landLevel) > 0 ||
+                  Math.abs(level - southSample.landLevel) > 0 ||
+                  Math.abs(level - westSample.landLevel) > 0 ||
+                  Math.abs(level - eastSample.landLevel) > 0
+                ))
+              );
+
+            const isBeachLand = !hasWater && nearSeaLevel && touchesBeachWall;
+
+            if (!hideTrees && !hasWater && !isBeachLand) {
+              const tree = getTreeSampleAtTile(globalX, globalZ, sample);
+              if (tree) {
+                addTreeSprite(group, tree);
+              }
+            }
+
+            const x0 = tileToWorldX(globalX);
+            const x1 = x0 + tileSize;
+            const z0 = tileToWorldZ(globalZ);
+            const z1 = z0 + tileSize;
+
+            // Top surfaces
+            if (isShorelineWater) {
+              addQuadTo(sandPositions, sandUvs, sandIndices, [
+                { x: x0, y: seaSurfaceY, z: z0, u: 0, v: 0 },
+                { x: x1, y: seaSurfaceY, z: z0, u: 1, v: 0 },
+                { x: x1, y: seaSurfaceY, z: z1, u: 1, v: 1 },
+                { x: x0, y: seaSurfaceY, z: z1, u: 0, v: 1 }
+              ]);
+            } else if (isInteriorWater) {
+              // seabed visible through water
+              addQuadTo(sandPositions, sandUvs, sandIndices, [
+                { x: x0, y, z: z0, u: 0, v: 0 },
+                { x: x1, y, z: z0, u: 1, v: 0 },
+                { x: x1, y, z: z1, u: 1, v: 1 },
+                { x: x0, y, z: z1, u: 0, v: 1 }
+              ]);
+
+              addQuadTo(waterPositions, waterUvs, waterIndices, [
+                { x: x0, y: seaSurfaceY, z: z0, u: 0, v: 0 },
+                { x: x1, y: seaSurfaceY, z: z0, u: 1, v: 0 },
+                { x: x1, y: seaSurfaceY, z: z1, u: 1, v: 1 },
+                { x: x0, y: seaSurfaceY, z: z1, u: 0, v: 1 }
+              ]);
+            } else if (isBeachLand) {
+              addQuadTo(sandPositions, sandUvs, sandIndices, [
+                { x: x0, y, z: z0, u: 0, v: 0 },
+                { x: x1, y, z: z0, u: 1, v: 0 },
+                { x: x1, y, z: z1, u: 1, v: 1 },
+                { x: x0, y, z: z1, u: 0, v: 1 }
+              ]);
+            } else {
+              addQuadTo(grassPositions, grassUvs, grassIndices, [
+                { x: x0, y, z: z0, u: 0, v: 0 },
+                { x: x1, y, z: z0, u: 1, v: 0 },
+                { x: x1, y, z: z1, u: 1, v: 1 },
+                { x: x0, y, z: z1, u: 0, v: 1 }
+              ]);
+            }
+
+            /*
+              Side walls:
+              - shoreline water behaves like a sand block up to sea level
+              - interior water keeps seabed walls, preserving terrain visible through the water
+            */
+            const northInteriorWater = northHasWater && isWaterSample(northSample) && isWaterSample(getSample(globalX, globalZ - 2)) && isWaterSample(getSample(globalX - 1, globalZ - 1)) && isWaterSample(getSample(globalX + 1, globalZ - 1));
+            const southInteriorWater = southHasWater && isWaterSample(southSample) && isWaterSample(getSample(globalX, globalZ + 2)) && isWaterSample(getSample(globalX - 1, globalZ + 1)) && isWaterSample(getSample(globalX + 1, globalZ + 1));
+            const westInteriorWater = westHasWater && isWaterSample(westSample) && isWaterSample(getSample(globalX - 2, globalZ)) && isWaterSample(getSample(globalX - 1, globalZ - 1)) && isWaterSample(getSample(globalX - 1, globalZ + 1));
+            const eastInteriorWater = eastHasWater && isWaterSample(eastSample) && isWaterSample(getSample(globalX + 2, globalZ)) && isWaterSample(getSample(globalX + 1, globalZ - 1)) && isWaterSample(getSample(globalX + 1, globalZ + 1));
+
+            const northVisibleTop = northHasWater && !northInteriorWater ? seaSurfaceY : northY;
+            const southVisibleTop = southHasWater && !southInteriorWater ? seaSurfaceY : southY;
+            const westVisibleTop = westHasWater && !westInteriorWater ? seaSurfaceY : westY;
+            const eastVisibleTop = eastHasWater && !eastInteriorWater ? seaSurfaceY : eastY;
+
+            function addTileWall(sideX0, sideZ0, sideX1, sideZ1, wallBottom, wallTop, useSand) {
+              if (wallTop <= wallBottom + 0.001) return;
+              if (useSand) {
+                addWallTo(sandPositions, sandUvs, sandIndices, sideX0, sideZ0, sideX1, sideZ1, wallBottom, wallTop);
+              } else {
+                addWallTo(dirtPositions, dirtUvs, dirtIndices, sideX0, sideZ0, sideX1, sideZ1, wallBottom, wallTop);
+              }
+            }
+
+            if (isShorelineWater) {
+              // shoreline block walls from surrounding visible top up to sea level
+              addTileWall(x1, z0, x0, z0, northVisibleTop, seaSurfaceY, true);
+              addTileWall(x0, z1, x1, z1, southVisibleTop, seaSurfaceY, true);
+              addTileWall(x0, z0, x0, z1, westVisibleTop, seaSurfaceY, true);
+              addTileWall(x1, z1, x1, z0, eastVisibleTop, seaSurfaceY, true);
+
+              // if seabed inside shoreline block rises above neighboring ground, keep that cliff hidden by sand too
+              addTileWall(x1, z0, x0, z0, northY, y, true);
+              addTileWall(x0, z1, x1, z1, southY, y, true);
+              addTileWall(x0, z0, x0, z1, westY, y, true);
+              addTileWall(x1, z1, x1, z0, eastY, y, true);
+            } else {
+              function addCoastAwareWall(sideX0, sideZ0, sideX1, sideZ1, neighborY, neighborHasWater, neighborLevel) {
+                if (y <= neighborY + 0.001) return;
+
+                const coastal =
+                  isInteriorWater ||
+                  neighborHasWater ||
+                  isBeachLand ||
+                  level <= seaLevel + 2 ||
+                  neighborLevel <= seaLevel + 2;
+
+                if (coastal) {
+                  addWallTo(sandPositions, sandUvs, sandIndices, sideX0, sideZ0, sideX1, sideZ1, neighborY, y);
+                } else {
+                  addWallTo(dirtPositions, dirtUvs, dirtIndices, sideX0, sideZ0, sideX1, sideZ1, neighborY, y);
+                }
+              }
+
+              addCoastAwareWall(x1, z0, x0, z0, northY, northHasWater, northSample.landLevel);
+              addCoastAwareWall(x0, z1, x1, z1, southY, southHasWater, southSample.landLevel);
+              addCoastAwareWall(x0, z0, x0, z1, westY, westHasWater, westSample.landLevel);
+              addCoastAwareWall(x1, z1, x1, z0, eastY, eastHasWater, eastSample.landLevel);
+            }
+
+            const topVisualY = isInteriorWater ? seaSurfaceY : (isShorelineWater ? seaSurfaceY : y);
+            const gy = topVisualY + 0.035;
+            gridPositions.push(
+              x0, gy, z0, x1, gy, z0,
+              x1, gy, z0, x1, gy, z1,
+              x1, gy, z1, x0, gy, z1,
+              x0, gy, z1, x0, gy, z0
+            );
+          }
+        }
+
+        const grassGeometry = new THREE.BufferGeometry();
+        grassGeometry.setAttribute("position", new THREE.Float32BufferAttribute(grassPositions, 3));
+        grassGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(grassUvs, 2));
+        grassGeometry.setIndex(grassIndices);
+        grassGeometry.computeVertexNormals();
+        const grassMesh = new THREE.Mesh(grassGeometry, grassMaterial);
+        group.add(grassMesh);
+
+        if (sandPositions.length > 0) {
+          const sandGeometry = new THREE.BufferGeometry();
+          sandGeometry.setAttribute("position", new THREE.Float32BufferAttribute(sandPositions, 3));
+          sandGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(sandUvs, 2));
+          sandGeometry.setIndex(sandIndices);
+          sandGeometry.computeVertexNormals();
+          const sandMesh = new THREE.Mesh(sandGeometry, sandMaterial);
+          group.add(sandMesh);
+        }
+
+        if (dirtPositions.length > 0) {
+          const dirtGeometry = new THREE.BufferGeometry();
+          dirtGeometry.setAttribute("position", new THREE.Float32BufferAttribute(dirtPositions, 3));
+          dirtGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(dirtUvs, 2));
+          dirtGeometry.setIndex(dirtIndices);
+          dirtGeometry.computeVertexNormals();
+          const dirtMesh = new THREE.Mesh(dirtGeometry, dirtMaterial);
+          group.add(dirtMesh);
+        }
+
+        if (waterPositions.length > 0) {
+          const waterGeometry = new THREE.BufferGeometry();
+          waterGeometry.setAttribute("position", new THREE.Float32BufferAttribute(waterPositions, 3));
+          waterGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(waterUvs, 2));
+          waterGeometry.setIndex(waterIndices);
+          waterGeometry.computeVertexNormals();
+          const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+          group.add(waterMesh);
+
+          /*
+            Animated top water layer:
+            duplicate the sea-level surface slightly above the base water plane so the top layer
+            can shimmer and slide independently instead of sitting there like printed wrapping paper.
+          */
+          const waterSurfacePositions = waterPositions.slice();
+          for (let i = 1; i < waterSurfacePositions.length; i += 3) {
+            waterSurfacePositions[i] += 0.08;
+          }
+
+          const waterSurfaceGeometry = new THREE.BufferGeometry();
+          waterSurfaceGeometry.setAttribute("position", new THREE.Float32BufferAttribute(waterSurfacePositions, 3));
+          waterSurfaceGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(waterUvs, 2));
+          waterSurfaceGeometry.setIndex(waterIndices);
+          waterSurfaceGeometry.computeVertexNormals();
+
+          const waterSurfaceMesh = new THREE.Mesh(waterSurfaceGeometry, waterSurfaceMaterial);
+          waterSurfaceMesh.renderOrder = 1;
+          group.add(waterSurfaceMesh);
+        }
+
+        const gridGeometry = new THREE.BufferGeometry();
+        gridGeometry.setAttribute("position", new THREE.Float32BufferAttribute(gridPositions, 3));
+        const gridLines = new THREE.LineSegments(gridGeometry, gridMaterial);
+        gridLines.visible = showGridLines;
+        gridLineObjects.add(gridLines);
+        group.add(gridLines);
+
+        scene.add(group);
+        loadedChunks.set(chunkKey, group);
+      }
+
+      function disposeChunk(group) {
+        group.traverse((child) => {
+          if (child.type === "LineSegments") {
+            gridLineObjects.delete(child);
+          }
+
+          if (child.userData && child.userData.isTreeHitboxGrid) {
+            treeHitboxGridObjects.delete(child);
+            if (child.material) child.material.dispose();
+          }
+
+          if (child.userData && child.userData.isPineTreeSprite) {
+            treeSprites.delete(child);
+            if (child.userData.treeColliderKey) {
+              treeColliders.delete(child.userData.treeColliderKey);
+            }
+            if (child.material) child.material.dispose();
+          }
+
+          if (child.geometry) child.geometry.dispose();
+        });
+
+        scene.remove(group);
+      }
+
+      window.__setTileGridVisibility = (visible) => {
+        showGridLines = visible;
+        for (const gridLines of gridLineObjects) {
+          gridLines.visible = visible;
+        }
+
+        for (const hitboxGrid of treeHitboxGridObjects) {
+          hitboxGrid.visible = visible && !hideTrees;
+        }
+      };
+
+      window.__setTreeVisibility = (visible) => {
+        hideTrees = !visible;
+        hideTreesCheckbox.checked = hideTrees;
+
+        for (const sprite of treeSprites) {
+          sprite.visible = visible;
+        }
+
+        for (const hitboxGrid of treeHitboxGridObjects) {
+          hitboxGrid.visible = visible && showGridLines;
+        }
+      };
+
+      function queueDistantLodChunk(chunkX, chunkZ) {
+        const key = getChunkKey(chunkX, chunkZ);
+        if (loadedChunks.has(key) || distantLodChunks.has(key) || queuedLodChunkKeys.has(key)) return;
+
+        queuedLodChunkKeys.add(key);
+        lodBuildQueue.push({ x: chunkX, z: chunkZ, key });
+      }
+
+      function processDistantLodQueue() {
+        let builds = 0;
+
+        while (lodBuildQueue.length > 0 && builds < maxLodBuildsPerFrame) {
+          const item = lodBuildQueue.shift();
+          queuedLodChunkKeys.delete(item.key);
+
+          if (!loadedChunks.has(item.key) && !distantLodChunks.has(item.key)) {
+            buildDistantLodChunk(item.x, item.z);
+            builds += 1;
+          }
+        }
+      }
+
+      function updateChunks() {
+        const currentTileX = Math.floor(state.target.x / tileSize);
+        const currentTileZ = Math.floor(state.target.z / tileSize);
+        const centerChunkX = Math.floor(currentTileX / chunkTiles);
+        const centerChunkZ = Math.floor(currentTileZ / chunkTiles);
+
+        const neededDetailed = new Set();
+        const neededExploredLod = new Set();
+
+        for (let z = centerChunkZ - chunkRadius; z <= centerChunkZ + chunkRadius; z += 1) {
+          for (let x = centerChunkX - chunkRadius; x <= centerChunkX + chunkRadius; x += 1) {
+            const key = getChunkKey(x, z);
+            neededDetailed.add(key);
+            buildChunk(x, z);
+          }
+        }
+
+        /*
+          As the player explores, remember a wider ring as compressed distant terrain.
+          This makes the world feel larger because old horizons do not instantly vanish
+          the moment they leave the detailed render radius. Finally, terrain with object permanence.
+        */
+        for (let z = centerChunkZ - distantLodRadius; z <= centerChunkZ + distantLodRadius; z += 1) {
+          for (let x = centerChunkX - distantLodRadius; x <= centerChunkX + distantLodRadius; x += 1) {
+            const distance = getChunkDistance(x, z, centerChunkX, centerChunkZ);
+            if (distance <= chunkRadius || distance > distantLodRadius) continue;
+
+            const key = getChunkKey(x, z);
+            neededExploredLod.add(key);
+
+            if (!loadedChunks.has(key)) {
+              queueDistantLodChunk(x, z);
+            }
+          }
+        }
+
+        for (const [key, group] of [...loadedChunks.entries()]) {
+          if (!neededDetailed.has(key)) {
+            const distance = getChunkDistance(group.userData.chunkX, group.userData.chunkZ, centerChunkX, centerChunkZ);
+
+            if (distance <= distantLodRadius) {
+              demoteDetailedChunkToLod(key, group);
+            } else {
+              disposeChunk(group);
+              loadedChunks.delete(key);
+            }
+          }
+        }
+
+        /*
+          Hide LOD chunks that are currently covered by detailed chunks, but keep old explored
+          LOD chunks visible unless the budget is exceeded.
+        */
+        for (const [key, group] of distantLodChunks.entries()) {
+          group.visible = !loadedChunks.has(key);
+        }
+
+        enforceDistantLodBudget(centerChunkX, centerChunkZ);
+
+        chunkReadout.textContent = `Detailed chunks: ${loadedChunks.size}`;
+        distantChunkReadout.textContent = `Distant LOD chunks: ${distantLodChunks.size} queued: ${lodBuildQueue.length}`;
+      }
+
+      function getTerrainHeightAtWorld(x, z) {
+        const tileX = Math.floor(x / tileSize);
+        const tileZ = Math.floor(z / tileSize);
+        return getHeightLevelAtTile(tileX, tileZ) * heightStep;
+      }
+
+      function getVisibleSurfaceHeightAtWorld(x, z) {
+        const tileX = Math.floor(x / tileSize);
+        const tileZ = Math.floor(z / tileSize);
+        const sample = getTerrainSampleAtTile(tileX, tileZ);
+        const landY = sample.landLevel * heightStep;
+        const waterY = sample.waterLevel === seaLevel && sample.landLevel < seaLevel
+          ? seaLevel * heightStep + 0.18
+          : -Infinity;
+
+        return Math.max(landY, waterY);
+      }
+
+      function getWaterSurfaceHeightAtWorld(x, z) {
+        const tileX = Math.floor(x / tileSize);
+        const tileZ = Math.floor(z / tileSize);
+        const sample = getTerrainSampleAtTile(tileX, tileZ);
+
+        return sample.waterLevel === seaLevel && sample.landLevel < seaLevel
+          ? seaLevel * heightStep + 0.18
+          : -Infinity;
+      }
+
+      function isWaterAtWorld(x, z) {
+        return Number.isFinite(getWaterSurfaceHeightAtWorld(x, z));
+      }
+
+      function updateTargetHeight() {
+        if (isThirdPersonMode && player.mesh) {
+          /*
+            Third person target follows the ball.
+            While floating at the surface, keep the target above sea level so the follow camera
+            does not get waterboarded. Only blend downward after actual submersion.
+          */
+          const dryOffset = 6;
+          const underwaterOffset = 1.2;
+          const desiredOffset = lerp(dryOffset, underwaterOffset, player.cameraWaterBlend);
+          let desiredY = player.mesh.position.y + desiredOffset;
+
+          if (
+            player.inWater &&
+            !player.underwater &&
+            Number.isFinite(player.waterSurfaceY)
+          ) {
+            desiredY = Math.max(desiredY, player.waterSurfaceY + player.radius * 2.4);
+          }
+
+          state.target.x = lerp(state.target.x, player.mesh.position.x, 0.16);
+          state.target.y = lerp(state.target.y, desiredY, 0.075);
+          state.target.z = lerp(state.target.z, player.mesh.position.z, 0.16);
+          return;
+        }
+
+        const groundY = getTerrainHeightAtWorld(state.target.x, state.target.z);
+        const desiredY = groundY + 26;
+        state.target.y = lerp(state.target.y, desiredY, 0.08);
+      }
+
+      function updateCameraPosition() {
+        const horizontalDistance = Math.cos(state.pitch) * state.distance;
+        let verticalDistance = Math.sin(state.pitch) * state.distance;
+
+        if (isThirdPersonMode && player.mesh) {
+          /*
+            Blend camera height behavior only after real submersion.
+            Surface bobbing keeps normal camera height. The camera is not a bath toy.
+          */
+          const waterFlatten = lerp(1.0, 0.24, player.cameraWaterBlend);
+          verticalDistance *= waterFlatten;
+        }
+
+        camera.position.x = state.target.x + Math.sin(state.yaw) * horizontalDistance;
+        camera.position.y = state.target.y + verticalDistance;
+        camera.position.z = state.target.z + Math.cos(state.yaw) * horizontalDistance;
+
+        if (
+          isThirdPersonMode &&
+          player.mesh &&
+          Number.isFinite(player.waterSurfaceY)
+        ) {
+          if (player.cameraWaterBlend > 0.72 && player.underwater) {
+            // Once actually submerged, allow the camera below sea level.
+            const maxUnderwaterCameraY = player.waterSurfaceY - 0.35;
+            camera.position.y = Math.min(camera.position.y, maxUnderwaterCameraY);
+          } else if (player.inWater) {
+            // While surface-floating, keep the camera above the waterline.
+            const minSurfaceCameraY = player.waterSurfaceY + player.radius * 1.8;
+            camera.position.y = Math.max(camera.position.y, minSurfaceCameraY);
+          }
+        }
+
+        camera.lookAt(state.target);
+      }
+
+      function updateLodFogCurtain() {
+        /*
+          Radius is placed slightly inside the distant LOD limit so it overlaps the seam
+          between detailed terrain, remembered terrain, and sky fog.
+        */
+        const curtainRadius = chunkWorldSize * (distantLodRadius - 0.75);
+        const curtainHeight = 1250;
+        const curtainY = 260;
+
+        lodFogCurtain.position.set(state.target.x, curtainY, state.target.z);
+        lodFogCurtain.scale.set(curtainRadius, curtainHeight, curtainRadius);
+
+        horizonHazeDisk.position.set(state.target.x, seaLevel * heightStep + 34, state.target.z);
+        horizonHazeDisk.scale.set(curtainRadius * 0.92, curtainRadius * 0.92, 1);
+
+        // The farther the camera is zoomed out, the more useful the horizon haze becomes.
+        const zoomFade = THREE.MathUtils.clamp((state.distance - 120) / 900, 0.34, 0.66);
+        lodFogCurtain.material.opacity = zoomFade;
+        horizonHazeDisk.material.opacity = THREE.MathUtils.clamp(zoomFade * 0.68, 0.26, 0.46);
+      }
+
+      function updateUnderwaterOverlay(deltaSeconds) {
+        underwaterOverlayTime += deltaSeconds;
+
+        /*
+          Trigger the underwater tint from the CAMERA being below sea_level,
+          not from the player's underwater state. The camera is the eyeball.
+          Shocking, I know. Optics: invented before JavaScript, still somehow forgotten.
+        */
+        const seaSurfaceY = seaLevel * heightStep + 0.18;
+        const underwaterView =
+          isThirdPersonMode &&
+          player.mesh &&
+          camera.position.y < seaSurfaceY - 0.04;
+
+        if (!underwaterView) {
+          underwaterOverlay.style.opacity = "0";
+          return;
+        }
+
+        const depth = seaSurfaceY - camera.position.y;
+        const overlayOpacity = THREE.MathUtils.clamp(0.46 + depth * 0.018, 0.46, 0.86);
+
+        underwaterOverlay.style.opacity = overlayOpacity.toFixed(3);
+        underwaterOverlay.style.backgroundPosition =
+          `center center, ${underwaterOverlayTime * 32}px ${underwaterOverlayTime * 21}px`;
+      }
+
+      function updateNerdStats() {
+        if (isThirdPersonMode && player.mesh) {
+          const relative = {
+            x: player.mesh.position.x - activeSpawnPoint.x,
+            y: player.mesh.position.y - activeSpawnPoint.y,
+            z: player.mesh.position.z - activeSpawnPoint.z
+          };
+
+          sphereCoordsReadout.textContent = `Sphere XYZ from spawn: ${formatXYZ(relative)}`;
+          cameraDirectionReadout.textContent = `Camera facing: ${formatYaw(state.yaw)}`;
+        } else {
+          const relative = {
+            x: state.target.x - activeSpawnPoint.x,
+            y: state.target.y - activeSpawnPoint.y,
+            z: state.target.z - activeSpawnPoint.z
+          };
+
+          sphereCoordsReadout.textContent = `Camera XYZ from spawn: ${formatXYZ(relative)}`;
+          cameraDirectionReadout.textContent = `Camera facing: ${formatYaw(state.yaw)}`;
+        }
+
+        spawnCoordsReadout.textContent = `Spawn XYZ: ${formatXYZ(activeSpawnPoint)} facing ${formatYaw(activeSpawnPoint.yaw)}`;
+      }
+
+      function getMinimapCenterWorld() {
+        if (isThirdPersonMode && player.mesh) {
+          return {
+            x: player.mesh.position.x,
+            z: player.mesh.position.z
+          };
+        }
+
+        return {
+          x: state.target.x,
+          z: state.target.z
+        };
+      }
+
+      function drawMinimapTreeIcons(ctx, centerTileX, centerTileZ, halfTiles, tilePixels) {
+        if (hideTrees || !minimapTreeIconReady) return;
+
+        /*
+          Tree icons are generated from the same deterministic terrain/tree sampling
+          as the actual spawned forest, not from currently loaded chunks. This keeps
+          the minimap honest even when chunks pop in/out, a rare outbreak of integrity.
+        */
+        for (let dz = -halfTiles - 1; dz < halfTiles + 1; dz += 1) {
+          for (let dx = -halfTiles - 1; dx < halfTiles + 1; dx += 1) {
+            const gx = centerTileX + dx;
+            const gz = centerTileZ + dz;
+            const sample = getTerrainSampleAtTile(gx, gz);
+            const tree = getTreeSampleAtTile(gx, gz, sample);
+            if (!tree) continue;
+
+            // Match the actual world spawn anchor: single trees center on one tile, 2x2 trees center on the full footprint.
+            const treeCenterOffset = tree.footprintSize * 0.5;
+            const treeDx = tree.globalX + treeCenterOffset - centerTileX;
+            const treeDz = tree.globalZ + treeCenterOffset - centerTileZ;
+            const px = (treeDx + halfTiles) * tilePixels;
+            const py = (treeDz + halfTiles) * tilePixels;
+            const iconSize = Math.max(5, tilePixels * tree.footprintSize * 1.55);
+            const alpha = Math.max(0.62, Math.min(0.95, tree.opacity));
+
+            if (px < -iconSize || px > minimapCanvas.width + iconSize || py < -iconSize || py > minimapCanvas.height + iconSize) {
+              continue;
+            }
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.drawImage(
+              minimapTreeIcon,
+              px - iconSize * 0.5,
+              py - iconSize * 0.5,
+              iconSize,
+              iconSize
+            );
+            ctx.restore();
+          }
+        }
+      }
+
+      function drawMinimap() {
+        if (hideMinimap || !minimapContext) return;
+
+        /*
+          Top-down minimap that mirrors the generated tiles around the sphere.
+          The grid is intentionally coarse: one minimap grid square = 3x3 world tiles.
+          A tiny lie? No. A tiny abstraction. Society continues to limp onward.
+        */
+        const ctx = minimapContext;
+        const width = minimapCanvas.width;
+        const height = minimapCanvas.height;
+        const center = getMinimapCenterWorld();
+
+        const centerTileX = Math.floor(center.x / tileSize);
+        const centerTileZ = Math.floor(center.z / tileSize);
+
+        // One drawn pixel block is one real generated tile.
+        // Zooming in reduces the number of world tiles shown, which increases per-tile detail.
+        const rawTilesAcross = minimapBaseTilesAcross / minimapZoom;
+        const tilesAcross = Math.max(12, Math.round(rawTilesAcross / 6) * 6); // keep symmetric and compatible with 3x3 grid squares
+        const tilePixels = width / tilesAcross;
+        const halfTiles = Math.floor(tilesAcross / 2);
+        const minimapGridWorldTiles = 3;
+        const startTileX = centerTileX - halfTiles;
+        const startTileZ = centerTileZ - halfTiles;
+
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, width, height);
+
+        for (let dz = -halfTiles; dz < halfTiles; dz += 1) {
+          for (let dx = -halfTiles; dx < halfTiles; dx += 1) {
+            const gx = centerTileX + dx;
+            const gz = centerTileZ + dz;
+            const sample = getTerrainSampleAtTile(gx, gz);
+
+            const north = getTerrainSampleAtTile(gx, gz - 1);
+            const south = getTerrainSampleAtTile(gx, gz + 1);
+            const west = getTerrainSampleAtTile(gx - 1, gz);
+            const east = getTerrainSampleAtTile(gx + 1, gz);
+
+            const isWaterSample = (candidate) =>
+              candidate.waterLevel === seaLevel && candidate.landLevel < seaLevel;
+
+            const hasWater = isWaterSample(sample);
+            const northHasWater = isWaterSample(north);
+            const southHasWater = isWaterSample(south);
+            const westHasWater = isWaterSample(west);
+            const eastHasWater = isWaterSample(east);
+
+            const isInteriorWater = hasWater && northHasWater && southHasWater && westHasWater && eastHasWater;
+            const isShorelineWater = hasWater && !isInteriorWater;
+            const adjacentWater = northHasWater || southHasWater || westHasWater || eastHasWater;
+
+            const nearSeaLevel =
+              sample.landLevel <= seaLevel + 2 ||
+              north.landLevel <= seaLevel + 1 ||
+              south.landLevel <= seaLevel + 1 ||
+              west.landLevel <= seaLevel + 1 ||
+              east.landLevel <= seaLevel + 1;
+
+            const touchesBeachWall =
+              !hasWater &&
+              (
+                adjacentWater ||
+                (sample.landLevel <= seaLevel + 3 && (
+                  Math.abs(sample.landLevel - north.landLevel) > 0 ||
+                  Math.abs(sample.landLevel - south.landLevel) > 0 ||
+                  Math.abs(sample.landLevel - west.landLevel) > 0 ||
+                  Math.abs(sample.landLevel - east.landLevel) > 0
+                ))
+              );
+
+            const isBeachLand = !hasWater && nearSeaLevel && touchesBeachWall;
+
+            const px = Math.floor((dx + halfTiles) * tilePixels);
+            const py = Math.floor((dz + halfTiles) * tilePixels);
+            const size = Math.ceil(tilePixels) + 1;
+
+            if (isInteriorWater) {
+              ctx.fillStyle = "#36c5ee";
+            } else if (isShorelineWater || isBeachLand) {
+              ctx.fillStyle = "#eee0a1";
+            } else {
+              const level = Math.max(0, Math.min(maxHeightLevels, sample.landLevel));
+              const heightShade = level / maxHeightLevels;
+
+              const r = Math.round(28 + heightShade * 42);
+              const g = Math.round(118 + heightShade * 78);
+              const b = Math.round(38 + heightShade * 22);
+              ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            }
+
+            ctx.fillRect(px, py, size, size);
+          }
+        }
+
+        /*
+          Topological height outlines:
+          Draw subtle dark contour edges where neighboring tile heights differ.
+          This reveals hills/valleys inside grass regions without turning the minimap
+          into unreadable spreadsheet confetti. Barely restrained cartography.
+        */
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.46)";
+        ctx.lineWidth = 1;
+
+        for (let dz = -halfTiles; dz < halfTiles; dz += 1) {
+          for (let dx = -halfTiles; dx < halfTiles; dx += 1) {
+            const gx = centerTileX + dx;
+            const gz = centerTileZ + dz;
+            const sample = getTerrainSampleAtTile(gx, gz);
+            const east = getTerrainSampleAtTile(gx + 1, gz);
+            const south = getTerrainSampleAtTile(gx, gz + 1);
+
+            const px = Math.floor((dx + halfTiles) * tilePixels);
+            const py = Math.floor((dz + halfTiles) * tilePixels);
+
+            if (sample.landLevel !== east.landLevel) {
+              const strength = Math.min(0.78, 0.28 + Math.abs(sample.landLevel - east.landLevel) * 0.08);
+              ctx.strokeStyle = `rgba(0, 0, 0, ${strength})`;
+              ctx.beginPath();
+              ctx.moveTo(px + tilePixels, py);
+              ctx.lineTo(px + tilePixels, py + tilePixels);
+              ctx.stroke();
+            }
+
+            if (sample.landLevel !== south.landLevel) {
+              const strength = Math.min(0.78, 0.28 + Math.abs(sample.landLevel - south.landLevel) * 0.08);
+              ctx.strokeStyle = `rgba(0, 0, 0, ${strength})`;
+              ctx.beginPath();
+              ctx.moveTo(px, py + tilePixels);
+              ctx.lineTo(px + tilePixels, py + tilePixels);
+              ctx.stroke();
+            }
+          }
+        }
+
+        drawMinimapTreeIcons(ctx, centerTileX, centerTileZ, halfTiles, tilePixels);
+
+        if (showGridLines) {
+          /*
+            Minimap grid aligned to actual world-tile boundaries.
+            Each grid cell represents 3x3 world tiles, and the lines are positioned from
+            the current visible start tile instead of just being stamped at arbitrary intervals.
+          */
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+          ctx.lineWidth = 1;
+
+          const mod3 = (value) => ((value % minimapGridWorldTiles) + minimapGridWorldTiles) % minimapGridWorldTiles;
+
+          for (let i = 0; i <= tilesAcross; i += 1) {
+            const worldBoundaryTileX = startTileX + i;
+            if (mod3(worldBoundaryTileX) !== 0) continue;
+
+            const px = Math.round(i * tilePixels) + 0.5;
+            ctx.beginPath();
+            ctx.moveTo(px, 0);
+            ctx.lineTo(px, height);
+            ctx.stroke();
+          }
+
+          for (let i = 0; i <= tilesAcross; i += 1) {
+            const worldBoundaryTileZ = startTileZ + i;
+            if (mod3(worldBoundaryTileZ) !== 0) continue;
+
+            const py = Math.round(i * tilePixels) + 0.5;
+            ctx.beginPath();
+            ctx.moveTo(0, py);
+            ctx.lineTo(width, py);
+            ctx.stroke();
+          }
+        }
+
+        // Slightly stronger crosshair through the player tile.
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(width / 2, 0);
+        ctx.lineTo(width / 2, height);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, height / 2);
+        ctx.lineTo(width, height / 2);
+        ctx.stroke();
+
+        // Player red dot, centered exactly on the tile the sphere occupies.
+        ctx.fillStyle = "#ff1e1e";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(width / 2, height / 2, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Facing direction tick.
+        const dirX = -Math.sin(state.yaw);
+        const dirY = -Math.cos(state.yaw);
+        ctx.strokeStyle = "#ff1e1e";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(width / 2, height / 2);
+        ctx.lineTo(width / 2 + dirX * 16, height / 2 + dirY * 16);
+        ctx.stroke();
+      }
+
+      window.__drawMinimapNow = drawMinimap;
+      updateMinimapZoomFromSlider();
+
+      function resetCamera() {
+        state.yaw = Number.isFinite(activeSpawnPoint.yaw) ? activeSpawnPoint.yaw : Math.PI / 4;
+        state.pitch = THREE.MathUtils.degToRad(isThirdPersonMode ? 38 : 54);
+        state.distance = isThirdPersonMode ? 62 : 360;
+
+        if (player.mesh) {
+          player.mesh.visible = isThirdPersonMode;
+        }
+
+        if (isThirdPersonMode && player.mesh) {
+          const spawnX = activeSpawnPoint.x || 0;
+          const spawnZ = activeSpawnPoint.z || 0;
+          const savedY = Number(activeSpawnPoint.y);
+          const terrainSpawnY = getVisibleSurfaceHeightAtWorld(spawnX, spawnZ) + player.radius;
+          const spawnY = Number.isFinite(savedY) && savedY !== 0 ? savedY : terrainSpawnY;
+
+          player.mesh.position.set(spawnX, spawnY, spawnZ);
+          player.velocity.set(0, 0, 0);
+          player.verticalVelocity = 0;
+          player.grounded = true;
+          player.inWater = false;
+          player.underwater = false;
+          player.waterSurfaceY = -Infinity;
+          player.waterBlend = 0;
+          player.cameraWaterBlend = 0;
+          player.waterDepthOffset = 0;
+          player.bounceTimer = 0;
+          player.launchStretchTimer = 0;
+          player.mesh.scale.set(1, 1, 1);
+          state.target.set(spawnX, spawnY + 6, spawnZ);
+        } else {
+          state.target.set(activeSpawnPoint.x || 0, getTerrainHeightAtWorld(activeSpawnPoint.x || 0, activeSpawnPoint.z || 0) + 26, activeSpawnPoint.z || 0);
+        }
+
+        updateChunks();
+        updateCameraPosition();
+      }
+
+      function getForwardRightVectors() {
+        const forward = new THREE.Vector3(-Math.sin(state.yaw), 0, -Math.cos(state.yaw)).normalize();
+        const right = new THREE.Vector3(Math.cos(state.yaw), 0, -Math.sin(state.yaw)).normalize();
+        return { forward, right };
+      }
+
+      function updateThirdPersonPlayer(deltaSeconds) {
+        if (!player.mesh) return;
+
+        const { forward, right } = getForwardRightVectors();
+        const movement = new THREE.Vector3();
+
+        if (keys.has("KeyW") || keys.has("ArrowUp")) movement.add(forward);
+        if (keys.has("KeyS") || keys.has("ArrowDown")) movement.sub(forward);
+        if (keys.has("KeyD") || keys.has("ArrowRight")) movement.add(right);
+        if (keys.has("KeyA") || keys.has("ArrowLeft")) movement.sub(right);
+
+        const waterSurfaceY = getWaterSurfaceHeightAtWorld(player.mesh.position.x, player.mesh.position.z);
+        const isOnWaterTile = Number.isFinite(waterSurfaceY);
+        const landY = getTerrainHeightAtWorld(player.mesh.position.x, player.mesh.position.z);
+        const floatRestY = isOnWaterTile
+          ? waterSurfaceY + player.radius * 0.56 - player.waterDepthOffset
+          : -Infinity;
+        const isFloating = isOnWaterTile && player.mesh.position.y <= waterSurfaceY + player.radius * 1.25;
+        player.inWater = isFloating;
+        player.waterSurfaceY = isOnWaterTile ? waterSurfaceY : -Infinity;
+
+        if (!isOnWaterTile) {
+          player.waterDepthOffset = 0;
+        }
+
+        const targetWaterBlend = isFloating ? 1 : 0;
+        player.waterBlend = lerp(player.waterBlend, targetWaterBlend, isFloating ? 0.08 : 0.12);
+
+        /*
+          Camera only enters underwater-follow when the sphere is meaningfully submerged.
+          Floating/bobbing at the surface should keep the camera above sea level,
+          because drowning the camera before the player dives is apparently "bad UX".
+        */
+        const targetCameraWaterBlend =
+          isOnWaterTile && player.mesh.position.y < waterSurfaceY - player.radius * 0.35
+            ? 1
+            : 0;
+
+        player.cameraWaterBlend = lerp(
+          player.cameraWaterBlend,
+          targetCameraWaterBlend,
+          targetCameraWaterBlend > player.cameraWaterBlend ? 0.045 : 0.085
+        );
+
+        player.underwater = player.cameraWaterBlend > 0.58 && isOnWaterTile && player.mesh.position.y < waterSurfaceY - player.radius * 0.45;
+
+        const horizontalVelocity = new THREE.Vector3(player.velocity.x, 0, player.velocity.z);
+
+        const holdingShift = keys.has("ShiftLeft") || keys.has("ShiftRight");
+        const sprintingOnLand = holdingShift && !isFloating;
+
+        if (movement.lengthSq() > 0) {
+          movement.normalize();
+          const acceleration = isFloating
+            ? player.swimAcceleration
+            : (player.grounded ? player.acceleration : player.airAcceleration);
+
+          const accelerationMultiplier = sprintingOnLand ? player.sprintMultiplier : 1;
+          horizontalVelocity.addScaledVector(movement, acceleration * accelerationMultiplier * deltaSeconds);
+        }
+
+        const maxSpeed = isFloating
+          ? player.swimMaxSpeed
+          : player.maxSpeed * (sprintingOnLand ? player.sprintMaxSpeedMultiplier : 1);
+        if (horizontalVelocity.length() > maxSpeed) {
+          horizontalVelocity.setLength(maxSpeed);
+        }
+
+        const damping = isFloating
+          ? player.waterDamping
+          : (player.grounded ? player.damping : player.airDamping);
+
+        horizontalVelocity.multiplyScalar(Math.pow(damping, deltaSeconds * 60));
+
+        player.velocity.x = horizontalVelocity.x;
+        player.velocity.z = horizontalVelocity.z;
+
+        const previousPosition = player.mesh.position.clone();
+
+        if (isFloating) {
+          const bob = Math.sin(performance.now() * 0.004) * 0.22;
+          const targetFloatY = floatRestY + bob;
+          const displacement = targetFloatY - player.mesh.position.y;
+
+          /*
+            Ease into buoyancy on water entry. Without this, land-to-water transition yanks
+            the ball and follow camera down like a trapdoor in a cartoon castle.
+          */
+          const buoyancyStrength = player.buoyancySpring * player.waterBlend;
+          const gravityStrength = lerp(player.gravity, player.waterGravity, player.waterBlend);
+
+          player.verticalVelocity += displacement * buoyancyStrength * deltaSeconds;
+          player.verticalVelocity -= gravityStrength * deltaSeconds;
+
+          /*
+            Swim/dive control:
+            Looking down while pushing forward lets the sphere swim through the water.
+            The more downward the pitch, the more it presses below the bobbing line.
+          */
+          const pushingForward = keys.has("KeyW") || keys.has("ArrowUp");
+          const downwardLook = smoothstep(
+            THREE.MathUtils.degToRad(40),
+            THREE.MathUtils.degToRad(72),
+            state.pitch
+          );
+
+          if (pushingForward && downwardLook > 0) {
+            player.verticalVelocity -= player.swimDiveForce * downwardLook * deltaSeconds;
+            player.velocity.addScaledVector(forward, player.swimAcceleration * 0.35 * downwardLook * deltaSeconds);
+          }
+
+          const holdingSpace = keys.has("Space");
+
+          if (holdingShift) {
+            /*
+              Shift increases the chosen buoyancy depth.
+              Release Shift and the ball stabilizes there instead of bobbing back up like a pool toy with opinions.
+            */
+            player.waterDepthOffset = Math.min(
+              player.maxWaterDepthOffset,
+              player.waterDepthOffset + player.waterDepthAdjustSpeed * deltaSeconds
+            );
+          }
+
+          if (holdingSpace) {
+            /*
+              In water, Space is the opposite of Shift:
+              it raises the chosen float depth at the same speed Shift lowers it.
+            */
+            player.waterDepthOffset = Math.max(
+              0,
+              player.waterDepthOffset - player.waterDepthAdjustSpeed * deltaSeconds
+            );
+          }
+
+          // Water drag. Reduced while diving/sinking/floating back up so the ball can actually move through water.
+          const activelyAdjustingDepth = holdingShift || holdingSpace;
+          const activelyDiving = (pushingForward && downwardLook > 0.2) || activelyAdjustingDepth;
+          const drag = activelyDiving ? 0.975 : 0.92;
+          player.verticalVelocity *= Math.pow(drag, deltaSeconds * 60);
+        } else {
+          player.verticalVelocity -= player.gravity * deltaSeconds;
+        }
+
+        player.mesh.position.x += player.velocity.x * deltaSeconds;
+        player.mesh.position.z += player.velocity.z * deltaSeconds;
+        player.mesh.position.y += player.verticalVelocity * deltaSeconds;
+
+        const newWaterSurfaceY = getWaterSurfaceHeightAtWorld(player.mesh.position.x, player.mesh.position.z);
+        const newIsOnWaterTile = Number.isFinite(newWaterSurfaceY);
+        const newLandY = getTerrainHeightAtWorld(player.mesh.position.x, player.mesh.position.z);
+
+        // Trees are visual only now. Their hitbox grid can render for debugging, but it does not alter terrain height.
+        const landRestingY = newLandY + player.radius;
+        const waterRestingY = newIsOnWaterTile ? newWaterSurfaceY + player.radius * 0.56 : -Infinity;
+        const restingY = newIsOnWaterTile ? Math.max(waterRestingY, landRestingY) : landRestingY;
+
+        const wasGrounded = player.grounded;
+
+        if (!newIsOnWaterTile && player.mesh.position.y <= landRestingY) {
+          player.mesh.position.y = landRestingY;
+
+          if (!wasGrounded && player.verticalVelocity < -18) {
+            player.bounceTimer = player.bounceDuration;
+            player.verticalVelocity = Math.min(18, Math.abs(player.verticalVelocity) * 0.16);
+          } else {
+            player.verticalVelocity = 0;
+          }
+
+          player.grounded = true;
+          player.waterDepthOffset = 0;
+        } else if (newIsOnWaterTile) {
+          /*
+            Water sinking now respects the seabed.
+            Shift can set a deeper submerged depth, but the sphere stops when it reaches terrain.
+            Revolutionary safety feature: the planet is solid again.
+          */
+          if (player.mesh.position.y <= landRestingY) {
+            player.mesh.position.y = landRestingY;
+            player.verticalVelocity = Math.max(0, player.verticalVelocity);
+
+            // Prevent the chosen sink depth from constantly asking the sphere to push below the terrain.
+            const deepestAllowedOffset = Math.max(
+              0,
+              newWaterSurfaceY + player.radius * 0.56 - landRestingY
+            );
+            player.waterDepthOffset = Math.min(player.waterDepthOffset, deepestAllowedOffset);
+          }
+
+          // Keep the ball from popping too high above water unless it jumped in from land.
+          const maxFloatY = newWaterSurfaceY + player.radius * 1.35;
+          if (player.mesh.position.y > maxFloatY && player.verticalVelocity > 0) {
+            player.verticalVelocity *= 0.72;
+          }
+
+          player.underwater = player.cameraWaterBlend > 0.58 && player.mesh.position.y < newWaterSurfaceY - player.radius * 0.45;
+          player.waterSurfaceY = newWaterSurfaceY;
+
+          player.grounded = false;
+        } else {
+          player.grounded = false;
+        }
+
+        const deltaMove = player.mesh.position.clone().sub(previousPosition);
+        deltaMove.y = 0;
+
+        if (deltaMove.lengthSq() > 0.0001) {
+          const rollAxis = new THREE.Vector3(deltaMove.z, 0, -deltaMove.x).normalize();
+          const rollSpeedMultiplier = sprintingOnLand ? 1.22 : 1;
+          const rollAngle = (deltaMove.length() / player.radius) * rollSpeedMultiplier;
+          player.mesh.rotateOnWorldAxis(rollAxis, rollAngle);
+        }
+
+        if (player.launchStretchTimer > 0) {
+          player.launchStretchTimer = Math.max(0, player.launchStretchTimer - deltaSeconds);
+          const t = player.launchStretchTimer / player.launchStretchDuration;
+          const stretch = Math.sin(t * Math.PI) * player.launchStretchAmount;
+
+          player.mesh.scale.set(
+            1 - stretch * 0.35,
+            1 + stretch,
+            1 - stretch * 0.35
+          );
+        } else if (isFloating) {
+          const bobSquish = Math.sin(performance.now() * 0.006) * 0.035;
+          player.mesh.scale.set(
+            1 + bobSquish,
+            1 - bobSquish * 0.8,
+            1 + bobSquish
+          );
+          player.bounceTimer = 0;
+        } else if (player.bounceTimer > 0) {
+          player.bounceTimer = Math.max(0, player.bounceTimer - deltaSeconds);
+          const t = player.bounceTimer / player.bounceDuration;
+          const squash = Math.sin(t * Math.PI) * player.bounceAmount;
+
+          player.mesh.scale.set(
+            1 + squash * 0.45,
+            1 - squash,
+            1 + squash * 0.45
+          );
+        } else {
+          player.mesh.scale.lerp(new THREE.Vector3(1, 1, 1), 0.25);
+        }
+
+        state.target.x = player.mesh.position.x;
+        state.target.z = player.mesh.position.z;
+        updateChunks();
+      }
+
+      function handleMovement(deltaSeconds) {
+        if (isThirdPersonMode) {
+          updateThirdPersonPlayer(deltaSeconds);
+
+          if (keys.has("KeyQ")) {
+            state.yaw += state.keyRotateSpeed * deltaSeconds;
+          }
+
+          if (keys.has("KeyE")) {
+            state.yaw -= state.keyRotateSpeed * deltaSeconds;
+          }
+
+          return;
+        }
+
+        const { forward, right } = getForwardRightVectors();
+        const movement = new THREE.Vector3();
+
+        if (keys.has("KeyW") || keys.has("ArrowUp")) movement.add(forward);
+        if (keys.has("KeyS") || keys.has("ArrowDown")) movement.sub(forward);
+        if (keys.has("KeyD") || keys.has("ArrowRight")) movement.add(right);
+        if (keys.has("KeyA") || keys.has("ArrowLeft")) movement.sub(right);
+
+        if (movement.lengthSq() > 0) {
+          movement.normalize();
+          const speed = state.moveSpeed * Math.max(0.65, state.distance / 360);
+          state.target.addScaledVector(movement, speed * deltaSeconds);
+          updateChunks();
+        }
+
+        if (keys.has("KeyQ")) {
+          state.yaw += state.keyRotateSpeed * deltaSeconds;
+        }
+
+        if (keys.has("KeyE")) {
+          state.yaw -= state.keyRotateSpeed * deltaSeconds;
+        }
+      }
+
+      canvas.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+      });
+
+      canvas.addEventListener("pointerdown", (event) => {
+        if (event.button === 1 || event.button === 2) {
+          event.preventDefault();
+          state.dragging = true;
+          state.lastPointerX = event.clientX;
+          state.lastPointerY = event.clientY;
+          canvas.classList.add("dragging");
+          canvas.setPointerCapture(event.pointerId);
+        }
+      });
+
+      canvas.addEventListener("pointermove", (event) => {
+        if (!state.dragging) return;
+
+        const deltaX = event.clientX - state.lastPointerX;
+        const deltaY = event.clientY - state.lastPointerY;
+
+        state.lastPointerX = event.clientX;
+        state.lastPointerY = event.clientY;
+
+        state.yaw -= deltaX * state.rotateSpeed;
+        state.pitch += deltaY * state.rotateSpeed;
+        state.pitch = THREE.MathUtils.clamp(
+          state.pitch,
+          THREE.MathUtils.degToRad(isThirdPersonMode ? 14 : 4),
+          THREE.MathUtils.degToRad(isThirdPersonMode ? 72 : 86)
+        );
+      });
+
+      canvas.addEventListener("pointerup", (event) => {
+        state.dragging = false;
+        canvas.classList.remove("dragging");
+
+        if (canvas.hasPointerCapture(event.pointerId)) {
+          canvas.releasePointerCapture(event.pointerId);
+        }
+      });
+
+      canvas.addEventListener("pointercancel", () => {
+        state.dragging = false;
+        canvas.classList.remove("dragging");
+      });
+
+      window.addEventListener("wheel", (event) => {
+        if (minimap.contains(event.target)) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const zoomFactor = 1 + event.deltaY * state.zoomSpeed;
+        state.distance = THREE.MathUtils.clamp(
+          state.distance * zoomFactor,
+          isThirdPersonMode ? 26 : state.minDistance,
+          isThirdPersonMode ? 150 : state.maxDistance
+        );
+      }, { passive: false });
+
+      async function toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (error) {
+          console.warn("Fullscreen toggle failed:", error);
+        }
+      }
+
+      window.addEventListener("keydown", (event) => {
+        keys.add(event.code);
+
+        if (event.code === "Escape") {
+          hud.classList.toggle("hidden");
+        }
+
+        if (event.code === "KeyR") {
+          resetCamera();
+        }
+
+        if (event.code === "KeyF") {
+          toggleFullscreen();
+          event.preventDefault();
+        }
+
+        if (
+          isThirdPersonMode &&
+          event.code === "Space" &&
+          player.mesh &&
+          player.grounded &&
+          !player.inWater
+        ) {
+          const sprintJump = keys.has("ShiftLeft") || keys.has("ShiftRight");
+          player.verticalVelocity = player.jumpVelocity * (sprintJump ? player.sprintJumpMultiplier : 1);
+
+          if (sprintJump) {
+            const { forward } = getForwardRightVectors();
+            player.velocity.addScaledVector(forward, player.maxSpeed * 0.78);
+            player.launchStretchTimer = player.launchStretchDuration;
+          }
+
+          player.grounded = false;
+          player.bounceTimer = 0;
+          event.preventDefault();
+        }
+
+        if (
+          isThirdPersonMode &&
+          event.code === "Space" &&
+          player.mesh &&
+          player.inWater
+        ) {
+          // In water, Space is handled continuously in updateThirdPersonPlayer as "float upward".
+          event.preventDefault();
+        }
+
+        if (
+          ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "ShiftLeft", "ShiftRight"].includes(event.code)
+        ) {
+          event.preventDefault();
+        }
+      });
+
+      window.addEventListener("keyup", (event) => {
+        keys.delete(event.code);
+      });
+
+      window.addEventListener("resize", () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      });
+
+      const clock = new THREE.Clock();
+
+      function animate() {
+        const deltaSeconds = Math.min(clock.getDelta(), 0.05);
+        const elapsedSeconds = clock.elapsedTime;
+
+        handleMovement(deltaSeconds);
+        updateTargetHeight();
+        updateCameraPosition();
+        updateUnderwaterOverlay(deltaSeconds);
+        updateNerdStats();
+        updateTreeFlattening(deltaSeconds);
+        updateCloudLayer(deltaSeconds);
+        updateLodFogCurtain();
+        processDistantLodQueue();
+        saveWorldCache(false);
+
+        minimapFrameCounter += 1;
+        if (minimapFrameCounter % 4 === 0) {
+          drawMinimap();
+        }
+
+        if (waterTexture) {
+          waterTexture.offset.x = (waterTexture.offset.x + deltaSeconds * 0.012) % 1;
+          waterTexture.offset.y = (waterTexture.offset.y + deltaSeconds * 0.006) % 1;
+        }
+
+        if (waterSurfaceTexture) {
+          /*
+            Faster diagonal water motion for the animated top layer.
+            No side-to-side sway nonsense now — just a steady diagonal drift.
+          */
+          waterSurfaceTexture.offset.x = (waterSurfaceTexture.offset.x + deltaSeconds * 0.32) % 1;
+          waterSurfaceTexture.offset.y = (waterSurfaceTexture.offset.y + deltaSeconds * 0.24) % 1;
+        }
+
+        waterSurfaceMaterial.opacity = 0.18 + (Math.sin(elapsedSeconds * 2.4) * 0.055 + 0.055);
+
+        updateTreeSpritesFacingCamera();
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      loadWorldCache();
+      syncModeReadout();
+      resetCamera();
+      restoreFullGameState();
+      animate();
+
+      window.addEventListener("beforeunload", () => {
+        saveWorldCache(true);
+      });
+
+      requestAnimationFrame(() => {
+        initialFrameRendered = true;
+        maybeFinishLoading();
+      });
+    }
+  </script>
+</body>
+</html>
