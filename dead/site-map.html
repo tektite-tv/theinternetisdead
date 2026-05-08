@@ -94,7 +94,12 @@
   </div>
   <div id="site-map-list" aria-live="polite"></div>
   <script>
-    const repoIndexUrl = '/dead/JSON/repo-index.json';
+    const repoIndexUrls = [
+      '/dead/JSON/repo-index.json',
+      './JSON/repo-index.json',
+      'JSON/repo-index.json'
+    ];
+
     const meta = document.getElementById('meta');
     const filter = document.getElementById('filter');
     const typeFilter = document.getElementById('type-filter');
@@ -113,58 +118,76 @@
       }[char]));
     }
 
+    function stripSlashes(value) {
+      return String(value || '').replace(/^\/+/, '').replace(/\/+$/, '');
+    }
+
     function titleize(value) {
-      return String(value || 'Root')
-        .replace(/.[^.]+$/, '')
+      const clean = String(value || 'Root')
+        .replace(/\.[^.]+$/, '')
         .replace(/[-_]+/g, ' ')
-        .replace(/w/g, char => char.toUpperCase());
+        .trim();
+      return clean.replace(/\b\w/g, char => char.toUpperCase()) || 'Root';
     }
 
     function normalizeItems(repoIndex) {
-      if (Array.isArray(repoIndex.items)) return repoIndex.items;
-      if (Array.isArray(repoIndex.folders)) {
-        return repoIndex.folders.map(href => ({
-type: 'directory',
-name: href === '/' ? 'Root' : href.split('/').filter(Boolean).at(-1),
-path: href === '/' ? '' : href.replace(/^//, '').replace(//$/, ''),
-href,
-parent: href.split('/').filter(Boolean).slice(0, -1).join('/') || '.',
-depth: href.split('/').filter(Boolean).length
-        }));
+      if (repoIndex && Array.isArray(repoIndex.items)) return repoIndex.items;
+
+      if (Array.isArray(repoIndex)) return repoIndex;
+
+      if (repoIndex && repoIndex.byPath && typeof repoIndex.byPath === 'object') {
+        return Object.values(repoIndex.byPath);
       }
+
       return [];
     }
 
     function isHiddenPath(item) {
-      return String(item.path || '').split('/').some(part => part.startsWith('.'));
+      const path = stripSlashes(item.path || item.href || item.name || '');
+      return path.split('/').some(part => part.startsWith('.'));
+    }
+
+    function cleanItem(item) {
+      const type = item.type === 'directory' ? 'directory' : 'file';
+      const path = stripSlashes(item.path || item.href || item.name || '');
+      const href = item.href || '/' + path + (type === 'directory' ? '/' : '');
+      const pathParts = path.split('/').filter(Boolean);
+      const name = item.name || pathParts.at(-1) || 'Root';
+      const parent = item.parent ? stripSlashes(item.parent) : pathParts.slice(0, -1).join('/') || '.';
+
+      return { ...item, type, path, href, name, parent };
     }
 
     function groupLabel(parent) {
       if (!parent || parent === '.') return 'Root';
-      return '/' + parent.replace(/^//, '').replace(//$/, '') + '/';
+      return '/' + stripSlashes(parent) + '/';
     }
 
     function render() {
       const groups = new Map();
-      items.forEach(item => {
+      items.forEach(rawItem => {
+        const item = cleanItem(rawItem);
         const parent = item.parent || '.';
         if (!groups.has(parent)) groups.set(parent, []);
         groups.get(parent).push(item);
       });
 
-      const groupHtml = [...groups.entries()].map(([parent, groupItems]) => {
+      const groupHtml = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([parent, groupItems]) => {
+        const sortedItems = groupItems.sort((a, b) => {
+          if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+          return a.href.localeCompare(b.href);
+        });
         const label = groupLabel(parent);
-        const rows = groupItems.map(item => {
-const href = item.href || '/' + item.path + (item.type === 'directory' ? '/' : '');
-const displayPath = href;
-const type = item.type || 'file';
-const name = item.name || displayPath;
-return '<li data-path="' + escapeHtml(displayPath.toLowerCase()) + '" data-type="' + escapeHtml(type) + '"><a href="' + escapeHtml(href) + '">' + escapeHtml(titleize(name)) + '<br><span class="path">' + escapeHtml(displayPath) + ' • ' + escapeHtml(type) + '</span></a></li>';
+        const rows = sortedItems.map(item => {
+          const displayPath = item.href;
+          const type = item.type || 'file';
+          const name = item.name || displayPath;
+          return '<li data-path="' + escapeHtml(displayPath.toLowerCase()) + '" data-type="' + escapeHtml(type) + '"><a href="' + escapeHtml(item.href) + '">' + escapeHtml(titleize(name)) + '<br><span class="path">' + escapeHtml(displayPath) + ' • ' + escapeHtml(type) + '</span></a></li>';
         }).join('');
-        return '<section data-section="' + escapeHtml(label.toLowerCase()) + '"><h2>' + escapeHtml(label) + ' <span class="path">(' + groupItems.length + ')</span></h2><ul>' + rows + '</ul></section>';
+        return '<section data-section="' + escapeHtml(label.toLowerCase()) + '"><h2>' + escapeHtml(label) + ' <span class="path">(' + sortedItems.length + ')</span></h2><ul>' + rows + '</ul></section>';
       }).join('');
 
-      list.innerHTML = groupHtml;
+      list.innerHTML = groupHtml || '<section class="error"><h2>No entries found</h2><p>The repo index loaded, but it had nothing useful in it. Naturally.</p></section>';
       totalCount.textContent = items.length;
       applyFilter();
     }
@@ -192,17 +215,35 @@ return '<li data-path="' + escapeHtml(displayPath.toLowerCase()) + '" data-type=
       visibleCount.textContent = visible;
     }
 
+    async function fetchRepoIndex() {
+      let lastError = null;
+
+      for (const url of repoIndexUrls) {
+        try {
+          const response = await fetch(url, { cache: 'no-store' });
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          const repoIndex = await response.json();
+          return { repoIndex, url };
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      throw lastError || new Error('Unknown fetch failure');
+    }
+
     async function loadRepoIndex() {
       try {
-        const response = await fetch(repoIndexUrl, { cache: 'no-store' });
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        const repoIndex = await response.json();
-        items = normalizeItems(repoIndex).filter(item => !isHiddenPath(item));
-        meta.innerHTML = 'Generated live from <code>' + repoIndexUrl + '</code>. Showing ' + items.length + ' public-ish entries. Dotfiles and dotfolders are banished to the shadow realm.';
+        const { repoIndex, url } = await fetchRepoIndex();
+        items = normalizeItems(repoIndex)
+          .map(cleanItem)
+          .filter(item => !isHiddenPath(item));
+
+        meta.innerHTML = 'Generated live from <code>' + escapeHtml(url) + '</code>. Showing ' + items.length + ' public-ish entries. Dotfiles and dotfolders are banished to the shadow realm.';
         render();
       } catch (error) {
         meta.classList.add('error');
-        meta.textContent = 'Could not load ' + repoIndexUrl + ': ' + error.message;
+        meta.textContent = 'Could not load repo-index.json: ' + error.message;
       }
     }
 
