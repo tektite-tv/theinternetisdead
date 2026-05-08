@@ -10,8 +10,9 @@ const standaloneParams = new URLSearchParams(window.location.search);
 const allowStandalone = standaloneParams.get('standalone') === 'true';
 
 if (window.top === window.self && !allowStandalone) {
-  window.sessionStorage.setItem('deadRootShellFramePath', '/dead/experiments/' + window.location.search + window.location.hash);
-  window.location.replace('/');
+  const shellFramePath = '/dead/experiments/' + window.location.search + window.location.hash;
+  window.sessionStorage.setItem('deadRootShellFramePath', shellFramePath);
+  window.location.replace('/?frame=' + encodeURIComponent(shellFramePath));
 }
 </script>
 <style>
@@ -20,59 +21,68 @@ if (window.top === window.self && !allowStandalone) {
   --panel-bg:#4b0076;
   --text:#00ff00;
   --accent:#00ff00;
-  --hover-bg:#001a00;
+  --hover-bg:#2a0042;
   --font:"Courier New", monospace;
 }
 
 *{box-sizing:border-box;}
 html,body{
   margin:0;
-  background:var(--page-bg);
   color:var(--text);
   font-family:var(--font);
+  overflow:auto;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
 }
+
+html{
+  background:transparent !important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar{
+  display:none;
+}
+
 
 body{
   padding:20px;
+  position:relative;
+  min-height:100vh;
+  min-height:100dvh;
+  background:transparent !important;
+  isolation:isolate;
+}
+
+.header,
+#links,
+.edit-note{
+  position:relative;
+  z-index:1;
 }
 
 .header{
-  margin-bottom:20px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  margin-bottom:24px;
+}
+
+.header-copy{
+  flex:1 1 auto;
+  min-width:0;
 }
 
 .title{
-  font-size:28px;
+  font-size:24px;
   font-weight:bold;
-  margin:0 0 8px 0;
+  margin:0 0 6px 0;
 }
 
 .subtitle{
   margin:0;
   opacity:.8;
-}
-
-.controls{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  flex-wrap:wrap;
-  margin:18px 0 24px;
-}
-
-#searchInput{
-  width:260px;
-  max-width:100%;
-  height:40px;
-  padding:0 12px;
-  border:2px solid var(--accent);
-  background:var(--panel-bg);
-  color:var(--text);
-  font-family:var(--font);
-}
-
-#searchInput::placeholder{
-  color:var(--text);
-  opacity:1;
+  font-size:14px;
 }
 
 button{
@@ -86,8 +96,10 @@ button{
 }
 
 button:hover,
-a.post:hover{
+a.post:hover,
+a.post:hover .post-copy{
   background:var(--hover-bg);
+  background-color:var(--hover-bg);
 }
 
 #links{
@@ -106,7 +118,12 @@ a.post{
   text-decoration:none;
   border:2px solid var(--accent);
   background:var(--panel-bg);
+  background-color:var(--panel-bg);
   padding:10px;
+}
+
+.post-copy{
+  background:var(--panel-bg);
 }
 
 .grid-view .post .thumb{
@@ -124,12 +141,14 @@ a.post{
 .list-view .post .thumb{
   width:160px;
   flex:0 0 160px;
+  aspect-ratio:16/9;
 }
 
 .thumb{
   border:2px solid var(--accent);
   overflow:hidden;
   background:var(--panel-bg);
+  position:relative;
 }
 
 .thumb img{
@@ -164,9 +183,16 @@ code{
   color:var(--text);
 }
 
+@media (max-width: 900px){
+  .header{
+    flex-direction:column;
+    align-items:stretch;
+  }
+}
+
 @media (max-width: 768px){
   body{padding:12px;}
-  .title{font-size:22px;}
+  .title{font-size:20px;}
   #links,
   #links.grid-view{
     grid-template-columns:1fr;
@@ -178,27 +204,19 @@ code{
     width:100%;
     margin-bottom:10px;
   }
-  #searchInput{
-    width:100%;
-  }
 }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1 class="title">Web Experiments by @Honestly_Thomas (Tektite)</h1>
-  <p class="subtitle">Weird ideas I vibe-coded into reality with ChatGPT.</p>
+  <div class="header-copy">
+    <h1 class="title">Web Experiments by @Honestly_Thomas (Tektite)</h1>
+    <p class="subtitle">Weird ideas I vibe-coded into reality with ChatGPT.</p>
+  </div>
 </div>
 
-<div class="controls">
-  <input id="searchInput" type="text" placeholder="Search links...">
-  <button id="gridBtn" type="button">GRID</button>
-  <button id="listBtn" type="button">LIST</button>
-</div>
-
-<div id="links" class="grid-view"></div>
-
+<div id="links" class="list-view"></div>
 <div class="edit-note">
   All experiments painstakingly hand vibe-coded in ChatGPT by Thomas Harrison aka @Honestly_Thomas (Tektite) / Copyright 2026 / theinternetisdead.org
 </div>
@@ -206,62 +224,60 @@ code{
 <script>
 const linksData = [
   {
+    title: "Blotter Visualizer",
+    description: "A visual experiment tucked under /dead/experiments/blotter-visualizer/.",
+    url: "/dead/experiments/blotter-visualizer/"
+  },
+  {
+    title: "Canvas Backgrounds",
+    description: "A collection of animated canvas background experiments.",
+    url: "/dead/experiments/canvas-backgrounds/"
+  },
+  {
     title: "Chat Sandbox",
     description: "A Minecraft-esque chat/command messaging system for interacting with my site.",
-    url: "/dead/experiments/chat-sandbox/",
-    image: "/dead/images/link-thumbnails/chat-sandbox.png"
+    url: "/dead/experiments/chat-sandbox/"
   },
   {
     title: "God's Eye Art",
     description: "I made this recursive art in photoshop when I was 20 years old and I named it gods-eye.png and apparently turned it into a website using math.",
-    url: "/dead/experiments/gods-eye/",
-    image: "/dead/images/link-thumbnails/gods-eye-art.png"
+    url: "/dead/experiments/gods-eye/"
   },
   {
-    title: "Multimedia Editor",
-    description: "Edit images with my weird tool or use the camera if you dare!",
-    url: "/dead/tools/multimedia-editor/",
-    image: "/dead/images/link-thumbnails/multimedia-editor.png"
-  },
-  {
-    title: "Music Player",
-    description: "Who needs iTunes, VLC, or WinAMP, when we have HTML/CSS and Javascript and AI to vibecode any design you want?",
-    url: "/dead/tools/music-player/",
-    image: "/dead/images/link-thumbnails/music-player.png"
+    title: "Mandala Visuals",
+    description: "A series of mandala visual experiments.",
+    url: "/dead/experiments/mandala-visuals/"
   },
   {
     title: "Photosphere Planet View",
     description: "Wrap an image around the planet/skybox to create some really trippy effects man.",
-    url: "/dead/experiments/photosphere/",
-    image: "/dead/images/link-thumbnails/photosphere.png"
+    url: "/dead/experiments/photosphere/"
   },
   {
     title: "Sound Machine",
     description: "Make crazy sounding noises with a cool waveform visualizer I made just for you!",
-    url: "/dead/experiments/sound-machine/",
-    image: "/dead/images/link-thumbnails/sound-machine.png"
+    url: "/dead/experiments/sound-machine/"
   },
   {
-    title: "Bookmark Manager",
-    description: "A tiny draggable bookmark bar for importing, sorting, editing, and launching links.",
-    url: "/dead/tools/bookmark-manager/",
-    image: "/dead/images/link-thumbnails/rainbow-test.png"
+    title: "Stacks",
+    description: "A stacked-layout visual experiment.",
+    url: "/dead/experiments/stacks/"
+  },
+  {
+    title: "Test",
+    description: "Experimental test pages and sketches.",
+    url: "/dead/experiments/test/"
   }
 ];
 
 const linksEl = document.getElementById('links');
-const searchInput = document.getElementById('searchInput');
-const gridBtn = document.getElementById('gridBtn');
-const listBtn = document.getElementById('listBtn');
-
-let currentView = 'grid';
-let filteredLinks = [...linksData];
+const fallbackImage = "/dead/images/pngs/static.gif";
 
 function renderLinks(){
-  linksEl.className = currentView === 'grid' ? 'grid-view' : 'list-view';
-  linksEl.innerHTML = filteredLinks.map(link => `
+  linksEl.className = 'list-view';
+  linksEl.innerHTML = linksData.map(link => `
     <a class="post" href="${link.url}" data-index-frame-src="${link.url}">
-      <div class="thumb"><img src="${link.image}" alt="${link.title}"></div>
+      <div class="thumb"><img src="${fallbackImage}" alt="${link.title}"></div>
       <div class="post-copy">
         <div class="post-title">${link.title}</div>
         <div class="post-desc">${link.description || ''}</div>
@@ -269,28 +285,6 @@ function renderLinks(){
     </a>
   `).join('');
 }
-
-function applySearch(){
-  const q = searchInput.value.trim().toLowerCase();
-  filteredLinks = !q
-    ? [...linksData]
-    : linksData.filter(link =>
-        `${link.title} ${link.description} ${link.url}`.toLowerCase().includes(q)
-      );
-  renderLinks();
-}
-
-gridBtn.addEventListener('click', () => {
-  currentView = 'grid';
-  renderLinks();
-});
-
-listBtn.addEventListener('click', () => {
-  currentView = 'list';
-  renderLinks();
-});
-
-searchInput.addEventListener('input', applySearch);
 
 function getStandaloneUrl(frameSrc){
   const url = new URL(frameSrc, window.location.origin);

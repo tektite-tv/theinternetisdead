@@ -9,8 +9,9 @@ const standaloneParams = new URLSearchParams(window.location.search);
 const allowStandalone = standaloneParams.get('standalone') === 'true';
 
 if (window.top === window.self && !allowStandalone) {
-  window.sessionStorage.setItem('deadRootShellFramePath', '/dead/experiments/sound-machine/' + window.location.search + window.location.hash);
-  window.location.replace('/');
+  const shellFramePath = '/dead/experiments/sound-machine/' + window.location.search + window.location.hash;
+  window.sessionStorage.setItem('deadRootShellFramePath', shellFramePath);
+  window.location.replace('/?frame=' + encodeURIComponent(shellFramePath));
 }
 </script>
 

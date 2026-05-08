@@ -231,13 +231,11 @@ function redirectKnownWatchRoutes(){
             ? "/dead/experiments/"
             : (toolShortPaths.has(folderName) ? "/dead/tools/" : "");
         if(folderBasePath){
-            window.sessionStorage.setItem(
-                "deadRootShellFramePath",
-                folderBasePath + encodeURIComponent(folderName) + "/" +
-                    (window.location.search || "") +
-                    (window.location.hash || "")
-            );
-            window.location.replace("/");
+            const shellFramePath = folderBasePath + encodeURIComponent(folderName) + "/" +
+                (window.location.search || "") +
+                (window.location.hash || "");
+            window.sessionStorage.setItem("deadRootShellFramePath", shellFramePath);
+            window.location.replace("/?frame=" + encodeURIComponent(shellFramePath));
             return true;
         }
     }

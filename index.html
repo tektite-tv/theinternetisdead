@@ -166,7 +166,15 @@
       { count: 120, baseSpeedY: 80, parallaxX: 0.60, sizeMin: 1, sizeMax: 3 },
       { count: 70, baseSpeedY: 140, parallaxX: 0.90, sizeMin: 2, sizeMax: 4 }
     ];
-    const pendingFramePath = window.sessionStorage.getItem(ROOT_SHELL_FRAME_KEY) || '';
+    const shellQueryParams = new URLSearchParams(window.location.search || '');
+    const pendingQueryFramePath = shellQueryParams.get('frame') || '';
+    const isPlainShellHome = (window.location.pathname || '/') === '/' &&
+      !pendingQueryFramePath &&
+      !window.location.hash;
+    const pendingStoredFramePath = isPlainShellHome
+      ? ''
+      : window.sessionStorage.getItem(ROOT_SHELL_FRAME_KEY) || '';
+    const pendingFramePath = pendingQueryFramePath || pendingStoredFramePath;
     if (pendingFramePath) {
       window.sessionStorage.removeItem(ROOT_SHELL_FRAME_KEY);
     }
@@ -223,7 +231,16 @@
       if (
         /^\/dead\/games\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path) ||
         /^\/dead\/experiments\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path) ||
-        /^\/dead\/tools\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path)
+        /^\/dead\/tools\/(?:[^/]+\/?)?(?:index\.html)?$/i.test(path) ||
+        (
+          path.startsWith('/dead/') &&
+          !path.startsWith('/dead/JSON/') &&
+          !path.startsWith('/dead/audio/') &&
+          !path.startsWith('/dead/images/') &&
+          !path.startsWith('/dead/messages/') &&
+          !path.startsWith('/dead/scripts/') &&
+          !/\.(?:css|js|mjs|json|map|png|jpe?g|gif|webp|svg|ico|mp3|wav|ogg|pdf|zip|md|txt)$/i.test(path)
+        )
       ) {
         return `${path}${window.location.search || ''}${window.location.hash || ''}`;
       }
@@ -697,7 +714,9 @@
     resizeObserver.observe(overlayContainer);
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js').catch((error) => {
+      navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+        registration.update();
+      }).catch((error) => {
         console.warn('Unable to register service worker', error);
       });
     }
