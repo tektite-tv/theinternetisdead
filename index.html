@@ -221,6 +221,22 @@
       return ROOT_SHORT_PATH_REDIRECTS[normalizedPath] || getShortFolderRedirect(normalizedPath);
     }
 
+    function getDeadStandaloneIndexPath(pathname) {
+      const normalizedPath = String(pathname || '').replace(/\/{2,}/g, '/');
+      if (!normalizedPath.startsWith('/dead/')) return '';
+      if (normalizedPath.endsWith('/index.html')) return normalizedPath;
+      if (/\.[^/]+$/.test(normalizedPath)) return '';
+      return normalizedPath.replace(/\/?$/, '/index.html');
+    }
+
+    const requestedStandaloneDeadIndexPath = shellQueryParams.get('standalone') === 'true'
+      ? getDeadStandaloneIndexPath(window.location.pathname || '/')
+      : '';
+
+    if (requestedStandaloneDeadIndexPath && requestedStandaloneDeadIndexPath !== (window.location.pathname || '')) {
+      window.location.replace(`${requestedStandaloneDeadIndexPath}${window.location.search || ''}${window.location.hash || ''}`);
+    }
+
     function getStartupFramePathFromUrl() {
       const path = (window.location.pathname || '').replace(/\/{2,}/g, '/');
       const shortPathRedirect = getShortPathRedirect(path);
@@ -327,11 +343,18 @@
         const url = new URL(rawValue, window.location.origin);
         if (url.origin !== window.location.origin) return DEFAULT_IFRAME_PATH;
         const shortPathRedirect = getShortPathRedirect(url.pathname);
-        return `${shortPathRedirect || url.pathname}${url.search}${url.hash}`;
+        let normalizedPath = shortPathRedirect || url.pathname;
+        if (url.searchParams.get('standalone') === 'true') {
+          normalizedPath = getDeadStandaloneIndexPath(normalizedPath) || normalizedPath;
+        }
+        return `${normalizedPath}${url.search}${url.hash}`;
       } catch (error) {
         const withLeadingSlash = rawValue.startsWith('/') ? rawValue : `/${rawValue}`;
         const normalizedPath = withLeadingSlash.replace(/\/{2,}/g, '/');
-        return getShortPathRedirect(normalizedPath) || normalizedPath;
+        const redirectedPath = getShortPathRedirect(normalizedPath) || normalizedPath;
+        return rawValue.includes('standalone=true')
+          ? (getDeadStandaloneIndexPath(redirectedPath) || redirectedPath)
+          : redirectedPath;
       }
     }
 
@@ -565,7 +588,7 @@
         event.preventDefault();
         if (event.shiftKey) {
           const standaloneUrl = new URL(frameSrc, window.location.origin);
-          standaloneUrl.pathname = standaloneUrl.pathname.replace(/\/?$/, '/index.html');
+          standaloneUrl.pathname = getDeadStandaloneIndexPath(standaloneUrl.pathname) || standaloneUrl.pathname.replace(/\/?$/, '/index.html');
           standaloneUrl.searchParams.set('standalone', 'true');
           window.location.href = standaloneUrl.href;
           return;

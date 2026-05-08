@@ -249,55 +249,7 @@ code{
 
 </div>
 
-<div id="links" class="grid-view">
-  <a class="post" href="/dead/games/shooter-game/" data-index-frame-src="/dead/games/shooter-game/">
-    <div class="thumb"><img src="/dead/images/link-thumbnails/dead-games-shooter-game.png" alt="Tektite's Shooter Game"></div>
-    <div class="post-copy">
-      <div class="post-title">Tektite's Shooter Game</div>
-      <div class="post-desc">I had a bunch of random images I turned into a decent and fun Galaga clone with lots of secrets!</div>
-    </div>
-  </a>
-
-  <a class="post" href="#">
-    <div class="thumb"><img src="https://placehold.co/1280x720/140014/00ff00?text=Placeholder+2" alt="Placeholder Link 2"></div>
-    <div class="post-copy">
-      <div class="post-title">Placeholder Link 2</div>
-      <div class="post-desc">Another manually editable item in the same layout style.</div>
-    </div>
-  </a>
-
-  <a class="post" href="#">
-    <div class="thumb"><img src="https://placehold.co/1280x720/101010/00ff00?text=Placeholder+3" alt="Placeholder Link 3"></div>
-    <div class="post-copy">
-      <div class="post-title">Placeholder Link 3</div>
-      <div class="post-desc">Use local image paths if you want, like /dead/images/pngs/example.png.</div>
-    </div>
-  </a>
-
-  <a class="post" href="#">
-    <div class="thumb"><img src="https://placehold.co/1280x720/1d0028/00ff00?text=Placeholder+4" alt="Placeholder Link 4"></div>
-    <div class="post-copy">
-      <div class="post-title">Placeholder Link 4</div>
-      <div class="post-desc">This keeps the same general visual rhythm as your reference file.</div>
-    </div>
-  </a>
-
-  <a class="post" href="#">
-    <div class="thumb"><img src="https://placehold.co/1280x720/001414/00ff00?text=Placeholder+5" alt="Placeholder Link 5"></div>
-    <div class="post-copy">
-      <div class="post-title">Placeholder Link 5</div>
-      <div class="post-desc">Grid view shows cards. List view shows rows. Civilization limps onward.</div>
-    </div>
-  </a>
-
-  <a class="post" href="#">
-    <div class="thumb"><img src="https://placehold.co/1280x720/181800/00ff00?text=Placeholder+6" alt="Placeholder Link 6"></div>
-    <div class="post-copy">
-      <div class="post-title">Placeholder Link 6</div>
-      <div class="post-desc">Delete, duplicate, or reorder these objects however you want.</div>
-    </div>
-  </a>
-</div>
+<div id="links" class="grid-view" aria-live="polite"></div>
 
 <div class="edit-note">
   All games painstakingly hand vibe-coded in ChatGPT by Thomas Harrison aka @Honestly_Thomas (Tektite) / Copyright 2026 / theinternetisdead.org
@@ -305,14 +257,89 @@ code{
 
 
 <script>
-function getStandaloneUrl(frameSrc){
+const linksEl = document.getElementById('links');
+const fallbackImage = '/dead/images/pngs/static.gif';
+const gameMetadata = {
+  '/dead/games/shooter-game/': {
+    title: "Tektite's Shooter Game",
+    description: 'I had a bunch of random images I turned into a decent and fun Galaga clone with lots of secrets!',
+    image: '/dead/images/link-thumbnails/dead-games-shooter-game.png'
+  },
+  '/dead/games/tektite-3D-game/': {
+    title: "Tektite's 3D Game",
+    description: 'A weird little 3D terrain/game experiment. Nature, but with more JavaScript crimes.',
+    image: '/dead/images/link-thumbnails/dead-games-tektite-3D-game.png'
+  }
+};
+
+const fallbackGameLinks = Object.keys(gameMetadata);
+
+function normalizeFolderPath(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw, window.location.origin);
+    return url.pathname.replace(/\/{2,}/g, '/').replace(/\/?$/, '/');
+  } catch (error) {
+    return raw.replace(/\/{2,}/g, '/').replace(/\/?$/, '/');
+  }
+}
+
+function titleFromFolder(folderPath) {
+  const slug = normalizeFolderPath(folderPath).split('/').filter(Boolean).pop() || 'game';
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function thumbnailFromFolder(folderPath) {
+  const slugPath = normalizeFolderPath(folderPath)
+    .replace(/^\//, '')
+    .replace(/\/$/, '')
+    .replace(/\//g, '-');
+  return `/dead/images/link-thumbnails/${slugPath}.png`;
+}
+
+function renderLinks(folderPaths) {
+  const seen = new Set();
+  const links = folderPaths
+    .map(normalizeFolderPath)
+    .filter((folderPath) => /^\/dead\/games\/[^/]+\/$/.test(folderPath))
+    .filter((folderPath) => {
+      if (seen.has(folderPath)) return false;
+      seen.add(folderPath);
+      return true;
+    })
+    .sort((a, b) => titleFromFolder(a).localeCompare(titleFromFolder(b)));
+
+  linksEl.innerHTML = links.map((folderPath) => {
+    const meta = gameMetadata[folderPath] || {};
+    const title = meta.title || titleFromFolder(folderPath);
+    const description = meta.description || `A game folder under ${folderPath}. It exists, therefore the menu must acknowledge it, as civilization demands.`;
+    const image = meta.image || thumbnailFromFolder(folderPath);
+    return `
+      <a class="post" href="${folderPath}" data-index-frame-src="${folderPath}">
+        <div class="thumb"><img src="${image}" alt="${title}" onerror="this.onerror=null;this.src='${fallbackImage}'"></div>
+        <div class="post-copy">
+          <div class="post-title">${title}</div>
+          <div class="post-desc">${description}</div>
+        </div>
+      </a>
+    `;
+  }).join('');
+}
+
+function getStandaloneUrl(frameSrc) {
   const url = new URL(frameSrc, window.location.origin);
-  url.pathname = url.pathname.replace(/\/?$/, '/index.html');
+  const path = url.pathname.replace(/\/{2,}/g, '/');
+  url.pathname = path.endsWith('/index.html') ? path : path.replace(/\/?$/, '/index.html');
   url.searchParams.set('standalone', 'true');
   return url.href;
 }
 
-function openLinkInRootFrame(event){
+function openLinkInRootFrame(event) {
   const link = event.target.closest('[data-index-frame-src]');
   if (!link) return;
 
@@ -339,7 +366,23 @@ function openLinkInRootFrame(event){
   parentController.setSource(frameSrc, { historyMode: 'push' });
 }
 
+function loadGamesFromRepoIndex() {
+  renderLinks(fallbackGameLinks);
+
+  fetch('/dead/JSON/repo-index.json', { cache: 'no-cache' })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      const folders = data && Array.isArray(data.folders) ? data.folders : [];
+      const gameFolders = folders.filter((folderPath) => /^\/dead\/games\/[^/]+\/$/.test(String(folderPath || '')));
+      if (gameFolders.length) renderLinks(gameFolders);
+    })
+    .catch(() => {
+      renderLinks(fallbackGameLinks);
+    });
+}
+
 document.addEventListener('click', openLinkInRootFrame, true);
+loadGamesFromRepoIndex();
 </script>
 </body>
 </html>

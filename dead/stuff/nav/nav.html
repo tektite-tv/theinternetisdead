@@ -1545,14 +1545,11 @@ html, body {
 
     const url = new URL(href, window.location.origin);
     const path = url.pathname.replace(/\/{2,}/g, '/');
-    const isStandalonePage =
-      /^\/dead\/games\/(?:[^/]+\/?)?(?:index\.html)?$/.test(path) ||
-      /^\/dead\/experiments\/(?:[^/]+\/?)?(?:index\.html)?$/.test(path);
+    const isDeadFolder = path.startsWith('/dead/') && !/\.[^/]+$/.test(path);
+    const isDeadIndex = path.startsWith('/dead/') && path.endsWith('/index.html');
 
-    if (!isStandalonePage) return '';
-    if (/^\/dead\/games\/[^/]+\/?$/.test(path)) {
-      url.pathname = path.replace(/\/?$/, '/index.html');
-    }
+    if (!isDeadFolder && !isDeadIndex) return '';
+    url.pathname = isDeadIndex ? path : path.replace(/\/?$/, '/index.html');
     url.searchParams.set('standalone', 'true');
     return url.href;
   }
