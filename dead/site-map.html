@@ -241,6 +241,27 @@
       return { ...item, type, path, href, name, parent };
     }
 
+
+    function getItemSize(item) {
+      const rawSize = item && (item.size ?? item.bytes ?? item.fileSize ?? item.length);
+      const size = Number(rawSize);
+      return Number.isFinite(size) && size > 0 ? size : 0;
+    }
+
+    function formatBytes(bytes) {
+      const size = Number(bytes) || 0;
+      if (size <= 0) return '—';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let value = size;
+      let unitIndex = 0;
+      while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+      }
+      const decimals = value >= 10 || unitIndex === 0 ? 0 : 1;
+      return value.toFixed(decimals) + ' ' + units[unitIndex];
+    }
+
     function makeNode(path, name, item = null) {
       return {
         path,
