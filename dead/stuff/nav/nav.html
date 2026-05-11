@@ -1116,8 +1116,8 @@ html, body {
     panel.href = frameInfo.href;
     panel.dataset.videoId = '';
     panel.dataset.stateMode = 'frame';
-    panel.title = frameInfo.title;
-    panel.setAttribute('aria-label', frameInfo.title);
+    panel.title = `Copy URL: ${getAbsoluteSiteUrl(frameInfo.href)}`;
+    panel.setAttribute('aria-label', `Copy URL for ${frameInfo.label}`);
     panel.classList.remove('is-disabled');
     window.requestAnimationFrame(fitNavStateText);
     return true;
@@ -1149,15 +1149,11 @@ html, body {
     if (!isDefaultFeedFramePath()) return;
     if (panel.dataset.stateMode === 'video') return;
     const videoId = String(state.firstVideoId || '').trim();
-    const label = String(state.sortPanelText || 'Watch My Most Viewed Videos');
+    const label = 'Home';
     text.textContent = label;
     panel.href = videoId ? `/?video_embed=${encodeURIComponent(videoId)}` : '/';
     panel.dataset.videoId = videoId;
     panel.dataset.stateMode = 'feed';
-    const videoTitle = String(state.firstVideoTitle || '').trim();
-    const title = videoId
-      ? `Open first visible video${videoTitle ? `: ${videoTitle}` : ''}`
-      : 'No visible video';
     const gridCardSize = String(state.gridCardSize || '').trim();
     if (gridCardSize) {
       overlayRoot.style.setProperty('--mobile-feed-column-width', gridCardSize);
@@ -1167,8 +1163,8 @@ html, body {
         overlayRoot.style.removeProperty('--feed-state-panel-width');
       }
     }
-    panel.title = title;
-    panel.setAttribute('aria-label', title);
+    panel.title = 'Copy current URL';
+    panel.setAttribute('aria-label', 'Copy current URL');
     panel.classList.toggle('is-disabled', !videoId);
     window.requestAnimationFrame(fitNavStateText);
   }
@@ -1201,8 +1197,8 @@ html, body {
     panel.href = `/?video_embed=${encodeURIComponent(videoId)}`;
     panel.dataset.videoId = videoId;
     panel.dataset.stateMode = 'video';
-    panel.title = `Open video: ${label}`;
-    panel.setAttribute('aria-label', `Open video: ${label}`);
+    panel.title = 'Copy video URL. Shift-click to open on YouTube.';
+    panel.setAttribute('aria-label', `Copy video URL for ${label}. Shift-click to open on YouTube.`);
     panel.classList.remove('is-disabled');
     window.requestAnimationFrame(fitNavStateText);
   }
@@ -1629,6 +1625,10 @@ html, body {
     return url.href;
   }
 
+  function getAbsoluteSiteUrl(path) {
+    return new URL(path || '/', window.location.origin).href;
+  }
+
   function getNavStateVideoId() {
     const panelVideoId = String(navStatePanel && navStatePanel.dataset.videoId || '').trim();
     if (panelVideoId) return panelVideoId;
@@ -1648,6 +1648,69 @@ html, body {
     const url = new URL('https://www.youtube.com/watch');
     url.searchParams.set('v', videoId);
     return url.href;
+  }
+
+  function getNavStateCopyUrl() {
+    const stateMode = String(navStatePanel && navStatePanel.dataset.stateMode || '').trim();
+
+    if (stateMode === 'video') {
+      const currentUrl = new URL(window.location.href);
+      const isCurrentVideoRoute = currentUrl.pathname.replace(/\/{2,}/g, '/') === '/dead/videos/';
+      const currentVideoId = isCurrentVideoRoute
+        ? String(currentUrl.searchParams.get('vid') || currentUrl.searchParams.get('id') || '').trim()
+        : '';
+      if (currentVideoId) return currentUrl.href;
+
+      const videoId = getNavStateVideoId();
+      if (videoId) {
+        const url = new URL('/dead/videos/', window.location.origin);
+        url.searchParams.set('vid', videoId);
+        return url.href;
+      }
+    }
+
+    if (stateMode === 'frame') {
+      return getAbsoluteSiteUrl(navStatePanel.dataset.frameSrc || currentIndexFramePath || '/');
+    }
+
+    return window.location.href;
+  }
+
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(text);
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+      document.execCommand('copy');
+    } finally {
+      textarea.remove();
+    }
+
+    return Promise.resolve();
+  }
+
+  function copyNavStateUrl() {
+    const url = getNavStateCopyUrl();
+    const previousTitle = navStatePanel.title;
+    const copiedTitle = `Copied: ${url}`;
+
+    return copyTextToClipboard(url).then(() => {
+      navStatePanel.title = copiedTitle;
+      window.setTimeout(() => {
+        if (navStatePanel.title === copiedTitle) {
+          navStatePanel.title = previousTitle;
+        }
+      }, 1400);
+    });
   }
 
   if (navStatePanel) {
@@ -1671,17 +1734,7 @@ html, body {
       }
 
       event.preventDefault();
-      if (isMobileOverlayView()) {
-        if (typeof window.toggleIndexMobileFeedHeader === 'function') {
-          window.toggleIndexMobileFeedHeader();
-        }
-        return;
-      }
-      const videoId = String(navStatePanel.dataset.videoId || '').trim();
-      if (!videoId) return;
-      if (typeof window.openNavFeedStateVideo === 'function') {
-        window.openNavFeedStateVideo(videoId);
-      }
+      copyNavStateUrl();
     });
   }
 
