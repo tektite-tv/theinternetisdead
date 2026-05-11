@@ -1070,62 +1070,26 @@ html, body {
     : '';
 
   function getNavFrameInfo(path) {
-    const framePath = String(path || '').split(/[?#]/)[0].replace(/\/{2,}/g, '/');
-
-    if (framePath === '/dead/games/' || framePath === '/dead/games/index.html') {
+    try {
+      const url = new URL(String(path || '/'), window.location.origin);
+      url.pathname = url.pathname.replace(/\/{2,}/g, '/');
+      const label = `${url.pathname}${url.search}${url.hash}` || '/';
       return {
-        label: '/dead/games/',
-        href: '/dead/games/',
-        title: '/dead/games/'
+        label,
+        href: label,
+        title: label,
+        frameSrc: label
+      };
+    } catch (error) {
+      const fallbackPath = String(path || '/').trim() || '/';
+      const label = fallbackPath.startsWith('/') ? fallbackPath : `/${fallbackPath}`;
+      return {
+        label,
+        href: label,
+        title: label,
+        frameSrc: label
       };
     }
-
-    const gameFolderMatch = framePath.match(/^\/dead\/games\/([^/]+)\/?(?:index\.html)?$/);
-    if (gameFolderMatch) {
-      const href = `/dead/games/${gameFolderMatch[1]}/`;
-      return {
-        label: href,
-        href,
-        title: href
-      };
-    }
-
-    const experimentsIndexMatch = framePath.match(/^\/dead\/experiments\/?(?:index\.html)?$/);
-    if (experimentsIndexMatch) {
-      return {
-        label: '/dead/experiments/',
-        href: '/dead/experiments/',
-        title: '/dead/experiments/'
-      };
-    }
-
-    if (framePath === '/privacy.html' || framePath === '/privacy/') {
-      return {
-        label: '/privacy.html/',
-        href: '/privacy.html',
-        title: '/privacy.html/'
-      };
-    }
-
-    if (framePath === '/dead/site-map.html' || framePath === '/dead/site-map/' || framePath === '/dead/site-map') {
-      return {
-        label: '/dead/site-map.html/',
-        href: '/dead/site-map.html',
-        title: '/dead/site-map.html/'
-      };
-    }
-
-    const experimentFolderMatch = framePath.match(/^\/dead\/experiments\/([^/]+)\/?(?:index\.html)?$/);
-    if (experimentFolderMatch) {
-      const folderName = decodeURIComponent(experimentFolderMatch[1]);
-      return {
-        label: `/${folderName}/`,
-        href: `/dead/experiments/${experimentFolderMatch[1]}/`,
-        title: `/${folderName}/`
-      };
-    }
-
-    return null;
   }
 
   function updateNavFrameState(framePath = currentIndexFramePath) {
@@ -1138,9 +1102,20 @@ html, body {
     const text = panel && panel.querySelector('.nav-state-text');
     if (!panel || !text) return true;
 
+    panel.dataset.frameSrc = frameInfo.frameSrc;
+    if (isDefaultFeedFramePath()) {
+      if (!isTopLevelVideoRoute() && panel.dataset.stateMode === 'video') {
+        panel.dataset.videoId = '';
+        panel.dataset.stateMode = 'feed';
+      }
+      applyNavFeedState(latestNavFeedState || {});
+      return true;
+    }
+
     text.textContent = frameInfo.label;
     panel.href = frameInfo.href;
     panel.dataset.videoId = '';
+    panel.dataset.stateMode = 'frame';
     panel.title = frameInfo.title;
     panel.setAttribute('aria-label', frameInfo.title);
     panel.classList.remove('is-disabled');
@@ -1148,21 +1123,37 @@ html, body {
     return true;
   }
 
+  function isDefaultFeedFramePath(path = currentIndexFramePath) {
+    try {
+      const url = new URL(String(path || ''), window.location.origin);
+      return url.pathname.replace(/\/{2,}/g, '/') === '/dead/stuff/stuff-for-index/feeds/feeds-bridge.html';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function isTopLevelVideoRoute() {
+    const path = (window.location.pathname || '').replace(/\/{2,}/g, '/');
+    if (path !== '/dead/videos/') return false;
+
+    const params = new URLSearchParams(window.location.search || '');
+    return !!String(params.get('vid') || params.get('id') || '').trim();
+  }
+
   let latestNavFeedState = null;
 
-  function updateNavFeedState(state = {}) {
-    latestNavFeedState = state;
-    if (updateNavFrameState()) return;
-
+  function applyNavFeedState(state = {}) {
     const panel = overlayRoot.querySelector('#nav-state-panel');
     const text = panel && panel.querySelector('.nav-state-text');
     if (!panel || !text) return;
+    if (!isDefaultFeedFramePath()) return;
     if (panel.dataset.stateMode === 'video') return;
     const videoId = String(state.firstVideoId || '').trim();
     const label = String(state.sortPanelText || 'Watch My Most Viewed Videos');
     text.textContent = label;
     panel.href = videoId ? `/?video_embed=${encodeURIComponent(videoId)}` : '/';
     panel.dataset.videoId = videoId;
+    panel.dataset.stateMode = 'feed';
     const videoTitle = String(state.firstVideoTitle || '').trim();
     const title = videoId
       ? `Open first visible video${videoTitle ? `: ${videoTitle}` : ''}`
@@ -1182,6 +1173,11 @@ html, body {
     window.requestAnimationFrame(fitNavStateText);
   }
 
+  function updateNavFeedState(state = {}) {
+    latestNavFeedState = state;
+    updateNavFrameState();
+  }
+
 
 
   function updateNavVideoRouteState(state = {}) {
@@ -1195,7 +1191,7 @@ html, body {
 
     if (action !== 'open' || !videoId) {
       panel.dataset.videoId = '';
-      panel.dataset.stateMode = '';
+      panel.dataset.stateMode = 'frame';
       updateNavFeedState(latestNavFeedState || {});
       return;
     }
@@ -1623,26 +1619,50 @@ html, body {
 
   if (!sidebar || !backdrop) return;
 
-  function getStandaloneNavStateUrl(link) {
-    if (!link) return '';
-    const href = String(link.getAttribute('href') || '').trim();
-    if (!href) return '';
+  function getStandaloneNavStateUrl(framePath) {
+    const sourcePath = String(framePath || '').trim();
+    if (!sourcePath) return '';
 
-    const url = new URL(href, window.location.origin);
-    const path = url.pathname.replace(/\/{2,}/g, '/');
-    const isDeadFolder = path.startsWith('/dead/') && !/\.[^/]+$/.test(path);
-    const isDeadIndex = path.startsWith('/dead/') && path.endsWith('/index.html');
-
-    if (!isDeadFolder && !isDeadIndex) return '';
-    url.pathname = isDeadIndex ? path : path.replace(/\/?$/, '/index.html');
+    const url = new URL(sourcePath, window.location.origin);
+    url.pathname = url.pathname.replace(/\/{2,}/g, '/');
     url.searchParams.set('standalone', 'true');
+    return url.href;
+  }
+
+  function getNavStateVideoId() {
+    const panelVideoId = String(navStatePanel && navStatePanel.dataset.videoId || '').trim();
+    if (panelVideoId) return panelVideoId;
+
+    const routeSource = String(navStatePanel && navStatePanel.dataset.frameSrc || currentIndexFramePath || '').trim();
+    if (!routeSource) return '';
+
+    try {
+      const url = new URL(routeSource, window.location.origin);
+      return String(url.searchParams.get('vid') || '').trim();
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function getYouTubeWatchUrl(videoId) {
+    const url = new URL('https://www.youtube.com/watch');
+    url.searchParams.set('v', videoId);
     return url.href;
   }
 
   if (navStatePanel) {
     navStatePanel.addEventListener('click', (event) => {
       if (event.shiftKey) {
-        const standaloneUrl = getStandaloneNavStateUrl(navStatePanel);
+        if (navStatePanel.dataset.stateMode === 'video') {
+          const videoId = getNavStateVideoId();
+          if (videoId) {
+            event.preventDefault();
+            window.location.href = getYouTubeWatchUrl(videoId);
+            return;
+          }
+        }
+
+        const standaloneUrl = getStandaloneNavStateUrl(navStatePanel.dataset.frameSrc || currentIndexFramePath);
         if (standaloneUrl) {
           event.preventDefault();
           window.location.href = standaloneUrl;

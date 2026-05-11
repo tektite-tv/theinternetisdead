@@ -192,11 +192,18 @@
       return `/dead/videos/?vid=${encodeURIComponent(videoId)}`;
     }
 
+    function isVideoQueryRoute(pathname = window.location.pathname) {
+      const path = String(pathname || '').replace(/\/{2,}/g, '/');
+      if (!/^\/dead\/videos\/?$/i.test(path)) return false;
+      return !!getVideoIdFromCurrentUrl();
+    }
+
 
     let pendingVideoId = getVideoIdFromCurrentUrl() || window.sessionStorage.getItem('deadVideoId') || '';
     if (pendingVideoId) {
       window.sessionStorage.removeItem('deadVideoId');
     }
+    let restoringVideoIdFromHistory = pendingVideoId;
 
     function getShortFolderRedirect(pathname) {
       const normalizedPath = String(pathname || '').replace(/\/{2,}/g, '/');
@@ -243,6 +250,10 @@
       const shortPathRedirect = getShortPathRedirect(path);
       if (shortPathRedirect) {
         return `${shortPathRedirect}${window.location.search || ''}${window.location.hash || ''}`;
+      }
+
+      if (isVideoQueryRoute(path)) {
+        return DEFAULT_IFRAME_PATH;
       }
 
       if (
@@ -359,10 +370,23 @@
       }
     }
 
+    function replaceContentFrameSource(nextPath) {
+      try {
+        if (contentFrame.contentWindow) {
+          contentFrame.contentWindow.location.replace(nextPath);
+          return;
+        }
+      } catch (error) {
+        // Fall back to src assignment if the frame is unavailable.
+      }
+
+      contentFrame.src = nextPath;
+    }
+
     function setFrameSource(value, options = {}) {
       const historyMode = options === true ? 'replace' : options && options.historyMode;
       const nextPath = normalizeIframePath(value);
-      contentFrame.src = nextPath;
+      replaceContentFrameSource(nextPath);
       currentFramePath = nextPath;
 
       if (historyMode === 'push' || historyMode === 'replace') {
@@ -378,6 +402,21 @@
       window.dispatchEvent(new CustomEvent('indexFrameChange', {
         detail: { src: nextPath, links: iframeLinks.slice() }
       }));
+    }
+
+    function getFramePathFromBrowserLocation(state = window.history.state) {
+      if (state && typeof state.framePath === 'string' && state.framePath.trim()) {
+        return state.framePath;
+      }
+
+      return getStartupFramePathFromUrl() || DEFAULT_IFRAME_PATH;
+    }
+
+    function restoreFrameFromHistoryState(state) {
+      const restoredVideoId = String(state && state.videoId || '').trim();
+      pendingVideoId = restoredVideoId;
+      restoringVideoIdFromHistory = restoredVideoId;
+      setFrameSource(getFramePathFromBrowserLocation(state));
     }
 
     async function loadNav() {
@@ -717,7 +756,20 @@
         setFrameSource(DEFAULT_IFRAME_PATH);
       }
 
-      window.history.replaceState({ videoId: videoId || null }, '', nextUrl);
+      const videoHistoryState = {
+        framePath: DEFAULT_IFRAME_PATH,
+        videoId: videoId || null
+      };
+      if (isVideoOpen) {
+        if (restoringVideoIdFromHistory === videoId) {
+          restoringVideoIdFromHistory = '';
+        } else {
+          window.history.pushState(videoHistoryState, '', nextUrl);
+        }
+      } else {
+        restoringVideoIdFromHistory = '';
+        window.history.replaceState({ framePath: DEFAULT_IFRAME_PATH, videoId: null }, '', nextUrl);
+      }
       if (typeof window.updateNavVideoRouteState === 'function') {
         window.updateNavVideoRouteState({
           action: data.action,
@@ -733,6 +785,9 @@
 
     window.addEventListener('resize', syncOverlayHeight);
     window.addEventListener('orientationchange', syncOverlayHeight);
+    window.addEventListener('popstate', (event) => {
+      restoreFrameFromHistoryState(event.state);
+    });
 
     const resizeObserver = new ResizeObserver(syncOverlayHeight);
     resizeObserver.observe(overlayContainer);
@@ -754,7 +809,16 @@
     if (pendingFramePath) {
       setFrameSource(pendingFramePath, { historyMode: 'replace' });
     } else if (startupFramePath) {
-      setFrameSource(startupFramePath, { historyMode: 'replace' });
+      if (isVideoQueryRoute()) {
+        setFrameSource(startupFramePath);
+        window.history.replaceState(
+          { framePath: DEFAULT_IFRAME_PATH, videoId: pendingVideoId || null },
+          '',
+          `${window.location.pathname || '/'}${window.location.search || ''}${window.location.hash || ''}`
+        );
+      } else {
+        setFrameSource(startupFramePath, { historyMode: 'replace' });
+      }
     } else if (pendingVideoId) {
       window.history.replaceState({ videoId: pendingVideoId }, '', getVideoRouteUrl(pendingVideoId));
       window.dispatchEvent(new CustomEvent('indexFrameChange', {

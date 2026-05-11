@@ -11,6 +11,8 @@ self.addEventListener('fetch', (event) => {
   if (event.request.destination && event.request.destination !== 'document') return;
 
   const url = new URL(event.request.url);
+  if (url.searchParams.get('standalone') === 'true') return;
+
   const normalizedPath = url.pathname.replace(/\/{2,}/g, '/');
   const rootShortPathRedirects = {
     '/games': '/dead/games/',
