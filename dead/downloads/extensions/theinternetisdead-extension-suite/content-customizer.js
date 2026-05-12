@@ -19,12 +19,16 @@
     inverted: false,
     cycleInvert: false,
     hueMonochrome: false,
+    filterImages: false,
     staticColor: "",
     blendMode: "normal",
     textureFilters: [],
     textureColorMode: "normal",
     textureIntensity: 45,
     textureScale: 100,
+    animateTexture: false,
+    textureAnimationStyle: "no-animation",
+    textureAnimationSpeed: 100,
     crtEffects: false
   };
 
@@ -35,6 +39,9 @@
   let hueOverlayTimer = null;
   let hueOverlayHue = 84;
   let shellActive = false;
+  let overlayMaskTimer = null;
+  let overlayMaskWatchersInstalled = false;
+  let overlayMaskObserver = null;
   const OVERLAY_BLEND_MODES = new Set([
     "normal",
     "multiply",
@@ -89,6 +96,19 @@
     "deep-fried": "saturate(2.2) contrast(1.65) brightness(1.08)",
     "washed-out": "saturate(0.45) contrast(0.85) brightness(1.12)"
   };
+  const TEXTURE_ANIMATION_STYLES = new Set([
+    "no-animation",
+    "diagonal-south-east",
+    "diagonal-south-west",
+    "diagonal-north-east",
+    "diagonal-north-west",
+    "linear-north",
+    "linear-south",
+    "linear-east",
+    "linear-west",
+    "ripple",
+    "breathing"
+  ]);
   let resizeTimer = null;
   let crtInlineTimer = null;
   let crtCanvasAnimation = null;
@@ -100,6 +120,37 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
+      @keyframes tektite-texture-linear-pan {
+        0% { background-position: 0 0; }
+        100% { background-position: var(--tektite-texture-pan-end-x, 320px) var(--tektite-texture-pan-end-y, 320px); }
+      }
+
+      @keyframes tektite-texture-ripple {
+        0%, 100% {
+          background-position: 0 0;
+        }
+        25% {
+          background-position: calc(var(--tektite-texture-pan-x, 320px) * 0.08) calc(var(--tektite-texture-pan-y, 320px) * -0.04);
+        }
+        50% {
+          background-position: calc(var(--tektite-texture-pan-x, 320px) * -0.04) calc(var(--tektite-texture-pan-y, 320px) * 0.08);
+        }
+        75% {
+          background-position: calc(var(--tektite-texture-pan-x, 320px) * 0.05) calc(var(--tektite-texture-pan-y, 320px) * 0.05);
+        }
+      }
+
+      @keyframes tektite-texture-breathing {
+        0%, 100% {
+          background-position: 50% 50%;
+          background-size: var(--tektite-texture-breath-out-x, 292px) var(--tektite-texture-breath-out-y, 292px);
+        }
+        50% {
+          background-position: 50% 50%;
+          background-size: var(--tektite-texture-breath-in-x, 352px) var(--tektite-texture-breath-in-y, 352px);
+        }
+      }
+
       html.tektite-suite-customizer-crt-frame {
         --tektite-crt-screen-left: 12vw;
         --tektite-crt-screen-top: 10vh;
@@ -855,6 +906,120 @@
     root.style.setProperty("transition", "none", "important");
   }
 
+  function clearOverlayImageMask(root) {
+    if (!root) return;
+    root.style.removeProperty("mask-image");
+    root.style.removeProperty("mask-size");
+    root.style.removeProperty("mask-repeat");
+    root.style.removeProperty("mask-position");
+    root.style.removeProperty("mask-mode");
+    root.style.removeProperty("-webkit-mask-image");
+    root.style.removeProperty("-webkit-mask-size");
+    root.style.removeProperty("-webkit-mask-repeat");
+    root.style.removeProperty("-webkit-mask-position");
+  }
+
+  function imageFilterMaskTargets() {
+    return Array.from(document.querySelectorAll("img, picture, svg, canvas, video"));
+  }
+
+  function shouldMaskTargetElement(element) {
+    if (!element || element.id === ROOT_ID || element.closest?.(`#${ROOT_ID}`)) return false;
+    if (element.closest?.(`#${CRT_CABINET_ID}, #${CRT_OVERLAY_ID}`)) return false;
+
+    const style = window.getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) <= 0) return false;
+
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return false;
+    if (rect.right <= 0 || rect.bottom <= 0 || rect.left >= window.innerWidth || rect.top >= window.innerHeight) return false;
+    return true;
+  }
+
+  function overlayMaskRects() {
+    const width = Math.max(1, Math.round(window.innerWidth || document.documentElement.clientWidth || 1));
+    const height = Math.max(1, Math.round(window.innerHeight || document.documentElement.clientHeight || 1));
+    const rects = [];
+
+    for (const element of imageFilterMaskTargets()) {
+      if (!shouldMaskTargetElement(element)) continue;
+      const rect = element.getBoundingClientRect();
+      const x = Math.max(0, Math.floor(rect.left));
+      const y = Math.max(0, Math.floor(rect.top));
+      const right = Math.min(width, Math.ceil(rect.right));
+      const bottom = Math.min(height, Math.ceil(rect.bottom));
+      const w = Math.max(0, right - x);
+      const h = Math.max(0, bottom - y);
+      if (w >= 2 && h >= 2) rects.push({ x, y, w, h });
+      if (rects.length >= 180) break;
+    }
+
+    return { width, height, rects };
+  }
+
+  function escapeSvgAttr(value) {
+    return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  }
+
+  function updateOverlayImageMask(root) {
+    if (!root) return;
+
+    // Checked means: let the filters touch images. Unchecked means: punch image-shaped holes
+    // through the overlay, because apparently images asked for diplomatic immunity.
+    if (state.filterImages) {
+      clearOverlayImageMask(root);
+      return;
+    }
+
+    const { width, height, rects } = overlayMaskRects();
+    if (!rects.length) {
+      clearOverlayImageMask(root);
+      return;
+    }
+
+    const holes = rects.map((rect) => `<rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="black"/>`).join("");
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="white"/>${holes}</svg>`;
+    const url = `url("data:image/svg+xml,${encodeURIComponent(escapeSvgAttr(svg))}")`;
+
+    root.style.setProperty("-webkit-mask-image", url, "important");
+    root.style.setProperty("-webkit-mask-size", "100% 100%", "important");
+    root.style.setProperty("-webkit-mask-repeat", "no-repeat", "important");
+    root.style.setProperty("-webkit-mask-position", "0 0", "important");
+    root.style.setProperty("mask-image", url, "important");
+    root.style.setProperty("mask-size", "100% 100%", "important");
+    root.style.setProperty("mask-repeat", "no-repeat", "important");
+    root.style.setProperty("mask-position", "0 0", "important");
+    root.style.setProperty("mask-mode", "alpha", "important");
+  }
+
+  function scheduleOverlayImageMaskUpdate() {
+    window.clearTimeout(overlayMaskTimer);
+    overlayMaskTimer = window.setTimeout(() => {
+      const root = document.getElementById(ROOT_ID);
+      if (!root || root.style.display === "none") return;
+      updateOverlayImageMask(root);
+    }, 80);
+  }
+
+  function installOverlayMaskWatchers() {
+    if (overlayMaskWatchersInstalled) return;
+    overlayMaskWatchersInstalled = true;
+
+    window.addEventListener("scroll", scheduleOverlayImageMaskUpdate, true);
+    window.addEventListener("resize", scheduleOverlayImageMaskUpdate, { passive: true });
+    document.addEventListener("load", (event) => {
+      if (event.target?.matches?.("img, picture, svg, canvas, video")) scheduleOverlayImageMaskUpdate();
+    }, true);
+
+    overlayMaskObserver = new MutationObserver(scheduleOverlayImageMaskUpdate);
+    overlayMaskObserver.observe(document.documentElement || document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["src", "srcset", "style", "class", "width", "height"]
+    });
+  }
+
   function updateOverlayTransition(root) {
     if (!root) return;
     const transition = state.cycleInvert
@@ -899,6 +1064,23 @@
     return Object.prototype.hasOwnProperty.call(TEXTURE_COLOR_MODES, mode) ? mode : "normal";
   }
 
+  function normalizeTextureAnimationStyle(value) {
+    const style = String(value || "").trim().toLowerCase();
+    if (style === "diagonal") return "diagonal-south-east";
+    return TEXTURE_ANIMATION_STYLES.has(style) ? style : "no-animation";
+  }
+
+  function normalizeTextureAnimationSpeed(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return 100;
+    return Math.max(25, Math.min(300, Math.round(number)));
+  }
+
+  function textureAnimationDuration(baseSeconds) {
+    const speed = normalizeTextureAnimationSpeed(state.textureAnimationSpeed) / 100;
+    return `${Math.max(0.25, baseSeconds / speed).toFixed(2)}s`;
+  }
+
   function textureColorModeFilter() {
     return TEXTURE_COLOR_MODES[normalizeTextureColorMode(state.textureColorMode)] || "";
   }
@@ -918,6 +1100,82 @@
   function scaleTextureBackgroundSize(backgroundSize) {
     const scale = normalizeTextureScale(state.textureScale) / 100;
     return String(backgroundSize || "320px 320px").replace(/(-?\d*\.?\d+)px/g, (_match, px) => `${Math.max(1, Number(px) * scale)}px`);
+  }
+
+  function textureSizeValues(backgroundSize, index = 0) {
+    const matches = Array.from(String(backgroundSize || "320px 320px").matchAll(/(-?\d*\.?\d+)px/g)).map((match) => Math.max(1, Number(match[1])));
+    const fallback = 320 + index * 40;
+    return {
+      x: matches[0] || fallback,
+      y: matches[1] || matches[0] || fallback
+    };
+  }
+
+  function texturePanDistance(backgroundSize, index = 0) {
+    const size = textureSizeValues(backgroundSize, index);
+    return {
+      x: `${size.x}px`,
+      y: `${size.y}px`
+    };
+  }
+
+  function isLinearTextureAnimationStyle(style) {
+    return style.startsWith("diagonal-") || style.startsWith("linear-");
+  }
+
+  function textureAnimationName() {
+    if (!state.animateTexture) return "none";
+    const style = normalizeTextureAnimationStyle(state.textureAnimationStyle);
+    if (isLinearTextureAnimationStyle(style)) return "tektite-texture-linear-pan";
+    if (style === "ripple") return "tektite-texture-ripple";
+    if (style === "breathing") return "tektite-texture-breathing";
+    return "none";
+  }
+
+  function texturePanVector(style, panX, panY) {
+    const directions = {
+      "diagonal-south-east": [1, 1],
+      "diagonal-south-west": [-1, 1],
+      "diagonal-north-east": [1, -1],
+      "diagonal-north-west": [-1, -1],
+      "linear-north": [0, -1],
+      "linear-south": [0, 1],
+      "linear-east": [1, 0],
+      "linear-west": [-1, 0]
+    };
+    const [x, y] = directions[style] || directions["diagonal-south-east"];
+    return {
+      x: x === 0 ? "0px" : (x < 0 ? `calc(${panX} * -1)` : panX),
+      y: y === 0 ? "0px" : (y < 0 ? `calc(${panY} * -1)` : panY)
+    };
+  }
+
+  function ensureTextureRippleFilter(duration = "5.80s") {
+    const filterId = "tektite-texture-ripple-filter";
+    const existing = document.getElementById(`${filterId}-svg`);
+    const svg = existing || document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = `${filterId}-svg`;
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    svg.style.setProperty("position", "fixed", "important");
+    svg.style.setProperty("left", "-9999px", "important");
+    svg.style.setProperty("top", "-9999px", "important");
+    svg.style.setProperty("width", "0", "important");
+    svg.style.setProperty("height", "0", "important");
+    svg.style.setProperty("overflow", "hidden", "important");
+    svg.innerHTML = `
+      <filter id="${filterId}" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.012 0.045" numOctaves="2" seed="7" result="waveNoise">
+          <animate attributeName="baseFrequency" dur="${duration}" repeatCount="indefinite" values="0.010 0.038;0.018 0.052;0.014 0.030;0.010 0.038" />
+          <animate attributeName="seed" dur="${duration}" repeatCount="indefinite" values="7;11;17;7" />
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="waveNoise" scale="18" xChannelSelector="R" yChannelSelector="G">
+          <animate attributeName="scale" dur="${duration}" repeatCount="indefinite" values="10;24;15;22;10" />
+        </feDisplacementMap>
+      </filter>
+    `;
+    if (!existing) (document.documentElement || document.body || document).appendChild(svg);
+    return `url(#${filterId})`;
   }
 
   function textureAssetUrl(path) {
@@ -942,7 +1200,10 @@
     layer.style.setProperty("display", "block", "important");
     layer.style.setProperty("opacity", "1", "important");
     layer.style.setProperty("background-repeat", "repeat", "important");
-    layer.style.setProperty("background-position", "0 0", "important");
+    // Keep this non-important so texture animations can override it with keyframes.
+    layer.style.setProperty("background-position", "0 0");
+    layer.style.setProperty("transform-origin", "50% 50%", "important");
+    layer.style.setProperty("will-change", "background-position, opacity, transform, filter", "important");
   }
 
   function textureOpacity(vars, multiplier = 1) {
@@ -971,6 +1232,7 @@
   function updateTextureFilters(root, vars) {
     const filters = normalizeTextureFilters(state.textureFilters);
     const activeKeys = new Set(filters);
+    if (filters.length) ensureStyle();
 
     for (const layer of root.querySelectorAll?.("[data-tektite-texture-filter]") || []) {
       if (!activeKeys.has(layer.dataset.tektiteTextureFilter)) layer.remove();
@@ -991,11 +1253,57 @@
       }
 
       styleTextureLayer(layer, index);
-      layer.style.setProperty("opacity", String(layerStyles.opacity), "important");
+      const animationStyle = state.animateTexture ? normalizeTextureAnimationStyle(state.textureAnimationStyle) : "no-animation";
+      const animationName = textureAnimationName();
+      const isLinearAnimation = isLinearTextureAnimationStyle(animationStyle);
+      const animationDuration = isLinearAnimation
+        ? textureAnimationDuration(14)
+        : animationStyle === "ripple"
+          ? textureAnimationDuration(5.8)
+          : textureAnimationDuration(7.5);
+      const animationTiming = isLinearAnimation ? "linear" : "ease-in-out";
+      const canAnimateOpacity = false;
+      const rippleFilterUrl = animationStyle === "ripple" ? ensureTextureRippleFilter(animationDuration) : "";
+      const activeTextureFilter = [rippleFilterUrl, layerStyles.filter].filter(Boolean).join(" ") || "none";
+      const canAnimateBackgroundSize = animationStyle === "breathing";
+      const rippleScale = animationStyle === "ripple" ? 1.04 : 1;
+
+      // These texture layers are extension-owned, so inline styles are enough.
+      // Avoid !important on animated properties, because !important beats keyframes
+      // and makes the dropdown look like it was added by a haunted mannequin.
+      layer.style.setProperty("opacity", String(layerStyles.opacity), canAnimateOpacity ? "" : "important");
       layer.style.setProperty("mix-blend-mode", layerStyles.mixBlendMode, "important");
-      layer.style.setProperty("background-size", layerStyles.backgroundSize, "important");
+      layer.style.setProperty("background-size", layerStyles.backgroundSize, canAnimateBackgroundSize ? "" : "important");
       layer.style.setProperty("background-image", layerStyles.backgroundImage, "important");
-      layer.style.setProperty("filter", layerStyles.filter, "important");
+      layer.style.setProperty("filter", activeTextureFilter, "important");
+      layer.style.setProperty("transform", rippleScale === 1 ? "none" : `scale(${rippleScale})`, "important");
+      layer.style.setProperty("--tektite-texture-filter", activeTextureFilter || "none");
+      layer.style.setProperty("--tektite-texture-opacity", String(layerStyles.opacity));
+      layer.style.setProperty("--tektite-texture-opacity-low", String(Math.max(0, layerStyles.opacity * 0.58)));
+      const size = textureSizeValues(layerStyles.backgroundSize, index);
+      const sizeX = size.x;
+      const sizeY = size.y;
+      layer.style.setProperty("--tektite-texture-size-x", `${sizeX}px`);
+      layer.style.setProperty("--tektite-texture-size-y", `${sizeY}px`);
+      layer.style.setProperty("--tektite-texture-ripple-wide-x", `${Math.max(1, sizeX * 1.11)}px`);
+      layer.style.setProperty("--tektite-texture-ripple-wide-y", `${Math.max(1, sizeY * 1.11)}px`);
+      layer.style.setProperty("--tektite-texture-ripple-tight-x", `${Math.max(1, sizeX * 0.89)}px`);
+      layer.style.setProperty("--tektite-texture-ripple-tight-y", `${Math.max(1, sizeY * 0.89)}px`);
+      layer.style.setProperty("--tektite-texture-ripple-wide-x-soft", `${Math.max(1, sizeX * 1.055)}px`);
+      layer.style.setProperty("--tektite-texture-ripple-wide-y-soft", `${Math.max(1, sizeY * 1.055)}px`);
+      layer.style.setProperty("--tektite-texture-ripple-tight-x-soft", `${Math.max(1, sizeX * 0.945)}px`);
+      layer.style.setProperty("--tektite-texture-ripple-tight-y-soft", `${Math.max(1, sizeY * 0.945)}px`);
+      layer.style.setProperty("--tektite-texture-breath-out-x", `${Math.max(1, sizeX * 0.90)}px`);
+      layer.style.setProperty("--tektite-texture-breath-out-y", `${Math.max(1, sizeY * 0.90)}px`);
+      layer.style.setProperty("--tektite-texture-breath-in-x", `${Math.max(1, sizeX * 1.13)}px`);
+      layer.style.setProperty("--tektite-texture-breath-in-y", `${Math.max(1, sizeY * 1.13)}px`);
+      const pan = texturePanDistance(layerStyles.backgroundSize, index);
+      const panVector = texturePanVector(animationStyle, pan.x, pan.y);
+      layer.style.setProperty("--tektite-texture-pan-x", pan.x);
+      layer.style.setProperty("--tektite-texture-pan-y", pan.y);
+      layer.style.setProperty("--tektite-texture-pan-end-x", panVector.x);
+      layer.style.setProperty("--tektite-texture-pan-end-y", panVector.y);
+      layer.style.setProperty("animation", animationName === "none" ? "none" : `${animationName} ${animationDuration} ${animationTiming} infinite`, "important");
     });
   }
 
@@ -1019,6 +1327,30 @@
     };
   }
 
+  function rgbToHueDegrees(rgb) {
+    if (!rgb) return 0;
+
+    const r = Math.max(0, Math.min(255, Number(rgb.r) || 0)) / 255;
+    const g = Math.max(0, Math.min(255, Number(rgb.g) || 0)) / 255;
+    const b = Math.max(0, Math.min(255, Number(rgb.b) || 0)) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    if (!delta) return 0;
+
+    let hue = 0;
+    if (max === r) {
+      hue = ((g - b) / delta) % 6;
+    } else if (max === g) {
+      hue = (b - r) / delta + 2;
+    } else {
+      hue = (r - g) / delta + 4;
+    }
+
+    return Math.round((hue * 60 + 360) % 360);
+  }
+
   function hueOverlayColorValue(vars) {
     const alpha = overlayAlpha(vars);
     return `hsla(${hueOverlayHue}deg, 100%, 52%, ${alpha})`;
@@ -1026,11 +1358,22 @@
 
   function rootBackdropFilterValue(invertValue) {
     const parts = [`invert(${invertValue})`];
+    const allowFiltersOnBlackWhite = Boolean(state.hueMonochrome);
 
-    if (state.enabled && !state.hueMonochrome) {
+    if (!allowFiltersOnBlackWhite) {
       const vars = intensityToVars(state.intensity);
-      parts.push(`hue-rotate(${hueOverlayHue}deg)`);
-      parts.push(`saturate(${vars.pageSaturation})`);
+
+      if (state.enabled) {
+        parts.push(`hue-rotate(${hueOverlayHue}deg)`);
+        parts.push(`saturate(${vars.pageSaturation})`);
+      } else if (state.staticColor) {
+        const staticHue = rgbToHueDegrees(hexToRgb(state.staticColor));
+        // When black/white filtering is disabled, keep static color in backdrop-filter land.
+        // hue-rotate/saturate can shift colored page pixels while leaving neutral black/white/gray alone.
+        // The rgba overlay below is only allowed when the checkbox is enabled.
+        parts.push(`hue-rotate(${staticHue}deg)`);
+        parts.push(`saturate(${vars.pageSaturation})`);
+      }
     }
 
     return parts.join(" ");
@@ -1055,12 +1398,16 @@
 
   function updateStaticOverlayColor(root, vars) {
     const rgb = hexToRgb(state.staticColor);
-    if (!rgb) {
+    const allowFiltersOnBlackWhite = Boolean(state.hueMonochrome);
+
+    if (!rgb || !allowFiltersOnBlackWhite) {
       root.style.setProperty("background-color", "transparent", "important");
+      updateRootBackdropFilter(root);
       return;
     }
 
     root.style.setProperty("background-color", `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${overlayAlpha(vars)})`, "important");
+    updateRootBackdropFilter(root);
   }
 
   function startHueOverlayTimer(root, vars, speedSeconds) {
@@ -1794,6 +2141,8 @@ function shouldShowCrtEffects() {
       }
 
       updateTextureFilters(root, vars);
+      installOverlayMaskWatchers();
+      updateOverlayImageMask(root);
     } else {
       stopHueOverlayTimer();
       if (root) {
@@ -1803,6 +2152,7 @@ function shouldShowCrtEffects() {
         root.style.setProperty("background-color", "transparent", "important");
         root.style.setProperty("mix-blend-mode", "normal", "important");
         removeTextureLayers(root);
+        clearOverlayImageMask(root);
         updateRootBackdropFilter(root, "0");
       }
     }
@@ -1840,6 +2190,9 @@ function shouldShowCrtEffects() {
       textureColorMode: normalizeTextureColorMode(state.textureColorMode),
       textureIntensity: normalizeTextureIntensity(state.textureIntensity),
       textureScale: normalizeTextureScale(state.textureScale),
+      animateTexture: Boolean(state.animateTexture),
+      textureAnimationStyle: normalizeTextureAnimationStyle(state.textureAnimationStyle),
+      textureAnimationSpeed: normalizeTextureAnimationSpeed(state.textureAnimationSpeed),
       crtEffects: state.crtEffects,
       crtEffectsActive: effectiveCrtEffects
     };
@@ -1850,7 +2203,7 @@ function shouldShowCrtEffects() {
     try {
       const parsed = new URL(window.location.href);
       if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-        return `${parsed.origin}${parsed.pathname}${parsed.search}`;
+        return parsed.origin;
       }
       if (parsed.protocol === "file:") {
         parsed.hash = "";
@@ -1858,6 +2211,23 @@ function shouldShowCrtEffects() {
       }
     } catch (_error) {
       // Browser internals and malformed URLs fall back to a safe global-ish key.
+    }
+
+    return "__global__";
+  }
+
+  function getLegacyCurrentPageKey() {
+    try {
+      const parsed = new URL(window.location.href);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return `${parsed.origin}${parsed.pathname}${parsed.search}`;
+      }
+      if (parsed.protocol === "file:") {
+        parsed.hash = "";
+        return parsed.href;
+      }
+    } catch (_error) {
+      // Legacy exact-page key fallback. Yes, the URL hydra needed two heads.
     }
 
     return "__global__";
@@ -1871,24 +2241,30 @@ function shouldShowCrtEffects() {
       inverted: Boolean(settings.customizerInverted ?? settings.inverted ?? DEFAULT_CUSTOMIZER_STATE.inverted),
       cycleInvert: Boolean(settings.customizerCycleInvert ?? settings.cycleInvert ?? DEFAULT_CUSTOMIZER_STATE.cycleInvert),
       hueMonochrome: Boolean(settings.customizerHueMonochrome ?? settings.hueMonochrome ?? DEFAULT_CUSTOMIZER_STATE.hueMonochrome),
+      filterImages: Boolean(settings.customizerFilterImages ?? settings.filterImages ?? DEFAULT_CUSTOMIZER_STATE.filterImages),
       staticColor: normalizeHexColor(settings.customizerStaticColor ?? settings.staticColor ?? DEFAULT_CUSTOMIZER_STATE.staticColor),
       blendMode: normalizeBlendMode(settings.customizerBlendMode ?? settings.blendMode ?? DEFAULT_CUSTOMIZER_STATE.blendMode),
       textureFilters: normalizeTextureFilters(settings.customizerTextureFilters ?? settings.textureFilters ?? DEFAULT_CUSTOMIZER_STATE.textureFilters),
       textureColorMode: normalizeTextureColorMode(settings.customizerTextureColorMode ?? settings.textureColorMode ?? DEFAULT_CUSTOMIZER_STATE.textureColorMode),
       textureIntensity: normalizeTextureIntensity(settings.customizerTextureIntensity ?? settings.textureIntensity ?? DEFAULT_CUSTOMIZER_STATE.textureIntensity),
       textureScale: normalizeTextureScale(settings.customizerTextureScale ?? settings.textureScale ?? DEFAULT_CUSTOMIZER_STATE.textureScale),
+      animateTexture: Boolean(settings.customizerAnimateTexture ?? settings.animateTexture ?? DEFAULT_CUSTOMIZER_STATE.animateTexture),
+      textureAnimationStyle: normalizeTextureAnimationStyle(settings.customizerTextureAnimationStyle ?? settings.textureAnimationStyle ?? DEFAULT_CUSTOMIZER_STATE.textureAnimationStyle),
+      textureAnimationSpeed: normalizeTextureAnimationSpeed(settings.customizerTextureAnimationSpeed ?? settings.textureAnimationSpeed ?? DEFAULT_CUSTOMIZER_STATE.textureAnimationSpeed),
       crtEffects: false
     };
   }
 
   function getStoredCustomizerStateForCurrentPage(saved = {}) {
     const pageKey = getCurrentPageKey();
+    const legacyPageKey = getLegacyCurrentPageKey();
     const pageSettings = saved[PAGE_SETTINGS_KEY] || {};
 
     // Never inherit legacy/global visual settings on a page with no saved entry.
-    // Each new page starts with all customizer effects disabled until the popup
-    // saves settings for that exact URL. Tiny mercy, delivered by JavaScript.
-    return normalizeStoredCustomizerState(pageSettings[pageKey] || DEFAULT_CUSTOMIZER_STATE);
+    // Each origin starts clean until the popup saves settings for that site.
+    // Older exact-page entries are still readable so old themes don't vanish
+    // into the browser swamp.
+    return normalizeStoredCustomizerState(pageSettings[pageKey] || pageSettings[legacyPageKey] || DEFAULT_CUSTOMIZER_STATE);
   }
 
   function loadStoredCustomizerStateForCurrentPage() {
@@ -1904,6 +2280,7 @@ function shouldShowCrtEffects() {
       customizerInverted: false,
       customizerCycleInvert: false,
       customizerHueMonochrome: false,
+      customizerFilterImages: false,
       customizerStaticColor: "",
       customizerBlendMode: "normal",
       customizerTextureFilters: [],
@@ -2027,12 +2404,16 @@ function shouldShowCrtEffects() {
         inverted: Boolean(message.inverted),
         cycleInvert: Boolean(message.cycleInvert),
         hueMonochrome: Boolean(message.hueMonochrome),
+        filterImages: Boolean(message.filterImages),
         staticColor: normalizeHexColor(message.staticColor),
         blendMode: normalizeBlendMode(message.blendMode),
         textureFilters: normalizeTextureFilters(message.textureFilters),
         textureColorMode: normalizeTextureColorMode(message.textureColorMode),
         textureIntensity: normalizeTextureIntensity(message.textureIntensity),
         textureScale: normalizeTextureScale(message.textureScale),
+        animateTexture: Boolean(message.animateTexture),
+        textureAnimationStyle: normalizeTextureAnimationStyle(message.textureAnimationStyle),
+        textureAnimationSpeed: normalizeTextureAnimationSpeed(message.textureAnimationSpeed),
         crtEffects: Boolean(message.crtEffects)
       }));
       return true;

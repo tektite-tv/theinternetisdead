@@ -88,112 +88,162 @@
 
     <section id="panel-customizer" class="panel tool-panel hidden">
       <label class="row saved-themes-row">
-        <span>Stored Themes</span>
+        <span>Themes</span>
         <select id="customizerSavedThemesSelect">
-          <option value="">No stored themes found</option>
+          <option value="">Default</option>
         </select>
       </label>
 
-      <div id="customizerStaticColorBtn" class="static-color-control secondary" role="group" aria-label="Static color filter">
-        <span class="static-color-label">Static Color Filter:</span>
-        <label id="customizerStaticColorTarget" class="static-color-chip" title="Pick static color filter">
-          <span id="customizerStaticColorValue">Unchanged</span>
-          <input id="customizerStaticColorPicker" type="color" value="#99ff00" aria-label="Static color filter picker">
-        </label>
-        <button id="customizerClearStaticColor" class="secondary mini-button color-clear-button" type="button" hidden title="Clear static color filter" aria-label="Clear static color filter">×</button>
+      <label class="checkbox-row image-filter-toggle-row">
+        <input id="customizerFilterImages" type="checkbox">
+        <span>Enable Color/Texture Filter On Images</span>
+      </label>
+
+      <button id="customizerColorToggle" class="secondary color-filter-toggle" type="button" aria-expanded="false" aria-controls="customizerColorSlideout">Color Filter</button>
+      <div id="customizerColorSlideout" class="filter-slideout color-filter-slideout" aria-hidden="true">
+        <div class="filter-slideout-inner">
+          <div id="customizerStaticColorBtn" class="static-color-control secondary" role="group" aria-label="Static color filter">
+            <span class="static-color-label">Static Color Filter:</span>
+            <label id="customizerStaticColorTarget" class="static-color-chip" title="Pick static color filter">
+              <span id="customizerStaticColorValue">Default</span>
+              <input id="customizerStaticColorPicker" type="color" value="#99ff00" aria-label="Static color filter picker">
+            </label>
+            <button id="customizerClearStaticColor" class="secondary mini-button color-clear-button" type="button" hidden title="Clear static color filter" aria-label="Clear static color filter">×</button>
+          </div>
+
+
+          <label class="row">
+            <span>Blend Mode</span>
+            <select id="customizerBlendMode">
+              <option value="normal">Normal</option>
+              <option value="multiply">Multiply</option>
+              <option value="screen">Screen</option>
+              <option value="overlay">Overlay</option>
+              <option value="darken">Darken</option>
+              <option value="lighten">Lighten</option>
+              <option value="color-dodge">Color Dodge</option>
+              <option value="color-burn">Color Burn</option>
+              <option value="hard-light">Hard Light</option>
+              <option value="soft-light">Soft Light</option>
+              <option value="difference">Difference</option>
+              <option value="exclusion">Exclusion</option>
+              <option value="hue">Hue</option>
+              <option value="saturation">Saturation</option>
+              <option value="color">Color</option>
+              <option value="luminosity">Luminosity</option>
+            </select>
+          </label>
+
+          <label class="row">
+            <span>Intensity</span>
+            <input id="customizerIntensity" type="range" min="10" max="100" value="55">
+          </label>
+
+          <label class="row">
+            <span>Speed</span>
+            <input id="customizerSpeed" type="range" min="4" max="40" value="14">
+          </label>
+
+          <label class="checkbox-row">
+            <input id="customizerToggle" type="checkbox">
+            <span>Enable Hueshift</span>
+          </label>
+          <label class="checkbox-row">
+            <input id="customizerInvert" type="checkbox">
+            <span>Enable Inversion</span>
+          </label>
+
+          <label class="checkbox-row">
+            <input id="customizerHueMonochrome" type="checkbox">
+            <span>Allow filters on black/white too</span>
+          </label>
+          <label class="checkbox-row">
+            <input id="customizerCycleInvert" type="checkbox">
+            <span>Cycle inversion with 5-second fades</span>
+          </label>
+        </div>
       </div>
 
-      <label class="row texture-filter-row">
-        <span>Texture Filter</span>
-        <div class="texture-filter-picker">
-          <select id="customizerTextureFilterSelect">
-            <option value="black-and-white-grid">Black and White Grid</option>
-            <option value="cobblestone">Cobblestone</option>
-            <option value="cracked-01">Cracked 01</option>
-            <option value="cracked-02">Cracked 02</option>
-            <option value="dirt">Dirt</option>
-            <option value="grass">Grass</option>
-            <option value="lime-and-magenta-grid">Lime and Magenta Grid</option>
-            <option value="sand">Sand</option>
-            <option value="tv-wood">TV Wood</option>
-            <option value="water">Water</option>
-          </select>
-          <button id="customizerAddTextureFilter" class="secondary mini-button" type="button" title="Add texture filter">+</button>
+      <button id="customizerTextureToggle" class="secondary texture-toggle" type="button" aria-expanded="false" aria-controls="customizerTextureSlideout">Texture Filter</button>
+      <div id="customizerTextureSlideout" class="texture-slideout" aria-hidden="true">
+        <div class="texture-slideout-inner">
+          <label class="row texture-filter-row">
+            <span>Texture Filter</span>
+            <div class="texture-filter-picker">
+              <select id="customizerTextureFilterSelect">
+                <option value="black-and-white-grid">Black and White Grid</option>
+                <option value="cobblestone">Cobblestone</option>
+                <option value="cracked-01">Cracked 01</option>
+                <option value="cracked-02">Cracked 02</option>
+                <option value="dirt">Dirt</option>
+                <option value="grass">Grass</option>
+                <option value="lime-and-magenta-grid">Lime and Magenta Grid</option>
+                <option value="sand">Sand</option>
+                <option value="tv-wood">TV Wood</option>
+                <option value="water">Water</option>
+              </select>
+              <button id="customizerAddTextureFilter" class="secondary mini-button" type="button" title="Add texture filter">+</button>
+            </div>
+          </label>
+          <div id="customizerTextureFilterList" class="texture-filter-list" aria-live="polite"></div>
+
+          <label class="row">
+            <span>Texture Color Mode</span>
+            <select id="customizerTextureColorMode">
+              <option value="normal">Normal</option>
+              <option value="grayscale">Grayscale</option>
+              <option value="chromatic-aberration">Chromatic Aberration</option>
+              <option value="inverted">Inverted</option>
+              <option value="sepia">Sepia</option>
+              <option value="terminal-green">Terminal Green</option>
+              <option value="vaporwave">Vaporwave</option>
+              <option value="acid-wash">Acid Wash</option>
+              <option value="deep-fried">Deep Fried</option>
+              <option value="washed-out">Washed Out</option>
+            </select>
+          </label>
+
+          <label class="row">
+            <span>Texture Intensity</span>
+            <input id="customizerTextureIntensity" type="range" min="0" max="100" value="45">
+          </label>
+
+          <label class="row">
+            <span>Texture Scale</span>
+            <input id="customizerTextureScale" type="range" min="25" max="300" value="100">
+          </label>
+
+          <label class="checkbox-row texture-animation-toggle-row">
+            <input id="customizerAnimateTexture" type="checkbox">
+            <span>Animate Texture</span>
+          </label>
+
+          <label id="customizerTextureAnimationStyleRow" class="row" hidden>
+            <span>Animation Style</span>
+            <select id="customizerTextureAnimationStyle">
+              <option value="no-animation">No Animation</option>
+              <option value="diagonal-south-east">Diagonal (South East)</option>
+              <option value="diagonal-south-west">Diagonal (South West)</option>
+              <option value="diagonal-north-east">Diagonal (North East)</option>
+              <option value="diagonal-north-west">Diagonal (North West)</option>
+              <option value="linear-north">Linear (North)</option>
+              <option value="linear-south">Linear (South)</option>
+              <option value="linear-east">Linear (East)</option>
+              <option value="linear-west">Linear (West)</option>
+              <option value="ripple">Ripple</option>
+              <option value="breathing">Breathing</option>
+            </select>
+          </label>
+
+          <label id="customizerTextureAnimationSpeedRow" class="row" hidden>
+            <span>Animation Speed</span>
+            <input id="customizerTextureAnimationSpeed" type="range" min="25" max="300" value="100">
+          </label>
         </div>
-      </label>
-      <div id="customizerTextureFilterList" class="texture-filter-list" aria-live="polite"></div>
+      </div>
 
-      <label class="row">
-        <span>Texture Color Mode</span>
-        <select id="customizerTextureColorMode">
-          <option value="normal">Normal</option>
-          <option value="grayscale">Grayscale</option>
-          <option value="chromatic-aberration">Chromatic Aberration</option>
-          <option value="inverted">Inverted</option>
-          <option value="sepia">Sepia</option>
-          <option value="terminal-green">Terminal Green</option>
-          <option value="vaporwave">Vaporwave</option>
-          <option value="acid-wash">Acid Wash</option>
-          <option value="deep-fried">Deep Fried</option>
-          <option value="washed-out">Washed Out</option>
-        </select>
-      </label>
-
-      <label class="row">
-        <span>Texture Intensity</span>
-        <input id="customizerTextureIntensity" type="range" min="0" max="100" value="45">
-      </label>
-
-      <label class="row">
-        <span>Texture Scale</span>
-        <input id="customizerTextureScale" type="range" min="25" max="300" value="100">
-      </label>
-
-      <label class="row">
-        <span>Blend Mode</span>
-        <select id="customizerBlendMode">
-          <option value="normal">Normal</option>
-          <option value="multiply">Multiply</option>
-          <option value="screen">Screen</option>
-          <option value="overlay">Overlay</option>
-          <option value="darken">Darken</option>
-          <option value="lighten">Lighten</option>
-          <option value="color-dodge">Color Dodge</option>
-          <option value="color-burn">Color Burn</option>
-          <option value="hard-light">Hard Light</option>
-          <option value="soft-light">Soft Light</option>
-          <option value="difference">Difference</option>
-          <option value="exclusion">Exclusion</option>
-          <option value="hue">Hue</option>
-          <option value="saturation">Saturation</option>
-          <option value="color">Color</option>
-          <option value="luminosity">Luminosity</option>
-        </select>
-      </label>
-
-      <label class="row">
-        <span>Intensity</span>
-        <input id="customizerIntensity" type="range" min="10" max="100" value="55">
-      </label>
-
-      <label class="row">
-        <span>Speed</span>
-        <input id="customizerSpeed" type="range" min="4" max="40" value="14">
-      </label>
-
-      <label class="checkbox-row">
-        <input id="customizerCycleInvert" type="checkbox">
-        <span>Cycle inversion with 5-second fades</span>
-      </label>
-      <label class="checkbox-row">
-        <input id="customizerHueMonochrome" type="checkbox">
-        <span>Apply hueshift to black/white too</span>
-      </label>
-
-      <button id="customizerToggle" class="primary">Enable Hueshift</button>
-      <button id="customizerInvert" class="secondary">Enable Inversion</button>
       <button id="customizerSaveTheme" class="secondary">Save Page Theme</button>
-      <button id="customizerReset" class="secondary">Reset Page Customization</button>
+      <button id="customizerReset" class="secondary">Reset Page Theme</button>
     </section>
 
     <section id="panel-broken" class="panel tool-panel hidden">

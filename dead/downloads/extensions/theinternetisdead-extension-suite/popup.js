@@ -17,12 +17,16 @@ const DEFAULTS = {
   customizerInverted: false,
   customizerCycleInvert: false,
   customizerHueMonochrome: false,
+  customizerFilterImages: false,
   customizerStaticColor: "",
   customizerBlendMode: "normal",
   customizerTextureFilters: [],
   customizerTextureColorMode: "normal",
   customizerTextureIntensity: 45,
   customizerTextureScale: 100,
+  customizerAnimateTexture: false,
+  customizerTextureAnimationStyle: "no-animation",
+  customizerTextureAnimationSpeed: 100,
   customizerCrtEffects: false,
   customizerSettingsByPage: {},
   customizerSelectedStoredThemeByPage: {},
@@ -51,12 +55,16 @@ const CUSTOMIZER_DEFAULTS = {
   customizerInverted: false,
   customizerCycleInvert: false,
   customizerHueMonochrome: false,
+  customizerFilterImages: false,
   customizerStaticColor: "",
   customizerBlendMode: "normal",
   customizerTextureFilters: [],
   customizerTextureColorMode: "normal",
   customizerTextureIntensity: 45,
   customizerTextureScale: 100,
+  customizerAnimateTexture: false,
+  customizerTextureAnimationStyle: "no-animation",
+  customizerTextureAnimationSpeed: 100,
   customizerCrtEffects: false
 };
 
@@ -247,6 +255,37 @@ async function toggleVolumeControls() {
   if (open) refreshAudioTabs().catch(() => {});
 }
 
+
+function setColorFilterControlsOpen(open) {
+  const panel = $("customizerColorSlideout");
+  const toggle = $("customizerColorToggle");
+  if (!panel || !toggle) return;
+
+  panel.classList.toggle("is-open", Boolean(open));
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function toggleColorFilterControls() {
+  const panel = $("customizerColorSlideout");
+  setColorFilterControlsOpen(!panel?.classList.contains("is-open"));
+}
+
+function setTextureControlsOpen(open) {
+  const panel = $("customizerTextureSlideout");
+  const toggle = $("customizerTextureToggle");
+  if (!panel || !toggle) return;
+
+  panel.classList.toggle("is-open", Boolean(open));
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function toggleTextureControls() {
+  const panel = $("customizerTextureSlideout");
+  setTextureControlsOpen(!panel?.classList.contains("is-open"));
+}
+
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
@@ -344,9 +383,35 @@ const CUSTOMIZER_TEXTURE_COLOR_MODES = new Map([
   ["washed-out", "Washed Out"]
 ]);
 
+const CUSTOMIZER_TEXTURE_ANIMATION_STYLES = new Set([
+  "no-animation",
+  "diagonal-south-east",
+  "diagonal-south-west",
+  "diagonal-north-east",
+  "diagonal-north-west",
+  "linear-north",
+  "linear-south",
+  "linear-east",
+  "linear-west",
+  "ripple",
+  "breathing"
+]);
+
 function normalizeTextureColorMode(value) {
   const mode = String(value || "").trim().toLowerCase();
   return CUSTOMIZER_TEXTURE_COLOR_MODES.has(mode) ? mode : "normal";
+}
+
+function normalizeTextureAnimationStyle(value) {
+  const style = String(value || "").trim().toLowerCase();
+  if (style === "diagonal") return "diagonal-south-east";
+  return CUSTOMIZER_TEXTURE_ANIMATION_STYLES.has(style) ? style : "no-animation";
+}
+
+function clampTextureAnimationSpeed(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 100;
+  return Math.max(25, Math.min(300, Math.round(number)));
 }
 
 function normalizeTextureFilters(value) {
@@ -389,7 +454,7 @@ function getCustomizerPageKeyFromUrl(url = "") {
   try {
     const parsed = new URL(url);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return `${parsed.origin}${parsed.pathname}${parsed.search}`;
+      return parsed.origin;
     }
     if (parsed.protocol === "file:") {
       parsed.hash = "";
@@ -397,6 +462,24 @@ function getCustomizerPageKeyFromUrl(url = "") {
     }
   } catch (_error) {
     // Fall through to an empty key for browser/internal pages.
+  }
+
+  return "";
+}
+
+function getLegacyCustomizerPageKeyFromUrl(url = "") {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return `${parsed.origin}${parsed.pathname}${parsed.search}`;
+    }
+    if (parsed.protocol === "file:") {
+      parsed.hash = "";
+      return parsed.href;
+    }
+  } catch (_error) {
+    // Older builds used exact path keys. This keeps them readable during the
+    // transition to origin-wide themes, because apparently URLs breed edge cases.
   }
 
   return "";
@@ -410,18 +493,37 @@ function normalizeCustomizerSettings(settings = {}) {
     customizerInverted: Boolean(settings.customizerInverted),
     customizerCycleInvert: Boolean(settings.customizerCycleInvert),
     customizerHueMonochrome: Boolean(settings.customizerHueMonochrome),
+    customizerFilterImages: Boolean(settings.customizerFilterImages),
     customizerStaticColor: normalizeHexInput(settings.customizerStaticColor),
     customizerBlendMode: normalizeBlendMode(settings.customizerBlendMode),
     customizerTextureFilters: normalizeTextureFilters(settings.customizerTextureFilters),
     customizerTextureColorMode: normalizeTextureColorMode(settings.customizerTextureColorMode),
     customizerTextureIntensity: clampTextureIntensity(settings.customizerTextureIntensity),
     customizerTextureScale: clampTextureScale(settings.customizerTextureScale),
+    customizerAnimateTexture: Boolean(settings.customizerAnimateTexture ?? settings.animateTexture),
+    customizerTextureAnimationStyle: normalizeTextureAnimationStyle(settings.customizerTextureAnimationStyle ?? settings.textureAnimationStyle),
+    customizerTextureAnimationSpeed: clampTextureAnimationSpeed(settings.customizerTextureAnimationSpeed ?? settings.textureAnimationSpeed),
     customizerCrtEffects: false
   };
 }
 
 function extractCustomizerSettings(settings = {}) {
   return normalizeCustomizerSettings({ ...CUSTOMIZER_DEFAULTS, ...settings });
+}
+
+function customizerSettingsMatch(a = {}, b = {}) {
+  const left = extractCustomizerSettings(a);
+  const right = extractCustomizerSettings(b);
+  return Object.keys(CUSTOMIZER_DEFAULTS).every((key) => {
+    if (Array.isArray(left[key]) || Array.isArray(right[key])) {
+      return JSON.stringify(left[key] || []) === JSON.stringify(right[key] || []);
+    }
+    return left[key] === right[key];
+  });
+}
+
+function customizerSettingsAreDefault(settings = {}) {
+  return customizerSettingsMatch(settings, CUSTOMIZER_DEFAULTS);
 }
 
 async function getActiveCustomizerPageKey() {
@@ -431,27 +533,33 @@ async function getActiveCustomizerPageKey() {
 
 async function getCustomizerSettingsForActivePage() {
   const storage = await chrome.storage.local.get(DEFAULTS);
-  const pageKey = await getActiveCustomizerPageKey();
+  const tab = await getActiveTab();
+  const pageKey = getCustomizerPageKeyFromUrl(tab?.url || "");
+  const legacyPageKey = getLegacyCustomizerPageKeyFromUrl(tab?.url || "");
   const pageSettings = storage[CUSTOMIZER_PAGE_SETTINGS_KEY] || {};
   const savedForPage = pageKey ? pageSettings[pageKey] : null;
+  const legacySavedForPage = legacyPageKey && legacyPageKey !== pageKey ? pageSettings[legacyPageKey] : null;
 
   // New pages should start clean. Older builds used global customizer storage,
   // which made fresh tabs inherit effects before the user touched the page.
   // Because apparently browsers needed haunted hand-me-down CSS.
-  return extractCustomizerSettings(savedForPage || CUSTOMIZER_DEFAULTS);
+  return extractCustomizerSettings(savedForPage || legacySavedForPage || CUSTOMIZER_DEFAULTS);
 }
 
 async function saveCustomizer(patch) {
   const storage = await chrome.storage.local.get(DEFAULTS);
-  const pageKey = await getActiveCustomizerPageKey();
+  const tab = await getActiveTab();
+  const pageKey = getCustomizerPageKeyFromUrl(tab?.url || "");
+  const legacyPageKey = getLegacyCustomizerPageKeyFromUrl(tab?.url || "");
   const safePageKey = pageKey || "__global__";
   const pageSettings = storage[CUSTOMIZER_PAGE_SETTINGS_KEY] || {};
-  const current = extractCustomizerSettings(pageSettings[safePageKey] || CUSTOMIZER_DEFAULTS);
+  const current = extractCustomizerSettings(pageSettings[safePageKey] || pageSettings[legacyPageKey] || CUSTOMIZER_DEFAULTS);
   const nextCustomizer = normalizeCustomizerSettings({ ...current, ...patch, customizerCrtEffects: false });
   const nextPageSettings = {
     ...pageSettings,
     [safePageKey]: nextCustomizer
   };
+  if (legacyPageKey && legacyPageKey !== safePageKey) delete nextPageSettings[legacyPageKey];
 
   await chrome.storage.local.set({
     [CUSTOMIZER_PAGE_SETTINGS_KEY]: nextPageSettings,
@@ -467,7 +575,9 @@ async function saveCustomizer(patch) {
 
 async function replaceCustomizerForActivePage(settings = {}) {
   const storage = await chrome.storage.local.get(DEFAULTS);
-  const pageKey = await getActiveCustomizerPageKey();
+  const tab = await getActiveTab();
+  const pageKey = getCustomizerPageKeyFromUrl(tab?.url || "");
+  const legacyPageKey = getLegacyCustomizerPageKeyFromUrl(tab?.url || "");
   const safePageKey = pageKey || "__global__";
   const pageSettings = storage[CUSTOMIZER_PAGE_SETTINGS_KEY] || {};
   const nextCustomizer = normalizeCustomizerSettings({
@@ -479,6 +589,7 @@ async function replaceCustomizerForActivePage(settings = {}) {
     ...pageSettings,
     [safePageKey]: nextCustomizer
   };
+  if (legacyPageKey && legacyPageKey !== safePageKey) delete nextPageSettings[legacyPageKey];
 
   await chrome.storage.local.set({
     [CUSTOMIZER_PAGE_SETTINGS_KEY]: nextPageSettings,
@@ -493,10 +604,13 @@ async function replaceCustomizerForActivePage(settings = {}) {
 
 async function resetCustomizerForActivePage() {
   const storage = await chrome.storage.local.get(DEFAULTS);
-  const pageKey = await getActiveCustomizerPageKey();
+  const tab = await getActiveTab();
+  const pageKey = getCustomizerPageKeyFromUrl(tab?.url || "");
+  const legacyPageKey = getLegacyCustomizerPageKeyFromUrl(tab?.url || "");
   const safePageKey = pageKey || "__global__";
   const pageSettings = { ...(storage[CUSTOMIZER_PAGE_SETTINGS_KEY] || {}) };
   delete pageSettings[safePageKey];
+  if (legacyPageKey && legacyPageKey !== safePageKey) delete pageSettings[legacyPageKey];
 
   await chrome.storage.local.set({
     [CUSTOMIZER_PAGE_SETTINGS_KEY]: pageSettings,
@@ -535,7 +649,8 @@ function themeDisplayName(tab, date = new Date()) {
 async function getActiveThemePageContext() {
   const tab = await getActiveTab();
   const pageKey = getCustomizerPageKeyFromUrl(tab?.url || "") || "__global__";
-  return { tab, pageKey };
+  const legacyPageKey = getLegacyCustomizerPageKeyFromUrl(tab?.url || "") || pageKey;
+  return { tab, pageKey, legacyPageKey };
 }
 
 async function fetchJsonResource(path) {
@@ -590,20 +705,32 @@ function storedThemeDisplayName(theme, path, matchesActivePage = true) {
 async function getStoredThemesForActivePage() {
   const { tab, pageKey } = await getActiveThemePageContext();
   const tabUrl = tab?.url || "";
-  let index = [];
+  const indexPaths = [
+    "stored-themes/index.json",
+    "stored-themes/ChatGPT/index.json"
+  ];
+  const index = [];
 
-  try {
-    const indexJson = await fetchJsonResource("stored-themes/index.json");
-    index = Array.isArray(indexJson) ? indexJson : Array.isArray(indexJson.themes) ? indexJson.themes : [];
-  } catch (_error) {
-    return [];
+  for (const indexPath of indexPaths) {
+    try {
+      const indexJson = await fetchJsonResource(indexPath);
+      const entries = Array.isArray(indexJson) ? indexJson : Array.isArray(indexJson.themes) ? indexJson.themes : [];
+      index.push(...entries);
+    } catch (_error) {
+      // Missing theme indexes are fine. Apparently folders need lore now.
+    }
   }
 
+  if (!index.length) return [];
+
   const themes = [];
+  const seenPaths = new Set();
   for (const entry of index) {
     const path = normalizeStoredThemeEntry(entry);
     if (!path || !path.startsWith("stored-themes/") || !path.endsWith(".json")) continue;
-    if (path === "stored-themes/index.json") continue;
+    if (path.endsWith("/index.json") || path === "stored-themes/index.json") continue;
+    if (seenPaths.has(path)) continue;
+    seenPaths.add(path);
 
     try {
       const theme = await fetchJsonResource(path);
@@ -651,19 +778,32 @@ async function setSelectedStoredThemeForActivePage(selectedId = "") {
   await chrome.storage.local.set({ [CUSTOMIZER_SELECTED_STORED_THEME_KEY]: selectedByPage });
 }
 
-async function renderSavedThemesDropdown(selectedId = "") {
+async function renderSavedThemesDropdown(selectedId = "", currentSettings = null) {
   const select = $("customizerSavedThemesSelect");
   if (!select) return;
 
   const themes = await getStoredThemesForActivePage();
   const activeSelectedId = selectedId || await getSelectedStoredThemeForActivePage();
-  const hasSelectedTheme = Boolean(activeSelectedId && themes.some((theme) => theme.__selectId === activeSelectedId));
+  const selectedTheme = activeSelectedId ? themes.find((theme) => theme.__selectId === activeSelectedId) : null;
+  const hasSelectedTheme = Boolean(selectedTheme);
+  const settings = currentSettings || await getCustomizerSettingsForActivePage();
+  const isDefaultTheme = customizerSettingsAreDefault(settings);
+  const selectedThemeIsClean = Boolean(selectedTheme?.settings && customizerSettingsMatch(settings, selectedTheme.settings));
+  const isCustomizedState = !isDefaultTheme && !selectedThemeIsClean;
+
   select.innerHTML = "";
 
-  const topOption = document.createElement("option");
-  topOption.value = hasSelectedTheme ? "__reset_theme__" : "";
-  topOption.textContent = hasSelectedTheme ? "Reset Theme" : "Select stored theme";
-  select.append(topOption);
+  const defaultOption = document.createElement("option");
+  defaultOption.value = "";
+  defaultOption.textContent = "Default";
+  select.append(defaultOption);
+
+  if (isCustomizedState) {
+    const customizedOption = document.createElement("option");
+    customizedOption.value = "__customized__";
+    customizedOption.textContent = "Customized";
+    select.append(customizedOption);
+  }
 
   for (const theme of themes) {
     const option = document.createElement("option");
@@ -672,25 +812,38 @@ async function renderSavedThemesDropdown(selectedId = "") {
     select.append(option);
   }
 
-  select.value = hasSelectedTheme ? activeSelectedId : "";
+  if (hasSelectedTheme && selectedThemeIsClean) {
+    select.value = activeSelectedId;
+  } else if (isCustomizedState) {
+    select.value = "__customized__";
+  } else {
+    select.value = "";
+  }
 }
 
 async function saveCurrentPageTheme() {
-  const { tab, pageKey } = await getActiveThemePageContext();
+  const { tab, pageKey, legacyPageKey } = await getActiveThemePageContext();
   const savedAt = new Date();
-  const settings = await getCustomizerSettingsForActivePage();
+  const settings = extractCustomizerSettings(await getCustomizerSettingsForActivePage());
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const filename = `${slugifyThemePart(tab?.title || tab?.url || pageKey, "page-theme")}-${formatThemeTimestamp(savedAt)}.json`;
+  const themeOrigin = pageKey === "__global__" ? "" : pageKey;
+  const sourcePageUrl = tab?.url || "";
+  const filename = `${slugifyThemePart(themeOrigin || sourcePageUrl || tab?.title || pageKey, "page-theme")}-${formatThemeTimestamp(savedAt)}.json`;
   const theme = {
     id,
     name: themeDisplayName(tab, savedAt),
+    displayName: themeDisplayName(tab, savedAt),
     pageKey,
-    pageUrl: tab?.url || "",
+    pageUrl: themeOrigin || sourcePageUrl,
+    pageOrigin: themeOrigin,
+    pageMatchMode: themeOrigin ? "origin" : "exact",
+    sourcePageUrl,
+    legacyPageKey,
     pageTitle: tab?.title || "",
     savedAt: savedAt.toISOString(),
     extension: "theinternetisdead-extension-suite",
     type: "theinternetisdead-customizer-page-theme",
-    version: 1,
+    version: 2,
     settings
   };
 
@@ -717,13 +870,14 @@ async function saveCurrentPageTheme() {
 async function applySelectedSavedTheme() {
   const select = $("customizerSavedThemesSelect");
   const selectedId = String(select?.value || "");
-  if (!selectedId) return;
 
-  if (selectedId === "__reset_theme__") {
+  if (selectedId === "__customized__") return;
+
+  if (!selectedId) {
     const next = await resetCustomizerForActivePage();
     await setSelectedStoredThemeForActivePage("");
     await applyCustomizer(next);
-    await renderSavedThemesDropdown();
+    await renderSavedThemesDropdown("", next);
     return;
   }
 
@@ -740,7 +894,7 @@ async function applySelectedSavedTheme() {
   await setSelectedStoredThemeForActivePage(selectedId);
   await applyCustomizer(next);
   applyLabels({ ...(await chrome.storage.local.get(DEFAULTS)), ...next });
-  await renderSavedThemesDropdown(selectedId);
+  await renderSavedThemesDropdown(selectedId, next);
 }
 
 function renderTextureFilterList(filters) {
@@ -790,13 +944,13 @@ function applyLabels(s) {
   $("mainVolumeValue").textContent = `${clampPercent(s.mainVolume, 100)}%`;
   setVolumeControlsOpen(Boolean(s.volumeControlsOpen));
 
-  $("customizerToggle").textContent = s.customizerEnabled ? "Disable Hueshift" : "Enable Hueshift";
+  $("customizerToggle").checked = Boolean(s.customizerEnabled);
   $("customizerIntensity").value = s.customizerIntensity;
   $("customizerSpeed").value = s.customizerSpeed;
   const staticColor = /^#[0-9a-f]{6}$/i.test(String(s.customizerStaticColor || "")) ? String(s.customizerStaticColor) : "";
   const staticColorValue = $("customizerStaticColorValue");
   const staticColorTarget = $("customizerStaticColorTarget");
-  staticColorValue.textContent = staticColor ? staticColor.toUpperCase() : "Unchanged";
+  staticColorValue.textContent = staticColor ? staticColor.toUpperCase() : "Default";
   staticColorTarget.style.background = staticColor || "rgba(5, 0, 8, 0.95)";
   $("customizerStaticColorPicker").value = staticColor || "#99ff00";
   const clearStaticColor = $("customizerClearStaticColor");
@@ -806,11 +960,26 @@ function applyLabels(s) {
   if (textureColorMode) textureColorMode.value = normalizeTextureColorMode(s.customizerTextureColorMode);
   $("customizerTextureIntensity").value = clampTextureIntensity(s.customizerTextureIntensity);
   $("customizerTextureScale").value = clampTextureScale(s.customizerTextureScale);
+  const animateTexture = $("customizerAnimateTexture");
+  if (animateTexture) animateTexture.checked = Boolean(s.customizerAnimateTexture);
+  const textureAnimationStyle = $("customizerTextureAnimationStyle");
+  const normalizedTextureAnimationStyle = Boolean(s.customizerAnimateTexture)
+    ? normalizeTextureAnimationStyle(s.customizerTextureAnimationStyle)
+    : "no-animation";
+  if (textureAnimationStyle) textureAnimationStyle.value = normalizedTextureAnimationStyle;
+  const textureAnimationStyleRow = $("customizerTextureAnimationStyleRow");
+  if (textureAnimationStyleRow) textureAnimationStyleRow.hidden = !Boolean(s.customizerAnimateTexture);
+  const textureAnimationSpeed = $("customizerTextureAnimationSpeed");
+  if (textureAnimationSpeed) textureAnimationSpeed.value = clampTextureAnimationSpeed(s.customizerTextureAnimationSpeed);
+  const textureAnimationSpeedRow = $("customizerTextureAnimationSpeedRow");
+  if (textureAnimationSpeedRow) textureAnimationSpeedRow.hidden = !Boolean(s.customizerAnimateTexture) || normalizedTextureAnimationStyle === "no-animation";
   renderTextureFilterList(s.customizerTextureFilters);
-  $("customizerInvert").textContent = s.customizerInverted ? "Disable Inversion" : "Enable Inversion";
+  $("customizerInvert").checked = Boolean(s.customizerInverted);
   $("customizerCycleInvert").checked = Boolean(s.customizerCycleInvert);
   const hueMonochrome = $("customizerHueMonochrome");
   if (hueMonochrome) hueMonochrome.checked = Boolean(s.customizerHueMonochrome);
+  const filterImages = $("customizerFilterImages");
+  if (filterImages) filterImages.checked = Boolean(s.customizerFilterImages);
   const crtEffects = $("customizerCrtEffects");
   if (crtEffects) crtEffects.checked = false;
 
@@ -991,12 +1160,16 @@ async function applyCustomizer(s) {
       inverted: Boolean(s.customizerInverted),
       cycleInvert: Boolean(s.customizerCycleInvert),
       hueMonochrome: Boolean(s.customizerHueMonochrome),
+      filterImages: Boolean(s.customizerFilterImages),
       staticColor: String(s.customizerStaticColor || ""),
       blendMode: normalizeBlendMode(s.customizerBlendMode),
       textureFilters: normalizeTextureFilters(s.customizerTextureFilters),
       textureColorMode: normalizeTextureColorMode(s.customizerTextureColorMode),
       textureIntensity: clampTextureIntensity(s.customizerTextureIntensity),
       textureScale: clampTextureScale(s.customizerTextureScale),
+      animateTexture: Boolean(s.customizerAnimateTexture),
+      textureAnimationStyle: normalizeTextureAnimationStyle(s.customizerTextureAnimationStyle),
+      textureAnimationSpeed: clampTextureAnimationSpeed(s.customizerTextureAnimationSpeed),
       crtEffects: false
     });
   } catch (_error) {
@@ -1006,7 +1179,9 @@ async function applyCustomizer(s) {
 
 async function saveAndApplyCustomizer(patch) {
   const next = await saveCustomizer(patch);
+  await setSelectedStoredThemeForActivePage("");
   await applyCustomizer(next);
+  await renderSavedThemesDropdown("", next);
   return next;
 }
 
@@ -1302,6 +1477,9 @@ $("mainVolume").addEventListener("input", async () => {
 
 $("refreshAudioTabs").addEventListener("click", () => refreshAudioTabs());
 
+$("customizerColorToggle").addEventListener("click", () => toggleColorFilterControls());
+$("customizerTextureToggle").addEventListener("click", () => toggleTextureControls());
+
 $("customizerSaveTheme").addEventListener("click", async () => {
   await saveCurrentPageTheme();
 });
@@ -1344,6 +1522,31 @@ $("customizerTextureScale").addEventListener("input", async () => {
   await saveAndApplyCustomizer({ customizerTextureScale: clampTextureScale($("customizerTextureScale").value) });
 });
 
+$("customizerAnimateTexture").addEventListener("change", async () => {
+  const enabled = $("customizerAnimateTexture").checked;
+  const styleRow = $("customizerTextureAnimationStyleRow");
+  const speedRow = $("customizerTextureAnimationSpeedRow");
+  const styleSelect = $("customizerTextureAnimationStyle");
+  if (!enabled && styleSelect) styleSelect.value = "no-animation";
+  if (styleRow) styleRow.hidden = !enabled;
+  if (speedRow) speedRow.hidden = !enabled || normalizeTextureAnimationStyle(styleSelect?.value) === "no-animation";
+  await saveAndApplyCustomizer({
+    customizerAnimateTexture: enabled,
+    customizerTextureAnimationStyle: enabled ? normalizeTextureAnimationStyle(styleSelect?.value) : "no-animation"
+  });
+});
+
+$("customizerTextureAnimationStyle").addEventListener("change", async () => {
+  const style = normalizeTextureAnimationStyle($("customizerTextureAnimationStyle").value);
+  const speedRow = $("customizerTextureAnimationSpeedRow");
+  if (speedRow) speedRow.hidden = style === "no-animation";
+  await saveAndApplyCustomizer({ customizerTextureAnimationStyle: style });
+});
+
+$("customizerTextureAnimationSpeed")?.addEventListener("input", async () => {
+  await saveAndApplyCustomizer({ customizerTextureAnimationSpeed: clampTextureAnimationSpeed($("customizerTextureAnimationSpeed").value) });
+});
+
 
 $("customizerTextureFilterSelect").addEventListener("change", async () => {
   await addSelectedTextureFilter();
@@ -1363,9 +1566,8 @@ $("customizerTextureFilterList").addEventListener("click", async (event) => {
   await saveAndApplyCustomizer({ customizerTextureFilters: nextFilters });
 });
 
-$("customizerToggle").addEventListener("click", async () => {
-  const s = await getCustomizerSettingsForActivePage();
-  await saveAndApplyCustomizer({ customizerEnabled: !s.customizerEnabled });
+$("customizerToggle").addEventListener("change", async () => {
+  await saveAndApplyCustomizer({ customizerEnabled: $("customizerToggle").checked });
 });
 
 $("customizerIntensity").addEventListener("input", async () => {
@@ -1376,9 +1578,8 @@ $("customizerSpeed").addEventListener("input", async () => {
   await saveAndApplyCustomizer({ customizerSpeed: Number($("customizerSpeed").value) });
 });
 
-$("customizerInvert").addEventListener("click", async () => {
-  const s = await getCustomizerSettingsForActivePage();
-  await saveAndApplyCustomizer({ customizerInverted: !s.customizerInverted });
+$("customizerInvert").addEventListener("change", async () => {
+  await saveAndApplyCustomizer({ customizerInverted: $("customizerInvert").checked });
 });
 
 $("customizerCycleInvert").addEventListener("change", async () => {
@@ -1387,6 +1588,10 @@ $("customizerCycleInvert").addEventListener("change", async () => {
 
 $("customizerHueMonochrome").addEventListener("change", async () => {
   await saveAndApplyCustomizer({ customizerHueMonochrome: $("customizerHueMonochrome").checked });
+});
+
+$("customizerFilterImages")?.addEventListener("change", async () => {
+  await saveAndApplyCustomizer({ customizerFilterImages: $("customizerFilterImages").checked });
 });
 
 $("favoritesToggle").addEventListener("click", async () => {

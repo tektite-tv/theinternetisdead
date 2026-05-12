@@ -1,4 +1,4 @@
-/* theinternetisdead compact-scale v1.56.9: popup dimensions and typography set to 75% of the original full-size UI. */
+/* theinternetisdead compact-scale v1.56.42: keep filter toggles highlighted while open. */
 * {
   box-sizing: border-box;
 }
@@ -36,7 +36,7 @@ body {
 
 .titlebar {
   display: grid;
-  grid-template-columns: 33px 1fr;
+  grid-template-columns: 33px minmax(0, 1fr);
   gap: 7.5px;
   align-items: center;
   padding: 7.5px;
@@ -67,6 +67,8 @@ body {
 
 .title-stack {
   min-width: 0;
+  display: grid;
+  align-items: center;
 }
 
 h1 {
@@ -86,18 +88,17 @@ p {
   color: #d59cff;
 }
 
+#headerTitle,
 #headerSubtitle {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: none;
 }
 
 .header-select {
   width: 100%;
-  margin-top: 5.25px;
-  height: 22.5px;
-  padding: 3.75px 5.25px;
-  font-size: 8.25px;
+  margin-top: 0;
+  height: 33px;
+  padding: 3.75px 7.5px;
+  font-size: 9px;
 }
 
 .panel {
@@ -138,7 +139,9 @@ button:hover {
   color: #ff9cff;
 }
 
-.secondary:hover {
+.secondary:hover,
+#customizerColorToggle[aria-expanded="true"],
+#customizerTextureToggle[aria-expanded="true"] {
   color: #120018;
   background: #ff4dff;
   box-shadow: 0 0 12px rgba(255, 77, 255, 0.6);
@@ -191,6 +194,31 @@ input[type="range"] {
 
 input[type="checkbox"] {
   accent-color: #ff4dff;
+}
+
+[hidden],
+#customizerTextureAnimationStyleRow[hidden],
+#customizerTextureAnimationSpeedRow[hidden] {
+  display: none !important;
+}
+
+#customizerToggle,
+#customizerInvert,
+#customizerCycleInvert,
+#customizerHueMonochrome,
+#customizerAnimateTexture {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  justify-self: center;
+}
+
+.checkbox-row:has(#customizerCycleInvert) {
+  padding-bottom: 4px;
+}
+
+.texture-animation-toggle-row:has(#customizerAnimateTexture:not(:checked)) {
+  margin-bottom: 7.5px;
 }
 
 .note {
@@ -644,6 +672,42 @@ h2 {
     rgba(5, 0, 8, 0.35) 5.25px,
     rgba(5, 0, 8, 0.35) 10.5px
   );
+}
+
+
+ .color-filter-toggle {
+  margin-top: 9px;
+}
+
+.texture-toggle {
+  margin-top: 0;
+}
+
+.filter-slideout,
+.texture-slideout {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  overflow: hidden;
+  transition: grid-template-rows 180ms ease, opacity 180ms ease, margin-top 180ms ease;
+}
+
+ .filter-slideout.is-open,
+.texture-slideout.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 0;
+}
+
+ .filter-slideout-inner,
+.texture-slideout-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.filter-slideout-inner > :first-child,
+.texture-slideout-inner > :first-child {
+  margin-top: 0;
 }
 
 .texture-filter-picker {
