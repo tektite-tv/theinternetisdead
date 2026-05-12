@@ -1,0 +1,31 @@
+name: Zip theinternetisdead Extension Suite
+
+on:
+  push:
+    paths:
+      - "dead/downloads/extensions/theinternetisdead-extension-suite/**"
+      - ".github/workflows/zip-theinternetisdead-extension-suite.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  zip-extension-suite:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Create ZIP from extension suite folder
+        run: |
+          cd dead/downloads/extensions
+          rm -f theinternetisdead-extension-suite.zip
+          zip -r theinternetisdead-extension-suite.zip theinternetisdead-extension-suite
+
+      - name: Commit updated ZIP
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-zip theinternetisdead extension suite"
+          file_pattern: dead/downloads/extensions/theinternetisdead-extension-suite.zip
