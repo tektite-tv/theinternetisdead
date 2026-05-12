@@ -1,3 +1,9 @@
+## v1.56.36
+
+- Enabled the bundled ChatGPT stored themes so selecting them applies their visual customizer overlay immediately.
+- Restored root `stored-themes/index.json` with the existing ChatGPT stored theme paths while keeping the ChatGPT folder index intact.
+- Updated extension version to `1.56.36`.
+
 ## v1.56.35
 
 - Updated extension version to `1.56.35`.
