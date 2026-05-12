@@ -47,6 +47,10 @@ const DEFAULTS = {
 const CUSTOMIZER_PAGE_SETTINGS_KEY = "customizerSettingsByPage";
 const CUSTOMIZER_SELECTED_STORED_THEME_KEY = "customizerSelectedStoredThemeByPage";
 const CUSTOMIZER_CONTENT_SCRIPT_FILES = ["content-customizer.js"];
+const THEME_FOLDER_SCOPES = {
+  ChatGPT: ["chatgpt.com"],
+  YouTube: ["youtube.com", "www.youtube.com"]
+};
 
 const CUSTOMIZER_DEFAULTS = {
   customizerEnabled: false,
@@ -668,6 +672,53 @@ function normalizeStoredThemeEntry(entry) {
   return "";
 }
 
+function normalizeThemeDomain(value = "") {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+
+  try {
+    return new URL(raw.includes("://") ? raw : `https://${raw}`).hostname.replace(/\.$/, "");
+  } catch (_error) {
+    return raw
+      .replace(/^https?:\/\//, "")
+      .replace(/\/.*$/, "")
+      .replace(/:\d+$/, "")
+      .replace(/\.$/, "");
+  }
+}
+
+function expandThemeDomainAliases(domain = "") {
+  const normalized = normalizeThemeDomain(domain);
+  if (!normalized) return [];
+  const aliases = new Set([normalized]);
+  if (normalized.startsWith("www.")) {
+    aliases.add(normalized.slice(4));
+  } else if (!normalized.includes(":")) {
+    aliases.add(`www.${normalized}`);
+  }
+  return Array.from(aliases);
+}
+
+function getThemeDomainsForUrl(url = "") {
+  try {
+    const parsed = new URL(String(url || ""));
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return [];
+    return expandThemeDomainAliases(parsed.hostname);
+  } catch (_error) {
+    return [];
+  }
+}
+
+function getThemeFolderFromPath(path = "") {
+  const parts = String(path || "").split("/");
+  return parts.length >= 3 && parts[0] === "stored-themes" ? parts[1] : "";
+}
+
+function getThemeFolderScopeDomains(path = "") {
+  const folder = getThemeFolderFromPath(path);
+  return Array.isArray(THEME_FOLDER_SCOPES[folder]) ? THEME_FOLDER_SCOPES[folder] : [];
+}
+
 function safeUrlOrigin(value) {
   try {
     return new URL(String(value || "")).origin;
@@ -676,11 +727,28 @@ function safeUrlOrigin(value) {
   }
 }
 
-function pageMatchesStoredTheme(theme, pageKey, tabUrl) {
+function domainSetsIntersect(left = [], right = []) {
+  const rightSet = new Set(right.map(normalizeThemeDomain).filter(Boolean));
+  return left.map(normalizeThemeDomain).filter(Boolean).some((domain) => rightSet.has(domain));
+}
+
+function pageMatchesStoredTheme(theme, pageKey, tabUrl, path = "") {
+  if (theme?.pageMatchMode === "global" || theme?.siteScope === "global") return true;
+
+  const themeScopeDomains = [
+    ...(Array.isArray(theme?.siteScopeDomains) ? theme.siteScopeDomains : []),
+    ...(Array.isArray(theme?.scopeDomains) ? theme.scopeDomains : []),
+    ...getThemeFolderScopeDomains(path)
+  ].filter(Boolean);
+
+  if (themeScopeDomains.length) {
+    return domainSetsIntersect(getThemeDomainsForUrl(tabUrl || pageKey), themeScopeDomains);
+  }
+
   const candidates = new Set([
     String(theme?.pageKey || ""),
     String(theme?.pageUrl || "")
-  ].filter(Boolean));
+  ].filter((candidate) => candidate && candidate !== "__global__"));
 
   if (candidates.has(pageKey) || candidates.has(tabUrl)) return true;
 
@@ -707,7 +775,7 @@ async function getStoredThemesForActivePage() {
   const tabUrl = tab?.url || "";
   const indexPaths = [
     "stored-themes/index.json",
-    "stored-themes/ChatGPT/index.json"
+    ...Object.keys(THEME_FOLDER_SCOPES).map((folder) => `stored-themes/${folder}/index.json`)
   ];
   const index = [];
 
@@ -735,7 +803,8 @@ async function getStoredThemesForActivePage() {
     try {
       const theme = await fetchJsonResource(path);
       if (theme?.type !== "theinternetisdead-customizer-page-theme" || !theme?.settings) continue;
-      const matchesActivePage = pageMatchesStoredTheme(theme, pageKey, tabUrl);
+      const matchesActivePage = pageMatchesStoredTheme(theme, pageKey, tabUrl, path);
+      if (!matchesActivePage) continue;
       themes.push({
         ...theme,
         __path: path,
@@ -749,7 +818,6 @@ async function getStoredThemesForActivePage() {
   }
 
   return themes.sort((a, b) => {
-    if (a.__matchesActivePage !== b.__matchesActivePage) return a.__matchesActivePage ? -1 : 1;
     return String(a.__displayName || a.__path).localeCompare(String(b.__displayName || b.__path));
   });
 }
@@ -828,6 +896,7 @@ async function saveCurrentPageTheme() {
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const themeOrigin = pageKey === "__global__" ? "" : pageKey;
   const sourcePageUrl = tab?.url || "";
+  const siteScopeDomains = getThemeDomainsForUrl(sourcePageUrl || themeOrigin);
   const filename = `${slugifyThemePart(themeOrigin || sourcePageUrl || tab?.title || pageKey, "page-theme")}-${formatThemeTimestamp(savedAt)}.json`;
   const theme = {
     id,
@@ -836,7 +905,8 @@ async function saveCurrentPageTheme() {
     pageKey,
     pageUrl: themeOrigin || sourcePageUrl,
     pageOrigin: themeOrigin,
-    pageMatchMode: themeOrigin ? "origin" : "exact",
+    pageMatchMode: siteScopeDomains.length ? "domain" : "exact",
+    siteScopeDomains,
     sourcePageUrl,
     legacyPageKey,
     pageTitle: tab?.title || "",
