@@ -1,3 +1,9 @@
+## v1.56.35
+
+- Updated extension version to `1.56.35`.
+- Simplified the popup header so the top rectangle only shows the icon and tool dropdown.
+- Hid the old header title/subtitle text while preserving the JS metadata updates, because apparently even text ghosts need somewhere to haunt.
+
 ## v1.56.34 - Rename Blue Ocean stored theme
 
 - Renamed `stored-themes/chatgpt-ocean-blue.json` to `stored-themes/chatgpt-blue-ocean.json`.
@@ -102,7 +108,7 @@
 ## v1.56.16
 
 - Changed the **Stored Themes** dropdown default label to **Unchanged**.
-- After a stored theme is selected, the top dropdown option becomes **Reset Theme**, which clears the active page customization using the same reset flow as **Reset Page Customization**.
+- After a stored theme is selected, the top dropdown option becomes **Reset Theme**, which clears the active page customization using the same reset flow as **Reset Page Theme**.
 
 ## v1.56.15
 
@@ -120,7 +126,7 @@
 ## v1.56.11
 
 - Added a **Stored Themes** dropdown at the top of `theinternetisdead-customizer`.
-- Added a **Save Page Theme** button above **Reset Page Customization**.
+- Added a **Save Page Theme** button above **Reset Page Theme**.
 - Clicking **Save Page Theme** opens the browser save dialog and suggests a JSON filename.
 - Added the `downloads` permission for the JSON theme export flow.
 - Scaled the popup UI down to 50% using a global popup zoom so the layout, spacing, colors, and control relationships stay visually the same, just smaller.
@@ -130,7 +136,7 @@
 
 - Made every `theinternetisdead-customizer` setting save and apply to the active page immediately.
 - Added a content-script readiness check so existing tabs can receive live customizer updates after the extension reloads.
-- Made **Reset Page Customization** instantly clear the active page visuals, not just storage.
+- Made **Reset Page Theme** instantly clear the active page visuals, not just storage.
 - Selecting a texture filter from the dropdown now applies it immediately; the `+` button still works as a backup for the same action.
 
 ## v1.56.4
@@ -143,7 +149,7 @@ This stops fresh pages from inheriting stale/global hueshift, inversion, static 
 
 ## v1.56.5
 
-- Renamed **Reset Visual Effects** to **Reset Page Customization**.
+- Renamed **Reset Visual Effects** to **Reset Page Theme**.
 - Reset now removes only the active page's saved customizer settings, leaving other pages alone.
 
 ## v1.56.2
@@ -648,12 +654,12 @@ Older builds stored visual effect toggles in `chrome.storage.local`, so a newly 
 
 Changes:
 
-- added **Reset Page Customization** button to `theinternetisdead-customizer`
+- added **Reset Page Theme** button to `theinternetisdead-customizer`
 - reset now clears only the active page customization entry and leaves other page customizations alone
 - content script no longer lets legacy `customizerScanlines` / `customizerCrtFrame` resurrect CRT mode
 - hueshift overlay is hidden by default in CSS before state is applied
 
-If a specific page still opens purple after installing this version, open that page and click **Reset Page Customization** once in the customizer panel.
+If a specific page still opens purple after installing this version, open that page and click **Reset Page Theme** once in the customizer panel.
 
 
 ## v1.40.0 WeakMap restore fix
