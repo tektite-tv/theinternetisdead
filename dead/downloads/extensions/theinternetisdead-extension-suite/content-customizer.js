@@ -977,9 +977,9 @@
       return;
     }
 
-    const holes = rects.map((rect) => `<rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="black"/>`).join("");
+    const holes = rects.map((rect) => `<rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="transparent" fill-opacity="0"/>`).join("");
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="white"/>${holes}</svg>`;
-    const url = `url("data:image/svg+xml,${encodeURIComponent(escapeSvgAttr(svg))}")`;
+    const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 
     root.style.setProperty("-webkit-mask-image", url, "important");
     root.style.setProperty("-webkit-mask-size", "100% 100%", "important");
@@ -2241,7 +2241,7 @@ function shouldShowCrtEffects() {
       inverted: Boolean(settings.customizerInverted ?? settings.inverted ?? DEFAULT_CUSTOMIZER_STATE.inverted),
       cycleInvert: Boolean(settings.customizerCycleInvert ?? settings.cycleInvert ?? DEFAULT_CUSTOMIZER_STATE.cycleInvert),
       hueMonochrome: Boolean(settings.customizerHueMonochrome ?? settings.hueMonochrome ?? DEFAULT_CUSTOMIZER_STATE.hueMonochrome),
-      filterImages: Boolean(settings.customizerFilterImages ?? settings.filterImages ?? DEFAULT_CUSTOMIZER_STATE.filterImages),
+      filterImages: false,
       staticColor: normalizeHexColor(settings.customizerStaticColor ?? settings.staticColor ?? DEFAULT_CUSTOMIZER_STATE.staticColor),
       blendMode: normalizeBlendMode(settings.customizerBlendMode ?? settings.blendMode ?? DEFAULT_CUSTOMIZER_STATE.blendMode),
       textureFilters: normalizeTextureFilters(settings.customizerTextureFilters ?? settings.textureFilters ?? DEFAULT_CUSTOMIZER_STATE.textureFilters),
@@ -2280,7 +2280,6 @@ function shouldShowCrtEffects() {
       customizerInverted: false,
       customizerCycleInvert: false,
       customizerHueMonochrome: false,
-      customizerFilterImages: false,
       customizerStaticColor: "",
       customizerBlendMode: "normal",
       customizerTextureFilters: [],
@@ -2404,7 +2403,7 @@ function shouldShowCrtEffects() {
         inverted: Boolean(message.inverted),
         cycleInvert: Boolean(message.cycleInvert),
         hueMonochrome: Boolean(message.hueMonochrome),
-        filterImages: Boolean(message.filterImages),
+        filterImages: false,
         staticColor: normalizeHexColor(message.staticColor),
         blendMode: normalizeBlendMode(message.blendMode),
         textureFilters: normalizeTextureFilters(message.textureFilters),

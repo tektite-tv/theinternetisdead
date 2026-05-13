@@ -17,7 +17,6 @@ const DEFAULTS = {
   customizerInverted: false,
   customizerCycleInvert: false,
   customizerHueMonochrome: false,
-  customizerFilterImages: false,
   customizerStaticColor: "",
   customizerBlendMode: "normal",
   customizerTextureFilters: [],
@@ -30,6 +29,7 @@ const DEFAULTS = {
   customizerCrtEffects: false,
   customizerSettingsByPage: {},
   customizerSelectedStoredThemeByPage: {},
+  customizerSavedThemesByPage: {},
 
   favoritesEnabled: true,
   favoritesOpenInNewTab: true,
@@ -46,6 +46,10 @@ const DEFAULTS = {
 
 const CUSTOMIZER_PAGE_SETTINGS_KEY = "customizerSettingsByPage";
 const CUSTOMIZER_SELECTED_STORED_THEME_KEY = "customizerSelectedStoredThemeByPage";
+const CUSTOMIZER_SAVED_THEMES_KEY = "customizerSavedThemesByPage";
+const CUSTOMIZER_SAVE_THEME_BUTTON_ID = "customizerSaveTheme";
+const CUSTOMIZER_SAVE_THEME_INPUT_ID = "customizerSaveThemeNameInput";
+const CUSTOMIZER_DELETE_LOCAL_THEME_BUTTON_ID = "customizerDeleteLocalTheme";
 const CUSTOMIZER_CONTENT_SCRIPT_FILES = ["content-customizer.js"];
 const THEME_FOLDER_SCOPES = {
   ChatGPT: ["chatgpt.com"],
@@ -59,7 +63,6 @@ const CUSTOMIZER_DEFAULTS = {
   customizerInverted: false,
   customizerCycleInvert: false,
   customizerHueMonochrome: false,
-  customizerFilterImages: false,
   customizerStaticColor: "",
   customizerBlendMode: "normal",
   customizerTextureFilters: [],
@@ -92,27 +95,27 @@ const TOOL_META = {
     icon: "icons/icon48.png"
   },
   browserControls: {
-    title: "theinternetisdead-browser-controls",
+    title: "tab-control-panel",
     subtitle: "browser / tab media volume",
     icon: "icons/icon48.png"
   },
   customizer: {
-    title: "theinternetisdead-customizer",
+    title: "overlay-customizer",
     subtitle: "hueshift / inversion / page tint",
     icon: "icons/customizer48.png"
   },
   favorites: {
-    title: "theinternetisdead-favorites-menu",
+    title: "context-menu-bookmarks",
     subtitle: "native right-click favorites",
     icon: "icons/favorites48.png"
   },
   reader: {
-    title: "theinternetisdead-reader-extension",
+    title: "tts-reader-popup",
     subtitle: "Microsoft David reader tools",
     icon: "icons/reader48.png"
   },
   storage: {
-    title: "theinternetisdead-storage-reader",
+    title: "localsessionstorage-reader",
     subtitle: "localStorage / sessionStorage viewer",
     icon: "icons/storage48.png"
   },
@@ -497,7 +500,6 @@ function normalizeCustomizerSettings(settings = {}) {
     customizerInverted: Boolean(settings.customizerInverted),
     customizerCycleInvert: Boolean(settings.customizerCycleInvert),
     customizerHueMonochrome: Boolean(settings.customizerHueMonochrome),
-    customizerFilterImages: Boolean(settings.customizerFilterImages),
     customizerStaticColor: normalizeHexInput(settings.customizerStaticColor),
     customizerBlendMode: normalizeBlendMode(settings.customizerBlendMode),
     customizerTextureFilters: normalizeTextureFilters(settings.customizerTextureFilters),
@@ -650,6 +652,79 @@ function themeDisplayName(tab, date = new Date()) {
   return `${title || "Page Theme"} · ${date.toLocaleString()}`;
 }
 
+function getLocalThemeBucketKey(pageKey = "") {
+  return pageKey || "__global__";
+}
+
+function getThemeFilenameStem(filename = "") {
+  return String(filename || "")
+    .split("/")
+    .pop()
+    .replace(/\.json$/i, "")
+    .replace(/\s+/g, " ")
+    .trim() || "page-theme";
+}
+
+function createCurrentPageTheme({ withTimestamp = false, filenameStemOverride = "" } = {}) {
+  return getActiveThemePageContext().then(async ({ tab, pageKey, legacyPageKey }) => {
+    const savedAt = new Date();
+    const settings = extractCustomizerSettings(await getCustomizerSettingsForActivePage());
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const themeOrigin = pageKey === "__global__" ? "" : pageKey;
+    const sourcePageUrl = tab?.url || "";
+    const siteScopeDomains = getThemeDomainsForUrl(sourcePageUrl || themeOrigin);
+    const stemBase = slugifyThemePart(filenameStemOverride || themeOrigin || sourcePageUrl || tab?.title || pageKey, "page-theme");
+    const filenameStem = withTimestamp ? `${stemBase}-${formatThemeTimestamp(savedAt)}` : stemBase;
+    const filename = `${filenameStem}.json`;
+    const theme = {
+      id,
+      name: filenameStem,
+      displayName: filenameStem,
+      filename,
+      pageKey,
+      pageUrl: themeOrigin || sourcePageUrl,
+      pageOrigin: themeOrigin,
+      pageMatchMode: siteScopeDomains.length ? "domain" : "exact",
+      siteScopeDomains,
+      sourcePageUrl,
+      legacyPageKey,
+      pageTitle: tab?.title || "",
+      savedAt: savedAt.toISOString(),
+      extension: "theinternetisdead-extension-suite",
+      type: "theinternetisdead-customizer-page-theme",
+      version: 2,
+      settings
+    };
+    return { tab, pageKey, legacyPageKey, theme, filename, filenameStem };
+  });
+}
+
+async function getLocalSavedThemesForActivePage(pageKey = "", tabUrl = "") {
+  const storage = await chrome.storage.local.get({ [CUSTOMIZER_SAVED_THEMES_KEY]: {} });
+  const savedByPage = storage[CUSTOMIZER_SAVED_THEMES_KEY] || {};
+  const activeBucket = getLocalThemeBucketKey(pageKey || getCustomizerPageKeyFromUrl(tabUrl || ""));
+  const rawThemes = Array.isArray(savedByPage[activeBucket]) ? savedByPage[activeBucket] : [];
+
+  return rawThemes
+    .filter((theme) => theme?.type === "theinternetisdead-customizer-page-theme" && theme?.settings)
+    .map((theme) => {
+      const filename = theme.filename || `${slugifyThemePart(theme.displayName || theme.name || activeBucket, "page-theme")}.json`;
+      const id = String(theme.id || filename);
+      const label = getThemeFilenameStem(filename);
+      return {
+        ...theme,
+        filename,
+        __path: `localStorage/${activeBucket}/${filename}`,
+        __selectId: `local:${activeBucket}:${id}`,
+        __matchesActivePage: true,
+        __displayName: label,
+        __source: "local",
+        __localBucket: activeBucket,
+        __localId: id
+      };
+    });
+}
+
 async function getActiveThemePageContext() {
   const tab = await getActiveTab();
   const pageKey = getCustomizerPageKeyFromUrl(tab?.url || "") || "__global__";
@@ -760,11 +835,12 @@ function pageMatchesStoredTheme(theme, pageKey, tabUrl, path = "") {
   return false;
 }
 
-function storedThemeDisplayName(theme, path, matchesActivePage = true) {
-  const basename = String(path || "")
-    .replace(/^stored-themes\//, "")
+function storedThemeDisplayName(_theme, path, matchesActivePage = true) {
+  const filename = String(path || "")
+    .split("/")
+    .pop()
     .replace(/\.json$/i, "");
-  const label = String(theme?.displayName || theme?.name || theme?.pageTitle || basename || "Stored Theme")
+  const label = String(filename || "Stored Theme")
     .replace(/\s+/g, " ")
     .trim();
   return matchesActivePage ? label : `${label} · other page`;
@@ -789,8 +865,6 @@ async function getStoredThemesForActivePage() {
     }
   }
 
-  if (!index.length) return [];
-
   const themes = [];
   const seenPaths = new Set();
   for (const entry of index) {
@@ -810,15 +884,18 @@ async function getStoredThemesForActivePage() {
         __path: path,
         __selectId: path,
         __matchesActivePage: matchesActivePage,
-        __displayName: storedThemeDisplayName(theme, path, matchesActivePage)
+        __displayName: storedThemeDisplayName(theme, path, matchesActivePage),
+        __source: "stored"
       });
     } catch (_error) {
       // Ignore broken theme files so one bad JSON doesn't brick the dropdown.
     }
   }
 
+  themes.push(...await getLocalSavedThemesForActivePage(pageKey, tabUrl));
+
   return themes.sort((a, b) => {
-    return String(a.__displayName || a.__path).localeCompare(String(b.__displayName || b.__path));
+    return String(a.__path || a.__displayName).localeCompare(String(b.__path || b.__displayName));
   });
 }
 
@@ -876,9 +953,11 @@ async function renderSavedThemesDropdown(selectedId = "", currentSettings = null
   for (const theme of themes) {
     const option = document.createElement("option");
     option.value = theme.__selectId;
-    option.textContent = theme.__displayName || theme.__path.replace(/^stored-themes\//, "").replace(/\.json$/i, "");
+    const label = theme.__displayName || String(theme.__path || "").split("/").pop().replace(/\.json$/i, "");
+    option.textContent = label;
     select.append(option);
   }
+
 
   if (hasSelectedTheme && selectedThemeIsClean) {
     select.value = activeSelectedId;
@@ -887,36 +966,51 @@ async function renderSavedThemesDropdown(selectedId = "", currentSettings = null
   } else {
     select.value = "";
   }
+
+  updateDeleteLocalThemeButton(themes, select.value);
 }
 
-async function saveCurrentPageTheme() {
-  const { tab, pageKey, legacyPageKey } = await getActiveThemePageContext();
-  const savedAt = new Date();
-  const settings = extractCustomizerSettings(await getCustomizerSettingsForActivePage());
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const themeOrigin = pageKey === "__global__" ? "" : pageKey;
-  const sourcePageUrl = tab?.url || "";
-  const siteScopeDomains = getThemeDomainsForUrl(sourcePageUrl || themeOrigin);
-  const filename = `${slugifyThemePart(themeOrigin || sourcePageUrl || tab?.title || pageKey, "page-theme")}-${formatThemeTimestamp(savedAt)}.json`;
-  const theme = {
-    id,
-    name: themeDisplayName(tab, savedAt),
-    displayName: themeDisplayName(tab, savedAt),
-    pageKey,
-    pageUrl: themeOrigin || sourcePageUrl,
-    pageOrigin: themeOrigin,
-    pageMatchMode: siteScopeDomains.length ? "domain" : "exact",
-    siteScopeDomains,
-    sourcePageUrl,
-    legacyPageKey,
-    pageTitle: tab?.title || "",
-    savedAt: savedAt.toISOString(),
-    extension: "theinternetisdead-extension-suite",
-    type: "theinternetisdead-customizer-page-theme",
-    version: 2,
-    settings
-  };
+function updateDeleteLocalThemeButton(themes = [], selectedId = "") {
+  const button = $(CUSTOMIZER_DELETE_LOCAL_THEME_BUTTON_ID);
+  if (!button) return;
 
+  const selectedTheme = themes.find((theme) => theme.__selectId === selectedId);
+  const canDelete = selectedTheme?.__source === "local";
+  button.hidden = !canDelete;
+  button.disabled = !canDelete;
+  button.dataset.themeId = canDelete ? selectedTheme.__selectId : "";
+}
+
+async function deleteSelectedLocalTheme() {
+  const select = $("customizerSavedThemesSelect");
+  const selectedId = String(select?.value || "");
+  if (!selectedId) return;
+
+  const themes = await getStoredThemesForActivePage();
+  const selectedTheme = themes.find((theme) => theme.__selectId === selectedId && theme.__source === "local");
+  const bucketKey = selectedTheme?.__localBucket;
+  const localId = selectedTheme?.__localId;
+  if (!bucketKey || !localId) return;
+
+  const storage = await chrome.storage.local.get({ [CUSTOMIZER_SAVED_THEMES_KEY]: {} });
+  const savedByPage = { ...(storage[CUSTOMIZER_SAVED_THEMES_KEY] || {}) };
+  const existing = Array.isArray(savedByPage[bucketKey]) ? savedByPage[bucketKey] : [];
+  const nextThemes = existing.filter((theme) => String(theme?.id || theme?.filename || "") !== String(localId));
+
+  if (nextThemes.length) {
+    savedByPage[bucketKey] = nextThemes;
+  } else {
+    delete savedByPage[bucketKey];
+  }
+
+  await chrome.storage.local.set({ [CUSTOMIZER_SAVED_THEMES_KEY]: savedByPage });
+  await setSelectedStoredThemeForActivePage("");
+  const resetSettings = await resetCustomizerForActivePage();
+  await renderSavedThemesDropdown("", resetSettings);
+}
+
+async function exportCurrentPageThemeJson() {
+  const { theme, filename } = await createCurrentPageTheme({ withTimestamp: true });
   const blob = new Blob([JSON.stringify(theme, null, 2)], { type: "application/json" });
   const objectUrl = URL.createObjectURL(blob);
 
@@ -935,6 +1029,110 @@ async function saveCurrentPageTheme() {
 
   await renderSavedThemesDropdown();
   return theme;
+}
+
+async function saveCurrentPageThemeToLocalStorage(themeName = "") {
+  const cleanThemeName = slugifyThemePart(themeName, "page-theme");
+  const { pageKey, theme } = await createCurrentPageTheme({
+    withTimestamp: false,
+    filenameStemOverride: cleanThemeName
+  });
+  const bucketKey = getLocalThemeBucketKey(pageKey);
+  const storage = await chrome.storage.local.get({
+    [CUSTOMIZER_SAVED_THEMES_KEY]: {},
+    [CUSTOMIZER_SELECTED_STORED_THEME_KEY]: {}
+  });
+  const savedByPage = { ...(storage[CUSTOMIZER_SAVED_THEMES_KEY] || {}) };
+  const existing = Array.isArray(savedByPage[bucketKey]) ? savedByPage[bucketKey] : [];
+  const filename = theme.filename;
+  const localId = filename;
+  const label = getThemeFilenameStem(filename);
+  const nextTheme = {
+    ...theme,
+    id: localId,
+    name: label,
+    displayName: label
+  };
+  const withoutOldCopy = existing.filter((item) => item?.filename !== filename && item?.id !== localId);
+  savedByPage[bucketKey] = [...withoutOldCopy, nextTheme];
+
+  await chrome.storage.local.set({ [CUSTOMIZER_SAVED_THEMES_KEY]: savedByPage });
+  const selectedId = `local:${bucketKey}:${localId}`;
+  await setSelectedStoredThemeForActivePage(selectedId);
+  await renderSavedThemesDropdown(selectedId, nextTheme.settings);
+  return nextTheme;
+}
+
+function restoreSaveThemeButton(label = "Save Page Theme") {
+  const input = $(CUSTOMIZER_SAVE_THEME_INPUT_ID);
+  if (!input) return;
+
+  const button = document.createElement("button");
+  button.id = CUSTOMIZER_SAVE_THEME_BUTTON_ID;
+  button.className = "secondary";
+  button.type = "button";
+  button.title = "Click to name and save this site theme locally. Shift-click to export a JSON file.";
+  button.textContent = label;
+  input.replaceWith(button);
+  attachSaveThemeButtonHandler(button);
+
+  if (label !== "Save Page Theme") {
+    setTimeout(() => {
+      const currentButton = $(CUSTOMIZER_SAVE_THEME_BUTTON_ID);
+      if (currentButton) currentButton.textContent = "Save Page Theme";
+    }, 1200);
+  }
+}
+
+function showSaveThemeNameInput() {
+  const button = $(CUSTOMIZER_SAVE_THEME_BUTTON_ID);
+  if (!button) return;
+
+  const input = document.createElement("input");
+  input.id = CUSTOMIZER_SAVE_THEME_INPUT_ID;
+  input.className = "secondary save-theme-name-input";
+  input.type = "text";
+  input.placeholder = "Theme name, then Enter";
+  input.title = "Type a theme name, then press Enter to save locally. Esc cancels.";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+
+  button.replaceWith(input);
+  requestAnimationFrame(() => input.focus());
+
+  input.addEventListener("keydown", async (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      restoreSaveThemeButton();
+      return;
+    }
+
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+
+    const themeName = input.value.trim();
+    if (!themeName) {
+      input.placeholder = "Name required, tiny tragedy";
+      input.classList.add("needs-value");
+      return;
+    }
+
+    input.disabled = true;
+    await saveCurrentPageThemeToLocalStorage(themeName);
+    restoreSaveThemeButton("Saved");
+  });
+}
+
+function attachSaveThemeButtonHandler(button = $(CUSTOMIZER_SAVE_THEME_BUTTON_ID)) {
+  if (!button) return;
+  button.addEventListener("click", async (event) => {
+    if (event.shiftKey) {
+      await exportCurrentPageThemeJson();
+      return;
+    }
+
+    showSaveThemeNameInput();
+  });
 }
 
 async function applySelectedSavedTheme() {
@@ -1048,8 +1246,6 @@ function applyLabels(s) {
   $("customizerCycleInvert").checked = Boolean(s.customizerCycleInvert);
   const hueMonochrome = $("customizerHueMonochrome");
   if (hueMonochrome) hueMonochrome.checked = Boolean(s.customizerHueMonochrome);
-  const filterImages = $("customizerFilterImages");
-  if (filterImages) filterImages.checked = Boolean(s.customizerFilterImages);
   const crtEffects = $("customizerCrtEffects");
   if (crtEffects) crtEffects.checked = false;
 
@@ -1230,7 +1426,7 @@ async function applyCustomizer(s) {
       inverted: Boolean(s.customizerInverted),
       cycleInvert: Boolean(s.customizerCycleInvert),
       hueMonochrome: Boolean(s.customizerHueMonochrome),
-      filterImages: Boolean(s.customizerFilterImages),
+      filterImages: false,
       staticColor: String(s.customizerStaticColor || ""),
       blendMode: normalizeBlendMode(s.customizerBlendMode),
       textureFilters: normalizeTextureFilters(s.customizerTextureFilters),
@@ -1550,12 +1746,15 @@ $("refreshAudioTabs").addEventListener("click", () => refreshAudioTabs());
 $("customizerColorToggle").addEventListener("click", () => toggleColorFilterControls());
 $("customizerTextureToggle").addEventListener("click", () => toggleTextureControls());
 
-$("customizerSaveTheme").addEventListener("click", async () => {
-  await saveCurrentPageTheme();
-});
+attachSaveThemeButtonHandler();
 
 $("customizerSavedThemesSelect").addEventListener("change", async () => {
   await applySelectedSavedTheme();
+});
+
+$(CUSTOMIZER_DELETE_LOCAL_THEME_BUTTON_ID)?.addEventListener("click", async (event) => {
+  event.preventDefault();
+  await deleteSelectedLocalTheme();
 });
 
 $("customizerReset").addEventListener("click", async () => {
@@ -1660,9 +1859,6 @@ $("customizerHueMonochrome").addEventListener("change", async () => {
   await saveAndApplyCustomizer({ customizerHueMonochrome: $("customizerHueMonochrome").checked });
 });
 
-$("customizerFilterImages")?.addEventListener("change", async () => {
-  await saveAndApplyCustomizer({ customizerFilterImages: $("customizerFilterImages").checked });
-});
 
 $("favoritesToggle").addEventListener("click", async () => {
   const s = await chrome.storage.local.get(DEFAULTS);

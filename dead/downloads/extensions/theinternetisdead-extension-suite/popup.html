@@ -7,19 +7,24 @@
 </head>
 <body>
   <main class="shell">
+    <div class="suite-brand" aria-label="theinternetisdead.org extension-suite">
+      <a class="suite-brand-link" href="https://theinternetisdead.org" target="_blank" rel="noopener noreferrer">theinternetisdead.org</a>
+      <div class="suite-brand-subtitle">extension-suite</div>
+    </div>
+
     <header class="titlebar">
       <div class="sigil">
         <img id="headerIcon" src="icons/customizer48.png" alt="">
       </div>
       <div class="title-stack">
-        <h1 id="headerTitle">theinternetisdead-customizer</h1>
+        <h1 id="headerTitle">overlay-customizer</h1>
         <p id="headerSubtitle">theinternetisdead-extension-suite</p>
         <select id="toolSelect" class="header-select" aria-label="Select extension tool">
-          <option value="customizer">theinternetisdead-customizer</option>
-          <option value="browserControls">theinternetisdead-browser-controls</option>
-          <option value="favorites">theinternetisdead-favorites-menu</option>
-          <option value="reader">theinternetisdead-reader-extension</option>
-          <option value="storage">theinternetisdead-storage-reader</option>
+          <option value="customizer">overlay-customizer</option>
+          <option value="browserControls">tab-control-panel</option>
+          <option value="favorites">context-menu-bookmarks</option>
+          <option value="reader">tts-reader-popup</option>
+          <option value="storage">localsessionstorage-reader</option>
           <option value="broken">Broken Features</option>
           <option value="main">Settings</option>
         </select>
@@ -31,23 +36,23 @@
       <div class="menu-visibility-list" aria-label="Dropdown menu visibility">
         <p class="note menu-visibility-note">Checked menus show in the dropdown. Uncheck one to bury it, because apparently menus now need bouncers.</p>
         <label class="row menu-visibility-row">
-          <span>theinternetisdead-browser-controls</span>
+          <span>tab-control-panel</span>
           <input id="showBrowserControlsMenu" type="checkbox" checked>
         </label>
         <label class="row menu-visibility-row">
-          <span>theinternetisdead-customizer</span>
+          <span>overlay-customizer</span>
           <input id="showCustomizerMenu" type="checkbox" checked>
         </label>
         <label class="row menu-visibility-row">
-          <span>theinternetisdead-favorites-menu</span>
+          <span>context-menu-bookmarks</span>
           <input id="showFavoritesMenu" type="checkbox" checked>
         </label>
         <label class="row menu-visibility-row">
-          <span>theinternetisdead-reader-extension</span>
+          <span>tts-reader-popup</span>
           <input id="showReaderMenu" type="checkbox" checked>
         </label>
         <label class="row menu-visibility-row">
-          <span>theinternetisdead-storage-reader</span>
+          <span>localsessionstorage-reader</span>
           <input id="showStorageMenu" type="checkbox" checked>
         </label>
         <label class="row menu-visibility-row">
@@ -89,15 +94,14 @@
     <section id="panel-customizer" class="panel tool-panel hidden">
       <label class="row saved-themes-row">
         <span>Themes</span>
-        <select id="customizerSavedThemesSelect">
-          <option value="">Default</option>
-        </select>
+        <span class="saved-themes-control">
+          <select id="customizerSavedThemesSelect">
+            <option value="">Default</option>
+          </select>
+          <button id="customizerDeleteLocalTheme" class="theme-delete-button" type="button" title="Delete selected local theme" aria-label="Delete selected local theme" hidden>❌</button>
+        </span>
       </label>
 
-      <label class="checkbox-row image-filter-toggle-row">
-        <input id="customizerFilterImages" type="checkbox">
-        <span>Enable Color/Texture Filter On Images</span>
-      </label>
 
       <button id="customizerColorToggle" class="secondary color-filter-toggle" type="button" aria-expanded="false" aria-controls="customizerColorSlideout">Color Filter</button>
       <div id="customizerColorSlideout" class="filter-slideout color-filter-slideout" aria-hidden="true">
@@ -242,7 +246,7 @@
         </div>
       </div>
 
-      <button id="customizerSaveTheme" class="secondary">Save Page Theme</button>
+      <button id="customizerSaveTheme" class="secondary" title="Click to name and save this site theme locally. Shift-click to export a JSON file.">Save Page Theme</button>
       <button id="customizerReset" class="secondary">Reset Page Theme</button>
     </section>
 

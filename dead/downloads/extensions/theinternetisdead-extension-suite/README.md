@@ -1,3 +1,91 @@
+## v1.56.53
+
+- Renamed the storage reader menu label to `localsessionstorage-reader` in the menu switcher and visibility settings.
+- Updated extension version to `1.56.53`.
+
+## v1.56.52
+
+- Renamed the popup menu labels in the menu switcher and visibility settings: `overlay-customizer`, `tab-control-panel`, `context-menu-bookmarks`, and `tts-reader-popup`.
+- Updated extension version to `1.56.52`.
+
+## v1.56.51
+
+- Added a linked **theinternetisdead.org** title above the icon and menu switcher, pointing to `https://theinternetisdead.org`.
+- Added the **extension-suite** subtitle under that title while keeping the existing icon/dropdown switcher below it.
+- Updated extension version to `1.56.51`.
+
+## v1.56.50
+
+- Added the new `stored-themes/YouTube/index.json` so YouTube folder themes are discovered by the Stored Themes dropdown.
+- Rebuilt the root `stored-themes/index.json` from all folder theme JSON files, including the new YouTube theme and animated ChatGPT themes.
+- Normalized bundled theme metadata so dropdown labels continue to use filename stems without `.json`.
+
+## v1.56.49
+
+- Made the Save Page Theme name input use black text and black placeholder text for `Theme name, then Enter`.
+- Kept the local theme save and Shift-click JSON export behavior intact.
+
+## v1.56.48
+
+- Changed local saved-theme deletion so deleting the selected local theme resets the active page customizer settings back to Default.
+- Kept the themes dropdown on **Default** after delete instead of falling into **Customized**.
+- Updated extension version to `1.56.48`.
+
+## v1.56.47
+
+- Removed the local-theme delete marker from the Themes dropdown text.
+- Kept the local-theme delete button inline beside the dropdown and matched its default dropdown styling.
+- Updated extension version to `1.56.47`.
+
+## v1.56.46
+
+- Added a ❌ marker beside localStorage-saved themes in the themes dropdown.
+- Added a ❌ delete button beside the dropdown that only appears when the selected theme is a localStorage-saved theme.
+- Bundled `stored-themes` entries remain non-deletable from the popup.
+
+## v1.56.45
+
+- Changed **Save Page Theme** so a normal click turns the button into a theme-name text input.
+- Pressing **Enter** in that input saves the current customizer config to local storage using that name.
+- Pressing **Esc** cancels naming without saving.
+- Kept **Shift-click** on **Save Page Theme** as the JSON export path.
+
+## v1.56.44
+
+- Changed **Save Page Theme** so a normal click saves/overwrites the active site's current customizer config into extension local storage.
+- Kept JSON export on **Shift-click** of **Save Page Theme**.
+- Merged locally saved site themes into the saved theme dropdown alongside bundled `stored-themes` entries, using filename-style labels without `.json`.
+
+## v1.56.42
+
+- Changed the stored themes dropdown to display theme filenames without the `.json` extension.
+- Kept theme selection keyed to the full JSON path so overwritten theme metadata cannot rename dropdown entries.
+- Updated extension version to `1.56.42`.
+
+## v1.56.40
+
+- Removed the “Enable Color/Texture Filter On Images” checkbox from the customizer UI.
+- Forced color and texture filters to keep using the image-exclusion mask instead of reading that removed toggle from saved settings or stored themes.
+- Removed the obsolete image-filter flag from bundled ChatGPT stored theme JSON files.
+- Updated extension version to `1.56.40`.
+
+## v1.56.39
+
+- Renamed all bundled ChatGPT stored themes so the dropdown shows their actual theme names instead of the source chat title/timestamp.
+- Refreshed both stored theme indexes for the ChatGPT bundle.
+- Updated extension version to `1.56.39`.
+
+## v1.56.38
+
+- Fixed the image-exclusion mask so static color filters and texture filters actually punch transparent holes over images when **Enable Color/Texture Filter On Images** is unchecked.
+- Updated extension version to `1.56.38`.
+
+## v1.56.37
+
+- Fixed the image-exclusion mask so stored themes still render when "Enable Color/Texture Filter On Images" is unchecked.
+- Corrected the generated SVG mask data URL so the overlay no longer disappears behind a broken escaped mask.
+- Updated extension version to `1.56.37`.
+
 ## v1.56.36
 
 - Enabled the bundled ChatGPT stored themes so selecting them applies their visual customizer overlay immediately.
@@ -160,13 +248,13 @@ This stops fresh pages from inheriting stale/global hueshift, inversion, static 
 
 ## v1.56.2
 
-- Hid the popup-level scrollbar that appeared when the theinternetisdead-storage-reader menu drawer expanded.
+- Hid the popup-level scrollbar that appeared when the localsessionstorage-reader menu drawer expanded.
 - Kept the internal storage-reader lime scrollbars visible for the actual storage lists.
 
 ## v1.56.0
 
-- Merged `theinternetisdead-storage-reader` into the suite dropdown.
-- Added a `theinternetisdead-storage-reader` panel for current-tab `localStorage` and `sessionStorage`.
+- Merged `localsessionstorage-reader` into the suite dropdown.
+- Added a `localsessionstorage-reader` panel for current-tab `localStorage` and `sessionStorage`.
 - Keeps values hidden by default behind a Show/Hide control for safer screen recording.
 - Added Storage Reader icons to the suite bundle.
 
@@ -858,7 +946,7 @@ Note: these controls target normal HTML `<audio>` and `<video>` elements. Some W
 
 ## v1.56.1
 
-- Made the theinternetisdead-storage-reader scrollbars thin lime green in Chromium and Firefox-style scrollbar engines.
+- Made the localsessionstorage-reader scrollbars thin lime green in Chromium and Firefox-style scrollbar engines.
 
 
 ## v1.56.2
