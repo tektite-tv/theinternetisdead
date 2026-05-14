@@ -1,12 +1,14 @@
-/* theinternetisdead compact-scale v1.56.51: add suite brand link above the tool switcher. */
+/* theinternetisdead uniform-popup v1.56.59: all dropdown panels share the mobile iframe menu footprint. */
 * {
   box-sizing: border-box;
 }
 
 html,
 body {
-  width: 270px;
-  min-height: 247.5px;
+  width: 292.5px;
+  min-width: 292.5px;
+  min-height: 0;
+  height: auto;
   margin: 0;
   background: #09000f;
   color: #b8ff2c;
@@ -62,7 +64,9 @@ body {
 }
 
 .shell {
+  width: 390px;
   padding: 9px;
+  zoom: 0.75;
   background:
     radial-gradient(circle at 20% 0%, rgba(179, 0, 255, 0.35), transparent 42%),
     linear-gradient(135deg, rgba(75, 0, 118, 0.9), rgba(6, 0, 12, 0.95));
@@ -138,10 +142,19 @@ p {
 .panel {
   margin-top: 9px;
   max-width: 100%;
+  height: 585px;
   padding: 7.5px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
   border: 0.75px dashed #b8ff2c;
   background: rgba(0, 0, 0, 0.55);
+}
+
+.panel::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .hidden {
@@ -221,7 +234,7 @@ button:hover {
 
 .checkbox-row {
   display: grid;
-  grid-template-columns: 13.5px 1fr;
+  grid-template-columns: 15px 1fr;
   gap: 6px;
   align-items: center;
   margin: 7.5px 0 0;
@@ -289,6 +302,10 @@ input[type="range"] {
 }
 
 input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  flex: 0 0 15px;
   accent-color: #ff4dff;
 }
 
@@ -303,9 +320,6 @@ input[type="checkbox"] {
 #customizerCycleInvert,
 #customizerHueMonochrome,
 #customizerAnimateTexture {
-  width: 15px;
-  height: 15px;
-  margin: 0;
   justify-self: center;
 }
 
@@ -922,4 +936,77 @@ h2 {
 
 .default-menu-picker select {
   width: 100%;
+}
+
+
+html.site-frame-mode,
+body.site-frame-mode {
+  width: 292.5px;
+  min-width: 292.5px;
+}
+
+body.site-frame-mode .shell {
+  transform: none;
+  transform-origin: top left;
+}
+
+.site-frame-panel {
+  padding: 6px;
+}
+
+.site-frame-toolbar {
+  display: block;
+  margin-bottom: 6px;
+  padding: 5px 6px;
+  border: 0.75px solid #b8ff2c;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ff9cff;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 5px rgba(255, 77, 255, 0.75);
+}
+
+.site-frame-shell {
+  width: 375px;
+  max-width: 100%;
+  margin: 0 auto;
+  border: 0.75px solid #ff4dff;
+  background: #000;
+  box-shadow: inset 0 0 12px rgba(184, 255, 44, 0.18);
+  overflow: hidden;
+}
+
+.site-frame {
+  display: block;
+  width: 100%;
+  height: 500px;
+  border: 0;
+  background: #000;
+}
+
+.site-frame-open-link {
+  display: block;
+  margin-top: 6px;
+  padding: 6px;
+  border: 0.75px solid #b8ff2c;
+  background: rgba(0, 0, 0, 0.55);
+  color: #b8ff2c;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 5px rgba(184, 255, 44, 0.6);
+}
+
+.site-frame-open-link:hover {
+  color: #ff9cff;
+  border-color: #ff4dff;
+  text-shadow: 0 0 6px rgba(255, 77, 255, 0.8);
 }

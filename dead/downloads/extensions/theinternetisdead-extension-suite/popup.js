@@ -7,6 +7,7 @@ const DEFAULTS = {
   showFavoritesMenu: true,
   showReaderMenu: true,
   showStorageMenu: true,
+  showTheInternetIsDeadMenu: true,
   showBrokenMenu: true,
   tabVolumeByTabId: {},
   volumeControlsOpen: false,
@@ -119,6 +120,11 @@ const TOOL_META = {
     subtitle: "localStorage / sessionStorage viewer",
     icon: "icons/storage48.png"
   },
+  theinternetisdead: {
+    title: "theinternetisdead.org",
+    subtitle: "mobile iframe view",
+    icon: "icons/icon48.png"
+  },
   broken: {
     title: "Broken Features",
     subtitle: "disabled experiments / cursed leftovers",
@@ -133,6 +139,7 @@ const panels = {
   favorites: $("panel-favorites"),
   reader: $("panel-reader"),
   storage: $("panel-storage"),
+  theinternetisdead: $("panel-theinternetisdead"),
   broken: $("panel-broken")
 };
 
@@ -146,10 +153,11 @@ const MENU_VISIBILITY = {
   favorites: "showFavoritesMenu",
   reader: "showReaderMenu",
   storage: "showStorageMenu",
+  theinternetisdead: "showTheInternetIsDeadMenu",
   broken: "showBrokenMenu"
 };
 
-const DEFAULT_TOOL_OPTIONS = ["browserControls", "customizer", "favorites", "reader", "storage", "broken", "main"];
+const DEFAULT_TOOL_OPTIONS = ["browserControls", "customizer", "favorites", "reader", "storage", "theinternetisdead", "broken", "main"];
 
 function getDefaultStartTool(settings = {}) {
   const requested = cleanTool(settings.defaultSuiteTool || "main");
@@ -220,6 +228,10 @@ function clampPercent(value, fallback = 100) {
 function showTool(tool, settings = {}) {
   let selected = cleanTool(tool);
   if (!isMenuVisible(selected, settings)) selected = "customizer";
+
+  const siteFrameMode = selected === "theinternetisdead";
+  document.documentElement.classList.toggle("site-frame-mode", siteFrameMode);
+  document.body.classList.toggle("site-frame-mode", siteFrameMode);
 
   Object.entries(panels).forEach(([key, panel]) => {
     if (panel) panel.classList.toggle("hidden", key !== selected);

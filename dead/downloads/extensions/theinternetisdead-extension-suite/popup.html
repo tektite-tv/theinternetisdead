@@ -25,6 +25,7 @@
           <option value="favorites">context-menu-bookmarks</option>
           <option value="reader">tts-reader-popup</option>
           <option value="storage">localsessionstorage-reader</option>
+          <option value="theinternetisdead">theinternetisdead.org</option>
           <option value="broken">Broken Features</option>
           <option value="main">Settings</option>
         </select>
@@ -54,6 +55,10 @@
         <label class="row menu-visibility-row">
           <span>localsessionstorage-reader</span>
           <input id="showStorageMenu" type="checkbox" checked>
+        </label>
+        <label class="row menu-visibility-row">
+          <span>theinternetisdead.org</span>
+          <input id="showTheInternetIsDeadMenu" type="checkbox" checked>
         </label>
         <label class="row menu-visibility-row">
           <span>Broken Features</span>
@@ -286,6 +291,21 @@
     </section>
 
 
+
+    <section id="panel-theinternetisdead" class="panel tool-panel site-frame-panel hidden">
+      <div class="site-frame-toolbar">MOBILE IFRAME VIEW</div>
+      <div class="site-frame-shell" aria-label="theinternetisdead.org mobile iframe view">
+        <iframe
+          id="theinternetisdeadFrame"
+          class="site-frame"
+          src="https://theinternetisdead.org/"
+          title="theinternetisdead.org mobile view"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+        ></iframe>
+      </div>
+      <a class="site-frame-open-link" href="https://theinternetisdead.org/" target="_blank" rel="noopener noreferrer">OPEN FULL SITE</a>
+    </section>
 
     <section id="panel-storage" class="panel tool-panel storage-panel hidden">
       <div class="storage-topbar">

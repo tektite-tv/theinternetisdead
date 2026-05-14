@@ -1,3 +1,47 @@
+## v1.56.60
+
+- Standardized every popup menu checkbox to the same 15px size used by the `overlay-customizer` controls.
+- Kept checkbox alignment consistent across visibility, favorites, reader, broken, and customizer panels.
+- Updated extension version to `1.56.60`.
+
+## v1.56.59
+
+- Standardized all popup dropdown panels to the same visible footprint as the current `theinternetisdead.org` mobile iframe menu.
+- Applied the compact 390px layout at 75% scale globally so switching menus no longer changes the popup box size.
+- Added internal panel scrolling for taller menus while keeping the outer popup size consistent.
+- Updated extension version to `1.56.59`.
+
+## v1.56.58
+
+- Removed the leftover black dead-space under the `theinternetisdead.org` mobile iframe menu by using layout-aware shell scaling instead of transform-only scaling.
+- Updated extension version to `1.56.58`.
+
+## v1.56.57
+
+- Changed the `theinternetisdead.org` mobile iframe menu scaling so the actual popup box is 75% size instead of using browser zoom on a full-size backing surface.
+- Removed the leftover full-size black background area that could show behind the scaled menu.
+- Updated extension version to `1.56.57`.
+
+## v1.56.56
+
+- Scaled the full `theinternetisdead.org` mobile iframe popup menu to 75% only while that dropdown item is selected.
+- Left the other popup menus at their normal size.
+- Updated extension version to `1.56.56`.
+
+## v1.56.55
+
+- Added a top `MOBILE IFRAME VIEW` label to the `theinternetisdead.org` popup panel.
+- Moved the `OPEN FULL SITE` link below the iframe.
+- Expanded the popup only while the site iframe panel is selected so the embedded site gets a more realistic mobile viewport.
+- Updated extension version to `1.56.55`.
+
+## v1.56.54
+
+- Added a `theinternetisdead.org` item to the popup menu selector.
+- Added a mobile-width iframe panel that loads `https://theinternetisdead.org/`, with an external open link for full-site escape hatches.
+- Added visibility/default-menu support for the new site iframe panel.
+- Updated extension version to `1.56.54`.
+
 ## v1.56.53
 
 - Renamed the storage reader menu label to `localsessionstorage-reader` in the menu switcher and visibility settings.
