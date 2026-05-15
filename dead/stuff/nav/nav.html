@@ -1108,7 +1108,14 @@ html, body {
         panel.dataset.videoId = '';
         panel.dataset.stateMode = 'feed';
       }
-      applyNavFeedState(latestNavFeedState || {});
+      text.textContent = 'Home';
+      panel.href = '/';
+      panel.dataset.videoId = '';
+      panel.dataset.stateMode = 'feed';
+      panel.title = 'Copy current URL';
+      panel.setAttribute('aria-label', 'Copy current URL');
+      panel.classList.remove('is-disabled');
+      window.requestAnimationFrame(fitNavStateText);
       return true;
     }
 
@@ -1140,42 +1147,6 @@ html, body {
     return !!String(params.get('vid') || params.get('id') || '').trim();
   }
 
-  let latestNavFeedState = null;
-
-  function applyNavFeedState(state = {}) {
-    const panel = overlayRoot.querySelector('#nav-state-panel');
-    const text = panel && panel.querySelector('.nav-state-text');
-    if (!panel || !text) return;
-    if (!isDefaultFeedFramePath()) return;
-    if (panel.dataset.stateMode === 'video') return;
-    const videoId = String(state.firstVideoId || '').trim();
-    const label = 'Home';
-    text.textContent = label;
-    panel.href = videoId ? `/?video_embed=${encodeURIComponent(videoId)}` : '/';
-    panel.dataset.videoId = videoId;
-    panel.dataset.stateMode = 'feed';
-    const gridCardSize = String(state.gridCardSize || '').trim();
-    if (gridCardSize) {
-      overlayRoot.style.setProperty('--mobile-feed-column-width', gridCardSize);
-      if (isMobileOverlayView()) {
-        overlayRoot.style.setProperty('--feed-state-panel-width', gridCardSize);
-      } else {
-        overlayRoot.style.removeProperty('--feed-state-panel-width');
-      }
-    }
-    panel.title = 'Copy current URL';
-    panel.setAttribute('aria-label', 'Copy current URL');
-    panel.classList.toggle('is-disabled', !videoId);
-    window.requestAnimationFrame(fitNavStateText);
-  }
-
-  function updateNavFeedState(state = {}) {
-    latestNavFeedState = state;
-    updateNavFrameState();
-  }
-
-
-
   function updateNavVideoRouteState(state = {}) {
     const panel = overlayRoot.querySelector('#nav-state-panel');
     const text = panel && panel.querySelector('.nav-state-text');
@@ -1188,7 +1159,7 @@ html, body {
     if (action !== 'open' || !videoId) {
       panel.dataset.videoId = '';
       panel.dataset.stateMode = 'frame';
-      updateNavFeedState(latestNavFeedState || {});
+      updateNavFrameState();
       return;
     }
 
@@ -1204,8 +1175,6 @@ html, body {
   }
 
   window.updateNavVideoRouteState = updateNavVideoRouteState;
-
-  window.updateNavFeedState = updateNavFeedState;
   window.addEventListener('indexFrameChange', (event) => {
     updateNavFrameState(event.detail && event.detail.src);
   });

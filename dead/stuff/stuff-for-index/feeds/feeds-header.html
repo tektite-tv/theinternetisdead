@@ -211,8 +211,7 @@ pointer-events:none;
 
 .channelHeader:focus-within,
 .channelHeader:hover,
-.controls:focus-within,
-.controls:hover{
+.controlsPlaceholder:hover{
 animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
@@ -247,7 +246,7 @@ display:none;
 display:block;
 }
 
-.controls{
+.controlsPlaceholder{
 display:flex;
 align-items:stretch;
 align-self:stretch;
@@ -263,48 +262,6 @@ box-sizing:border-box;
 background:#000;
 border:3px solid var(--accent-color);
 overflow:hidden;
-}
-
-.controls > *{
-min-width:0;
-overflow:hidden;
-}
-
-.sortStatePanel{
-display:none;
-align-items:center;
-justify-content:center;
-width:var(--feed-grid-card-size);
-min-width:0;
-height:var(--header-control-height);
-min-height:0;
-max-height:var(--header-control-height);
-align-self:flex-start;
-box-sizing:border-box;
-padding:0 10px;
-background:#000;
-border:3px solid var(--accent-color);
-color:var(--page-text);
-font-size:calc(21px * var(--page-font-scale));
-font-weight:700;
-line-height:1.15;
-text-align:center;
-text-decoration:none;
-cursor:pointer;
-overflow:hidden;
-user-select:none;
--webkit-tap-highlight-color:transparent;
-}
-
-.sortStatePanel:hover,
-.sortStatePanel:focus-visible{
-animation: overlay-ui-hueshift 1.8s linear infinite;
-outline:none;
-}
-
-.sortStatePanel.is-disabled{
-cursor:default;
-opacity:.72;
 }
 
 .headerMessagePanel{
@@ -343,170 +300,20 @@ opacity:1;
 transition:opacity 260ms ease;
 }
 
-.stateIndicatorText{
-display:block;
-max-width:100%;
-overflow:hidden;
-text-overflow:ellipsis;
-white-space:nowrap;
-font-size:var(--state-indicator-font-size, 21px);
-line-height:1;
-}
-
 @keyframes overlay-ui-hueshift {
 from { filter: hue-rotate(0deg); }
 to { filter: hue-rotate(360deg); }
 }
 
-@keyframes state-indicator-hueshift {
-from { filter: hue-rotate(0deg); }
-to { filter: hue-rotate(360deg); }
-}
-
 a:hover,
-a:focus-visible,
-button:hover,
-button:focus-visible,
-#videoSearch:hover,
-#videoSearch:focus-visible{
+a:focus-visible{
 animation: overlay-ui-hueshift 1.8s linear infinite;
 outline:none;
 }
 
-.sortStatePanel:hover,
-.sortStatePanel:focus-visible{
-outline:none;
-}
-
 .channelHeader a:hover,
-.channelHeader a:focus-visible,
-.controls button:hover,
-.controls button:focus-visible,
-.controls input:hover,
-.controls input:focus-visible{
+.channelHeader a:focus-visible{
 animation:none !important;
-}
-
-#videoSearch{
-width:auto;
-height:100%;
-min-height:0;
-border:none;
-background:transparent;
-color:var(--page-text);
-padding:0 8px;
-font-family:var(--page-font-family);
-font-weight:700;
-font-size:var(--controls-button-font-size, calc(12px * var(--page-font-scale)));
-box-sizing:border-box;
-min-width:0;
-flex:1 1 0;
-text-overflow:ellipsis;
-}
-
-#videoSearch::placeholder{
-color:var(--page-text);
-opacity:1;
-}
-
-#patternSpeed{
-display:none;
-align-self:stretch;
-width:86px;
-min-width:72px;
-accent-color:var(--accent-color);
-background:#000;
-border:none;
-box-sizing:border-box;
-padding:0 6px;
-cursor:pointer;
-}
-
-#patternSpeed:hover,
-#patternSpeed:focus-visible{
-animation:none !important;
-outline:none;
-}
-
-button{
-display:inline-flex;
-align-items:center;
-justify-content:center;
-align-self:stretch;
-height:100%;
-min-height:0;
-padding:0;
-border:none;
-background:transparent;
-color:var(--page-text);
-cursor:pointer;
-font-family:var(--page-font-family);
-font-weight:700;
-font-size:var(--controls-button-font-size, calc(12px * var(--page-font-scale)));
-box-sizing:border-box;
-min-width:0;
-flex:0 1 var(--feed-control-button-size);
-width:var(--feed-control-button-size);
-aspect-ratio:1;
-}
-
-button:disabled{
-cursor:default;
-opacity:.65;
-}
-
-#gridBtn,
-#modeBtn{
-aspect-ratio:1;
-padding:0;
-width:var(--feed-control-button-size);
-height:var(--feed-control-button-size);
-flex:0 1 var(--feed-control-button-size);
-min-width:0;
-min-height:var(--feed-control-button-size);
-line-height:1;
-text-align:center;
-white-space:normal;
-overflow:hidden;
-overflow-wrap:anywhere;
-}
-
-#gridMenu{
-position:absolute;
-top:50px;
-right:0;
-background:var(--panel-background);
-border:2px solid var(--accent-color);
-padding:25px;
-display:none;
-z-index:999;
-}
-
-#gridControl{
-width:220px;
-display:flex;
-align-items:center;
-justify-content:space-between;
-gap:12px;
-}
-
-.gridMenuLabel{
-font-size:calc(14px * var(--page-font-scale));
-white-space:nowrap;
-}
-
-#gridPageSelect{
-height:40px;
-min-width:108px;
-border:2px solid var(--accent-color);
-background:var(--panel-background);
-color:var(--page-text);
-padding:0 12px;
-font-family:var(--page-font-family);
-}
-
-.mobileSortDock{
-display:none;
 }
 
 .mobileHeaderHandle{
@@ -581,8 +388,7 @@ will-change:transform;
 }
 
 .channelHeader,
-.controls,
-.sortStatePanel,
+.controlsPlaceholder,
 .headerMessagePanel{
 width:100%;
 flex:0 0 auto;
@@ -691,7 +497,7 @@ display:inline-flex;
 display:inline-flex;
 }
 
-.controls{
+.controlsPlaceholder{
 display:flex;
 align-items:stretch;
 align-self:stretch;
@@ -700,60 +506,11 @@ flex-wrap:nowrap;
 width:100%;
 }
 
-.sortStatePanel{
-display:none;
-width:230px;
-min-height:40px;
-font-size:calc(17px * var(--page-font-scale));
-padding:0 8px;
-}
-
 .headerMessagePanel{
 display:flex;
 order:-1;
 font-size:calc(17px * var(--page-font-scale));
 padding:0 8px;
-}
-
-#videoSearch{
-width:auto;
-flex:1 1 auto;
-min-width:0;
-height:auto;
-min-height:40px;
-box-sizing:border-box;
-font-size:calc(12px * var(--page-font-scale));
-}
-
-#patternSpeed{
-display:none;
-}
-
-#gridBtn,
-#modeBtn{
-display:inline-flex !important;
-align-items:center;
-justify-content:center;
-height:auto;
-min-height:40px;
-font-size:calc(12px * var(--page-font-scale));
-white-space:nowrap;
-flex:0 0 var(--feed-control-button-size);
-aspect-ratio:1;
-padding:0;
-width:var(--feed-control-button-size);
-height:var(--feed-control-button-size);
-min-width:var(--feed-control-button-size);
-min-height:var(--feed-control-button-size);
-line-height:1;
-text-align:center;
-white-space:normal;
-overflow:hidden;
-overflow-wrap:anywhere;
-}
-
-#gridMenu{
-display:none !important;
 }
 
 }
@@ -777,21 +534,7 @@ display:none !important;
 <span class="headerMessagePanelText">Loading message...</span>
 </div>
 
-<div class="controls">
-<input id="videoSearch" placeholder="Search Feed...">
-<input id="patternSpeed" type="range" min="0.1" max="5" step="0.1" value="1" title="Pattern speed">
-<span class="controlDivider" aria-hidden="true"></span>
-<button id="gridBtn">View</button>
-<span class="controlDivider" aria-hidden="true"></span>
-<button id="modeBtn" disabled>Sort</button>
-
-<div id="gridMenu">
-<div id="gridControl">
-<label for="gridPageSelect" class="gridMenuLabel">Grid Pages</label>
-<select id="gridPageSelect"></select>
-</div>
-</div>
-</div>
+<div class="controlsPlaceholder" aria-hidden="true"></div>
 <div class="mobileHeaderHandle" title="Drag header down">
 </div>
 </header>
@@ -799,27 +542,12 @@ display:none !important;
 <script>
 const HONESTLY_THOMAS_URL="https://www.youtube.com/@Honestly_Thomas";
 const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
-const MESSAGE_LIST_PATH="/dead/JSON/message-list.json";
-const DEFAULT_HEADER_MESSAGE="Loading message...";
-const DEFAULT_MESSAGE_DISPLAY_MS=12000;
-const RANDOM_MESSAGE_MIN_DELAY_MS=45000;
-const RANDOM_MESSAGE_MAX_DELAY_MS=180000;
 const headerEl=document.querySelector("header");
 const mobileHeaderHandle=document.querySelector(".mobileHeaderHandle");
-const headerMessagePanel=document.querySelector(".headerMessagePanel");
-const headerMessageText=document.querySelector(".headerMessagePanelText");
 const channelHomeLink=document.getElementById("channelHomeLink");
 const channelLogoLinks=Array.from(document.querySelectorAll(".logoLink"));
-const controlsEl=document.querySelector(".controls");
+const controlsEl=document.querySelector(".controlsPlaceholder");
 const channelTitleEl=document.getElementById("channelTitle");
-const sortStatePanel=document.getElementById("sortStatePanel");
-const mobileSortStatePanel=document.getElementById("mobileSortStatePanel");
-const searchInput=document.getElementById("videoSearch");
-const patternSpeedInput=document.getElementById("patternSpeed");
-const gridBtn=document.getElementById("gridBtn");
-const modeBtn=document.getElementById("modeBtn");
-const gridMenu=document.getElementById("gridMenu");
-const gridPageSelect=document.getElementById("gridPageSelect");
 const defaultChannelLogoUrls=[
 "/dead/images/pngs/oldtube.png",
 "/dead/images/pngs/oldtube-alt-1.png",
@@ -841,17 +569,6 @@ let mobileDrawerLastY=0;
 let mobileDrawerLastTime=0;
 let mobileDrawerVelocity=0;
 let mobileDrawerHideTimeoutId=null;
-let headerMessageDefault=DEFAULT_HEADER_MESSAGE;
-let headerMessageRevertTimeoutId=null;
-let headerMessageRandomTimeoutIds=[];
-let headerMessageTimedEntries=[];
-let headerMessageClockIntervalId=null;
-let headerMessageLastTimedKeys=new Set();
-let headerMessageFadeTimeoutId=null;
-let headerStandardMessages=[];
-let headerStandardCycleIntervalId=null;
-let headerStandardCycleIndex=-1;
-let headerStandardCycleActive=false;
 const mobileDrawerSnapTransition="transform 360ms cubic-bezier(.16, 1, .3, 1)";
 
 function isMobileHeaderLayout(){
@@ -1093,59 +810,6 @@ function syncSortButtonGroupWidth(){
 postSize();
 }
 
-function updateGridPageOptions(pageCount, currentPage){
-const maxPages=Math.max(1, parseInt(pageCount, 10) || 1);
-const selected=Math.max(1, Math.min(maxPages, parseInt(currentPage, 10) || 1));
-gridPageSelect.innerHTML="";
-for(let page=1; page<=maxPages; page++){
-const option=document.createElement("option");
-option.value=String(page);
-option.textContent=`Page ${page}`;
-gridPageSelect.appendChild(option);
-}
-gridPageSelect.value=String(selected);
-postSize();
-}
-
-function setStateIndicatorText(text){
-const label=String(text || "");
-[sortStatePanel, mobileSortStatePanel].forEach((link)=>{
-if(!link) return;
-const textEl=link.querySelector(".stateIndicatorText");
-if(textEl){
-textEl.textContent=label;
-}else{
-link.textContent=label;
-}
-});
-fitStateIndicatorText();
-}
-
-function fitTextInsideLink(link, maxSize, minSize){
-const textEl=link && link.querySelector(".stateIndicatorText");
-if(!link || !textEl) return;
-textEl.style.fontSize=`${maxSize}px`;
-const availableWidth=Math.max(1, link.clientWidth - 20);
-const availableHeight=Math.max(1, link.clientHeight - 6);
-let size=maxSize;
-while(size > minSize && (textEl.scrollWidth > availableWidth || textEl.scrollHeight > availableHeight)){
-size-=1;
-textEl.style.fontSize=`${size}px`;
-}
-}
-
-function fitStateIndicatorText(){
-window.requestAnimationFrame(()=>{
-if(sortStatePanel && window.getComputedStyle(sortStatePanel).display !== "none"){
-fitTextInsideLink(sortStatePanel, 21, 9);
-}
-if(mobileSortStatePanel && window.getComputedStyle(mobileSortStatePanel).display !== "none"){
-fitTextInsideLink(mobileSortStatePanel, 17, 9);
-}
-postSize();
-});
-}
-
 function setFontSizeForAll(elements, size){
 elements.forEach((element)=>{
 if(element) element.style.fontSize=`${size}px`;
@@ -1194,266 +858,8 @@ document.documentElement.style.setProperty("--controls-button-font-size", `${but
 function fitHeaderRectangleChildren(){
 window.requestAnimationFrame(()=>{
 fitChannelHeaderChildren();
-fitStateIndicatorText();
 fitControlsChildren();
 postSize();
-});
-}
-
-function setHeaderMessage(message, fade=false){
-if(!headerMessageText) return;
-const nextMessage=String(message || "").trim() || DEFAULT_HEADER_MESSAGE;
-if(headerMessageFadeTimeoutId !== null){
-window.clearTimeout(headerMessageFadeTimeoutId);
-headerMessageFadeTimeoutId=null;
-}
-if(fade){
-headerMessageText.style.opacity="0";
-headerMessageFadeTimeoutId=window.setTimeout(()=>{
-headerMessageText.textContent=nextMessage;
-headerMessageText.style.opacity="1";
-headerMessageFadeTimeoutId=null;
-fitHeaderRectangleChildren();
-}, 260);
-return;
-}
-headerMessageText.textContent=nextMessage;
-headerMessageText.style.opacity="1";
-fitHeaderRectangleChildren();
-}
-
-function showDefaultHeaderMessage(){
-if(headerMessageRevertTimeoutId !== null){
-window.clearTimeout(headerMessageRevertTimeoutId);
-headerMessageRevertTimeoutId=null;
-}
-setHeaderMessage(headerMessageDefault);
-}
-
-function showTemporaryHeaderMessage(message, durationMs=DEFAULT_MESSAGE_DISPLAY_MS){
-if(headerStandardCycleActive) return;
-if(headerMessageRevertTimeoutId !== null){
-window.clearTimeout(headerMessageRevertTimeoutId);
-}
-setHeaderMessage(message);
-headerMessageRevertTimeoutId=window.setTimeout(()=>{
-headerMessageRevertTimeoutId=null;
-setHeaderMessage(headerMessageDefault);
-}, Math.max(1000, Number(durationMs) || DEFAULT_MESSAGE_DISPLAY_MS));
-}
-
-function normalizeHeaderMessageEntry(entry){
-if(!entry || typeof entry !== "object") return null;
-const message=String(entry.random_message || entry.message || "").trim();
-if(!message) return null;
-return {
-message,
-messageTime:String(entry.message_time || "random").trim() || "random",
-messageDate:String(entry.message_date || "").trim(),
-durationMs:Math.max(1000, Number(entry.display_duration_ms) || DEFAULT_MESSAGE_DISPLAY_MS)
-};
-}
-
-function getHeaderMessageEntries(data){
-const groups=Array.isArray(data && data.message_groups) ? data.message_groups : [];
-return groups.flatMap((group)=>{
-const regularMessages=Array.isArray(group && group.messages) ? group.messages : [];
-const randomMessages=Array.isArray(group && group.random_messages) ? group.random_messages : [];
-const messages=[...regularMessages, ...randomMessages];
-return messages.map(normalizeHeaderMessageEntry).filter(Boolean);
-});
-}
-
-function getStandardHeaderMessages(data){
-return getHeaderMessageEntries(data)
-.filter((entry)=>entry.messageTime.toLowerCase() === "standard")
-.map((entry)=>entry.message)
-.filter(Boolean);
-}
-
-function parseHeaderMessageTime(messageTime){
-const parts=String(messageTime || "").trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-if(!parts) return null;
-const hours=Number(parts[1]);
-const minutes=Number(parts[2]);
-const seconds=parts[3] === undefined ? 0 : Number(parts[3]);
-if(hours > 23 || minutes > 59 || seconds > 59) return null;
-return { hours, minutes, seconds, hasSeconds:parts[3] !== undefined };
-}
-
-function requestOverlayClockSnapshot(){
-return new Promise((resolve)=>{
-const requestId=`header-message-clock-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-const timeoutId=window.setTimeout(()=>{
-window.removeEventListener("message", handleClockResponse);
-resolve(null);
-}, 1000);
-
-function handleClockResponse(event){
-const data=event.data || {};
-if(data.type !== "overlayClockTimeState" || data.requestId !== requestId) return;
-window.clearTimeout(timeoutId);
-window.removeEventListener("message", handleClockResponse);
-resolve(data.clock || null);
-}
-
-window.addEventListener("message", handleClockResponse);
-if(window.top && window.top !== window){
-window.top.postMessage({ type:"overlayClockTimeRequest", requestId }, "*");
-}else{
-window.postMessage({ type:"overlayClockTimeRequest", requestId }, "*");
-}
-});
-}
-
-function clearHeaderMessageSchedules(){
-headerMessageRandomTimeoutIds.forEach((timeoutId)=>window.clearTimeout(timeoutId));
-headerMessageRandomTimeoutIds=[];
-headerMessageTimedEntries=[];
-headerMessageLastTimedKeys=new Set();
-if(headerMessageClockIntervalId !== null){
-window.clearInterval(headerMessageClockIntervalId);
-headerMessageClockIntervalId=null;
-}
-if(headerMessageRevertTimeoutId !== null){
-window.clearTimeout(headerMessageRevertTimeoutId);
-headerMessageRevertTimeoutId=null;
-}
-}
-
-function scheduleRandomHeaderMessage(entry){
-const delay=RANDOM_MESSAGE_MIN_DELAY_MS + Math.random() * (RANDOM_MESSAGE_MAX_DELAY_MS - RANDOM_MESSAGE_MIN_DELAY_MS);
-const timeoutId=window.setTimeout(()=>{
-showTemporaryHeaderMessage(entry.message, entry.durationMs);
-scheduleRandomHeaderMessage(entry);
-}, delay);
-headerMessageRandomTimeoutIds.push(timeoutId);
-}
-
-async function checkTimedHeaderMessages(){
-if(!headerMessageTimedEntries.length) return;
-const clock=await requestOverlayClockSnapshot();
-if(!clock) return;
-headerMessageTimedEntries.forEach((entry)=>{
-if(!entry.scheduledTime) return;
-if(entry.messageDate && String(clock.dateKey || "") !== entry.messageDate) return;
-const matches=Number(clock.hours) === entry.scheduledTime.hours
-&& Number(clock.minutes) === entry.scheduledTime.minutes
-&& (!entry.scheduledTime.hasSeconds || Number(clock.seconds || 0) === entry.scheduledTime.seconds);
-if(!matches) return;
-const shownKey=`${clock.dateKey || "unknown"}-${entry.messageDate || "daily"}-${entry.messageTime}-${entry.message}`;
-if(headerMessageLastTimedKeys.has(shownKey)) return;
-headerMessageLastTimedKeys.add(shownKey);
-showTemporaryHeaderMessage(entry.message, entry.durationMs);
-});
-}
-
-function scheduleTimedHeaderMessages(entries){
-headerMessageTimedEntries=entries
-.map((entry)=>({ ...entry, scheduledTime:parseHeaderMessageTime(entry.messageTime) }))
-.filter((entry)=>entry.scheduledTime);
-if(!headerMessageTimedEntries.length) return;
-checkTimedHeaderMessages();
-headerMessageClockIntervalId=window.setInterval(checkTimedHeaderMessages, 1000);
-}
-
-function scheduleHeaderMessages(entries){
-clearHeaderMessageSchedules();
-const timedEntries=[];
-entries.forEach((entry)=>{
-if(entry.messageTime.toLowerCase() === "standard"){
-return;
-}
-if(entry.messageTime.toLowerCase() === "random"){
-scheduleRandomHeaderMessage(entry);
-return;
-}
-timedEntries.push(entry);
-});
-scheduleTimedHeaderMessages(timedEntries);
-}
-
-function showNextStandardHeaderMessage(){
-if(!headerStandardMessages.length) return;
-headerStandardCycleIndex=(headerStandardCycleIndex + 1) % headerStandardMessages.length;
-setHeaderMessage(headerStandardMessages[headerStandardCycleIndex], true);
-}
-
-function startStandardHeaderMessageCycle(){
-if(!headerStandardMessages.length || headerStandardCycleActive) return;
-headerStandardCycleActive=true;
-headerStandardCycleIndex=-1;
-showNextStandardHeaderMessage();
-headerStandardCycleIntervalId=window.setInterval(showNextStandardHeaderMessage, 3000);
-}
-
-function stopStandardHeaderMessageCycle(){
-if(headerStandardCycleIntervalId !== null){
-window.clearInterval(headerStandardCycleIntervalId);
-headerStandardCycleIntervalId=null;
-}
-headerStandardCycleActive=false;
-headerStandardCycleIndex=-1;
-showDefaultHeaderMessage();
-}
-
-function toggleStandardHeaderMessageCycle(){
-if(headerStandardCycleActive){
-stopStandardHeaderMessageCycle();
-return;
-}
-startStandardHeaderMessageCycle();
-}
-
-function bindHeaderMessagePanelInteractions(){
-if(!headerMessagePanel || headerMessagePanel.dataset.messageCycleBound === "true") return;
-headerMessagePanel.dataset.messageCycleBound="true";
-headerMessagePanel.addEventListener("mouseenter", ()=>{
-if(isMobileHeaderLayout()) return;
-startStandardHeaderMessageCycle();
-});
-headerMessagePanel.addEventListener("mouseleave", ()=>{
-if(isMobileHeaderLayout()) return;
-stopStandardHeaderMessageCycle();
-});
-headerMessagePanel.addEventListener("click", ()=>{
-if(!isMobileHeaderLayout()) return;
-toggleStandardHeaderMessageCycle();
-});
-}
-
-async function loadHeaderMessages(){
-try{
-const response=await fetch(MESSAGE_LIST_PATH, { cache:"no-store" });
-if(!response.ok) throw new Error(`Failed to load ${MESSAGE_LIST_PATH}`);
-const data=await response.json();
-headerMessageDefault=String(data && data.default_message && data.default_message.message || DEFAULT_HEADER_MESSAGE).trim() || DEFAULT_HEADER_MESSAGE;
-headerStandardMessages=getStandardHeaderMessages(data);
-showDefaultHeaderMessage();
-scheduleHeaderMessages(getHeaderMessageEntries(data));
-}catch(error){
-console.warn("Unable to load header message list", error);
-headerMessageDefault=DEFAULT_HEADER_MESSAGE;
-headerStandardMessages=[];
-showDefaultHeaderMessage();
-scheduleHeaderMessages([]);
-}
-}
-
-function syncStateIndicatorLinks(state={}){
-const videoId=String(state.firstVideoId || "").trim();
-const videoTitle=String(state.firstVideoTitle || "").trim();
-const href=videoId ? `/dead/videos/?vid=${encodeURIComponent(videoId)}` : "/";
-const title=videoId
-? `Open first visible video${videoTitle ? `: ${videoTitle}` : ""}`
-: "No visible video";
-[sortStatePanel, mobileSortStatePanel].forEach((link)=>{
-if(!link) return;
-link.href=href;
-link.dataset.videoId=videoId;
-link.title=title;
-link.setAttribute("aria-label", title);
-link.classList.toggle("is-disabled", !videoId);
 });
 }
 
@@ -1480,67 +886,9 @@ fitHeaderRectangleChildren();
 
 function applyState(state){
 applyGridSizingState(state);
-if(typeof state.query === "string" && searchInput.value !== state.query){
-searchInput.value=state.query;
-}
-if(state.sortPanelText){
-setStateIndicatorText(state.sortPanelText);
-}
-syncStateIndicatorLinks(state);
-if(state.sortButtonTitle){
-modeBtn.title=state.sortButtonTitle;
-modeBtn.setAttribute("aria-label", state.sortButtonTitle);
-}
-if(Number.isFinite(Number(state.patternSpeed))){
-patternSpeedInput.value=String(state.patternSpeed);
-patternSpeedInput.title=`Pattern speed: ${state.patternSpeed}x`;
-}
-modeBtn.disabled=Boolean(state.sortDisabled);
-gridBtn.title=state.view === "list" ? "Current view: list" : "Current view: grid";
-gridBtn.setAttribute("aria-label", gridBtn.title);
-updateGridPageOptions(state.maxGridPages, state.gridPageCount);
 syncControlButtonSize();
 fitHeaderRectangleChildren();
 }
-
-function handleStateIndicatorClick(event){
-const link=event.currentTarget;
-const videoId=String(link && link.dataset.videoId || "").trim();
-if(!videoId) return;
-event.preventDefault();
-event.stopPropagation();
-postCommand("openVideo", { videoId });
-}
-
-searchInput.addEventListener("input", ()=>{
-postCommand("search", { query:searchInput.value });
-});
-
-patternSpeedInput.addEventListener("input", ()=>{
-const speed=Number(patternSpeedInput.value) || 1;
-patternSpeedInput.title=`Pattern speed: ${speed}x`;
-postCommand("setPatternSpeed", { speed });
-});
-
-gridBtn.addEventListener("click", ()=>{
-gridMenu.style.display="none";
-postCommand("toggleView");
-});
-
-modeBtn.addEventListener("click", ()=>{
-postCommand("toggleSort");
-});
-
-if(sortStatePanel){
-sortStatePanel.addEventListener("click", handleStateIndicatorClick);
-}
-if(mobileSortStatePanel){
-mobileSortStatePanel.addEventListener("click", handleStateIndicatorClick);
-}
-
-gridPageSelect.addEventListener("change", ()=>{
-postCommand("setGridPage", { page:gridPageSelect.value });
-});
 
 channelHomeLink.addEventListener("click", ()=>{
 channelHomeLink.href=getRandomChannelUrl();
@@ -1608,9 +956,6 @@ fitHeaderRectangleChildren();
 syncMobileChannelCycle();
 if(!isMobileHeaderLayout()){
 setMobileDrawerProgress(0, false);
-if(headerStandardCycleActive){
-stopStandardHeaderMessageCycle();
-}
 }
 postSize();
 });
@@ -1624,9 +969,7 @@ applyChannelLogoAsset(getPrimaryChannelLogoUrl());
 bindChannelLogoHoverCycle();
 syncMobileChannelCycle();
 bindContentOnlyLinks();
-bindHeaderMessagePanelInteractions();
 updateTintFilters();
-loadHeaderMessages();
 syncControlButtonSize();
 fitHeaderRectangleChildren();
 setMobileDrawerProgress(0, false);

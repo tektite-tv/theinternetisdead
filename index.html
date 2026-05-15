@@ -751,13 +751,6 @@
 
       if (event.source !== contentFrame.contentWindow) return;
 
-      if (data.type === 'feedGridHeaderState') {
-        if (typeof window.updateNavFeedState === 'function') {
-          window.updateNavFeedState(data);
-        }
-        return;
-      }
-
       if (data.type !== 'indexFrameVideoRoute') return;
 
       const videoId = String(data.videoId || '').trim();
