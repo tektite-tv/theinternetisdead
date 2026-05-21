@@ -191,6 +191,10 @@ width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3)
 min-width:0;
 }
 
+.controlDivider{
+display:none;
+}
+
 @keyframes overlay-ui-hueshift {
 from { filter: hue-rotate(0deg); }
 to { filter: hue-rotate(360deg); }
@@ -277,6 +281,10 @@ outline:none;
 aspect-ratio:auto;
 padding:0 10px;
 width:calc((var(--feed-sort-buttons-width, calc((2 * var(--feed-control-button-size)) + 6px)) - 6px) / 2);
+}
+
+#modeBtn{
+min-width:calc(112px * var(--page-font-scale));
 }
 
 #gridMenu{
@@ -940,7 +948,7 @@ font-size:calc(16px * var(--page-font-scale));
 <input id="videoSearch" placeholder="Search Feed...">
 <button id="gridBtn">View</button>
 <span class="controlDivider" aria-hidden="true"></span>
-<button id="modeBtn" disabled>Sort</button>
+<button id="modeBtn" disabled>Newest</button>
 
 <div id="gridMenu">
 <div id="gridControl">
@@ -991,7 +999,7 @@ let posts=[];
 let filtered=[];
 let view="grid";
 const sortModes=["newest","oldest","most-viewed","least-viewed"];
-let sortModeIndex=2;
+let sortModeIndex=0;
 let sortTransitionTimeoutId=null;
 let sortTransitionRenderTimeoutId=null;
 
@@ -1426,18 +1434,14 @@ const bViews = Number(b.views || 0);
 const sortMode = sortModes[sortModeIndex];
 const aHasTimestamp = aTimestamp > 0;
 const bHasTimestamp = bTimestamp > 0;
+const aTitle = String(a.title || "").trim().toLowerCase();
+const bTitle = String(b.title || "").trim().toLowerCase();
 
 if(sortMode === "newest" || sortMode === "oldest"){
 if(aHasTimestamp && bHasTimestamp && aTimestamp !== bTimestamp){
 return sortMode === "newest" ? bTimestamp - aTimestamp : aTimestamp - bTimestamp;
 }
-if(a.sourceIndex !== b.sourceIndex){
-return sortMode === "newest" ? a.sourceIndex - b.sourceIndex : b.sourceIndex - a.sourceIndex;
-}
-if(aViews !== bViews){
-return bViews - aViews;
-}
-}else{
+}else if(sortMode === "most-viewed" || sortMode === "least-viewed"){
 if(aViews !== bViews){
 return sortMode === "most-viewed" ? bViews - aViews : aViews - bViews;
 }
@@ -1447,6 +1451,12 @@ return bTimestamp - aTimestamp;
 if(a.sourceIndex !== b.sourceIndex){
 return a.sourceIndex - b.sourceIndex;
 }
+}else if(sortMode === "alphabetical" || sortMode === "reverse-alphabetical"){
+if(aTitle !== bTitle){
+return sortMode === "alphabetical" ? aTitle.localeCompare(bTitle) : bTitle.localeCompare(aTitle);
+}
+}else if(sortMode === "source-order"){
+return a.sourceIndex - b.sourceIndex;
 }
 return a.sourceIndex - b.sourceIndex;
 });
@@ -1458,22 +1468,39 @@ filtered = getFilteredPosts(searchInput ? searchInput.value : headerSearchQuery)
 
 function updateSortButton(){
 const sortMode = sortModes[sortModeIndex];
+let modeBtnText = "Sort";
 if(sortMode === "newest"){
 currentSortButtonTitle = "Sorting newest to oldest";
 currentSortPanelText = "Watch My Newest Videos";
+modeBtnText = "Newest";
 }else if(sortMode === "oldest"){
 currentSortButtonTitle = "Sorting oldest to newest";
 currentSortPanelText = "Watch My Oldest Videos";
+modeBtnText = "Oldest";
 }else if(sortMode === "most-viewed"){
 currentSortButtonTitle = "Sorting highest views to lowest";
 currentSortPanelText = "Watch My Most Viewed Videos";
-}else{
+modeBtnText = "Most Viewed";
+}else if(sortMode === "least-viewed"){
 currentSortButtonTitle = "Sorting lowest views to highest";
 currentSortPanelText = "Watch My Least Viewed Videos";
+modeBtnText = "Least Viewed";
+}else if(sortMode === "alphabetical"){
+currentSortButtonTitle = "Sorting alphabetically A to Z";
+currentSortPanelText = "Watch My Videos A-Z";
+modeBtnText = "Sort: A-Z";
+}else if(sortMode === "reverse-alphabetical"){
+currentSortButtonTitle = "Sorting alphabetically Z to A";
+currentSortPanelText = "Watch My Videos Z-A";
+modeBtnText = "Sort: Z-A";
+}else{
+currentSortButtonTitle = "Sorting in source order";
+currentSortPanelText = "Watch My Videos In Source Order";
+modeBtnText = "Sort: Source Order";
 }
 if(modeBtn){
 modeBtn.title = currentSortButtonTitle;
-modeBtn.textContent = "Sort";
+modeBtn.textContent = modeBtnText;
 modeBtn.setAttribute("aria-label", modeBtn.title);
 }
 syncSortButtonGroupWidth();
