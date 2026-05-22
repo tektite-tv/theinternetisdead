@@ -246,7 +246,7 @@
         box-shadow:
           0 0 0 clamp(10px, 1.4vw, 18px) #171717,
           0 0 0 calc(clamp(10px, 1.4vw, 18px) + 4px) #99ff00,
-          0 0 0 calc(clamp(10px, 1.4vw, 18px) + 7px) #4b0076,
+          0 0 0 calc(clamp(10px, 1.4vw, 18px) + 7px) #512A67,
           0 0 36px rgba(153, 255, 0, 0.42),
           inset 0 0 80px rgba(0, 0, 0, 0.84),
           inset 0 0 18px rgba(255, 255, 255, 0.14) !important;

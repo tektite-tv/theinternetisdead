@@ -4627,7 +4627,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
       if (/^#[0-9a-f]{3}$/i.test(raw)) {
         return `#${raw[1]}${raw[1]}${raw[2]}${raw[2]}${raw[3]}${raw[3]}`.toLowerCase();
       }
-      return '#4b0076';
+      return '#512A67';
     }
 
     function rgbToHsl(r, g, b) {
@@ -4707,7 +4707,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
     }
 
     function getShooterBackgroundColorDefaultState() {
-      const parsed = hexToHsl('#4b0076');
+      const parsed = hexToHsl('#512A67');
       return {
         hue: parsed.hue,
         saturation: Math.max(0.7, parsed.saturation || 0.86),
@@ -4799,7 +4799,7 @@ function createHomepageCustomizeMessageNode(result = {}) {
         const currentHex = activeCommandPicker.valueNode && activeCommandPicker.valueNode.dataset
           ? activeCommandPicker.valueNode.dataset.hexValue
           : hslToHex(activeCommandPicker.hue, activeCommandPicker.saturation, activeCommandPicker.lightness);
-        rawCommand = `${activeCommandPicker.command} ${currentHex || '#4b0076'}`;
+        rawCommand = `${activeCommandPicker.command} ${currentHex || '#512A67'}`;
       } else if (activeCommandPicker.kind === 'choice') {
         const options = Array.isArray(activeCommandPicker.options) ? activeCommandPicker.options : [];
         const selected = options[activeCommandPicker.index] || options[0] || '';

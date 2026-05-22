@@ -68,7 +68,7 @@
         height: 48px;
         border: 2px solid rgba(153, 255, 0, 0.55);
         border-radius: 999px;
-        background: rgba(75, 0, 118, 0.85);
+        background: rgba(81, 42, 103, 0.85);
         color: #99ff00;
         font: 700 28px/1 Courier New, monospace;
         display: inline-flex;
