@@ -59,10 +59,12 @@ display:flex;
 align-items:stretch;
 justify-content:center;
 gap:var(--feed-header-row-gap) var(--feed-grid-gap);
-padding:13px 20px var(--feed-header-row-gap);
+padding:var(--feed-header-row-gap) 20px;
 background:var(--header-bg);
+border-bottom:3px solid lime;
 position:relative;
 z-index:20;
+box-sizing:border-box;
 }
 
 .channelHeader{
@@ -181,13 +183,14 @@ flex:0 0 20px;
 }
 
 .controls{
-display:flex;
+display:grid;
+grid-template-columns:var(--feed-grid-card-size) var(--feed-grid-gap) var(--feed-grid-card-size) var(--feed-grid-gap) var(--feed-grid-card-size);
 align-items:stretch;
 align-self:stretch;
-gap:6px;
+gap:0;
 position:relative;
 z-index:21;
-width:calc((100vw - (2 * var(--feed-posts-x)) - (2 * var(--feed-grid-gap))) / 3);
+width:calc((3 * var(--feed-grid-card-size)) + (2 * var(--feed-grid-gap)));
 min-width:0;
 }
 
@@ -223,10 +226,12 @@ padding:6px 10px;
 }
 
 #videoSearch{
-width:auto;
+grid-column:1;
+grid-row:1;
+width:100%;
 height:auto;
 min-height:var(--header-control-height);
-border:1px solid var(--accent-color);
+border:3px solid var(--accent-color);
 background:#000;
 color:var(--page-text);
 padding:0 8px;
@@ -235,7 +240,6 @@ font-weight:700;
 font-size:calc(14px * var(--page-font-scale));
 box-sizing:border-box;
 min-width:0;
-flex:1 1 0;
 }
 
 #videoSearch::placeholder{
@@ -280,11 +284,46 @@ outline:none;
 #modeBtn{
 aspect-ratio:auto;
 padding:0 10px;
-width:calc((var(--feed-sort-buttons-width, calc((2 * var(--feed-control-button-size)) + 6px)) - 6px) / 2);
+width:calc((var(--feed-grid-card-size) - 6px) / 2);
+border-width:3px;
+}
+
+#randomVideoBtn{
+grid-column:3;
+grid-row:1;
+display:flex;
+align-items:center;
+justify-content:center;
+align-self:stretch;
+width:100%;
+height:auto;
+min-height:var(--header-control-height);
+padding:0 12px;
+aspect-ratio:auto;
+overflow:hidden;
+background:#000;
+border:3px solid var(--accent-color);
+color:var(--page-text);
+font-size:calc(21px * var(--page-font-scale));
+font-weight:700;
+line-height:1;
+text-align:center;
+white-space:nowrap;
+text-overflow:ellipsis;
+cursor:pointer;
+}
+
+#gridBtn{
+grid-column:5;
+grid-row:1;
+justify-self:start;
 }
 
 #modeBtn{
-min-width:calc(112px * var(--page-font-scale));
+grid-column:5;
+grid-row:1;
+justify-self:end;
+min-width:0;
 }
 
 #gridMenu{
@@ -753,7 +792,7 @@ calc((100dvh - (var(--feed-fit-gap-count) * var(--feed-grid-gap)) - var(--feed-l
 }
 
 header{
-padding:16px 12px var(--feed-header-row-gap);
+padding:16px 12px;
 flex-direction:column;
 align-items:stretch;
 gap:var(--feed-header-row-gap);
@@ -834,6 +873,10 @@ gap:6px;
 flex-wrap:nowrap;
 }
 
+.controlDivider{
+display:none;
+}
+
 #videoSearch{
 width:auto;
 flex:1 1 auto;
@@ -842,6 +885,16 @@ height:auto;
 min-height:46px;
 box-sizing:border-box;
 font-size:calc(14px * var(--page-font-scale));
+}
+
+#randomVideoBtn{
+flex:0 1 auto;
+width:auto;
+min-width:120px;
+min-height:46px;
+padding:0 10px;
+border-width:3px;
+font-size:calc(12px * var(--page-font-scale));
 }
 
 #gridBtn,
@@ -946,6 +999,7 @@ font-size:calc(16px * var(--page-font-scale));
 <header>
 <div class="controls">
 <input id="videoSearch" placeholder="Search Feed...">
+<button id="randomVideoBtn" type="button">My Latest Video</button>
 <button id="gridBtn">View</button>
 <span class="controlDivider" aria-hidden="true"></span>
 <button id="modeBtn" disabled>Newest</button>
@@ -986,6 +1040,8 @@ const CRYPTID_MEMES_URL="https://www.youtube.com/@Cryptid_Memes";
 const HONESTLY_THOMAS_AVATAR="/dead/images/pngs/honestly-thomas.png";
 const CRYPTID_MEMES_AVATAR="/dead/images/pngs/cryptid-memes.png";
 const THUMBNAIL_FALLBACK="/dead/images/pngs/static.gif";
+const HONESTLY_THOMAS_CHANNEL_ID="UCn3WLZT7k8nO24XimlJVJVQ";
+const HONESTLY_THOMAS_RSS_FEED_URL=`https://www.youtube.com/feeds/videos.xml?channel_id=${HONESTLY_THOMAS_CHANNEL_ID}`;
 const thumbnailSourceCache = new Map();
 
 function updateTintFilters(){
@@ -1018,6 +1074,7 @@ const searchInput=document.getElementById("videoSearch");
 const loadBtn=document.getElementById("loadMore");
 const gridMenu=document.getElementById("gridMenu");
 const gridBtn=document.getElementById("gridBtn");
+const randomVideoBtn=document.getElementById("randomVideoBtn");
 const controlsEl=document.querySelector(".controls");
 const channelHomeLink=document.getElementById("channelHomeLink");
 const channelTitleEl=document.getElementById("channelTitle");
@@ -1033,6 +1090,8 @@ let currentSortPanelText="Watch My Most Viewed Videos";
 let currentSortButtonTitle="Sorting highest views to lowest";
 let feedBgPatternSpeed=1;
 let canvasBackgrounds=[];
+let latestFeedVideoId="";
+let latestFeedVideoTitle="";
 let currentCanvasBackground=null;
 let canvasBackgroundFrame=null;
 const FEED_BG_PATTERN_BASE_DURATION_MS=8000;
@@ -1568,6 +1627,7 @@ query: searchInput ? searchInput.value : headerSearchQuery,
 sortMode: sortModes[sortModeIndex],
 sortPanelText: currentSortPanelText,
 sortButtonTitle: currentSortButtonTitle,
+sortButtonText: modeBtn ? modeBtn.textContent : "",
 firstVideoId: firstVisiblePost ? firstVisiblePost.id : "",
 firstVideoTitle: firstVisiblePost ? firstVisiblePost.title : "",
 sortDisabled: !posts.length,
@@ -1686,6 +1746,66 @@ async function fetchJson(path){
 const response = await fetch(path, { cache: "no-store" });
 if(!response.ok) throw new Error(`${path} failed`);
 return response.json();
+}
+
+function syncLatestVideoButton(){
+if(randomVideoBtn){
+randomVideoBtn.textContent = "My Latest Video";
+randomVideoBtn.title = latestFeedVideoTitle
+? `Open latest video: ${latestFeedVideoTitle}`
+: "Open latest video";
+randomVideoBtn.setAttribute("aria-label", randomVideoBtn.title);
+randomVideoBtn.disabled = !latestFeedVideoId;
+}
+}
+
+function getFirstFeedEntryForChannel(data, channelId){
+const entries = Array.isArray(data && data.entries) ? data.entries : [];
+const normalizedChannelId = String(channelId || "").trim();
+return entries.find((entry)=>{
+return String(entry && entry.channel_id || "").trim() === normalizedChannelId
+|| String(entry && entry.channel_url || "").includes(normalizedChannelId);
+}) || entries.find((entry)=>entry && entry.id);
+}
+
+async function loadLatestVideoFallback(){
+const data = await fetchJson(FEED_DATA_PATH);
+const entry = getFirstFeedEntryForChannel(data, HONESTLY_THOMAS_CHANNEL_ID);
+return {
+id: String(entry && entry.id || "").trim(),
+title: String(entry && entry.title || "").trim()
+};
+}
+
+function setLatestVideo(video){
+latestFeedVideoId = String(video && video.id || "").trim();
+latestFeedVideoTitle = String(video && video.title || "").trim();
+syncLatestVideoButton();
+}
+
+async function loadLatestRssEntry(){
+try{
+const response = await fetch(HONESTLY_THOMAS_RSS_FEED_URL, { cache:"no-store" });
+if(!response.ok) throw new Error(`${HONESTLY_THOMAS_RSS_FEED_URL} failed`);
+const xmlText = await response.text();
+const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+const parseError = xml.querySelector("parsererror");
+if(parseError) throw new Error("Unable to parse YouTube RSS XML");
+const entry = xml.querySelector("entry");
+const id = entry?.querySelector("videoId, yt\\:videoId")?.textContent?.trim()
+|| String(entry?.querySelector("id")?.textContent || "").replace(/^yt:video:/, "").trim();
+const title = entry?.querySelector("title")?.textContent?.trim() || "";
+if(!id) throw new Error("YouTube RSS feed had no entry video id");
+setLatestVideo({ id, title });
+}catch(error){
+console.warn("Unable to load YouTube RSS latest video directly; using local feed fallback.", error);
+try{
+setLatestVideo(await loadLatestVideoFallback());
+}catch(fallbackError){
+console.warn("Unable to load local feed fallback video.", fallbackError);
+setLatestVideo(null);
+}
+}
 }
 
 function normalizeLegacyFeedData(data){
@@ -1864,6 +1984,25 @@ document.getElementById("closeVideo").onclick = closeVideo;
 
 }
 
+function openRandomVideo(){
+const candidates = (posts || []).filter((post)=>post && post.id);
+if(!candidates.length) return;
+const randomIndex = Math.floor(Math.random() * candidates.length);
+openVideo(candidates[randomIndex]);
+}
+
+function openLatestVideo(){
+if(!latestFeedVideoId) return;
+const video = posts.find((post)=>post.id === latestFeedVideoId) || {
+id: latestFeedVideoId,
+title: latestFeedVideoTitle,
+description:"",
+views:0,
+sortTimestamp:0
+};
+openVideo(video);
+}
+
 function render(){
 updateTintFilters();
 updateViewButton();
@@ -1958,6 +2097,11 @@ syncGridPaging();
 }
 render();
 }
+}
+
+if(randomVideoBtn){
+syncLatestVideoButton();
+randomVideoBtn.addEventListener("click", openLatestVideo);
 }
 
 loadBtn.onclick=()=>{
@@ -2228,6 +2372,10 @@ if(action === "toggleSort"){
 window.tektiteChatApi.toggleSort();
 return;
 }
+if(action === "openRandomVideo"){
+openRandomVideo();
+return;
+}
 if(action === "setGridPage"){
 window.tektiteChatApi.setGridPage(data.page);
 return;
@@ -2325,6 +2473,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   bindChannelLogoHoverCycle();
   updateTintFilters();
   syncControlButtonSize();
+  loadLatestRssEntry();
   loadCanvasBackgroundIndex();
   loadPosts().then(() => {
     const params = new URLSearchParams(window.location.search);

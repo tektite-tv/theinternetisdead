@@ -556,7 +556,7 @@ html, body {
 
 @media (max-width: 768px) {
   #overlay-root {
-    --mobile-nav-state-gap: 4px;
+    --mobile-nav-state-gap: 8px;
     --mobile-feed-column-width: min(
       calc(100vw - 16px),
       calc(100dvh - 94px)
@@ -670,15 +670,15 @@ html, body {
 
   #overlay-root .sidebar .topbar {
     height: auto;
-    min-height: 160px;
-    padding: 10px 14px 8px;
-    row-gap: 4px;
+    min-height: 0;
+    padding: 10px 8px var(--mobile-nav-state-gap);
+    row-gap: var(--mobile-nav-state-gap);
   }
 
   #overlay-root .sidebar .topbar > .hamburger {
     position: absolute;
     top: 10px;
-    left: 14px;
+    left: 8px;
   }
 
   #overlay-root .sidebar .logo {
@@ -1682,6 +1682,14 @@ html, body {
     });
   }
 
+  function requestMobileFeedHeaderToggle() {
+    if (!isMobileOverlayView()) return false;
+    if (!navStatePanel || navStatePanel.dataset.stateMode !== 'feed') return false;
+    if (typeof window.toggleIndexMobileFeedHeader !== 'function') return false;
+    window.toggleIndexMobileFeedHeader();
+    return true;
+  }
+
   if (navStatePanel) {
     navStatePanel.addEventListener('click', (event) => {
       if (event.shiftKey) {
@@ -1703,6 +1711,9 @@ html, body {
       }
 
       event.preventDefault();
+      if (requestMobileFeedHeaderToggle()) {
+        return;
+      }
       copyNavStateUrl();
     });
   }

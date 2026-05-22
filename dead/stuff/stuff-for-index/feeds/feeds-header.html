@@ -211,7 +211,11 @@ pointer-events:none;
 
 .channelHeader:focus-within,
 .channelHeader:hover,
-.controlsPlaceholder:hover{
+.controlsPlaceholder:hover,
+.headerMessagePanel:hover,
+.headerMessagePanel:focus-visible,
+.headerControlBtn:hover,
+.headerControlBtn:focus-visible{
 animation: overlay-ui-hueshift 1.8s linear infinite;
 }
 
@@ -247,7 +251,8 @@ display:block;
 }
 
 .controlsPlaceholder{
-display:flex;
+display:grid;
+grid-template-columns:calc((var(--feed-grid-card-size) - 6px) / 2) 6px calc((var(--feed-grid-card-size) - 6px) / 2);
 align-items:stretch;
 align-self:stretch;
 gap:0;
@@ -259,28 +264,24 @@ height:var(--header-control-height);
 min-height:0;
 max-height:var(--header-control-height);
 box-sizing:border-box;
-background:#000;
-border:3px solid var(--accent-color);
+background:transparent;
+border:none;
 overflow:hidden;
 }
 
-.headerMessagePanel{
+.headerMessagePanel,
+.headerControlBtn,
+.headerCommandPanel{
 display:flex;
 align-items:center;
 justify-content:center;
-width:var(--feed-grid-card-size);
-min-width:0;
-height:var(--header-control-height);
-min-height:0;
-max-height:var(--header-control-height);
-align-self:flex-start;
 box-sizing:border-box;
-flex:0 0 auto;
-padding:0 10px;
+appearance:none;
+margin:0;
 background:#000;
 border:3px solid var(--accent-color);
 color:var(--page-text);
-font-size:calc(21px * var(--page-font-scale));
+font-family:var(--page-font-family);
 font-weight:700;
 line-height:1;
 text-align:center;
@@ -288,6 +289,60 @@ overflow:hidden;
 white-space:nowrap;
 pointer-events:auto;
 cursor:pointer;
+}
+
+.headerMessagePanel{
+width:var(--feed-grid-card-size);
+min-width:0;
+height:var(--header-control-height);
+min-height:0;
+max-height:var(--header-control-height);
+align-self:flex-start;
+flex:0 0 auto;
+padding:0 10px;
+font-size:calc(21px * var(--page-font-scale));
+cursor:pointer;
+}
+
+.headerControlBtn{
+display:none;
+width:100%;
+min-width:0;
+height:var(--header-control-height);
+min-height:0;
+max-height:var(--header-control-height);
+padding:0 10px;
+font-size:var(--controls-button-font-size, calc(12px * var(--page-font-scale)));
+}
+
+.headerCommandPanel{
+grid-column:1 / -1;
+width:100%;
+min-width:0;
+max-width:100%;
+height:var(--header-control-height);
+min-height:0;
+max-height:var(--header-control-height);
+padding:0 12px;
+font-size:calc(17px * var(--page-font-scale));
+text-decoration:none;
+-webkit-tap-highlight-color:transparent;
+}
+
+.headerCommandPanelText{
+display:block;
+max-width:100%;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+}
+
+#headerGridBtn{
+grid-column:1;
+}
+
+#headerModeBtn{
+grid-column:3;
 }
 
 .headerMessagePanelText{
@@ -498,12 +553,21 @@ display:inline-flex;
 }
 
 .controlsPlaceholder{
-display:flex;
+display:grid;
+grid-template-columns:calc((100% - 6px) / 2) 6px calc((100% - 6px) / 2);
 align-items:stretch;
 align-self:stretch;
 gap:0;
 flex-wrap:nowrap;
 width:100%;
+}
+
+.headerCommandPanel{
+display:flex;
+}
+
+.headerControlBtn{
+display:none;
 }
 
 .headerMessagePanel{
@@ -530,11 +594,15 @@ padding:0 8px;
 <div class="channelTitle" id="channelTitle"><span class="channelDivider" aria-hidden="true"></span><a href="https://www.youtube.com/@Honestly_Thomas" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/honestly-thomas.png" class="channelHandleAvatar" alt="Honestly Thomas avatar"><span>@Honestly_Thomas</span></a><span class="channelDivider" aria-hidden="true"></span><a href="https://www.youtube.com/@Cryptid_Memes" target="_blank" rel="noopener noreferrer" class="channelHandleLink"><img src="/dead/images/pngs/cryptid-memes.png" class="channelHandleAvatar" alt="Cryptid Memes avatar"><span>@Cryptid_Memes</span></a></div>
 </div>
 
-<div class="headerMessagePanel" aria-hidden="true">
-<span class="headerMessagePanelText">Loading message...</span>
-</div>
+<button class="headerMessagePanel" id="headerRandomVideoBtn" type="button">
+<span class="headerMessagePanelText">Watch Random Video</span>
+</button>
 
-<div class="controlsPlaceholder" aria-hidden="true"></div>
+<div class="controlsPlaceholder">
+<button class="headerCommandPanel" id="headerCommandBtn" type="button" aria-label="Open chat command input"><span class="headerCommandPanelText">Enter command...</span></button>
+<button class="headerControlBtn" id="headerGridBtn" type="button">View</button>
+<button class="headerControlBtn" id="headerModeBtn" type="button" disabled>Newest</button>
+</div>
 <div class="mobileHeaderHandle" title="Drag header down">
 </div>
 </header>
@@ -547,6 +615,11 @@ const mobileHeaderHandle=document.querySelector(".mobileHeaderHandle");
 const channelHomeLink=document.getElementById("channelHomeLink");
 const channelLogoLinks=Array.from(document.querySelectorAll(".logoLink"));
 const controlsEl=document.querySelector(".controlsPlaceholder");
+const headerRandomVideoBtn=document.getElementById("headerRandomVideoBtn");
+const headerCommandBtn=document.getElementById("headerCommandBtn");
+const headerGridBtn=document.getElementById("headerGridBtn");
+const headerModeBtn=document.getElementById("headerModeBtn");
+const headerMessageText=document.querySelector(".headerMessagePanelText");
 const channelTitleEl=document.getElementById("channelTitle");
 const defaultChannelLogoUrls=[
 "/dead/images/pngs/oldtube.png",
@@ -587,6 +660,18 @@ console.warn("Unable to post feed header message", error);
 
 function postCommand(action, extra={}){
 postToParent({ type:"feedGridHeaderCommand", action, ...extra });
+}
+
+function openCommandInput(){
+try{
+if(window.top && window.top !== window){
+window.top.postMessage({ type:"openChatFromChild", seedSlash:true }, "*");
+return;
+}
+window.postMessage({ type:"openChatFromChild", seedSlash:true }, "*");
+}catch(error){
+console.warn("Unable to request command input", error);
+}
 }
 
 function bindContentOnlyLinks(){
@@ -884,8 +969,37 @@ root.style.setProperty("--feed-load-more-height", gridLoadMoreHeight);
 fitHeaderRectangleChildren();
 }
 
+function getSortButtonText(sortMode){
+if(sortMode === "newest") return "Newest";
+if(sortMode === "oldest") return "Oldest";
+if(sortMode === "most-viewed") return "Most Viewed";
+if(sortMode === "least-viewed") return "Least Viewed";
+if(sortMode === "alphabetical") return "Sort: A-Z";
+if(sortMode === "reverse-alphabetical") return "Sort: Z-A";
+if(sortMode === "source-order") return "Sort: Source Order";
+return "Sort";
+}
+
 function applyState(state){
 applyGridSizingState(state);
+if(headerMessageText){
+headerMessageText.textContent="Watch Random Video";
+}
+if(headerGridBtn){
+headerGridBtn.textContent="View";
+headerGridBtn.title=state.view === "list" ? "Current view: list" : "Current view: grid";
+headerGridBtn.setAttribute("aria-label", headerGridBtn.title);
+headerGridBtn.disabled=false;
+}
+if(headerModeBtn){
+headerModeBtn.textContent=String(state.sortButtonText || getSortButtonText(state.sortMode));
+headerModeBtn.title=String(state.sortButtonTitle || "Change sort");
+headerModeBtn.setAttribute("aria-label", headerModeBtn.title);
+headerModeBtn.disabled=Boolean(state.sortDisabled);
+}
+if(headerRandomVideoBtn){
+headerRandomVideoBtn.disabled=Boolean(state.sortDisabled);
+}
 syncControlButtonSize();
 fitHeaderRectangleChildren();
 }
@@ -893,6 +1007,28 @@ fitHeaderRectangleChildren();
 channelHomeLink.addEventListener("click", ()=>{
 channelHomeLink.href=getRandomChannelUrl();
 });
+
+if(headerRandomVideoBtn){
+headerRandomVideoBtn.addEventListener("click", ()=>{
+postCommand("openRandomVideo");
+});
+}
+
+if(headerCommandBtn){
+headerCommandBtn.addEventListener("click", openCommandInput);
+}
+
+if(headerGridBtn){
+headerGridBtn.addEventListener("click", ()=>{
+postCommand("toggleView");
+});
+}
+
+if(headerModeBtn){
+headerModeBtn.addEventListener("click", ()=>{
+postCommand("toggleSort");
+});
+}
 
 mobileHeaderHandle.addEventListener("pointerdown", (event)=>{
 if(!isMobileHeaderLayout()) return;
