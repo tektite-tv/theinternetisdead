@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+import atexit
 import json
 import subprocess
+import threading
+import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -10,8 +13,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 HOST = "0.0.0.0"
 PORT = 8000
 
-# HDMI-CEC User Control codes.
-# These assume the Pi is logical address 1 sending to TV address 0.
+# The Pi is usually HDMI logical address 1 and the TV is usually 0.
+# If your setup differs, run: echo "scan" | cec-client -s -d 1
+CEC_SOURCE = "1"
+CEC_TARGET = "0"
+
 CEC_COMMANDS = {
     "power": ["on 0"],
     "standby": ["standby 0"],
@@ -40,23 +46,85 @@ CEC_COMMANDS = {
 }
 
 
-def run_cec(commands):
-    full_script = "\n".join(commands) + "\n"
+class PersistentCECClient:
+    def __init__(self):
+        self.process = None
+        self.lock = threading.Lock()
+        self.last_output = ""
 
-    result = subprocess.run(
-        ["cec-client", "-s", "-d", "1"],
-        input=full_script,
-        text=True,
-        capture_output=True,
-        timeout=5,
-    )
+    def start(self):
+        with self.lock:
+            if self.process and self.process.poll() is None:
+                return
 
-    output = (result.stdout + result.stderr).strip()
+            self.process = subprocess.Popen(
+                ["cec-client", "-d", "1"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
 
-    if result.returncode != 0:
-        raise RuntimeError(output or f"cec-client exited with {result.returncode}")
+            time.sleep(2.0)
 
-    return output
+            if self.process.poll() is not None:
+                output = self._safe_read_startup_output()
+                raise RuntimeError(f"cec-client exited during startup. {output}".strip())
+
+            # Establish/announce the connection on startup.
+            # scan wakes up the adapter discovery; as tells CEC who this device is.
+            self._write_unlocked("scan")
+            time.sleep(1.0)
+            self._write_unlocked(f"as {CEC_SOURCE}")
+
+    def send(self, commands):
+        with self.lock:
+            self.start()
+
+            for command in commands:
+                self._write_unlocked(command)
+                time.sleep(0.08)
+
+            return "CEC command sent"
+
+    def _write_unlocked(self, command):
+        if not self.process or self.process.poll() is not None:
+            raise RuntimeError("cec-client is not running")
+
+        if not self.process.stdin:
+            raise RuntimeError("cec-client stdin is unavailable")
+
+        self.process.stdin.write(command + "\n")
+        self.process.stdin.flush()
+
+    def _safe_read_startup_output(self):
+        if not self.process or not self.process.stdout:
+            return ""
+
+        try:
+            return self.process.stdout.read(2000)
+        except Exception:
+            return ""
+
+    def stop(self):
+        with self.lock:
+            if self.process and self.process.poll() is None:
+                try:
+                    self._write_unlocked("q")
+                    time.sleep(0.3)
+                except Exception:
+                    pass
+
+                try:
+                    self.process.terminate()
+                    self.process.wait(timeout=2)
+                except Exception:
+                    self.process.kill()
+
+
+cec = PersistentCECClient()
+atexit.register(cec.stop)
 
 
 class CECRemoteHandler(SimpleHTTPRequestHandler):
@@ -79,11 +147,9 @@ class CECRemoteHandler(SimpleHTTPRequestHandler):
                 self.send_json({"error": f"Unknown command: {command_name}"}, status=400)
                 return
 
-            output = run_cec(CEC_COMMANDS[command_name])
+            output = cec.send(CEC_COMMANDS[command_name])
             self.send_json({"ok": True, "command": command_name, "output": output})
 
-        except subprocess.TimeoutExpired:
-            self.send_json({"error": "CEC command timed out"}, status=504)
         except Exception as error:
             self.send_json({"error": str(error)}, status=500)
 
@@ -99,8 +165,16 @@ class CECRemoteHandler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     print(f"Serving repo root: {REPO_ROOT}")
+    print("Starting persistent cec-client connection...")
+
+    try:
+        cec.start()
+        print("CEC connection established.")
+    except Exception as error:
+        print(f"CEC startup warning: {error}")
+        print("The web server will still start, but button presses may fail until CEC works.")
+
     print(f"CEC remote: http://jins-pi.local:{PORT}/dead/experiments/cec-remote/")
-    print("Do not expose this to the public internet unless you enjoy inventing cursed appliances.")
 
     server = ThreadingHTTPServer((HOST, PORT), CECRemoteHandler)
     server.serve_forever()
