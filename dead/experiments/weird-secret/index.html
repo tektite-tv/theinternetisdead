@@ -12,33 +12,46 @@
       --acid-dim: rgba(118, 255, 122, 0.45);
       --purple: #9d4dff;
       --warn: #ff4df3;
+      --panel: rgba(0, 0, 0, 0.52);
     }
 
     * { box-sizing: border-box; }
 
-    body {
+    html, body {
       margin: 0;
-      min-height: 100vh;
+      width: 100%;
+      height: 100%;
+      background: #020403;
+      overflow: hidden;
+    }
+
+    body {
+      min-height: 100svh;
       display: grid;
       place-items: center;
       background:
-        radial-gradient(circle at 50% 0%, rgba(157, 77, 255, 0.14), transparent 38%),
+        radial-gradient(circle at 50% 0%, rgba(157, 77, 255, 0.16), transparent 36%),
+        radial-gradient(circle at 50% 100%, rgba(118, 255, 122, 0.08), transparent 42%),
         linear-gradient(180deg, #020403 0%, #050806 100%);
       color: var(--acid);
       font-family: Consolas, "Courier New", monospace;
-      overflow-x: hidden;
     }
 
     main {
-      width: min(96vw, 1400px);
-      padding: 18px;
+      width: min(100vw, 1400px);
+      height: 100svh;
+      padding: clamp(6px, 1.4vmin, 14px);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      gap: clamp(6px, 1.2vmin, 10px);
       text-align: center;
-      border: 1px solid rgba(118, 255, 122, 0.26);
+      border: 1px solid rgba(118, 255, 122, 0.22);
       box-shadow:
         0 0 22px rgba(118, 255, 122, 0.12),
-        inset 0 0 40px rgba(157, 77, 255, 0.08);
-      background: rgba(0, 0, 0, 0.42);
+        inset 0 0 46px rgba(157, 77, 255, 0.09);
+      background: var(--panel);
       position: relative;
+      overflow: hidden;
     }
 
     main::before {
@@ -55,26 +68,48 @@
           transparent 5px
         );
       mix-blend-mode: screen;
-      opacity: 0.45;
+      opacity: 0.42;
       z-index: 10;
     }
 
+    main::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border-radius: 18px / 40px;
+      pointer-events: none;
+      box-shadow:
+        inset 0 0 38px rgba(0, 0, 0, 0.88),
+        inset 0 0 120px rgba(0, 0, 0, 0.56);
+      z-index: 2;
+    }
+
     h1 {
-      margin: 0 0 12px;
-      font-size: clamp(1rem, 2.4vw, 1.85rem);
+      margin: 0;
+      font-size: clamp(0.72rem, 1.8vmin, 1.35rem);
+      line-height: 1.05;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       text-shadow: 0 0 8px var(--acid-dim), 2px 0 0 rgba(255, 77, 243, 0.2);
+      position: relative;
+      z-index: 3;
     }
 
     .stage {
       position: relative;
-      width: 100%;
+      width: min(100%, calc((100svh - 112px) * 1.5588235294));
+      max-width: 100%;
+      max-height: calc(100svh - 112px);
       aspect-ratio: 1590 / 1020;
+      margin: 0 auto;
+      align-self: center;
       border: 1px solid rgba(118, 255, 122, 0.35);
       background: #000;
       overflow: hidden;
-      box-shadow: 0 0 28px rgba(157, 77, 255, 0.22);
+      box-shadow:
+        0 0 28px rgba(157, 77, 255, 0.22),
+        inset 0 0 42px rgba(0, 0, 0, 0.85);
+      z-index: 1;
     }
 
     canvas {
@@ -86,17 +121,44 @@
 
     .status {
       min-height: 1.35em;
-      margin: 12px 0 10px;
-      font-size: 0.95rem;
+      margin: 0;
+      font-size: clamp(0.72rem, 1.55vmin, 0.95rem);
       color: rgba(215, 255, 218, 0.88);
       text-shadow: 0 0 8px rgba(118, 255, 122, 0.45);
+      position: relative;
+      z-index: 3;
+      white-space: nowrap;
+    }
+
+    .aside {
+      display: inline-block;
+      min-width: min(48ch, 48vw);
+      margin-left: 0.65rem;
+      color: var(--acid);
+      opacity: 0;
+      transform: translateX(-4px);
+      transition: opacity 130ms ease, transform 130ms ease;
+      text-align: left;
+      text-shadow: 0 0 10px rgba(118, 255, 122, 0.5);
+    }
+
+    .aside.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .aside.hint {
+      color: var(--warn);
+      text-shadow: 0 0 10px rgba(255, 77, 243, 0.55);
     }
 
     .controls {
       display: flex;
       justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
+      gap: 8px;
+      flex-wrap: nowrap;
+      position: relative;
+      z-index: 3;
     }
 
     input, button {
@@ -104,12 +166,14 @@
       background: rgba(0, 0, 0, 0.82);
       color: var(--acid);
       font: inherit;
-      padding: 0.8rem 0.95rem;
+      font-size: clamp(0.72rem, 1.55vmin, 0.95rem);
+      padding: clamp(0.48rem, 1.2vmin, 0.8rem) clamp(0.65rem, 1.6vmin, 0.95rem);
       box-shadow: inset 0 0 12px rgba(118, 255, 122, 0.08);
     }
 
     input {
-      min-width: min(430px, 86vw);
+      width: min(430px, 58vw);
+      min-width: 0;
       outline: none;
     }
 
@@ -122,6 +186,7 @@
       cursor: pointer;
       text-transform: uppercase;
       letter-spacing: 0.08em;
+      white-space: nowrap;
     }
 
     button:hover {
@@ -129,9 +194,45 @@
       box-shadow: 0 0 16px rgba(118, 255, 122, 0.2);
     }
 
+    button:disabled,
+    input:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
     .unlocked {
       color: #fff;
       text-shadow: 0 0 10px #76ff7a, 0 0 22px #9d4dff;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        grid-template-rows: auto auto auto auto;
+      }
+
+      .stage {
+        width: 100%;
+        max-height: calc(100svh - 142px);
+      }
+
+      .status {
+        white-space: normal;
+      }
+
+      .aside {
+        display: block;
+        min-width: 0;
+        margin: 0.35rem 0 0;
+        text-align: center;
+      }
+
+      .controls {
+        flex-wrap: wrap;
+      }
+
+      input {
+        width: min(430px, 88vw);
+      }
     }
   </style>
 </head>
@@ -143,7 +244,7 @@
       <canvas id="canvas" width="1590" height="1020"></canvas>
     </section>
 
-    <p id="status" class="status">Enter the secret passphrase.</p>
+    <p id="status" class="status"><span id="prompt">Enter the secret passphrase.</span><span id="aside" class="aside" aria-live="polite"></span></p>
 
     <div class="controls">
       <input id="passphrase" type="password" autocomplete="off" spellcheck="false" placeholder="secret passphrase">
@@ -160,6 +261,26 @@
     const input = document.getElementById("passphrase");
     const button = document.getElementById("unlock");
     const status = document.getElementById("status");
+    const promptText = document.getElementById("prompt");
+    const aside = document.getElementById("aside");
+
+    const wrongRemarks = [
+      "(bold guess from the carbon-based sector)",
+      "(the machine spirit remains unimpressed)",
+      "(not even close, but the confidence was vintage)",
+      "(somewhere, a login form just learned shame)",
+      "(the haunted iframe coughs politely)"
+    ];
+
+    const hints = [
+      "(hint: no spaces, no dots, all lowercase, like a domain got flattened)",
+      "(hint: the site name is already whispering it at you)",
+      "(hint: Where are you right now on the web?)"
+    ];
+
+    let wrongGuessCount = 0;
+    let hintCount = 0;
+    let lastRemark = -1;
 
     const img = new Image();
     img.src = DATA_URI;
@@ -230,17 +351,46 @@
       requestAnimationFrame(drawScrambled);
     }
 
+    function showAside(message, isHint = false) {
+      aside.textContent = message;
+      aside.classList.toggle("hint", isHint);
+      aside.classList.remove("show");
+      void aside.offsetWidth;
+      aside.classList.add("show");
+    }
+
+    function randomRemark() {
+      let index = Math.floor(Math.random() * wrongRemarks.length);
+      if (wrongRemarks.length > 1) {
+        while (index === lastRemark) index = Math.floor(Math.random() * wrongRemarks.length);
+      }
+      lastRemark = index;
+      return wrongRemarks[index];
+    }
+
     function unlock() {
       const attempt = input.value.trim();
       if (attempt !== SECRET) {
-        status.textContent = "wrong passphrase // signal remains haunted";
+        wrongGuessCount++;
         status.classList.remove("unlocked");
+        promptText.textContent = "Enter the secret passphrase.";
+
+        if (wrongGuessCount % 3 === 0) {
+          const hint = hints[Math.min(hintCount, hints.length - 1)];
+          hintCount++;
+          showAside(hint, true);
+        } else {
+          showAside(randomRemark(), false);
+        }
+
         input.select();
         return;
       }
 
       unlocked = true;
-      status.textContent = "passphrase accepted // original signal restored";
+      promptText.textContent = "passphrase accepted // original signal restored";
+      aside.textContent = "";
+      aside.classList.remove("show", "hint");
       status.classList.add("unlocked");
       input.disabled = true;
       button.disabled = true;
